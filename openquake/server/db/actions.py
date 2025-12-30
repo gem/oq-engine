@@ -578,17 +578,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     order_dir = request_get_dict.get('order_dir', 'DESC').upper()
     if order_dir not in ('ASC', 'DESC'):
         order_dir = 'DESC'
-
-    tags_query = """
-GROUP_CONCAT(
-    CASE
-        WHEN jt.is_preferred = 1 THEN tg.name || '★'
-        ELSE tg.name
-    END,
-    ', '
-) AS tags
-    """
-
+    tags_query = "GROUP_CONCAT(tag_value, ', ') AS tags"
     where_clause = f"?A AND ({users_filter} AND {user_name_like_filter}"
     if include_shared:
         where_clause += " OR j.status == 'shared'"
@@ -612,8 +602,17 @@ GROUP_CONCAT(
     query = f"""
 SELECT j.*, {tags_query}
 FROM job AS j
-LEFT JOIN job_tag AS jt ON j.id = jt.job_id
-LEFT JOIN tag AS tg ON tg.id = jt.tag_id
+LEFT JOIN (
+    SELECT
+        jt.job_id,
+        CASE
+            WHEN jt.is_preferred THEN t.name || '★'
+            ELSE t.name
+        END AS tag_value
+    FROM job_tag jt
+    JOIN tag t ON t.id = jt.tag_id
+    ORDER BY jt.is_preferred DESC, t.name
+) jt ON jt.job_id = j.id
 WHERE {where_clause}
 GROUP BY j.id
 ORDER BY {order_by} {order_dir}
