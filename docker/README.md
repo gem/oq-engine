@@ -127,7 +127,7 @@ EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 EMAIL_SUPPORT=
 DJANGO_SETTINGS_MODULE=openquake.server.settings
-WEBUI_PATHPREFIX='/path'
+WEBUI_PATHPREFIX=/path
 ```
 To run the docker:
 
