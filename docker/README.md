@@ -22,10 +22,10 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 ### Testing the image
 
 If you want to use the nightly build instead of the latest, the files are in the docker folder.
-To create a development image use the following command:
+To create a development image using the TAG nightly use the following command:
 
 ```bash
-$ docker build -t openquake/engine:dev -f Dockerfile.dev .
+$ docker build -t openquake/engine:nightly -f Dockerfile.dev .
 ```
 
 Please note that the nightly image is meant for testing purposes and not for production.
@@ -44,12 +44,6 @@ The Openquake image uses several environment variables
 OQ_APPLICATION_MODE
 
 This environment variable is required and set to RESTRICTED to enable the webui authentication.
-The default value is False, and it can also be undefined if the webui authentication is not necessary
-
-```bash
-$ docker run -e OQ_APPLICATION_MODE=RESTRICTED openquake/engine:nightly
-```
-If you don't set any other environment variables the default values for admin login, password and email are: 'admin', 'admin', 'admin@example.com'
 
 OQ_ADMIN_LOGIN
 
@@ -121,7 +115,24 @@ This example runs a container named openquake using the openquake/engine:nightly
 This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8800/engine
 
 ```bash
-$ docker run --name openquake -d -p 127.0.0.1:8080:8800 -e OQ_APPLICATION_MODE=RESTRICTED -e WEBUI_PATHPREFIX='/path' openquake/engine:nightly
+OQ_APPLICATION_MODE=RESTRICTED
+OQ_ADMIN_LOGIN=example
+OQ_ADMIN_PASSWORD=example
+OQ_ADMIN_EMAIL=login@example.com
+EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_USE_TLS=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_SUPPORT=
+DJANGO_SETTINGS_MODULE=openquake.server.settings
+WEBUI_PATHPREFIX='/path'
+```
+To run the docker:
+
+```bash
+$ docker run --name openquake -d -p 127.0.0.1:8080:8800 --env-file PATH/.env  openquake/engine:nightly
 ```
 
 This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables.
