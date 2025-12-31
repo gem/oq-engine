@@ -160,15 +160,15 @@ This variable sets the superuser admin email for WebUI
 
 WEBUI_PATHPREFIX
 
-This variable overrides the default prefix path (/engine) for the WebUI
+This variable overrides the default prefix path (`/engine`) for the WebUI
 
 EMAIL_BACKEND
 
-This variable specifies the backend used by Django to send emails (e.g. 'django.core.mail.backends.smtp.EmailBackend')
+This variable specifies the backend used by Django to send emails (e.g. `django.core.mail.backends.smtp.EmailBackend`)
 
 EMAIL_HOST
 
-This variable specifies the host to use for sending email (e.g. 'smtp.gmail.com')
+This variable specifies the host to use for sending email (e.g. `smtp.gmail.com`)
 
 EMAIL_PORT
 
