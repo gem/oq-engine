@@ -350,13 +350,13 @@ class ImpactModeTestCase(django.test.TestCase):
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
-    # check that the URL 'run' cannot be accessed in ARISTOTLE mode
+    # check that the URL 'run' cannot be accessed in IMPACT mode
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
-    # check that the URL 'validate_zip' cannot be accessed in ARISTOTLE mode
+    # check that the URL 'validate_zip' cannot be accessed in IMPACT mode
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))

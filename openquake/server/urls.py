@@ -64,7 +64,7 @@ if settings.WEBUI:
             re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
                     name="aelo_site_classes"),
         ]
-    elif settings.APPLICATION_MODE == 'ARISTOTLE':
+    elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,

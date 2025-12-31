@@ -215,7 +215,7 @@ FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
+    'PUBLIC', 'RESTRICTED', 'AELO', 'IMPACT', 'READ_ONLY', 'TOOLS_ONLY']
 
 APPLICATION_MODE = 'PUBLIC'
 
@@ -305,7 +305,7 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'IMPACT'):
     LOCKDOWN = True
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
@@ -338,7 +338,7 @@ if LOCKDOWN:
             'app-messages')
     else:
         EMAIL_BACKEND = EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend'
-    if APPLICATION_MODE == 'ARISTOTLE':
+    if APPLICATION_MODE == 'IMPACT':
         EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
         EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
     elif APPLICATION_MODE == 'AELO':

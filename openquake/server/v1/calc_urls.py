@@ -55,7 +55,7 @@ if settings.APPLICATION_MODE == 'AELO':
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
     ])
-elif settings.APPLICATION_MODE == 'ARISTOTLE':
+elif settings.APPLICATION_MODE == 'IMPACT':
     urlpatterns.extend([
         re_path(r'^impact_get_rupture_data$',
                 views.impact_get_rupture_data),
