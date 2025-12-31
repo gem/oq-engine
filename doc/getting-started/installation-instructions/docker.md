@@ -225,4 +225,4 @@ This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host 
 If the `WEBUI_PATHPREFIX` variable is specified (e.g. with the value `/path`), the WebUI is reachable from the host machine using the url: `http://127.0.0.1:8080/path` instead.
 
 ## Getting help
-If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
+If you need help or have questions/comments/feedback for us, you can subscribe to the [OpenQuake users mailing list](https://groups.google.com/g/openquake-users).
