@@ -34,7 +34,7 @@ $ docker pull docker.io/openquake/engine:nightly
 
 ### LTS
 
-This container is updated on a daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+This container provides the long term support version of the OpenQuake Engine and its software stack. It is recommended for production.
 
 ```bash
 $ docker pull docker.io/openquake/engine:LTS
