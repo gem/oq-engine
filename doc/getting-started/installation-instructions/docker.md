@@ -168,7 +168,7 @@ This variable specifies the backend used by Django to send emails (e.g. `django.
 
 EMAIL_HOST
 
-This variable specifies the host to use for sending email (e.g. `smtp.gmail.com`)
+This variable specifies the host to use for sending emails (e.g. `smtp.gmail.com`)
 
 EMAIL_PORT
 
@@ -192,10 +192,10 @@ This variable specifies the email address to be used when replying to a Django e
 
 DJANGO_SETTINGS_MODULE
 
-This variable specifies the path to the python module containing Django settings, formatted in Python path syntax, e.g. mysite.settings. Note that the settings module should be on the Python sys.path.
+This variable specifies the path to the python module containing Django settings, formatted in Python path syntax, e.g. `mysite.settings`. Note that the settings module should be on the Python sys.path.
 
 
-To define all the environment variables, you can use a .env file with the following format:
+To define all the environment variables, you can use a `.env` file with the following format:
 
 ```bash
 OQ_APPLICATION_MODE=RESTRICTED
@@ -220,9 +220,9 @@ $ docker run --name openquake -d -p 127.0.0.1:8800:8800 --env-file PATH/.env ope
 
 This example runs a container named `openquake` using the `openquake/engine:nightly` image, and sets the value for the environment variables.
 
-This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the WebUI is reachable from the host machine using the url: http://127.0.0.1:8800/engine.
+This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the WebUI is reachable from the host machine using the url: `http://127.0.0.1:8800/engine`.
 
-If the WEBUI_PATHPREFIX variable is specified (e.g. with the value `/path`), the WebUI is reachable from the host machine using the url: http://127.0.0.1:8080/path instead.
+If the WEBUI_PATHPREFIX variable is specified (e.g. with the value `/path`), the WebUI is reachable from the host machine using the url: `http://127.0.0.1:8080/path` instead.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
