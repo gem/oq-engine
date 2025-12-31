@@ -136,15 +136,15 @@ $ docker rmi openquake/<imagename>[:TAG]
 
 You can print the list of containers and images using `$ docker ps -a` and `$ docker images`. For more details please refer to the [official Docker documentation](https://docs.docker.com/engine/).
 
-### Docker advanced options
+## Docker advanced options
 
-#### Environment Variables
+### Environment Variables
 
 The Openquake image uses several environment variables:
 
 OQ_APPLICATION_MODE
 
-This optional variable overrides the WebUI `APPLICATION_MODE` (_PUBLIC_ by default, running the WebUI without authentication). If it is set to _RESTRICTED_, the authentication infrastructure will be enabled, restricting the access authorized users.
+This optional variable overrides the WebUI `APPLICATION_MODE` (_PUBLIC_ by default, running the WebUI without authentication). If it is set to _RESTRICTED_, the authentication infrastructure will be enabled, restricting the access to authorized users.
 
 OQ_ADMIN_USERNAME
 
@@ -163,27 +163,35 @@ WEBUI_PATHPREFIX
 This variable overrides the default prefix path (/engine) for the WebUI
 
 EMAIL_BACKEND
+
 This variable specifies the backend used by Django to send emails (e.g. 'django.core.mail.backends.smtp.EmailBackend')
 
 EMAIL_HOST
+
 This variable specifies the host to use for sending email (e.g. 'smtp.gmail.com')
 
 EMAIL_PORT
+
 This variable specifies the port to use for the SMTP server defined in EMAIL_HOST
 
 EMAIL_USE_TLS
+
 This variable specifies whether to use a TLS (secure) connection when talking to the SMTP server. This is used for explicit TLS connections, generally on port 587
 
 EMAIL_HOST_USER
+
 This variable specifies the username to use for the SMTP server defined in EMAIL_HOST
 
 EMAIL_HOST_PASSWORD
+
 This variable specifies the password to use for the SMTP server defined in EMAIL_HOST. This setting is used in conjunction with EMAIL_HOST_USER when authenticating to the SMTP server. If either of these settings is empty, Django won’t attempt authentication
 
 EMAIL_SUPPORT
+
 This variable specifies the email address to be used when replying to a Django email notification
 
 DJANGO_SETTINGS_MODULE
+
 This variable specifies the path to the python module containing Django settings, formatted in Python path syntax, e.g. mysite.settings. Note that the settings module should be on the Python sys.path.
 
 
