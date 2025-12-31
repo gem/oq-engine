@@ -18,6 +18,9 @@ If you only download the install.py file and run the installation, the `local_se
 
 Then, copy the contents of `openquake/server/local_settings.py.server` into `openquake/server/local_settings.py`.
 
+The above settings override the variables specified in the Django settings.py file, to make the WebUI behave properly in the context of a multi-user server installation.
+For instance, `APPLICATION_MODE = 'RESTRICTED'` enables the authentication backend to restrict the use of the web interface to authorized users.
+
 #### Configure the STATIC_ROOT folder
 
 STATIC_ROOT is the full, absolute path to your static files folder.
