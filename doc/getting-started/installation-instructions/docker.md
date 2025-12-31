@@ -21,27 +21,38 @@ Each container includes:
 
 ## Available tags
 
-Currently two different sets of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
+Different sets of *TAGS* are provided (see below).
+Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
 
 ### nightly
 
-This container is updated on a daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+This container is updated on a daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what the next stable version will have. It is not recommended for production.
 
 ```bash
 $ docker pull docker.io/openquake/engine:nightly
 ```
 
-### X.Y
+### LTS
 
-For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the tag _latest_
+This container is updated on a daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+
+```bash
+$ docker pull docker.io/openquake/engine:LTS
+```
+
+### X.Y(.Z)
+
+Whenever a new version of the OpenQuake Engine is released (starting from 2.2) a corresponding container providing the engine and its software stack is published and tagged. The last stable release is also available under the tag _latest_. If only the major and minor references (X.Y) are specified, the latest available corresponding version is pulled. Otherwise (X.Y.Z) the exact corresponding version is retrieved.
 
 ```bash
 $ docker pull docker.io/openquake/engine:3.23
 ```
 ```bash
+$ docker pull docker.io/openquake/engine:3.23.2
+```
+```bash
 $ docker pull docker.io/openquake/engine:latest
 ```
-
 
 ## Deployment
 
