@@ -58,7 +58,7 @@ $ docker pull docker.io/openquake/engine:latest
 
 ### Docker single node deployment
 
-Pull an image from Docker Hub (see [available-tags] (https://hub.docker.com/r/openquake/engine/tags/) ):
+Pull an image from Docker Hub (see [available-tags](https://hub.docker.com/r/openquake/engine/tags/)):
 
 ```bash
 $ docker pull docker.io/openquake/engine[:TAG]
