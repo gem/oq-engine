@@ -107,7 +107,7 @@ Users can be part of groups. Members of the same group can have access to any ca
 
 #### Users and groups management
 
-Users and groups can be managed via the Django admin interface, available at `/admin` when `LOCKDOWN` is enabled.
+Users and groups can be managed via the Django admin interface, available at `/admin` when `LOCKDOWN` is enabled (e.g. if `APPLICATION_MODE = 'RESTRICTED'`).
 
 
 #### Authentication using PAM
