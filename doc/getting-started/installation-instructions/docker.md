@@ -21,11 +21,11 @@ Each container includes:
 
 ## Available tags
 
-Currently two different set of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
+Currently two different sets of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
 
 ### nightly
 
-This container is updated on daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+This container is updated on a daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
 
 ```bash
 $ docker pull docker.io/openquake/engine:nightly
@@ -33,7 +33,7 @@ $ docker pull docker.io/openquake/engine:nightly
 
 ### X.Y
 
-For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the latest tag
+For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the tag _latest_
 
 ```bash
 $ docker pull docker.io/openquake/engine:3.23
@@ -81,7 +81,7 @@ This modality provides the same features as the headless mode plus the ability t
 $ docker run --name <containername> -t -i -p 127.0.0.1:8800:8800 openquake/engine:nightly 
 ```
 
-The container prompt will appear, here you play with the `oq` [shell command](../running-calculations/unix.rst).
+The container prompt will appear, and you will have the possibility to run `oq` via the [command line interface](../running-calculations/unix.rst).
 
 ```bash
 INFO:root:Creating the initial schema from 0000-base_schema.sql
@@ -129,27 +129,27 @@ You can print the list of containers and images using `$ docker ps -a` and `$ do
 
 #### Environment Variables
 
-The Openquake image uses several environment variables
+The Openquake image uses several environment variables:
 
 OQ_APPLICATION_MODE
 
-This environment variable is required and set to RESTRICTED to enable the webui authentication.
+This optional variable overrides the WebUI `APPLICATION_MODE` (_PUBLIC_ by default, running the WebUI without authentication). If it is set to _RESTRICTED_, the authentication infrastructure will be enabled, restricting the access authorized users.
 
-OQ_ADMIN_LOGIN
+OQ_ADMIN_USERNAME
 
-This variable defines the superuser admin login in the webui
+This variable defines the superuser admin username in the WebUI
 
 OQ_ADMIN_PASSWORD
 
-This environment variable sets the superuser admin password for webui
+This variable sets the superuser admin password for WebUI
 
 OQ_ADMIN_EMAIL
 
-This environment variable sets the superuser admin email for webui
+This variable sets the superuser admin email for WebUI
 
 WEBUI_PATHPREFIX
 
-This variable overrides the default prefix path (/engine) for the webui
+This variable overrides the default prefix path (/engine) for the WebUI
 
 EMAIL_BACKEND
 This variable specifies the backend used by Django to send emails (e.g. 'django.core.mail.backends.smtp.EmailBackend')
@@ -158,30 +158,29 @@ EMAIL_HOST
 This variable specifies the host to use for sending email (e.g. 'smtp.gmail.com')
 
 EMAIL_PORT
-Port to use for the SMTP server defined in EMAIL_HOST
+This variable specifies the port to use for the SMTP server defined in EMAIL_HOST
 
 EMAIL_USE_TLS
-Whether to use a TLS (secure) connection when talking to the SMTP server. This is used for explicit TLS connections, generally on port 587
+This variable specifies whether to use a TLS (secure) connection when talking to the SMTP server. This is used for explicit TLS connections, generally on port 587
 
 EMAIL_HOST_USER
-Username to use for the SMTP server defined in EMAIL_HOST
+This variable specifies the username to use for the SMTP server defined in EMAIL_HOST
 
 EMAIL_HOST_PASSWORD
-Password to use for the SMTP server defined in EMAIL_HOST. This setting is used in conjunction with EMAIL_HOST_USER when authenticating to the SMTP server. If either of these settings is empty, Django won’t attempt authentication
+This variable specifies the password to use for the SMTP server defined in EMAIL_HOST. This setting is used in conjunction with EMAIL_HOST_USER when authenticating to the SMTP server. If either of these settings is empty, Django won’t attempt authentication
 
 EMAIL_SUPPORT
-Email address to be used when replying to a Django email notification
+This variable specifies the email address to be used when replying to a Django email notification
 
 DJANGO_SETTINGS_MODULE
-When you use Django, you have to tell it which settings you’re using. Do this by using an environment variable, DJANGO_SETTINGS_MODULE.
-The value of DJANGO_SETTINGS_MODULE should be in Python path syntax, e.g. mysite.settings. Note that the settings module should be on the Python sys.path.
+This variable specifies the path to the python module containing Django settings, formatted in Python path syntax, e.g. mysite.settings. Note that the settings module should be on the Python sys.path.
 
 
-To define all the environment variables, you can use a .env file in the following format:
+To define all the environment variables, you can use a .env file with the following format:
 
 ```bash
 OQ_APPLICATION_MODE=RESTRICTED
-OQ_ADMIN_LOGIN=example
+OQ_ADMIN_USERNAME=example
 OQ_ADMIN_PASSWORD=example
 OQ_ADMIN_EMAIL=login@example.com
 EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
@@ -194,40 +193,17 @@ EMAIL_SUPPORT=
 DJANGO_SETTINGS_MODULE=openquake.server.settings
 ```
 
-To run the docker:
+To run the docker (replacing `PATH` with the path to the directory containing the `.env` file):
 
 ```bash
 $ docker run --name openquake -d -p 127.0.0.1:8800:8800 --env-file PATH/.env openquake/engine:nightly
 ```
 
-This example runs a container named openquake using the openquake/engine:nightly image and sets the value for the environment variables.
+This example runs a container named `openquake` using the `openquake/engine:nightly` image, and sets the value for the environment variables.
 
-This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the webui is reachable from the host machine using the url: http://127.0.0.1:8800/engine.
+This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the WebUI is reachable from the host machine using the url: http://127.0.0.1:8800/engine.
 
-```bash
-OQ_APPLICATION_MODE=RESTRICTED
-OQ_ADMIN_LOGIN=example
-OQ_ADMIN_PASSWORD=example
-OQ_ADMIN_EMAIL=login@example.com
-EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST=
-EMAIL_PORT=
-EMAIL_USE_TLS=
-EMAIL_HOST_USER=
-EMAIL_HOST_PASSWORD=
-EMAIL_SUPPORT=
-DJANGO_SETTINGS_MODULE=openquake.server.settings
-WEBUI_PATHPREFIX=/path
-```
-To run the docker:
-
-```bash
-$ docker run --name openquake -d -p 127.0.0.1:8080:8800 --env-file PATH/.env  openquake/engine:nightly
-```
-
-This example runs a container named openquake using the openquake/engine:nightly image and sets the value for the environment variables.
-
-This binds port 8800 of the container to TCP port 8080 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8080/path
+If the WEBUI_PATHPREFIX variable is specified (e.g. with the value `/path`), the WebUI is reachable from the host machine using the url: http://127.0.0.1:8080/path instead.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
