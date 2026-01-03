@@ -12,10 +12,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-# ---------------------------------------------------------------------
 # MinMaxScaler parameters (from scx.pkl)
-# ---------------------------------------------------------------------
-
 _DATA_MIN = np.array([4.1, 131.0, 0.1, 0.0, 0.0, 0.0], dtype=float)
 _DATA_MAX = np.array([7.6, 1380.0, 199.0, 1.0, 1.0, 1.0], dtype=float)
 
@@ -36,10 +33,7 @@ _MIN = np.array(
     dtype=float,
 )
 
-# ---------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------
-
 _DATA_DIR = os.path.join(
     os.path.dirname(__file__),
     "mohammadi_turkiye_2023_data",
@@ -49,9 +43,7 @@ _ONNX_DIR = os.path.join(_DATA_DIR, "onnx_models")
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
 
-# ---------------------------------------------------------------------
 # IM component
-# ---------------------------------------------------------------------
 _IMC_CANDIDATES = [
     "GMEAN",
     "GEOMETRIC_MEAN",
@@ -95,10 +87,6 @@ def _scale_features(X: np.ndarray) -> np.ndarray:
     """
     return X * _SCALE + _MIN
 
-
-# ---------------------------------------------------------------------
-# ONNX model handling (Single bundled model)
-# ---------------------------------------------------------------------
 
 _BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
 _SESS_CACHE = None  # Will hold the single session
@@ -170,9 +158,7 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
     Vs30 = np.asarray(ctx.vs30, dtype=float)
     rake = np.asarray(ctx.rake, dtype=float)
 
-    # -------------------------------------------------------------
     # Fault mechanism flags (vectorized)
-    # -------------------------------------------------------------
     normal      = np.zeros(N, dtype=float)
     reverse     = np.zeros(N, dtype=float)
     strike_slip = np.zeros(N, dtype=float)
@@ -185,9 +171,7 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
     X = np.column_stack([Mw, Vs30, RJB, normal, reverse, strike_slip])
     X_scaled = _scale_features(X).astype(np.float32)
 
-    # -------------------------------------------------------------
     # IMT identification
-    # -------------------------------------------------------------
     imt_str = str(imt)  # e.g. "PGA", "PGV", "SA(0.2)"
 
     if imt_str == "PGA":
@@ -208,9 +192,7 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
         raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
 
 
-    # -------------------------------------------------------------
     # Prediction in training units, then convert to OQ units
-    # -------------------------------------------------------------
     ln_im_train = _predict_ln_im(key, X_scaled)
 
     if kind in ("PGA", "SA"):
@@ -220,12 +202,10 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
         # PGV already in cm/s
         ln_im = ln_im_train
 
-    # -------------------------------------------------------------
     # Standard deviations from stds.csv (all in ln-units)
     #   Sigma -> intra-event
     #   Tau   -> inter-event
     #   Phi   -> total
-    # -------------------------------------------------------------
     sigma_val = gsim.sigma_intra[key]  # intra-event
     tau_val   = gsim.tau_inter[key]    # inter-event
     phi_val   = gsim.phi_total[key]    # total
@@ -236,9 +216,6 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
 
     return ln_im, sigma_intra, tau_inter, phi_total
 
-# ---------------------------------------------------------------------
-# 5. GSIM class
-# ---------------------------------------------------------------------
 
 class Mohammadi2023Turkiye(GMPE):
     """
@@ -248,78 +225,9 @@ class Mohammadi2023Turkiye(GMPE):
     ---------
     Mohammadi A, Karimzadeh S, Banimahd SA, Ozsarac V, Lourenço PB (2023).
     "The potential of region-specific machine-learning-based ground motion models:
-     application to Turkiye."
+    application to Turkiye."
     Soil Dynamics and Earthquake Engineering, 172:108008.
     https://doi.org/10.1016/j.soildyn.2023.108008
-
-    Model overview
-    --------------
-    - Trained on strong-motion data from Turkiye.
-    - ML regressor: XGBoost for each intensity measure (PGA, PGV, PSA(T)).
-    - Inputs (in the order used for training and ONNX):
-        1. Mw         : moment magnitude
-        2. Vs30       : averaged shear-wave velocity in the top 30 m (m/s)
-        3. RJB        : Joyner–Boore distance (km)
-        4. normal     : 1 if normal faulting, else 0
-        5. reverse    : 1 if reverse faulting, else 0
-        6. strike_slip: 1 if strike-slip, else 0
-
-    Outputs
-    -----
-    Training units (used inside the ONNX models):
-        - PGA, PSA(T): cm/s^2
-        - PGV       : cm/s
-
-    OpenQuake interface (this GSIM returns *logarithms* of IMs):
-        - PGA, SA(T): ln(g)
-        - PGV       : ln(cm/s)
-
-    Standard deviations (all defined in ln-space)
-    ---------------------------------------------
-    The file ``stds.csv`` stores, for each IM, the following columns:
-
-        ID    : string, e.g. "ln(PGA)", "ln(PSA=0.01)"
-        Sigma : intra-event standard deviation (σ_intra)
-        Tau   : inter-event standard deviation (τ)
-        Phi   : total standard deviation (σ_total)
-
-    In this implementation we adopt the following convention:
-
-        Sigma -> intra-event  (σ_intra)  → mapped to const.StdDev.INTRA_EVENT
-        Tau   -> inter-event  (τ)        → mapped to const.StdDev.INTER_EVENT
-        Phi   -> total        (σ_total)  → mapped to const.StdDev.TOTAL
-
-    This GSIM *does not* recompute residuals; it simply reads σ, τ, Φ from
-    ``stds.csv`` and returns them in the order requested by ``stddev_types``.
-
-    Supported inputs
-    ----------------
-    - Rupture:
-        - mag  : scalar moment magnitude
-        - rake : scalar rake angle (degrees, used to define fault mechanism)
-    - Distance:
-        - rjb  : Joyner–Boore distance (km)
-    - Site:
-        - vs30 : averaged shear-wave velocity to 30 m (m/s)
-
-    Fault mechanism encoding
-    ------------------------
-    The rake is mapped to one-hot style flags:
-
-        rake < -30°      → normal = 1, reverse = 0, strike_slip = 0
-        rake >  30°      → normal = 0, reverse = 1, strike_slip = 0
-        otherwise        → normal = 0, reverse = 0, strike_slip = 1
-
-    Returned units
-    --------------
-    - mean ln(PGA), ln(SA(T)) : logarithm of acceleration in g
-    - mean ln(PGV)            : logarithm of velocity in cm/s
-    - Std devs (Tau, Sigma, Phi):
-        all are in natural-logarithmic units, directly taken from stds.csv
-        according to the convention:
-            Sigma -> intra-event  (σ_intra)
-            Tau   -> inter-event  (τ)
-            Phi   -> total        (σ_total)
     """
 
     # Tectonic region
@@ -346,13 +254,14 @@ class Mohammadi2023Turkiye(GMPE):
     REQUIRES_DISTANCES = {"rjb"}
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.sigma_intra = {}
         self.tau_inter = {}
         self.phi_total = {}
         if not os.path.exists(_STDS_FILE):
-             raise IOError(f"Cannot find stds.csv at {_STDS_FILE}")
+            raise IOError(f"Cannot find stds.csv at {_STDS_FILE}")
 
         with open(_STDS_FILE, newline="") as f:
             reader = csv.DictReader(f)
@@ -362,29 +271,11 @@ class Mohammadi2023Turkiye(GMPE):
                 self.tau_inter[key]   = float(row["Tau"])
                 self.phi_total[key]   = float(row["Phi"])
 
-    # ------------------------------------------------------------------
+
     # Vectorized compute()
-    # ------------------------------------------------------------------
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Vectorized OpenQuake entry point.
-
-        Parameters
-        ----------
-        ctx : numpy.recarray
-            Rupture + site context with fields:
-                - mag, rake, rjb, vs30
-            (plus any others OQ adds).
-        imts : list of IMT instances
-            For example: [PGA(), PGV(), SA(0.2), ...]
-        mean : np.ndarray, shape (M, N)
-            mean[m, i] = ln(IM_m) at site i
-        sig : np.ndarray, shape (M, N)
-            Total stddev (σ_total = Phi) in ln-units.
-        tau : np.ndarray, shape (M, N)
-            Inter-event stddev (τ) in ln-units.
-        phi : np.ndarray, shape (M, N)
-            Intra-event stddev (σ_intra = Sigma) in ln-units.
+        Compute method for Mohammadi et al. 2023 GSIM.
         """
         for m, imt in enumerate(imts):
             ln_im, sigma_intra, tau_inter, phi_total = _mean_and_std_from_ctx(
