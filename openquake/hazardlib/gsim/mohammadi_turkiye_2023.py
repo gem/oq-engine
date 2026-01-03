@@ -194,108 +194,65 @@ def _scale_features(X: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------
-# 4. ONNX model handling (one ONNX per IM)
+# 4. ONNX model handling (Single bundled model)
 # ---------------------------------------------------------------------
 
-_SESS_CACHE = {}
+_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
+_SESS_CACHE = None  # Will hold the single session
 
 
-def _onnx_filename(kind: str, period: float | None) -> str:
+def _get_output_name(kind: str, period: float | None) -> str:
     """
-    Map (kind, period) to an ONNX filename inside the ``onnx_models`` folder.
-
-    Parameters
-    ----------
-    kind : {"PGA", "PGV", "SA"}
-        Type of intensity measure.
-    period : float or None
-        Period in seconds for SA. Must exactly match the period used
-        in training/filenames. For PGA and PGV this is ignored.
-
-    Returns
-    -------
-    fname : str
-        ONNX filename, for example:
-            - "Xgboost_ln(PGA).onnx"
-            - "Xgboost_ln(PGV).onnx"
-            - "Xgboost_ln(PSA=0.01).onnx"
-
-    Raises
-    ------
-    ValueError
-        If the IM kind is not recognized.
+    Map (kind, period) to the output node name in the bundled ONNX model.
+    
+    Structure determined by bundling script:
+      - "ln(PGA)"
+      - "ln(PGV)"
+      - "ln(PSA={period})"
     """
     if kind == "PGA":
-        return "Xgboost_ln(PGA).onnx"
+        return "ln(PGA)"
     if kind == "PGV":
-        return "Xgboost_ln(PGV).onnx"
+        return "ln(PGV)"
     if kind == "SA":
-        # period is a float; filenames must match exactly the training ones
-        return f"Xgboost_ln(PSA={period}).onnx"
+        return f"ln(PSA={period})"
     raise ValueError(f"Unknown IM kind: {kind}")
 
 
-def _get_session(fname: str) -> ort.InferenceSession:
+def _get_session() -> ort.InferenceSession:
     """
-    Return a cached ONNXRuntime session for the given model filename.
-
-    Parameters
-    ----------
-    fname : str
-        Filename of the ONNX model (e.g. "Xgboost_ln(PGA).onnx"),
-        relative to the ``onnx_models`` directory.
-
-    Returns
-    -------
-    sess : onnxruntime.InferenceSession
-        A cached session ready for inference.
-
-    Raises
-    ------
-    IOError
-        If the ONNX model file cannot be found.
+    Return the cached ONNXRuntime session for the bundled model.
     """
-    if fname not in _SESS_CACHE:
-        full_path = os.path.join(_ONNX_DIR, fname)
+    global _SESS_CACHE
+    if _SESS_CACHE is None:
+        full_path = os.path.join(_DATA_DIR, _BUNDLED_MODEL_NAME)
         if not os.path.exists(full_path):
-            raise IOError(f"Cannot find ONNX file: {full_path}")
+            raise IOError(f"Cannot find bundled ONNX file: {full_path}")
 
         opt = ort.SessionOptions()
         opt.intra_op_num_threads = 1
         opt.inter_op_num_threads = 1
 
-        _SESS_CACHE[fname] = ort.InferenceSession(full_path, sess_options=opt)
+        _SESS_CACHE = ort.InferenceSession(full_path, sess_options=opt)
 
-    return _SESS_CACHE[fname]
+    return _SESS_CACHE
 
 
 def _predict_ln_im(kind: str, period: float | None, X_scaled: np.ndarray) -> np.ndarray:
     """
-    Evaluate the appropriate ONNX model and return ln(IM) in training units.
-
-    Parameters
-    ----------
-    kind : {"PGA", "PGV", "SA"}
-        Type of intensity measure.
-    period : float or None
-        SA period in seconds (ignored for PGA and PGV).
-    X_scaled : np.ndarray, shape (N, 6)
-        Scaled features, as returned by :func:`_scale_features`.
-
-    Returns
-    -------
-    ln_im_train : np.ndarray, shape (N,)
-        Natural logarithm of IM in **training units**:
-            - PGA, SA: ln(cm/s^2)
-            - PGV    : ln(cm/s)
+    Evaluate the bundled ONNX model and return ln(IM) in training units.
     """
-    fname = _onnx_filename(kind, period)
-    sess = _get_session(fname)
+    sess = _get_session()
+    
+    # Identify the correct output node
+    target_output = _get_output_name(kind, period)
+    
+    # Input name is shared and fixed by bundling script
+    # It was 'float_input' in all original models.
+    input_name = sess.get_inputs()[0].name  # Should be 'float_input'
 
-    input_name = sess.get_inputs()[0].name    # usually 'float_input'
-    output_name = sess.get_outputs()[0].name  # e.g. 'Xgboost_ln(PGA)'
-
-    out = sess.run([output_name], {input_name: X_scaled})[0]
+    # Run inference only for the requested output
+    out = sess.run([target_output], {input_name: X_scaled})[0]
     return np.asarray(out, dtype=float).reshape(-1)
 
 def _mean_and_std_from_ctx(gsim, ctx, imt):
