@@ -302,7 +302,37 @@ def _predict_ln_im(kind: str, period: float | None, X_scaled: np.ndarray) -> np.
 # ---------------------------------------------------------------------
 # 5. GSIM class
 # ---------------------------------------------------------------------
+def _prepare_scaled_features(sites, rup, dists) -> np.ndarray:
+    """Return X_scaled (float32) shaped (N,6): [Mw, Vs30, RJB, normal, reverse, strike_slip]."""
+    N = len(sites)
+    Mw = np.full(N, rup.mag, dtype=float)
+    RJB = np.asarray(dists.rjb, dtype=float)
+    Vs30 = np.asarray(sites.vs30, dtype=float)
 
+    rake = float(rup.rake)
+    if rake < -30.0:
+        normal = np.ones(N, dtype=float); reverse = np.zeros(N, dtype=float); strike_slip = np.zeros(N, dtype=float)
+    elif rake > 30.0:
+        normal = np.zeros(N, dtype=float); reverse = np.ones(N, dtype=float); strike_slip = np.zeros(N, dtype=float)
+    else:
+        normal = np.zeros(N, dtype=float); reverse = np.zeros(N, dtype=float); strike_slip = np.ones(N, dtype=float)
+
+    X = np.column_stack([Mw, Vs30, RJB, normal, reverse, strike_slip])
+    return _scale_features(X).astype(np.float32)
+
+
+def _parse_imt(imt):
+    """Map imt -> (kind, period, key). Raises ValueError for unsupported IMT."""
+    imt_str = str(imt)  # e.g. 'PGA', 'PGV', 'SA(0.2)'
+    if imt_str == "PGA":
+        return "PGA", None, "ln(PGA)"
+    if imt_str == "PGV":
+        return "PGV", None, "ln(PGV)"
+    if imt_str.startswith("SA(") and imt_str.endswith(")"):
+        period = float(imt_str[3:-1])
+        return "SA", period, f"ln(PSA={period})"
+    raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
+ 
 class Mohammadi2023Turkiye(GMPE):
     """
     Machine-learning Ground-Motion Model for Turkiye (Mohammadi et al., 2023).
@@ -414,82 +444,33 @@ class Mohammadi2023Turkiye(GMPE):
 
         N = len(sites)
 
-        Mw = np.full(N, rup.mag, dtype=float)
-        RJB = np.asarray(dists.rjb, dtype=float)
-        Vs30 = np.asarray(sites.vs30, dtype=float)
+        X_scaled = _prepare_scaled_features(sites, rup, dists)
 
-        rake = float(rup.rake)
-
-        # Fault mechanism flags (scalar rake, broadcast to N-length arrays)
-        if rake < -30.0:
-            normal = np.ones(N, dtype=float)
-            reverse = np.zeros(N, dtype=float)
-            strike_slip = np.zeros(N, dtype=float)
-        elif rake > 30.0:
-            normal = np.zeros(N, dtype=float)
-            reverse = np.ones(N, dtype=float)
-            strike_slip = np.zeros(N, dtype=float)
-        else:
-            normal = np.zeros(N, dtype=float)
-            reverse = np.zeros(N, dtype=float)
-            strike_slip = np.ones(N, dtype=float)
-
-        # Order: Mw, Vs30, RJB, normal, reverse, strike_slip
-        X = np.column_stack([Mw, Vs30, RJB, normal, reverse, strike_slip])
-        X_scaled = _scale_features(X).astype(np.float32)
-
-        # -----------------------------------------------------------------
-        # IMT identification – robust to old OQ versions
-        # -----------------------------------------------------------------
-        imt_str = str(imt)  # e.g. 'PGA', 'PGV', 'SA(0.2)'
-
-        if imt_str == "PGA":
-            kind, period = "PGA", None
-            key = "ln(PGA)"
-
-        elif imt_str == "PGV":
-            kind, period = "PGV", None
-            key = "ln(PGV)"
-
-        elif imt_str.startswith("SA(") and imt_str.endswith(")"):
-            inside = imt_str[3:-1]  # strip 'SA(' and ')'
-            period = float(inside)
-            kind = "SA"
-            key = f"ln(PSA={period})"
-
-        else:
-            raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
+        kind, period, key = _parse_imt(imt)
 
         if getattr(self, "_debug_scaling", False):
             print("\n--- GSIM Scaling Debug ---")
             print("Scaled input:", X_scaled)
             print("--------------------------\n")
 
-        # -----------------------------------------------------------------
-        # Prediction in training units (log)
-        # -----------------------------------------------------------------
+        # Prediction in training units (ln of training units)
         ln_im_train = _predict_ln_im(kind, period, X_scaled)
 
-        # Convert to OpenQuake units, STILL ln:
-        #   - PGA, SA: cm/s^2 -> g
-        #   - PGV: stays in cm/s
+        # Convert training units to OpenQuake ln-units:
+        # - PGA, SA: training ln(cm/s^2) -> ln(g)
+        # - PGV: ln(cm/s) remains unchanged
         if kind in ("PGA", "SA"):
             ln_im = ln_im_train - np.log(981.0)   # ln(g)
         else:
-            ln_im = ln_im_train                   # ln(cm/s)
+            ln_im = ln_im_train
 
-        # -----------------------------------------------------------------
-        # Standard deviations from stds.csv (all in ln-units)
-        #   Sigma -> intra-event
-        #   Tau   -> inter-event
-        #   Phi   -> total
-        # -----------------------------------------------------------------
+        # Retrieve stddevs from loaded tables (all ln-units)
         if key not in _SIGMA_INTRA:
             raise KeyError(f"No stddev entry for IM key '{key}' in stds.csv")
 
-        sigma = _SIGMA_INTRA[key]  # intra-event
-        tau   = _TAU_INTER[key]    # inter-event
-        phi   = _PHI_TOTAL[key]    # total
+        sigma = _SIGMA_INTRA[key]
+        tau   = _TAU_INTER[key]
+        phi   = _PHI_TOTAL[key]
 
         stds = []
         for s in stddev_types:
