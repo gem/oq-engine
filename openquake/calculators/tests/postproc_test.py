@@ -38,8 +38,8 @@ from openquake.qa_tests_data.postproc import (
     case_mrd, case_rtgm, case_median_spectrum)
 
 PLOT = False
-
 aae = np.testing.assert_almost_equal
+ae = np.testing.assert_equal
 
 
 def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
@@ -227,16 +227,15 @@ class PostProcTestCase(CalculatorTestCase):
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        # FIXME: there is a missing round down here
-        assert dic41 == {'BSE2N_Sxs': 1.35000,
-                         'BSE2E_Sxs': 1.09844,
-                         'BSE1N_Sxs': 0.90000,
-                         'BSE1E_Sxs': 0.65396,
-                         'BSE2N_Sx1': 0.42968,
-                         'BSE2E_Sx1': 0.34593,
-                         'BSE1N_Sx1': 0.28645,
-                         'BSE1E_Sx1': 0.18822,
-                         'custom_site_id': '0'}
+        aae(dic41['BSE2N_Sxs'], 1.35000)
+        aae(dic41['BSE2E_Sxs'], 1.09844)
+        aae(dic41['BSE1N_Sxs'], 0.90000)
+        aae(dic41['BSE1E_Sxs'], 0.65397)
+        aae(dic41['BSE2N_Sx1'], 0.42968)
+        aae(dic41['BSE2E_Sx1'], 0.34593)
+        aae(dic41['BSE1N_Sx1'], 0.28645)
+        aae(dic41['BSE1E_Sx1'], 0.18822)
+        ae(dic41['custom_site_id'], 'CRETE')
 
     def test_median_spectrum1(self):
         # test with a single site and many ruptures

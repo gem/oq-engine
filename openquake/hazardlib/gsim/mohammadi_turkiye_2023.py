@@ -194,145 +194,176 @@ def _scale_features(X: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------
-# 4. ONNX model handling (one ONNX per IM)
+# 4. ONNX model handling (Single bundled model)
 # ---------------------------------------------------------------------
 
-_SESS_CACHE = {}
+_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
+_SESS_CACHE = None  # Will hold the single session
 
 
-def _onnx_filename(kind: str, period: float | None) -> str:
+def _get_output_name(kind: str, period: float | None) -> str:
     """
-    Map (kind, period) to an ONNX filename inside the ``onnx_models`` folder.
-
-    Parameters
-    ----------
-    kind : {"PGA", "PGV", "SA"}
-        Type of intensity measure.
-    period : float or None
-        Period in seconds for SA. Must exactly match the period used
-        in training/filenames. For PGA and PGV this is ignored.
-
-    Returns
-    -------
-    fname : str
-        ONNX filename, for example:
-            - "Xgboost_ln(PGA).onnx"
-            - "Xgboost_ln(PGV).onnx"
-            - "Xgboost_ln(PSA=0.01).onnx"
-
-    Raises
-    ------
-    ValueError
-        If the IM kind is not recognized.
+    Map (kind, period) to the output node name in the bundled ONNX model.
+    
+    Structure determined by bundling script:
+      - "ln(PGA)"
+      - "ln(PGV)"
+      - "ln(PSA={period})"
     """
     if kind == "PGA":
-        return "Xgboost_ln(PGA).onnx"
+        return "ln(PGA)"
     if kind == "PGV":
-        return "Xgboost_ln(PGV).onnx"
+        return "ln(PGV)"
     if kind == "SA":
-        # period is a float; filenames must match exactly the training ones
-        return f"Xgboost_ln(PSA={period}).onnx"
+        return f"ln(PSA={period})"
     raise ValueError(f"Unknown IM kind: {kind}")
 
 
-def _get_session(fname: str) -> ort.InferenceSession:
+def _get_session() -> ort.InferenceSession:
     """
-    Return a cached ONNXRuntime session for the given model filename.
-
-    Parameters
-    ----------
-    fname : str
-        Filename of the ONNX model (e.g. "Xgboost_ln(PGA).onnx"),
-        relative to the ``onnx_models`` directory.
-
-    Returns
-    -------
-    sess : onnxruntime.InferenceSession
-        A cached session ready for inference.
-
-    Raises
-    ------
-    IOError
-        If the ONNX model file cannot be found.
+    Return the cached ONNXRuntime session for the bundled model.
     """
-    if fname not in _SESS_CACHE:
-        full_path = os.path.join(_ONNX_DIR, fname)
+    global _SESS_CACHE
+    if _SESS_CACHE is None:
+        full_path = os.path.join(_DATA_DIR, _BUNDLED_MODEL_NAME)
         if not os.path.exists(full_path):
-            raise IOError(f"Cannot find ONNX file: {full_path}")
+            raise IOError(f"Cannot find bundled ONNX file: {full_path}")
 
         opt = ort.SessionOptions()
         opt.intra_op_num_threads = 1
         opt.inter_op_num_threads = 1
 
-        _SESS_CACHE[fname] = ort.InferenceSession(full_path, sess_options=opt)
+        _SESS_CACHE = ort.InferenceSession(full_path, sess_options=opt)
 
-    return _SESS_CACHE[fname]
+    return _SESS_CACHE
 
 
 def _predict_ln_im(kind: str, period: float | None, X_scaled: np.ndarray) -> np.ndarray:
     """
-    Evaluate the appropriate ONNX model and return ln(IM) in training units.
+    Evaluate the bundled ONNX model and return ln(IM) in training units.
+    """
+    sess = _get_session()
+    
+    # Identify the correct output node
+    target_output = _get_output_name(kind, period)
+    
+    # Input name is shared and fixed by bundling script
+    # It was 'float_input' in all original models.
+    input_name = sess.get_inputs()[0].name  # Should be 'float_input'
+
+    # Run inference only for the requested output
+    out = sess.run([target_output], {input_name: X_scaled})[0]
+    return np.asarray(out, dtype=float).reshape(-1)
+
+def _mean_and_std_from_ctx(gsim, ctx, imt):
+    """
+    Core prediction logic for a single IMT, using the vectorized `ctx`
+    (numpy.recarray) used by modern OpenQuake.
 
     Parameters
     ----------
-    kind : {"PGA", "PGV", "SA"}
-        Type of intensity measure.
-    period : float or None
-        SA period in seconds (ignored for PGA and PGV).
-    X_scaled : np.ndarray, shape (N, 6)
-        Scaled features, as returned by :func:`_scale_features`.
+    gsim : Mohammadi2023Turkiye instance
+    ctx  : numpy.recarray
+        Must provide fields: mag, rake, rjb, vs30
+    imt  : IMT instance (PGA, PGV, SA(...))
 
     Returns
     -------
-    ln_im_train : np.ndarray, shape (N,)
-        Natural logarithm of IM in **training units**:
-            - PGA, SA: ln(cm/s^2)
-            - PGV    : ln(cm/s)
+    ln_im : np.ndarray, shape (N,)
+        ln(IM) in OQ units:
+           - ln(PGA), ln(SA) in g
+           - ln(PGV) in cm/s
+    sigma_intra : np.ndarray, shape (N,)
+        Intra-event stddev (σ_intra)
+    tau_inter   : np.ndarray, shape (N,)
+        Inter-event stddev (τ)
+    phi_total   : np.ndarray, shape (N,)
+        Total stddev (σ_total)
     """
-    fname = _onnx_filename(kind, period)
-    sess = _get_session(fname)
+    N = len(ctx)
 
-    input_name = sess.get_inputs()[0].name    # usually 'float_input'
-    output_name = sess.get_outputs()[0].name  # e.g. 'Xgboost_ln(PGA)'
+    Mw   = np.asarray(ctx.mag,  dtype=float)
+    RJB  = np.asarray(ctx.rjb,  dtype=float)
+    Vs30 = np.asarray(ctx.vs30, dtype=float)
+    rake = np.asarray(ctx.rake, dtype=float)
 
-    out = sess.run([output_name], {input_name: X_scaled})[0]
-    return np.asarray(out, dtype=float).reshape(-1)
+    # -------------------------------------------------------------
+    # Fault mechanism flags (vectorized)
+    # -------------------------------------------------------------
+    normal      = np.zeros(N, dtype=float)
+    reverse     = np.zeros(N, dtype=float)
+    strike_slip = np.zeros(N, dtype=float)
 
+    normal[rake < -30.0] = 1.0
+    reverse[rake > 30.0] = 1.0
+    strike_slip[(rake >= -30.0) & (rake <= 30.0)] = 1.0
+
+    # Order: Mw, Vs30, RJB, normal, reverse, strike_slip
+    X = np.column_stack([Mw, Vs30, RJB, normal, reverse, strike_slip])
+    X_scaled = _scale_features(X).astype(np.float32)
+
+    if getattr(gsim, "_debug_scaling", False):
+        print("\n--- GSIM Scaling Debug ---")
+        print("Scaled input:", X_scaled)
+        print("--------------------------\n")
+
+    # -------------------------------------------------------------
+    # IMT identification
+    # -------------------------------------------------------------
+    imt_str = str(imt)  # e.g. "PGA", "PGV", "SA(0.2)"
+
+    if imt_str == "PGA":
+        kind, period = "PGA", None
+        key = "ln(PGA)"
+
+    elif imt_str == "PGV":
+        kind, period = "PGV", None
+        key = "ln(PGV)"
+
+    elif imt_str.startswith("SA(") and imt_str.endswith(")"):
+        inside = imt_str[3:-1]
+        period = float(inside)
+        kind = "SA"
+        key = f"ln(PSA={period})"
+
+    else:
+        raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
+
+    # -------------------------------------------------------------
+    # Prediction in training units, then convert to OQ units
+    # -------------------------------------------------------------
+    ln_im_train = _predict_ln_im(kind, period, X_scaled)
+
+    if kind in ("PGA", "SA"):
+        # cm/s^2 -> g (still in ln)
+        ln_im = ln_im_train - np.log(981.0)
+    else:
+        # PGV already in cm/s
+        ln_im = ln_im_train
+
+    # -------------------------------------------------------------
+    # Standard deviations from stds.csv (all in ln-units)
+    #   Sigma -> intra-event
+    #   Tau   -> inter-event
+    #   Phi   -> total
+    # -------------------------------------------------------------
+    if key not in _SIGMA_INTRA:
+        raise KeyError(f"No stddev entry for IM key '{key}' in stds.csv")
+
+    sigma_val = _SIGMA_INTRA[key]  # intra-event
+    tau_val   = _TAU_INTER[key]    # inter-event
+    phi_val   = _PHI_TOTAL[key]    # total
+
+    sigma_intra = np.full_like(ln_im, sigma_val)
+    tau_inter   = np.full_like(ln_im, tau_val)
+    phi_total   = np.full_like(ln_im, phi_val)
+
+    return ln_im, sigma_intra, tau_inter, phi_total
 
 # ---------------------------------------------------------------------
 # 5. GSIM class
 # ---------------------------------------------------------------------
-def _prepare_scaled_features(sites, rup, dists) -> np.ndarray:
-    """Return X_scaled (float32) shaped (N,6): [Mw, Vs30, RJB, normal, reverse, strike_slip]."""
-    N = len(sites)
-    Mw = np.full(N, rup.mag, dtype=float)
-    RJB = np.asarray(dists.rjb, dtype=float)
-    Vs30 = np.asarray(sites.vs30, dtype=float)
 
-    rake = float(rup.rake)
-    if rake < -30.0:
-        normal = np.ones(N, dtype=float); reverse = np.zeros(N, dtype=float); strike_slip = np.zeros(N, dtype=float)
-    elif rake > 30.0:
-        normal = np.zeros(N, dtype=float); reverse = np.ones(N, dtype=float); strike_slip = np.zeros(N, dtype=float)
-    else:
-        normal = np.zeros(N, dtype=float); reverse = np.zeros(N, dtype=float); strike_slip = np.ones(N, dtype=float)
-
-    X = np.column_stack([Mw, Vs30, RJB, normal, reverse, strike_slip])
-    return _scale_features(X).astype(np.float32)
-
-
-def _parse_imt(imt):
-    """Map imt -> (kind, period, key). Raises ValueError for unsupported IMT."""
-    imt_str = str(imt)  # e.g. 'PGA', 'PGV', 'SA(0.2)'
-    if imt_str == "PGA":
-        return "PGA", None, "ln(PGA)"
-    if imt_str == "PGV":
-        return "PGV", None, "ln(PGV)"
-    if imt_str.startswith("SA(") and imt_str.endswith(")"):
-        period = float(imt_str[3:-1])
-        return "SA", period, f"ln(PSA={period})"
-    raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
- 
 class Mohammadi2023Turkiye(GMPE):
     """
     Machine-learning Ground-Motion Model for Turkiye (Mohammadi et al., 2023).
@@ -396,91 +427,48 @@ class Mohammadi2023Turkiye(GMPE):
     REQUIRES_DISTANCES = {"rjb"}
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    # ------------------------------------------------------------------
+    # NEW OQ API: vectorized compute()
+    # ------------------------------------------------------------------
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Compute mean ln(IM) and standard deviations for the requested IMT.
+        Vectorized OpenQuake entry point.
 
         Parameters
         ----------
-        sites : :class:`openquake.hazardlib.site.SiteCollection`
-            Collection of sites. Only ``vs30`` is used by this model.
-        rup : object
-            Rupture-like object with attributes:
-                - mag  : moment magnitude
-                - rake : rake angle in degrees
-                - tectonic_region_type (ignored here; assumed compatible).
-        dists : object
-            Distance context with attribute:
-                - rjb : Joyner–Boore distance (array-like, km)
-        imt : instance of :mod:`openquake.hazardlib.imt` (PGA, PGV, SA)
-            Intensity measure type for which to evaluate the model.
-        stddev_types : list of :class:`openquake.hazardlib.const.StdDev`
-            Standard deviation types required. Any subset of:
-                - const.StdDev.INTRA_EVENT
-                - const.StdDev.INTER_EVENT
-                - const.StdDev.TOTAL
+        ctx : numpy.recarray
+            Rupture + site context with fields:
+                - mag, rake, rjb, vs30
+            (plus any others OQ adds).
+        imts : list of IMT instances
+            For example: [PGA(), PGV(), SA(0.2), ...]
+        mean : np.ndarray, shape (M, N)
+            mean[m, i] = ln(IM_m) at site i
+        sig : np.ndarray, shape (M, N)
+            Total stddev (σ_total = Phi) in ln-units.
+        tau : np.ndarray, shape (M, N)
+            Inter-event stddev (τ) in ln-units.
+        phi : np.ndarray, shape (M, N)
+            Intra-event stddev (σ_intra = Sigma) in ln-units.
 
-        Returns
-        -------
-        mean : np.ndarray, shape (N,)
-            Mean **logarithm** of IM at each site:
-                - ln(PGA), ln(SA(T)) in g
-                - ln(PGV) in cm/s
-        stds : list of np.ndarray
-            One array per requested stddev type, same shape as ``mean``.
-            Values are in natural-logarithmic units, taken directly from
-            ``stds.csv`` using the convention:
-                Sigma -> intra-event  (σ_intra)
-                Tau   -> inter-event  (τ)
-                Phi   -> total        (σ_total)
-
-        Raises
-        ------
-        ValueError
-            If the IMT is not supported or a StdDev type is unknown.
-        KeyError
-            If no stddev entry is found in ``stds.csv`` for the given IMT.
+        Notes
+        -----
+        This matches the standard GMPE API used by OpenQuake 3.x
+        (see openquake.hazardlib.gsim.base.GMPE.compute).
         """
+        N = len(ctx)
+        if N == 0:
+            return  # nothing to do
 
-        N = len(sites)
+        for m, imt in enumerate(imts):
+            ln_im, sigma_intra, tau_inter, phi_total = _mean_and_std_from_ctx(
+                self, ctx, imt
+            )
+            # Fill rows for IMT m
+            mean[m, :] = ln_im
+            sig[m, :]  = phi_total     # TOTAL
+            tau[m, :]  = tau_inter     # INTER-EVENT
+            phi[m, :]  = sigma_intra   # INTRA-EVENT
 
-        X_scaled = _prepare_scaled_features(sites, rup, dists)
-
-        kind, period, key = _parse_imt(imt)
-
-        if getattr(self, "_debug_scaling", False):
-            print("\n--- GSIM Scaling Debug ---")
-            print("Scaled input:", X_scaled)
-            print("--------------------------\n")
-
-        # Prediction in training units (ln of training units)
-        ln_im_train = _predict_ln_im(kind, period, X_scaled)
-
-        # Convert training units to OpenQuake ln-units:
-        # - PGA, SA: training ln(cm/s^2) -> ln(g)
-        # - PGV: ln(cm/s) remains unchanged
-        if kind in ("PGA", "SA"):
-            ln_im = ln_im_train - np.log(981.0)   # ln(g)
-        else:
-            ln_im = ln_im_train
-
-        # Retrieve stddevs from loaded tables (all ln-units)
-        if key not in _SIGMA_INTRA:
-            raise KeyError(f"No stddev entry for IM key '{key}' in stds.csv")
-
-        sigma = _SIGMA_INTRA[key]
-        tau   = _TAU_INTER[key]
-        phi   = _PHI_TOTAL[key]
-
-        stds = []
-        for s in stddev_types:
-            if s == const.StdDev.INTRA_EVENT:
-                stds.append(np.full_like(ln_im, sigma))
-            elif s == const.StdDev.INTER_EVENT:
-                stds.append(np.full_like(ln_im, tau))
-            elif s == const.StdDev.TOTAL:
-                stds.append(np.full_like(ln_im, phi))
-            else:
-                raise ValueError(f"StdDev type {s} not supported.")
-
-        return ln_im, stds
+        # No epistemic adjustment implemented -> return None
+        return None

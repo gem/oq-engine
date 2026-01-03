@@ -43,6 +43,7 @@ from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.gsim.base import DummyGMPE
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
@@ -1025,17 +1026,17 @@ def _get_smr(source_id):
     return int(smr)
 
 
-def _ddic(trtis, smrs, get_rlzs):
+def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
     # returns a double dictionary trt_smr -> gsim -> rlzs
     acc = AccumDict(accum=AccumDict(accum=[]))
     for smr in smrs:
         rlzs_sm = get_rlzs(smr)
-        for trti in trtis:
-            rbg = acc[smr + TWO24 * trti]
+        for trti, gsims in zip(trtis, gsims_by_trt):
+            trt_smr = smr + TWO24 * trti
+            rbg = acc[trt_smr]
             for rlz in rlzs_sm:
                 rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-            acc[smr + TWO24 * trti] = {gsim: U32(rbg[gsim])
-                                       for gsim in sorted(rbg)}
+            acc[trt_smr] = {gsim: U32(rbg[gsim]) for gsim in sorted(rbg)}
     return acc
 
 
@@ -1047,6 +1048,7 @@ class FullLogicTree(object):
     :param gsim_lt: :class:`GsimLogicTree` object
     """
     oversampling = 'tolerate'
+    _rlzs_by = ()
 
     @classmethod
     def fake(cls, gsimlt=None):
@@ -1105,44 +1107,44 @@ class FullLogicTree(object):
             return weights[:, -1]
         return self.gsim_lt.wget(weights, imt)
 
-    def gfull(self, all_trt_smrs):
+    def gfull(self, unique_trt_smrs):
         """
         :returns: the total Gt = Σ_i G_i
         """
         Gt = 0
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             trt = self.trts[trt_smrs[0] // TWO24]
             Gt += len(self.gsim_lt.values[trt])
         return Gt
 
-    def get_gids(self, all_trt_smrs):
+    def get_gids(self, unique_trt_smrs):
         """
         :returns: list of of arrays of gids, one for each source group
         """
         gids = []
         g = 0
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             rbg = self.get_rlzs_by_gsim(trt_smrs)
             gids.append(numpy.arange(g, g + len(rbg)))
             g += len(rbg)
         return gids
 
-    def get_trt_rlzs(self, all_trt_smrs):
+    def get_trt_rlzs(self, unique_trt_smrs):
         """
         :returns: a list with Gt arrays of dtype uint32
         """
         data = []
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
                 data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
-    def g_weights(self, all_trt_smrs):
+    def g_weights(self, unique_trt_smrs):
         """
         :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
         data = []
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
                 data.append(self.weights[rlzs].sum(axis=0))
         return numpy.array(data)
@@ -1309,15 +1311,11 @@ class FullLogicTree(object):
                 rlz.weight = rlz.weight / tot_weight
         return rlzs
 
-    def _rlzs_by_gsim(self, trt_smr):
-        # return dictionary gsim->rlzs
-        return self.get_rlzs_by_gsim_dic()[trt_smr]
-
     def get_rlzs_by_gsim_dic(self):
         """
         :returns: a dictionary trt_smr -> gsim -> rlz ordinals
         """
-        if hasattr(self, '_rlzs_by'):
+        if self._rlzs_by:
             return self._rlzs_by
         rlzs = self.get_realizations()
         trtis = range(len(self.gsim_lt.values))
@@ -1328,7 +1326,7 @@ class FullLogicTree(object):
             smidx = numpy.zeros(self.get_num_paths(), int)
             for rlz in rlzs:
                 smidx[rlz.ordinal] = smr_by_ltp['~'.join(rlz.sm_lt_path)]
-            self._rlzs_by = _ddic(trtis, smrs,
+            self._rlzs_by = _ddic(trtis, smrs, self.gsim_lt.values.values(),
                                   lambda smr: rlzs[smidx == smr])
         else:  # classical and event based
             start = 0
@@ -1336,7 +1334,8 @@ class FullLogicTree(object):
             for sm in self.sm_rlzs:
                 slices.append(slice(start, start + sm.samples))
                 start += sm.samples
-            self._rlzs_by = _ddic(trtis, smrs, lambda smr: rlzs[slices[smr]])
+            self._rlzs_by = _ddic(trtis, smrs, self.gsim_lt.values.values(),
+                                  lambda smr: rlzs[slices[smr]])
         return self._rlzs_by
 
     def get_rlzs_by_gsim(self, trt_smr):
@@ -1344,15 +1343,17 @@ class FullLogicTree(object):
         :param trt_smr: index or array of indices
         :returns: a dictionary gsim -> array of rlz indices
         """
+        rlzs_by_gsim_dic = self.get_rlzs_by_gsim_dic()
         if isinstance(trt_smr, (numpy.ndarray, list, tuple)):  # classical
-            dic = AccumDict(accum=[])
+            trt = self.trts[trt_smr[0] // TWO24]
+            dic = {gsim: [] for gsim in self.gsim_lt.values[trt]}
             for t in trt_smr:
-                for gsim, rlzs in self._rlzs_by_gsim(t).items():
+                for gsim, rlzs in rlzs_by_gsim_dic[t].items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32)
+            return {k: numpy.concatenate(ls, dtype=U32) if ls else []
                     for k, ls in dic.items()}
         # event based
-        return self._rlzs_by_gsim(trt_smr)
+        return rlzs_by_gsim_dic[trt_smr]
 
     # FullLogicTree
     def __toh5__(self):

@@ -824,6 +824,14 @@ jaimes_2020
     :undoc-members:
     :show-inheritance:
 
+ji_karimzadeh_azores_island_2025
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ji_karimzadeh_azores_island_2025
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kale_2015
 -----------------------------------------
 
@@ -1397,6 +1405,14 @@ vanhoutte_2018
     :undoc-members:
     :show-inheritance:
 
+wang_2025_turkey
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.wang_2025_turkey
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 weatherill_2024
 -------------------------------------------
 
@@ -1494,7 +1510,7 @@ zhao_2006_swiss_coeffs
     :show-inheritance:
 
 zhao_2016
------------------------------------------
+------------------------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2016
     :members:
@@ -1503,6 +1519,7 @@ zhao_2016
 
 mohammadi_turkiye_2023
 -----------------------------------------------
+
 .. automodule:: openquake.hazardlib.gsim.mohammadi_turkiye_2023
     :members:
     :undoc-members:

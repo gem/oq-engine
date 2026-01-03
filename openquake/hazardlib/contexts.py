@@ -36,7 +36,7 @@ from openquake.baselib.general import (
     sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module, InvalidFile
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
@@ -602,7 +602,6 @@ class ContextMaker(object):
             self.imtls = imt_module.dictarray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
-        self.cache_distances = param.get('cache_distances', False)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
@@ -1695,7 +1694,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
+# mock site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1922,6 +1921,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
+    def get_gids(self):
+        """
+        :returns: list of gid arrays, one for each underlying cmaker
+        """
+        return [cm.gid for cm in self.cmakers]
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -2017,16 +2022,16 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
-    all_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
+    unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
+    gweights = full_lt.g_weights(unique_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
-    for grp_id, trt_smrs in enumerate(all_trt_smrs):
+    for grp_id, trt_smrs in enumerate(unique_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
@@ -2035,7 +2040,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm.trti = trti
         cm.trt_smrs = trt_smrs
         cmakers.append(cm)
-    gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
+    gids = full_lt.get_gids(unique_trt_smrs)
     for cm, gid in zip(cmakers, gids):
         cm.gid = gid
         cm.wei = gweights[gid]
@@ -2061,16 +2066,41 @@ def read_cmakers(dstore, full_lt=None):
 def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt'].init()
+    glt = full_lt.gsim_lt
     attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
-        dic[label] = copy.copy(full_lt)
+        dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
+        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+
+        # all gsim logic trees in the dictionary must have the same
+        # trts and the same number of gsims per trt
+        exp = list(glt.values)
+        got = list(flt.gsim_lt.values)
+        if exp != got:
+            raise InvalidFile(
+                f'{oq.inputs["gsim_logic_tree"]}: expected {exp} got {got}')
+        for trt, gsims in full_lt.gsim_lt.values.items():
+            got = len(gsims)
+            exp = len(glt.values[trt])
+            if exp != got:
+                raise InvalidFile(
+                    f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
+                    f'got {got} for {trt=}')
+
+    # sanity check: the gids must be consistent
+    unique_trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+    default_gids = dic['Default'].get_gids(unique_trt_smrs)
+    for label in list(dic)[1:]:
+        gids = dic[label].get_gids(unique_trt_smrs)
+        numpy.testing.assert_equal(gids, default_gids)
     return dic
 
 

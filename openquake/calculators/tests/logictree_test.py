@@ -172,6 +172,19 @@ class LogicTreeTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # test csm.get_sources; there are 3 source model realizations
+        fname = general.gettemp(view('sm_rlzs', self.calc.datastore))
+        self.assertEqualFiles('expected/sm_rlzs.org', fname)
+
+        csm = self.calc.datastore['_csm']
+        source_ids = [src.source_id for src in csm.get_sources(0)]
+        assert source_ids == ['2', '1']
+        source_ids = [src.source_id for src in csm.get_sources(1)]
+        assert source_ids == ['1']
+        source_ids = [src.source_id for src in csm.get_sources(2)]
+        assert source_ids == ['3']
+        # NB: the same source '1' appears in two sm_rlzs
+
     def test_case_08(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
@@ -692,7 +705,7 @@ hazard_uhs-std.csv
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8], []])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
 
     def test_case_73(self):

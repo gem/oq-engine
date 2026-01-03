@@ -1,0 +1,3 @@
+IMT    c0	  c1 	      c2 	 c3
+PGA    999        999         999        999 # Dummy values not used in CY14 adjustment tests (CY14 always computes mean for PGA so must provide dummy values for this imt too - values are not used in tests - this is checked by asserting adjusted ground-motions are equal to those expected).
+0.100  -0.006409  -0.0002874  0.0002144  -0.00004877

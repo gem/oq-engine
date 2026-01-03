@@ -30,7 +30,11 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
 import toml
-import pandas
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # hiding tz warning datetime.datetime.utcfromtimestamp() is deprecated
+    # (unfortunately also others)
+    import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
@@ -994,7 +998,7 @@ def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None, usecols=None):
+             index=None, errors=None, usecols=None, dframe=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -1003,7 +1007,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
     :param usecols: columns to read
-    :returns: an ArrayWrapper, unless there is an index
+    :param dframe: pass True to return a DataFrame
+    :returns: an ArrayWrapper, unless there is an index or df is true
     """
     attrs = {}
     if fname.endswith('.csv'):
@@ -1040,7 +1045,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
-    if index:
+    if index or dframe:
         df = pandas.DataFrame.from_records(arr, index)
         vars(df).update(attrs)
         return df

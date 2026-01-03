@@ -27,7 +27,6 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, cond_spectra
 
 PLOT = False
-OVERWRITE_EXPECTED = False
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
@@ -165,7 +164,7 @@ class CondSpectraTestCase(unittest.TestCase):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('skip on macOS')
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
-        if OVERWRITE_EXPECTED:
+        if os.environ.get('OQ_OVERWRITE'):
             df.to_csv(expected, index=False, lineterminator='\r\n',
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)

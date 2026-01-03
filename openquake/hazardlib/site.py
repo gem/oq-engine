@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 
+import logging
 import numpy
 import pandas
 from h3.api.numpy_int import geo_to_h3, h3_to_geo
@@ -304,15 +305,14 @@ def add(string, suffix, maxlen):
     Add a suffix to a string staying within the maxlen limit
 
     >>> add('pippo', ':xxx', 8)
-    'pipp:xxx'
+    'pippo:xx'
     >>> add('pippo', ':x', 8)
     'pippo:x'
     """
-    L = len(string)
-    assert L < maxlen, string
-    assert len(suffix) < maxlen, suffix
-    n = len(suffix)
-    return string[:maxlen-n] + suffix
+    n = len(string)
+    assert n < maxlen, string
+    assert len(suffix) <= maxlen, suffix
+    return string + suffix[:maxlen-n]
 
 
 class SiteCollection(object):
@@ -528,7 +528,7 @@ class SiteCollection(object):
         try:
             dt['custom_site_id']
         except KeyError:
-            new_csi = True
+            new_csi = True  # not already there
             dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
                 (n, dt[n]) for n in names]
             names.insert(0, 'custom_site_id')
@@ -557,10 +557,11 @@ class SiteCollection(object):
                 for name in names:
                     if name == 'custom_site_id' and new_csi:
                         # tested in classical/case_08
-                        rec[name] = add(f'{i}'.encode('ascii'), b':' + cl, 8)
+                        csi = f'{i}'.encode('ascii')
+                        rec[name] = add(csi[:5], b':' + cl, 8)
                     elif name == 'custom_site_id':
                         # tested in classical/case_38
-                        rec[name] = add(orig_rec[name], b':' + cl, 8)
+                        rec[name] = add(orig_rec[name][:5], b':' + cl, 8)
                     elif name == 'vs30':
                         rec[name] = vs30
                     elif name == 'sids':
@@ -610,6 +611,16 @@ class SiteCollection(object):
             if values is not None:
                 arr[colname] = values
             self.array = arr
+
+    def ensure_custom_site_id(self, size):
+        """
+        Add a custom_site_id if not present
+        """
+        if 'custom_site_id' not in self.array.dtype.names:
+            gh = self.geohash(size)
+            if len(numpy.unique(gh)) < len(gh):
+                logging.error('geohashes are not unique')
+            self.add_col('custom_site_id', f'S{size}', gh)
 
     def make_complete(self):
         """
@@ -790,7 +801,7 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
-    def assoc(self, site_model, assoc_dist, ignore=()):
+    def assoc(self, site_model, assoc_dist, mode, ignore=()):
         """
         Associate the `site_model` parameters to the sites.
         Log a warning if the site parameters are more distant than
@@ -802,9 +813,9 @@ class SiteCollection(object):
         m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
         for name in ok:
             self._set(name, site_model[name])
 

@@ -368,3 +368,16 @@ def read_input(hparams, **extra):
     - "ses_per_logic_tree_path" (default 1)
     """
     return Input(hparams, extra)
+
+
+def retperiods(itime, poes):
+    """
+    Convert PoEs into integer return periods:
+
+    >>> retperiods(50, [.1, .02])
+    [475, 2475]
+    >>> retperiods(1, [.002105, .000404])
+    [475, 2475]
+    """
+    years = numpy.round(- itime / numpy.log(1. - numpy.array(poes)), 0)
+    return [int(y) for y in years]

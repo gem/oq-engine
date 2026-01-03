@@ -125,7 +125,6 @@ def main(
     if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
-            yes = True
     else:  # DbServer yes
         print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
@@ -136,9 +135,10 @@ def main(
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
+        safeprint(msg)
         if msg.startswith('Your database is already updated'):
             pass
-        elif yes or confirm('Proceed? (y/n) '):
+        else:
             logs.dbcmd('upgrade_db')
         if not run:
             sys.exit(0)
@@ -197,6 +197,7 @@ def main(
         hc_id = get_job_id(list_outputs, user_name)
         for line in logs.dbcmd('list_outputs', hc_id):
             safeprint(line)
+
     elif show_log is not None:
         hc_id = get_job_id(show_log, user_name)
         for line in logs.dbcmd('get_log', hc_id):

@@ -28,6 +28,7 @@ from openquake.commonlib import datastore
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
+
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
@@ -43,7 +44,8 @@ except ImportError:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
 
-TEST = 'test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+TEST = ('test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+        or os.environ.get('GITHUB_ACTIONS'))
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -55,20 +57,22 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
 USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
 
+CONTEXT_PROCESSORS = [
+    'django.template.context_processors.debug',
+    'django.template.context_processors.i18n',
+    'django.template.context_processors.media',
+    'django.template.context_processors.static',
+    'django.template.context_processors.tz',
+    'django.contrib.messages.context_processors.messages',
+    'openquake.server.utils.oq_server_context_processor',
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'APP_DIRS': True,
         'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.i18n',
-                'django.template.context_processors.media',
-                'django.template.context_processors.static',
-                'django.template.context_processors.tz',
-                'django.contrib.messages.context_processors.messages',
-                'openquake.server.utils.oq_server_context_processor',
-            ],
+            'context_processors': CONTEXT_PROCESSORS,
         },
     },
 ]
@@ -238,7 +242,13 @@ GOOGLE_ANALYTICS_TOKEN = None
 
 HELP_URL = 'https://docs.openquake.org/oq-engine/latest/manual/'
 
-CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
 
 # OpenQuake Standalone tools (IPT, Taxonomy Glossary)
 if STANDALONE and WEBUI:
@@ -259,6 +269,7 @@ if STANDALONE and WEBUI:
 
     CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
+    TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
 try:
     # Try to load a local_settings.py from the current folder; this is useful
@@ -294,44 +305,64 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+    LOCKDOWN = True
+
+STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
+
 if APPLICATION_MODE not in ('PUBLIC',):
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
                 'openquake.server.user_profile', 'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
-
-    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.insert(
-            0, 'django.template.context_processors.request')
     COOKIE_CONSENT_NAME = "cookie_consent"
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
 
-if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_impact import *  # noqa
-    elif APPLICATION_MODE == 'AELO':
-        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
-    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
-    #        We should redefine it to a different directory for each test,
-    #        in order to avoid concurrency issues in case tests run in
-    #        parallel
-    EMAIL_FILE_PATH = os.path.join(
-        config.directory.custom_tmp or tempfile.gettempdir(),
-        'app-messages')
-
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
-    LOCKDOWN = True
-
-STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
-
 if LOCKDOWN:
+    if TEST:
+        # NOTE: keep the setting if already specified (e.g. in local_settings.py)
+        EMAIL_BACKEND = (
+            EMAIL_BACKEND or 'django.core.mail.backends.filebased.EmailBackend')
+        # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+        #        We should redefine it to a different directory for each test,
+        #        in order to avoid concurrency issues in case tests run in
+        #        parallel
+        EMAIL_FILE_PATH = os.path.join(
+            config.directory.custom_tmp or tempfile.gettempdir(),
+            'app-messages')
+    else:
+        EMAIL_BACKEND = EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
+    elif APPLICATION_MODE == 'AELO':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
+    else:
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
 
     # NOTE: the following variables are needed to send pasword reset emails
     #       using the createnormaluser Django command.
     USE_HTTPS = True
     SERVER_PORT = 443
+
+    if 'django.contrib.auth.context_processors.auth' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.contrib.auth.context_processors.auth')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
+
+    if 'openquakeplatform.utils.oq_context_processor' in CONTEXT_PROCESSORS:
+        print('WARNING: OpenQuake Tools are not loaded because'
+              ' authentication is enabled.')
+        CONTEXT_PROCESSORS.remove('openquakeplatform.utils.oq_context_processor')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
     # do not log to file unless running through the webui
     if getpass.getuser() == WEBUI_USER:
@@ -382,34 +413,13 @@ if LOCKDOWN:
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
-    # Official documentation suggests to override the entire TEMPLATES
-    TEMPLATES = [
-        {
-            'BACKEND': 'django.template.backends.django.DjangoTemplates',
-            'APP_DIRS': True,
-            'OPTIONS': {
-                'context_processors': [
-                    'django.contrib.auth.context_processors.auth',
-                    'django.template.context_processors.debug',
-                    'django.template.context_processors.i18n',
-                    'django.template.context_processors.media',
-                    'django.template.context_processors.static',
-                    'django.template.context_processors.tz',
-                    'django.template.context_processors.request',
-                    'django.contrib.messages.context_processors.messages',
-                    'openquake.server.utils.oq_server_context_processor',
-                ],
-            },
-        },
-    ]
-
-    LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
-    LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
+    LOGIN_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/engine/'
+    LOGOUT_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
     LOGIN_EXEMPT_URLS = (
-        '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
+        f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
         'reset_password', 'reset/', 'cookies/',
     )
-    LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
+    LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
 
     AUTH_PASSWORD_VALIDATORS = [
         {'NAME': 'django.contrib.auth.password_validation.'

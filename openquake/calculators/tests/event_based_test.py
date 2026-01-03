@@ -449,7 +449,7 @@ class EventBasedTestCase(CalculatorTestCase):
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
         [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-data-from-ruptures.csv', gmf)
+        self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')

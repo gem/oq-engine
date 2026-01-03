@@ -30,7 +30,7 @@ def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     """
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
-    if parent_id:
+    if parent_id and isinstance(parent_id, int):
         dstore.parent = datastore.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:

@@ -24,6 +24,7 @@ import string
 import pickle
 import logging
 import os
+import sys
 import tempfile
 import subprocess
 import traceback
@@ -1159,12 +1160,16 @@ def create_impact_job(request, params):
             ' will be accessible at the following link: %s'
             % (outputs_uri_api, traceback_uri))
 
+    args = ([params], [jobctx], job_owner_email, outputs_uri_web,
+            impact_callback)
+    #if 'pytest' in sys.argv[0]:
+    #    # hack for debugging the tests
+    #    # unfortunately it does not work yet because check_email
+    #    # is meant to work with a subprocess
+    #    impact.main_web(*args)
+    #else:
     # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
+    mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
 
@@ -1209,6 +1214,7 @@ def impact_run(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1252,6 +1258,7 @@ def impact_run_with_shakemap(request):
         post, request.user, post['rupture_file'])
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1360,6 +1367,7 @@ def aelo_run(request):
                          'error_msg': str(exc)}
         logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_username(request), None)
@@ -1393,9 +1401,9 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, site_class, job_owner_email,
-        outputs_uri_web,
-        jobctx, aelo_callback)).start()
+        lon, lat, vs30, siteid, asce_version, site_class, jobctx,
+        job_owner_email, outputs_uri_web, config.directory.mosaic_dir,
+        aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
 
@@ -1418,7 +1426,9 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         else:  # called by calc_run_ini
             job_ini = ini
         job.oqparam = oq = readinput.get_oqparam(
-            job_ini, kw={'hazard_calculation_id': hc_id})
+            job_ini, kw={'hazard_calculation_id': hc_id,
+                         'export_dir': (config.directory.custom_tmp or
+                                        tempfile.gettempdir())})
         dic = dict(calculation_mode=oq.calculation_mode,
                    description=oq.description, hazard_calculation_id=hc_id)
         logs.dbcmd('update_job', job.calc_id, dic)
@@ -1619,7 +1629,7 @@ def calc_result(request, result_id):
     elif len(exported) > 1:
         # Building an archive so that there can be a single file download
         archname = ds_key + '-' + export_type + '.zip'
-        zipfiles(exported, os.path.join(tmpdir, archname))
+        zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
         exported = os.path.join(tmpdir, archname)
         content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
@@ -1814,7 +1824,7 @@ def calc_zip(request, job_id):
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     archname = f'job_{job_id}.zip'
-    zipfiles(exported, os.path.join(tmpdir, archname))
+    zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
     return stream_response(os.path.join(tmpdir, archname), ZIP)
 
 

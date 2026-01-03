@@ -378,7 +378,7 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
     :param extract_scripts:
         name of the method to extract the scripts
     """
-    msg_safe_ = '\nThe following scripts can be applied safely:\n%s'
+    msg_safe_ = '\nThe following scripts have been applied safely:\n%s'
     msg_slow_ = '\nPlease note that the following scripts could be slow:\n%s'
     msg_danger_ = ('\nPlease note that the following scripts are potentially '
                    'dangerous and could destroy your data:\n%s')
@@ -409,13 +409,12 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
         return 'Your database is already updated at version %s.' % \
             current_version
 
-    header = 'Your database is at version %s.' % current_version
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
     msg_danger = msg_danger_ % '\n'.join(danger)
-    msg = header + (msg_safe if safe else '') + (msg_slow if slow else '') \
+    msg = (msg_safe if safe else '') + (msg_slow if slow else '') \
         + (msg_danger if danger else '')
-    msg += ('\nClick on the links if you want to know what exactly the '
+    msg += ('\nVisit the links if you want to know what exactly the '
             'scripts are doing.')
     if slow:
         msg += ('\nEven slow script can be fast if your database is small or'

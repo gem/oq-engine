@@ -39,7 +39,8 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
 # Guo (2021) site amplification model.
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
-PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.csv')
+PSAS= os.path.join(os.path.dirname(__file__), "chapman_guo_2021", 
+                   'chapman_guo_2021_psa_ratios.csv')
 
 
 # Coefficients for period-dependent bias adjustment provided by Ramos-Sepulveda

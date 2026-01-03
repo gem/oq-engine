@@ -816,6 +816,12 @@ def extract_agg_curves(dstore, what):
 
 
 def aggexp_tags(dstore):
+    """
+    Read agg_values and returns a datastore with fields like::
+
+            policy taxonomy  number  nonstructural  structural  area
+     agg_id
+    """
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
@@ -855,10 +861,8 @@ def extract_mmi_tags(dstore, what):
     Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
     """
     df = dstore.read_df('mmi_tags')
-
-    # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+    # NOTE: if admin2 is not available, ID_2 and NAME_2 store the admin1 values
     df.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
-
     return df
 
 
@@ -1030,6 +1034,22 @@ def extract_aggregate(dstore, what):
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname)[1:])
     aw.shape_descr = tagnames
     return aw
+
+
+@extract.add('avg_losses_by')
+def extract_avg_losses_by(dstore, tagname):
+    """
+    /extract/avg_losses_by/taxonomy
+
+    :returns: an aggregate DataFrame with fields (tagname, loss_type, ...)
+    """
+    oq = dstore['oqparam']
+    assert oq.collect_rlzs  # there is a single realization in avg_losses-rlzs
+    assetcol = dstore['assetcol']
+    out = {tagname: getattr(assetcol.tagcol, tagname)[1:]}
+    for lt, dset in dstore['avg_losses-rlzs'].items():
+        out[lt] = assetcol.aggregateby([tagname], dset[:, 0])
+    return pandas.DataFrame(out)
 
 
 @extract.add('losses_by_asset')

@@ -2,6 +2,14 @@
 
   <title>{% block title %}AELO changelog{% endblock %}</title>
 
+  {% block nav-items %}
+  {{ block.super }}
+                <li class="calc">
+                    <a href="{% url "index" %}">Back to Calculations</a>
+                </li>
+  {% endblock nav-items %}
+
+
   {% block main %}
   {{ block.super }}
   <div class="content-wrap">
