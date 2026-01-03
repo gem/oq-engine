@@ -1500,3 +1500,10 @@ zhao_2016
     :members:
     :undoc-members:
     :show-inheritance:
+
+mohammadi_turkiye_2023
+-----------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.mohammadi_turkiye_2023
+    :members:
+    :undoc-members:
+    :show-inheritance:
