@@ -7,7 +7,6 @@ import os
 import csv
 import numpy as np
 import onnxruntime as ort
-
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -33,33 +32,22 @@ _MIN = np.array(
     dtype=float,
 )
 
-# Paths
+# Data directory
 _DATA_DIR = os.path.join(
     os.path.dirname(__file__),
     "mohammadi_turkiye_2023_data",
 )
 
+# ONNX model directory
 _ONNX_DIR = os.path.join(_DATA_DIR, "onnx_models")
+# Standard deviations file
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
 
-# IM component
-_IMC_CANDIDATES = [
-    "GMEAN",
-    "GEOMETRIC_MEAN",
-    "AVERAGE_HORIZONTAL",
-    "HORIZONTAL",
-    "RANDOM_HORIZONTAL",
-]
 
-for _name in _IMC_CANDIDATES:
-    if hasattr(const.IMC, _name):
-        _IMC_GMEAN = getattr(const.IMC, _name)
-        break
-else:
-    # Fallback: first enum member (whatever it is)
-    _IMC_GMEAN = list(const.IMC)[0]
-
+# ONNX model handling (Single bundled model)
+_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
+_SESS_CACHE = None  # Will hold the single session
 
 def _scale_features(X: np.ndarray) -> np.ndarray:
     """
@@ -86,10 +74,6 @@ def _scale_features(X: np.ndarray) -> np.ndarray:
       when training the XGBoost models.
     """
     return X * _SCALE + _MIN
-
-
-_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
-_SESS_CACHE = None  # Will hold the single session
 
 
 def _get_session() -> ort.InferenceSession:
@@ -191,7 +175,6 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
     else:
         raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
 
-
     # Prediction in training units, then convert to OQ units
     ln_im_train = _predict_ln_im(key, X_scaled)
 
@@ -237,7 +220,7 @@ class Mohammadi2023Turkiye(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     # Component: geometric mean or closest available
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = _IMC_GMEAN
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     # Std dev types – order doesn't matter; mapping is defined in code.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -253,7 +236,6 @@ class Mohammadi2023Turkiye(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "rake"}
     REQUIRES_DISTANCES = {"rjb"}
     REQUIRES_SITES_PARAMETERS = {"vs30"}
-
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -271,8 +253,6 @@ class Mohammadi2023Turkiye(GMPE):
                 self.tau_inter[key]   = float(row["Tau"])
                 self.phi_total[key]   = float(row["Phi"])
 
-
-    # Vectorized compute()
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Compute method for Mohammadi et al. 2023 GSIM.
