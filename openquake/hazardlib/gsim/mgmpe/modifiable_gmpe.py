@@ -114,8 +114,10 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
             imts_bse.append(imt)
 
     # NOTE: 'imts_bse' can be empty if all IMTs in job file will be
-    # computed using conditional GMPEs (e.g. classical/case_09 test)
-    # (so the means and std devs will be returned as zeroed arrays)
+    # computed using conditional GMPEs (e.g. classical/case_09 test
+    # where only IA from Macedo 2019 is required). In this case the
+    # the means and std devs will be returned as zeroed arrays as
+    # is required in such instances
     if len(imts_bse) > 0:
         
         # Need to map original order of IMTs for reordering
