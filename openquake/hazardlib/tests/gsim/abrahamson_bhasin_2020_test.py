@@ -15,14 +15,6 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
-import numpy as np
-
-from openquake.hazardlib.gsim.abrahamson_bhasin_2020 import (
-    AbrahamsonBhasin2020,
-    AbrahamsonBhasin2020PGA,
-    AbrahamsonBhasin2020SA1
-    )
 from openquake.hazardlib.valid import gsim, modified_gsim
     
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
