@@ -83,6 +83,11 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         # Instantiate here and store for later
         [(gmpe_name, kw)] = cgmpes[imt]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
+        if not hasattr(cond, "REQUIRES_IMTS"):
+            raise ValueError(f"{cond.__class__.__name__} lacks the "
+                             f"REQUIRES_IMTS attribute - this is "
+                             f"required for a conditional GMPE's "
+                             f"OpenQuake Engine implementation.")
         self.params[
             "conditional_gmpe"]["conditional_gmpes"][imt]["gsim"] = cond
         # Add each required IMT so we compute all using underlying GMM once
