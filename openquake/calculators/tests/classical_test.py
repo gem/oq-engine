@@ -1000,9 +1000,9 @@ class ClassicalTestCase(CalculatorTestCase):
         # (2020) for prediction of PGV with AbrahamsonGulerce2020SInter
         # as the underlying GMM used to condition predictions upon
         self.assert_curves_ok([
+            "hazard_curve-mean-IA.csv",
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-PGV.csv',
             'hazard_curve-mean-SA(0.2).csv',
-            'hazard_curve-mean-SA(1.0).csv',
-            "hazard_curves-mean-IA.csv"],
-            case_89.__file__)
+            'hazard_curve-mean-SA(1.0).csv'],
+            case_90.__file__)
