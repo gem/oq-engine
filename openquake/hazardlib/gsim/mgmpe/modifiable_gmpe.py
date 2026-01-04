@@ -72,7 +72,7 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, conditional_gmpes, base_preds):
     if str(imt) in conditional_gmpes:
 
         # Get the conditional GMM specified for the given IMT
-        [(gmpe_name, kw)] = conditional_gmpes[str(imt)].pop("gmpe").items()
+        [(gmpe_name, kw)] = conditional_gmpes[str(imt)]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
 
         # Check that conditional GMPE supports the IMT we want to use it for
@@ -466,7 +466,7 @@ class ModifiableGMPE(GMPE):
             self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
 
             # Ensure means and sigma are in original order given potentially
-            # removed if have imts not supported by the base 
+            # removed if have imts not supported by the underlying GSIM
             arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
             reordered = [np.zeros_like(arr) for arr in arrays]
             for idx, imt in enumerate(imts_bse):
