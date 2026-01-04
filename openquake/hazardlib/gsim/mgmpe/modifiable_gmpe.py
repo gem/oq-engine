@@ -117,9 +117,9 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         if str(imt).split("(")[0] in imts_gmm and imt not in imts_bse:
             imts_bse.append(imt)
 
-    # 'imts_bse' can be empty if all IMTs in job file will be computed
-    # using conditional GMPEs (e.g. classical/case_09 QA test) (so the
-    # means and standard deviations will be returned as zeroed arrays)
+    # NOTE: 'imts_bse' can be empty if all IMTs in job file will be
+    # computed using conditional GMPEs (e.g. classical/case_09 test)
+    # (so the means and std devs will be returned as zeroed arrays)
     if len(imts_bse) > 0:
         
         # Need to map original order of IMTs for reordering
