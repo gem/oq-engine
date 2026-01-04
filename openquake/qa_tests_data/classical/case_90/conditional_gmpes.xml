@@ -6,12 +6,14 @@
     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="Subduction Interface">
 
-        <logicTreeBranch branchID="MC19">
+        <logicTreeBranch branchID="conditional_gmpes_within_an_mgmpe">
             <uncertaintyModel>
                 [ModifiableGMPE]
                 gmpe.AbrahamsonGulerce2020SInter = {}
                 [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
                 "IA" = {gmpe.MacedoEtAl2019SInter = {region = "Japan"}}
+                <!-- AB2020 is for ASCR but fine to use here for tests -->
+                "PGV" = {gmpe.AbrahamsonBhasin2020 = {kind = "pga-based"}}
             </uncertaintyModel>
             <uncertaintyWeight>1.0</uncertaintyWeight>
         

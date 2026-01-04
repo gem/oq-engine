@@ -80,7 +80,7 @@ CONSTANTS = {
 }
 
 
-def get_mean_conditional_arias_intensity(
+def get_mean_conditional_ia(
     C: dict,
     ctx: np.recarray,
     base_preds: dict
@@ -185,7 +185,7 @@ class MacedoEtAl2019SInter(GMPE):
     # Subduction interface
     kind = "sinter"
 
-    # Conditional upon PGA and Sa (1.0 s)
+    # Conditional upon PGA and SA(1.0)
     REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
                                      # implementation in OQ given we use ModifiableGMPE
                                      # to manage them (we need this info as a class att
@@ -227,11 +227,11 @@ class MacedoEtAl2019SInter(GMPE):
                            the values representing those computed using the
                            underlying GMM (i.e. the values the conditional GMPE's
                            values will be conditioned upon). This dictionary is
-                           built within the ModifiableGMPE code.
+                           built within the ModifiableGMPE's compute method.
         """
         C = CONSTANTS[self.kind][self.region]
 
-        mean_ia = get_mean_conditional_arias_intensity(C, ctx, base_preds)
+        mean_ia = get_mean_conditional_ia(C, ctx, base_preds)
 
         sigma_ia, tau_ia, phi_ia = get_sig(C, self.kind, self.rho_pga_sa1, base_preds)
         

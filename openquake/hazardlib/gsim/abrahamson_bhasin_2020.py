@@ -24,7 +24,7 @@ Module exports: :class:`AbrahamsonBhasin2020`,
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV, PGA 
-from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.contexts import get_mean_stds
 
 not_verified = True
@@ -56,7 +56,9 @@ M2 = 7.0
 
 def _get_tref(ctx):
     """
-    Magnitude-dependent conditioning period Tref (Table 3.1).
+    Magnitude-dependent conditioning period Tref (Table 3.1) - used
+    if not specifying to use exclusively PGA or SA(1.0) for the
+    conditioning.
     """
     mval = float(np.asarray(ctx.mag).flat[0])
 
@@ -68,9 +70,8 @@ def _get_tref(ctx):
 
 
 def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):
-    """Magnitude-dependent slope term f1(M) of ln(PSA(tref)). 
-    (see eq. 3.8)
-
+    """
+    Magnitude-dependent slope term f1(M) of ln(PSA(tref)) - (see eq. 3.8)
     """
     f1 = np.empty_like(ctx.mag, dtype=float)
     m1 = (ctx.mag < 5.0)
@@ -83,10 +84,9 @@ def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):
 
 
 def _tri_linear_stdev_term(M: np.ndarray, stdev1: float, stdev2: float):
-    """Tri-linear interpolation between used in pga- and sa1-based
-    models. 
-    (see eq. 3.9)
-
+    """
+    Tri-linear interpolation between used in pga- and sa1-based
+    models - see eq. 3.9
     """
     out = np.empty_like(M, dtype=float)
     m_lo = (M < M1)
@@ -101,15 +101,16 @@ def _tri_linear_stdev_term(M: np.ndarray, stdev1: float, stdev2: float):
 def get_mean_conditional_pgv(
     C: dict, 
     ctx: np.recarray, 
-    mean_gms: dict, 
-    imt_key: str
+    base_preds: dict, 
+    imt_key: str,
     ):
-  
-    lnY = mean_gms[imt_key]
     f1  = _get_trilinear_magnitude_term(ctx, C)
+    """
+    Returns (mean) conditioned PGV
+    """
     return (
         C["a1"]
-        + f1 * lnY
+        + f1 * base_preds[imt_key]['mean']
         + C["a4"] * (ctx.mag - 6.0)
         + C["a5"] * (8.5 - ctx.mag) ** 2
         + C["a6"] * np.log(ctx.rrup + 5.0 * np.exp(0.4 * (ctx.mag - 6.0)))
@@ -117,16 +118,16 @@ def get_mean_conditional_pgv(
     )
 
 
-def get_standard_deviations(
+def get_sig(
     C: dict, 
     ctx: np.recarray,
-    sigma_gms: dict, 
-    tau_gms: dict, 
-    phi_gms: dict,
+    base_preds: dict,
     imt_key: str):
-
+    """
+    Returns sigma, tau and phi arrays for PGV
+    """
     f1 = _get_trilinear_magnitude_term(ctx, C)
-    sigma_cond = sigma_gms[imt_key]  
+    sigma_cond = base_preds[imt_key]['sig']  
     if "sigma" in C:  # general model
         sigma_pgv = np.full_like(sigma_cond, C["sigma"], dtype=float)
         tau_pgv   = np.full_like(sigma_cond, C["tau"],   dtype=float)
@@ -137,17 +138,19 @@ def get_standard_deviations(
         tau_pgv   = _tri_linear_stdev_term(M, C["tau_1"],   C["tau_2"])
         phi_pgv   = _tri_linear_stdev_term(M, C["phi_1"],   C["phi_2"])
 
-    tau_cond = tau_gms.get(imt_key)
-    phi_cond = phi_gms.get(imt_key)
+    tau_cond = base_preds[imt_key]["tau"]
+    phi_cond = base_preds[imt_key]["phi"]
 
     sigma = np.sqrt((f1 * sigma_cond) ** 2 + sigma_pgv ** 2)
     tau   = np.sqrt((f1 * tau_cond)   ** 2 + tau_pgv   ** 2) if (tau_cond is not None and np.size(tau_cond) > 0) else tau_pgv
     phi   = np.sqrt((f1 * phi_cond)   ** 2 + phi_pgv   ** 2) if (phi_cond is not None and np.size(phi_cond) > 0) else phi_pgv
+
     return sigma, tau, phi
 
 
 class AbrahamsonBhasin2020(GMPE):
-    """Implementation of a conditional GMPE of Abrahamson & Bhasin (2020)
+    """
+    Implementation of a conditional GMPE of Abrahamson & Bhasin (2020)
     for Peak Ground Velocity (PGV) applicable to active shallow crustal 
     earthquakes. This requires characterisation of the SA at reference 
     period (which is magnitude-dependent), in addition to magnitude and vs30, 
@@ -159,8 +162,7 @@ class AbrahamsonBhasin2020(GMPE):
     Abrahamson N, Bhasin S (2020) "Conditional Ground-Motion Model for Peak Ground
     Velocity for Active Crustal Regions.", PEER Report 2020/05, Pacific Earthquake 
     Engineering Research Center Headquarters, University of California at Berkeley.
-    (October 2010)
-
+    (October 2010).
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
@@ -174,70 +176,50 @@ class AbrahamsonBhasin2020(GMPE):
 
     non_verified = True
 
-    def __init__(self, kind: str = "general", **gmpe_dict):
+    # Conditional upon PGA and SA(1.0 s)
+    REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
+                                     # implementation in OQ given we use ModifiableGMPE
+                                     # to manage them (we need this info as a class att
+                                     # to be available in the mgmpe imt-checks)
 
+
+    def __init__(self, kind: str = "general"):
+        # Set kind
         if kind not in AB20_COEFFS:
             raise ValueError(f"Unknown AB20 kind '{kind}'. Choose from {list(AB20_COEFFS)}")
-        [(gmpe_name, kw)] = gmpe_dict.pop("gmpe").items()
-        self.gmpe = registry[gmpe_name](**kw)
         self.c = AB20_COEFFS[kind]
         self.kind = kind
         self.last_tref = None
 
-        for attr in ("REQUIRES_SITES_PARAMETERS", "REQUIRES_RUPTURE_PARAMETERS", "REQUIRES_DISTANCES"):
-            setattr(self, attr,
-                    set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
+    def compute(self, ctx: np.recarray, base_preds: dict):
+        """
+        Compute method for conditional GMPE applied within ModifiableGMPE.
 
-    def compute(self, ctx: np.recarray, imts: list,
-                mean: np.ndarray, sig: np.ndarray,
-                tau: np.ndarray, phi: np.ndarray):
+        :param base_preds: Dictionary where each key is a string of an IMT
+                           and each value is a sub-dictionary. Each subdict
+                           has keys of "mean", "sigma", "tau" and "phi", with
+                           the values representing those computed using the
+                           underlying GMM (i.e. the values the conditional GMPE's
+                           values will be conditioned upon). This dictionary is
+                           built within the ModifiableGMPE's compute method.
+        """
+        # Get conditioning IMT based on self.kind
+        if self.kind == "general":
+            tref = _get_tref(ctx) # Mag-dependent
+            self.last_tref = tref
+            cond_imt = SA(tref)
 
-        non_pgv = [(i, imt) for i, imt in enumerate(imts)
-                   if str(imt) != "PGV"]
+        elif self.kind == "pga-based":
+            cond_imt = PGA()
+        
+        else:
+            cond_imt = SA(1.0)
 
-        if non_pgv:
-            non_pgv_imts = [imt for _, imt in non_pgv]
-            base_mean, base_sig, base_tau, base_phi = get_mean_stds(
-                self.gmpe, ctx, non_pgv_imts
-            )
-            for j, (i, _) in enumerate(non_pgv):
-                mean[i] = base_mean[j]
-                sig[i]  = base_sig[j]
-                tau[i]  = base_tau[j]
-                phi[i]  = base_phi[j]
+        lnpgv = get_mean_conditional_pgv(self.c, ctx, base_preds, str(cond_imt))
 
-        for i, imt in enumerate(imts):
-            if str(imt) != "PGV":
-                continue
+        sigma_pgv, tau_pgv, phi_pgv = get_sig(self.c, ctx, base_preds, str(cond_imt))
 
-            if self.kind == "general":
-                tref = _get_tref(ctx)
-                self.last_tref = tref
-                cond_imt = SA(tref)
-            elif self.kind == "pga-based":
-                cond_imt = PGA()
-            else:
-                cond_imt = SA(1.0)
-
-            key = str(cond_imt)
-
-            mean_gms, sigma_gms, tau_gms, phi_gms = get_mean_stds(
-                self.gmpe, ctx, {cond_imt}, return_dicts=True
-            )
-
-            lnpgv = get_mean_conditional_pgv(self.c, ctx, mean_gms, key)
-            sigma_pgv, tau_pgv, phi_pgv = get_standard_deviations(
-                self.c, ctx,
-                sigma_gms=sigma_gms,
-                tau_gms=tau_gms,
-                phi_gms=phi_gms,
-                imt_key=key,
-            )
-
-            mean[i] = lnpgv
-            sig[i]  = sigma_pgv
-            tau[i]  = tau_pgv
-            phi[i]  = phi_pgv
+        return lnpgv, sigma_pgv, tau_pgv, phi_pgv
 
 
 class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
