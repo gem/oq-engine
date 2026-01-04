@@ -449,10 +449,15 @@ class ModifiableGMPE(GMPE):
         else:
             ctx_copy = ctx
         g = globals()
-
+        
         # Get the IMTs of the underlying GMM - this is necessary in case we are using
         # conditional GMPEs, in which case the underlying GSIM (most likely) will not
         # support one (or more) of the IMTs - therefore we cannot compute a mean yet
+        # for these IMTs conditional GMMs will be used for instead
+
+        #TODO make this only performed if using conditional but first understand why
+        # it is breaking the mgmpe tests
+
         imts_map = {imt: i for i, imt in enumerate(imts)} # Keep original order
         imts_gmm = [imt.__qualname__ for imt in
                     self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
@@ -462,15 +467,15 @@ class ModifiableGMPE(GMPE):
         # Compute the original mean and standard deviations for the supported IMTs
         self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
 
-        # Ensure means and sigma are in original order given potentially removed if
-        # have imts not supported by the base GMM
-        arrays = [mean, sig, tau, phi] # Generated from gsim obj's compute method
-        reordered = [np.full_like(arr, 0) for arr in arrays]
+        # Ensure means and sigma are in original order given potentially
+        # removed if have imts not supported by the base 
+        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
+        reordered = [np.zeros_like(arr) for arr in arrays]
         for idx, imt in enumerate(imts_bse):
             orig_pos = imts_map[imt]
             for arr, arr_r in zip(arrays, reordered):
                 arr_r[orig_pos] = arr[idx]
-        mean, sig, tau, phi = reordered
+        mean[:], sig[:], tau[:], phi[: ] = reordered
         
         # Here we compute reference ground-motion for PGA when we need to
         # amplify the motion using the CEUS2020 model
@@ -496,7 +501,7 @@ class ModifiableGMPE(GMPE):
             if methname in ['ceus2020_site_term']:
                 kw['ref_pga'] = np.exp(ref)
             if methname in ["conditional_gmpe"]:
-                kw['base_preds'] = { # If using conditional GMPEs make dict of underlying gmm preds
+                kw['base_preds'] = { # If using cond GMPEs make dict of underlying gmm preds
                     str(imt): {"mean": mean[i], "sig": sig[i], "tau": tau[i], "phi": phi[i]}
                     for i, imt in enumerate(imts_bse)
                     } 
