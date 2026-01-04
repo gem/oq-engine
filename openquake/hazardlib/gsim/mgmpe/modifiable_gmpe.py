@@ -56,16 +56,12 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 
 def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     """
-    Compute the means and standard deviations for the IMTs supported by
-    the underlying GSIM that are required by the conditional GMPEs.
-
-    This is required because the underlying GSIM will most likely not
-    support one or more of the required IMTs in the given calc.
-    
-    Therefore, we cannot compute a mean yet for the IMTs which the
-    conditional GMMs will be used for instead, and we set empty
-    (zeroed) arrays for these IMTs here which are updated using
-    the conditional GMMs.
+    This function performs 3 tasks:
+        1) Instantiate the conditional GMPEs.
+        2) Compute the means and standard deviations for any IMTs
+           required by the conditional GMPEs.
+        3) Compute the means and standard deviations for any IMTs
+           we are not using conditional GMPEs for instead.
     """
     # Get each conditional GMM's required IMTs and also instantiate them
     imts_req = []
