@@ -184,11 +184,11 @@ class AbrahamsonBhasin2020(GMPE):
         self.last_tref = None
 
         if kind == "general":
-            self.REQUIRES_IMTS = []# TODO fix
+            self.REQUIRES_IMTS = []
         elif kind == "pga-based":
-            self.REQUIRES_IMTS = ["PGA"]
+            self.REQUIRES_IMTS = [PGA()]
         else:
-            self.REQUIRES_IMTS = ["SA(1.0)"]
+            self.REQUIRES_IMTS = [SA(1.0)]
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """

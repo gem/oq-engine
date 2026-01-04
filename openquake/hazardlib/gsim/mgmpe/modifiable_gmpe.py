@@ -72,8 +72,7 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, conditional_gmpes, base_preds):
     if str(imt) in conditional_gmpes:
 
         # Get the conditional GMM specified for the given IMT
-        [(gmpe_name, kw)] = conditional_gmpes[str(imt)]["gmpe"].items()
-        cond = registry[gmpe_name](**kw)
+        cond = conditional_gmpes[str(imt)]["gsim"]
 
         # Check that conditional GMPE supports the IMT we want to use it for
         try:
@@ -456,13 +455,35 @@ class ModifiableGMPE(GMPE):
             # one or more of the required IMTs in the given calc. Therefore, we cannot
             # compute a mean yet for the IMTs which the conditional GMMs will be used
             # for instead.
-            imts_map = {imt: i for i, imt in enumerate(imts)} # Need to map original order
+
+            # Set store for IMTs we will compute here using underlying GMM
+            imts_bse = []
+
+            # Need to map original order of IMTs for reordering
+            imts_map = {imt: i for i, imt in enumerate(imts)}
+            
+            # IMTs of underlying GMM
             imts_gmm = [imt.__qualname__ for imt in
                         self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
-            imts_bse = [imt for imt in imts 
-                        if str(imt).split("(")[0] in imts_gmm] # Get IMT without period/freq
 
-            # Compute the original mean and std devs for only the supported IMTs
+            # Get each conditional GMM's required IMTs and also instantiate them
+            cgmpes = self.params["conditional_gmpe"]["conditional_gmpes"]
+            for imt in cgmpes.keys():
+                # Instantiate here and store for later
+                [(gmpe_name, kw)] = cgmpes[imt]["gmpe"].items()
+                cond = registry[gmpe_name](**kw)
+                self.params[
+                    "conditional_gmpe"]["conditional_gmpes"][imt]["gsim"] = cond
+                # Add each required IMT so we compute all using underlying GMM once
+                imts_bse.extend(
+                    [imt for imt in cond.REQUIRES_IMTS if imt not in imts_bse])
+                
+            # Also add IMTs specified in calc but not req by conditional gsims
+            for imt in imts:
+                if str(imt).split("(")[0] in imts_gmm and imt not in imts_bse:
+                    imts_bse.append(imt)
+
+            # Compute the original mean and std devs for required IMTs
             self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
 
             # Ensure means and sigma are in original order given potentially
@@ -512,3 +533,4 @@ class ModifiableGMPE(GMPE):
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)
+                
