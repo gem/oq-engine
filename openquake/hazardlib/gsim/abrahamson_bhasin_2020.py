@@ -25,7 +25,6 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV, PGA 
 from openquake.hazardlib.gsim.base import GMPE
-from openquake.hazardlib.contexts import get_mean_stds
 
 not_verified = True
 
@@ -176,13 +175,6 @@ class AbrahamsonBhasin2020(GMPE):
 
     non_verified = True
 
-    # Conditional upon PGA and SA(1.0 s)
-    REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
-                                     # implementation in OQ given we use ModifiableGMPE
-                                     # to manage them (we need this info as a class att
-                                     # to be available in the mgmpe imt-checks)
-
-
     def __init__(self, kind: str = "general"):
         # Set kind
         if kind not in AB20_COEFFS:
@@ -190,6 +182,13 @@ class AbrahamsonBhasin2020(GMPE):
         self.c = AB20_COEFFS[kind]
         self.kind = kind
         self.last_tref = None
+
+        if kind == "general":
+            self.REQUIRES_IMTS = []# TODO fix
+        elif kind == "pga-based":
+            self.REQUIRES_IMTS = ["PGA"]
+        else:
+            self.REQUIRES_IMTS = ["SA(1.0)"]
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """
@@ -208,10 +207,16 @@ class AbrahamsonBhasin2020(GMPE):
             tref = _get_tref(ctx) # Mag-dependent
             self.last_tref = tref
             cond_imt = SA(tref)
-
+            # We cannot know apriori the cond_imt if using "general"
+            # given it is ctx-dependent so compute here using the
+            # underlying gsim instead
+            mean_t, sig_t, tau_t, phi_t = [
+                np.array([np.zeros_like(ctx.vs30)]) for _ in range(4)]
+            base_preds["base"].compute(ctx, [cond_imt], mean_t, sig_t, tau_t, phi_t)
+            base_preds[str(cond_imt)] = {
+                "mean": mean_t, "sig": sig_t, "tau": tau_t, "phi": phi_t}
         elif self.kind == "pga-based":
             cond_imt = PGA()
-        
         else:
             cond_imt = SA(1.0)
 

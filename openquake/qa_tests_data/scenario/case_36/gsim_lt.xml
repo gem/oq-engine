@@ -12,8 +12,10 @@
           branchID="b11"
           >
         <uncertaintyModel>
-          [AbrahamsonBhasin2020]
-          gmpe.NZNSHM2022_AbrahamsonGulerce2020SInterNewZealand = {}
+          [ModifiableGMPE]
+          gmpe.NZNSHM2022_AbrahamsonGulerce2020SInterNewZealand  = {}
+          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
           .1
@@ -23,8 +25,10 @@
           branchID="b12"
           >
         <uncertaintyModel>
-          [AbrahamsonBhasin2020]
-          gmpe.NZNSHM2022_AbrahamsonGulerce2020SSlabNewZealand = {}
+          [ModifiableGMPE]
+          gmpe.NZNSHM2022_AbrahamsonGulerce2020SSlabNewZealand  = {}
+          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
           .1
@@ -55,8 +59,10 @@
           branchID="b15"
           >
         <uncertaintyModel>
-          [AbrahamsonBhasin2020]
-          gmpe.Atkinson2022SInter = {}
+          [ModifiableGMPE]
+          gmpe.Atkinson2022SInter  = {}
+          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
           .1
@@ -66,8 +72,10 @@
           branchID="b16"
           >
         <uncertaintyModel>
-          [AbrahamsonBhasin2020]
+          [ModifiableGMPE]
           gmpe.Atkinson2022Crust = {}
+          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
           .1
@@ -77,8 +85,10 @@
           branchID="b17"
           >
         <uncertaintyModel>
-          [AbrahamsonBhasin2020]
+          [ModifiableGMPE]
           gmpe.Stafford2022 = {}
+          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
           .1

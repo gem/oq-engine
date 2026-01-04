@@ -506,8 +506,9 @@ class ModifiableGMPE(GMPE):
             if methname in ["conditional_gmpe"]:
                 kw['base_preds'] = { # If using cond GMPEs make dict of underlying gmm preds
                     str(imt): {"mean": mean[i], "sig": sig[i], "tau": tau[i], "phi": phi[i]}
-                    for i, imt in enumerate(imts_bse)
-                    } 
+                    for i, imt in enumerate(imts) if imt in imts_bse
+                    }
+                kw["base_preds"]["base"] = self.gmpe
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)
