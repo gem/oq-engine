@@ -224,7 +224,7 @@ class BaseGSIMTestCase(unittest.TestCase):
             return
 
         if self.GSIM_CLASS.__class__.__name__ == "ModifiableGMPE":
-            gsim = self.GSIM_CLASS
+            gsim = self.GSIM_CLASS # GSIM from valid.modified_gsim
         else:
             gsim = self.GSIM_CLASS(**kwargs)
 
