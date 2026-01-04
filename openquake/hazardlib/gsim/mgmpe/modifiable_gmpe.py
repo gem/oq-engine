@@ -67,17 +67,8 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     (zeroed) arrays for these IMTs here which are updated using
     the conditional GMMs.
     """
-    # Set store for IMTs we will compute here using underlying GMM
-    imts_bse = []
-
-    # Need to map original order of IMTs for reordering
-    imts_map = {imt: i for i, imt in enumerate(imts)}
-    
-    # IMTs of underlying GMM
-    imts_gmm = [imt.__qualname__ for imt in
-                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
-
     # Get each conditional GMM's required IMTs and also instantiate them
+    imts_req = []
     cgmpes = self.params["conditional_gmpe"]["conditional_gmpes"]
     for imt in cgmpes.keys():
         # Instantiate here and store for later
@@ -91,28 +82,61 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         self.params[
             "conditional_gmpe"]["conditional_gmpes"][imt]["gsim"] = cond
         # Add each required IMT so we compute all using underlying GMM once
-        imts_bse.extend(
-            [imt for imt in cond.REQUIRES_IMTS if imt not in imts_bse])
+        imts_req.extend(
+            [imt for imt in cond.REQUIRES_IMTS if imt not in imts_req])
+
+    # Compute the means and std devs for IMTs required by conditional GMPEs
+    req_ord = {imt: i for i, imt in enumerate(imts_req)}
+    sh = (len(imts_req), len(ctx_copy))
+    mean_b, sig_b, tau_b, phi_b = np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
+    self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
+
+    # Store them for use in conditional GMPE(s) later
+    self.params[
+        "conditional_gmpe"]["base_preds"] = {str(imt): {} for imt in req_ord.keys()}
+    for imt in req_ord.keys():
+        i = req_ord[imt]
+        self.params[
+            "conditional_gmpe"]["base_preds"][str(imt)]["mean"] = mean_b[i]
+        self.params[
+            "conditional_gmpe"]["base_preds"][str(imt)]["sig"] = sig_b[i]
+        self.params[
+            "conditional_gmpe"]["base_preds"][str(imt)]["tau"] = tau_b[i]
+        self.params[
+            "conditional_gmpe"]["base_preds"][str(imt)]["phi"] = phi_b[i]
         
-    # Also add IMTs specified in calc but not req by conditional gsims
+    # Sometimes need underlying GSIM within conditional GMPEs compute method if has
+    # ctx-dependent conditioning periods like possible within AbrahamsonBhasin2020
+    self.params["conditional_gmpe"]["base_preds"]["base"] = self.gmpe
+
+    # Now get the IMTs we wish to compute using the underlying GSIM
+    imts_gmm = [imt.__qualname__ for imt in
+                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+    imts_bse = []
     for imt in imts:
         if str(imt).split("(")[0] in imts_gmm and imt not in imts_bse:
             imts_bse.append(imt)
 
-    # Compute the original mean and std devs for required IMTs
-    self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
+    # 'imts_bse' can be empty if all IMTs in job file will be computed
+    # using conditional GMPEs (e.g. classical/case_09 QA test) (so the
+    # means and standard deviations will be returned as zeroed arrays)
+    if len(imts_bse) > 0:
+        
+        # Need to map original order of IMTs for reordering
+        imts_map = {imt: i for i, imt in enumerate(imts)}
 
-    # Ensure means and sigma are in original order given potentially
-    # removed if have imts not supported by the underlying GSIM
-    arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
-    reordered = [np.zeros_like(arr) for arr in arrays]
-    for idx, imt in enumerate(imts_bse):
-        orig_pos = imts_map[imt]
-        for arr, arr_r in zip(arrays, reordered):
-            arr_r[orig_pos] = arr[idx]
-    mean[:], sig[:], tau[:], phi[: ] = reordered
+        # Compute the original mean and std devs for required IMTs
+        self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
 
-    return mean, sig, tau, phi, imts_bse
+        # Ensure means and sigma are in original order given potentially
+        # removed if have imts not supported by the underlying GSIM
+        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
+        reordered = [np.zeros_like(arr) for arr in arrays]
+        for idx, imt in enumerate(imts_bse):
+            orig_pos = imts_map[imt]
+            for arr, arr_r in zip(arrays, reordered):
+                arr_r[orig_pos] = arr[idx]
+        mean[:], sig[:], tau[:], phi[: ] = reordered
 
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, conditional_gmpes, base_preds):
@@ -519,8 +543,7 @@ class ModifiableGMPE(GMPE):
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
-            mean, sig, tau, phi, imts_bse = conditional_gmpe_setup(
-                self, imts, ctx_copy, mean, sig, tau, phi)
+            conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
             
         # Otherwise, compute the original mean and std devs for all
         # IMTs given not using a conditional GMPE
@@ -555,14 +578,8 @@ class ModifiableGMPE(GMPE):
 
             # Conditional GMPEs
             if methname in ["conditional_gmpe"]:
-                kw['base_preds'] = { # If using cond GMPEs make dict of underlying gmm preds
-                    str(imt): {"mean": mean[i], "sig": sig[i], "tau": tau[i], "phi": phi[i]}
-                    for i, imt in enumerate(imts) if imt in imts_bse
-                    }
-                kw["base_preds"]["base"] = self.gmpe # Sometimes need underlying GSIM within
-                                                     # conditional GMPEs compute method if
-                                                     # ctx-dependent conditioning periods like
-                                                     # possible within AbrahamsonBhasin2020
+                kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
+                
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)

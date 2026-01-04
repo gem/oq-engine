@@ -136,7 +136,7 @@ def get_sig(
         sigma_pgv = _tri_linear_stdev_term(M, C["sigma_1"], C["sigma_2"])
         tau_pgv   = _tri_linear_stdev_term(M, C["tau_1"],   C["tau_2"])
         phi_pgv   = _tri_linear_stdev_term(M, C["phi_1"],   C["phi_2"])
-
+    
     tau_cond = base_preds[imt_key]["tau"]
     phi_cond = base_preds[imt_key]["phi"]
 
