@@ -450,33 +450,36 @@ class ModifiableGMPE(GMPE):
             ctx_copy = ctx
         g = globals()
         
-        # Get the IMTs of the underlying GMM - this is necessary in case we are using
-        # conditional GMPEs, in which case the underlying GSIM (most likely) will not
-        # support one (or more) of the IMTs - therefore we cannot compute a mean yet
-        # for these IMTs conditional GMMs will be used for instead
+        if "conditional_gmpe" in self.params:
+            # If using a conditional GMPE get the IMTs supported by the underlying GSIM.
+            # This is required because the underlying GSIM will most likely not support
+            # one or more of the required IMTs in the given calc. Therefore, we cannot
+            # compute a mean yet for the IMTs which the conditional GMMs will be used
+            # for instead.
+            imts_map = {imt: i for i, imt in enumerate(imts)} # Need to map original order
+            imts_gmm = [imt.__qualname__ for imt in
+                        self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+            imts_bse = [imt for imt in imts 
+                        if str(imt).split("(")[0] in imts_gmm] # Get IMT without period/freq
 
-        #TODO make this only performed if using conditional but first understand why
-        # it is breaking the mgmpe tests
+            # Compute the original mean and std devs for only the supported IMTs
+            self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
 
-        imts_map = {imt: i for i, imt in enumerate(imts)} # Keep original order
-        imts_gmm = [imt.__qualname__ for imt in
-                    self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
-        imts_bse = [imt for imt in imts 
-                    if str(imt).split("(")[0] in imts_gmm] # Get IMT without period/freq
+            # Ensure means and sigma are in original order given potentially
+            # removed if have imts not supported by the base 
+            arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
+            reordered = [np.zeros_like(arr) for arr in arrays]
+            for idx, imt in enumerate(imts_bse):
+                orig_pos = imts_map[imt]
+                for arr, arr_r in zip(arrays, reordered):
+                    arr_r[orig_pos] = arr[idx]
+            mean[:], sig[:], tau[:], phi[: ] = reordered
 
-        # Compute the original mean and standard deviations for the supported IMTs
-        self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
+        else:
+            # Compute the original mean and std devs for all IMTs given
+            # not using a conditional GMPE
+            self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
-        # Ensure means and sigma are in original order given potentially
-        # removed if have imts not supported by the base 
-        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
-        reordered = [np.zeros_like(arr) for arr in arrays]
-        for idx, imt in enumerate(imts_bse):
-            orig_pos = imts_map[imt]
-            for arr, arr_r in zip(arrays, reordered):
-                arr_r[orig_pos] = arr[idx]
-        mean[:], sig[:], tau[:], phi[: ] = reordered
-        
         # Here we compute reference ground-motion for PGA when we need to
         # amplify the motion using the CEUS2020 model
         if 'ceus2020_site_term' in self.params:
