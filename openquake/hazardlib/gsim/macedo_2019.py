@@ -208,7 +208,9 @@ class MacedoEtAl2019SInter(GMPE):
 
         NOTE: the underlying GSIM is specified within ModifiableGMPE (as the GMPE
         upon which the predictions are conditioned), and therefore this base GMPE
-        does not have to be specified within the instantation of this GMPE.
+        does not have to be specified within the instantation of this GMPE. Please
+        see oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml
+        for an example of conditional GMPEs specified within ModifiableGMPE.
         """
         # Check that the region is one of those supported
         assert region in ("Global", "Japan", "Taiwan", "South America",

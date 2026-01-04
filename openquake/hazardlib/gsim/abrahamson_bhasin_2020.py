@@ -183,8 +183,11 @@ class AbrahamsonBhasin2020(GMPE):
         self.kind = kind
         self.last_tref = None
 
+        # Get the corresponding required IMTs
         if kind == "general":
-            self.REQUIRES_IMTS = []
+            self.REQUIRES_IMTS = [] # None - the mean and std devs will be computed 
+                                    # within this GSIM's compute method given they
+                                    # are ctx dependent (we cannot provide apriori)
         elif kind == "pga-based":
             self.REQUIRES_IMTS = [PGA()]
         else:
