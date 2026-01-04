@@ -15,38 +15,54 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import unittest
+import numpy as np
+
 from openquake.hazardlib.gsim.abrahamson_bhasin_2020 import (
     AbrahamsonBhasin2020,
     AbrahamsonBhasin2020PGA,
     AbrahamsonBhasin2020SA1
     )
+from openquake.hazardlib.valid import gsim, modified_gsim
     
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
+BASE_GMM = gsim("Lin2009")
+
+
 class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AbrahamsonBhasin2020
+    GSIM_CLASS = modified_gsim(
+        BASE_GMM,
+        conditional_gmpe={
+            "conditional_gmpes": 
+            {"PGV": {"gmpe": {"AbrahamsonBhasin2020": {}}}}})
 
     def test_all(self):
         self.check('AB20/General.csv',
                    max_discrep_percentage=0.2,
-                   std_discrep_percentage=0.1,
-                   gmpe={'Lin2009': {}})
+                   std_discrep_percentage=0.1)
 
 class AbrahamsonBhasin2020PGATestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AbrahamsonBhasin2020PGA
+    GSIM_CLASS = modified_gsim(
+        BASE_GMM,
+        conditional_gmpe={
+            "conditional_gmpes": 
+            {"PGV": {"gmpe": {"AbrahamsonBhasin2020PGA": {}}}}})
 
     def test_all(self):
         self.check('AB20/PGAbased.csv',
                    max_discrep_percentage=0.2,
-                   std_discrep_percentage=0.1,
-                   gmpe={'Lin2009': {}})
+                   std_discrep_percentage=0.1)
 
 class AbrahamsonBhasin2020SA1TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AbrahamsonBhasin2020SA1
+    GSIM_CLASS = modified_gsim(
+        BASE_GMM,
+        conditional_gmpe={
+            "conditional_gmpes": 
+            {"PGV": {"gmpe": {"AbrahamsonBhasin2020SA1": {}}}}})
 
     def test_all(self):
         self.check('AB20/SA1based.csv',
                    max_discrep_percentage=0.2,
-                   std_discrep_percentage=0.1,
-                   gmpe={'Lin2009': {}})
+                   std_discrep_percentage=0.1)
