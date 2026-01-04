@@ -234,13 +234,13 @@ class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
 
-    def __init__(self, **gmpe_dict):
-        super().__init__(kind="pga-based", **gmpe_dict)
+    def __init__(self):
+        super().__init__(kind="pga-based")
 
 
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
 
-    def __init__(self, **gmpe_dict):
-        super().__init__(kind="sa1_based", **gmpe_dict)
+    def __init__(self):
+        super().__init__(kind="sa1_based")
