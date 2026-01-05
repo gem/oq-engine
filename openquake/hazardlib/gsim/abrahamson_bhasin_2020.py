@@ -187,7 +187,7 @@ class AbrahamsonBhasin2020(GMPE):
 
         NOTE: the underlying "base" GSIM is specified within ModifiableGMPE (as the
         GMPE upon which the predictions are conditioned), and therefore the base GMPE
-        does not have to be specified within the instantation of this GMPE. Please see
+        CANNOT be specified directly within the instantation of this GMPE. Please see
         oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
         an example of conditional GMPEs specified within ModifiableGMPE.
         """
