@@ -1,0 +1,103 @@
+.impact_form_row label {
+    margin-bottom: 10px;
+}
+
+.impact_form_row label {
+    display: inline-block;
+    width: 225px;
+}
+
+.impact_form_row input {
+    /* width: calc(100% - 110px); /1* Adjust according to label width *1/ */
+    box-sizing: border-box;
+}
+
+.impact-select {
+    width: 206px;
+}
+
+.impact-input-wider {
+    width: 618px;
+}
+
+.impact-losses-container {
+    width: 100%;
+    display: block;
+    overflow-x: scroll;
+    position: relative;
+}
+
+table#impact-losses {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table#impact-losses th td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+#impact-losses-download {
+  margin-top: 10px;
+}
+
+.shakemap-image-container {
+    float: left;
+    /* If we want to adjust the size of images instead of making them of the suitable size
+    /* width: 50%; */
+}
+
+/* If we want to adjust the size of images instead of making them of the suitable size
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
+
+#impact_approach {
+  display: block;  /* each label in its own row */
+  margin-bottom: 20px; /* Space between radio options */
+}
+
+.station-btn {
+    margin-left: 40px;
+    margin-bottom: 8px;
+}
+
+#extracted_html_table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    margin-top: 20px;
+}
+
+#extracted_html_table th,
+#extracted_html_table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+#extracted_html_table thead {
+    background-color: #f4f4f4;
+}
+
+#extracted_html_table th {
+    background-color: #1b75a7;
+    color: white;
+    font-weight: bold;
+}
+
+#extracted_html_table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#extracted_html_table tr:hover {
+    background-color: #f1f1f1;
+}
