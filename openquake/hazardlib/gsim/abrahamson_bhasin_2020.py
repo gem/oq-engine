@@ -36,7 +36,7 @@ AB20_COEFFS = {
         "a6": -0.359, "a7": -0.134, "a8": 0.023, "phi": 0.29, "tau": 0.16,
         "sigma": 0.33
     },
-    "pga-based": {
+    "pga_based": {
         "a1": 4.77, "a2": 0.738, "a3": 0.484, "a4": 0.275, "a5": -0.036,
         "a6": -0.332, "a7": -0.44, "a8": 0.0, "phi_1": 0.32, "phi_2": 0.42,
         "tau_1": 0.12, "tau_2": 0.26, "sigma_1": 0.34, "sigma_2": 0.49,
@@ -180,6 +180,17 @@ class AbrahamsonBhasin2020(GMPE):
     conditional = True
 
     def __init__(self, kind: str = "general"):
+        """
+        :param kind: Specify if the user wishes to compute PGV based on PGA ("pga_based"),
+                     SA(1.0) ("sa1_based") or based on a magnitude-dependent conditioning
+                     period ("general").
+
+        NOTE: the underlying "base" GSIM is specified within ModifiableGMPE (as the
+        GMPE upon which the predictions are conditioned), and therefore the base GMPE
+        does not have to be specified within the instantation of this GMPE. Please see
+        oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
+        an example of conditional GMPEs specified within ModifiableGMPE.
+        """
         # Set kind
         if kind not in AB20_COEFFS:
             raise ValueError(f"Unknown AB20 kind '{kind}'. Choose from {list(AB20_COEFFS)}")
@@ -192,9 +203,10 @@ class AbrahamsonBhasin2020(GMPE):
             self.REQUIRES_IMTS = [] # None - the mean and std devs will be computed 
                                     # within this GSIM's compute method given they
                                     # are ctx dependent (we cannot provide apriori)
-        elif kind == "pga-based":
+        elif kind == "pga_based":
             self.REQUIRES_IMTS = [PGA()]
         else:
+            assert kind == 'sa1_based'
             self.REQUIRES_IMTS = [SA(1.0)]
 
     def compute(self, ctx: np.recarray, base_preds: dict):
@@ -222,7 +234,7 @@ class AbrahamsonBhasin2020(GMPE):
             base_preds["base"].compute(ctx, [cond_imt], mean_t, sig_t, tau_t, phi_t)
             base_preds[str(cond_imt)] = {
                 "mean": mean_t, "sig": sig_t, "tau": tau_t, "phi": phi_t}
-        elif self.kind == "pga-based":
+        elif self.kind == "pga_based":
             cond_imt = PGA()
         else:
             cond_imt = SA(1.0)
@@ -239,7 +251,7 @@ class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
 
     def __init__(self):
-        super().__init__(kind="pga-based")
+        super().__init__(kind="pga_based")
 
 
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
