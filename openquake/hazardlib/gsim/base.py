@@ -80,6 +80,14 @@ class AdaptedWarning(UserWarning):
     """
 
 
+class ConditionalWarning(UserWarning):
+    """
+    Raised for conditional GMPEs to notify the user that they must be specified
+    within ModifiableGMPE in combination with an underlying GMPE (upon which the
+    required IMT's predicted ground-motions are conditioned upon).
+    """
+
+
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
 
@@ -285,6 +293,12 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'may not be as expected - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
+        if cls.conditional:
+            msg = ('%s is a conditional GMPE - the user must specify such GMPEs '
+                   'within ModifiableGMPE in combination with a base GMPE to '
+                   'condition the ground-motions upon (i.e., this GMPE cannot be '
+                   'instantiated as a "regular" standalone GMPE)') % cls.__name__
+            warnings.warn(msg, ConditionalWarning)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
