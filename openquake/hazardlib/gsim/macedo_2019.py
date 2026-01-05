@@ -194,6 +194,9 @@ class MacedoEtAl2019SInter(GMPE):
     # GMPE not verified against an independent implementation
     non_verified = True
 
+    # Conditional GMPE
+    conditional = True
+
     def __init__(self, region: str="Global", rho_pga_sa1: float=0.52):
         """
         Args:

@@ -75,6 +75,12 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
                              f"REQUIRES_IMTS attribute - this is "
                              f"required for a conditional GMPE's "
                              f"OpenQuake Engine implementation.")
+        if cond.conditional is not True:
+            raise ValueError(f"{cond._class__.__name__} is not a "
+                             f"conditional GMPE - it cannot be used "
+                             f"in ModifiableGMPE as a GMPE to predict "
+                             f"conditioned ground-motions for {imt}.")
+
         self.params[
             "conditional_gmpe"]["conditional_gmpes"][imt]["gsim"] = cond
         # Add each required IMT so we compute all using underlying GMM once

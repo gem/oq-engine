@@ -173,7 +173,11 @@ class AbrahamsonBhasin2020(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
     REQUIRES_DISTANCES = {"rrup"}
 
+    # GMPE not verified against an independent implementation
     non_verified = True
+
+    # Conditional GMPE
+    conditional = True
 
     def __init__(self, kind: str = "general"):
         # Set kind
