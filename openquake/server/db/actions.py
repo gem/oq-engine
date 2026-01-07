@@ -698,11 +698,10 @@ def _get_tag_id(db, tag_name):
 def add_tag_to_job(db, job_id, tag_name):
     try:
         tag_id = _get_or_create_tag_id(db, tag_name)
-        db(
-            """
-            INSERT INTO job_tag (job_id, tag_id, is_preferred)
-            VALUES (?x, ?x, 0)
-            """, job_id, tag_id)
+        db("""
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
+VALUES (?x, ?x, 0)
+           """, job_id, tag_id)
     except Exception as exc:
         return {'error': str(exc)}
     else:
