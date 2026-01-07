@@ -998,7 +998,11 @@ class ClassicalTestCase(CalculatorTestCase):
         # ModifiableGMPE. Here we test using Macedo et al. (2019)
         # for prediction of Arias Intensity and Abrahamson & Bhasin
         # (2020) for prediction of PGV with AbrahamsonGulerce2020SInter
-        # as the underlying GMM used to condition predictions upon
+        # as the underlying GMM used to condition predictions upon. This
+        # test is also important because it ensures the reordering of the
+        # means and sigmas per IMT are handled correctly (in the conditional
+        # GMPEs we need to initially "skip" IMTs which are not supported by
+        # the underlying GMPE).
         self.assert_curves_ok([
             "hazard_curve-mean-IA.csv",
             'hazard_curve-mean-PGA.csv',

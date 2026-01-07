@@ -30,7 +30,6 @@
 | case_49 | Test the use of the convolution method to amplify the motion                                           |
 | case_50 | Test the use of the kernel method to amplify the motion                                                |
 | case_51 | Test the use of a modifiable GMPE                                                                      |
-| case_52 |                                                                                                        |
 | case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
 | case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation   |
 | case_55 | Tests the use of amplification functions                                                               |
@@ -49,10 +48,10 @@
 | case_75 | Tests calculation with multi-fault source                                                              |
 | case_76 | Tests for Canada SHM6                                                                                  |
 | case_77 | Tests Modifiable GMPE with Tabular GMM                                                                 |
-| case_82 | tests two mps, only one with reqv that should collapse points					                       |
+| case_82 | tests two mps, only one with reqv that should collapse points					   |              
 | case_83 | Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM                                   |
 | case_85 | Tests conditional gmm MacedoEtAl2019SInter for computation of arias intensity                          |      
 | case_87 | Tests execution of NGAEastUSGSGMPE with Chapman and Guo (2021) coastal plains site amp model           |
 | case_88 | Tests execution of AtkinsonMacias2009 GMM with BA08 site term specified as input argument              |
 | case_89 | Tests execution of site model with non-measured (-999) z1pt0 and z2pt5 and basin-param using GMMs      |
-| case_90 | Tests execution of conditional GMPEs specified within a single ModifiableGMPE                          |
+| case_90 | Tests execution of multiple conditional GMPEs specified within a single ModifiableGMPE                 |
