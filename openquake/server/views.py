@@ -1859,7 +1859,7 @@ def web_engine(request, **kwargs):
         params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
-    elif application_mode == 'ARISTOTLE':
+    elif application_mode == 'IMPACT':
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
@@ -1889,7 +1889,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
-            if application_mode == 'ARISTOTLE':
+            if application_mode == 'IMPACT':
                 pngs['avg_gmf'] = [
                     k for k in ds['png'] if k.startswith('avg_gmf-')]
                 pngs['assets'] = 'assets.png' in ds['png']
@@ -1920,7 +1920,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             kwargs['calc_aelo_version'] = '1.0.0'
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
-    elif application_mode == 'ARISTOTLE':
+    elif application_mode == 'IMPACT':
         kwargs['warnings'] = get_aristotle_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 

@@ -99,7 +99,7 @@ class EngineServerTestCase(django.test.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 if os.environ.get('OQ_APPLICATION_MODE') in ('AELO',
-                                                             'ARISTOTLE'):
+                                                             'IMPACT'):
                     # NOTE: some more time is needed in order to wait for the
                     # callback to finish and produce the email notification
                     time.sleep(1)

@@ -116,7 +116,7 @@ def main(calc_id: int = -1, site_model=False,
             dist = sitecol.get_cdist(rec)
             print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        if (os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE'
+        if (os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT'
                 and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
