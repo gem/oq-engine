@@ -17,7 +17,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyModel>
                     [ModifiableGMPE]
                     gmpe.AbrahamsonEtAl2015SInter = {}
-                    [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+                    [ModifiableGMPE.conditional_gmpe]
                     "IA" = {gmpe.MacedoEtAl2019SInter = {}}
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -30,7 +30,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyModel>
                     [ModifiableGMPE]
                     gmpe.AbrahamsonEtAl2015SInter = {}
-                    [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+                    [ModifiableGMPE.conditional_gmpe]
                     "IA" = {gmpe.MacedoEtAl2019SInter = {region = "South America"}}
                 </uncertaintyModel>
                 <uncertaintyWeight>

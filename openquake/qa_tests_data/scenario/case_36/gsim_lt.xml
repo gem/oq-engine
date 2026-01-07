@@ -14,7 +14,7 @@
         <uncertaintyModel>
           [ModifiableGMPE]
           gmpe.NZNSHM2022_AbrahamsonGulerce2020SInterNewZealand  = {}
-          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          [ModifiableGMPE.conditional_gmpe]
           "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
@@ -27,7 +27,7 @@
         <uncertaintyModel>
           [ModifiableGMPE]
           gmpe.NZNSHM2022_AbrahamsonGulerce2020SSlabNewZealand  = {}
-          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          [ModifiableGMPE.conditional_gmpe]
           "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
@@ -61,7 +61,7 @@
         <uncertaintyModel>
           [ModifiableGMPE]
           gmpe.Atkinson2022SInter  = {}
-          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          [ModifiableGMPE.conditional_gmpe]
           "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
@@ -74,7 +74,7 @@
         <uncertaintyModel>
           [ModifiableGMPE]
           gmpe.Atkinson2022Crust = {}
-          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          [ModifiableGMPE.conditional_gmpe]
           "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>
@@ -87,7 +87,7 @@
         <uncertaintyModel>
           [ModifiableGMPE]
           gmpe.Stafford2022 = {}
-          [ModifiableGMPE.conditional_gmpe.conditional_gmpes]
+          [ModifiableGMPE.conditional_gmpe]
           "PGV" = {gmpe = {AbrahamsonBhasin2020 = {}}}
         </uncertaintyModel>
         <uncertaintyWeight>

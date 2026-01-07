@@ -53,7 +53,6 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
-
 def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     """
     This function performs 3 tasks:
@@ -65,10 +64,13 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     """
     # Get each conditional GMM's required IMTs and also instantiate them
     imts_req = []
-    cgmpes = self.params["conditional_gmpe"]["conditional_gmpes"]
-    for imt in cgmpes.keys():
+    conditional_gmpe = self.params["conditional_gmpe"]
+    for imt in conditional_gmpe.keys():
+        if imt == "base_preds":
+            continue
+            
         # Instantiate here and store for later
-        [(gmpe_name, kw)] = cgmpes[imt]["gmpe"].items()
+        [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
         kw['from_mgmpe'] = True # Ensure the conditional gmpe instantiates
                                 # while preventing use as a "regular" gmm
         cond = registry[gmpe_name](**kw)
@@ -78,13 +80,13 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
                              f"required for a conditional GMPE's "
                              f"OpenQuake Engine implementation.")
         if cond.conditional is not True:
-            raise ValueError(f"{cond._class__.__name__} is not a "
+            raise ValueError(f"{cond.__class__.__name__} is not a "
                              f"conditional GMPE - it cannot be used "
                              f"in ModifiableGMPE as a GMPE to predict "
                              f"conditioned ground-motions for {imt}.")
 
-        self.params[
-            "conditional_gmpe"]["conditional_gmpes"][imt]["gsim"] = cond
+        self.params["conditional_gmpe"][imt]["gsim"] = cond
+
         # Add each required IMT so we compute all using underlying GMM once
         imts_req.extend(
             [imt for imt in cond.REQUIRES_IMTS if imt not in imts_req])
@@ -96,18 +98,14 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
-    self.params[
-        "conditional_gmpe"]["base_preds"] = {str(imt): {} for imt in req_ord.keys()}
+    self.params["conditional_gmpe"]["base_preds"] = {str(imt): {} for imt in req_ord.keys()}
+    
     for imt in req_ord.keys():
         i = req_ord[imt]
-        self.params[
-            "conditional_gmpe"]["base_preds"][str(imt)]["mean"] = mean_b[i]
-        self.params[
-            "conditional_gmpe"]["base_preds"][str(imt)]["sig"] = sig_b[i]
-        self.params[
-            "conditional_gmpe"]["base_preds"][str(imt)]["tau"] = tau_b[i]
-        self.params[
-            "conditional_gmpe"]["base_preds"][str(imt)]["phi"] = phi_b[i]
+        self.params["conditional_gmpe"]["base_preds"][str(imt)]["mean"] = mean_b[i]
+        self.params["conditional_gmpe"]["base_preds"][str(imt)]["sig"] = sig_b[i]
+        self.params["conditional_gmpe"]["base_preds"][str(imt)]["tau"] = tau_b[i]
+        self.params["conditional_gmpe"]["base_preds"][str(imt)]["phi"] = phi_b[i]
         
     # Sometimes need underlying GSIM within conditional GMPEs compute method if has
     # ctx-dependent conditioning periods like possible within AbrahamsonBhasin2020
@@ -142,16 +140,22 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
             orig_pos = imts_map[imt]
             for arr, arr_r in zip(arrays, reordered):
                 arr_r[orig_pos] = arr[idx]
-        mean[:], sig[:], tau[:], phi[: ] = reordered
+        mean[:], sig[:], tau[:], phi[:] = reordered
 
 
-def conditional_gmpe(ctx, imt, me, si, ta, ph, conditional_gmpes, base_preds):
+def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     """
     This function applies a conditional GMPE for the computing of the
     ground-motion for the given intensity measure type.
     """
-    # If the imt is requested from a conditional gmpe...
-    if str(imt) in conditional_gmpes:
+    # Get the conditional GMPE per IMT
+    conditional_gmpes = {k: v for k, v in kwargs.items() if k != "base_preds"}
+
+    # Get predictions per IMT required by the conditional GMPEs
+    base_preds = kwargs.get('base_preds')
+    
+    # If the imt is requested from a conditional gmpe... 
+    if str(imt) in conditional_gmpes: 
 
         # Get the conditional GMM specified for the given IMT
         cond = conditional_gmpes[str(imt)]["gsim"]

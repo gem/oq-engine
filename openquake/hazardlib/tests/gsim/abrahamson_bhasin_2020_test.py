@@ -27,8 +27,7 @@ class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
     GSIM_CLASS = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
-            "conditional_gmpes": 
-            {"PGV": {"gmpe": {"AbrahamsonBhasin2020": {}}}}})
+            "PGV": {"gmpe": {"AbrahamsonBhasin2020": {}}}})
 
     def test_all(self):
         self.check('AB20/General.csv',
@@ -39,8 +38,7 @@ class AbrahamsonBhasin2020PGATestCase(BaseGSIMTestCase):
     GSIM_CLASS = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
-            "conditional_gmpes": 
-            {"PGV": {"gmpe": {"AbrahamsonBhasin2020PGA": {}}}}})
+            "PGV": {"gmpe": {"AbrahamsonBhasin2020PGA": {}}}})
 
     def test_all(self):
         self.check('AB20/PGAbased.csv',
@@ -51,8 +49,7 @@ class AbrahamsonBhasin2020SA1TestCase(BaseGSIMTestCase):
     GSIM_CLASS = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
-            "conditional_gmpes": 
-            {"PGV": {"gmpe": {"AbrahamsonBhasin2020SA1": {}}}}})
+            "PGV": {"gmpe": {"AbrahamsonBhasin2020SA1": {}}}})
 
     def test_all(self):
         self.check('AB20/SA1based.csv',
