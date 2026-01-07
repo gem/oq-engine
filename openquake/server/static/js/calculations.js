@@ -345,3 +345,12 @@ function refresh_tag_selector() {
     });
 }
 
+$('input#list_preferred_only').change(function() {
+    set_calc_list_params();
+
+});
+
+$('select#tag_selector').change(function() {
+    set_calc_list_params();
+});
+
