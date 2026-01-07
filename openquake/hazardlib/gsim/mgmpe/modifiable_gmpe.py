@@ -69,6 +69,8 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     for imt in cgmpes.keys():
         # Instantiate here and store for later
         [(gmpe_name, kw)] = cgmpes[imt]["gmpe"].items()
+        kw['from_mgmpe'] = True # Ensure the conditional gmpe instantiates
+                                # while preventing use as a "regular" gmm
         cond = registry[gmpe_name](**kw)
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "

@@ -179,7 +179,7 @@ class AbrahamsonBhasin2020(GMPE):
     # Conditional GMPE
     conditional = True
 
-    def __init__(self, kind: str = "general"):
+    def __init__(self, kind: str = "general", **kwargs):
         """
         :param kind: Specify if the user wishes to compute PGV based on PGA ("pga_based"),
                      SA(1.0) ("sa1_based") or based on a magnitude-dependent conditioning
@@ -189,7 +189,8 @@ class AbrahamsonBhasin2020(GMPE):
         GMPE upon which the predictions are conditioned), and therefore the base GMPE
         CANNOT be specified directly within the instantation of this GMPE. Please see
         oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
-        an example of conditional GMPEs specified within ModifiableGMPE.
+        an example of conditional GMPEs specified within ModifiablseGMPE. This is why
+        kwargs are permitted within this GSIM (to be checked in the super init).
         """
         # Set kind
         if kind not in AB20_COEFFS:
@@ -208,6 +209,10 @@ class AbrahamsonBhasin2020(GMPE):
         else:
             assert kind == 'sa1_based'
             self.REQUIRES_IMTS = [SA(1.0)]
+
+        super().__init__(**kwargs) # Required to ensure conditional GMPE check is performed
+                                   # within oq-engine.openquake.hazardlib.gsim.base (i.e.,
+                                   # permit instantiation only from within ModifiableGMPE)
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """
@@ -250,13 +255,13 @@ class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
 
-    def __init__(self):
-        super().__init__(kind="pga_based")
+    def __init__(self, **kwargs):
+        super().__init__(kind="pga_based", **kwargs)
 
 
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
     
-    def __init__(self):
-        super().__init__(kind="sa1_based")
+    def __init__(self, **kwargs):
+        super().__init__(kind="sa1_based", **kwargs)

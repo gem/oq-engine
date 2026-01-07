@@ -58,9 +58,11 @@ managed if necessary (there is a case where the conditioning period of the spect
 is raised in `ModifiableGMPE` if a conditional GMPE lacks this attribute.  It is also important to emphasise that `REQUIRED_IMTS` is different to the information
 stored within `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
 
-The second thing to note, is that you must add `conditional = True` to the `GSIM` class. This permits `ModifiableGMPE` to check if the GMPE proposed by the
-user is actually a conditional GMPE in a validation step. If this flag is missing (or not set to `True`), the engine will inform the user that the proposed
-GMPE cannot be used for the prediction of conditioned ground-motions for the `IMT` it has been specified for obtaining predictions with. 
+The second thing to note, is that you must add `conditional = True` to the `GSIM` class and ensure a `super` of the `init` method is used which passes `kwargs` into
+it too (`ModifiableGMPE` will pass a `True` value for `from_mgmpe` when instantiating the conditional GMPE from within it - this permits instantiation of a conditional
+GMPE from within `ModifiableGMPE`, but not as a "regular" `GSIM`, preventing incorrect usage). If the `conditional` flag is missing (or not set to `True`) within a GMPE,
+the engine will inform the user that the proposed GMPE cannot be used for the prediction of conditioned ground-motions for the `IMT` it has been specified for obtaining
+predictions with. 
 
 The third thing to note, is that the `compute` method of conditional GMPEs is less conventional (but still abides to the requirements defined within the `MetaGSIM`
 metadata class). We recommend inspecting either the `MacedoEtAl2019SInter` or `AbrahamsonBhasin2020` GSIMs to understand how the `compute` method (and the variables
