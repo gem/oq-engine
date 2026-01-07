@@ -631,7 +631,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks and save agg_curves-stats
         """
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
             try:
                 self._plot_assets()
             except Exception:

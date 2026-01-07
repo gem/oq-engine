@@ -67,7 +67,7 @@
                   Show hazard map</a>
               </div>
               {% endif %}
-              {% if application_mode == 'ARISTOTLE' %}
+              {% if application_mode == 'IMPACT' %}
               {% for img in pngs.avg_gmf %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
@@ -80,7 +80,7 @@
                   Show assets</a>
               </div>
               {% endif %}
-              {% endif %} {# end if ARISTOTLE #}
+              {% endif %} {# end if IMPACT #}
               {% if application_mode == 'AELO' %}
               {% if pngs.mce %}
               <div class="my-pngs">

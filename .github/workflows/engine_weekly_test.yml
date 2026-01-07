@@ -394,7 +394,7 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: ARISTOTLE
+      OQ_APPLICATION_MODE: IMPACT
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -429,7 +429,7 @@ jobs:
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
               cp -- "$file" "${file%.impact.tmpl}"
           done
-      - name: Server 'ARISTOTLE' mode tests
+      - name: Server 'IMPACT' mode tests
         run: |
           set -x
           date
