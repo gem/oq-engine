@@ -89,6 +89,7 @@
                         console.error("Error loading site classes:", error);
                     }
                 });
+                vs30_original_placeholder = $('input#vs30').attr('placeholder');
             } else if (window.application_mode === 'IMPACT') {
                 set_shakemap_version_selector();
                 $.ajax({
@@ -102,10 +103,14 @@
                         console.error("Error loading impact_from_defaults:", error);
                     }
                 });
+                function toggleRunCalcBtnState() {
+                    var lonValue = $('#lon').val();
+                    if (typeof lonValue !== 'undefined') {
+                        lonValue = lonValue.trim();
+                    }
+                    $('#submit_impact_calc').prop('disabled', lonValue === '');
+                }
+                toggleRunCalcBtnState();
             }
-
-            var vs30_original_placeholder = $('input#vs30').attr('placeholder');
-
-            toggleRunCalcBtnState();
         });
 })($, Backbone, _, gem_oq_server_url);

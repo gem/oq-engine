@@ -2,6 +2,7 @@ var site_classes = {}  // populated via a ajax call to the web API
 // NOTE: avoiding to call it DEFAULT_SITE_CLASS to avoid confusion with the 'default' one
 const PRESELECTED_SITE_CLASS = 'BC';
 
+var vs30_original_placeholder;
 $('select#site_class').on('change', function() {
     const site_class = $(this).val();
     const $input_vs30 = $('input#vs30');
