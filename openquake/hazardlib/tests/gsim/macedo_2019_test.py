@@ -25,7 +25,7 @@ BASE_GMM = gsim("AbrahamsonEtAl2015SInter")
 
 
 class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = modified_gsim(
+    GSIM = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
             "IA": {"gmpe": {"MacedoEtAl2019SInter": {}}}})
@@ -33,7 +33,7 @@ class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
     def test_all(self):
         for region in REGIONS:
             # Set region in Macedo et al. (2019)
-            self.GSIM_CLASS.kwargs[
+            self.GSIM.kwargs[
                 "conditional_gmpe"][
                     "IA"]["gmpe"]["MacedoEtAl2019SInter"]["region"] = region
             self.check(f'MACEDO2019/{region.replace(" ", "")}.csv',

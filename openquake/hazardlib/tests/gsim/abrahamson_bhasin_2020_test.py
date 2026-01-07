@@ -24,7 +24,7 @@ BASE_GMM = gsim("Lin2009")
 
 
 class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = modified_gsim(
+    GSIM = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
             "PGV": {"gmpe": {"AbrahamsonBhasin2020": {}}}})
@@ -35,7 +35,7 @@ class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
                    std_discrep_percentage=0.1)
 
 class AbrahamsonBhasin2020PGATestCase(BaseGSIMTestCase):
-    GSIM_CLASS = modified_gsim(
+    GSIM = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
             "PGV": {"gmpe": {"AbrahamsonBhasin2020PGA": {}}}})
@@ -46,7 +46,7 @@ class AbrahamsonBhasin2020PGATestCase(BaseGSIMTestCase):
                    std_discrep_percentage=0.1)
 
 class AbrahamsonBhasin2020SA1TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = modified_gsim(
+    GSIM = modified_gsim(
         BASE_GMM,
         conditional_gmpe={
             "PGV": {"gmpe": {"AbrahamsonBhasin2020SA1": {}}}})

@@ -223,9 +223,9 @@ class BaseGSIMTestCase(unittest.TestCase):
             normalize(fnames)
             return
 
-        if self.GSIM_CLASS.__class__.__name__ == "ModifiableGMPE":
-            gsim = self.GSIM_CLASS # GSIM from valid.modified_gsim
-        else:
+        if hasattr(self, 'GSIM'):  # for ModifiableGMPE tests
+            gsim = self.GSIM
+        else:  # assume a GSIM_CLASS attribute for regular tests
             gsim = self.GSIM_CLASS(**kwargs)
 
         out_types = ["MEAN"]

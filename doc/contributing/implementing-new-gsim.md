@@ -69,6 +69,5 @@ metadata class). We recommend inspecting either the `MacedoEtAl2019SInter` or `A
 fed into it) are handled throughout the GSIM itself when computing the conditioned intensity measures. The main thing to take away is that the predictions from the
 IMTs required by the conditional GMPE are stored in the dictionary called `base_preds` which is an argument into the `compute` method for conditional GMPEs.
 
-Lastly, you can use regular GSIM unit tests, but you must make use of `modified_gsim` (which is found within `oq-engine/openquake/hazardlib/valid`) to instantiate
-the `GSIM_CLASS` object which is always required for a standard GSIM unit test. Examples of this can be found in the unit tests for `MacedoEtAl2019SInter` and
-`AbrahamsonBhasin2020S`.
+Lastly, you can use regular `GSIM` unit tests, but you must make use of `modified_gsim` (which is found within `oq-engine/openquake/hazardlib/valid`) to instantiate a `GSIM` object
+rather than a `GSIM_CLASS` (the latter is used in regular GSIM unit tests). Examples of this can be found in the unit tests for `MacedoEtAl2019SInter` and `AbrahamsonBhasin2020S`.
