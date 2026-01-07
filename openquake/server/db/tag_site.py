@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+from django.conf import settings
 from django.contrib.admin import AdminSite
 
 
 class TagAdminSite(AdminSite):
+    site_url = f"{settings.WEBUI_PATHPREFIX}/engine/"
     site_header = "Job Tags Management"
     site_title = "Job Tags Management"
     index_title = "Manage Job Tags"
