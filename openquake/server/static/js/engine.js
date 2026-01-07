@@ -877,7 +877,7 @@ site-specific hazard and site response could be warranted.`;
 
             // IMPACT
 
-            if (window.application_mode === 'ARISTOTLE') {
+            if (window.application_mode === 'IMPACT') {
                 set_shakemap_version_selector();
                 $.ajax({
                     url:  "/v1/get_impact_form_defaults",

@@ -54,9 +54,9 @@ class ServerConfig(AppConfig):
             raise ValueError(
                 f'Invalid application mode: "{settings.APPLICATION_MODE}".'
                 f' It must be one of {settings.APPLICATION_MODES}')
-        if settings.APPLICATION_MODE == 'ARISTOTLE':
+        if settings.APPLICATION_MODE == 'IMPACT':
             try:
-                # NOTE: optional dependency needed for ARISTOTLE
+                # NOTE: optional dependency needed for IMPACT
                 from timezonefinder import TimezoneFinder  # noqa
             except ImportError:
                 raise ImportError(
@@ -79,13 +79,13 @@ class ServerConfig(AppConfig):
                             f'If authentication is enabled (without PAM)'
                             f' all the following settings must be specified:'
                             f' {required_email_settings}')
-        if settings.APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
+        if settings.APPLICATION_MODE in ('AELO', 'IMPACT'):
             if not config.directory.mosaic_dir:
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
             if settings.APPLICATION_MODE == 'AELO':
-                # NOTE: this might be needed also for ARISTOTLE
+                # NOTE: this might be needed also for IMPACT
                 aelo_changelog_path = os.path.join(
                     config.directory.mosaic_dir, 'aelo_changelog.ini')
                 if not os.path.isfile(aelo_changelog_path):

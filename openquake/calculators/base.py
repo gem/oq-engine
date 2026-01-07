@@ -933,7 +933,7 @@ class HazardCalculator(BaseCalculator):
                 self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
 
     def _plot_assets(self):
-        # called by post_risk in ARISTOTLE mode
+        # called by post_risk in IMPACT mode
         plt = plot_assets(self.datastore.calc_id, show=False,
                           assets_only=True)
         bio = io.BytesIO()
