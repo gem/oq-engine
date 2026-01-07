@@ -42,8 +42,8 @@ https://github.com/gem/oq-engine/blob/master/debian/changelog following the [Dev
 # Implementing a new conditional GSIM in the OpenQuake hazard library
 
 Conditional GMPEs within OpenQuake are specified within `ModifiableGMPE`. We use `ModifiableGMPE` because it allows us to easily specify each conditional GMPE
-that we wish to use to compute each IMT (probably) not supported by the underlying GSIM which we are conditioning the predictions of the conditional GMPE upon.
-See `oq-engine/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py` for more information on `ModifiableGMPE`.
+that we wish to use to compute scalar intensity measure types (IMTs) not supported by the underlying GSIM, which we are conditioning the predictions of the
+conditional GMPE upon. See `oq-engine/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py` for more information on `ModifiableGMPE`.
 
 For an example of this syntax within a GMPE XML, you can inspect `oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml`, within which
 a different conditional GMPE is specified for each IMT not supported by the underlying GSIM (here the underlying GSIM is `AbrahamsonGulerce2020SInter`).
