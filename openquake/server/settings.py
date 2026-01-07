@@ -215,7 +215,13 @@ FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'PUBLIC', 'RESTRICTED', 'AELO', 'IMPACT', 'READ_ONLY', 'TOOLS_ONLY']
+    'PUBLIC',      # The default behavior without authentication
+    'RESTRICTED',  # Enabling authentication
+    'AELO',        # Specific configurations for AELO installations
+    'IMPACT',   # Specific configurations for IMPACT installations
+    'READ_ONLY',   # Inhibits the possibility to run calculations
+    'TOOLS_ONLY',  # Provides standalone tools
+]
 
 APPLICATION_MODE = 'PUBLIC'
 
