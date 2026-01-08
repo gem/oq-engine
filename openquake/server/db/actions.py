@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2025 GEM Foundation
+# Copyright (C) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -698,11 +698,10 @@ def _get_tag_id(db, tag_name):
 def add_tag_to_job(db, job_id, tag_name):
     try:
         tag_id = _get_or_create_tag_id(db, tag_name)
-        db(
-            """
-            INSERT INTO job_tag (job_id, tag_id, is_preferred)
-            VALUES (?x, ?x, 0)
-            """, job_id, tag_id)
+        db("""
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
+VALUES (?x, ?x, 0)
+           """, job_id, tag_id)
     except Exception as exc:
         return {'error': str(exc)}
     else:
