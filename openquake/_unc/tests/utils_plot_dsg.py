@@ -1,6 +1,6 @@
 #
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
+# Copyright (C) 2026 GEM Foundation
 #
 #                `.......      `....     `..`...     `..`... `......
 #                `..    `..  `..    `..  `..`. `..   `..     `..
