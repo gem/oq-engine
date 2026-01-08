@@ -103,10 +103,10 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         imt.string: {} for imt in imts_req}
     
     for i, imt in enumerate(imts_req):
-        self.params["conditional_gmpe"]["base_preds"][str(imt)]["mean"] = mean_b[i]
-        self.params["conditional_gmpe"]["base_preds"][str(imt)]["sig"] = sig_b[i]
-        self.params["conditional_gmpe"]["base_preds"][str(imt)]["tau"] = tau_b[i]
-        self.params["conditional_gmpe"]["base_preds"][str(imt)]["phi"] = phi_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["mean"] = mean_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["sig"] = sig_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["tau"] = tau_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["phi"] = phi_b[i]
         
     # Sometimes need underlying GSIM within conditional GMPEs compute method if has
     # ctx-dependent conditioning periods like possible within AbrahamsonBhasin2020
@@ -135,7 +135,7 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
         reordered = [np.zeros_like(arr) for arr in arrays]
 
-        # for instance in the test case_90 one has
+        # For instance in the test case_90 one has
         # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
         # and imts_base = {SA(1.0), SA(0.2), PGA}
         for idx, imt in enumerate(imts_base):
@@ -157,7 +157,7 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     base_preds = kwargs.get('base_preds')
     
     # If the imt is requested from a conditional gmpe... 
-    if str(imt) in conditional_gmpes: 
+    if imt.string in conditional_gmpes: 
 
         # Get the conditional GMM specified for the given IMT
         cond = conditional_gmpes[imt.string]["gsim"]
