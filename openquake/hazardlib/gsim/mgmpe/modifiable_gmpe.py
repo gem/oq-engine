@@ -555,9 +555,9 @@ class ModifiableGMPE(GMPE):
         if "conditional_gmpe" in self.params:
             conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
             
-        # Otherwise, compute the original mean and std devs for all
-        # IMTs given not using a conditional GMPE
         else:
+            # Otherwise, compute the original mean and std devs for all
+            # IMTs given not using a conditional GMPE
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Here we compute reference ground-motion for PGA when we need to
