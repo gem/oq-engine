@@ -35,7 +35,7 @@ from PIL import Image
 import configparser
 import collections
 
-from openquake.commands.plot_assets import main as plot_assets
+from openquake.commands.plot_assets_webmercator import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
