@@ -240,6 +240,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
+    conditional = False
 
     @classmethod
     def __init_subclass__(cls):
@@ -267,6 +268,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     def __init__(self, **kwargs):
         cls = self.__class__
+
+        # Required for conditional GMPE check
+        from_mgmpe = kwargs.pop('from_mgmpe', False)
+
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
                 cls.__name__, cls.superseded_by.__name__)
@@ -284,6 +289,12 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'may not be as expected - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
+        if cls.conditional and not from_mgmpe:
+            msg = ('%s is a conditional GMPE - the user must specify such GMPEs '
+                   'within ModifiableGMPE in combination with a base GMPE to '
+                   'condition the ground-motions upon (i.e., this GMPE cannot be '
+                   'instantiated as a "regular" standalone GMPE)') % cls.__name__
+            raise ValueError(msg)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

@@ -38,3 +38,36 @@ Therefore assignment statements such as REQUIRES_RUPTURE_PARAMETERS = {'mag'} an
 
 - Update the changelog file 
 https://github.com/gem/oq-engine/blob/master/debian/changelog following the [Developers notes](updating-the-changelog.md)
+
+# Implementing a new conditional GSIM in the OpenQuake hazard library
+
+Conditional GMPEs within OpenQuake are specified within `ModifiableGMPE`. We use `ModifiableGMPE` because it allows us to easily specify each conditional GMPE
+that we wish to use to compute scalar intensity measure types (IMTs) not supported by the underlying GSIM, which we are conditioning the predictions of the
+conditional GMPE upon. See `oq-engine/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py` for more information on `ModifiableGMPE`.
+
+For an example of this syntax within a GMPE XML, you can inspect `oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml`, within which
+a different conditional GMPE is specified for each IMT not supported by the underlying GSIM (here the underlying GSIM is `AbrahamsonGulerce2020SInter`).
+
+To implement a conditional GMPE within the OQ Engine, the implementation procedure differs slightly from a more conventional GMPE. 
+
+The first thing to note, is that you must add an attribute to the parent `GSIM` class called `REQUIRES_IMTS` which is a list containing (as `imt` objects) the
+IMTs required by the conditional GMPE for the conditioning process. For example, the `MacedoEtAl2019SInter` GMPE requires both `PGA` and `SA(1.0)` for the
+prediction of `IA` (Arias Intensity) and therefore this information must be provided in the `GSIM` class for use within `ModifiableGMPE` when it is handling
+the IMTs that are needed for each conditional GMPE. Please refer to `AbrahamsonBhasin2020` for a (slightly) more complex example of how this attribute can be
+managed if necessary (there is a case where the conditioning period of the spectral acceleration is magnitude-dependent and therefore unknowable apriori). An error
+is raised in `ModifiableGMPE` if a conditional GMPE lacks this attribute.  It is also important to emphasise that `REQUIRED_IMTS` is different to the information
+stored within `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
+
+The second thing to note, is that you must add `conditional = True` to the `GSIM` class and ensure a `super` of the `init` method is used which passes `kwargs` into
+it too (`ModifiableGMPE` will pass a `True` value for `from_mgmpe` when instantiating the conditional GMPE from within it - this permits instantiation of a conditional
+GMPE from within `ModifiableGMPE`, but not as a "regular" `GSIM`, preventing incorrect usage). If the `conditional` flag is missing (or not set to `True`) within a GMPE,
+the engine will inform the user that the proposed GMPE cannot be used for the prediction of conditioned ground-motions for the `IMT` it has been specified for obtaining
+predictions with. 
+
+The third thing to note, is that the `compute` method of conditional GMPEs is less conventional (but still abides to the requirements defined within the `MetaGSIM`
+metadata class). We recommend inspecting either the `MacedoEtAl2019SInter` or `AbrahamsonBhasin2020` GSIMs to understand how the `compute` method (and the variables
+fed into it) are handled throughout the GSIM itself when computing the conditioned intensity measures. The main thing to take away is that the predictions from the
+IMTs required by the conditional GMPE are stored in the dictionary called `base_preds` which is an argument into the `compute` method for conditional GMPEs.
+
+Lastly, you can use regular `GSIM` unit tests, but you must make use of `modified_gsim` (which is found within `oq-engine/openquake/hazardlib/valid`) to instantiate a `GSIM` object
+rather than a `GSIM_CLASS` (the latter is used in regular GSIM unit tests). Examples of this can be found in the unit tests for `MacedoEtAl2019SInter` and `AbrahamsonBhasin2020S`.

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Subduction Interface">
+
+        <logicTreeBranch branchID="conditional_gmpes_within_an_mgmpe">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AbrahamsonGulerce2020SInter = {}
+                [ModifiableGMPE.conditional_gmpe]
+                "IA" = {gmpe.MacedoEtAl2019SInter = {region = "Japan"}}
+                <!-- AB2020 is for ASCR but fine to use here for tests -->
+                "PGV" = {gmpe.AbrahamsonBhasin2020 = {kind = "pga_based"}}
+            </uncertaintyModel>
+            <uncertaintyWeight>1.0</uncertaintyWeight>
+        
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+</logicTree>
+</nrml>

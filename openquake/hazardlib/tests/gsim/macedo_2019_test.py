@@ -15,19 +15,28 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.macedo_2019 import MacedoEtAl2019SInter
+from openquake.hazardlib.valid import gsim, modified_gsim
+
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 REGIONS = 'Global', 'Japan', 'New Zealand', 'South America', 'Taiwan'
 
+BASE_GMM = gsim("AbrahamsonEtAl2015SInter")
+
 
 class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = MacedoEtAl2019SInter
-
+    GSIM = modified_gsim(
+        BASE_GMM,
+        conditional_gmpe={
+            "IA": {"gmpe": {"MacedoEtAl2019SInter": {}}}})
+    
     def test_all(self):
         for region in REGIONS:
+            # Set region in Macedo et al. (2019)
+            self.GSIM.kwargs[
+                "conditional_gmpe"][
+                    "IA"]["gmpe"]["MacedoEtAl2019SInter"]["region"] = region
             self.check(f'MACEDO2019/{region.replace(" ", "")}.csv',
                        max_discrep_percentage=0.2,
                        std_discrep_percentage=0.1,
-                       region=region,
-                       gmpe={'AbrahamsonEtAl2015SInter': {}})
+                       region=region)

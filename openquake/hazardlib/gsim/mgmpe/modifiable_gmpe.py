@@ -28,15 +28,18 @@ from openquake.hazardlib.imt import from_string
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
+# Site terms imports
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import _get_bssa14_site_term
-
+ 
+# Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
+# CEUS 2020 site term imports
 from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
     get_phi_ss_at_quantile)
@@ -47,33 +50,154 @@ from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
 from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
     hashash2020_non_linear_scaling)
 
-IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
-                      "set_scale_total_sigma_vector",
-                      "set_fixed_total_sigma"]
+
+# ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
+
+def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
+    """
+    This function performs 3 tasks:
+        1) Instantiate the conditional GMPEs.
+        2) Compute the means and standard deviations for any IMTs
+           required by the conditional GMPEs.
+        3) Compute the means and standard deviations for any IMTs
+           we are not using conditional GMPEs for instead.
+    """
+    # Get each conditional GMM's required IMTs and also instantiate them
+    imts_req = []
+    conditional_gmpe = self.params["conditional_gmpe"]
+    for imt in conditional_gmpe:
+        if imt == "base_preds":
+            continue
+
+        # Instantiate here and store for later
+        [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
+        kw['from_mgmpe'] = True # Ensure the conditional gmpe instantiates
+                                # while preventing use as a "regular" gmm
+        cond = registry[gmpe_name](**kw)
+        if not hasattr(cond, "REQUIRES_IMTS"):
+            raise ValueError(f"{cond.__class__.__name__} lacks the "
+                             f"REQUIRES_IMTS attribute - this is "
+                             f"required for a conditional GMPE's "
+                             f"OpenQuake Engine implementation.")
+        if not cond.conditional:
+            raise ValueError(f"{cond.__class__.__name__} is not a "
+                             f"conditional GMPE - it cannot be used "
+                             f"in ModifiableGMPE as a GMPE to predict "
+                             f"conditioned ground-motions for {imt}.")
+
+        self.params["conditional_gmpe"][imt]["gsim"] = cond
+
+        # Add each required IMT so we compute all using underlying GMM once
+        imts_req.extend(imt for imt in cond.REQUIRES_IMTS
+                        if imt not in imts_req)
+
+    # Compute the means and std devs for IMTs required by conditional GMPEs
+    sh = (len(imts_req), len(ctx_copy))
+    mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
+                                   np.empty(sh), np.empty(sh))
+    self.gmpe.compute(ctx_copy, imts_req, mean_b,
+                      sig_b, tau_b, phi_b)
+
+    # Store them for use in conditional GMPE(s) later
+    self.params["conditional_gmpe"]["base_preds"] = {
+        imt.string: {} for imt in imts_req}
+    
+    for i, imt in enumerate(imts_req):
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["mean"] = mean_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["sig"] = sig_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["tau"] = tau_b[i]
+        self.params["conditional_gmpe"]["base_preds"][imt.string]["phi"] = phi_b[i]
+        
+    # Sometimes need underlying GSIM within conditional GMPEs compute method if has
+    # ctx-dependent conditioning periods like possible within AbrahamsonBhasin2020
+    self.params["conditional_gmpe"]["base_preds"]["base"] = self.gmpe
+
+    # Now get the IMTs we wish to compute using the underlying GSIM
+    imt_names = {imt.__name__ for imt in
+                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+    imts_base = {imt for imt in imts if imt.name in imt_names}
+
+    # NOTE: 'imts_base' can be empty if all IMTs in job file will be
+    # computed using conditional GMPEs (e.g. classical/case_09 test
+    # where only IA from Macedo 2019 is required). In this case the
+    # the means and std devs will be returned as zeroed arrays as
+    # is required in such instances
+    if imts_base:
+ 
+        # Need to map original order of IMTs for reordering
+        imts_map = {imt: i for i, imt in enumerate(imts)}
+
+        # Compute the original mean and std devs for required IMTs
+        self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
+
+        # Ensure means and sigma are in original order given potentially
+        # removed if have imts not supported by the underlying GSIM
+        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
+        reordered = [np.zeros_like(arr) for arr in arrays]
+
+        # For instance in the test case_90 one has
+        # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
+        # and imts_base = {SA(1.0), SA(0.2), PGA}
+        for idx, imt in enumerate(imts_base):
+            orig_pos = imts_map[imt]
+            for arr, arr_r in zip(arrays, reordered):
+                arr_r[orig_pos] = arr[idx]
+        mean[:], sig[:], tau[:], phi[:] = reordered
+
+
+def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
+    """
+    This function applies a conditional GMPE for the computing of the
+    ground-motion for the given intensity measure type.
+    """
+    # Get the conditional GMPE per IMT
+    conditional_gmpes = {k: v for k, v in kwargs.items() if k != "base_preds"}
+
+    # Get predictions per IMT required by the conditional GMPEs
+    base_preds = kwargs.get('base_preds')
+    
+    # If the imt is requested from a conditional gmpe... 
+    if imt.string in conditional_gmpes: 
+
+        # Get the conditional GMM specified for the given IMT
+        cond = conditional_gmpes[imt.string]["gsim"]
+
+        # Check that conditional GMPE supports the IMT we want to use it for
+        try:
+            assert imt.name in { # Get IMT without period/freq
+                imt.__name__ for imt in cond.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+        except:
+            raise ValueError(f"{cond.__class__.__name__} does not support {imt}")
+
+        # Check that we have required predictions from the underlying GMM
+        # for use in the conditional GMM
+        cond_imts = [imt_cond.string for imt_cond in cond.REQUIRES_IMTS]
+        missing = [imt_req for imt_req in cond_imts if imt_req not in base_preds.keys()]
+        if missing:
+            raise ValueError(
+                f"To use {cond.__class__.__name__} for the calculation of {imt}, "
+                f"the user must provide a GMM which is defined for the following "
+                f"IMTS: {cond_imts} (Missing = {missing})"
+            )
+
+        # Compute mean and sigma for IMT conditioned on mean and sigma of base GMM
+        me_c, sig_c, tau_c, phi_c = cond.compute(ctx, base_preds)
+
+        # Assign the mean and sigma of the conditioned GMPE
+        me[:] = me_c
+        si[:] = sig_c
+        ta[:] = tau_c
+        ph[:] = phi_c
+
+
+# ################ SITE TERMS AND BASIN TERMS ################## #
+
 
 SITE_TERMS = ["cy14_site_term",
               "ba08_site_term",
               "bssa14_site_term",
               "nrcan15_site_term",
               "ceus2020_site_term"]
-
-
-# ################ BEGIN FUNCTIONS MODIFYING mean_stds ################## #
-
-def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
-                           ergodic, tau_model, phi_ss_coetab, tau_coetab):
-    """
-    This function uses the sigma model of Al Atik (2015) as the standard
-    deviation of a specified GMPE
-    """
-    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
-    if ergodic:
-        phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
-        phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
-    tau = TAU_EXECUTION[tau_model](imt, ctx.mag, tau_coetab)
-    si[:] = np.sqrt(tau ** 2. + phi ** 2.)
-    ta[:] = tau
-    ph[:] = phi
 
 
 def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
@@ -100,7 +224,6 @@ def ceus2020_site_term(
     :param ref_pga:
         The reference PGA value computed for a vs30 corresponding to `ref_vs30`
     """
-
     if not hasattr(ref_pga, '__len__'):
         ref_pga = np.array([ref_pga])
     assert len(ref_pga) == len(ctx.vs30)
@@ -152,19 +275,6 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     me = _apply_m9_basin_term(ctx, imt, me)
 
 
-def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
-    """
-    This adds the between and within standard deviations to a model which has
-    only the total standard deviation. This function requires a ratio between
-    the within-event standard deviation and the between-event one.
-
-    :param with_betw_ratio:
-        The ratio between the within and between-event standard deviations
-    """
-    ta[:] = (si**2 / (1 + with_betw_ratio**2))**0.5
-    ph[:] = with_betw_ratio * ta
-
-
 def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
     """
     Adds amplfactor to mean
@@ -191,6 +301,43 @@ def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
 
     ph[:] = phi_star
     si[:] = total_stddev_star
+
+
+# ################ FUNCTIONS MODIFYING mean_stds ################## #
+
+
+IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
+                     "set_scale_total_sigma_vector",
+                     "set_fixed_total_sigma"]
+
+
+def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
+                           ergodic, tau_model, phi_ss_coetab, tau_coetab):
+    """
+    This function uses the sigma model of Al Atik (2015) as the standard
+    deviation of a specified GMPE
+    """
+    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
+    if ergodic:
+        phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
+        phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+    tau = TAU_EXECUTION[tau_model](imt, ctx.mag, tau_coetab)
+    si[:] = np.sqrt(tau ** 2. + phi ** 2.)
+    ta[:] = tau
+    ph[:] = phi
+
+
+def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
+    """
+    This adds the between and within standard deviations to a model which has
+    only the total standard deviation. This function requires a ratio between
+    the within-event standard deviation and the between-event one.
+
+    :param with_betw_ratio:
+        The ratio between the within and between-event standard deviations
+    """
+    ta[:] = (si**2 / (1 + with_betw_ratio**2))**0.5
+    ph[:] = with_betw_ratio * ta
 
 
 def set_between_epsilon(ctx, imt, me, si, ta, ph, epsilon_tau):
@@ -268,9 +415,6 @@ def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
     si[:] = (ta[2]**2 + np.sign(delta) * delta**2)**0.5
-
-
-# ################ END OF FUNCTIONS MODIFYING mean_stds ################## #
 
 
 def _dict_to_coeffs_table(input_dict, name):
@@ -370,7 +514,7 @@ class ModifiableGMPE(GMPE):
 
         # Set params
         for key in self.params:
-            if key in IMT_DEPENDENT_KEYS:
+            if key in IMT_DEPENDENT_ADJ:
                 # If the modification is period-dependent
                 for subkey in self.params[key]:
                     if isinstance(self.params[key][subkey], dict):
@@ -408,8 +552,15 @@ class ModifiableGMPE(GMPE):
             ctx_copy = ctx
         g = globals()
         
-        # Compute the original mean and standard deviations
-        self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
+        # If necessary, compute the means and std devs for the required
+        # IMTs that are not going to be calculated using conditional GMPEs 
+        if "conditional_gmpe" in self.params:
+            conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
+            
+        else:
+            # Otherwise, compute the original mean and std devs for all
+            # IMTs given not using a conditional GMPE
+            self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Here we compute reference ground-motion for PGA when we need to
         # amplify the motion using the CEUS2020 model
@@ -432,8 +583,15 @@ class ModifiableGMPE(GMPE):
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
+
+            # CEUS 2020 site term needs ref PGA stored
             if methname in ['ceus2020_site_term']:
                 kw['ref_pga'] = np.exp(ref)
+
+            # Conditional GMPEs
+            if methname in ["conditional_gmpe"]:
+                kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
+                
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)
