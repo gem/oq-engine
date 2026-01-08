@@ -15,6 +15,15 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 
+if (window.application_mode === 'AELO') {
+    window.AELO = window.AELO || {};
+    window.AELO.site_classes = {};
+}
+else if (window.application_mode === 'IMPACT') {
+    window.IMPACT = window.IMPACT || {};
+    window.IMPACT.impact_form_defaults = {};
+}
+
 (function ($, Backbone, _) {
     /* classic event management */
     $(document).ready(
@@ -82,7 +91,7 @@
                     method: "GET",
                     dataType: "json",
                     success: function(data) {
-                        site_classes = data;
+                        window.AELO.site_classes = data;
                         $('#asce_version').trigger('change');
                     },
                     error: function(xhr, status, error) {
@@ -90,14 +99,14 @@
                     }
                 });
                 vs30_original_placeholder = $('input#vs30').attr('placeholder');
+                initAeloForm();
             } else if (window.application_mode === 'IMPACT') {
-                set_shakemap_version_selector();
                 $.ajax({
                     url:  "/v1/get_impact_form_defaults",
                     method: "GET",
                     dataType: "json",
                     success: function(data) {
-                        impact_form_defaults = data;
+                        window.IMPACT.impact_form_defaults = data;
                     },
                     error: function(xhr, status, error) {
                         console.error("Error loading impact_from_defaults:", error);
@@ -111,6 +120,7 @@
                     $('#submit_impact_calc').prop('disabled', lonValue === '');
                 }
                 toggleRunCalcBtnState();
+                initImpactForm();
             }
         });
 })($, Backbone, _, gem_oq_server_url);
