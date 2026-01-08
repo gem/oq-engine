@@ -139,6 +139,7 @@ IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
 IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
+IMT.name = property(lambda self: self[0].split('(', 1)[0])
 IMT.frequency = property(lambda self: 1. / self.period)
 
 

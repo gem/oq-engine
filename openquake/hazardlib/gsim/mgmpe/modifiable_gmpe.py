@@ -65,10 +65,10 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     # Get each conditional GMM's required IMTs and also instantiate them
     imts_req = []
     conditional_gmpe = self.params["conditional_gmpe"]
-    for imt in conditional_gmpe.keys():
+    for imt in conditional_gmpe:
         if imt == "base_preds":
             continue
-            
+
         # Instantiate here and store for later
         [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
         kw['from_mgmpe'] = True # Ensure the conditional gmpe instantiates
@@ -79,7 +79,7 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
                              f"REQUIRES_IMTS attribute - this is "
                              f"required for a conditional GMPE's "
                              f"OpenQuake Engine implementation.")
-        if cond.conditional is not True:
+        if not cond.conditional:
             raise ValueError(f"{cond.__class__.__name__} is not a "
                              f"conditional GMPE - it cannot be used "
                              f"in ModifiableGMPE as a GMPE to predict "
@@ -88,20 +88,21 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         self.params["conditional_gmpe"][imt]["gsim"] = cond
 
         # Add each required IMT so we compute all using underlying GMM once
-        imts_req.extend(
-            [imt for imt in cond.REQUIRES_IMTS if imt not in imts_req])
+        imts_req.extend(imt for imt in cond.REQUIRES_IMTS
+                        if imt not in imts_req)
 
     # Compute the means and std devs for IMTs required by conditional GMPEs
-    req_ord = {imt: i for i, imt in enumerate(imts_req)}
     sh = (len(imts_req), len(ctx_copy))
-    mean_b, sig_b, tau_b, phi_b = np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
-    self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
+    mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
+                                   np.empty(sh), np.empty(sh))
+    self.gmpe.compute(ctx_copy, imts_req, mean_b,
+                      sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
-    self.params["conditional_gmpe"]["base_preds"] = {str(imt): {} for imt in req_ord.keys()}
+    self.params["conditional_gmpe"]["base_preds"] = {
+        imt.string: {} for imt in imts_req}
     
-    for imt in req_ord.keys():
-        i = req_ord[imt]
+    for i, imt in enumerate(imts_req):
         self.params["conditional_gmpe"]["base_preds"][str(imt)]["mean"] = mean_b[i]
         self.params["conditional_gmpe"]["base_preds"][str(imt)]["sig"] = sig_b[i]
         self.params["conditional_gmpe"]["base_preds"][str(imt)]["tau"] = tau_b[i]
@@ -112,31 +113,32 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     self.params["conditional_gmpe"]["base_preds"]["base"] = self.gmpe
 
     # Now get the IMTs we wish to compute using the underlying GSIM
-    imts_gmm = [imt.__qualname__ for imt in
-                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
-    imts_bse = []
-    for imt in imts:
-        if str(imt).split("(")[0] in imts_gmm and imt not in imts_bse:
-            imts_bse.append(imt)
+    imt_names = {imt.__name__ for imt in
+                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+    imts_base = {imt for imt in imts if imt.name in imt_names}
 
-    # NOTE: 'imts_bse' can be empty if all IMTs in job file will be
+    # NOTE: 'imts_base' can be empty if all IMTs in job file will be
     # computed using conditional GMPEs (e.g. classical/case_09 test
     # where only IA from Macedo 2019 is required). In this case the
     # the means and std devs will be returned as zeroed arrays as
     # is required in such instances
-    if len(imts_bse) > 0:
-        
+    if imts_base:
+ 
         # Need to map original order of IMTs for reordering
         imts_map = {imt: i for i, imt in enumerate(imts)}
 
         # Compute the original mean and std devs for required IMTs
-        self.gmpe.compute(ctx_copy, imts_bse, mean, sig, tau, phi)
+        self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
 
         # Ensure means and sigma are in original order given potentially
         # removed if have imts not supported by the underlying GSIM
         arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
         reordered = [np.zeros_like(arr) for arr in arrays]
-        for idx, imt in enumerate(imts_bse):
+
+        # for instance in the test case_90 one has
+        # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
+        # and imts_base = {SA(1.0), SA(0.2), PGA}
+        for idx, imt in enumerate(imts_base):
             orig_pos = imts_map[imt]
             for arr, arr_r in zip(arrays, reordered):
                 arr_r[orig_pos] = arr[idx]
@@ -158,18 +160,18 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     if str(imt) in conditional_gmpes: 
 
         # Get the conditional GMM specified for the given IMT
-        cond = conditional_gmpes[str(imt)]["gsim"]
+        cond = conditional_gmpes[imt.string]["gsim"]
 
         # Check that conditional GMPE supports the IMT we want to use it for
         try:
-            assert str(imt).split("(")[0] in [ # Get IMT without period/freq
-                imt.__qualname__ for imt in cond.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+            assert imt.name in { # Get IMT without period/freq
+                imt.__name__ for imt in cond.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
         except:
             raise ValueError(f"{cond.__class__.__name__} does not support {imt}")
 
         # Check that we have required predictions from the underlying GMM
         # for use in the conditional GMM
-        cond_imts = [str(imt_cond) for imt_cond in cond.REQUIRES_IMTS]
+        cond_imts = [imt_cond.string for imt_cond in cond.REQUIRES_IMTS]
         missing = [imt_req for imt_req in cond_imts if imt_req not in base_preds.keys()]
         if missing:
             raise ValueError(
