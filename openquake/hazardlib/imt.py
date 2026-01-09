@@ -64,11 +64,11 @@ def imt2tup(string):
         strength_ratio = float(rest[0][:-1].split(',')[1])
     else:
         raise NameError('IMT attributes not recognizable: %s' % rest[0][:-1])
-    if name.startswith("Sa_avg2") or name.startswith("SA_avg2"):
+    if name.startswith("Sa_avg2"):
         return ('Sa_avg2(%s)' % period, period)
-    elif name.startswith("Sa_avg3") or name.startswith("SA_avg3"):
+    elif name.startswith("Sa_avg3"):
         return ('Sa_avg3(%s)' % period, period)
-    elif name.startswith("SA") or name.startswith("Sa"):
+    elif name.startswith("SA"):
         return ('SA(%s)' % period, period)
     elif name.startswith("FIV3"):
         return ('FIV3(%s)' % period, period)
@@ -126,8 +126,8 @@ def dictarray(imtls):
 def repr(self):
     if self.period and self.damping != 5.0:
         if self.string.startswith('SDi'):
-            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
-                                        self.damping)
+            return 'SDi(%s, %s, %s)' % (
+                self.period, self.strength_ratio, self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
