@@ -64,20 +64,21 @@ def _get_style_of_faulting(rake):
     Note that the 'Unspecified' case is not considered here as
     rake is always given.
     """
-    sof = np.full_like(rake, 0)
+    sof = np.zeros_like(rake)
 
-    sof[((rake >= -180) & (rake <= -150)) | ((rake > -30) &
-        (rake <= 30)) | ((rake > 150) & (rake <= 180))] = 0
+    sof[((rake >= -180) & (rake <= -150)) |
+        ((rake > -30) & (rake <= 30)) |
+        ((rake > 150) & (rake <= 180))] = 0
 
     sof[(rake > -120) & (rake <= -60)] = 1
 
     sof[(rake > 60) & (rake <= 120)] = 2
 
-    sof[((rake > 30) & (rake <= 60)) | ((rake > 120) &
-        (rake <= 150))] = 3
+    sof[((rake > 30) & (rake <= 60)) |
+        ((rake > 120) & (rake <= 150))] = 3
 
-    sof[((rake > -150) & (rake <= -120)) | ((rake > -60) &
-                                            (rake <= -30))] = 4
+    sof[((rake > -150) & (rake <= -120)) |
+        ((rake > -60) & (rake <= -30))] = 4
 
     return sof
 
