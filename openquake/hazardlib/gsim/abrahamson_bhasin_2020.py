@@ -56,9 +56,8 @@ M2 = 7.0
 
 def _get_tref(ctx):
     """
-    Magnitude-dependent conditioning period Tref (Table 3.1) - used
-    if not specifying to use exclusively PGA or SA(1.0) for the
-    conditioning.
+    Magnitude-dependent conditioning period Tref (Table 3.1)
+    - used when the conditiong IMTs are not specified
     """
     mval = float(np.asarray(ctx.mag).flat[0])
 
@@ -181,42 +180,10 @@ class AbrahamsonBhasin2020(GMPE):
     # Conditional GMPE
     conditional = True
     kind = "general"
-
-    def __init__(self,  **kwargs):
-        """
-        :param kind: Specify if the user wishes to compute PGV based on PGA
-                     ("pga_based"), SA(1.0) ("sa1_based") or based on a
-                     magnitude-dependent conditioning period ("general").
-
-        NOTE: the underlying "base" GSIM is specified within ModifiableGMPE (as the
-        GMPE upon which the predictions are conditioned), and therefore the base GMPE
-        CANNOT be specified directly within the instantation of this GMPE. Please see
-        oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
-        an example of conditional GMPEs specified within ModifiableGMPE. This is why
-        kwargs are permitted within this GSIM (to be checked in the super init).
-        """
-        # Set kind
-        kind = self.kind
-        if kind not in AB20_COEFFS:
-            raise ValueError(f"Unknown AB20 kind '{kind}'. Choose from {list(AB20_COEFFS)}")
-        self.c = AB20_COEFFS[kind]
-        self.kind = kind
-        self.last_tref = None
-
-        # Get the corresponding required IMTs
-        if kind == "general":
-            self.REQUIRES_IMTS = [] # None - the mean and std devs will be computed 
-                                    # within this GSIM's compute method given they
-                                    # are ctx dependent (we cannot provide apriori)
-        elif kind == "pga_based":
-            self.REQUIRES_IMTS = [PGA()]
-        else:
-            assert kind == 'sa1_based'
-            self.REQUIRES_IMTS = [SA(1.0)]
-
-        super().__init__(**kwargs) # Required to ensure conditional GMPE check is performed
-                                   # within oq-engine.openquake.hazardlib.gsim.base (i.e.,
-                                   # permit instantiation only from within ModifiableGMPE)
+    REQUIRES_IMTS = []
+    # the mean and std devs will be computed
+    # within this GSIM's compute method given they
+    # are ctx dependent (we cannot provide apriori)
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """
@@ -231,9 +198,9 @@ class AbrahamsonBhasin2020(GMPE):
                            built within the ModifiableGMPE's compute method.
         """
         # Get conditioning IMT based on self.kind
+        c = AB20_COEFFS[self.kind]
         if self.kind == "general":
-            tref = _get_tref(ctx) # Mag-dependent
-            self.last_tref = tref
+            tref = _get_tref(ctx)  # Mag-dependent
             cond_imt = SA(tref)
             # We cannot know apriori the cond_imt if using "general"
             # given it is ctx-dependent so compute here using the
@@ -248,16 +215,18 @@ class AbrahamsonBhasin2020(GMPE):
         else:
             cond_imt = SA(1.0)
 
-        lnpgv = get_mean_conditional_pgv(self.c, ctx, base_preds, str(cond_imt))
+        lnpgv = get_mean_conditional_pgv(c, ctx, base_preds, str(cond_imt))
 
-        sigma_pgv, tau_pgv, phi_pgv = get_sig(self.c, ctx, base_preds, str(cond_imt))
+        sigma_pgv, tau_pgv, phi_pgv = get_sig(c, ctx, base_preds, str(cond_imt))
 
         return lnpgv, sigma_pgv, tau_pgv, phi_pgv
 
 
 class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
     kind = "pga_based"
+    REQUIRES_IMTS = [PGA()]
 
 
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
     kind = "sa1_based"
+    REQUIRES_IMTS = [SA(1.0)]
