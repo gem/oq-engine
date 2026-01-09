@@ -120,27 +120,25 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     # NOTE: 'imts_base' can be empty if all IMTs in job file will be
     # computed using conditional GMPEs (e.g. classical/case_09 test
     # where only IA from Macedo 2019 is required). In this case the
-    # the means and std devs will be returned as zeroed arrays as
-    # is required in such instances
+    # the means and std devs will be returned as zeroed arrays
     if imts_base:
- 
         # Need to map original order of IMTs for reordering
         imts_map = {imt: i for i, imt in enumerate(imts)}
 
         # Compute the original mean and std devs for required IMTs
         self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
-
         arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
-        reordered = [np.zeros_like(arr) for arr in arrays]
 
         # For instance in test case_90 one has
         # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
         # and imts_base = {SA(1.0), SA(0.2), PGA}
+        # then `m` takes the values [4, 3, 0] for `idx` in [0, 1, 2]
         for idx, imt in enumerate(imts_base):
-            orig_pos = imts_map[imt]
-            for arr, arr_r in zip(arrays, reordered):
-                arr_r[orig_pos] = arr[idx]
-        mean[:], sig[:], tau[:], phi[:] = reordered
+            m = imts_map[imt]
+            mean[m] = arrays[0][idx]
+            sig[m] = arrays[1][idx]
+            tau[m] = arrays[2][idx]
+            phi[m] = arrays[3][idx]
 
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
