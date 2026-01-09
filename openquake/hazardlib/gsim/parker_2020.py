@@ -44,6 +44,10 @@ BASINS = [None, "out", "Seattle"]
 EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
 
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
+
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
@@ -465,7 +469,7 @@ class ParkerEtAl2020SInter(GMPE):
 
     def __init__(self, region=None, saturation_region=None, basin=None,
                  m9_basin_term=False, usgs_basin_scaling=False,
-                 sigma_mu_epsilon=0.0):
+                 sigma_mu_epsilon=0.0, ak23_bias_adj=False):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -505,6 +509,17 @@ class ParkerEtAl2020SInter(GMPE):
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
 
+        # Alaska 2023 NSHM bias adjustment
+        self.ak23_bias_adj = ak23_bias_adj
+        if self.ak23_bias_adj:
+            if self.DEFINED_FOR_TECTONIC_REGION_TYPE is \
+                not const.TRT.SUBDUCTION_INTERFACE:
+                raise ValueError("The Alaska 2023 NSHM bias adjustment "
+                                 "should only be applied to the interface "
+                                 "variants of the NGA-Subduction GMMs.")
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -540,6 +555,9 @@ class ParkerEtAl2020SInter(GMPE):
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + flin + fm + c0 + fd + fb
+
+            if self.ak23_bias_adj:
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling
