@@ -438,10 +438,9 @@ class ParkerEtAl2020SInter(GMPE):
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
                                    model
-    :param ak23_bias_adj: Period-dependent bias adjustment as a applied within
-                          the USGS 2023 NSHM for the state of Alaska
+    :param ak23_bias_adj: Period-dependent bias adjustment as applied within
+                          the USGS 2023 NSHM for Alaska
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
@@ -516,8 +515,9 @@ class ParkerEtAl2020SInter(GMPE):
         if self.ak23_bias_adj:
             if self.DEFINED_FOR_TECTONIC_REGION_TYPE is \
                 not const.TRT.SUBDUCTION_INTERFACE:
-                raise ValueError("The Alaska 2023 NSHM bias adjustment should "
-                                 "only be applied to the subduction interface.")
+                raise ValueError(f"The Alaska 2023 NSHM bias adjustment "
+                                 f"should only be applied to an interface "
+                                 f"variant of {self.__class__.__name__}.")
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
@@ -558,10 +558,11 @@ class ParkerEtAl2020SInter(GMPE):
             mean[m] = fp + fnl + flin + fm + c0 + fd + fb
 
             if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
-                # Apply epistemic uncertainty scaling
+                # Apply epistemic uncertainty factor
                 sigma_mu_adjust = _get_sigma_mu_adjustment(
                     self.saturation_region, trt, imt, self.epi_adjs_table)
                 mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon
