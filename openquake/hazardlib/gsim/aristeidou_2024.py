@@ -116,31 +116,32 @@ def extract_im_names(imts, component_definition):
     Convert the im strings of openquake to the im naming convention
     used in the GMM
     """
-    imts_base = []
     im_names = []
     for imt in imts:
-        # Keep the im text before the occurance of '('
-        base = imt.string.split('(')[0]
-        # Keep the im text before the last occurance of '_'
-        base = base.split('_')[:2]
-        base = "_".join(base[:2])
-        im_name_mapping = {
-            "RSD575": "Ds575",
-            "RSD595": "Ds595",
-            "Sa_avg2": "Sa_avg2" + f"_{component_definition}({imt.period})",
-            "Sa_avg3": "Sa_avg3" + f"_{component_definition}({imt.period})",
-            "SA": "SA" + f"_{component_definition}({imt.period})",
-            "Sa": "SA" + f"_{component_definition}({imt.period})",
-            "FIV3": "FIV3" + f"({imt.period})",
-            "PGA": "PGA",
-            "PGV": "PGV",
-            "PGD": "PGD",
-        }
-        im_name = im_name_mapping[base]
-        imts_base.append(base)
-        im_names.append(im_name)
-    im_names = np.array(im_names)
-    return im_names
+        base = imt.name
+
+        # 1. Handle Spectral Acceleration and Averages
+        if base == "SA" or base.startswith("Sa_avg"):
+            name = f"{base}_{component_definition}({imt.period})"
+            # i.e. SA_RotD100(1.0)
+
+        # 2. Handle Duration and Velocity/Displacement/Acceleration
+        elif base == "RSD575":
+            name = "Ds575"
+        elif base == "RSD595":
+            name = "Ds595"
+
+        # 3. Handle Period-dependent measures like FIV3
+        elif base == "FIV3":
+            name = f"FIV3({imt.period})"
+
+        # 4. Fallback: keep as is if no rule matches (i.e. PGA, PGV, PGD)
+        else:
+            name = base
+
+        im_names.append(name)
+
+    return np.array(im_names)
 
 
 def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
