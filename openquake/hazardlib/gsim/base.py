@@ -260,6 +260,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     experimental = False
     adapted = False
     conditional = False
+    from_mgmpe = False
 
     @classmethod
     def __init_subclass__(cls):

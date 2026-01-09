@@ -24,8 +24,7 @@ Module exports: :class:`AbrahamsonBhasin2020`,
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV, PGA 
-from openquake.hazardlib.gsim.base import GMPE, add_alias
-
+from openquake.hazardlib.gsim.base import GMPE
 
 not_verified = True
 

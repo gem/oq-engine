@@ -17,19 +17,21 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.valid import gsim, modified_gsim
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.abrahamson_bhasin_2020 import AbrahamsonBhasin2020
 
 BASE_GMM = gsim("Lin2009")
 
-'''
-def test_wrong_instantiation():
-    gs = gsim("AbrahamsonBhasin2020")
-    try:
-        gs.from_mgpme
-    except ValueError as err:
-        assert "AbrahamsonBhasin2020 is a conditional GMPE" in str(err)
-    else:
-        raise RuntimeError('Expected ValueError not raised')
-'''
+
+class WrongInstantionTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AbrahamsonBhasin2020
+
+    def test_all(self):
+        # AbrahamsonBhasin2020 was not instantiated via a ModifiableGMPE
+        with self.assertRaises(NotImplementedError):
+            self.check('AB20/General.csv',
+                       max_discrep_percentage=0.2,
+                       std_discrep_percentage=0.1)
+
 
 class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
     GSIM = modified_gsim(

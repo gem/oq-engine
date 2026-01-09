@@ -72,6 +72,7 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         # Instantiate here and store for later
         [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
+        cond.from_mgpme = True
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "
                              f"REQUIRES_IMTS attribute - this is "
@@ -550,7 +551,6 @@ class ModifiableGMPE(GMPE):
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
             conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
-            
         else:
             # Otherwise, compute the original mean and std devs for all
             # IMTs given not using a conditional GMPE

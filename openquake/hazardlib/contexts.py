@@ -1252,6 +1252,10 @@ class ContextMaker(object):
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
+            if gsim.conditional and not gsim.from_mgmpe:
+                raise NotImplementedError(
+                    f'{gsim} was not instantiated with a '
+                    'ModifiableGMPE, read the documentation')
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
