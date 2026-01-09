@@ -438,6 +438,8 @@ class ParkerEtAl2020SInter(GMPE):
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
                                    model
+    :param ak23_bias_adj: Period-dependent bias adjustment as a applied within
+                          the USGS 2023 NSHM for the state of Alaska
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
