@@ -63,7 +63,7 @@ the `GSIM` class. If the `conditional` flag is missing or not set to
 `True`, the engine will inform the user that the
 proposed GMPE cannot be used for the prediction of conditioned
 ground-motions for the `IMT` it has been specified for obtaining
-predictions with. `ModifiableGMPE` will pass a `True` value for `from_mgmpe` when instantiating the conditional GMPE from within it - this permits raising a clear error message if the conditional GMPE was not
+predictions with. `ModifiableGMPE` will set the boolean attribute `from_mgmpe` when instantiating the conditional GMPE from within it - this permits raising a clear error message if the conditional GMPE was not
 instantiated via `ModifiableGMPE`.
 
 The third thing to note, is that the `compute` method of conditional GMPEs is less conventional (but still abides to the requirements defined within the `MetaGSIM`

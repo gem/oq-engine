@@ -1253,9 +1253,11 @@ class ContextMaker(object):
         out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
             if gsim.conditional and not gsim.from_mgmpe:
+                url = ('https://docs.openquake.org/oq-engine/master/manual/'
+                       'contributing/implementing-new-gsim.html')
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
-                    'ModifiableGMPE, read the documentation')
+                    f'ModifiableGMPE, please read {url}')
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
