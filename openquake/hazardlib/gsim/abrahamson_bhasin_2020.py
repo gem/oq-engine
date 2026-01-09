@@ -142,8 +142,10 @@ def get_sig(
     phi_cond = base_preds[imt_key]["phi"]
 
     sigma = np.sqrt((f1 * sigma_cond) ** 2 + sigma_pgv ** 2)
-    tau   = np.sqrt((f1 * tau_cond)   ** 2 + tau_pgv   ** 2) if (tau_cond is not None and np.size(tau_cond) > 0) else tau_pgv
-    phi   = np.sqrt((f1 * phi_cond)   ** 2 + phi_pgv   ** 2) if (phi_cond is not None and np.size(phi_cond) > 0) else phi_pgv
+    tau   = np.sqrt((f1 * tau_cond)   ** 2 + tau_pgv   ** 2) if (
+        tau_cond is not None and np.size(tau_cond) > 0) else tau_pgv
+    phi   = np.sqrt((f1 * phi_cond)   ** 2 + phi_pgv   ** 2) if (
+        phi_cond is not None and np.size(phi_cond) > 0) else phi_pgv
 
     return sigma, tau, phi
 
@@ -168,8 +170,7 @@ class AbrahamsonBhasin2020(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     REQUIRES_SITES_PARAMETERS = {"vs30"}
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
     REQUIRES_DISTANCES = {"rrup"}
@@ -179,8 +180,9 @@ class AbrahamsonBhasin2020(GMPE):
 
     # Conditional GMPE
     conditional = True
+    kind = "general"
 
-    def __init__(self, kind: str = "general", **kwargs):
+    def __init__(self,  **kwargs):
         """
         :param kind: Specify if the user wishes to compute PGV based on PGA
                      ("pga_based"), SA(1.0) ("sa1_based") or based on a
@@ -194,6 +196,7 @@ class AbrahamsonBhasin2020(GMPE):
         kwargs are permitted within this GSIM (to be checked in the super init).
         """
         # Set kind
+        kind = self.kind
         if kind not in AB20_COEFFS:
             raise ValueError(f"Unknown AB20 kind '{kind}'. Choose from {list(AB20_COEFFS)}")
         self.c = AB20_COEFFS[kind]
@@ -253,16 +256,8 @@ class AbrahamsonBhasin2020(GMPE):
 
 
 class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
-
-    def __init__(self, **kwargs):
-        super().__init__(kind="pga_based", **kwargs)
+    kind = "pga_based"
 
 
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
-    
-    def __init__(self, **kwargs):
-        super().__init__(kind="sa1_based", **kwargs)
+    kind = "sa1_based"
