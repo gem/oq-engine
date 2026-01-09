@@ -130,14 +130,12 @@ def extract_im_names(imts, component_definition):
             name = "Ds575"
         elif base == "RSD595":
             name = "Ds595"
-        elif base in ["PGA", "PGV", "PGD"]:
-            name = base
 
         # 3. Handle Period-dependent measures like FIV3
         elif base == "FIV3":
             name = f"FIV3({imt.period})"
 
-        # 4. Fallback: keep as is if no rule matches
+        # 4. Fallback: keep as is if no rule matches (i.e. PGA, PGV, PGD)
         else:
             name = base
 
