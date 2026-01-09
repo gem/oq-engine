@@ -93,14 +93,11 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     sh = (len(imts_req), len(ctx_copy))
     mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
                                    np.empty(sh), np.empty(sh))
-    self.gmpe.compute(ctx_copy, imts_req, mean_b,
-                      sig_b, tau_b, phi_b)
+    self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
-    self.params["conditional_gmpe"]["base_preds"] = {
-        imt.string: {} for imt in imts_req}
-
-    preds = self.params["conditional_gmpe"]["base_preds"]
+    preds = self.params["conditional_gmpe"]["base_preds"] = {
+               imt.string: {} for imt in imts_req}  # imt -> stat -> array
     for i, imt in enumerate(imts_req):
         preds[imt.string]["mean"] = mean_b[i]
         preds[imt.string]["sig"] = sig_b[i]
