@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Extended `oq engine --lhc` and `oq engine --lrc` to show the
+    calculation_mode
+
   [Christopher Brooks]
   * Refactored conditional GMPEs to be specifiable within ModifiableGMPE
     on a per-IMT basis (safer handling, more flexibility).

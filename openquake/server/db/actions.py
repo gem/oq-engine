@@ -230,13 +230,14 @@ def list_calculations(db, job_type, user_name):
     if len(jobs) == 0:
         out.append('None')
     else:
-        out.append('job_id |     status |          start_time | '
-                   '        description')
+        out.append('   job_id|  calculation_mode|   status|'
+                   '          start_time|                   '
+                   '          description')
         for job in jobs:
-            descr = job.description
-            start_time = job.start_time
-            out.append('%6d | %10s | %s | %s' % (
-                job.id, job.status, start_time, descr))
+            descr = job.description[:39]
+            start_time = str(job.start_time)[:19]
+            out.append('%9d|%18s|%9s| %s| %s' % (
+                job.id, job.calculation_mode, job.status, start_time, descr))
     return out
 
 
