@@ -47,7 +47,7 @@ jobs:
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
-          OQ_ADMIN_LOGIN=user
+          OQ_ADMIN_USERNAME=user
           OQ_ADMIN_PASSWORD=login
           OQ_ADMIN_EMAIL=user@login.input
           EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'

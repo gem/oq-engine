@@ -40,8 +40,8 @@ if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
     done
 	cd ${oq_basedir}/openquake/server
     python3 manage.py migrate
-    if [ -n "$OQ_ADMIN_LOGIN" ]; then
-        python3 manage.py createuser ${OQ_ADMIN_LOGIN} ${OQ_ADMIN_EMAIL} --level 2 --password ${OQ_ADMIN_PASSWORD} --no-email --staff --superuser
+    if [ -n "$OQ_ADMIN_USERNAME" ]; then
+        python3 manage.py createuser ${OQ_ADMIN_USERNAME} ${OQ_ADMIN_EMAIL} --level 2 --password ${OQ_ADMIN_PASSWORD} --no-email --staff --superuser
     else
         python3 manage.py createuser admin admin@example.com --level 2 --password admin --no-email --staff --superuser
     fi
