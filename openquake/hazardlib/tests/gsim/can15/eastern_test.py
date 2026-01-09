@@ -19,6 +19,11 @@ from openquake.hazardlib.gsim.can15.eastern import (
     EasternCan15Mid, EasternCan15Upp, EasternCan15Low)
 
 
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
+
+
 class EasternCan15LowTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EasternCan15Low
 

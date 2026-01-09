@@ -23,6 +23,11 @@ from openquake.hazardlib.gsim.can15.western import (
     OceanicCan15Mid, OceanicCan15Low, OceanicCan15Upp)
 
 
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
+
+
 class GetSigmaTestCase(unittest.TestCase):
     """
     This class tests the calculation of sigma values for the GMPEs included
