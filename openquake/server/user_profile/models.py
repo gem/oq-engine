@@ -18,7 +18,7 @@
 
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils.translation import gettext_lazy as _
 
 # NOTE: User exists only when authentication is enabled
 User.level = property(lambda self: getattr(self.profile, 'level', 0))
@@ -27,13 +27,14 @@ User.testdir = property(lambda self: getattr(self.profile, 'testdir', None))
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    LEVEL_CHOICES = [
-        (0, 'View Only'),
-        (1, 'Simplified'),
-        (2, 'Advanced'),
-    ]
+
+    class Level(models.IntegerChoices):
+        READ_ONLY = 0, _("Read only")
+        RESTRICTED = 1, _("Restricted")
+        ADVANCED = 2, _("Advanced")
+
     level = models.IntegerField(
-        choices=LEVEL_CHOICES,
-        default=0,
-        help_text="Choose the level for the user"
+        choices=Level.choices,
+        default=Level.READ_ONLY,
+        help_text=_("Choose the level for the user")
     )
