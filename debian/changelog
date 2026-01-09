@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Extended `oq engine --lhc` to show the calculation_mode
+  * Extended `oq engine --lhc` and `oq engine --lrc` to show the
+    calculation_mode
 
   [Christopher Brooks]
   * Refactored conditional GMPEs to be specifiable within ModifiableGMPE
