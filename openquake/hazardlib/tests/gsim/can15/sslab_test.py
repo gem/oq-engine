@@ -19,6 +19,11 @@ from openquake.hazardlib.gsim.can15.sslab import (
     SSlabCan15Mid, SSlabCan15Low, SSlabCan15Upp)
 
 
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
+
+
 class EasternCan15HighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SSlabCan15Upp
 

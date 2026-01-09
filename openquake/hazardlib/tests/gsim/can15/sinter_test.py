@@ -19,6 +19,11 @@ from openquake.hazardlib.gsim.can15.sinter import (
     SInterCan15Mid, SInterCan15Low, SInterCan15Upp)
 
 
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
+
+
 class SinterCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SInterCan15Mid
 
