@@ -185,18 +185,18 @@ class MacedoEtAl2019SInter(GMPE):
     # Subduction interface
     kind = "sinter"
 
+    conditional = True
     # Conditional upon PGA and SA(1.0)
-    REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
-                                     # implementation in OQ given we use ModifiableGMPE
-                                     # to manage them (we need this info as a class att
-                                     # to be available in the mgmpe imt-checks)
+    REQUIRES_IMTS = [PGA(), SA(1.0)]
+    # NOTE: This is ESSENTIAL for a conditional GMPE's
+    # implementation in OQ given we use ModifiableGMPE
+    # to manage them (we need this info as a class attribute
+    # to be available in the mgmpe imt-checks)
 
     # GMPE not verified against an independent implementation
     non_verified = True
 
-    conditional = True
-
-    def __init__(self, region: str="Global", rho_pga_sa1: float=0.52, **kwargs):
+    def __init__(self, region: str="Global", rho_pga_sa1: float=0.52):
         """
         Args:
             region: Region of application. Must be either "Global" (default)
@@ -212,8 +212,7 @@ class MacedoEtAl2019SInter(GMPE):
         GMPE upon which the predictions are conditioned), and therefore the base GMPE
         CANNOT be specified directly within the instantation of this GMPE. Please see
         oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
-        an example of conditional GMPEs specified within ModifiableGMPE. This is why
-        kwargs are permitted within this GSIM (to be checked in the super init).
+        an example of conditional GMPEs specified within ModifiableGMPE.
         """
         # Check that the region is one of those supported
         assert region in ("Global", "Japan", "Taiwan", "South America",
@@ -221,10 +220,6 @@ class MacedoEtAl2019SInter(GMPE):
             "Region %s not recognised for Macedo et al (2019) GMPE" % region
         self.region = region
         self.rho_pga_sa1 = rho_pga_sa1
-
-        super().__init__(**kwargs) # Required to ensure conditional GMPE check is performed
-                                   # within oq-engine.openquake.hazardlib.gsim.base (i.e.,
-                                   # permit instantiation only from within ModifiableGMPE)
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """

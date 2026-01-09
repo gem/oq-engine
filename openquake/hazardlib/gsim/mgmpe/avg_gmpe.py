@@ -69,7 +69,6 @@ class AvgGMPE(GMPE):
         """
         Instantiate a dictionary branch_name -> gmpe_name -> gmpe_params
         """
-        super().__init__(**kwargs)
         weights = []
         self.gsims = []
         rrp = set()
