@@ -185,16 +185,16 @@ class MacedoEtAl2019SInter(GMPE):
     # Subduction interface
     kind = "sinter"
 
+    conditional = True
     # Conditional upon PGA and SA(1.0)
-    REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
-                                     # implementation in OQ given we use ModifiableGMPE
-                                     # to manage them (we need this info as a class att
-                                     # to be available in the mgmpe imt-checks)
+    REQUIRES_IMTS = [PGA(), SA(1.0)]
+    # NOTE: This is ESSENTIAL for a conditional GMPE's
+    # implementation in OQ given we use ModifiableGMPE
+    # to manage them (we need this info as a class attribute
+    # to be available in the mgmpe imt-checks)
 
     # GMPE not verified against an independent implementation
     non_verified = True
-
-    conditional = True
 
     def __init__(self, region: str="Global", rho_pga_sa1: float=0.52, **kwargs):
         """

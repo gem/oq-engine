@@ -290,10 +290,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
         if cls.conditional and not from_mgmpe:
-            msg = ('%s is a conditional GMPE - the user must specify such GMPEs '
-                   'within ModifiableGMPE in combination with a base GMPE to '
-                   'condition the ground-motions upon (i.e., this GMPE cannot be '
-                   'instantiated as a "regular" standalone GMPE)') % cls.__name__
+            msg = ('%s is a conditional GMPE - the user must specify such GMPEs'
+                   ' within ModifiableGMPE in combination with a base GMPE to '
+                   'condition the ground-motions upon (i.e., this GMPE cannot '
+                   'be instantiated as a "regular" standalone GMPE)'
+                   ) % cls.__name__
             raise ValueError(msg)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

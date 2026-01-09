@@ -24,7 +24,8 @@ Module exports: :class:`AbrahamsonBhasin2020`,
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV, PGA 
-from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim.base import GMPE, add_alias
+
 
 not_verified = True
 
@@ -181,15 +182,15 @@ class AbrahamsonBhasin2020(GMPE):
 
     def __init__(self, kind: str = "general", **kwargs):
         """
-        :param kind: Specify if the user wishes to compute PGV based on PGA ("pga_based"),
-                     SA(1.0) ("sa1_based") or based on a magnitude-dependent conditioning
-                     period ("general").
+        :param kind: Specify if the user wishes to compute PGV based on PGA
+                     ("pga_based"), SA(1.0) ("sa1_based") or based on a
+                     magnitude-dependent conditioning period ("general").
 
         NOTE: the underlying "base" GSIM is specified within ModifiableGMPE (as the
         GMPE upon which the predictions are conditioned), and therefore the base GMPE
         CANNOT be specified directly within the instantation of this GMPE. Please see
         oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml for
-        an example of conditional GMPEs specified within ModifiablseGMPE. This is why
+        an example of conditional GMPEs specified within ModifiableGMPE. This is why
         kwargs are permitted within this GSIM (to be checked in the super init).
         """
         # Set kind

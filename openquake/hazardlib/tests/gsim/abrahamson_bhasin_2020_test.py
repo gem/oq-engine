@@ -22,6 +22,14 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 BASE_GMM = gsim("Lin2009")
 
+def test_wrong_instantiation():
+    try:
+        gsim("AbrahamsonBhasin2020")
+    except ValueError as err:
+        assert "AbrahamsonBhasin2020 is a conditional GMPE" in str(err)
+    else:
+        raise RuntimeError('Expected ValueError not raised')
+
 
 class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
     GSIM = modified_gsim(
