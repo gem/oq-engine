@@ -13,7 +13,7 @@
                 [ModifiableGMPE.conditional_gmpe]
                 "IA" = {gmpe.MacedoEtAl2019SInter = {region = "Japan"}}
                 <!-- AB2020 is for ASCR but fine to use here for tests -->
-                "PGV" = {gmpe.AbrahamsonBhasin2020 = {kind = "pga_based"}}
+                "PGV" = {gmpe.AbrahamsonBhasin2020PGA = {}}
             </uncertaintyModel>
             <uncertaintyWeight>1.0</uncertaintyWeight>
         

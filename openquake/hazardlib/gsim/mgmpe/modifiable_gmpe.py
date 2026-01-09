@@ -71,8 +71,6 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
 
         # Instantiate here and store for later
         [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
-        kw['from_mgmpe'] = True # Ensure the conditional gmpe instantiates
-                                # while preventing use as a "regular" gmm
         cond = registry[gmpe_name](**kw)
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "
@@ -101,16 +99,18 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
     # Store them for use in conditional GMPE(s) later
     self.params["conditional_gmpe"]["base_preds"] = {
         imt.string: {} for imt in imts_req}
-    
+
+    preds = self.params["conditional_gmpe"]["base_preds"]
     for i, imt in enumerate(imts_req):
-        self.params["conditional_gmpe"]["base_preds"][imt.string]["mean"] = mean_b[i]
-        self.params["conditional_gmpe"]["base_preds"][imt.string]["sig"] = sig_b[i]
-        self.params["conditional_gmpe"]["base_preds"][imt.string]["tau"] = tau_b[i]
-        self.params["conditional_gmpe"]["base_preds"][imt.string]["phi"] = phi_b[i]
+        preds[imt.string]["mean"] = mean_b[i]
+        preds[imt.string]["sig"] = sig_b[i]
+        preds[imt.string]["tau"] = tau_b[i]
+        preds[imt.string]["phi"] = phi_b[i]
         
-    # Sometimes need underlying GSIM within conditional GMPEs compute method if has
-    # ctx-dependent conditioning periods like possible within AbrahamsonBhasin2020
-    self.params["conditional_gmpe"]["base_preds"]["base"] = self.gmpe
+    # Sometimes need underlying GSIM within conditional GMPEs compute method
+    # if has ctx-dependent conditioning periods like possible within
+    # AbrahamsonBhasin2020
+    preds["base"] = self.gmpe
 
     # Now get the IMTs we wish to compute using the underlying GSIM
     imt_names = {imt.__name__ for imt in
@@ -130,12 +130,10 @@ def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
         # Compute the original mean and std devs for required IMTs
         self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
 
-        # Ensure means and sigma are in original order given potentially
-        # removed if have imts not supported by the underlying GSIM
         arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
         reordered = [np.zeros_like(arr) for arr in arrays]
 
-        # For instance in the test case_90 one has
+        # For instance in test case_90 one has
         # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
         # and imts_base = {SA(1.0), SA(0.2), PGA}
         for idx, imt in enumerate(imts_base):
@@ -163,24 +161,25 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
         cond = conditional_gmpes[imt.string]["gsim"]
 
         # Check that conditional GMPE supports the IMT we want to use it for
-        try:
-            assert imt.name in { # Get IMT without period/freq
-                imt.__name__ for imt in cond.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
-        except:
-            raise ValueError(f"{cond.__class__.__name__} does not support {imt}")
+        imt_names = {func.__name__ for func in cond.
+                     DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+        if imt.name not in imt_names:
+            raise ValueError(
+                f"{cond.__class__.__name__} does not support {imt}")
 
         # Check that we have required predictions from the underlying GMM
         # for use in the conditional GMM
         cond_imts = [imt_cond.string for imt_cond in cond.REQUIRES_IMTS]
-        missing = [imt_req for imt_req in cond_imts if imt_req not in base_preds.keys()]
+        missing = [imt_req for imt_req in cond_imts
+                   if imt_req not in base_preds.keys()]
         if missing:
             raise ValueError(
-                f"To use {cond.__class__.__name__} for the calculation of {imt}, "
-                f"the user must provide a GMM which is defined for the following "
-                f"IMTS: {cond_imts} (Missing = {missing})"
+                f"To use {cond.__class__.__name__} for the calculation "
+                f"of {imt}, the user must provide a GMM which is defined for "
+                f"the following IMTS: {cond_imts} (Missing = {missing})"
             )
 
-        # Compute mean and sigma for IMT conditioned on mean and sigma of base GMM
+        # Compute mean and sigma for IMT conditioned
         me_c, sig_c, tau_c, phi_c = cond.compute(ctx, base_preds)
 
         # Assign the mean and sigma of the conditioned GMPE
