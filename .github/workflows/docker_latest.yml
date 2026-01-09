@@ -61,6 +61,7 @@ jobs:
           EOF
           release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
           echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
+          echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
           docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
           sleep 300
           docker logs openquake -t
