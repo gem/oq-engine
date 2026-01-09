@@ -31,7 +31,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import (
-    RSD575, RSD595, Sa_avg2, Sa_avg3, SA, PGA, PGV, PGD, FIV3)
+    RSD575, RSD595, Sa_avg2, Sa_avg3, SA, PGA, PGV, PGD, FIV3, from_string)
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 import h5py
@@ -52,28 +52,6 @@ def load_hdf5_to_list(group):
         # Sort keys numerically
         sorted_keys = sorted(keys, key=lambda k: int(k.split("_")[-1]))
         return [load_hdf5_to_list(group[key]) for key in sorted_keys]
-
-
-def get_period_im(name: str):
-    """
-    Returns the period of IM and IM type, given the IM name string
-    """
-    period = float(name.split('(')[-1].split(')')[0])
-    return period
-
-
-def linear(x):
-    """
-    Calculate the linear activation function
-    """
-    return x
-
-
-def tanh(x):
-    """
-    Calculate the tanh activation function
-    """
-    return np.tanh(x)
 
 
 def softmax(x):
@@ -187,37 +165,30 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
         means_no_interp = means[:, idx].T
         stddevs_no_interp = stddevs[:, idx, :]
 
-    idx_no_interp = np.isin(im_names, supported_ims)
+    no_interp = np.isin(im_names, supported_ims)
 
     means_interp = []
     stddevs_interp = np.full(
-        (stddevs.shape[0], len(im_names[~idx_no_interp]),
+        (stddevs.shape[0], len(im_names[~no_interp]),
          stddevs.shape[2]), np.nan)
     # Perform linear interpolation in the logarithmic space for periods
     # not included in the set of periods of the GMM
-    for m, im_name in enumerate(im_names[~idx_no_interp]):
+    for m, im_name in enumerate(im_names[~no_interp]):
         idxs = np.where(np.char.startswith(
             supported_ims, im_name.split("(")[0]))
-        ims = supported_ims[idxs]
         means_for_interp = means[:, idxs]
         stddevs_for_interp = stddevs[:, idxs, :]
-
-        periods = []
-        for im in ims:
-            _t = get_period_im(im)
-            periods.append(_t)
+        periods = [from_string(im).period for im in supported_ims[idxs]]
 
         # Create interpolators
-        interp_stddevs = interp1d(np.log(periods), stddevs_for_interp,
-                                  axis=2)
+        interp_stddevs = interp1d(np.log(periods), stddevs_for_interp, axis=2)
         interp_means = interp1d(np.log(periods), means_for_interp)
+        imt = imts[np.where([~no_interp])[1][m]]
         try:
-            mean_interp = interp_means(
-                np.log(imts[np.where([~idx_no_interp])[1][m]].period))
-            stddev_interp = interp_stddevs(
-                np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+            mean_interp = interp_means(np.log(imt.period))
+            stddev_interp = interp_stddevs(np.log(imt.period))
         except ValueError:
-            raise KeyError(imts[np.where([~idx_no_interp])[1][m]])
+            raise KeyError(imt)
         means_interp.append(np.squeeze(mean_interp, axis=1))
         stddevs_interp[:, m, :] = np.squeeze(stddev_interp, axis=1)
     means_interp = np.array(means_interp)
@@ -228,12 +199,13 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
     mean = np.full((len(im_names), means.shape[0]), np.nan)
     stddev = np.full((
         stddevs.shape[0], len(im_names), stddevs.shape[2]), np.nan)
-    if means_interp.size != 0 and means_no_interp.size != 0:
-        mean[idx_no_interp, :] = means_no_interp
-        mean[~idx_no_interp, :] = means_interp
+    if means_interp.size and means_no_interp.size:
+        # TODO: this part is not tested
+        mean[no_interp, :] = means_no_interp
+        mean[~no_interp, :] = means_interp
 
-        stddev[:, idx_no_interp, :] = stddevs_no_interp
-        stddev[:, ~idx_no_interp, :] = stddevs_interp
+        stddev[:, no_interp, :] = stddevs_no_interp
+        stddev[:, ~no_interp, :] = stddevs_interp
         return mean, stddev
     elif means_interp.size == 0:
         mean = means_no_interp
@@ -251,7 +223,7 @@ def _generate_function(x, biases, weights):
     """
     biases = np.asarray(biases)
     weights = np.asarray(weights).T
-    return biases.reshape(1, -1) + np.dot(weights, x.T).T
+    return biases.reshape(1, -1) + (weights @ x.T).T
 
 
 def _minmax_scaling(DATA, x, SUGGESTED_LIMITS, feature_range=(-3, 3)):
@@ -259,12 +231,11 @@ def _minmax_scaling(DATA, x, SUGGESTED_LIMITS, feature_range=(-3, 3)):
     Returns the min-max transformation scaling of input features
     """
     pars = np.char.decode(DATA['parameters'], 'UTF-8')
-    min_max = np.asarray([
-        SUGGESTED_LIMITS[par] for par in pars])
+    min_max = np.asarray([SUGGESTED_LIMITS[par] for par in pars])
 
     scaled_data = (x - min_max[:, 0]) / (min_max[:, 1] - min_max[:, 0])
-    scaled_data = scaled_data * \
-        (feature_range[1] - feature_range[0]) + feature_range[0]
+    scaled_data = scaled_data * (
+        feature_range[1] - feature_range[0]) + feature_range[0]
     return scaled_data
 
 
@@ -279,8 +250,7 @@ class AristeidouEtAl2024(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        PGA, PGV, PGD, SA, Sa_avg2, Sa_avg3}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, PGD, SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD50}
@@ -294,8 +264,7 @@ class AristeidouEtAl2024(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
     #: Required rupture parameters
-    REQUIRES_RUPTURE_PARAMETERS = {
-        'mag', 'ztor', 'hypo_depth', 'rake'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'hypo_depth', 'rake'}
 
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
@@ -339,7 +308,7 @@ class AristeidouEtAl2024(GMPE):
         rake = np.array(ctx.rake).reshape(-1, 1)
         mechanism = _get_style_of_faulting_term(rake)
         z2pt5 = ctx.z2pt5.copy()
-        # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
+        # Use non-Japan CB14 vs30 to z2pt5 relationship for -999
         mask = z2pt5 == -999
         z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
         # Transform z2pt5 to [m]
@@ -347,8 +316,7 @@ class AristeidouEtAl2024(GMPE):
         rx = np.array(ctx.rx).reshape(-1, 1)
         ztor = np.array(ctx.ztor).reshape(-1, 1)
         ctx_params = np.column_stack([
-            rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor
-        ])
+            rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor])
 
         # Get biases and weights of the ANN model
         biases = self.DATA["biases"]
@@ -359,21 +327,13 @@ class AristeidouEtAl2024(GMPE):
         x_transformed = _minmax_scaling(
             self.DATA, ctx_params, self.SUGGESTED_LIMITS)
 
-        _data = _generate_function(
-            x_transformed, biases[0], weights[0])
-        a1 = softmax(_data)
+        a1 = softmax(_generate_function(x_transformed, biases[0], weights[0]))
 
         # Hidden layer
-        _data = _generate_function(
-            a1, biases[1], weights[1]
-        )
-        a2 = tanh(_data)
+        a2 = np.tanh(_generate_function(a1, biases[1], weights[1]))
 
         # Output layer
-        _data = _generate_function(
-            a2, biases[2], weights[2]
-        )
-        output_log10 = linear(_data)
+        output_log10 = _generate_function(a2, biases[2], weights[2])
 
         # Reverse log10
         output = 10 ** output_log10
@@ -402,7 +362,6 @@ class AristeidouEtAl2024(GMPE):
 
 
 class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
-
     #: Supported intensity measure types
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
         SA, Sa_avg2, Sa_avg3, RSD595, RSD575, FIV3}
@@ -414,10 +373,8 @@ class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
 
 
 class AristeidouEtAl2024RotD100(AristeidouEtAl2024):
-
     #: Supported intensity measure types
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        SA, Sa_avg2, Sa_avg3}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD100}
