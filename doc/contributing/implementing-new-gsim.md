@@ -99,3 +99,10 @@ of essential details like disabling the parallelization implemented by the machi
 learning library which would interfer with the engine parallelization and would cause
 disasters: for instance, we managed to totally freeze a machine with 128 cores due to excessive
 parallelization involving 128x128=16384 threads, the only solution being a hard reboot.
+
+A very common mistake when implementing advanced GSIMs that depends on other GSIMs, like for instance
+the ``ModifiableGSIM`` class, is to instantiate the underlying GSIMs in the ``compute`` method.
+This will apparently work well for most GSIMs, but as soon as one of the underlying GSIMs performs an expensive
+operation at instantiation time, like reading an .onnx files of several megabytes, the performance of the
+engine will be destroyed, since the ``compute`` method is called millions of times (at worse it will
+correspond to the number of ruptures in the model).
