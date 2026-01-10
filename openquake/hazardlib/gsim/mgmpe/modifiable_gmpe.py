@@ -555,8 +555,7 @@ class ModifiableGMPE(GMPE):
             ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
-        g = globals()
-        
+
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
@@ -586,6 +585,7 @@ class ModifiableGMPE(GMPE):
             ref = np.squeeze(ref)
 
         # Apply sequentially the modifications
+        g = globals()
         for methname, kw in self.params.items():
 
             # CEUS 2020 site term needs ref PGA stored
