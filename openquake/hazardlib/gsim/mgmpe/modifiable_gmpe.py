@@ -56,10 +56,9 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     """
     This function:
-        1) Compute the means and standard deviations for any IMTs
+        1) Compute the means and standard deviations for the IMTs
            required by the conditional GMPEs.
-        2) Compute the means and standard deviations for any IMTs
-           required by the conditional GMPEs.
+        2) Compute the means and standard deviations for the other IMTs
     """
     # Compute the means and std devs for IMTs required by conditional GMPEs
     imts_req = self.imts_req
