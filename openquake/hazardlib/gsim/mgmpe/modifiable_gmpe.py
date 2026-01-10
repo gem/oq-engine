@@ -402,7 +402,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     #  'PGV': {'gmpe': {'AbrahamsonBhasin2020PGA': {}}}}
 
     # Get each conditional GMM's required IMTs and also instantiate them
-    imts_req = []
+    imts_req = set()
     for imt in cond_gmpe_by_imt:
         if imt == "base_preds":
             continue
@@ -425,9 +425,8 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
         cond_gmpe_by_imt[imt]["gsim"] = cond
 
         # Add each required IMT so we compute all using underlying GMM once
-        imts_req.extend(imt for imt in cond.REQUIRES_IMTS
-                        if imt not in imts_req)
-    return imts_req
+        imts_req.update(cond.REQUIRES_IMTS)
+    return sorted(imts_req)
 
 
 class ModifiableGMPE(GMPE):
