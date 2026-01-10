@@ -513,11 +513,12 @@ class ParkerEtAl2020SInter(GMPE):
         # Alaska 2023 NSHM bias adjustment
         self.ak23_bias_adj = ak23_bias_adj
         if self.ak23_bias_adj:
-            if self.DEFINED_FOR_TECTONIC_REGION_TYPE is \
-                not const.TRT.SUBDUCTION_INTERFACE:
-                raise ValueError(f"The Alaska 2023 NSHM bias adjustment "
-                                 f"should only be applied to an interface "
-                                 f"variant of {self.__class__.__name__}.")
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is not
+                const.TRT.SUBDUCTION_INTERFACE or self.region):
+                raise ValueError(f'The Alaska 2023 NSHM bias adjustment '
+                                 f'should only be applied to the "global" '
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
