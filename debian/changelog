@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Reduced the number of duplicated warnings
+  * Show the GSIM class warnings only once
   * Extended `oq engine --lhc` and `oq engine --lrc` to show the
     calculation_mode
 
