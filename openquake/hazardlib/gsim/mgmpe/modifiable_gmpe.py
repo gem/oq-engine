@@ -53,44 +53,16 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
-def conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi):
+def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     """
-    This function performs 3 tasks:
-        1) Instantiate the conditional GMPEs.
-        2) Compute the means and standard deviations for any IMTs
+    This function:
+        1) Compute the means and standard deviations for any IMTs
            required by the conditional GMPEs.
-        3) Compute the means and standard deviations for any IMTs
+        2) Compute the means and standard deviations for any IMTs
            we are not using conditional GMPEs for instead.
     """
-    # Get each conditional GMM's required IMTs and also instantiate them
-    imts_req = []
-    conditional_gmpe = self.params["conditional_gmpe"]
-    for imt in conditional_gmpe:
-        if imt == "base_preds":
-            continue
-
-        # Instantiate here and store for later
-        [(gmpe_name, kw)] = conditional_gmpe[imt]["gmpe"].items()
-        cond = registry[gmpe_name](**kw)
-        cond.from_mgpme = True
-        if not hasattr(cond, "REQUIRES_IMTS"):
-            raise ValueError(f"{cond.__class__.__name__} lacks the "
-                             f"REQUIRES_IMTS attribute - this is "
-                             f"required for a conditional GMPE's "
-                             f"OpenQuake Engine implementation.")
-        if not cond.conditional:
-            raise ValueError(f"{cond.__class__.__name__} is not a "
-                             f"conditional GMPE - it cannot be used "
-                             f"in ModifiableGMPE as a GMPE to predict "
-                             f"conditioned ground-motions for {imt}.")
-
-        self.params["conditional_gmpe"][imt]["gsim"] = cond
-
-        # Add each required IMT so we compute all using underlying GMM once
-        imts_req.extend(imt for imt in cond.REQUIRES_IMTS
-                        if imt not in imts_req)
-
     # Compute the means and std devs for IMTs required by conditional GMPEs
+    imts_req = self.imts_req
     sh = (len(imts_req), len(ctx_copy))
     mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
                                    np.empty(sh), np.empty(sh))
@@ -421,6 +393,42 @@ def _dict_to_coeffs_table(input_dict, name):
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 
+def init_underlying_gmpes(cond_gmpe_by_imt):
+    """
+    :param cond_gmpe_by_imt: dictionary describing a conditional GMPE
+    """
+    # NB: in classical/case_90 cond_gmpe_by_imt is the dictionary
+    # {'IA': {'gmpe': {'MacedoEtAl2019SInter': {'region': 'Japan'}}},
+    #  'PGV': {'gmpe': {'AbrahamsonBhasin2020PGA': {}}}}
+
+    # Get each conditional GMM's required IMTs and also instantiate them
+    imts_req = set()
+    for imt in cond_gmpe_by_imt:
+        if imt == "base_preds":
+            continue
+
+        # Instantiate here and store for later
+        [(gmpe_name, kw)] = cond_gmpe_by_imt[imt]["gmpe"].items()
+        cond = registry[gmpe_name](**kw)
+        cond.from_mgpme = True
+        if not hasattr(cond, "REQUIRES_IMTS"):
+            raise ValueError(f"{cond.__class__.__name__} lacks the "
+                             f"REQUIRES_IMTS attribute - this is "
+                             f"required for a conditional GMPE's "
+                             f"OpenQuake Engine implementation.")
+        if not cond.conditional:
+            raise ValueError(f"{cond.__class__.__name__} is not a "
+                             f"conditional GMPE - it cannot be used "
+                             f"in ModifiableGMPE as a GMPE to predict "
+                             f"conditioned ground-motions for {imt}.")
+
+        cond_gmpe_by_imt[imt]["gsim"] = cond
+
+        # Add each required IMT so we compute all using underlying GMM once
+        imts_req.update(cond.REQUIRES_IMTS)
+    return sorted(imts_req)
+
+
 class ModifiableGMPE(GMPE):
     """
     This is a class to modify an underlying GMPE.
@@ -435,7 +443,6 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
-
 
     def __init__(self, **kwargs):
         # Create the original GMPE
@@ -516,6 +523,9 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
+        if "conditional_gmpe" in self.params:
+            self.imts_req = init_underlying_gmpes(self.params["conditional_gmpe"])
+
     # called by the ContextMaker
     def set_tables(self, mags, imts):
         """
@@ -545,12 +555,11 @@ class ModifiableGMPE(GMPE):
             ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
-        g = globals()
-        
+
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
-            conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
+            conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
             # Otherwise, compute the original mean and std devs for all
             # IMTs given not using a conditional GMPE
@@ -576,6 +585,7 @@ class ModifiableGMPE(GMPE):
             ref = np.squeeze(ref)
 
         # Apply sequentially the modifications
+        g = globals()
         for methname, kw in self.params.items():
 
             # CEUS 2020 site term needs ref PGA stored
