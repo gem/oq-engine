@@ -87,12 +87,10 @@ learning model must be instantiated in the ``__init__`` method by using a
 ``PicklableInferenceSession`` class. Interested users should study the module
 ``taherian_2024_inland.py`` which is a simple example of how to implement such GSIMs.
 Basically the ``__init__` method will have the form
-
-.. code-block:: python
-
-  def __init__(self):
-      self.session = PicklableInferenceSession(path_to_onnx_file)
-
+```python
+def __init__(self):
+    self.session = PicklableInferenceSession(path_to_onnx_file)
+```
 and then ``self.session.run`` will be called in the ``compute`` method or in same helper
 function called by the ``compute`` method. The ``PicklableInferenceSession`` takes case
 of essential details like disabling the parallelization implemented by the machine
