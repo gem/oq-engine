@@ -55,7 +55,7 @@ BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020")
 KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020",
                             "kuehn_2020_coeffs.csv")
 
-# Alaska 2023 NSHM bias adjustment coefficients
+# Alaska 2023 USGS model bias adjustment coefficients
 AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")
@@ -755,7 +755,7 @@ class KuehnEtAl2020SInter(GMPE):
                       sigma_mu values are read in from hdf5 binary files and
                       interpolated to the magnitude and distances required
     ak23_bias_adj: Period-dependent bias adjustment as applied within the USGS
-                   2023 NSHM for Alaska
+                   2023 USGS model for Alaska
     """
     experimental = True
 
@@ -829,13 +829,13 @@ class KuehnEtAl2020SInter(GMPE):
         else:
             self.sigma_mu_model = {}
 
-        # Alaska 2023 NSHM bias adjustment
+        # Alaska 2023 USGS model bias adjustment
         self.ak23_bias_adj = ak23_bias_adj
         if self.ak23_bias_adj:
             if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
                 not const.TRT.SUBDUCTION_INTERFACE or
                     self.region != "GLO"):
-                raise ValueError(f'The Alaska 2023 NSHM bias adjustment '
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
                                  f'should only be applied to the "global"'
                                  f'interface variant of variant of '
                                  f'{self.__class__.__name__}.')

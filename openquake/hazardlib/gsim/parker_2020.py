@@ -44,7 +44,7 @@ BASINS = [None, "out", "Seattle"]
 EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
 
-# Alaska 2023 NSHM bias adjustment coefficients
+# Alaska 2023 USGS model bias adjustment coefficients
 AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")
@@ -440,7 +440,7 @@ class ParkerEtAl2020SInter(GMPE):
                                    of the median) for the epistemic uncertainty
                                    model
     :param ak23_bias_adj: Period-dependent bias adjustment as applied within
-                          the USGS 2023 NSHM for Alaska
+                          the USGS 2023 USGS model for Alaska
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -511,12 +511,12 @@ class ParkerEtAl2020SInter(GMPE):
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
 
-        # Alaska 2023 NSHM bias adjustment
+        # Alaska 2023 USGS model bias adjustment
         self.ak23_bias_adj = ak23_bias_adj
         if self.ak23_bias_adj:
             if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is not
                 const.TRT.SUBDUCTION_INTERFACE or self.region):
-                raise ValueError(f'The Alaska 2023 NSHM bias adjustment '
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
                                  f'should only be applied to the "global" '
                                  f'interface variant of '
                                  f'{self.__class__.__name__}.')
