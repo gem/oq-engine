@@ -72,7 +72,14 @@ This modality is recommended when only the [WebUI or the API server](server.md) 
 $ docker run --name <containername> -d -p 127.0.0.1:8800:8800  openquake/engine:nightly
 ```
 
-Then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
+You can show the logs of the container running:
+
+```bash
+$ docker logs <containername> --timestamp --follow
+```
+
+After the logs show that the DB server started (and, if authentication is enabled, after the necessary migrations have been applied),
+then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 You can stop and start again your container with the following commands:
 
