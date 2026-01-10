@@ -110,11 +110,13 @@ def save_performance(dstore, calcs, operations):
     """
     # tested in AreaSourceClassicalPSHA/job.toml
     n = len(calcs)
-    dic = {'calc_id': np.uint32(calcs)}
+    dic = {'calc_id': np.uint32(calcs), 'model': ['???']*n}
     for op in operations:
         dic[op.replace(' ', '_')] = np.zeros(n)
     for i, calc_id in enumerate(calcs):
-        pdata = datastore.read(calc_id)['performance_data'][:]
+        ds = datastore.read(calc_id)
+        dic['model'][i] = ds['oqparam'].mosaic_model or '???'
+        pdata = ds['performance_data'][:]
         for op in operations:
             opdata = pdata[pdata['operation'] == op.encode('ascii')]
             dic[op.replace(' ', '_')][i] = opdata['time_sec'].sum()
