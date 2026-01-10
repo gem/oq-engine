@@ -118,7 +118,9 @@ def save_performance(dstore, calcs, operations):
         for op in operations:
             opdata = pdata[pdata['operation'] == op.encode('ascii')]
             dic[op.replace(' ', '_')][i] = opdata['time_sec'].sum()
-    dstore.create_df('operations', pd.DataFrame(dic))
+    df = pd.DataFrame(dic)
+    dstore.create_df('operations', df)
+    print(views.text_table(df, ext='org'))
 
 
 def main(postjob: str, workflow_id: int, calc_id: int, arg: str):
