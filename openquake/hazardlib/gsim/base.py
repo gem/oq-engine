@@ -30,7 +30,6 @@ import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
