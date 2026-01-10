@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the number of duplicated warnings
   * Extended `oq engine --lhc` and `oq engine --lrc` to show the
     calculation_mode
 

@@ -30,6 +30,7 @@ import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
@@ -79,6 +80,36 @@ class AdaptedWarning(UserWarning):
     to changes in future version.
     """
 
+# cached warnings, so that they are displayed only once per process
+@functools.lru_cache()
+def warn_superseded_by(cls):
+    if cls.superseded_by:
+        msg = '%s is deprecated - use %s instead' % (
+            cls.__name__, cls.superseded_by.__name__)
+        warnings.warn(msg, DeprecationWarning)
+
+@functools.lru_cache()
+def warn_non_verified(cls):
+    if cls.non_verified:
+        msg = ('%s is not independently verified - the user is liable '
+               'for their application') % cls.__name__
+        warnings.warn(msg, NotVerifiedWarning)
+
+@functools.lru_cache()
+def warn_experimental(cls):
+    if cls.experimental:
+        msg = ('%s is experimental and may change in future versions - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, ExperimentalWarning)
+
+@functools.lru_cache()
+def warn_adapted(cls):
+    if cls.adapted:
+        msg = ('%s is not intended for general use and the behaviour '
+               'may not be as expected - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, AdaptedWarning)
+
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
@@ -127,6 +158,9 @@ class MetaGSIM(abc.ABCMeta):
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
+    # NB: normally gsims are instantiated once, but conditional
+    # GMPEs can be instantiate millions of times in the engine
+    # (in conditional_gmpe_setup) hence the warnings must be cached
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
@@ -138,24 +172,13 @@ class MetaGSIM(abc.ABCMeta):
         if mixture_model is not None:
             self.mixture_model = mixture_model
 
-        # checks
-        if cls.superseded_by:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.superseded_by.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        if cls.experimental:
-            msg = ('%s is experimental and may change in future versions - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, ExperimentalWarning)
-        if cls.adapted:
-            msg = ('%s is not intended for general use and the behaviour '
-                   'may not be as expected - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, AdaptedWarning)
+        # checks to run only in the sequential part of the calculation
+        if not Starmap.on:
+            warn_superseded_by(cls)
+            warn_non_verified(cls)
+            warn_experimental(cls)
+            warn_adapted(cls)
+
         return self
 
 

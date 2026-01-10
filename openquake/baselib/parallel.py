@@ -277,6 +277,7 @@ def init_workers():
         pass
     else:
         setproctitle('oq-worker')
+    Starmap.on = True
 
 
 class Pickled(object):
@@ -694,6 +695,7 @@ num_cores = int(os.environ.get('OQ_NUM_CORES') or
 
 
 class Starmap(object):
+    on = False
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!

@@ -545,15 +545,12 @@ class ModifiableGMPE(GMPE):
             ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
-        g = globals()
-        
-        # If necessary, compute the means and std devs for the required
-        # IMTs that are not going to be calculated using conditional GMPEs 
+
         if "conditional_gmpe" in self.params:
+            # compute the means and std devs for the required IMTs
             conditional_gmpe_setup(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
-            # Otherwise, compute the original mean and std devs for all
-            # IMTs given not using a conditional GMPE
+            # otherwise, compute the original mean and std devs for all IMTs
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Here we compute reference ground-motion for PGA when we need to
@@ -561,8 +558,8 @@ class ModifiableGMPE(GMPE):
         if 'ceus2020_site_term' in self.params:
 
             # Arrays for storing results
-            ref = np.zeros((1, len(sig[0, :])))
-            tmp = np.zeros((1, len(sig[0, :])))
+            ref = np.zeros((1, len(sig[0])))
+            tmp = np.zeros((1, len(sig[0])))
 
             # Update context
             tctx = ctx.copy()
@@ -576,6 +573,7 @@ class ModifiableGMPE(GMPE):
             ref = np.squeeze(ref)
 
         # Apply sequentially the modifications
+        g = globals()
         for methname, kw in self.params.items():
 
             # CEUS 2020 site term needs ref PGA stored
