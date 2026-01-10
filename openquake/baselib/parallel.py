@@ -270,7 +270,11 @@ def oq_distribute(task=None):
 
 
 def init_workers():
-    """Used to initialize the process pool"""
+    """
+    Used to initialize the process pool. Calls setproctitle (if available)
+    and sets the flag Starmap.on, so that it is possible to determine if
+    the current code is begin run in parallel or not.
+    """
     try:
         from setproctitle import setproctitle
     except ImportError:
