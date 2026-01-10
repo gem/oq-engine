@@ -73,3 +73,33 @@ IMTs required by the conditional GMPE are stored in the dictionary called `base_
 
 Lastly, you can use regular `GSIM` unit tests, but you must make use of `modified_gsim` (which is found within `oq-engine/openquake/hazardlib/valid`) to instantiate a `GSIM` object
 rather than a `GSIM_CLASS` (the latter is used in regular GSIM unit tests). Examples of this can be found in the unit tests for `MacedoEtAl2019SInter` and `AbrahamsonBhasin2020`.
+
+# Implementing advanced GSIMs
+
+Often GSIMs depend on a complicated set of parameters which are stored in a file, like for instance
+tables in .hdf5 files. In this case one must take special care, in particular, *reading the file must be done in the ``__init__``
+method and not in the ``compute`` method*, otherwise disasters may happen, as explained in the chapter "Ground Motion Models".
+
+In recent versions of the engine, we introduced GSIMs
+dependent on machine learning models, i.e. dependent on ``.onnx`` files. In that case the machine
+learning model must be instantiated in the ``__init__`` method by using a
+``PicklableInferenceSession`` class. Interested users should study the module
+``taherian_2024_inland.py`` which is a simple example of how to implement such GSIMs.
+Basically the ``__init__` method will have the form
+```python
+def __init__(self):
+    self.session = PicklableInferenceSession(path_to_onnx_file)
+```
+and then ``self.session.run`` will be called in the ``compute`` method or in same helper
+function called by the ``compute`` method. The ``PicklableInferenceSession`` takes case
+of essential details like disabling the parallelization implemented by the machine
+learning library which would interfer with the engine parallelization and would cause
+disasters: for instance, we managed to totally freeze a machine with 128 cores due to excessive
+parallelization involving 128x128=16384 threads, the only solution being a hard reboot.
+
+A very common mistake when implementing advanced GSIMs that depends on other GSIMs, like for instance
+the ``ModifiableGSIM`` class, is to instantiate the underlying GSIMs in the ``compute`` method.
+This will apparently work well for most GSIMs, but as soon as one of the underlying GSIMs performs an expensive
+operation at instantiation time, like reading an .onnx file of several megabytes, the performance of the
+engine will be destroyed, since the ``compute`` method is called millions of times (at worse it will
+correspond to the number of ruptures in the model).

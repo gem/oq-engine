@@ -270,13 +270,18 @@ def oq_distribute(task=None):
 
 
 def init_workers():
-    """Used to initialize the process pool"""
+    """
+    Used to initialize the process pool. Calls setproctitle (if available)
+    and sets the flag Starmap.on, so that it is possible to determine if
+    the current code is begin run in parallel or not.
+    """
     try:
         from setproctitle import setproctitle
     except ImportError:
         pass
     else:
         setproctitle('oq-worker')
+    Starmap.on = True
 
 
 class Pickled(object):
@@ -694,6 +699,7 @@ num_cores = int(os.environ.get('OQ_NUM_CORES') or
 
 
 class Starmap(object):
+    on = False
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
