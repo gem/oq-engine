@@ -56,10 +56,9 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     """
     This function:
-        1) Compute the means and standard deviations for any IMTs
+        1) Compute the means and standard deviations for the IMTs
            required by the conditional GMPEs.
-        2) Compute the means and standard deviations for any IMTs
-           we are not using conditional GMPEs for instead.
+        2) Compute the means and standard deviations for the other IMTs
     """
     # Compute the means and std devs for IMTs required by conditional GMPEs
     imts_req = self.imts_req
@@ -561,8 +560,7 @@ class ModifiableGMPE(GMPE):
         if "conditional_gmpe" in self.params:
             conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
-            # Otherwise, compute the original mean and std devs for all
-            # IMTs given not using a conditional GMPE
+            # otherwise, compute the original mean and std devs for all IMTs
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Here we compute reference ground-motion for PGA when we need to
@@ -570,8 +568,8 @@ class ModifiableGMPE(GMPE):
         if 'ceus2020_site_term' in self.params:
 
             # Arrays for storing results
-            ref = np.zeros((1, len(sig[0, :])))
-            tmp = np.zeros((1, len(sig[0, :])))
+            ref = np.zeros((1, len(sig[0])))
+            tmp = np.zeros((1, len(sig[0])))
 
             # Update context
             tctx = ctx.copy()
