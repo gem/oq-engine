@@ -4,3 +4,6 @@ ini = "job.ini"
 [[success]]
 func = "openquake.engine.postjobs.import_outputs"
 out_types = ["hcurves", "hmaps-stats"]
+[[success]]
+func = "openquake.engine.postjobs.save_performance"
+operations = ["computing mean_std", "get_poes", "total postclassical"]

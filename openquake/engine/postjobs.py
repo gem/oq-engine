@@ -25,6 +25,8 @@ import os
 import ast
 import logging
 import tempfile
+import numpy as np
+import pandas as pd
 from openquake.baselib import hdf5, config, performance
 from openquake.commonlib import datastore
 from openquake.calculators import base, export, views
@@ -100,6 +102,23 @@ def post_aelo(dstore, calcs):
         with open(fname, 'w') as f:
             print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
+
+
+def save_performance(dstore, calcs, operations):
+    """
+    Save the runtimes of the given operations, one entry per calculation
+    """
+    # tested in AreaSourceClassicalPSHA/job.toml
+    n = len(calcs)
+    dic = {'calc_id': np.uint32(calcs)}
+    for op in operations:
+        dic[op.replace(' ', '_')] = np.zeros(n)
+    for i, calc_id in enumerate(calcs):
+        pdata = datastore.read(calc_id)['performance_data'][:]
+        for op in operations:
+            opdata = pdata[pdata['operation'] == op.encode('ascii')]
+            dic[op.replace(' ', '_')][i] = opdata['time_sec'].sum()
+    dstore.create_df('operations', pd.DataFrame(dic))
 
 
 def main(postjob: str, workflow_id: int, calc_id: int, arg: str):
