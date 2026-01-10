@@ -78,8 +78,7 @@ rather than a `GSIM_CLASS` (the latter is used in regular GSIM unit tests). Exam
 
 Often GSIMs depend on a complicated set of parameters which are stored in a file, like for instance
 tables in .hdf5 files. In this case one must take special care, in particular, *reading the file must be done in the ``__init__``
-method and not in the ``compute`` method*, otherwise disasters may happen, as explained in the chapter
-:ref:`ground_motion_models`.
+method and not in the ``compute`` method*, otherwise disasters may happen, as explained in the chapter "Ground Motion Models".
 
 In recent versions of the engine, we introduced GSIMs
 dependent on machine learning models, i.e. dependent on ``.onnx`` files. In that case the machine
