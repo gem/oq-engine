@@ -25,6 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
+from openquake.commonlib import dbapi
 from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
 
 
@@ -61,6 +62,8 @@ def _read(calc_id, datadir, mode, haz_id=None):
     if isinstance(calc_id, int):
         # look in the db
         job = dbcmd('get_job', calc_id)
+        if job is None:
+            raise dbapi.NotFound(f'{calc_id=} missing in the database')
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
