@@ -44,7 +44,8 @@ BASINS = [None, "out", "Seattle"]
 EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
 
-# Alaska 2023 USGS model bias adjustment coefficients
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from https://code.usgs.gov/ghsc/nshmp
 AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")
