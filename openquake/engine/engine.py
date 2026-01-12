@@ -223,7 +223,7 @@ def run_calc(log):
         logging.info(outs)
         path = calc.datastore.filename
         size = general.humansize(getsize(path))
-        logging.info(
+        logging.warning(
             'Stored %s on %s in %d seconds', size, path, time.time() - t0)
         # sanity check to make sure that the logging on file is working
         if (log.log_file and log.log_file != os.devnull and
