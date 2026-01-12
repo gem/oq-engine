@@ -5,8 +5,9 @@ Mohammadi et al. (2023) Turkiye ML-based Ground-Motion Model
 
 import os
 import csv
+import gzip
 import numpy as np
-import onnxruntime as ort
+from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -38,16 +39,11 @@ _DATA_DIR = os.path.join(
     "mohammadi_turkiye_2023_data",
 )
 
-# ONNX model directory
-_ONNX_DIR = os.path.join(_DATA_DIR, "onnx_models")
 # Standard deviations file
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
-
-
 # ONNX model handling (Single bundled model)
-_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx"
-_SESS_CACHE = None  # Will hold the single session
+_BUNDLED_MODEL_NAME = "mohammadi_turkiye_2023_bundled.onnx.gz"
 
 def _scale_features(X: np.ndarray) -> np.ndarray:
     """
@@ -76,31 +72,11 @@ def _scale_features(X: np.ndarray) -> np.ndarray:
     return X * _SCALE + _MIN
 
 
-def _get_session() -> ort.InferenceSession:
-    """
-    Return the cached ONNXRuntime session for the bundled model.
-    """
-    global _SESS_CACHE
-    if _SESS_CACHE is None:
-        full_path = os.path.join(_DATA_DIR, _BUNDLED_MODEL_NAME)
-        if not os.path.exists(full_path):
-            raise IOError(f"Cannot find bundled ONNX file: {full_path}")
-
-        opt = ort.SessionOptions()
-        opt.intra_op_num_threads = 1
-        opt.inter_op_num_threads = 1
-
-        _SESS_CACHE = ort.InferenceSession(full_path, sess_options=opt)
-
-    return _SESS_CACHE
-
-
-def _predict_ln_im(output_name: str, X_scaled: np.ndarray) -> np.ndarray:
+def _predict_ln_im(output_name: str, X_scaled: np.ndarray,
+                     sess: PicklableInferenceSession) -> np.ndarray:
     """
     Evaluate the bundled ONNX model and return ln(IM) in training units.
     """
-    sess = _get_session()
-
     # Input name is shared and fixed by bundling script
     # It was 'float_input' in all original models.
     input_name = sess.get_inputs()[0].name  # Should be 'float_input'
@@ -176,7 +152,7 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
         raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
 
     # Prediction in training units, then convert to OQ units
-    ln_im_train = _predict_ln_im(key, X_scaled)
+    ln_im_train = _predict_ln_im(key, X_scaled, gsim.session)
 
     if kind in ("PGA", "SA"):
         # cm/s^2 -> g (still in ln)
@@ -252,6 +228,11 @@ class Mohammadi2023Turkiye(GMPE):
                 self.sigma_intra[key] = float(row["Sigma"])
                 self.tau_inter[key]   = float(row["Tau"])
                 self.phi_total[key]   = float(row["Phi"])
+
+        model_path = os.path.join(_DATA_DIR, _BUNDLED_MODEL_NAME)
+        with gzip.open(model_path, "rb") as f:
+            model_bytes = f.read()
+        self.session = PicklableInferenceSession(model_bytes)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
