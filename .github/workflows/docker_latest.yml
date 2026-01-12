@@ -1,0 +1,97 @@
+---
+name: Build Image Latest for Docker
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: Comma-separated list of tags
+        default: latest
+        required: true
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+
+jobs:
+  docker:
+    name: Build image and push after successfull calculation
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.docker_username }}
+      DOCKER_PASSWORD: ${{ secrets.docker_password }}
+      REPO_REF: ${{ github.event.inputs.git-ref }}
+      DOCKER_TAG: ${{ github.event.inputs.version }}
+    steps:
+  # This Checkout is necessary when using a context in docker/build-push-action
+      - name: Clone Repository (Latest)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Extract tag names
+        shell: bash
+        run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
+        id: extract_tags
+      - name: Build image engine with tag ${{ github.event.inputs.version }}
+        id: docker_engine
+        run: docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
+      - name: List Image
+        run: |
+          docker image ls
+      - name: Test Auth mode and run calcs on single docker
+        run: |
+          # Test authentication on WebUI headless
+          echo "Test WEBUI HEADLESS"
+          cat > ./.env << EOF
+          OQ_APPLICATION_MODE=RESTRICTED
+          OQ_ADMIN_USERNAME=user
+          OQ_ADMIN_PASSWORD=login
+          OQ_ADMIN_EMAIL=user@login.input
+          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_USE_TLS=True
+          EMAIL_HOST_USER=admin@reply.com
+          EMAIL_HOST_PASSWORD=polhjuih@
+          EMAIL_SUPPORT=noreply@reply.com
+          DJANGO_SETTINGS_MODULE=openquake.server.settings
+          EOF
+          release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
+          echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
+          sleep 180
+          docker logs openquake -t
+          echo "Waiting WEBUI up on port 8800...."
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+           echo "Still waiting WEBUI account login up on port 8800...."
+           sleep 5 # wait for 5 seconds before check again
+          done
+          sleep 1
+          echo -n "TEST DJANGO LOGIN "
+          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+          YOUR_USER='user'
+          YOUR_PASS='login'
+          COOKIES=cookies.txt
+          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+          echo -n "Django Auth: get csrftoken ..."
+          $CURL_BIN $LOGIN_URL > /dev/null
+          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+          echo " perform login ..."
+          $CURL_BIN \
+              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+              -X POST $LOGIN_URL > /dev/null
+          docker logs -t -n 5 openquake
+          # Run calcs
+          echo "test run of calc on running container "
+          sleep 3
+          time docker exec -t openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          echo "test run of a calcs on new created container"
+          time docker run openquake/engine:${release_tag} oq engine --run "https://downloads.openquake.org/jobs/risk_test.zip"
+      - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
+        run: |
+          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+          docker push openquake/engine --all-tags
