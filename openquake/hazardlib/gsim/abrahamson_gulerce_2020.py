@@ -679,7 +679,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
                     self.region != "GLO"):
                 raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
                                  f'should only be applied to the "global"'
-                                 f'interface variant of variant of '
+                                 f'interface variant of '
                                  f'{self.__class__.__name__}.')
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
