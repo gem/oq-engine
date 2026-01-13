@@ -79,6 +79,40 @@ class AdaptedWarning(UserWarning):
     to changes in future version.
     """
 
+# cache warnings, so that they are displayed only once
+
+@functools.lru_cache()
+def warn_superseded_by(cls):
+    if cls.superseded_by:
+        msg = '%s is deprecated - use %s instead' % (
+            cls.__name__, cls.superseded_by.__name__)
+        warnings.warn(msg, DeprecationWarning)
+
+
+@functools.lru_cache()
+def warn_non_verified(cls):
+    if cls.non_verified:
+        msg = ('%s is not independently verified - the user is liable '
+               'for their application') % cls.__name__
+        warnings.warn(msg, NotVerifiedWarning)
+
+
+@functools.lru_cache()
+def warn_experimental(cls):
+    if cls.experimental:
+        msg = ('%s is experimental and may change in future versions - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, ExperimentalWarning)
+
+
+@functools.lru_cache()
+def warn_adapted(cls):
+    if cls.adapted:
+        msg = ('%s is not intended for general use and the behaviour '
+               'may not be as expected - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, AdaptedWarning)
+
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
@@ -137,6 +171,12 @@ class MetaGSIM(abc.ABCMeta):
             self.kwargs['gmpe_table'] = self.gmpe_table
         if mixture_model is not None:
             self.mixture_model = mixture_model
+
+        warn_superseded_by(cls)
+        warn_non_verified(cls)
+        warn_experimental(cls)
+        warn_adapted(cls)
+
         return self
 
 
@@ -240,6 +280,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
+    conditional = False
+    from_mgmpe = False
 
     @classmethod
     def __init_subclass__(cls):
@@ -264,26 +306,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                   self.REQUIRES_RUPTURE_PARAMETERS |
                   self.REQUIRES_SITES_PARAMETERS)
         return tuple(sorted(tot))
-
-    def __init__(self, **kwargs):
-        cls = self.__class__
-        if cls.superseded_by:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.superseded_by.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        if cls.experimental:
-            msg = ('%s is experimental and may change in future versions - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, ExperimentalWarning)
-        if cls.adapted:
-            msg = ('%s is not intended for general use and the behaviour '
-                   'may not be as expected - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, AdaptedWarning)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

@@ -15,20 +15,34 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.sinter import SInterCan15Mid
+from openquake.hazardlib.gsim.can15.sinter import (
+    SInterCan15Mid, SInterCan15Low, SInterCan15Upp)
 
 
-class SinterCan15TestCase(BaseGSIMTestCase):
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
+
+
+class SinterCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SInterCan15Mid
-
-    def test_mean_upp(self):
-        self.check('CAN15/GMPEtInterface_high_combo.csv',
-                       max_discrep_percentage=100., sgn=+1)
-
-    def test_mean_low(self):
-        self.check('CAN15/GMPEtInterface_Low_combo.csv',
-                       max_discrep_percentage=900., sgn=-1)
 
     def test_mean(self):
         self.check('CAN15/GMPEtInterface_med_combo.csv',
                        max_discrep_percentage=200.)
+
+
+class SinterCan15LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SInterCan15Low
+
+    def test_mean_low(self):
+        self.check('CAN15/GMPEtInterface_Low_combo.csv',
+                       max_discrep_percentage=900.)
+
+
+class SinterCan15UppTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SInterCan15Upp
+
+    def test_mean_upp(self):
+        self.check('CAN15/GMPEtInterface_high_combo.csv',
+                       max_discrep_percentage=100.)

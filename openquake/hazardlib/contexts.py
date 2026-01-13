@@ -1252,6 +1252,12 @@ class ContextMaker(object):
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
+            if gsim.conditional and not gsim.from_mgmpe:
+                url = ('https://docs.openquake.org/oq-engine/master/manual/'
+                       'contributing/implementing-new-gsim.html')
+                raise NotImplementedError(
+                    f'{gsim} was not instantiated with a '
+                    f'ModifiableGMPE, please read {url}')
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
@@ -2078,7 +2084,10 @@ def read_full_lt_by_label(dstore, full_lt=None):
         dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
         dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
+        flt.label = label
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+        flt.weights = numpy.array(
+            [rlz.weight for rlz in flt.get_realizations()])
 
         # all gsim logic trees in the dictionary must have the same
         # trts and the same number of gsims per trt

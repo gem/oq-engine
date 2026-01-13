@@ -223,7 +223,7 @@ def run_calc(log):
         logging.info(outs)
         path = calc.datastore.filename
         size = general.humansize(getsize(path))
-        logging.info(
+        logging.warning(
             'Stored %s on %s in %d seconds', size, path, time.time() - t0)
         # sanity check to make sure that the logging on file is working
         if (log.log_file and log.log_file != os.devnull and
@@ -436,6 +436,7 @@ OVERRIDABLE_PARAMS = (
     'ses_per_logic_tree_path',
     'minimum_magnitude',
     'mosaic_model',
+    'ps_grid_spacing',
     'return_periods',
     'ses_seed',
     'sites',
