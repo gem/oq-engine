@@ -108,10 +108,11 @@ class ClassicalTestCase(CalculatorTestCase):
         sitecol = self.calc.sitecol
         full_lt = self.calc.full_lt
         oq = self.calc.oqparam
-        hcurve = calc.mean_rates.calc_mcurves(
-            src_groups, sitecol, full_lt, oq)[0, 0]
-        pga = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        aac(pga, hcurve, rtol=6e-5)
+        hcurves, gweights = calc.mean_rates.calc_mcurves(
+            src_groups, sitecol, full_lt, oq)
+        pga = self.calc.datastore['hcurves-stats'][0]
+        aac(pga, hcurves, rtol=6e-5)
+        aac(gweights, [1.])  # see case_06 for a nontrivial test
 
     def test_case_03(self):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
@@ -164,15 +165,18 @@ class ClassicalTestCase(CalculatorTestCase):
         src_groups = self.calc.csm.src_groups
 
         # check the mean hazard curves manually
-        hcurve0 = calc.mean_rates.calc_mcurves(
-            src_groups, sites0, flt0, oq)[0, 0]
-        hcurve1 = calc.mean_rates.calc_mcurves(
-            src_groups, sites1, flt1, oq)[0, 0]
-        hcurve2 = calc.mean_rates.calc_mcurves(
-            src_groups, sites2, flt2, oq)[0, 0]
-        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
-        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        ae(wei0, [.5, .5, 0, 1.])
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        ae(wei1, [.1, .9, 0, 1.])
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        ae(wei2, [.5, .25, .25, 1.])
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
         aac(hcurve0, pga0, rtol=3e-6)
         aac(hcurve1, pga1, rtol=3e-6)
         aac(hcurve2, pga2, rtol=3e-6)
@@ -198,15 +202,18 @@ class ClassicalTestCase(CalculatorTestCase):
         src_groups = self.calc.csm.src_groups
 
         # check the mean hazard curves manually
-        hcurve0 = calc.mean_rates.calc_mcurves(
-            src_groups, sites0, flt0, oq)[0, 0]
-        hcurve1 = calc.mean_rates.calc_mcurves(
-            src_groups, sites1, flt1, oq)[0, 0]
-        hcurve2 = calc.mean_rates.calc_mcurves(
-            src_groups, sites2, flt2, oq)[0, 0]
-        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
-        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        aac(wei0, [0.4, 0.6, 0., 1.], atol=1e-12)
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        aac(wei1, [0., 1., 0., 1.], atol=1e-12)
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        aac(wei2, [0.4, 0., 0.6, 1.], atol=1e-12)
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
         aac(hcurve0, pga0, rtol=3e-6)
         aac(hcurve1, pga1, rtol=3e-6)
         aac(hcurve2, pga2, rtol=3e-6)
