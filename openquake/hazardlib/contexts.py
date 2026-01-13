@@ -2084,7 +2084,10 @@ def read_full_lt_by_label(dstore, full_lt=None):
         dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
         dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
+        flt.label = label
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+        flt.weights = numpy.array(
+            [rlz.weight for rlz in flt.get_realizations()])
 
         # all gsim logic trees in the dictionary must have the same
         # trts and the same number of gsims per trt

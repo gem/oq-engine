@@ -89,13 +89,13 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     :param sitecol: a SiteCollection instance
     :param full_lt: a FullLogicTree instance
     :param oq: an OqParam instance
-    :returns: an array of shape (N, M, L1)
+    :returns: an array of probabilities of shape (N, M, L1), and Gt weights
     """
     assert oq.use_rates
     rmap, cmakers = get_rmap(src_groups, full_lt, sitecol, oq)
     gweights = numpy.concatenate([cm.wei for cm in cmakers])
     rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
-    return to_probs(rates)
+    return to_probs(rates), gweights
 
 
 # tested in run-demos.sh
