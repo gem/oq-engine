@@ -1189,7 +1189,6 @@ scala_2025
     :undoc-members:
     :show-inheritance:
 
-
 sera_amplification_models
 -------------------------------------------
 

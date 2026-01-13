@@ -53,7 +53,8 @@ def _get_site_amplification(ctx, C):
     different EC8 site classes. Due to the regression dataset only sites
     B and C are considered. Hence in the current version site class A (rock)
     is considered as equivalent to site class B, and site class D (soft soil)
-    is considered as equivalent to site class C."""
+    is considered as equivalent to site class C.
+    """
     ssb, ssc = _get_site_type_dummy_variables(ctx)
 
     return (C['sB'] * ssb) + (C['sC'] * ssc)
@@ -94,8 +95,6 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
     !!!This class considers Epicentral distance (Repi) as distance measure
     and Moment magnitude (Mw) as magnitude type.!!!
 
-    Test tables are generated from a spreadsheet provided by the authors, and
-    modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
     """
 
 
@@ -123,15 +122,12 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
     #: Required distance measure is Repi.
     REQUIRES_DISTANCES = {'repi'}
     H=1.4
-    #DIST_TYPE = 'repi'  # check kind
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-
-
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             rval_distance = getattr(ctx, next(iter(self.REQUIRES_DISTANCES)))
@@ -177,44 +173,9 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
 
 class Scala2025CampiFlegreiRhypoMW(Scala2025CampiFlegreiRepiMW):
     """
-    Implements GMPE developed by Antonio Scala and co-authors (2025) and
-    submitted as "Ground Motion Models for Campi Flegrei (Italy)"
-    Bulletin of Earthquake Engineering. DOI: https://doi.org/10.1007/s10518-025-02315-6
-
-    GMPE derives from earthquakes in the volcanic area of Campi Flegrei in Italy
-    in the magnitude range 1.5<Mw<4.0 (corresponding to a range 2.5<Md<4.4)
-    for epicentral distances <40 km (but considering Hypocentral distance as a covariate),
-    and for stiff soil (EC8-B) and soft soil (EC8-C).
-
     !!!This class considers HYPOCENTRAL DISTANCE (Rhypo) as distance measure
     and MOMENT MAGNITUDE (Mw) as magnitude type.!!!
-
-    Test tables are generated from a spreadsheet provided by the authors, and
-    modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
     """
-
-
-    #: Supported tectonic region type is 'volcanic'
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
-    #: Supported intensity measure types are PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-
-    #: Supported intensity measure component is the maximum of two horizontal
-    #: components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
-
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
-
-    #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameter is magnitude.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
 
@@ -248,52 +209,11 @@ class Scala2025CampiFlegreiRhypoMW(Scala2025CampiFlegreiRepiMW):
 
 class Scala2025CampiFlegreiRepiMD(Scala2025CampiFlegreiRepiMW):
     """
-    Implements GMPE developed by Antonio Scala and co-authors (2025) and
-    submitted as "Ground Motion Models for Campi Flegrei (Italy)"
-    Bulletin of Earthquake Engineering. DOI: https://doi.org/10.1007/s10518-025-02315-6
-
-    GMPE derives from earthquakes in the volcanic area of Campi Flegrei in Italy
-    in the magnitude range 1.5<Mw<4.0 (corresponding to a range 2.5<Md<4.4)
-    for epicentral distances <40 km (but considering Hypocentral distance as a covariate),
-    and for stiff soil (EC8-B) and soft soil (EC8-C).
-
     !!!This class considers EPICENTRAL DISTANCE (Repi) as distance measure
     and DURATION MAGNITUDE (Md) as magnitude type.  The implementation of this model became
     necessary for practical purposes, as the official bulletin for the area uses Md
     as the magnitude measure, as detailed in the paper.!!!
-
-    Test tables are generated from a spreadsheet provided by the authors, and
-    modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
     """
-
-
-    #: Supported tectonic region type is 'volcanic'
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
-    #: Supported intensity measure types are PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-
-    #: Supported intensity measure component is the maximum of two horizontal
-    #: components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
-
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
-
-    #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameter is magnitude.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    #: Required distance measure is Repi.
-    REQUIRES_DISTANCES = {'repi'}
-
-    H=1.4
-    #DIST_TYPE = 'rhypo'
-
     # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT		a		b		c1		 c2		 sB		sC		tau	 	phi     sigma0	sigma
