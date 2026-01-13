@@ -33,7 +33,6 @@ def _compute_distance(rval2, C, ctx, h):
     """
     Compute the distance function
     """
-
     rval = np.sqrt(rval2 ** 2 + h ** 2)
     return (C['c1'] + C['c2']*ctx.mag) * np.log10(rval)
 
@@ -96,8 +95,6 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
     and Moment magnitude (Mw) as magnitude type.!!!
 
     """
-
-
     #: Supported tectonic region type is 'volcanic'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
 
@@ -178,10 +175,7 @@ class Scala2025CampiFlegreiRhypoMW(Scala2025CampiFlegreiRepiMW):
     """
     #: Required distance measure is Rhypo.
     REQUIRES_DISTANCES = {'rhypo'}
-
     H=1.0
-    #DIST_TYPE = 'rhypo'
-
     # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT		a		b		c1		 c2		 sB		sC		tau	 	phi     sigma0	sigma
