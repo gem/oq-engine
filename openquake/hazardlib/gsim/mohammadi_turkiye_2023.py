@@ -132,23 +132,24 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
     X_scaled = _scale_features(X).astype(np.float32)
 
     # IMT identification
-    imt_str = str(imt)  # e.g. "PGA", "PGV", "SA(0.2)"
-
-    if imt_str == "PGA":
+    if imt.string == "PGA":
         kind, period = "PGA", None
         key = "ln(PGA)"
 
-    elif imt_str == "PGV":
+    elif imt.string == "PGV":
         kind, period = "PGV", None
         key = "ln(PGV)"
 
-    elif imt_str.startswith("SA(") and imt_str.endswith(")"):
-        inside = imt_str[3:-1]
-        period = float(inside)
+    elif imt.period:
+        period = float(imt.period)
         kind = "SA"
         key = f"ln(PSA={period})"
 
     else:
+        try:
+            imt_str = str(imt)
+        except Exception:
+            imt_str = repr(imt)
         raise ValueError(f"IMT {imt_str} not supported in Mohammadi2023Turkiye")
 
     # Prediction in training units, then convert to OQ units
