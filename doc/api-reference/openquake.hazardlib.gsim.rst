@@ -915,7 +915,7 @@ lin_2009
 lin_2011
 --------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.lin_2011
+.. automodule:: openquake.hazardlib.gsim.tem20.lin_2011
     :members:
     :undoc-members:
     :show-inheritance:
