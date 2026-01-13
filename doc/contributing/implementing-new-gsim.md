@@ -38,3 +38,68 @@ Therefore assignment statements such as REQUIRES_RUPTURE_PARAMETERS = {'mag'} an
 
 - Update the changelog file 
 https://github.com/gem/oq-engine/blob/master/debian/changelog following the [Developers notes](updating-the-changelog.md)
+
+# Implementing a new conditional GSIM in the OpenQuake hazard library
+
+Conditional GMPEs within OpenQuake are specified within `ModifiableGMPE`. We use `ModifiableGMPE` because it allows us to easily specify each conditional GMPE
+that we wish to use to compute scalar intensity measure types (IMTs) not supported by the underlying GSIM, which we are conditioning the predictions of the
+conditional GMPE upon. See `oq-engine/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py` for more information on `ModifiableGMPE`.
+
+For an example of this syntax within a GMPE XML, you can inspect `oq-engine/openquake/qa_test_data/classical/case_90/conditional_gmpes.xml`, within which
+a different conditional GMPE is specified for each IMT not supported by the underlying GSIM (here the underlying GSIM is `AbrahamsonGulerce2020SInter`).
+
+To implement a conditional GMPE within the OQ Engine, the implementation procedure differs slightly from a more conventional GMPE. 
+
+The first thing to note, is that you must add an attribute to the parent `GSIM` class called `REQUIRES_IMTS` which is a list containing (as `imt` objects) the
+IMTs required by the conditional GMPE for the conditioning process. For example, the `MacedoEtAl2019SInter` GMPE requires both `PGA` and `SA(1.0)` for the
+prediction of `IA` (Arias Intensity) and therefore this information must be provided in the `GSIM` class for use within `ModifiableGMPE` when it is handling
+the IMTs that are needed for each conditional GMPE. Please refer to `AbrahamsonBhasin2020` for a (slightly) more complex example of how this attribute can be
+managed if necessary (there is a case where the conditioning period of the spectral acceleration is magnitude-dependent and therefore unknowable apriori). An error
+is raised in `ModifiableGMPE` if a conditional GMPE lacks this attribute.  It is also important to emphasise that `REQUIRED_IMTS` is different to the information
+stored within `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
+
+The second thing to note, is that you must add `conditional = True` to
+the `GSIM` class. If the `conditional` flag is missing or not set to
+`True`, the engine will inform the user that the
+proposed GMPE cannot be used for the prediction of conditioned
+ground-motions for the `IMT` it has been specified for obtaining
+predictions with. `ModifiableGMPE` will set the boolean attribute `from_mgmpe` when instantiating the conditional GMPE from within it - this permits raising a clear error message if the conditional GMPE was not
+instantiated via `ModifiableGMPE`.
+
+The third thing to note, is that the `compute` method of conditional GMPEs is less conventional (but still abides to the requirements defined within the `MetaGSIM`
+metadata class). We recommend inspecting either the `MacedoEtAl2019SInter` or `AbrahamsonBhasin2020` GSIMs to understand how the `compute` method (and the variables
+fed into it) are handled throughout the GSIM itself when computing the conditioned intensity measures. The main thing to take away is that the predictions from the
+IMTs required by the conditional GMPE are stored in the dictionary called `base_preds` which is an argument into the `compute` method for conditional GMPEs.
+
+Lastly, you can use regular `GSIM` unit tests, but you must make use of `modified_gsim` (which is found within `oq-engine/openquake/hazardlib/valid`) to instantiate a `GSIM` object
+rather than a `GSIM_CLASS` (the latter is used in regular GSIM unit tests). Examples of this can be found in the unit tests for `MacedoEtAl2019SInter` and `AbrahamsonBhasin2020`.
+
+# Implementing advanced GSIMs
+
+Often GSIMs depend on a complicated set of parameters which are stored in a file, like for instance
+tables in .hdf5 files. In this case one must take special care, in particular, *reading the file must be done in the ``__init__``
+method and not in the ``compute`` method*, otherwise disasters may happen, as explained in the chapter "Ground Motion Models".
+
+In recent versions of the engine, we introduced GSIMs
+dependent on machine learning models, i.e. dependent on ``.onnx`` files. In that case the machine
+learning model must be instantiated in the ``__init__`` method by using a
+``PicklableInferenceSession`` class. Interested users should study the module
+``taherian_2024_inland.py`` which is a simple example of how to implement such GSIMs.
+Basically the ``__init__` method will have the form
+```python
+def __init__(self):
+    self.session = PicklableInferenceSession(path_to_onnx_file)
+```
+and then ``self.session.run`` will be called in the ``compute`` method or in same helper
+function called by the ``compute`` method. The ``PicklableInferenceSession`` takes case
+of essential details like disabling the parallelization implemented by the machine
+learning library which would interfer with the engine parallelization and would cause
+disasters: for instance, we managed to totally freeze a machine with 128 cores due to excessive
+parallelization involving 128x128=16384 threads, the only solution being a hard reboot.
+
+A very common mistake when implementing advanced GSIMs that depends on other GSIMs, like for instance
+the ``ModifiableGSIM`` class, is to instantiate the underlying GSIMs in the ``compute`` method.
+This will apparently work well for most GSIMs, but as soon as one of the underlying GSIMs performs an expensive
+operation at instantiation time, like reading an .onnx file of several megabytes, the performance of the
+engine will be destroyed, since the ``compute`` method is called millions of times (at worse it will
+correspond to the number of ruptures in the model).

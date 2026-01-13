@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,11 @@
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.eastern import (
     EasternCan15Mid, EasternCan15Upp, EasternCan15Low)
+
+
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
 
 
 class EasternCan15LowTestCase(BaseGSIMTestCase):

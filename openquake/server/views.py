@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -691,6 +691,26 @@ def check_db_response(resp):
         return JsonResponse(resp, status=403)
     else:
         return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
+
+
+def create_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('create_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def delete_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('delete_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
 
 
 def add_tag_to_job(user_level, calc_id, tag_name):
@@ -1839,7 +1859,7 @@ def web_engine(request, **kwargs):
         params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
-    elif application_mode == 'ARISTOTLE':
+    elif application_mode == 'IMPACT':
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
@@ -1869,7 +1889,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
-            if application_mode == 'ARISTOTLE':
+            if application_mode == 'IMPACT':
                 pngs['avg_gmf'] = [
                     k for k in ds['png'] if k.startswith('avg_gmf-')]
                 pngs['assets'] = 'assets.png' in ds['png']
@@ -1900,7 +1920,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             kwargs['calc_aelo_version'] = '1.0.0'
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
-    elif application_mode == 'ARISTOTLE':
+    elif application_mode == 'IMPACT':
         kwargs['warnings'] = get_aristotle_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 
@@ -2305,6 +2325,28 @@ def on_same_fs(request):
         pass
 
     return JsonResponse({'success': False}, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_create_tag(request, tag_name):
+    """
+    Create a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return create_tag(user_level, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_delete_tag(request, tag_name):
+    """
+    Delete a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return delete_tag(user_level, tag_name)
 
 
 @csrf_exempt

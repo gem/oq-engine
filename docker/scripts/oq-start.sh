@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019-2025 GEM Foundation
+# Copyright (C) 2019-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,8 +40,8 @@ if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
     done
 	cd ${oq_basedir}/openquake/server
     python3 manage.py migrate
-    if [ -n "$OQ_ADMIN_LOGIN" ]; then
-        python3 manage.py createuser ${OQ_ADMIN_LOGIN} ${OQ_ADMIN_EMAIL} --level 2 --password ${OQ_ADMIN_PASSWORD} --no-email --staff --superuser
+    if [ -n "$OQ_ADMIN_USERNAME" ]; then
+        python3 manage.py createuser ${OQ_ADMIN_USERNAME} ${OQ_ADMIN_EMAIL} --level 2 --password ${OQ_ADMIN_PASSWORD} --no-email --staff --superuser
     else
         python3 manage.py createuser admin admin@example.com --level 2 --password admin --no-email --staff --superuser
     fi

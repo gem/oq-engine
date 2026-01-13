@@ -47,7 +47,7 @@ jobs:
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
-          OQ_ADMIN_LOGIN=user
+          OQ_ADMIN_USERNAME=user
           OQ_ADMIN_PASSWORD=login
           OQ_ADMIN_EMAIL=user@login.input
           EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
@@ -61,7 +61,10 @@ jobs:
           EOF
           release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
           echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
+          echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
           docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
+          sleep 180
+          docker logs openquake -t
           echo "Waiting WEBUI up on port 8800...."
           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
            echo "Still waiting WEBUI account login up on port 8800...."

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,8 @@ urlpatterns = [
     re_path(r'^(\d+)/unshare$', views.calc_unshare),
     # Tagging
     re_path(r'^list_tags$', views.calc_list_tags),
+    path('create_tag/<str:tag_name>', views.calc_create_tag),
+    path('delete_tag/<str:tag_name>', views.calc_delete_tag),
     path('<int:calc_id>/add_tag/<str:tag_name>', views.calc_add_tag),
     path('<int:calc_id>/remove_tag/<str:tag_name>', views.calc_remove_tag),
     path('<int:calc_id>/set_preferred_job_for_tag/<str:tag_name>',
@@ -55,7 +57,7 @@ if settings.APPLICATION_MODE == 'AELO':
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
     ])
-elif settings.APPLICATION_MODE == 'ARISTOTLE':
+elif settings.APPLICATION_MODE == 'IMPACT':
     urlpatterns.extend([
         re_path(r'^impact_get_rupture_data$',
                 views.impact_get_rupture_data),

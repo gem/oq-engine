@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -906,7 +906,7 @@ class EventBasedCalculator(base.HazardCalculator):
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
             imts = list(self.oqparam.imtls)
             ex = Extractor(self.datastore.calc_id)
             for imt in imts:

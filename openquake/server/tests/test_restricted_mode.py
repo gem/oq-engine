@@ -177,7 +177,7 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 404)
         ret = logs.dbcmd('add_tag_to_job', jobs[0].calc_id, tag_name)
         self.assertIn('error', ret)
-        self.assertIn("CHECK constraint failed: LENGTH(tag) > 0", ret['error'])
+        self.assertIn("CHECK constraint failed: LENGTH(name) > 0", ret['error'])
 
         # generate random tag names, 10 characters long
         first_tag = random_string(10)
@@ -256,6 +256,24 @@ class RestrictedModeTestCase(django.test.TestCase):
         # delete the jobs
         for job in jobs:
             self.remove_calc(job.calc_id)
+
+        # delete the tags
+        for tag in [first_tag, second_tag]:
+            ret = self.get(f'delete_tag/{tag}')
+            self.assertEqual(ret.status_code, 200)
+            self.assertIn('success', ret.json())
+            self.assertIn(f'Tag {tag} was deleted', ret.json()['success'])
+
+        # create and delete a tag
+        tag_name = random_string(10)
+        ret = self.get(f'create_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {tag_name} was created', ret.json()['success'])
+        ret = self.get(f'delete_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {tag_name} was deleted', ret.json()['success'])
 
     def test_calc_list(self):
         """

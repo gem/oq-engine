@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,7 +64,7 @@ if settings.WEBUI:
             re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
                     name="aelo_site_classes"),
         ]
-    elif settings.APPLICATION_MODE == 'ARISTOTLE':
+    elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,

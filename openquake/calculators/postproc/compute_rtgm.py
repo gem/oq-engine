@@ -473,9 +473,8 @@ def find_max(df, key, custom_site_key):
     df['temp'] = df[key].fillna(float('-inf'))
     idx = df.groupby([custom_site_key, 'period'])['temp'].idxmax()
     out_max = df.loc[idx]
-    out_spectrum = [smart_round(o) for o in out_max[key]]
     out = {'period': out_max['period'].values,
-           key: out_spectrum,
+           key: [smart_round(o, np.nan) for o in out_max[key]],
            'custom_site_id': out_max[custom_site_key].values}
     return pd.DataFrame(out)
 
@@ -642,7 +641,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
     return asce07
 
 
-def smart_round(number):
+def smart_round(number, nan='n.a.'):
     """
     Round the ASCE values (if they are floats)
     """
@@ -651,7 +650,7 @@ def smart_round(number):
     elif isinstance(number, str):
         return number
     elif np.isnan(number):
-        return 'n.a.'
+        return nan
     else:
         return round(number, ASCE_DECIMALS)
 

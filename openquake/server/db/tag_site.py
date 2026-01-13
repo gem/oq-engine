@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2025 GEM Foundation
+# Copyright (C) 2025-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+from django.conf import settings
 from django.contrib.admin import AdminSite
 
 
 class TagAdminSite(AdminSite):
+    site_url = f"{settings.WEBUI_PATHPREFIX}/engine/"
     site_header = "Job Tags Management"
     site_title = "Job Tags Management"
     index_title = "Manage Job Tags"

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2025 GEM Foundation
+# Copyright (C) 2017-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -116,7 +116,7 @@ def main(calc_id: int = -1, site_model=False,
             dist = sitecol.get_cdist(rec)
             print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        if (os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE'
+        if (os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT'
                 and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture

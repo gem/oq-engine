@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89)
+    case_86, case_87, case_88, case_89, case_90)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -108,10 +108,11 @@ class ClassicalTestCase(CalculatorTestCase):
         sitecol = self.calc.sitecol
         full_lt = self.calc.full_lt
         oq = self.calc.oqparam
-        hcurve = calc.mean_rates.calc_mcurves(
-            src_groups, sitecol, full_lt, oq)[0, 0]
-        pga = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        aac(pga, hcurve, rtol=6e-5)
+        hcurves, gweights = calc.mean_rates.calc_mcurves(
+            src_groups, sitecol, full_lt, oq)
+        pga = self.calc.datastore['hcurves-stats'][0]
+        aac(pga, hcurves, rtol=6e-5)
+        aac(gweights, [1.])  # see case_06 for a nontrivial test
 
     def test_case_03(self):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
@@ -164,15 +165,18 @@ class ClassicalTestCase(CalculatorTestCase):
         src_groups = self.calc.csm.src_groups
 
         # check the mean hazard curves manually
-        hcurve0 = calc.mean_rates.calc_mcurves(
-            src_groups, sites0, flt0, oq)[0, 0]
-        hcurve1 = calc.mean_rates.calc_mcurves(
-            src_groups, sites1, flt1, oq)[0, 0]
-        hcurve2 = calc.mean_rates.calc_mcurves(
-            src_groups, sites2, flt2, oq)[0, 0]
-        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
-        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        ae(wei0, [.5, .5, 0, 1.])
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        ae(wei1, [.1, .9, 0, 1.])
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        ae(wei2, [.5, .25, .25, 1.])
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
         aac(hcurve0, pga0, rtol=3e-6)
         aac(hcurve1, pga1, rtol=3e-6)
         aac(hcurve2, pga2, rtol=3e-6)
@@ -198,15 +202,18 @@ class ClassicalTestCase(CalculatorTestCase):
         src_groups = self.calc.csm.src_groups
 
         # check the mean hazard curves manually
-        hcurve0 = calc.mean_rates.calc_mcurves(
-            src_groups, sites0, flt0, oq)[0, 0]
-        hcurve1 = calc.mean_rates.calc_mcurves(
-            src_groups, sites1, flt1, oq)[0, 0]
-        hcurve2 = calc.mean_rates.calc_mcurves(
-            src_groups, sites2, flt2, oq)[0, 0]
-        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
-        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        aac(wei0, [0.4, 0.6, 0., 1.], atol=1e-12)
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        aac(wei1, [0., 1., 0., 1.], atol=1e-12)
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        aac(wei2, [0.4, 0., 0.6, 1.], atol=1e-12)
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
         aac(hcurve0, pga0, rtol=3e-6)
         aac(hcurve1, pga1, rtol=3e-6)
         aac(hcurve2, pga2, rtol=3e-6)
@@ -992,3 +999,21 @@ class ClassicalTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError) as job:
             self.run_calc(case_89.__file__, 'job_error.ini')
         self.assertIn('float -100.0 < 0 or not equal to -999', str(job.exception))
+
+    def test_case_90(self):
+        # Check execution of conditional GMPEs specified within a
+        # ModifiableGMPE. Here we test using Macedo et al. (2019)
+        # for prediction of Arias Intensity and Abrahamson & Bhasin
+        # (2020) for prediction of PGV with AbrahamsonGulerce2020SInter
+        # as the underlying GMM used to condition predictions upon. This
+        # test is also important because it ensures the reordering of the
+        # means and sigmas per IMT are handled correctly (in the conditional
+        # GMPEs we need to initially "skip" IMTs which are not supported by
+        # the underlying GMPE).
+        self.assert_curves_ok([
+            "hazard_curve-mean-IA.csv",
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-PGV.csv',
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv'],
+            case_90.__file__)

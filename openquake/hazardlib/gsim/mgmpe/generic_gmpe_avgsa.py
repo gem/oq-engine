@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -61,9 +61,6 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
 
     def __init__(self, gmpe_name, avg_periods, corr_func='none', **kwargs):
-
-        super().__init__(gmpe_name=gmpe_name, avg_periods=avg_periods,
-                         corr_func=corr_func, **kwargs)
         self.gmpe = registry[gmpe_name](**kwargs)
         # Combine the parameters of the GMPE provided at the construction
         # level with the ones assigned to the average GMPE.
@@ -160,8 +157,6 @@ class GmpeIndirectAvgSA(GMPE):
 
     def __init__(self, gmpe_name, corr_func, t_low: float = 0.2,
                  t_high: float = 1.5, n_per: int = 10, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, corr_func=corr_func,
-                         t_low=t_low, t_high=t_high, n_per=n_per, **kwargs)
         self.gmpe = registry[gmpe_name](**kwargs)
         # Combine the parameters of the GMPE provided at the construction
         # level with the ones assigned to the average GMPE.

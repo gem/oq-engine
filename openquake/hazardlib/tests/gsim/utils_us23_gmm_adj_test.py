@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,7 +25,8 @@ from openquake.hazardlib import valid
 aae = np.testing.assert_almost_equal
 
 # Mean ground-shaking values array: exp_res[gmm][imt]
-exp_res = np.array([[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
+exp_res = np.array(
+      [[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
         [ -5.14424676,  -6.37286291,  -7.60510263,  -9.56682442],
         [ -5.85932703,  -6.80133893,  -7.56254085,  -9.16291274]],
 
@@ -119,24 +120,37 @@ exp_res = np.array([[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
 
        [[ -2.81084019,  -4.24608951,  -5.56060691,  -5.61764873],
         [ -2.92921647,  -3.43743119,  -4.23963001,  -4.76727315],
-        [ -3.66715672,  -3.97179111,  -4.5627542 ,  -5.1938102 ]]])
+        [ -3.66715672,  -3.97179111,  -4.5627542 ,  -5.1938102 ]],
+        
+       [[ -3.795401  ,  -6.0362383 ,  -8.35390431,  -9.72784243],
+        [ -4.34210661,  -5.47498291,  -6.65930671,  -8.32647953],
+        [ -5.37700556,  -6.35594893,  -7.35869688,  -8.7911042 ]],
+
+       [[ -4.10637248,  -6.2178471 ,  -8.81218048, -10.32676323],
+        [ -4.22856749,  -5.59250592,  -7.43613957,  -9.40100562],
+        [ -5.27368364,  -6.4943435 ,  -7.9425776 ,  -9.59401018]],
+
+       [[ -4.47648083,  -6.86694079,  -8.94356238, -10.2203591 ],
+        [ -4.57481616,  -6.0255732 ,  -7.4984945 ,  -9.08773001],
+        [ -5.62184187,  -6.99839488,  -8.30351301,  -9.43848431]]]  
+        )
 
 # AbrahamsonGulerce2020SInter (all adj vs no adj)
 ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\n'
                     'region="CAS"\n'
-                    'usgs_basin_scaling="true"')
+                    'usgs_basin_scaling=true')
 
 # KuehnEtAl2020SInter (all adj vs no adj)
 k20_adj = valid.gsim('[KuehnEtAl2020SInter]\n'
                      'region="CAS"\n'
-                     'm9_basin_term="true"\n' \
-                     'usgs_basin_scaling="true"')
+                     'm9_basin_term=true\n' \
+                     'usgs_basin_scaling=true')
 
 # ParkerEtAl2020SInterB (all adj vs no adj)
 p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\n'
                      'region="Cascadia"\n'
-                     'm9_basin_term="true"\n'
-                     'usgs_basin_scaling="true"')
+                     'm9_basin_term=true\n'
+                     'usgs_basin_scaling=true')
 
 # ParkerEtAl2020SInterB with epistemic uncertainty scaling 
 p20_epi = valid.gsim('[ParkerEtAl2020SInterB]\n'
@@ -145,82 +159,87 @@ p20_epi = valid.gsim('[ParkerEtAl2020SInterB]\n'
 
 # AtkinsonMacias2009 (m9 and cb14 basin terms and ba08 site term)
 a09_adj = valid.gsim('[AtkinsonMacias2009]\n'
-                     'cb14_basin_term="true"\n'
-                     'm9_basin_term="true"\n'
+                     'cb14_basin_term=true\n'
+                     'm9_basin_term=true\n'
                      'ba08_site_term=true')
 
 # ZhaoEtAl2006SInter (m9 and cb14 vs m9)
 z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\n'
-                     'cb14_basin_term="true"\n'
-                     'm9_basin_term="true"')
+                     'cb14_basin_term=true\n'
+                     'm9_basin_term=true')
 
 # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
 k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\n'
                              'region="SEA"\n'
-                             'm9_basin_term="true"\n'
-                             'usgs_basin_scaling="true"')
+                             'm9_basin_term=true\n'
+                             'usgs_basin_scaling=true')
 
 # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
 k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\n'
                                'region="SEA"\n'
-                               'm9_basin_term="true"\n'
-                               'usgs_basin_scaling="true"')
+                               'm9_basin_term=true\n'
+                               'usgs_basin_scaling=true')
 
 # NGAWest2 GMMs with/without USGS basin scaling
 ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\n'
-                       'usgs_basin_scaling="true"')
+                       'usgs_basin_scaling=true')
 ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
 bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\n'
-                        'usgs_basin_scaling="true"')
+                        'usgs_basin_scaling=true')
 bssa14_def = valid.gsim('[BooreEtAl2014]\nregion="CAL"')
 cb14_adj = valid.gsim('[CampbellBozorgnia2014]\n'
-                      'usgs_basin_scaling="true"')    
+                      'usgs_basin_scaling=true')    
 cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
 cy14_adj = valid.gsim('[ChiouYoungs2014]\n'
-                      'usgs_basin_scaling="true"')
+                      'usgs_basin_scaling=true')
 cy14_def = valid.gsim('[ChiouYoungs2014]')
 
 # US NSHMP 2014 GMM with passing of an additional arguments for base GMM
 nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\n'
                                'gmpe_name="AbrahamsonEtAl2014"\n'
-                               'sgn=0\nusgs_basin_scaling="true"')
+                               'sgn=0\nusgs_basin_scaling=true')
 
 # US NSHMP 2014 GMMs with Cybershake basin adjustments
 ask14_cy = valid.gsim('[NSHMP2014]\n'
                       'gmpe_name="AbrahamsonEtAl2014"\n'
-                      'sgn=0\ncybershake_basin_adj="true"')
+                      'sgn=0\ncybershake_basin_adj=true')
 bssa14_cy = valid.gsim('[NSHMP2014]\n'
                        'gmpe_name="BooreEtAl2014"\n'
                        'sgn=0\n'
-                       'cybershake_basin_adj="true"')
+                       'cybershake_basin_adj=true')
 cb14_cy = valid.gsim('[NSHMP2014]\n'
                      'gmpe_name="CampbellBozorgnia2014"\n'
                      'sgn=0\n'
-                     'cybershake_basin_adj="true"')
+                     'cybershake_basin_adj=true')
 cy14_cy = valid.gsim('[NSHMP2014]\n'
                      'gmpe_name="ChiouYoungs2014"\n'
                      'sgn=0\n'
-                     'cybershake_basin_adj="true"')
+                     'cybershake_basin_adj=true')
 
 # NGAEast GMM with Ramos-Sepulveda et al. (2023) bias adjustment
 ngaeast_bias = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
-                          'usgs_2023_bias_adj="true"\n'
-                          'z_sed_scaling="true"')
+                          'usgs_2023_bias_adj=true\n'
+                          'z_sed_scaling=true')
 
 # NGAEast GMM with Chapman and Guo (2021) Coastal Plains site amp
 ngaeast_cpa = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
-                          'coastal_plains_site_amp="true"\n'
-                          'z_sed_scaling="true"')
+                          'coastal_plains_site_amp=true\n'
+                          'z_sed_scaling=true')
 
 # NGAEast GMM with both US 2023 adjustments (not used together in
 # the US 2023 model because have similar effects but checked for QA).
 ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'gmpe_table="nga_east_usgs_17.hdf5"\n'
-                          'usgs_2023_bias_adj="true"\n'
-                          'coastal_plains_site_amp="true"\n'
-                          'z_sed_scaling="true"')
+                          'usgs_2023_bias_adj=true\n'
+                          'coastal_plains_site_amp=true\n'
+                          'z_sed_scaling=true')
+
+# Alaska 2023 NSHM bias adjustment for global variant of NGASUB GMMs
+a20_ak23 = valid.gsim('[AbrahamsonGulerce2020SInter]\nak23_bias_adj=true') 
+p20_ak23 = valid.gsim('[ParkerEtAl2020SInter]\nak23_bias_adj=true')  
+k20_ak23 = valid.gsim('[KuehnEtAl2020SInter]\nak23_bias_adj=true')
 
 gmms = [ag_adj,
         k20_adj,
@@ -245,7 +264,10 @@ gmms = [ag_adj,
         cy14_cy,
         ngaeast_bias,
         ngaeast_cpa,
-        ngaeast_both]
+        ngaeast_both,
+        a20_ak23,
+        p20_ak23,
+        k20_ak23]
 
 
 class US23AdjustmentTestCase(unittest.TestCase):       
@@ -253,7 +275,9 @@ class US23AdjustmentTestCase(unittest.TestCase):
     def test_all(self):
         """
         Test the execution and correctness of values for GMMs as
-        adjusted within the Conterminous US 2023 NSHM.
+        adjusted within the Conterminous US 2023 NSHM. We also test
+        the 2023 Alaska USGS model bias adjustments to the global
+        variants of the NGA-Subduction GMMs here.
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']

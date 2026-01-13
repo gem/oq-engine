@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,7 +99,7 @@ class EngineServerTestCase(django.test.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 if os.environ.get('OQ_APPLICATION_MODE') in ('AELO',
-                                                             'ARISTOTLE'):
+                                                             'IMPACT'):
                     # NOTE: some more time is needed in order to wait for the
                     # callback to finish and produce the email notification
                     time.sleep(1)

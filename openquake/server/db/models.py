@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2025 GEM Foundation
+# Copyright (C) 2025-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.db import models, connection
+from django.db import models
 
 
 class Job(models.Model):
@@ -28,44 +28,61 @@ class Job(models.Model):
     class Meta:
         managed = False  # the schema is not managed by Django
         db_table = 'job'
+        ordering = ['-id']  # descending by id
 
     def __str__(self):
         return f"{self.id} – {self.description[:80]}"  # show first 80 chars
 
 
+class Tag(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        managed = False
+        db_table = "tag"
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class JobTag(models.Model):
+    id = models.AutoField(primary_key=True)
     job = models.ForeignKey(
         Job,
         on_delete=models.CASCADE,
         db_column="job_id",
+        related_name="job_tags",
     )
-    tag = models.CharField(max_length=255)
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        db_column="tag_id",
+        related_name="job_tags",
+    )
     is_preferred = models.BooleanField(default=False)
 
     class Meta:
+        managed = False
         db_table = 'job_tag'
-        managed = False  # the schema is not managed by Django
         unique_together = ("job", "tag")
+        ordering = ['job_id', 'tag_id']
         indexes = [
             models.Index(
-                fields=['tag'],
-                name='uq_preferred_per_tag',
+                fields=["tag_id"],
+                name="uq_preferred_per_tag",
                 condition=models.Q(is_preferred=True),
             )
         ]
+
         verbose_name = "Job Tag"
         verbose_name_plural = "Job Tags"
 
     def __str__(self):
-        return (f"{self.tag} (job_id={self.job_id},"
-                f" {'preferred' if self.is_preferred else 'not preferred'})")
-
-    @property
-    def job_description(self):
-        """Return the job description (queried directly from the job table)."""
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT description FROM job WHERE id = %s", [self.job_id]
-            )
-            row = cursor.fetchone()
-        return row[0] if row else "(unknown)"
+        return (
+            f"{self.tag.name} (job_id={self.job_id}, "
+            f"{'preferred' if self.is_preferred else 'not preferred'})"
+        )
