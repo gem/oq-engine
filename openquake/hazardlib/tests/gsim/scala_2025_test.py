@@ -21,19 +21,20 @@ Implements the tests for the set of GMM classes included within the GMM
 of Scala and co-authors (2025). Test tables were created by an excel spreadsheet
 that calculates expected values provided by the original authors.
 """
-from openquake.hazardlib.gsim.scala_2025 import (Scala2025CampiFlegrei_repi,
-                                                Scala2025CampiFlegrei_rhypo)
+from openquake.hazardlib.gsim.scala_2025 import (Scala2025CampiFlegreiRepiMW,
+                                                Scala2025CampiFlegreiRhypoMW,
+                                                Scala2025CampiFlegreiRepiMD)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepancy percentages to be applied to all tests
 
 
-class Scala2025CampiFlegrei_repiTestCase(BaseGSIMTestCase):
+class Scala2025CampiFlegreiRepiMWTestCase(BaseGSIMTestCase):
     """
     Tests the Scala 2025 GMM using Mw and Repi as covariates.
     """
-    GSIM_CLASS = Scala2025CampiFlegrei_repi
+    GSIM_CLASS = Scala2025CampiFlegreiRepiMW
     # File containing the results for the Mean
     MEAN_FILE = "SCALA25/Scala2025repi_MEAN.csv"
     # File contaning the results for the Total Standard Deviation
@@ -44,13 +45,25 @@ class Scala2025CampiFlegrei_repiTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-class Scala2025CampiFlegrei_rhypoTestCase(BaseGSIMTestCase):
+class Scala2025CampiFlegreiRhypoMWTestCase(BaseGSIMTestCase):
     """
     Tests the Scala 2025 GMM using Mw and Rhypo as covariates.
     """
-    GSIM_CLASS = Scala2025CampiFlegrei_rhypo
+    GSIM_CLASS = Scala2025CampiFlegreiRhypoMW
     MEAN_FILE = "SCALA25/Scala2025rhypo_MEAN.csv"
     STD_FILE = "SCALA25/Scala2025rhypo_STD_TOTAL.csv"
+
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=0.1)
+
+class Scala2025CampiFlegreiRepiMDTestCase(BaseGSIMTestCase):
+    """
+    Tests the Scala 2025 GMM using Mw and Repi as covariates.
+    """
+    GSIM_CLASS = Scala2025CampiFlegreiRepiMD
+    MEAN_FILE = "SCALA25/Scala2025repi_Md_MEAN.csv"
+    STD_FILE = "SCALA25/Scala2025repi_Md_STD_TOTAL.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.STD_FILE,
