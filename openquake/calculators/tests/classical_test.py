@@ -108,10 +108,11 @@ class ClassicalTestCase(CalculatorTestCase):
         sitecol = self.calc.sitecol
         full_lt = self.calc.full_lt
         oq = self.calc.oqparam
-        hcurve = calc.mean_rates.calc_mcurves(
-            src_groups, sitecol, full_lt, oq)[0, 0]
-        pga = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        aac(pga, hcurve, rtol=6e-5)
+        hcurves, gweights = calc.mean_rates.calc_mcurves(
+            src_groups, sitecol, full_lt, oq)
+        pga = self.calc.datastore['hcurves-stats'][0]
+        aac(pga, hcurves, rtol=6e-5)
+        aac(gweights, [1.])  # see case_06 for a nontrivial test
 
     def test_case_03(self):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
