@@ -17,16 +17,25 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from openquake.hazardlib.gsim.tem20.lin_2011 import Lin2011foot
+from openquake.hazardlib.gsim.lin_2011 import Lin2011hanging, Lin2011foot
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
 
 # Test data provided by Jia-Cian Gao (TEM) on June 9, 2021 - Revised and
 # updated by M. Pagani on July 16, 2021
 # Values of std compared against the ones published.
 
 BASE_PATH = os.path.dirname(__file__)
-DATA_PATH = os.path.join(BASE_PATH, '..', 'data', 'tem20')
+DATA_PATH = os.path.join(BASE_PATH, 'data', 'lin2011')
 
+
+class LinEtAl2011HanginWallCase(BaseGSIMTestCase):
+    GSIM_CLASS = Lin2011hanging
+
+    def test_all(self):
+        self.check(os.path.join(DATA_PATH, 'lin2011_mean_hw.csv'),
+                       os.path.join(DATA_PATH, 'lin2011_std_hw.csv'),
+                       max_discrep_percentage=0.1)
 
 class LinEtAl2011FootWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011foot
