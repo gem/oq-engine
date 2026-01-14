@@ -19,7 +19,6 @@
 """
 Module exports class:`MorikawaFujiwara2013`
 """
-
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -57,23 +56,23 @@ _get_magnitude_term = CallableDict()
 
 
 @_get_magnitude_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, rhypo):
+def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     return (C['a'] * (mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e'] * mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, rhypo):
+def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     return (C['a'] * (mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, rhypo):
+def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     if region == "SW":
-        tmp[rhypo < 80] += C['PH']
+        tmp[hypo_z < 80] += C['PH']
     return tmp
 
 
@@ -88,7 +87,6 @@ class MorikawaFujiwara2013Crustal(GMPE):
     Motion Prediction Equation for Japan Applicable up to M9 Mega-Earthquake",
     Journal of Disaster Research, Vol.8, No.5, 2013.
     """
-
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -116,24 +114,17 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required distance measure is Rrup [km]
     REQUIRES_DISTANCES = {'rrup'}
 
-    region = None
-    model = 'model1'
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         mw01 = CONSTS["Mw01"]
         mw1 = CONSTS["Mw1"]
         mw1prime = np.array(ctx.mag)
         mw1prime[ctx.mag >= mw01] = mw01
+        self.region = getattr(self, 'region', None)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            if self.model == 'model1':
-                mag_term = _get_magnitude_term(
-                    trt, self.region, C, ctx.rrup, mw1prime, mw1,
-                    ctx.hypo_depth)
-            else:
-                msg = "Model not supported"
-                raise ValueError(msg)
+            mag_term = _get_magnitude_term(
+                trt, self.region, C, ctx.rrup, mw1prime, mw1, ctx.hypo_depth)
 
             mean[m] = (mag_term + _get_basin_term(C, ctx) +
                        _get_shallow_amplification_term(C, ctx.vs30) +
@@ -199,42 +190,34 @@ class MorikawaFujiwara2013Crustal(GMPE):
 
 
 class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-    region = None
-    model = 'model1'
 
 
 class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013SubInterface):
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     region = 'NE'
-    model = 'model1'
 
 
 class MorikawaFujiwara2013SubInterfaceSW(MorikawaFujiwara2013SubInterface):
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     region = 'SW'
-    model = 'model1'
 
 
 class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-    region = None
-    model = 'model1'
 
 
 class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     region = 'NE'
-    model = 'model1'
 
 
-class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlabNE):
-    #: Supported tectonic region type is active shallow crust
+class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlab):
+    #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     region = 'SW'
-    model = 'model1'
