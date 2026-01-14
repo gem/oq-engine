@@ -4,10 +4,10 @@
   [Christopher Brooks]
   * Added the Alaska bias adjustments for the NGASUB GMMs
     as required for the USGS 2023 Alaska model.
- 
+
   [Antonio Scala]
-  * Added Scala et al (2025) GMM 
-  
+  * Added Scala et al (2025) GMM
+
   [Michele Simionato]
   * Show the GSIM class warnings only once
   * Extended `oq engine --lhc` and `oq engine --lrc` to show the
