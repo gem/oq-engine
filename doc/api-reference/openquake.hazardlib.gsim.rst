@@ -1518,9 +1518,17 @@ zhao_2006_swiss_coeffs
     :show-inheritance:
 
 zhao_2016
------------------------------------------
+------------------------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+mohammadi_turkiye_2023
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mohammadi_turkiye_2023
     :members:
     :undoc-members:
     :show-inheritance:
