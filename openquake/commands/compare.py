@@ -519,9 +519,13 @@ def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
     """
     for fname in os.listdir(dir2):
         if fname.endswith('.org'):
+            fname2 = os.path.join(dir2, fname)
+            if not os.path.exists(fname2):
+                print(f"{fname2} does not exist, cannot compare")
+                continue
             print(f"Comparing {fname}")
             df1 = read_org_df(os.path.join(dir1, fname))
-            df2 = read_org_df(os.path.join(dir2, fname))
+            df2 = read_org_df(fname2)
             equal = []
             for col in df1.columns:
                 ok = compare_column_values(strip(df1[col].to_numpy()),

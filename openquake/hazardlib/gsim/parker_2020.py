@@ -44,6 +44,12 @@ BASINS = [None, "out", "Seattle"]
 EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
 
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from https://code.usgs.gov/ghsc/nshmp
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
+
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
@@ -434,8 +440,9 @@ class ParkerEtAl2020SInter(GMPE):
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
                                    model
+    :param ak23_bias_adj: Period-dependent bias adjustment as applied within
+                          the USGS 2023 USGS model for Alaska
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
@@ -465,7 +472,7 @@ class ParkerEtAl2020SInter(GMPE):
 
     def __init__(self, region=None, saturation_region=None, basin=None,
                  m9_basin_term=False, usgs_basin_scaling=False,
-                 sigma_mu_epsilon=0.0):
+                 sigma_mu_epsilon=0.0, ak23_bias_adj=False):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
@@ -505,6 +512,18 @@ class ParkerEtAl2020SInter(GMPE):
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
 
+        # Alaska 2023 USGS model bias adjustment
+        self.ak23_bias_adj = ak23_bias_adj
+        if self.ak23_bias_adj:
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is not
+                const.TRT.SUBDUCTION_INTERFACE or self.region):
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
+                                 f'should only be applied to the "global" '
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -541,8 +560,12 @@ class ParkerEtAl2020SInter(GMPE):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + flin + fm + c0 + fd + fb
 
+            if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
+
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
-                # Apply epistemic uncertainty scaling
+                # Apply epistemic uncertainty factor
                 sigma_mu_adjust = _get_sigma_mu_adjustment(
                     self.saturation_region, trt, imt, self.epi_adjs_table)
                 mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon

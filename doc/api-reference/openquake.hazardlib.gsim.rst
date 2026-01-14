@@ -915,7 +915,7 @@ lin_2009
 lin_2011
 --------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.tem20.lin_2011
+.. automodule:: openquake.hazardlib.gsim.lin_2011
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1177,6 +1177,14 @@ sadigh_1997
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.sadigh_1997
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+scala_2025
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.scala_2025
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1510,9 +1518,17 @@ zhao_2006_swiss_coeffs
     :show-inheritance:
 
 zhao_2016
------------------------------------------
+------------------------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+mohammadi_turkiye_2023
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mohammadi_turkiye_2023
     :members:
     :undoc-members:
     :show-inheritance:
