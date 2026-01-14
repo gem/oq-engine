@@ -26,6 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
 
+
 CONSTS = {
     "D0": 300.,
     "e": 0.5,
@@ -48,8 +49,8 @@ def _get_intensity_correction_term(C, region, xvf, focal_depth):
         gamma = 0.
     else:
         raise ValueError('Unsupported region')
-    return (gamma * np.minimum(xvf, 75.0) *
-            np.maximum(focal_depth-30., 0.))
+    return (
+        gamma * np.minimum(xvf, 75.0) * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
