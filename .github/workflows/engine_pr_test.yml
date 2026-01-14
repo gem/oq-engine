@@ -151,7 +151,10 @@ jobs:
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
           pytest -v openquake/server/tests/test_restricted_mode.py
+          pytest -v openquake/server/tests/test_restricted_mode_ui.py
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -220,7 +223,10 @@ jobs:
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
           pytest -v openquake/server/tests/test_aelo_mode.py
+          pytest -v openquake/server/tests/test_aelo_mode_ui.py
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
