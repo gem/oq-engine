@@ -184,8 +184,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         logging.info('Not requiring mem_gb = %.2f', req_gb)
     else:
         logging.info('Requiring mem_gb = %.2f', req_gb)
-    if req_gb >= 30 and not config.directory.custom_tmp:
-        logging.info('We suggest to set custom_tmp')
 
     # store source_groups
     dstore.create_dset('source_groups', data,

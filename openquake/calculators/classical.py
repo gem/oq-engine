@@ -627,7 +627,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 block = [block]
             for tgetter in tgetters:
                 allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
-                n_out.append(1)
+            n_out.append(len(tgetters))
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         len(allargs), min(n_out), max(n_out))
