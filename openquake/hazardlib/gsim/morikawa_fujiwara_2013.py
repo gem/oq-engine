@@ -196,14 +196,10 @@ class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
 
 
 class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013SubInterface):
-    #: Supported tectonic region type is subduction interface
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     region = 'NE'
 
 
 class MorikawaFujiwara2013SubInterfaceSW(MorikawaFujiwara2013SubInterface):
-    #: Supported tectonic region type is subduction interface
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     region = 'SW'
 
 
@@ -213,12 +209,8 @@ class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
 
 
 class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
-    #: Supported tectonic region type is subduction intraslab
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     region = 'NE'
 
 
 class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlab):
-    #: Supported tectonic region type is subduction intraslab
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     region = 'SW'
