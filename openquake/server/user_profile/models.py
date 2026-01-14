@@ -29,7 +29,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
     class Level(models.IntegerChoices):
-        READ_ONLY = 0, _("Read-only")
+        READ_ONLY = 0, _("Read only")
         RESTRICTED = 1, _("Restricted")
         ADVANCED = 2, _("Advanced")
 
