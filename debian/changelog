@@ -20,17 +20,6 @@
     the OpenQuake Engine.
 
   [Michele Simionato]
-  * Show the GSIM class warnings only once
-  * Extended `oq engine --lhc` and `oq engine --lrc` to show the
-    calculation_mode
-
-  [Christopher Brooks]
-  * Refactored conditional GMPEs to be specifiable within ModifiableGMPE
-    on a per-IMT basis (safer handling, more flexibility).
-  * Added documentation for the implementation of conditional GMPEs within
-    the OpenQuake Engine.
-
-  [Michele Simionato]
   * Added a consistency check on the effective time when starting from SES
   * Added a new exporter hmaps-stats producing one file per return period
 
