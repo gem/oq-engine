@@ -84,7 +84,7 @@ def _get_shallow_amplification_term(C, vs30):
 
 class MorikawaFujiwara2013Crustal(GMPE):
     """
-    Implements the GMM from Morikawa and Fujiwara published as "A New Ground
+    Implements the GMMs from Morikawa and Fujiwara published as "A New Ground
     Motion Prediction Equation for Japan Applicable up to M9 Mega-Earthquake",
     Journal of Disaster Research, Vol.8, No.5, 2013.
     """
@@ -92,15 +92,15 @@ class MorikawaFujiwara2013Crustal(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
-    #: peak ground velocity and peak ground acceleration
+    #: peak ground velocity, peak ground acceleration and modified
+    #: Mercalli intensity
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA, JMA}
 
     #: Supported intensity measure component is orientation-independent
-    #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
+    #: measure :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total, see equation 2, pag 106.
+    #: Supported standard deviation type is only total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters are:
