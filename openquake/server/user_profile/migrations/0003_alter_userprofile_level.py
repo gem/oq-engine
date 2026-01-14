@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='level',
-            field=models.IntegerField(choices=[(0, 'Read only'), (1, 'Restricted'), (2, 'Advanced')], default=0, help_text='Choose the level for the user'),
+            field=models.IntegerField(choices=[(0, 'Read-only'), (1, 'Restricted'), (2, 'Advanced')], default=0, help_text='Choose the level for the user'),
         ),
     ]
