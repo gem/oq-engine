@@ -19,7 +19,6 @@
 import sys
 import logging
 import operator
-import psutil
 import numpy
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
@@ -237,12 +236,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
-            avail = psutil.virtual_memory().available
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
             logging.warning(
-                f'The global RateMap would require %s (of %s) ({Gt=}%s)',
-                general.humansize(nbytes), general.humansize(avail), extra)
+                f'The global RateMap requires %s ({Gt=}%s)',
+                general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         if sites:

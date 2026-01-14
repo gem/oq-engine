@@ -21,6 +21,7 @@
 Module exports :class:`AbrahamsonGulerce2020SInter`,
                :class:`AbrahamsonGulerce2020SSlab`
 """
+import os
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
@@ -98,7 +99,6 @@ REGIONAL_TERMS = {
         },
 }
 
-
 # Region- and period-independent constant values
 CONSTS = {
     "C4": 10.0,
@@ -133,6 +133,12 @@ CONSTS = {
 }
 
 METRES_PER_KM = 1000.
+
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from https://code.usgs.gov/ghsc/nshmp
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
 
 
 def get_base_term(C, region, apply_adjust):
@@ -607,8 +613,9 @@ class AbrahamsonGulerce2020SInter(GMPE):
         sigma_mu_epsilon (float): Number of standard deviations to multiply
                                   sigma mu (the standard deviation of the
                                   median) for the epistemic uncertainty model
+        ak23_bias_adj: Period-dependent bias adjustment as applied within
+                       the USGS 2023 model for Alaska
     """
-
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
@@ -640,10 +647,12 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
     # Other required params
     REQUIRES_ATTRIBUTES = {'region', 'ergodic', 'apply_usa_adjustment',
-                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
+                           'usgs_basin_scaling', 'sigma_mu_epsilon',
+                           'ak23_bias_adj'}
 
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0,
+                 ak23_bias_adj=False):
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region
@@ -662,6 +671,19 @@ class AbrahamsonGulerce2020SInter(GMPE):
             raise ValueError('USGS basin scaling is only applicable to the '
                              'Cascadia region for AbrahamsonGulerce2020.')
 
+        # Alaska 2023 USGS model bias adjustment
+        self.ak23_bias_adj = ak23_bias_adj
+        if self.ak23_bias_adj:
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
+                not const.TRT.SUBDUCTION_INTERFACE or
+                    self.region != "GLO"):
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
+                                 f'should only be applied to the "global"'
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -678,27 +700,26 @@ class AbrahamsonGulerce2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
-            # Get USGS basin scaling factor if required (can only be for
-            # CAS region)
-            if self.usgs_basin_scaling:
-                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
-            else:
-                usgs_baf = np.ones(len(ctx.vs30))
-            
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000, imt,
                                             self.apply_usa_adjustment,
                                             self.usgs_basin_scaling)
 
+            if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
+
             if self.sigma_mu_epsilon:
-                # Apply an epistmic adjustment factor
+                # Apply an epistemic adjustment factor
                 mean[m] += (self.sigma_mu_epsilon *
                             get_epistemic_adjustment(C, ctx.rrup))
+
             # Get the standard deviations
             tau_m, phi_m = get_tau_phi(C, C_PGA, self.region, imt.period,
                                        ctx.rrup, ctx.vs30, pga1000,
                                        self.ergodic)
             tau[m] = tau_m
             phi[m] = phi_m
+
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson

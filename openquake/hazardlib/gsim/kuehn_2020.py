@@ -55,6 +55,12 @@ BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020")
 KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020",
                             "kuehn_2020_coeffs.csv")
 
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from https://code.usgs.gov/ghsc/nshmp
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
+
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
@@ -749,6 +755,8 @@ class KuehnEtAl2020SInter(GMPE):
                       logic tree context. The scenario and period specific
                       sigma_mu values are read in from hdf5 binary files and
                       interpolated to the magnitude and distances required
+    ak23_bias_adj: Period-dependent bias adjustment as applied within the USGS
+                   2023 USGS model for Alaska
     """
     experimental = True
 
@@ -785,7 +793,8 @@ class KuehnEtAl2020SInter(GMPE):
                            'usgs_basin_scaling', 'sigma_mu_epsilon'}
 
     def __init__(self, region="GLO", m_b=None, m9_basin_term=None,
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0,
+                 ak23_bias_adj=False):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -820,6 +829,19 @@ class KuehnEtAl2020SInter(GMPE):
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
             self.sigma_mu_model = {}
+
+        # Alaska 2023 USGS model bias adjustment
+        self.ak23_bias_adj = ak23_bias_adj
+        if self.ak23_bias_adj:
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
+                not const.TRT.SUBDUCTION_INTERFACE or
+                    self.region != "GLO"):
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
+                                 f'should only be applied to the "global"'
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -877,11 +899,17 @@ class KuehnEtAl2020SInter(GMPE):
                                           trt, m_break, ctx, pga1100,
                                           m9_basin_term=self.m9_basin_term,
                                           usgs_bs=self.usgs_basin_scaling)
+                
+            if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
+
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
                     self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
+
             # Get standard deviations
             tau[m] = C["tau"]
             phi[m] = C["phi"]
