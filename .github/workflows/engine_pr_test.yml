@@ -163,6 +163,12 @@ jobs:
             --tracing retain-on-failure \
             --screenshot only-on-failure \
             --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: .playwright
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -243,6 +249,12 @@ jobs:
             --tracing retain-on-failure \
             --screenshot only-on-failure \
             --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: .playwright
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
