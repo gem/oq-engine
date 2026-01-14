@@ -154,7 +154,15 @@ jobs:
           pip install pytest-playwright
           playwright install
           pytest -v openquake/server/tests/test_restricted_mode.py
-          pytest -v openquake/server/tests/test_restricted_mode_ui.py
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_restricted_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -226,7 +234,15 @@ jobs:
           pip install pytest-playwright
           playwright install
           pytest -v openquake/server/tests/test_aelo_mode.py
-          pytest -v openquake/server/tests/test_aelo_mode_ui.py
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_aelo_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
