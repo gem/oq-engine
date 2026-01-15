@@ -26,8 +26,6 @@ from openquake.hazardlib import gsim
 import numpy as np
 
 
-data = pathlib.Path(__file__).parent / 'data'
-
 # Discrepancy percentages to be applied to all tests
 MEAN_DISCREP = 0.1
 STDDEV_DISCREP = 0.1
@@ -88,7 +86,7 @@ class AmeriEtAl2017RjbStressDropTestCase(BaseGSIMTestCase):
     GSIM_CLASS = gsim.ameri_2017.AmeriEtAl2017RjbStressDrop
 
     def test_all(self):
-        self.check("AmeriEtAl2017RjbStressDrop.csv",
+        self.check("AMERI2017/AmeriEtAl2017RjbStressDrop.csv",
                    max_discrep_percentage=MEAN_DISCREP,
                    std_discrep_percentage=STDDEV_DISCREP)
 
@@ -102,7 +100,7 @@ class AmeriEtAl2017RepiStressDropTestCase(BaseGSIMTestCase):
     GSIM_CLASS = gsim.ameri_2017.AmeriEtAl2017RepiStressDrop
 
     def test_all(self):
-        self.check("AmeriEtAl2017RepiStressDrop.csv",
+        self.check("AMERI2017/AmeriEtAl2017RepiStressDrop.csv",
                    max_discrep_percentage=MEAN_DISCREP,
                    std_discrep_percentage=STDDEV_DISCREP)
 

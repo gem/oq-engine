@@ -28,7 +28,7 @@ class GarciaEtAl2005SSlabTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_all(self):
-        self.check('GarciaEtAl2005SSlab.csv',
+        self.check('GA05/GarciaEtAl2005SSlab.csv',
                    max_discrep_percentage=0.2,
                    std_discrep_percentage=0.1)
 
@@ -40,6 +40,6 @@ class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_all(self):
-        self.check('GarciaEtAl2005SSlabVert.csv',
+        self.check('GA05/GarciaEtAl2005SSlabVert.csv',
                    max_discrep_percentage=0.2,
                    std_discrep_percentage=0.1)
