@@ -404,6 +404,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
     """
     # c7 is the same for interface or inslab - so just read from interface
     c_7 = C[REGION_TERMS_IF[region]["c7"]]
+
     # Get linear site term
     vs_mod = vs30 / C["k1"]
     f_site_g = c_7 * np.log(vs_mod)
@@ -757,6 +758,9 @@ class KuehnEtAl2020SInter(GMPE):
                       interpolated to the magnitude and distances required
     ak23_bias_adj: Period-dependent bias adjustment as applied within the USGS
                    2023 USGS model for Alaska
+    ak23_cb14_sig: Adjusted sigma model based on Campbell and Bozorgnia 2014 to
+                   account for aleatory variability associated with non-linear
+                   site amplification
     """
     experimental = True
 
@@ -794,7 +798,7 @@ class KuehnEtAl2020SInter(GMPE):
 
     def __init__(self, region="GLO", m_b=None, m9_basin_term=None,
                  usgs_basin_scaling=False, sigma_mu_epsilon=0.0,
-                 ak23_bias_adj=False):
+                 ak23_bias_adj=False, ak23_cb14_sig=False):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -830,9 +834,11 @@ class KuehnEtAl2020SInter(GMPE):
         else:
             self.sigma_mu_model = {}
 
-        # Alaska 2023 USGS model bias adjustment
+        # Alaska 2023 USGS model adjustments
         self.ak23_bias_adj = ak23_bias_adj
-        if self.ak23_bias_adj:
+        self.ak23_cb14_sig = ak23_cb14_sig
+        if self.ak23_bias_adj: # NOTE: Don't raise an error if using the CB14
+                               # based sigma outside Alaska USGS model context
             if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
                 not const.TRT.SUBDUCTION_INTERFACE or
                     self.region != "GLO"):
