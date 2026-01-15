@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         0.0000000E+00
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        1.5000000E+01
+                        1.0000000E+01
                     </lowerSeismoDepth>
                 </areaGeometry>
                 <magScaleRel>
