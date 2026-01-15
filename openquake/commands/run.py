@@ -108,7 +108,7 @@ def main(job_ini,
         params['concurrent_tasks'] = str(concurrent_tasks)
     if slowest:
         prof = cProfile.Profile()
-        prof.runctx('_run(job_ini[0], None, pdb, loglevel, '
+        prof.runctx('_run(job_ini, None, pdb, loglevel, '
                     'exports, params, host)', globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
@@ -117,36 +117,29 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    if all(ini.endswith('.ini') for ini in job_ini):
+    if job_ini.endswith('.ini'):
         mode = 'ini'
-    elif all(ini.endswith('.toml') for ini in job_ini):
+    elif job_ini.endswith('.toml'):
         mode = 'toml'
     else:
-        raise ValueError(f'You cannot mix .ini and .toml files: {job_ini}')
+        raise ValueError(f'Unknown extension in{job_ini}')
     if mode == 'ini':
-        dics = [readinput.get_params(ini) for ini in job_ini]
-        for dic in dics:
-            dic.update(params)
-            dic['exports'] = ','.join(exports)
-            if 'job_id' in dic:  # in sensitivity analysis
-                logs.dbcmd('update_job', dic['job_id'],
-                           {'calculation_mode': dic['calculation_mode']})
-        jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
+        dic = readinput.get_params(job_ini)
+        dic.update(params)
+        dic['exports'] = ','.join(exports)
+        if 'job_id' in dic:  # in sensitivity analysis
+            logs.dbcmd('update_job', dic['job_id'],
+                       {'calculation_mode': dic['calculation_mode']})
+        jobs = create_jobs([dic], loglevel, hc_id=hc, user_name=user_name,
                            host=host, pdb=pdb)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
         return jobs[0].calc_id  # used in commands_test
     else:  # toml
-        if not workflow_id:
-            sys.exit('You must pass a workflow ID or a workflow description')
-        try:
+        if workflow_id:
            params['workflow_id'] = int(workflow_id)
-        except ValueError:
-            params['description'] = workflow_id
-        run_workflow(params, job_ini, nodes=nodes, pdb=pdb)
-        return workflow_id
+        return run_workflow(params, job_ini, nodes=nodes, pdb=pdb)
 
-main.job_ini = dict(help='calculation configuration file '
-                    '(or files, space-separated)', nargs='+')
+main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
