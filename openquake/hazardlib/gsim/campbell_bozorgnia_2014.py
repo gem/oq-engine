@@ -434,17 +434,10 @@ def _get_rholnpga(C, mag):
     return rho_ln_pga
 
 
-def compute_sigma(C, C_PGA, imt, ctx, pga1100):
+def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
     """
     Compute CB14's sigma (total, tau and phi)
     """
-    # Get tau_lny for PGA on the basement rock
-    tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
-
-    # Get phi_lny for PGA on the basement rock
-    phi_lnpga_b = np.sqrt(
-        _get_philny(C_PGA, ctx.mag) ** 2. - C_PGA["philnAF"] ** 2.)
-
     # Get tau_lny on the basement rock
     tau_lnyb = _get_taulny(C, ctx.mag)
 
@@ -541,11 +534,19 @@ class CampbellBozorgnia2014(GMPE):
             _update_ctx(self, ctx)
 
         C_PGA = self.COEFFS[PGA()]
+
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx, PGA(),
                                          self.usgs_basin_scaling,
                                          self.cybershake_basin_adj))
      
+        # Get tau_lny for PGA on the basement rock
+        tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+
+        # Get phi_lny for PGA on the basement rock
+        phi_lnpga_b = np.sqrt(
+            _get_philny(C_PGA, ctx.mag) ** 2. - C_PGA["philnAF"] ** 2.)
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
@@ -567,7 +568,8 @@ class CampbellBozorgnia2014(GMPE):
                 mean[m, idx] = pga[idx]
                 mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
-            sig[m], tau[m], phi[m] = compute_sigma(C, C_PGA, imt, ctx, pga1100)
+            sig[m], tau[m], phi[m] = compute_sigma(
+                C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny

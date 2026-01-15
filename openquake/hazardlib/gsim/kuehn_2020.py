@@ -46,8 +46,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
-    compute_sigma as compute_cb14_sigma
 
 
 # Path to the within-model epistemic adjustment tables
@@ -711,7 +709,7 @@ def get_std_dev(C, C_PGA, ctx, imt, pga1100, cb14_sig):
     """
     if cb14_sig:
         # Campbell and Bozorgnia 2014 sigma model with K20 coefficients
-        sig, tau, phi = compute_cb14_sigma(C, C_PGA, imt, ctx, pga1100)
+        breakpoint()
         
     else:
         # Original sigma model
