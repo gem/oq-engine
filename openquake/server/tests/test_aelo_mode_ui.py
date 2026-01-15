@@ -19,6 +19,6 @@ def test_aelo_run_job(authenticated_page):
 
     job_row = page.latest_job_row()
     expect(job_row.get_by_text("executing")).to_be_visible(timeout=10_000)
-    job_row.get_by_role("link", name="AbortFIXME").click()
-    authenticated_page.get_by_role("button", name="Yes, abort").click()
+    job_row.get_by_role("link", name="AbortFIXME").click(timeout=10_000)
+    authenticated_page.get_by_role("button", name="Yes, abort").click(timeout=10_000)
     expect(job_row.get_by_text("aborted")).to_be_visible(timeout=10_000)
