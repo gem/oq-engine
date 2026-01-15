@@ -107,20 +107,12 @@ else if (window.application_mode === 'IMPACT') {
                     dataType: "json",
                     success: function(data) {
                         window.IMPACT.impact_form_defaults = data;
+                        initImpactForm();
                     },
                     error: function(xhr, status, error) {
                         console.error("Error loading impact_from_defaults:", error);
                     }
                 });
-                function toggleRunCalcBtnState() {
-                    var lonValue = $('#lon').val();
-                    if (typeof lonValue !== 'undefined') {
-                        lonValue = lonValue.trim();
-                    }
-                    $('#submit_impact_calc').prop('disabled', lonValue === '');
-                }
-                toggleRunCalcBtnState();
-                initImpactForm();
             }
         });
 })($, Backbone, _, gem_oq_server_url);
