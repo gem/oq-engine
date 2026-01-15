@@ -706,8 +706,8 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
 
 def get_std_dev(C, C_PGA, ctx, imt, pga1100, cb14_sig):
     """
-    Return sigma of the original K20 model OR CB14-based sigma (the
-    latter is used in the Alaska 2023 USGS model).
+    Return sigma of the original K20 model OR use CB14 sigma model with
+    K20 coefficients (this is used in the Alaska 2023 USGS model).
     """
     if cb14_sig:
         # Campbell and Bozorgnia 2014 sigma model with K20 coefficients
