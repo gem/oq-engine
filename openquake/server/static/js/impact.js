@@ -134,26 +134,26 @@ window.initImpactForm = function() {
             contentType: false,
             encode: true,
         }).done(function (data) {
-            let $select = $("#shakemap_version");
-            $select.empty();
+            let shakemap_selector = $("#shakemap_version");
+            shakemap_selector.empty();
             if (data.shakemap_versions_issue) {
-                $select.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
+                shakemap_selector.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
             } else {
                 if (data.shakemap_versions.length > 0) {
                     data.shakemap_versions.forEach(function (shakemap_version) {
                         var usgs_preferred = shakemap_version.id == data.usgs_preferred_version ? " (USGS preferred)" : "";
-                        $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
+                        shakemap_selector.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
                 } else {
-                    $select.append('<option value="">No versions available</option>');
+                    shakemap_selector.append('<option value="">No versions available</option>');
                 }
             }
             $('#submit_impact_get_rupture').prop('disabled', false);
             set_retrieve_data_btn_txt('initial');
         }).error(function (data) {
-            let $select = $("#shakemap_version");
-            $select.empty();
-            $select.append('<option value="error">Unable to retrieve data</option>');
+            let shakemap_selector = $("#shakemap_version");
+            shakemap_selector.empty();
+            shakemap_selector.append('<option value="error">Unable to retrieve data</option>');
             var resp = JSON.parse(data.responseText);
             var err_msg = resp.error_msg;
             diaerror.show(false, "Error", err_msg);
@@ -172,8 +172,8 @@ window.initImpactForm = function() {
         }
         const selectors = ['#shakemap_version', '#mosaic_model', '#trt'];
         for (select_id of selectors) {
-            let $select = $(select_id);
-            $select.empty();
+            let selector = $(select_id);
+            selector.empty();
         }
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
         $('#no_uncertainty').prop('checked', false);
@@ -182,17 +182,17 @@ window.initImpactForm = function() {
     }
 
     function populate_nodal_plane_selector(nodal_planes) {
-        const $select = $('select#nodal_plane');
-        $select.empty();
+        const nodal_plane_selector = $('select#nodal_plane');
+        nodal_plane_selector.empty();
         $.each(nodal_planes, function(key, values) {
             const optionText = `${key} (Dip: ${values.dip}, Rake: ${values.rake}, Strike: ${values.strike})`;
-            const $option = $('<option>')
+            const option = $('<option>')
                 .val(key) // Use the key as the value
                 .text(optionText) // Display the formatted text
                 .data('details', values); // Attach the object as data
-            $select.append($option);
+            nodal_plane_selector.append(option);
         });
-        const nodal_plane = $select.find(':selected').data('details');
+        const nodal_plane = nodal_plane_selector.find(':selected').data('details');
         $('#rake').val(nodal_plane.rake);
         $('#dip').val(nodal_plane.dip);
         $('#strike').val(nodal_plane.strike);
@@ -236,10 +236,10 @@ window.initImpactForm = function() {
                     $('input#mag').val(data.info.mag);
                 }
                 if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
-                    $nodal_plane = $('select#nodal_plane');
-                    $nodal_plane.empty();
-                    const $option = $('<option>').val('').text('Unable to retrieve nodal planes');
-                    $nodal_plane.append($option);
+                    let nodal_plane = $('select#nodal_plane');
+                    nodal_plane.empty();
+                    const option = $('<option>').val('').text('Unable to retrieve nodal planes');
+                    nodal_plane.append(option);
                     diaerror.show(false, "Note", data.nodal_planes_issue);
                 }
             }).error(function (data) {
@@ -577,9 +577,9 @@ window.initImpactForm = function() {
         formData.append('local_timestamp', $("#local_timestamp").val());
         formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
         formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
-        const $msr_selector = $("select#msr");
-        if ($msr_selector.length && $msr_selector.is(":has(option)")) {
-            formData.append('msr', $msr_selector.find(':selected').val());
+        const msr_selector = $("select#msr");
+        if (msr_selector.length && msr_selector.is(":has(option)")) {
+            formData.append('msr', msr_selector.find(':selected').val());
         }
         formData.append('description', $('#description').val());
         $.ajax({

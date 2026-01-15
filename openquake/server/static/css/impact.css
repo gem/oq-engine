@@ -14,13 +14,11 @@
  You should have received a copy of the GNU Affero General Public License
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
-.impact_form_row label {
-    margin-bottom: 10px;
-}
 
 .impact_form_row label {
     display: inline-block;
     width: 225px;
+    margin-bottom: 10px;
 }
 
 .impact_form_row input {
