@@ -96,8 +96,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Mercalli intensity
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA, JMA}
 
-    #: Supported intensity measure component is orientation-independent
-    #: measure :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
+    #: Supported intensity measure component is geometric mean
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     #: Supported standard deviation type is only total
