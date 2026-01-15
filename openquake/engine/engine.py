@@ -689,7 +689,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     if success in successes[wf_no]:
                         logging.info(f'{format_dic(success)} already called')
                     elif not failed:
-                        logging.info(f'calling {format_dic(success)}')
+                        logging.info(f'{format_dic(success)}')
                         successes[wf_no].append(success.copy())
                         success['dstore'] = dstore
                         success['calcs'] = calcs
