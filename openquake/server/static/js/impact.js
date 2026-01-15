@@ -205,6 +205,7 @@ window.initImpactForm = function() {
         }
         $('#submit_impact_calc').prop('disabled', lonValue === '');
     }
+    toggleRunCalcBtnState();
 
 
     $('input[name="usgs_id"]').on('input', function() {
