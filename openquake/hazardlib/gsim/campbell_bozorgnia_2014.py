@@ -58,9 +58,9 @@ def _get_alpha(C, vs30, pga_rock):
     """
     alpha = np.zeros(len(pga_rock))
     idx = vs30 < C["k1"]
+    vsk1 = vs30[idx] / C["k1"]
     if np.any(idx):
-        af1 = pga_rock[idx] +\
-            CONSTS["c"] * ((vs30[idx] / C["k1"]) ** CONSTS["n"])
+        af1 = pga_rock[idx] + CONSTS["c"] * (vsk1 ** CONSTS["n"])
         af2 = pga_rock[idx] + CONSTS["c"]
         alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
     return alpha
