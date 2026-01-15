@@ -438,8 +438,10 @@ def compute_sigma(C, C_PGA, imt, ctx, pga1100):
     """
     Compute CB14's sigma (total, tau and phi)
     """
-    # Get stddevs for PGA on basement rock
+    # Get tau_lny for PGA on the basement rock
     tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+
+    # Get phi_lny for PGA on the basement rock
     phi_lnpga_b = np.sqrt(
         _get_philny(C_PGA, ctx.mag) ** 2. - C_PGA["philnAF"] ** 2.)
 
@@ -447,8 +449,7 @@ def compute_sigma(C, C_PGA, imt, ctx, pga1100):
     tau_lnyb = _get_taulny(C, ctx.mag)
 
     # Get phi_lny on the basement rock
-    phi_lnyb = np.sqrt(
-        _get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
+    phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
     
     # Get site scaling term
     alpha = _get_alpha(C, ctx.vs30, pga1100)
