@@ -621,10 +621,11 @@ def prepare_workflow(params, workflow_toml, pdb):
 
 def format_dic(success):
     """
-    Format the success dictionary; for instance
-    {'func': 'openquake.engine.postjobs.import_outputs',
-     'out_types': ['hcurves', 'hmaps-stats']} =>
-    openquake.engine.postjobs.import_outputs(
+    Format the success dictionary; for instance::
+
+      {'func': 'openquake.engine.postjobs.import_outputs',
+       'out_types': ['hcurves', 'hmaps-stats']} =>
+      openquake.engine.postjobs.import_outputs(
         out_types=['hcurves', 'hmaps-stats'])
     """
     dic = success.copy()
