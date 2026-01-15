@@ -49,7 +49,7 @@ def main(fnames):
     with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
         if inis:
             engine.run_jobs(engine.create_jobs(inis))
-        elif tomls:
-            engine.run_workflow("check_input", tomls)
+        for toml in tomls:
+            engine.run_workflow(toml, {})
 
 main.fnames = dict(help='File names to check', nargs='+')

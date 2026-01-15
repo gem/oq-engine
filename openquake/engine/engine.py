@@ -633,7 +633,7 @@ def format_dic(success):
     return f'{func}({kwargs})'
 
 
-def run_workflow(params, workflow_toml, concurrent_jobs=None, nodes=1,
+def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                  sbatch=False, notify_to=None, pdb=False):
     """
     Run sequentially multiple batches of calculations specified by
