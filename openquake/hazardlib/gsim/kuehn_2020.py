@@ -46,6 +46,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
+    compute_sigma as compute_cb14_sigma
 
 
 # Path to the within-model epistemic adjustment tables
@@ -702,14 +704,15 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     return sigma_mu
 
 
-def get_std_dev(C, vs30, pga1100, cb14_sig):
+def get_std_dev(C, C_PGA, ctx, imt, pga1100, cb14_sig):
     """
     Return sigma of the original K20 model OR CB14-based sigma (the
     latter is used in the Alaska 2023 USGS model).
     """
     if cb14_sig:
-        breakpoint()
-
+        # Campbell and Bozorgnia 2014 sigma model with K20 coefficients
+        sig, tau, phi = compute_cb14_sigma(C, C_PGA, imt, ctx, pga1100)
+        
     else:
         # Original sigma model
         tau = C["tau"]
@@ -935,7 +938,7 @@ class KuehnEtAl2020SInter(GMPE):
 
             # Get standard deviations
             sig[m], tau[m], phi[m] = get_std_dev(
-                C, ctx.vs30, pga1100, self.ak23_cb14_sig)
+                C, C_PGA, imt, ctx, pga1100, self.ak23_cb14_sig)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:
