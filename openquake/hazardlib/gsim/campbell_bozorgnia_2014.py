@@ -434,6 +434,46 @@ def _get_rholnpga(C, mag):
     return rho_ln_pga
 
 
+def compute_sigma(C, C_PGA, imt, ctx, pga1100):
+    """
+    Compute CB14's sigma (total, tau and phi)
+    """
+    # Get stddevs for PGA on basement rock
+    tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+    phi_lnpga_b = np.sqrt(
+        _get_philny(C_PGA, ctx.mag) ** 2. - C_PGA["philnAF"] ** 2.)
+
+    # Get tau_lny on the basement rock
+    tau_lnyb = _get_taulny(C, ctx.mag)
+
+    # Get phi_lny on the basement rock
+    phi_lnyb = np.sqrt(
+        _get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
+    
+    # Get site scaling term
+    alpha = _get_alpha(C, ctx.vs30, pga1100)
+
+    if imt.string in ['CAV', 'IA']:
+        # Use formula in CB19 supplementary spreadsheet
+        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
+        2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
+
+        p = np.sqrt(
+        phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+        + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b)
+
+    else:
+        # Use formula in CB14 supplementary spreadsheet
+        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
+                2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
+
+        p = np.sqrt(
+            phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+            + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
+        
+    return np.sqrt(t**2 + p**2), t, p
+
+
 class CampbellBozorgnia2014(GMPE):
     """
     Implements NGA-West 2 GMPE developed by Kenneth W. Campbell and Yousef
@@ -526,40 +566,7 @@ class CampbellBozorgnia2014(GMPE):
                 mean[m, idx] = pga[idx]
                 mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
-            # Get stddevs for PGA on basement rock
-            tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
-            phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
-                                  C_PGA["philnAF"] ** 2.)
-
-            # Get tau_lny on the basement rock
-            tau_lnyb = _get_taulny(C, ctx.mag)
-            # Get phi_lny on the basement rock
-            phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
-                               C["philnAF"] ** 2.)
-            # Get site scaling term
-            alpha = _get_alpha(C, ctx.vs30, pga1100)
-
-            if imt.string in ['CAV', 'IA']:
-                # Use formula in CB19 supplementary spreadsheet
-                t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
-
-                p = np.sqrt(
-                phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b)
-
-            else:
-                # Use formula in CB14 supplementary spreadsheet
-                t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                        2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
-
-                p = np.sqrt(
-                    phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                    + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
-                
-            sig[m] = np.sqrt(t**2 + p**2)
-            tau[m] = t
-            phi[m] = p
+            sig[m], tau[m], phi[m] = compute_sigma(C, C_PGA, imt, ctx, pga1100)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny

@@ -702,6 +702,23 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     return sigma_mu
 
 
+def get_std_dev(C, vs30, pga1100, cb14_sig):
+    """
+    Return sigma of the original K20 model OR CB14-based sigma (the
+    latter is used in the Alaska 2023 USGS model).
+    """
+    if cb14_sig:
+        breakpoint()
+
+    else:
+        # Original sigma model
+        tau = C["tau"]
+        phi = C["phi"]
+        sig = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+
+    return sig, tau, phi
+
+
 class KuehnEtAl2020SInter(GMPE):
     """
     Implements the NGA Subduction model of Kuehn et al. (2020)
@@ -917,9 +934,8 @@ class KuehnEtAl2020SInter(GMPE):
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
 
             # Get standard deviations
-            tau[m] = C["tau"]
-            phi[m] = C["phi"]
-            sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+            sig[m], tau[m], phi[m] = get_std_dev(
+                C, ctx.vs30, pga1100, self.ak23_cb14_sig)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:
@@ -956,7 +972,6 @@ REGION_ALIASES = {
     "TWN": "Taiwan",
     "SEA": "CascadiaSeattleBasin",
 }
-
 
 for region in SUPPORTED_REGIONS[1:]:
     add_alias("KuehnEtAl2020SInter" + REGION_ALIASES[region],
