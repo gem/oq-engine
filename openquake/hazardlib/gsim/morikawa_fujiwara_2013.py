@@ -124,13 +124,13 @@ class MorikawaFujiwara2013Crustal(GMPE):
         self.region = getattr(self, 'region', None)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mag_term = _get_magnitude_term(
-                trt, self.region, C, ctx.rrup, mw1prime, mw1, ctx.hypo_depth)
 
-            mean[m] = (mag_term + _get_basin_term(C, ctx) +
-                       _get_shallow_amplification_term(C, ctx.vs30) +
-                       _get_intensity_correction_term(
-                           C, self.region, ctx.xvf, ctx.hypo_depth))
+            mean[m] = (
+                _get_magnitude_term(
+                    trt, self.region, C, ctx.rrup, mw1prime, mw1, ctx.hypo_depth) +
+                _get_basin_term(C, ctx) +
+                _get_shallow_amplification_term(C, ctx.vs30) +
+                _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
 
             mean[m] = np.log(10**mean[m] / 980.665)
             sig[m] = C['sigma'] * np.log(10)
