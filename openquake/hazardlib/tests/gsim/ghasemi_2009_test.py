@@ -24,6 +24,6 @@ class Ghasemi2009TestCase(BaseGSIMTestCase):
     # Tables created from Excel calculation file of the proposed model 
 
     def test_all(self):
-        self.check('Ghasemi09.csv',
+        self.check('GA09/Ghasemi09.csv',
                    max_discrep_percentage=0.1)
 
