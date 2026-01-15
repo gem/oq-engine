@@ -647,7 +647,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     success_dset = dstore['success']
     successes = success_dset[:]  # array of lists
-    with wfjob, dstore:
+    with dstore:
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
@@ -659,7 +659,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if status_dset[idx] == b'complete':
                     # already done; notice the conversion numpy.int64 -> int
                     calcs.append(int(calc_dset[idx]))
-                    logging.info(f'{name} already computed')
+                    with wfjob:
+                        logging.info(f'{name} already computed')
                 else:
                     new.append(ini)
                     new_names.append(name)
@@ -683,24 +684,27 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 successes[wf_no] = ast.literal_eval(literal_dics)
             else:
                 successes[wf_no] = []
-            for success in wf.success:
-                if success in successes[wf_no]:
-                    logging.info(f'{format_dic(success)} already called')
-                elif not failed:
-                    logging.info(f'calling {format_dic(success)}')
-                    successes[wf_no].append(success.copy())
-                    success['dstore'] = dstore
-                    success['calcs'] = calcs
-                    sap.run_func(success)
+            with wfjob:
+                for success in wf.success:
+                    if success in successes[wf_no]:
+                        logging.info(f'{format_dic(success)} already called')
+                    elif not failed:
+                        logging.info(f'{format_dic(success)}')
+                        successes[wf_no].append(success.copy())
+                        success['dstore'] = dstore
+                        success['calcs'] = calcs
+                        sap.run_func(success)
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = wfjob.dt / 3600.
-    logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    with wfjob:
+        logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:
         mask = status_dset[:] == b'failed'
         dic = {str(name): int(calc) for name, calc in
                zip(names[mask], calc_dset[:][mask])}
-        logging.warning(f'The following jobs failed: {dic}')
+        with wfjob:
+            logging.warning(f'The following jobs failed: {dic}')
     return wfjob.calc_id
 
 
