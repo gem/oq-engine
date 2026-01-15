@@ -344,17 +344,17 @@ function refresh_tag_selector() {
         } else {
             $("div#tag-filters").show();
         }
-        const $dropdown = $('#tag_selector');
-        const selected_tag = $dropdown.val();
-        $dropdown.empty();
-        $dropdown.append('<option value="">All tags</option>');
+        const tag_selector = $('#tag_selector');
+        const selected_tag = tag_selector.val();
+        tag_selector.empty();
+        tag_selector.append('<option value="">All tags</option>');
         $.each(resp.tags, function(_, tag) {
             const safeTag = $('<div>').text(tag).html(); // escape HTML
-            $dropdown.append(`<option value="${safeTag}">${safeTag}</option>`);
+            tag_selector.append(`<option value="${safeTag}">${safeTag}</option>`);
         });
         // Try to restore previous selection if still available
         if (selected_tag && resp.tags.includes(selected_tag)) {
-            $dropdown.val(selected_tag);
+            tag_selector.val(selected_tag);
         }
     }).fail(function(jqXHR, textStatus, errorThrown) {
         console.error('Error fetching tags:', textStatus, errorThrown);
