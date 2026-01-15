@@ -222,14 +222,24 @@ DJANGO_SETTINGS_MODULE=openquake.server.settings
 To run the docker (replacing `PATH` with the path to the directory containing the `.env` file):
 
 ```bash
-$ docker run --name openquake -d -p 127.0.0.1:8800:8800 --env-file PATH/.env openquake/engine:nightly
+$ docker run --name <containername> -d -p 127.0.0.1:8800:8800 --env-file PATH/.env openquake/engine:nightly
 ```
 
-This example runs a container named `openquake` using the `openquake/engine:nightly` image, and sets the value for the environment variables.
+This example runs a container named `<containername>` using the `openquake/engine:nightly` image, and sets the value for the environment variables.
 
 This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the WebUI is reachable from the host machine using the url: `http://127.0.0.1:8800/engine`.
 
 If the `WEBUI_PATHPREFIX` variable is specified (e.g. with the value `/path`), the WebUI is reachable from the host machine using the url: `http://127.0.0.1:8080/path` instead.
+
+You can show the logs of the container running:
+
+```bash
+$ docker logs <containername> --timestamp --follow
+```
+
+After the logs show that the DB server started (and, if authentication is enabled, after the necessary migrations have been applied),
+then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
+
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can subscribe to the [OpenQuake users mailing list](https://groups.google.com/g/openquake-users).

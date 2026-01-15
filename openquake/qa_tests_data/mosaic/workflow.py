@@ -12,6 +12,7 @@ OAT OPA'''.split())
 
 TOML = '''\
 [workflow]
+description = "Building SES"
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = {}
@@ -59,7 +60,7 @@ def aelo(mosaic_dir):
     site_file = os.path.join(mosaic_dir, 'merged_sites.csv')
     assert os.path.exists(site_file), site_file
     sites, siteid = get_aelo_sites(site_file)
-    lst = ['[workflow]']
+    lst = ['[workflow]\ndescription="AELO"']
     models = [mod for mod in MODELS if mod not in {'USA', 'ALS', 'HAW'}]
     add_checkout(lst, models)
     for mod in models:
@@ -75,7 +76,7 @@ def aelo(mosaic_dir):
 
 def ghm(mosaic_dir, legacy=False):
     "Build GHM.toml"
-    lst = ['[workflow]']
+    lst = ['[workflow]\ndescription="GHM"']
     add_checkout(lst, MODELS)
     for mod in MODELS:
         if legacy:  # to support unzipped_mosaic_run
@@ -97,7 +98,7 @@ def ghm(mosaic_dir, legacy=False):
 def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
         ses_per_logic_tree_path: int=50):
     "Build GRM.toml"
-    haz = ['[multi.workflow]']
+    haz = ['[multi.workflow]\ndescription="GRM"']
     haz.append(f'{number_of_logic_tree_samples=}')
     haz.append(f'{ses_per_logic_tree_path=}')
     add_checkout(haz, MODELS + REGIONS + ['Exposure', 'Vulnerability'])
