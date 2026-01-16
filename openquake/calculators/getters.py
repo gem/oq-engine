@@ -154,8 +154,13 @@ def get_pmaps_gb(dstore, full_lt=None):
 
 def get_num_chunks(dstore):
     """
-    :returns: number of postclassical tasks to generate as min(N, T)
-    where T = max(concurrent_tasks, max_sites, GB required to store the rates
+    :returns: number of postclassical tasks to generate
+
+    Computed as min(N, T) where N is the number of sites and
+    T = max(concurrent_tasks, max_sites_disagg, GB required to store the rates)
+    The idea is that for large calculations we may produce more tasks than
+    concurrent_tasks, to avoid running out of memory. For few sites, we
+    will generated at most N tasks, i.e. less than concurrent_tasks.
     """
     oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
