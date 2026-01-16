@@ -24,7 +24,6 @@ import string
 import pickle
 import logging
 import os
-import sys
 import tempfile
 import subprocess
 import traceback
