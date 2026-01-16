@@ -59,7 +59,7 @@ MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 
 # run workflow
-oq run $1/hazard/AreaSourceClassicalPSHA/job.toml -w "area demo"
+oq run $1/hazard/AreaSourceClassicalPSHA/job.toml
 
 # run multi_risk test
 oq engine --run $2/multi_risk/case_1/job_2.ini
