@@ -112,7 +112,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
             ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
     params['site_class'] = inputs.get(
         'site_class', oqvalidation.OqParam.site_class.default)
-    params['siteid'] = inputs['siteid']
+    params['siteid'] = readinput.get_custom_site_id(inputs['siteid'])
     return params
 
 

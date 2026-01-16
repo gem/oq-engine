@@ -1387,8 +1387,6 @@ def aelo_run(request):
         logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    # convert the 'siteid' field (a description) into a custom_site_id
-    params['siteid'] = readinput.get_custom_site_id(params['siteid'])
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_username(request), None)
