@@ -293,8 +293,7 @@ class US23AdjustmentTestCase(unittest.TestCase):
         """
         Test the execution and correctness of values for GMMs as
         adjusted within the Conterminous US 2023 NSHM. We also test
-        the 2023 Alaska USGS model bias adjustments to the global
-        variants of the NGA-Subduction GMMs here.
+        the 2023 Alaska USGS model GMM adjustments here.
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
