@@ -55,6 +55,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
+    # NB: this is faster if num_chunks is not too large
     if len(rates) == 0:
         return
     newh5 = h5 is None
