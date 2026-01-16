@@ -419,6 +419,7 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
             np.log(pga1100[idx] + CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
             np.log(pga1100[idx] + CONSTS["c"])
             )
+        
     return f_site_g
 
 
