@@ -63,7 +63,7 @@ def _get_alpha(C, vs30, pga_rock):
         af1 = pga_rock[idx] + CONSTS["c"] * (vsk1 ** CONSTS["n"])
         af2 = pga_rock[idx] + CONSTS["c"]
         alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
-        
+
     return alpha
 
 
@@ -348,7 +348,7 @@ def _get_style_of_faulting_term(C, ctx):
 def _get_taulny(C, mag):
     """
     Returns the inter-event random effects coefficient (tau)
-    Equation 28.
+    Equation 27.
     """
     res = C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
     res[mag <= 4.5] = C["tau1"]
@@ -460,11 +460,11 @@ def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
     else:
         # Use formula in CB14 supplementary spreadsheet
         t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
+                2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b) # Eq 29
 
         p = np.sqrt(
             phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-            + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
+            + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)   # Eq 30
         
     return np.sqrt(t**2 + p**2), t, p
 
