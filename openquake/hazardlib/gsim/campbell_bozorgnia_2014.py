@@ -440,31 +440,31 @@ def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
     Compute CB14's sigma (total, tau and phi)
     """
     # Get tau_lny on the basement rock
-    tau_lnyb = _get_taulny(C, ctx.mag)
+    tau_lny_b = _get_taulny(C, ctx.mag)
 
     # Get phi_lny on the basement rock
-    phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
+    phi_lny_b = np.sqrt(_get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
     
     # Get site scaling term
     alpha = _get_alpha(C, ctx.vs30, pga1100)
 
     if imt.string in ['CAV', 'IA']:
         # Use formula in CB19 supplementary spreadsheet
-        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-        2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
+        t = np.sqrt(tau_lny_b**2 + alpha**2 * tau_lnpga_b**2 +
+        2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lny_b * tau_lnpga_b)
 
         p = np.sqrt(
-        phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-        + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b)
+        phi_lny_b**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+        + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lny_b * phi_lnpga_b)
 
     else:
         # Use formula in CB14 supplementary spreadsheet
-        t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b) # Eq 29
+        t = np.sqrt(tau_lny_b**2 + alpha**2 * tau_lnpga_b**2 +
+                2.0 * alpha * C["rholny"] * tau_lny_b * tau_lnpga_b) # Eq 29
 
         p = np.sqrt(
-            phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-            + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)   # Eq 30
+            phi_lny_b**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+            + 2.0 * alpha * C["rholny"] * phi_lny_b * phi_lnpga_b)   # Eq 30
         
     return np.sqrt(t**2 + p**2), t, p
 
