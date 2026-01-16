@@ -332,3 +332,7 @@ input[type="radio"] {
   margin-right: 5px; /* Space between radio button and label text */
 }
 
+.loading-spinner {
+    width: 18px;
+    height: 18px;
+}

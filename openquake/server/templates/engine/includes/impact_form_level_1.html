@@ -14,6 +14,7 @@
               <div class="impact_form_row usgs_id_grp">
                 <label for="shakemap_version">{{ impact_form_labels.shakemap_version }}</label>
                 <select name="shakemap_version" id="shakemap_version" class="impact-select"></select>
+                <span class="populating_shakemap_version"></span>
               </div>
               <div class="impact_form_row hidden_except_submit">
                 <label for"rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
@@ -27,6 +28,8 @@
               <div class="impact_form_row">
                 <button id="submit_impact_get_rupture" type="submit" class="btn">Retrieve ShakeMap data</button>
                 <!-- <input type="submit"> -->
+                <br/>
+                <span class="submit_impact_get_rupture_waiting"></span>
               </div>
             </form>
             <div id="shakemap-image-row" style="display: none;">
