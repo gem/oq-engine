@@ -51,7 +51,7 @@ window.initImpactForm = function() {
     const retrieve_data_btn_txt_map = {
         'use_shakemap_from_usgs': {
             'initial': 'Retrieve ShakeMap data',
-            'running': 'Retrieving ShakemapData (it may take more than 10 seconds)...'},
+            'running': 'Retrieving Shakemap data (it may take more than 10 seconds)...'},
         'use_pnt_rup_from_usgs': {
             'initial': 'Retrieve rupture data',
             'running': 'Retrieving rupture data...'},
@@ -100,10 +100,15 @@ window.initImpactForm = function() {
         return selected_approach;
     }
 
-    function set_retrieve_data_btn_txt(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
+    function set_retrieve_data_btn_state(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
         const approach = get_selected_approach();
-        const btn_txt = retrieve_data_btn_txt_map[approach][state];
-        $('#submit_impact_get_rupture').text(btn_txt);
+        const msg = retrieve_data_btn_txt_map[approach][state];
+        if (state == 'initial') {
+            $('.submit_impact_get_rupture_waiting').hide();
+        } else {
+            $('.submit_impact_get_rupture_waiting').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> ' + msg);
+            $('.submit_impact_get_rupture_waiting').show();
+        }
     }
 
     function reset_rupture_form_inputs() {
@@ -121,7 +126,10 @@ window.initImpactForm = function() {
 
     function set_shakemap_version_selector() {
         $('#submit_impact_get_rupture').prop('disabled', true);
-        $('#submit_impact_get_rupture').text('Retrieving ShakeMap versions...');
+        $('#getStationDataFromUsgs').prop('disabled', true);
+        $('#submit_impact_calc').prop('disabled', true);
+        $('.populating_shakemap_version').show();
+        $('.populating_shakemap_version').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> Retrieving ShakeMap versions...');
         $('input[name="impact_approach"]').prop('disabled', true);
         var formData = new FormData();
         const usgs_id = $.trim($("#usgs_id").val());
@@ -149,7 +157,6 @@ window.initImpactForm = function() {
                 }
             }
             $('#submit_impact_get_rupture').prop('disabled', false);
-            set_retrieve_data_btn_txt('initial');
         }).error(function (data) {
             let shakemap_selector = $("#shakemap_version");
             shakemap_selector.empty();
@@ -159,7 +166,9 @@ window.initImpactForm = function() {
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
             $('input[name="impact_approach"]').prop('disabled', false);
-            set_retrieve_data_btn_txt('initial');
+            $('#getStationDataFromUsgs').prop('disabled', false);
+            toggleRunCalcBtnState();
+            $('.populating_shakemap_version').hide();
         });
     }
 
@@ -221,7 +230,7 @@ window.initImpactForm = function() {
             };
             $('#submit_impact_get_rupture').prop('disabled', true);
             $('input[name="impact_approach"]').prop('disabled', true);
-            set_retrieve_data_btn_txt('retrieving_nodal_planes');
+            set_retrieve_data_btn_state('retrieving_nodal_planes');
             $.ajax({
                 type: "POST",
                 url: gem_oq_server_url + "/v1/impact_get_nodal_planes_and_info",
@@ -248,7 +257,8 @@ window.initImpactForm = function() {
             }).always(function (data) {
                 $('#submit_impact_get_rupture').prop('disabled', false);
                 $('input[name="impact_approach"]').prop('disabled', false);
-                set_retrieve_data_btn_txt('initial');
+                set_retrieve_data_btn_state('initial');
+                // $('.submit_impact_get_rupture_waiting').hide();
             });
         }
     });
@@ -278,7 +288,7 @@ window.initImpactForm = function() {
 
     $('input[name="impact_approach"]').change(function () {
         const selected_approach = $(this).val();
-        set_retrieve_data_btn_txt('initial');
+        set_retrieve_data_btn_state('initial');
         reset_impact_forms();
         if (approaches_requiring_usgs_id.includes(selected_approach)) {
             $('.usgs_id_grp').removeClass('hidden');
@@ -336,11 +346,10 @@ window.initImpactForm = function() {
         $('#strike').val(nodal_plane.strike);
     });
 
-    // NOTE: if not in impact mode, impact_run_form does not exist, so this can never be triggered
     $("#impact_get_rupture_form").submit(function (event) {
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('input[name="impact_approach"]').prop('disabled', true);
-        set_retrieve_data_btn_txt('running');
+        set_retrieve_data_btn_state('running');
         var formData = new FormData();
         const selected_approach = get_selected_approach();
         formData.append('approach', selected_approach);
@@ -484,7 +493,8 @@ window.initImpactForm = function() {
         }).always(function (data) {
             $('#submit_impact_get_rupture').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
-            set_retrieve_data_btn_txt('initial');
+            set_retrieve_data_btn_state('initial');
+            // $('.submit_impact_get_rupture_waiting').hide();
         });
         event.preventDefault();
     });
@@ -520,7 +530,7 @@ window.initImpactForm = function() {
             var err_msg = resp.error_msg;
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
-            $('#submit_impact_calc').prop('disabled', false);
+            toggleRunCalcBtnState();
             $('#getStationDataFromUsgs').text('Retrieve from the USGS');
             $('input[name="impact_approach"]').prop('disabled', false);
         });
@@ -545,7 +555,7 @@ window.initImpactForm = function() {
     });
     $("#impact_run_form").submit(function (event) {
         $('#submit_impact_calc').prop('disabled', true);
-        $('#submit_impact_calc').text('Processing...');
+        $('.submit_impact_calc_waiting').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> Processing...');
         var formData = new FormData();
         const selected_approach = get_selected_approach();
         formData.append('approach', selected_approach);
@@ -605,6 +615,7 @@ window.initImpactForm = function() {
         }).always(function () {
             $('#submit_impact_calc').prop('disabled', false);
             $('#submit_impact_calc').text('Launch impact calculation');
+            $('.submit_impact_calc_waiting').hide();
         });
         event.preventDefault();
     });

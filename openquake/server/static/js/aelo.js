@@ -100,9 +100,9 @@ window.initAeloForm = function() {
         typingTimer = setTimeout(check_vs30_below_200, DONE_TYPING_DELAY);
     });
 
-    // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
     $("#aelo_run_form").submit(function (event) {
         $('#submit_aelo_calc').prop('disabled', true);
+        $('.submit_aelo_calc_waiting').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> Processing...');
         const site_class = $('select#site_class').val();
         const asce_version = $("#asce_version").val();
         var vs30;
@@ -144,6 +144,7 @@ window.initAeloForm = function() {
             diaerror.show(false, "Error", err_msg);
         }).always(function () {
             $('#submit_aelo_calc').prop('disabled', false);
+            $('.submit_aelo_calc_waiting').hide();
         });
         event.preventDefault();
     });
