@@ -719,7 +719,7 @@ def get_site_collection(oqparam, h5=None):
         return None
     else:  # use the default site params
         if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
-               or 'shakemap' in oqparam.inputs):
+                or 'shakemap' in oqparam.inputs):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params

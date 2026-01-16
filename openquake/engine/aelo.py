@@ -20,14 +20,11 @@ Master script for running an AELO analysis
 """
 import os
 import sys
-import getpass
 import logging
-import functools
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
 from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
-from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
 PRELIMINARY_MODELS = []
