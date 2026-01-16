@@ -409,17 +409,16 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
     vs_mod = vs30 / C["k1"]
     f_site_g = c_7 * np.log(vs_mod)
     idx = vs30 > C["k1"]
-    f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
-                                     np.log(vs_mod[idx]))
+    f_site_g[
+        idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] * np.log(vs_mod[idx]))
 
     # Get nonlinear site response term
     idx = np.logical_not(idx)
     if np.any(idx):
         f_site_g[idx] = f_site_g[idx] + C["k2"] * (
-                np.log(pga1100[idx] +
-                       CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
-                np.log(pga1100[idx] + CONSTS["c"])
-        )
+            np.log(pga1100[idx] + CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
+            np.log(pga1100[idx] + CONSTS["c"])
+            )
     return f_site_g
 
 
@@ -682,13 +681,11 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         # Extend for extreme periods as needed
         if np.any(imt.period > model["periods"][-1]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
-                axis=2)
+                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]), axis=2)
             model_t = np.concatenate((model_t, [imt.period]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
-                axis=2)
+                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model), axis=2)
             model_t = np.concatenate(([imt.period], model_t), axis=0)
 
         # Linear interpolation
@@ -696,8 +693,7 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
             (model_m, model_r, np.log(model_t)), sigma_mu_model,
             bounds_error=False, fill_value=None)
         sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
-                     axis=1))
+            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
 
     return sigma_mu
 
