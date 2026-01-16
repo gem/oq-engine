@@ -38,10 +38,11 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 CONSTS = {"h4": 1.0, "c": 1.88, "n": 1.18}
 
 # CyberShake basin adjustments for CB14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 1.5 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CB14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
 IMT   slope_cy
+1.5   0.748
 2.0   0.764
 3.0   1.279
 4.0   1.726
