@@ -225,7 +225,7 @@ cross_correlation:
   Default: "yes"
 
 siteid:
-  Used in combination with sites to give a unique name to each site.
+  Used in combination with sites to give an 8 character name to each site.
   Example: *siteid = SITE1 SITE2*.
   Default: empty tuple
 
@@ -1046,7 +1046,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
-    siteid = valid.Param(valid.namelist, ())
+    siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)

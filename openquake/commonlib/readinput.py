@@ -27,6 +27,8 @@ import ast
 import sys
 import copy
 import zlib
+import base64
+import hashlib
 import shutil
 import zipfile
 import pathlib
@@ -717,7 +719,7 @@ def get_site_collection(oqparam, h5=None):
         return None
     else:  # use the default site params
         if ('gmfs' in oqparam.inputs or 'hazard_curves' in oqparam.inputs
-               or 'shakemap' in oqparam.inputs):
+                or 'shakemap' in oqparam.inputs):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
@@ -1715,6 +1717,14 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
+
+
+def get_custom_site_id(descr):
+    """
+    Convert a string into a base64 custom_site_id string (8 chars)
+    """
+    digest = hashlib.sha256(descr.encode('utf8')).digest()
+    return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
 # NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1

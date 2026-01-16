@@ -20,14 +20,11 @@ Master script for running an AELO analysis
 """
 import os
 import sys
-import getpass
 import logging
-import functools
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
 from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
-from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
 PRELIMINARY_MODELS = []
@@ -115,7 +112,6 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
             ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
     params['site_class'] = inputs.get(
         'site_class', oqvalidation.OqParam.site_class.default)
-    params['siteid'] = inputs['siteid']
     return params
 
 
