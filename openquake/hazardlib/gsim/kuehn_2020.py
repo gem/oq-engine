@@ -46,6 +46,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_alpha
 
 
 # Path to the within-model epistemic adjustment tables
@@ -56,7 +57,8 @@ KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020",
                             "kuehn_2020_coeffs.csv")
 
 # Alaska 2023 USGS model bias adjustment coefficients. The coeffs
-# have been taken from https://code.usgs.gov/ghsc/nshmp
+# have been taken from:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-sub-ak-interface-adjustment.csv
 AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")
@@ -250,7 +252,8 @@ CONSTS = {"c_10": 0.0,
           "z_ref_if": 15.0,
           "z_ref_slab": 50.0,
           "z_b_if": 30.0,
-          "z_b_slab": 80.0}
+          "z_b_slab": 80.0,
+          "phi_lnAF": 0.3} # USGS java code sets square of this value (0.09)
 
 # Basin depth model parameters for each of the regions for which a
 # basin response model is defined
@@ -699,20 +702,41 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     return sigma_mu
 
 
-def get_std_dev(C, C_PGA, ctx, imt, pga1100, cb14_sig):
+def get_std_dev(C, C_PGA, imt, ctx, pga1100, cb14_sig):
     """
     Return sigma of the original K20 model OR use CB14 sigma model with
     K20 coefficients (this is used in the Alaska 2023 USGS model).
     """
     if cb14_sig:
-        # Campbell and Bozorgnia 2014 sigma model with K20 coefficients
-        breakpoint()
-        
+        # USGS implementation skips the mag-dep defined in eqs 27 and 28 of CB14.
+        tau_lny_b = C["tau"]
+        phi_lny = C["phi"]
+        tau_lnpga_b = C_PGA["tau"]
+        phi_lnpga_b = C_PGA["phi"]
+        rho_lny = C["rho"] 
+
+        # Get alpha (scalar per site describing PGA on bedrock vs given vs30)
+        alpha = _get_alpha(C, ctx.vs30, pga1100)
+
+        # Compute tau using eq 29 of CB14 
+        alpha_tau = alpha * tau_lnpga_b
+        tau = np.sqrt(
+            alpha_tau**2 + tau_lny_b**2 + (2.0 * alpha * rho_lny * tau_lny_b * tau_lnpga_b))
+
+        # Compute phi using eq 30 of CB14
+        phi_lny_b = np.sqrt(phi_lny**2 - CONSTS["phi_lnAF"]**2)
+        a_phi_lnpga_b = alpha * np.sqrt(phi_lnpga_b**2 - CONSTS["phi_lnAF"]**2)
+        phi = np.sqrt(
+            phi_lny**2 + a_phi_lnpga_b**2 + (2.0 * rho_lny * phi_lny_b * a_phi_lnpga_b))
+
+        # Total sigma
+        sig = np.sqrt(tau**2 + phi**2)
+
     else:
-        # Original sigma model
+        # Original Kuehn et al. (2020) sigma model
         tau = C["tau"]
         phi = C["phi"]
-        sig = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+        sig = np.sqrt(C["tau"]**2.0 + C["phi"]**2.0)
 
     return sig, tau, phi
 
