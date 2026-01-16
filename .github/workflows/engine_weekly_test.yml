@@ -226,7 +226,7 @@ jobs:
           pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           ruff check --preview openquake
-          pytest calculators -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake
+          pytest -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake/calculators
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
           pytest --doctest-modules doc/contributing/*.rst
         shell: bash
