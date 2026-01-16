@@ -152,20 +152,26 @@ def get_pmaps_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs
 
 
-def get_num_chunks_sites(dstore):
+def get_num_chunks(dstore):
     """
-    :returns: (number of postclassical tasks to generate, number of sites)
+    :returns: number of postclassical tasks to generate
 
-    It is 20 times the number of GB required to store the rates.
+    Computed as min(N, T) where N is the number of sites and
+    T = max(concurrent_tasks, max_sites_disagg, GB required to store the rates)
+    The idea is that for large calculations we may produce more tasks than
+    concurrent_tasks, to avoid running out of memory. For few sites, we
+    will generated at most N tasks, i.e. less than concurrent_tasks.
     """
+    oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
-    max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
     try:
-        req_gb = dstore['source_groups'].attrs['req_gb']
-    except KeyError:
-        return max_chunks, N
-    chunks = max(int(20 * req_gb), max_chunks)
-    return chunks, N
+        req_gb = int(dstore['source_groups'].attrs['req_gb'])
+    except KeyError: # in classical_bcr
+        req_gb = 1
+    T = max(oq.concurrent_tasks, oq.max_sites_disagg, req_gb)
+    # for EUR on cole concurrent_tasks=256, max_sites_disagg=10,
+    # req_gb=202, N=220,000 and we get concurrent_tasks
+    return min(N, T)
 
 
 def map_getters(dstore, full_lt=None, disagg=False):
@@ -173,10 +179,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = dstore['oqparam']
-    # disaggregation is meant for few sites, i.e. no tiling
-    n, N = get_num_chunks_sites(dstore)
-    if disagg and N > n:
-        raise ValueError('There are %d sites but only %d chunks' % (N, n))
+    n = get_num_chunks(dstore)
 
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
