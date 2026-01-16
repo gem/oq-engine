@@ -702,7 +702,7 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     return sigma_mu
 
 
-def get_std_dev(C, C_PGA, imt, ctx, pga1100, cb14_sig):
+def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     """
     Return sigma of the original K20 model OR use CB14 sigma model with
     K20 coefficients (this is used in the Alaska 2023 USGS model).
@@ -957,7 +957,7 @@ class KuehnEtAl2020SInter(GMPE):
 
             # Get standard deviations
             sig[m], tau[m], phi[m] = get_std_dev(
-                C, C_PGA, imt, ctx, pga1100, self.ak23_cb14_sig)
+                C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:
