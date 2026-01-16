@@ -27,6 +27,8 @@ import ast
 import sys
 import copy
 import zlib
+import base64
+import hashlib
 import shutil
 import zipfile
 import pathlib
@@ -1716,6 +1718,13 @@ def get_checksum32(oqparam, h5=None):
         h5.attrs['checksum32'] = checksum
     return checksum
 
+
+def get_custom_site_id(descr):
+    """
+    Convert a string into a base64 custom_site_id string (8 chars)
+    """
+    digest = hashlib.sha256(descr.encode('utf8')).digest()
+    return base64.b64encode(digest[:6])
 
 # NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
 @functools.lru_cache(maxsize=4)
