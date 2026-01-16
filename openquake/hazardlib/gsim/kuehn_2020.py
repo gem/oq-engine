@@ -155,9 +155,6 @@ REGION_TERMS_IF = {
         },
 }
 
-METRES_PER_KM = 1000.
-
-
 # Regional terms for the in-slab events
 REGION_TERMS_SLAB = {
     # Global - to be used in any other subduction region
@@ -243,7 +240,6 @@ REGION_TERMS_SLAB = {
         },
 }
 
-
 # Constants independent of region
 CONSTS = {"c_10": 0.0,
           "c": 1.88,
@@ -255,7 +251,6 @@ CONSTS = {"c_10": 0.0,
           "z_ref_slab": 50.0,
           "z_b_if": 30.0,
           "z_b_slab": 80.0}
-
 
 # Basin depth model parameters for each of the regions for which a
 # basin response model is defined
@@ -286,6 +281,8 @@ Z_MODEL = {
         "c_z_4": 0.43671101999999995,
         }
 }
+
+METRES_PER_KM = 1000.
 
 
 def get_base_term(C, trt, region):
