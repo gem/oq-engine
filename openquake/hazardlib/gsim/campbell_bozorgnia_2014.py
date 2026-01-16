@@ -63,6 +63,7 @@ def _get_alpha(C, vs30, pga_rock):
         af1 = pga_rock[idx] + CONSTS["c"] * (vsk1 ** CONSTS["n"])
         af2 = pga_rock[idx] + CONSTS["c"]
         alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
+        
     return alpha
 
 
