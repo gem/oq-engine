@@ -21,8 +21,6 @@ Module exports :class:`ChiouYoungs2014`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
 """
-import os
-import pathlib
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -39,7 +37,7 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
 
 
 # CyberShake basin adjustments for CY14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CY14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
 IMT   phi5cy   phi6cy   
