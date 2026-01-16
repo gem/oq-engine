@@ -2,6 +2,9 @@
   * Improved the number of tasks generated in postclassical (they were too
     many for EUR)
 
+  [Christopher Brooks]
+  * Fixing class inheritances in MorikawaFujiwara2013 GMMs.
+
   [Amirhossein Mohammadi]
   * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.
 

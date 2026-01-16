@@ -25,4 +25,4 @@ class Megawati2003TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         # built with utils/build_vtable MegawatiEtAl2003
-        self.check('MegawatiEtAl2003.csv', max_discrep_percentage=1.0)
+        self.check('MW13/MegawatiEtAl2003.csv', max_discrep_percentage=1.0)
