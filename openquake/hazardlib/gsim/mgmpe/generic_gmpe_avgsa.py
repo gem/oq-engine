@@ -30,9 +30,9 @@ from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
 class GenericGmpeAvgSA(GMPE):
     """
-    Implements a modified GMPE class that can be used to compute average
-    ground motion over several spectral ordinates from an arbitrary GMPE.
-    The mean and standard deviation are computed according to:
+    Implements a modified GMPE class that can be used to compute indirect
+    average ground motion over several spectral ordinates from an arbitrary
+    GMPE. The mean and standard deviation are computed according to:
     Kohrangi M., Reddy Kotha S. and Bazzurro P., 2018, Ground-motion models
     for average spectral acceleration in a period range: direct and indirect
     methods, Bull. Earthquake. Eng., 16, pp. 45–65.
@@ -186,10 +186,36 @@ class GmpeIndirectAvgSA(GMPE):
         the other IMTs using the underlying GMPE (as expected, an error will
         be raised if the underlying GMPE does not support the IMT).
         """
+        # Check if any non-AvgSA IMTs
+        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
+        if non_avgSA:
+
+            # Need to map original order of IMTs for reordering
+            imts_map = {imt: i for i, imt in enumerate(imts)}
+
+            # Compute for no AvgSA IMTs
+            mean_b = np.zeros([len(imts), len(ctx)])
+            sig_b = np.zeros_like(mean_b)
+            tau_b = np.zeros_like(mean_b)
+            phi_b = np.zeros_like(mean_b)
+            self.gmpe.compute(ctx, non_avgSA, mean_b, sig_b, tau_b, phi_b)
+
+            # For instance in test case_91 one has
+            # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
+            # and non_avgSA = {SA(1.0)}, then `m` takes value [1] for `idx` in [0]
+            for idx, imt in enumerate(non_avgSA):
+                m = imts_map[imt]
+                mean[m] = mean_b[0][idx]
+                sig[m] = sig_b[1][idx]
+                tau[m] = tau_b[2][idx]
+                phi[m] = phi_b[3][idx]
+
         # Gather together all of the needed periods for the set of imts
         periods = []
         idxs = []
         for idx_imt, imt in enumerate(imts):
+            if imt.name != "AvgSA": # Only for AvgSA get the periods
+                continue
             period = imt.period
             periods.extend(np.linspace(self.t_low * period,
                                        self.t_high * period,
@@ -214,43 +240,43 @@ class GmpeIndirectAvgSA(GMPE):
         phi_sa = np.zeros_like(mean_sa)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
-            if apply_interpolation:
-                # Interpolate mean and sigma to the t_num selected periods
-                target_periods = np.linspace(self.t_low * imt.period,
-                                             self.t_high * imt.period,
-                                             self.t_num)
+            if imt.name == "AvgSA": # Only use indirect approach for AvgSA imts
+                if apply_interpolation:
+                    # Interpolate mean and sigma to the t_num selected periods
+                    target_periods = np.linspace(self.t_low * imt.period,
+                                                 self.t_high * imt.period,
+                                                 self.t_num)
 
-                ipl_mean = interp1d(
-                    periods, mean_sa.T, bounds_error=False,
-                    fill_value=(mean_sa[0, :], mean_sa[-1, :]),
-                    assume_sorted=True)
-                mean[m] += ((1.0 / self.t_num) * np.sum(
-                    ipl_mean(target_periods).T, axis=0))
+                    ipl_mean = interp1d(
+                        periods, mean_sa.T, bounds_error=False,
+                        fill_value=(mean_sa[0, :], mean_sa[-1, :]),
+                        assume_sorted=True)
+                    mean[m] += ((1.0 / self.t_num) * np.sum(
+                        ipl_mean(target_periods).T, axis=0))
 
-                ipl_sig = interp1d(
-                    periods, sigma_sa.T, bounds_error=False,
-                    fill_value=(sigma_sa[0, :], sigma_sa[-1, :]),
-                    assume_sorted=True)
-                sig_target = ipl_sig(target_periods).T
-            else:
-                # For the given IM simply select the mean and sigma for the
-                # corresponding periods
-                idx = idxs == m
-                target_periods = periods[idx]
-                mean[m] += ((1.0 / self.t_num) * np.sum(mean_sa[idx, :],
-                                                        axis=0))
-                sig_target = sigma_sa[idx, :]
+                    ipl_sig = interp1d(
+                        periods, sigma_sa.T, bounds_error=False,
+                        fill_value=(sigma_sa[0, :], sigma_sa[-1, :]),
+                        assume_sorted=True)
+                    sig_target = ipl_sig(target_periods).T
+                else:
+                    # For the given IM simply select the mean and sigma for the
+                    # corresponding periods
+                    idx = idxs == m
+                    target_periods = periods[idx]
+                    mean[m] += ((1.0 / self.t_num) * np.sum(mean_sa[idx, :], axis=0))
+                    sig_target = sigma_sa[idx, :]
 
-            # For the total standard deviation sum the standard deviations
-            # accounting for the cross-correlation
-            for j, t_1 in enumerate(target_periods):
-                for k, t_2 in enumerate(target_periods):
-                    rho = 1.0 if j == k else self.corr_func.get_correlation(
-                        t_1, t_2)
-                    sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
-            sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
-
-
+                # For the total standard deviation sum the standard deviations
+                # accounting for the cross-correlation
+                for j, t_1 in enumerate(target_periods):
+                    for k, t_2 in enumerate(target_periods):
+                        rho = 1.0 if j == k else self.corr_func.get_correlation(
+                            t_1, t_2)
+                        sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
+                sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
+                
+        
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models used in spectral period averaging.
