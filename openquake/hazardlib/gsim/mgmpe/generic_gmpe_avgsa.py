@@ -18,10 +18,10 @@
 Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
-
 import abc
 import numpy as np
 from scipy.interpolate import interp1d
+
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
@@ -50,7 +50,6 @@ class GenericGmpeAvgSA(GMPE):
         different spectral acceleration ordinates. Valid options are:
         'baker_jayaram', 'akkar', 'eshm20', 'none'. Default is none.
     """
-
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -85,9 +84,6 @@ class GenericGmpeAvgSA(GMPE):
             self.corr_func = \
                 CORRELATION_FUNCTION_HANDLES[corr_func](avg_periods)
 
-        # Check if this GMPE has the necessary requirements
-        # TO-DO
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         :param imts: must be a single IMT of kind AvgSA
@@ -107,7 +103,8 @@ class GenericGmpeAvgSA(GMPE):
 
 
 class GmpeIndirectAvgSA(GMPE):
-    """Implements an alternative form of GMPE for indirect Average SA (AvgSA)
+    """
+    Implements an alternative form of GMPE for indirect Average SA (AvgSA)
     that allows for AvgSA to be defined as a vector quantity described by an
     anchoring period (T0) and a set of n_per spectral accelerations linearly
     spaced between t_low * T0 and t_high * T0. This corresponds to the more
@@ -145,7 +142,6 @@ class GmpeIndirectAvgSA(GMPE):
         Maximum number of periods permissible for direct calculation of
         AvgSA before switching to an interpolation approach
     """
-
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -186,16 +182,19 @@ class GmpeIndirectAvgSA(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
+        Compute the indirect AvgSA using the correlation model, and compute
+        the other IMTs using the underlying GMPE (as expected, an error will
+        be raised if the underlying GMPE does not support the IMT).
         """
         # Gather together all of the needed periods for the set of imts
-        t0s = np.array([imt.period for imt in imts])
         periods = []
         idxs = []
-        for i, period in enumerate(t0s):
+        for idx_imt, imt in enumerate(imts):
+            period = imt.period
             periods.extend(np.linspace(self.t_low * period,
                                        self.t_high * period,
                                        self.t_num))
-            idxs.extend(i * np.ones(self.t_num, dtype=int))
+            idxs.extend(idx_imt * np.ones(self.t_num, dtype=int))
         periods = np.array(periods)
         idxs = np.array(idxs)
         if len(periods) > self.max_num_per:
@@ -206,6 +205,7 @@ class GmpeIndirectAvgSA(GMPE):
             apply_interpolation = True
         else:
             apply_interpolation = False
+
         # Get mean and stddevs for all required periods
         new_imts = [SA(per) for per in periods]
         mean_sa = np.zeros([len(new_imts), len(ctx)])
@@ -464,9 +464,10 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
 
 
 class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
-    """Variation of the Baker & Jayaram (2007) cross-correlation model with
+    """
+    Variation of the Baker & Jayaram (2007) cross-correlation model with
     coefficients calibrated on European data, and with separate functions
-    for correlation in between-event, between-site and within-event residuals
+    for correlation in between-event, between-site and within-event residuals.
     """
 
     @staticmethod
@@ -495,7 +496,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_between_event_correlation(t1, t2):
-        """As per the get_correlation function but for the between-event
+        """
+        As per the get_correlation function but for the between-event
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-event"]
@@ -504,7 +506,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_between_site_correlation(t1, t2):
-        """As per the get_correlation function but for the between-site
+        """
+        As per the get_correlation function but for the between-site
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-site"]
@@ -513,7 +516,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_within_event_correlation(t1, t2):
-        """As per the get_correlation function but for the between-event
+        """
+        As per the get_correlation function but for the between-event
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["within-event"]
