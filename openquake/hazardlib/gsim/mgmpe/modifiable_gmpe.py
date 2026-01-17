@@ -91,12 +91,16 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # where only IA from Macedo 2019 is required). In this case the
     # the means and std devs will be returned as zeroed arrays
     if imts_base:
+        
         # Need to map original order of IMTs for reordering
         imts_map = {imt: i for i, imt in enumerate(imts)}
 
         # Compute the original mean and std devs for required IMTs
-        self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
-        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
+        mean_b = np.zeros([len(imts), len(ctx_copy)])
+        sig_b = np.zeros_like(mean_b)
+        tau_b = np.zeros_like(mean_b)
+        phi_b = np.zeros_like(mean_b)
+        self.gmpe.compute(ctx_copy, imts_base, mean_b, sig_b, tau_b, phi_b)
 
         # For instance in test case_90 one has
         # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
@@ -104,10 +108,10 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
         # then `m` takes the values [4, 3, 0] for `idx` in [0, 1, 2]
         for idx, imt in enumerate(imts_base):
             m = imts_map[imt]
-            mean[m] = arrays[0][idx]
-            sig[m] = arrays[1][idx]
-            tau[m] = arrays[2][idx]
-            phi[m] = arrays[3][idx]
+            mean[m] = mean_b[0][idx]
+            sig[m] = sig_b[1][idx]
+            tau[m] = tau_b[2][idx]
+            phi[m] = phi_b[3][idx]
 
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
