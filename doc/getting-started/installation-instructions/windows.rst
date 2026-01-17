@@ -19,7 +19,6 @@ Requirements are:
 -  4 GB of free disk space
 
 **Windows 7** and **Windows 8** and **Windows 10** are not supported.
-Ecco una versione più tecnica e formale:
 
 We do not support server-side installation on Windows Server. 
 In multi-user environments, each user must perform an individual installation (User or Developer installation).
