@@ -1023,7 +1023,11 @@ class ClassicalTestCase(CalculatorTestCase):
         # non-AvgSA IMTs also are specified in the job file (ensure there
         # is no overwrite of SA and AvgSA with the same ordinal - this
         # test in effect checks that different (and correct) hazard curves
-        # are obtained for SA(0.1) and AvgSA(0.1))
+        # are obtained for SA(0.1) and AvgSA(0.1) which of course have the
+        # same period attribute).
+        # We test both the GenericGmpeAvgSa and GmpeIndirectAvgSA classes
+        # here (both were checked individually and then combined into a single
+        # unit test for brevity).
         self.assert_curves_ok([
             "hazard_curve-mean-AvgSA(0.1).csv",
             'hazard_curve-mean-AvgSA(0.75).csv',

@@ -60,7 +60,8 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
     to their correct positions in the original mean, sig, tau and phi arrays.
 
     In the context of conditional GMPEs, it is used to compute the means and
-    sigmas for the IMTs required for the conditional models.
+    sigmas for the IMTs required for the conditional models using the
+    underlying GMPE the predictions will be conditioned upon.
 
     NOTE: This function is also used in the indirect AvgSA GMPE classes to
     compute the non-AvgSA IMTs (in the case that non-AvgSA IMTs have been
