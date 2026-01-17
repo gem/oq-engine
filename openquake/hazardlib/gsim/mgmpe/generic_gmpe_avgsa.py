@@ -28,6 +28,32 @@ from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
 
+def compute_non_avgsa(gmpe, non_avgSA, imts, ctx, mean, sig, tau, phi):
+    """
+    Docstring for compute_base
+    """
+    if non_avgSA:
+
+        # Need to map original order of IMTs for reordering
+        imts_map = {imt: i for i, imt in enumerate(imts)}
+
+        # Compute for no AvgSA IMTs
+        shp = (len(non_avgSA), len(ctx))
+        mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
+                                    np.empty(shp), np.empty(shp))
+        gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
+
+        # For instance in test case_91 one has
+        # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
+        # and non_avgSA = {SA(0.1)}, then `m` takes value [1] for `idx` in [0]
+        for idx, imt in enumerate(non_avgSA):
+            m = imts_map[imt]
+            mean[m] = mean_t[idx]
+            sig[m] = sig_t[idx]
+            tau[m] = tau_t[idx]
+            phi[m] = phi_t[idx]
+
+
 class GenericGmpeAvgSA(GMPE):
     """
     Implements a modified GMPE class that can be used to compute indirect
@@ -182,32 +208,16 @@ class GmpeIndirectAvgSA(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Compute the indirect AvgSA using the correlation model, and compute
-        the other IMTs using the underlying GMPE (as expected, an error will
-        be raised if the underlying GMPE does not support the IMT).
+        Compute the indirect AvgSA using the correlation model and the
+        specified GMPE, and compute the other IMTs using the underlying
+        GMPE (as expected, an error will be raised if the underlying
+        GMPE does not support the IMT).
         """
         # Check if any non-AvgSA IMTs
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
         if non_avgSA:
-
-            # Need to map original order of IMTs for reordering
-            imts_map = {imt: i for i, imt in enumerate(imts)}
-
-            # Compute for no AvgSA IMTs
-            shp = (len(non_avgSA), len(ctx))
-            mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
-                                       np.empty(shp), np.empty(shp))
-            self.gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
-
-            # For instance in test case_91 one has
-            # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
-            # and non_avgSA = {SA(1.0)}, then `m` takes value [1] for `idx` in [0]
-            for idx, imt in enumerate(non_avgSA):
-                m = imts_map[imt]
-                mean[m] = mean_t[idx]
-                sig[m] = sig_t[idx]
-                tau[m] = tau_t[idx]
-                phi[m] = phi_t[idx]
+            compute_non_avgsa(
+                self.gmpe, non_avgSA, imts, ctx, mean, sig, tau, phi)
                 
         # Gather together all of the needed periods for the set of imts
         periods = []
@@ -274,7 +284,7 @@ class GmpeIndirectAvgSA(GMPE):
                             t_1, t_2)
                         sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
                 sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
-                
+
         
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
