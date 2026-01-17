@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Added the option of using a modified form of the Campbell and Bozorgnia
+    (2014) GMM's sigma model within the Kuehn et al. (2020) GMMs as required
+    for the 2023 USGS Alaska model.
+
   [Michele Simionato]
   * Reduced the number of chunks generated in classical calculations, which
     has a huge effect on performance if you have 192 cores or more

@@ -43,7 +43,7 @@ CONSTS = {
     "v2": 300.0}
 
 # CyberShake basin adjustments for BSSA14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
     IMT          f6cy        f7cy       dz1cy
