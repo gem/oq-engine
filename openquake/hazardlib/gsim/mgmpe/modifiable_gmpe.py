@@ -95,12 +95,12 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
         imts_map = {imt: i for i, imt in enumerate(imts)}
 
         # Compute the original mean and std devs for required IMTs
-        shp = (len(imts), len(ctx_copy))
+        shp = (len(imts_base), len(ctx_copy))
         mean_t, sig_t, tau_t, phi_t = (
             np.empty(shp), np.empty(shp), np.empty(shp), np.empty(shp))
         self.gmpe.compute(
             ctx_copy, imts_base, mean_t, sig_t, tau_t, phi_t)
-
+        
         # For instance in test case_90 one has
         # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
         # and imts_base = {SA(1.0), SA(0.2), PGA}

@@ -194,22 +194,21 @@ class GmpeIndirectAvgSA(GMPE):
             imts_map = {imt: i for i, imt in enumerate(imts)}
 
             # Compute for no AvgSA IMTs
-            mean_b = np.zeros([len(imts), len(ctx)])
-            sig_b = np.zeros_like(mean_b)
-            tau_b = np.zeros_like(mean_b)
-            phi_b = np.zeros_like(mean_b)
-            self.gmpe.compute(ctx, non_avgSA, mean_b, sig_b, tau_b, phi_b)
+            shp = (len(non_avgSA), len(ctx))
+            mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
+                                       np.empty(shp), np.empty(shp))
+            self.gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
 
             # For instance in test case_91 one has
             # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
             # and non_avgSA = {SA(1.0)}, then `m` takes value [1] for `idx` in [0]
             for idx, imt in enumerate(non_avgSA):
                 m = imts_map[imt]
-                mean[m] = mean_b[0][idx]
-                sig[m] = sig_b[1][idx]
-                tau[m] = tau_b[2][idx]
-                phi[m] = phi_b[3][idx]
-
+                mean[m] = mean_t[idx]
+                sig[m] = sig_t[idx]
+                tau[m] = tau_t[idx]
+                phi[m] = phi_t[idx]
+                
         # Gather together all of the needed periods for the set of imts
         periods = []
         idxs = []
