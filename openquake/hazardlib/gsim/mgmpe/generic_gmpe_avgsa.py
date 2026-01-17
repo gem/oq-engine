@@ -30,28 +30,27 @@ from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
 def compute_non_avgsa(gmpe, non_avgSA, imts, ctx, mean, sig, tau, phi):
     """
-    Docstring for compute_base
+    Compute the mean and sigma for the the non-AvgSA IMTs using the 
+    specified GMPE.
     """
-    if non_avgSA:
+    # Need to map original order of IMTs for reordering
+    imts_map = {imt: i for i, imt in enumerate(imts)}
 
-        # Need to map original order of IMTs for reordering
-        imts_map = {imt: i for i, imt in enumerate(imts)}
+    # Compute for no AvgSA IMTs
+    shp = (len(non_avgSA), len(ctx))
+    mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
+                                np.empty(shp), np.empty(shp))
+    gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
 
-        # Compute for no AvgSA IMTs
-        shp = (len(non_avgSA), len(ctx))
-        mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
-                                    np.empty(shp), np.empty(shp))
-        gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
-
-        # For instance in test case_91 one has
-        # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
-        # and non_avgSA = {SA(0.1)}, then `m` takes value [1] for `idx` in [0]
-        for idx, imt in enumerate(non_avgSA):
-            m = imts_map[imt]
-            mean[m] = mean_t[idx]
-            sig[m] = sig_t[idx]
-            tau[m] = tau_t[idx]
-            phi[m] = phi_t[idx]
+    # For instance in test case_91 one has
+    # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
+    # and non_avgSA = {SA(0.1)}, then `m` takes value [1] for `idx` in [0]
+    for idx, imt in enumerate(non_avgSA):
+        m = imts_map[imt]
+        mean[m] = mean_t[idx]
+        sig[m] = sig_t[idx]
+        tau[m] = tau_t[idx]
+        phi[m] = phi_t[idx]
 
 
 class GenericGmpeAvgSA(GMPE):
