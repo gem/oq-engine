@@ -1019,9 +1019,11 @@ class ClassicalTestCase(CalculatorTestCase):
             case_90.__file__)
 
     def test_case_91(self):
-        # Tests indirect AvgSA GMPEs when non-AvgSA IMTs are specified
-        # in the job file (ensure there is no overwrite of SA and AvgSA
-        # with the same ordinal)
+        # Tests handling of IMTs when using indirect AvgSA GMPEs when
+        # non-AvgSA IMTs also are specified in the job file (ensure there
+        # is no overwrite of SA and AvgSA with the same ordinal - this
+        # test in effect checks that different (and correct) hazard curves
+        # are obtained for SA(0.1) and AvgSA(0.1))
         self.assert_curves_ok([
             "hazard_curve-mean-AvgSA(0.1).csv",
             'hazard_curve-mean-AvgSA(0.75).csv',
