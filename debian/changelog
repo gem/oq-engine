@@ -4,8 +4,8 @@
     for the 2023 USGS Alaska model.
 
   [Michele Simionato]
-  * Improved the number of tasks generated in postclassical (they were too
-    many for EUR)
+  * Reduced the number of chunks generated in classical calculations, which
+    has a huge effect on performance if you have 192 cores or more
 
   [Christopher Brooks]
   * Fixing class inheritances in MorikawaFujiwara2013 GMMs.

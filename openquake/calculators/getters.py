@@ -154,13 +154,14 @@ def get_pmaps_gb(dstore, full_lt=None):
 
 def get_num_chunks(dstore):
     """
-    :returns: number of postclassical tasks to generate
+    :returns: number of chunks to generate (determine postclassical tasks)
 
-    Computed as min(N, T) where N is the number of sites and
-    T = max(concurrent_tasks, max_sites_disagg, GB required to store the rates)
-    The idea is that for large calculations we may produce more tasks than
-    concurrent_tasks, to avoid running out of memory. For few sites, we
-    will generated at most N tasks, i.e. less than concurrent_tasks.
+    For performance, it is important to generate few chunks.
+    There are three regimes:
+
+    - few sites, num_chunks=N
+    - regular, num_chunks=concurrent_tasks/2
+    - lots of data, num_chunks=req_gb
     """
     oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
@@ -168,10 +169,14 @@ def get_num_chunks(dstore):
         req_gb = int(dstore['source_groups'].attrs['req_gb'])
     except KeyError: # in classical_bcr
         req_gb = 1
-    T = max(oq.concurrent_tasks, oq.max_sites_disagg, req_gb)
-    # for EUR on cole concurrent_tasks=256, max_sites_disagg=10,
-    # req_gb=202, N=220,000 and we get concurrent_tasks
-    return min(N, T)
+    ct2 = oq.concurrent_tasks // 2 or 1
+    if N < ct2:
+        return N
+    elif req_gb > ct2:
+        return int(req_gb)
+    return ct2
+    # for EUR on cole concurrent_tasks=256
+    # req_gb=202, N=260,000 and we get req_gb
 
 
 def map_getters(dstore, full_lt=None, disagg=False):
@@ -197,7 +202,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
             flt.__dict__.update(attrs)
             flt.gsim_lt = dstore['gsim_lt' + label]
             flt.init()
-            weights.append(full_lt.weights)
+            weights.append(flt.weights)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
