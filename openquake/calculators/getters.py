@@ -202,7 +202,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
             flt.__dict__.update(attrs)
             flt.gsim_lt = dstore['gsim_lt' + label]
             flt.init()
-            weights.append(full_lt.weights)
+            weights.append(flt.weights)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
