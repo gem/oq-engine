@@ -1024,7 +1024,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # is no overwrite of SA and AvgSA with the same ordinal - this
         # test in effect checks that different (and correct) hazard curves
         # are obtained for SA(0.1) and AvgSA(0.1) which of course have the
-        # same period attribute).
+        # same period attribute - previously identical hazard curves were
+        # being returned because of this being handled incorrectly).
         # We test both the GenericGmpeAvgSa and GmpeIndirectAvgSA classes
         # here (both were checked individually and then combined into a single
         # unit test for brevity).
