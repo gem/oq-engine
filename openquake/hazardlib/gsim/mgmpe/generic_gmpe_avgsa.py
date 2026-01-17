@@ -26,31 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
-
-
-def compute_non_avgsa(gmpe, non_avgSA, imts, ctx, mean, sig, tau, phi):
-    """
-    Compute the mean and sigma for the the non-AvgSA IMTs using the 
-    specified GMPE.
-    """
-    # Need to map original order of IMTs for reordering
-    imts_map = {imt: i for i, imt in enumerate(imts)}
-
-    # Compute for no AvgSA IMTs
-    shp = (len(non_avgSA), len(ctx))
-    mean_t, sig_t, tau_t, phi_t = (np.empty(shp), np.empty(shp),
-                                np.empty(shp), np.empty(shp))
-    gmpe.compute(ctx, non_avgSA, mean_t, sig_t, tau_t, phi_t)
-
-    # For instance in test case_91 one has
-    # imts_map = {AvgSA(0.1): 0, SA(0.1): 1, AvgSA(0.75): 2, AvgSA(0.2): 3}
-    # and non_avgSA = {SA(0.1)}, then `m` takes value [1] for `idx` in [0]
-    for idx, imt in enumerate(non_avgSA):
-        m = imts_map[imt]
-        mean[m] = mean_t[idx]
-        sig[m] = sig_t[idx]
-        tau[m] = tau_t[idx]
-        phi[m] = phi_t[idx]
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 
 class GenericGmpeAvgSA(GMPE):
@@ -215,8 +191,8 @@ class GmpeIndirectAvgSA(GMPE):
         # Check if any non-AvgSA IMTs
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
         if non_avgSA:
-            compute_non_avgsa(
-                self.gmpe, non_avgSA, imts, ctx, mean, sig, tau, phi)
+            compute_imts_subset(
+                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
                 
         # Gather together all of the needed periods for the set of imts
         periods = []
@@ -225,9 +201,8 @@ class GmpeIndirectAvgSA(GMPE):
             if imt.name != "AvgSA": # Only for AvgSA get the periods
                 continue
             period = imt.period
-            periods.extend(np.linspace(self.t_low * period,
-                                       self.t_high * period,
-                                       self.t_num))
+            periods.extend(np.linspace(
+                self.t_low * period, self.t_high * period, self.t_num))
             idxs.extend(idx_imt * np.ones(self.t_num, dtype=int))
         periods = np.array(periods)
         idxs = np.array(idxs)
@@ -242,25 +217,25 @@ class GmpeIndirectAvgSA(GMPE):
 
         # Get mean and stddevs for all required periods
         new_imts = [SA(per) for per in periods]
-        mean_sa = np.zeros([len(new_imts), len(ctx)])
-        sigma_sa = np.zeros_like(mean_sa)
-        tau_sa = np.zeros_like(mean_sa)
-        phi_sa = np.zeros_like(mean_sa)
+        sh = (len(new_imts), len(ctx))
+        mean_sa, sigma_sa, tau_sa, phi_sa =\
+              np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
             if imt.name == "AvgSA": # Only use indirect approach for AvgSA imts
                 if apply_interpolation:
                     # Interpolate mean and sigma to the t_num selected periods
-                    target_periods = np.linspace(self.t_low * imt.period,
-                                                 self.t_high * imt.period,
-                                                 self.t_num)
+                    target_periods = np.linspace(
+                        self.t_low * imt.period, self.t_high * imt.period,
+                        self.t_num)
 
                     ipl_mean = interp1d(
                         periods, mean_sa.T, bounds_error=False,
                         fill_value=(mean_sa[0, :], mean_sa[-1, :]),
                         assume_sorted=True)
-                    mean[m] += ((1.0 / self.t_num) * np.sum(
-                        ipl_mean(target_periods).T, axis=0))
+                    mean[m] += (
+                        (1.0 / self.t_num) * np.sum(
+                            ipl_mean(target_periods).T, axis=0))
 
                     ipl_sig = interp1d(
                         periods, sigma_sa.T, bounds_error=False,
@@ -272,7 +247,8 @@ class GmpeIndirectAvgSA(GMPE):
                     # corresponding periods
                     idx = idxs == m
                     target_periods = periods[idx]
-                    mean[m] += ((1.0 / self.t_num) * np.sum(mean_sa[idx, :], axis=0))
+                    mean[m] += (
+                        (1.0 / self.t_num) * np.sum(mean_sa[idx, :], axis=0))
                     sig_target = sigma_sa[idx, :]
 
                 # For the total standard deviation sum the standard deviations
@@ -284,7 +260,7 @@ class GmpeIndirectAvgSA(GMPE):
                         sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
                 sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
 
-        
+
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models used in spectral period averaging.
