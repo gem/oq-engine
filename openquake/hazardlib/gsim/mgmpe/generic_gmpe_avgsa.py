@@ -234,7 +234,7 @@ class GmpeIndirectAvgSA(GMPE):
               np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
-            if imt.name == "AvgSA": # Only use indirect approach for AvgSA imts
+            if imt.name == "AvgSA": # Only proceed for AvgSA imts
                 if apply_interpolation:
                     # Interpolate mean and sigma to the t_num selected periods
                     target_periods = np.linspace(
