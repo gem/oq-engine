@@ -7,7 +7,7 @@
         <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                 applyToTectonicRegionType="Active Shallow Crust">
 
-            <logicTreeBranch branchID="b1_indirect">
+            <logicTreeBranch branchID="b1_indirect_min_max_T">
               <uncertaintyModel>
                 [GmpeIndirectAvgSA]
                 gmpe_name = "KothaEtAl2020ESHM20"

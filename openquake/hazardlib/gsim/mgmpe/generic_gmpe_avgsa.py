@@ -103,6 +103,35 @@ class GenericGmpeAvgSA(GMPE):
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
 
+def _get_periods(t_low, t_high, t_num, max_num_per, imts):
+    """
+    Used in GmpeIndirectAvgSA class to compute periods and determine
+    if interpolation is required.
+    """
+    # Gather together all of the needed periods for the set of imts
+    periods = []
+    idxs = []
+    for idx_imt, imt in enumerate(imts):
+        if imt.name != "AvgSA": # Only for AvgSA get the periods
+            continue
+        period = imt.period
+        periods.extend(np.linspace(
+            t_low * period, t_high * period, t_num))
+        idxs.extend(idx_imt * np.ones(t_num, dtype=int))
+    periods = np.array(periods)
+    idxs = np.array(idxs)
+    if len(periods) > max_num_per:
+        # Maximum number of periods exceeded, so now define a set of
+        # max_num_per periods linearly spaced between the lower and
+        # upper bound of the total period range considered
+        periods = np.linspace(periods[0], periods[-1], max_num_per)
+        apply_interpolation = True
+    else:
+        apply_interpolation = False
+        
+    return periods, idxs, apply_interpolation
+
+
 class GmpeIndirectAvgSA(GMPE):
     """
     Implements an alternative form of GMPE for indirect Average SA (AvgSA)
@@ -193,28 +222,11 @@ class GmpeIndirectAvgSA(GMPE):
         if non_avgSA:
             compute_imts_subset(
                 self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
-                
-        # Gather together all of the needed periods for the set of imts
-        periods = []
-        idxs = []
-        for idx_imt, imt in enumerate(imts):
-            if imt.name != "AvgSA": # Only for AvgSA get the periods
-                continue
-            period = imt.period
-            periods.extend(np.linspace(
-                self.t_low * period, self.t_high * period, self.t_num))
-            idxs.extend(idx_imt * np.ones(self.t_num, dtype=int))
-        periods = np.array(periods)
-        idxs = np.array(idxs)
-        if len(periods) > self.max_num_per:
-            # Maximum number of periods exceeded, so now define a set of
-            # max_num_per periods linearly spaced between the lower and
-            # upper bound of the total period range considered
-            periods = np.linspace(periods[0], periods[-1], self.max_num_per)
-            apply_interpolation = True
-        else:
-            apply_interpolation = False
 
+        # Get periods
+        periods, idxs, apply_interpolation = _get_periods(
+            self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
+        
         # Get mean and stddevs for all required periods
         new_imts = [SA(per) for per in periods]
         sh = (len(new_imts), len(ctx))
@@ -259,7 +271,7 @@ class GmpeIndirectAvgSA(GMPE):
                             t_1, t_2)
                         sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
                 sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
-
+    
 
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
