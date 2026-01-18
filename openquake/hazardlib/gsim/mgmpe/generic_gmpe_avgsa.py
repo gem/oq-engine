@@ -96,7 +96,8 @@ class GenericGmpeAvgSA(GMPE):
         affect the AvgSA values because means and std devs are first
         computed within `get_mean_stds` only for the averaging periods
         (i.e., we just update the indices of the non-AvgSA arrays in
-        the mean and std dev arrays post AvgSA calculation).
+        the mean and std dev arrays post AvgSA calculation - checked
+        in classical/case34).
         """
         # Get mean and std devs for averaging periods
         averaging_periods = [SA(period) for period in self.avg_periods]
