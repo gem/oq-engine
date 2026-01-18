@@ -87,7 +87,12 @@ class GenericGmpeAvgSA(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        :param imts: must be a single IMT of kind AvgSA
+        Compute the indirect AvgSA using the correlation model and the
+        specified GMPE for a prespecified list of averaging periods.
+        
+        Also, compute the other IMTs using the underlying GMPE (as
+        expected, an error will be raised if the underlying GMPE does
+        not support the IMT).
         """
         sas = [SA(period) for period in self.avg_periods]
         out = contexts.get_mean_stds(self.gmpe, ctx, sas)
@@ -213,9 +218,12 @@ class GmpeIndirectAvgSA(GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Compute the indirect AvgSA using the correlation model and the
-        specified GMPE, and compute the other IMTs using the underlying
-        GMPE (as expected, an error will be raised if the underlying
-        GMPE does not support the IMT).
+        specified GMPE for linspaced t_num periods between t_low and
+        t_high, and switch to interpolation if exceeding max_num_per.
+        
+        Also, compute the other IMTs using the underlying GMPE (as
+        expected, an error will be raised if the underlying GMPE does
+        not support the IMT).
         """
         # Check if any non-AvgSA IMTs
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
