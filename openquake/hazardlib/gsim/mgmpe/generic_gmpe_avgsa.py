@@ -92,11 +92,17 @@ class GenericGmpeAvgSA(GMPE):
         
         Also, compute the other IMTs using the underlying GMPE (as
         expected, an error will be raised if the underlying GMPE does
-        not support the IMT).
+        not support the IMT). NOTE: Specifying additional IMTs does not
+        affect the AvgSA values because means and std devs are first
+        computed within `get_mean_stds` only for the averaging periods
+        (i.e., we just update the indices of the non-AvgSA arrays in
+        the mean and std dev arrays post AvgSA calculation).
         """
-        sas = [SA(period) for period in self.avg_periods]
-        out = contexts.get_mean_stds(self.gmpe, ctx, sas)
+        # Get mean and std devs for averaging periods
+        averaging_periods = [SA(period) for period in self.avg_periods]
+        out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods)
 
+        # Compute average SA
         stddvs_avgsa = 0.
         for i1 in range(self.tnum):
             mean[:] += out[0, i1]
@@ -107,7 +113,13 @@ class GenericGmpeAvgSA(GMPE):
         mean[:] /= self.tnum
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
-        
+        # Now update the indices in the mean and std devs that are not AvgSA
+        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
+        if non_avgSA:
+            compute_imts_subset(
+                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
+
+
 def _get_periods(t_low, t_high, t_num, max_num_per, imts):
     """
     Used in GmpeIndirectAvgSA class to compute target periods per AvgSA
