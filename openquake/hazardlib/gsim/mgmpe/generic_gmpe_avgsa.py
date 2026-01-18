@@ -102,34 +102,34 @@ class GenericGmpeAvgSA(GMPE):
         mean[:] /= self.tnum
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
-
+        
 def _get_periods(t_low, t_high, t_num, max_num_per, imts):
     """
-    Used in GmpeIndirectAvgSA class to compute periods and determine
-    if interpolation is required.
+    Used in GmpeIndirectAvgSA class to compute target periods per AvgSA
+    IMT and determine if interpolation is required.
     """
-    # Gather together all of the needed periods for the set of imts
-    periods = []
-    idxs = []
-    for idx_imt, imt in enumerate(imts):
-        if imt.name != "AvgSA": # Only for AvgSA get the periods
-            continue
-        period = imt.period
-        periods.extend(np.linspace(
-            t_low * period, t_high * period, t_num))
-        idxs.extend(idx_imt * np.ones(t_num, dtype=int))
-    periods = np.array(periods)
-    idxs = np.array(idxs)
-    if len(periods) > max_num_per:
+    # For each IMT get target period range 
+    periods_per_avgsa_imt = {
+        imt.string: np.linspace(
+            t_low * imt.period, t_high * imt.period, t_num)
+            for imt in imts if imt.name == "AvgSA"}
+
+    # Get the unique periods over all the AvgSA imts
+    unique_periods = np.unique(np.concatenate(list(
+        periods_per_avgsa_imt.values())))
+
+    if len(unique_periods) > max_num_per:
         # Maximum number of periods exceeded, so now define a set of
         # max_num_per periods linearly spaced between the lower and
         # upper bound of the total period range considered
-        periods = np.linspace(periods[0], periods[-1], max_num_per)
+        periods_all = np.linspace(
+            unique_periods[0], unique_periods[-1], max_num_per)
         apply_interpolation = True
     else:
+        periods_all = unique_periods
         apply_interpolation = False
-        
-    return periods, idxs, apply_interpolation
+    
+    return periods_all, apply_interpolation, periods_per_avgsa_imt
 
 
 class GmpeIndirectAvgSA(GMPE):
@@ -224,44 +224,46 @@ class GmpeIndirectAvgSA(GMPE):
                 self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
 
         # Get periods
-        periods, idxs, apply_interpolation = _get_periods(
+        periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
             self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
         
         # Get mean and stddevs for all required periods
-        new_imts = [SA(per) for per in periods]
+        new_imts = [SA(per) for per in periods_all]
         sh = (len(new_imts), len(ctx))
         mean_sa, sigma_sa, tau_sa, phi_sa =\
               np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
             if imt.name == "AvgSA": # Only proceed for AvgSA imts
+                
+                # Target periods for given IMT
+                target_periods = periods_per_avgsa_imt[imt.string]
+
                 if apply_interpolation:
-                    # Interpolate mean and sigma to the t_num selected periods
-                    target_periods = np.linspace(
-                        self.t_low * imt.period, self.t_high * imt.period,
-                        self.t_num)
-
-                    ipl_mean = interp1d(
-                        periods, mean_sa.T, bounds_error=False,
-                        fill_value=(mean_sa[0, :], mean_sa[-1, :]),
-                        assume_sorted=True)
-                    mean[m] += (
-                        (1.0 / self.t_num) * np.sum(
-                            ipl_mean(target_periods).T, axis=0))
-
-                    ipl_sig = interp1d(
-                        periods, sigma_sa.T, bounds_error=False,
-                        fill_value=(sigma_sa[0, :], sigma_sa[-1, :]),
-                        assume_sorted=True)
+                    # Interpolate mean and sigma
+                    ipl_mean = interp1d(periods_all, mean_sa.T,
+                                        bounds_error=False,
+                                        fill_value=(
+                                            mean_sa[0, :], mean_sa[-1, :]),
+                                            assume_sorted=True)
+                    m_target = ipl_mean(target_periods).T
+                    
+                    ipl_sig = interp1d(periods_all, sigma_sa.T,
+                                       bounds_error=False,
+                                       fill_value=(
+                                           sigma_sa[0, :], sigma_sa[-1, :]),
+                                           assume_sorted=True)
                     sig_target = ipl_sig(target_periods).T
+
                 else:
-                    # For the given IM simply select the mean and sigma for the
-                    # corresponding periods
-                    idx = idxs == m
-                    target_periods = periods[idx]
-                    mean[m] += (
-                        (1.0 / self.t_num) * np.sum(mean_sa[idx, :], axis=0))
+                    # For the given IM simply select the mean and
+                    # sigma for the corresponding periods
+                    idx = np.searchsorted(periods_all, target_periods)
+                    m_target = mean_sa[idx, :]
                     sig_target = sigma_sa[idx, :]
+
+                # Calculate Mean for index m
+                mean[m] = (1.0 / self.t_num) * np.sum(m_target, axis=0)
 
                 # For the total standard deviation sum the standard deviations
                 # accounting for the cross-correlation
