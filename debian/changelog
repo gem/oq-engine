@@ -1,3 +1,10 @@
+  [Christopher Brooks]
+  * Refactored the indirect AvgSA GMPEs capabilities to permit the
+    calculation of non-AvgSA IMTs using the underlying GMPE (added
+    new unit test of classical/case_91 for checking this works within
+    GmpeIndirectAvgSA and updated classical/case34 for checking this
+    works within GenericGmpeAvgSA).
+
   [Michele Simionato]
   * Reduced the number of chunks generated in classical calculations, which
     has a huge effect on performance if you have 192 cores or more
