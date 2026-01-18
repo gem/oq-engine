@@ -431,9 +431,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
 
     def test_case_34(self):
-        # spectral averaging
+        # Spectral averaging, with SA(2.0) also being computed to check
+        # that GenericGmpeAvgSA can also computed non-AvgSA IMTs using
+        # the underlying GMPE
         self.assert_curves_ok([
-            'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
+            'hazard_curve-mean-AvgSA.csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_34.__file__)
 
         # test prefer_global_site_params
         ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
