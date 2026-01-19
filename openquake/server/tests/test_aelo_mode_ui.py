@@ -20,8 +20,4 @@ def test_aelo_run_job(application_mode, authenticated_page, user):
 
     page.run_aelo_calc()
 
-    job_row = page.latest_job_row()
-    expect(job_row.get_by_text("executing")).to_be_visible(timeout=10_000)
-    job_row.get_by_role("link", name="Abort").click(timeout=10_000)
-    authenticated_page.get_by_role("button", name="Yes, abort").click(timeout=10_000)
-    expect(job_row.get_by_text("aborted")).to_be_visible(timeout=10_000)
+    page.abort_latest_job()
