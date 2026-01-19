@@ -648,6 +648,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Saving %s', self.rmap)
 
         def genargs():
+            # produce Gt arguments (i.e. tasks when custom_tmp is set)
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 

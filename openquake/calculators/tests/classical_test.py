@@ -27,6 +27,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.calculators import preclassical
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -296,7 +297,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # workers would read the real custom_tmp and not the mocked one
         tmp = tempfile.gettempdir()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
-             mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+             mock.patch.dict(vars(preclassical), {'PMAP_MAX_GB': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -317,7 +318,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # this also tests full tiling without custom_dir
         # NB: requires disabling the parallelization otherwise the
         # workers would read the real custom_tmp and not the mocked one
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
+        with mock.patch.dict(vars(preclassical), {'PMAP_MAX_GB': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': ''}), \
              mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([

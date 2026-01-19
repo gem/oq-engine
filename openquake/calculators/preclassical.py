@@ -20,7 +20,7 @@ import sys
 import logging
 import operator
 import numpy
-from openquake.baselib import general, parallel, hdf5, config
+from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import get_cmakers
@@ -39,6 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+PMAP_MAX_GB = 8
 
 
 def source_data(sources):
@@ -172,7 +173,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine if to use tiling
     req_gb, trt_rlzs, trt_smrs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
+    max_gb = min(parallel.num_cores / 8, PMAP_MAX_GB)  # from 1-2 GB to 8 GB
     regular = (req_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
@@ -236,9 +237,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is not None:
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
-            logging.warning(
-                f'The global RateMap requires %s ({Gt=}%s)',
-                general.humansize(nbytes), extra)
+            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
+                            general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         if sites:
