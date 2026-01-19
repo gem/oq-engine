@@ -51,6 +51,8 @@ AB20_COEFFS = {
 
 M1 = 5.0
 M2 = 7.0
+MAG_BINS = np.array([3.5, 4.5, 5.5, 6.5, 7.5, 8.5])
+T_REFS = np.array([0.20, 0.28, 0.40, 0.95, 1.40, 2.80])
 
 
 def _get_tref(ctx):
@@ -58,13 +60,8 @@ def _get_tref(ctx):
     Magnitude-dependent conditioning period Tref (Table 3.1)
     - used when the conditiong IMTs are not specified
     """
-    mval = float(np.asarray(ctx.mag).flat[0])
-
-    bins  = np.array([3.5, 4.5, 5.5, 6.5, 7.5, 8.5], dtype=float)
-    trefs = np.array([0.20, 0.28, 0.40, 0.95, 1.40, 2.80], dtype=float)
-
-    idx = np.searchsorted(bins, mval, side="left")
-    return float(trefs[min(idx, len(trefs) - 1)])
+    idx = np.searchsorted(MAG_BINS, ctx.mag[0], side="left")
+    return T_REFS[min(idx, len(T_REFS) - 1)]
 
 
 def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):

@@ -21,6 +21,7 @@ calculations."""
 
 import os
 import re
+import ast
 import sys
 import json
 import time
@@ -449,6 +450,7 @@ class _Workflow:
         self.workflow_toml = workflow_toml
         self.workflow_dir = os.path.dirname(workflow_toml)
         self.defaults = defaults
+        self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})
         self.may_fail = self.defaults.pop('may_fail', [])
         for value in self.checkout:
@@ -542,7 +544,7 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflows_toml, params={}, validate=True):
+def read_many(workflow_toml, params={}, validate=True):
     """
     Read the workflow file and returns a list a workflow dictionary.
     Set 'workflow_dir', 'success' and 'inis' on each.
@@ -551,51 +553,50 @@ def read_many(workflows_toml, params={}, validate=True):
     """
     out = []
     prefix = ''
-    for workflow_toml in workflows_toml:
-        try:
-            with open(workflow_toml, encoding='utf8') as f:
-                wfdict = toml.load(f)
-            if 'multi' in wfdict:
-                multi = wfdict.pop('multi')
-                for prefix, ddic in wfdict.items():
-                    wf = _Workflow(workflow_toml, multi['workflow'] | params,
-                                   ddic, prefix)
-                    wf.checkout = multi['workflow'].pop('checkout', {})
-                    if validate:
-                        wf.validate()
-                    out.append(wf)
-            elif 'workflow' in wfdict:
-                defaults = wfdict.pop('workflow') | params
-                wf = _Workflow(workflow_toml, defaults, wfdict)
-                wf.checkout = defaults.pop('checkout', {})
+    try:
+        with open(workflow_toml, encoding='utf8') as f:
+            wfdict = toml.load(f)
+        if 'multi' in wfdict:
+            multi = wfdict.pop('multi')
+            for prefix, ddic in wfdict.items():
+                wf = _Workflow(workflow_toml, multi['workflow'] | params,
+                               ddic, prefix)
+                wf.checkout = multi['workflow'].pop('checkout', {})
                 if validate:
                     wf.validate()
                 out.append(wf)
-            else:
-                raise InvalidFile('missing [workflow] or [multi.workflow]')
-        except Exception as exc:
-            print(f'Error while parsing {workflow_toml} {prefix}',
-                  file=sys.stderr)
-            raise exc
+        elif 'workflow' in wfdict:
+            defaults = wfdict.pop('workflow') | params
+            wf = _Workflow(workflow_toml, defaults, wfdict)
+            wf.checkout = defaults.pop('checkout', {})
+            if validate:
+                wf.validate()
+            out.append(wf)
+        else:
+            raise InvalidFile('missing [workflow] or [multi.workflow]')
+    except Exception as exc:
+        print(f'Error while parsing {workflow_toml} {prefix}',
+              file=sys.stderr)
+        raise exc
     return out
 
 
-def prepare_workflow(params, workflows_toml, pdb):
+def prepare_workflow(params, workflow_toml, pdb):
     """
     Create or retrieve a workflow record and create or update
     the workflow database
     """
-    workflows = read_many(workflows_toml, params)
+    workflows = read_many(workflow_toml, params)
     names = numpy.concatenate([wf.names for wf in workflows])
     n = len(names)
-    check_unique(names, workflows_toml)
-    wfdic = dict(base_path=os.path.dirname(workflows_toml[0]),
+    check_unique(names, workflow_toml)
+    wfdic = dict(base_path=os.path.dirname(workflow_toml),
                  calculation_mode='workflow')
     try:
         workflow_id = params.pop('workflow_id')
     except KeyError:
         # create a new workflow
-        descr = params.pop('description')
+        descr = workflows[0].description
         [wfjob] = create_jobs([wfdic], pdb=pdb)
         workflow_id = wfjob.calc_id
         dstore = datastore.read(workflow_id, 'w')
@@ -618,19 +619,35 @@ def prepare_workflow(params, workflows_toml, pdb):
     return wfjob, dstore, names, descr
 
 
-def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
+def format_dic(success):
+    """
+    Format the success dictionary; for instance::
+
+      {'func': 'openquake.engine.postjobs.import_outputs',
+       'out_types': ['hcurves', 'hmaps-stats']} =>
+      openquake.engine.postjobs.import_outputs(
+        out_types=['hcurves', 'hmaps-stats'])
+    """
+    dic = success.copy()
+    func = dic.pop('func')
+    kwargs = ', '.join(f'{k}={v!r}' for k, v in dic.items())
+    return f'{func}({kwargs})'
+
+
+def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                  sbatch=False, notify_to=None, pdb=False):
     """
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
-    wfjob, dstore, names, descr = prepare_workflow(params, workflows_toml, pdb)
+    wfjob, dstore, names, descr = prepare_workflow(params, workflow_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
     size_dset = dstore['workflow/size_mb']
     success_dset = dstore['success']
-    with wfjob, dstore:
+    successes = success_dset[:]  # array of lists
+    with dstore:
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
@@ -642,7 +659,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                 if status_dset[idx] == b'complete':
                     # already done; notice the conversion numpy.int64 -> int
                     calcs.append(int(calc_dset[idx]))
-                    logging.info(f'{name} already computed')
+                    with wfjob:
+                        logging.info(f'{name} already computed')
                 else:
                     new.append(ini)
                     new_names.append(name)
@@ -661,23 +679,32 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
-            called = success_dset[wf_no].decode('ascii')
-            for success in wf.success:
-                succfunc = success['func']
-                if succfunc in called:
-                    logging.info(f'{succfunc} already called')
-                elif not failed:
-                    success['dstore'] = dstore
-                    success['calcs'] = calcs
-                    sap.run_func(success)
-                    success_dset[wf_no] = called + succfunc + ' '
+            literal_dics = successes[wf_no].decode('ascii')
+            if literal_dics:
+                successes[wf_no] = ast.literal_eval(literal_dics)
+            else:
+                successes[wf_no] = []
+            with wfjob:
+                for success in wf.success:
+                    if success in successes[wf_no]:
+                        logging.info(f'{format_dic(success)} already called')
+                    elif not failed:
+                        logging.info(f'{format_dic(success)}')
+                        successes[wf_no].append(success.copy())
+                        success['dstore'] = dstore
+                        success['calcs'] = calcs
+                        sap.run_func(success)
+    for wf_no, succ in enumerate(successes):
+        success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = wfjob.dt / 3600.
-    logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    with wfjob:
+        logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:
         mask = status_dset[:] == b'failed'
         dic = {str(name): int(calc) for name, calc in
                zip(names[mask], calc_dset[:][mask])}
-        logging.warning(f'The following jobs failed: {dic}')
+        with wfjob:
+            logging.warning(f'The following jobs failed: {dic}')
     return wfjob.calc_id
 
 

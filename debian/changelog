@@ -1,3 +1,10 @@
+  [Michele Simionato]
+  * Reduced the number of chunks generated in classical calculations, which
+    has a huge effect on performance if you have 192 cores or more
+
+  [Christopher Brooks]
+  * Fixing class inheritances in MorikawaFujiwara2013 GMMs.
+
   [Amirhossein Mohammadi]
   * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.
 

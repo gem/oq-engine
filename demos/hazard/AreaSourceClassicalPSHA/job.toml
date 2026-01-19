@@ -1,4 +1,6 @@
 [workflow]
+description = "AreaSource demo workflow"
+
 [Job]
 ini = "job.ini"
 [[success]]
