@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90)
+    case_86, case_87, case_88, case_89, case_90, case_91)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -431,9 +431,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
 
     def test_case_34(self):
-        # spectral averaging
+        # Spectral averaging, with SA(2.0) also being computed to check
+        # that GenericGmpeAvgSA can also computed non-AvgSA IMTs using
+        # the underlying GMPE
         self.assert_curves_ok([
-            'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
+            'hazard_curve-mean-AvgSA.csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_34.__file__)
 
         # test prefer_global_site_params
         ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
@@ -1017,3 +1021,18 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(0.2).csv',
             'hazard_curve-mean-SA(1.0).csv'],
             case_90.__file__)
+
+    def test_case_91(self):
+        # Tests handling of IMTs when using GmpeIndirectAvgSA when
+        # non-AvgSA IMTs also are specified in the job file (ensure there
+        # is no overwrite of SA and AvgSA with the same ordinal - this
+        # test in effect checks that different (and correct) hazard curves
+        # are obtained for SA(0.1) and AvgSA(0.1) which of course have the
+        # same period attribute - previously identical hazard curves were
+        # being returned because of this being handled incorrectly).
+        self.assert_curves_ok([
+            "hazard_curve-mean-AvgSA(0.1).csv",
+            'hazard_curve-mean-AvgSA(0.75).csv',
+            'hazard_curve-mean-AvgSA(2.0).csv',
+            'hazard_curve-mean-SA(0.1).csv'],
+            case_91.__file__)
