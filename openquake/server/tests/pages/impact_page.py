@@ -15,6 +15,11 @@ class ImpactPage(EnginePage):
     def local_timestamp(self):
         return self.page.locator('input#local_timestamp')
 
+    def set_time_of_the_event(self, value):
+        selector = self.page.locator('select#time_event')
+        expect(selector).to_be_editable()
+        selector.select_option(label=value)
+
     def no_uncertainty_ckb(self):
         return self.page.locator('input#no_uncertainty')
 

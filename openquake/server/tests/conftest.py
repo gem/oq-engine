@@ -26,7 +26,7 @@ def test_credentials():
 
 
 @pytest.fixture
-def user(db, test_credentials, request):
+def user(db, application_mode, test_credentials, request):
     level = request.param
 
     User = get_user_model()
@@ -54,7 +54,7 @@ def authenticated_session(db, user):
 
 
 @pytest.fixture
-def authenticated_page(page, live_server, authenticated_session):
+def authenticated_page(page, live_server, authenticated_session, application_mode):
     page.context.clear_cookies()
     page.context.add_cookies([{
         "name": "sessionid",
@@ -66,7 +66,7 @@ def authenticated_page(page, live_server, authenticated_session):
 
 
 @pytest.fixture
-def ui_logged_in_page(page, live_server, user, test_credentials):
+def ui_logged_in_page(page, live_server, user, test_credentials, application_mode):
     page.context.clear_cookies()
     page.goto(f"{live_server.url}/engine/")
 

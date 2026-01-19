@@ -19,7 +19,9 @@ def test_impact_ui_level_1(application_mode, authenticated_page, user):
 
     page.set_rupture_identifier('us6000rfbw')
     page.retrieve_shakemap_data()
-    expect(page.local_timestamp()).to_be_visible(timeout=25_000)
+    expect(page.local_timestamp()).to_be_visible(timeout=30_000)
+    expect(page.local_timestamp()).not_to_be_editable()
+    page.set_time_of_the_event('Night')
     expect(page.no_uncertainty_ckb()).to_be_visible()
     expect(page.no_uncertainty_ckb()).not_to_be_checked()
     page.set_no_uncertainty()
