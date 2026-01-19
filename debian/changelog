@@ -4,6 +4,7 @@
     for the 2023 USGS Alaska model.
 
   [Michele Simionato]
+  * Implemented the "ilabel" feature i.e. region-dependent gsim logic trees
   * Reduced the number of chunks generated in classical calculations, which
     has a huge effect on performance if you have 192 cores or more
 

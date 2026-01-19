@@ -221,7 +221,7 @@ def fast_mean(pgetter, monitor):
         return {}
 
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(pgetter.weights)
+        hcurves = pgetter.get_fast_mean()
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -231,14 +231,11 @@ def fast_mean(pgetter, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
+def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
@@ -292,12 +289,12 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                         pc[:, r].reshape(M, L1))
             if hstats:
                 if len(pgetter.ilabels):
-                    weights = pgetter.weights[pgetter.ilabels[sid]]
+                    wget = pgetter.wgets[pgetter.ilabels[sid]]
                 else:
-                    weights = pgetter.weights[0]
+                    wget = pgetter.wgets[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, weights, wget, pgetter.use_rates)
+                        pc, imtls, stat, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -531,7 +528,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
@@ -795,9 +792,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        wget = self.full_lt.wget
-        allargs = [(getter, wget, hstats, oq.individual_rlzs,
-                    oq.max_sites_disagg, self.amplifier)
+        allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
