@@ -191,21 +191,17 @@ def map_getters(dstore, full_lt=None, disagg=False):
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean and not disagg:  # in classical
-        # pass gweights
+    if oq.fastmean:  # pass gweights
         weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
-        trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)
         full_lt.init()
-        weights = [full_lt.weights]
         wgets = [full_lt.gsim_lt.wget]
         for label in oq.site_labels:
             flt = copy.copy(full_lt)
             flt.__dict__.update(attrs)
             flt.gsim_lt = dstore['gsim_lt' + label]
             flt.init()
-            weights.append(flt.weights)
             wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
     try:
@@ -375,6 +371,7 @@ class MapGetter(object):
 
     def get_fast_mean(self, gweights):
         """
+        :param gweights: an array of shape (G,)
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
         M = self.M

@@ -201,10 +201,17 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in range(self.N):
-                    hcurve = self.mgetters[sid].get_hcurve(sid)
-                    mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve,
-                        full_lt.gsim_lt.wget)
+                    mgetter = self.mgetters[sid]
+                    hcurve = mgetter.get_hcurve(sid)  # shape (L, R)
+                    if oq.fastmean:
+                        # reshape mean (N, M, L1) -> (N, L) with N=1
+                        mean = mgetter.get_fast_mean(
+                            mgetter.weights).array.reshape((1, -1))
+                    else:
+                        mean = getters.build_stat_curve(
+                            hcurve, oq.imtls, stats.mean_curve,
+                            full_lt.gsim_lt.wget)
+                    # mean has shape (1, L)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
