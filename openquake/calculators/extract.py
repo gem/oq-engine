@@ -1522,7 +1522,7 @@ def extract_disagg_layer(dstore, what):
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
         for m, imt in enumerate(oq.imtls):
-            ws = full_lt.wget(weights, imt)
+            ws = full_lt.gsim_lt.wget(weights, imt)
             ws /= ws.sum()  # normalize to 1
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:

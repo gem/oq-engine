@@ -43,9 +43,8 @@ from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.gsim.base import DummyGMPE
 from openquake.hazardlib.gsim_lt import (
-    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
+    GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     dummy_branchset, LogicTreeError, parse_uncertainty)
@@ -1099,14 +1098,6 @@ class FullLogicTree(object):
             [rlz.weight for rlz in self.get_realizations()])
         return self
 
-    def wget(self, weights, imt):
-        """
-        Dispatch to the underlying gsim_lt.wget except for sampling
-        """
-        if self.num_samples:
-            return weights[:, -1]
-        return self.gsim_lt.wget(weights, imt)
-
     def gfull(self, unique_trt_smrs):
         """
         :returns: the total Gt = Σ_i G_i
@@ -1281,6 +1272,7 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         num_samples = self.source_model_lt.num_samples
+        self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []

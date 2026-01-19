@@ -29,7 +29,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import valid, InvalidFile, logictree
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -794,7 +794,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        wget = self.full_lt.wget
+        wget = self.full_lt.gsim_lt.wget
         allargs = [(getter, wget, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
