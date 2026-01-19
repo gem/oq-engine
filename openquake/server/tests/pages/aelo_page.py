@@ -34,3 +34,10 @@ class AeloPage:
         Assumes newest job appears first.
         """
         return self.calculation_table.locator("tbody tr").first
+
+    def abort_latest_job(self):
+        job_row = self.latest_job_row()
+        expect(job_row.get_by_text("executing")).to_be_visible(timeout=10_000)
+        job_row.get_by_role("link", name="Abort").click(timeout=10_000)
+        self.page.get_by_role("button", name="Yes, abort").click(timeout=10_000)
+        expect(job_row.get_by_text("aborted")).to_be_visible(timeout=10_000)

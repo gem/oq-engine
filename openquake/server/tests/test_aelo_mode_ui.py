@@ -6,7 +6,6 @@ from playwright.sync_api import expect
 @pytest.mark.parametrize("user", [1, 2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
 def test_aelo_run_job(application_mode, authenticated_page, user):
-    assert user.profile.level in {1, 2}
     page = AeloPage(authenticated_page)
 
     page.set_location(45, 9)
