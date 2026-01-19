@@ -1759,8 +1759,8 @@ def view_aggrisk(token, dstore):
         return df
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
-    gsim_lt = dstore['full_lt/gsim_lt']
-    rlzs = list(gsim_lt)
+    full_lt = dstore['full_lt'].init()
+    rlzs = list(full_lt.gsim_lt)
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):
