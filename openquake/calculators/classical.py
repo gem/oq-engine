@@ -232,13 +232,12 @@ def fast_mean(pgetter, monitor):
 
 
 def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
+                  amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
@@ -796,8 +795,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         wget = self.full_lt.wget
-        allargs = [(getter, wget, hstats, oq.individual_rlzs,
-                    oq.max_sites_disagg, self.amplifier)
+        allargs = [(getter, wget, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
