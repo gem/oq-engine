@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import read_cmakers, get_unique_inverse
+from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -166,6 +166,8 @@ def get_num_chunks(dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
+    if oq.calculation_mode == 'disaggregation':
+        return N  # one chunk per site
     try:
         req_gb = int(dstore['source_groups'].attrs['req_gb'])
     except KeyError: # in classical_bcr

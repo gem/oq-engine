@@ -196,6 +196,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)
+        # the real test for this is case_multi in the oq-risk-tests
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
