@@ -231,11 +231,9 @@ def fast_mean(pgetter, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  amplifier, monitor):
+def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
     :param amplifier: instance of Amplifier or None
@@ -291,12 +289,12 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                         pc[:, r].reshape(M, L1))
             if hstats:
                 if len(pgetter.ilabels):
-                    weights = pgetter.weights[pgetter.ilabels[sid]]
+                    wget = pgetter.wgets[pgetter.ilabels[sid]]
                 else:
-                    weights = pgetter.weights[0]
+                    wget = pgetter.wgets[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, weights, wget, pgetter.use_rates)
+                        pc, imtls, stat, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -794,8 +792,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        wget = self.full_lt.gsim_lt.wget
-        allargs = [(getter, wget, hstats, oq.individual_rlzs, self.amplifier)
+        allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')

@@ -152,20 +152,24 @@ class IMTWeigher:
     """
     A class to manage IMT-dependent weights in the gsim logic tree
     """
-    def __init__(self, gsim_lt, num_samples=0):
+    def __init__(self, gsim_lt, num_samples=0, weights=None):
         imts = {}
         for br in gsim_lt.branches:
             imts.update(br.weight.dic)
         # uppercase is sorted before lowercase, so 'weight' is the last
         self.imti = {imt: i for (i, imt) in enumerate(sorted(imts))}
         self.num_samples = num_samples
+        self.weights = weights
 
     # this is nontrivial only for Canada, see logictree/case_39
-    def __call__(self, weights, imt=None):
+    def __call__(self, weights=None, imt=None):
         """
         :param weight: an array of weights of shape (R, 1) or (R, M+1)
         :returns: imt-index for imt-dependent weights
         """
+        if weights is None:
+            assert self.weights is not None
+            weights = self.weights
         if self.num_samples:
             return weights[:, -1]
         try:

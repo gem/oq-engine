@@ -43,10 +43,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, wget, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
+    weights = wget.weights
     poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
@@ -56,7 +57,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
         # this is slower since the arrays are shorter
         for imt in imtls:
             slc = imtls(imt)
-            ws = wget(weights, imt)
+            ws = wget(None, imt)
             if not ws.sum():  # expect no data for this IMT
                 continue
             if use_rates:
@@ -196,13 +197,16 @@ def map_getters(dstore, full_lt=None, disagg=False):
         trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)
+        full_lt.init()
         weights = [full_lt.weights]
+        wgets = [full_lt.gsim_lt.wget]
         for label in oq.site_labels:
             flt = copy.copy(full_lt)
             flt.__dict__.update(attrs)
             flt.gsim_lt = dstore['gsim_lt' + label]
             flt.init()
             weights.append(flt.weights)
+            wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
@@ -215,7 +219,10 @@ def map_getters(dstore, full_lt=None, disagg=False):
     out = []
     for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
-        getter.weights = weights
+        if oq.fastmean:
+            getter.weights = weights
+        else:
+            getter.wgets = wgets
         if oq.site_labels:
             getter.ilabels = dstore['sitecol'].ilabel
         out.append(getter)

@@ -1094,8 +1094,9 @@ class FullLogicTree(object):
         self.trts = list(self.gsim_lt.values)
         R = self.get_num_paths()
         logging.info('Building {:_d} realizations'.format(R))
-        self.weights = numpy.array(  # shape (R, 1) or (R, M+1)
+        self.weights = ws = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
+        self.gsim_lt.wget.weights = ws
         return self
 
     def gfull(self, unique_trt_smrs):
