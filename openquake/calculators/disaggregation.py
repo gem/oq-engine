@@ -205,8 +205,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     hcurve = mgetter.get_hcurve(sid)  # shape (L, R)
                     if oq.fastmean:
                         # reshape mean (N, M, L1) -> (N, L) with N=1
-                        mean = mgetter.get_fast_mean(
-                            mgetter.weights).array.reshape((1, -1))
+                        mean = mgetter.get_fast_mean().array.reshape((1, -1))
                     else:
                         mean = getters.build_stat_curve(
                             hcurve, oq.imtls, stats.mean_curve,

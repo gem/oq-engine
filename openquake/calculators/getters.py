@@ -150,7 +150,7 @@ def get_pmaps_gb(dstore, full_lt=None):
         trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
-    return max_gb, trt_rlzs
+    return max_gb, trt_rlzs, trt_smrs
 
 
 def get_num_chunks(dstore):
@@ -190,18 +190,21 @@ def map_getters(dstore, full_lt=None, disagg=False):
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean:  # pass gweights
-        weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
+    _req_gb, trt_rlzs, trt_smrs = get_pmaps_gb(dstore, full_lt)
+    attrs = vars(full_lt)
+    full_lt.init()
+    if oq.fastmean:
+        gweights = [full_lt.g_weights(trt_smrs)]
     else:
-        attrs = vars(full_lt)
-        full_lt.init()
         wgets = [full_lt.gsim_lt.wget]
-        for label in oq.site_labels:
-            flt = copy.copy(full_lt)
-            flt.__dict__.update(attrs)
-            flt.gsim_lt = dstore['gsim_lt' + label]
-            flt.init()
+    for label in oq.site_labels:
+        flt = copy.copy(full_lt)
+        flt.__dict__.update(attrs)
+        flt.gsim_lt = dstore['gsim_lt' + label]
+        flt.init()
+        if oq.fastmean:
+            gweights.append(flt.g_weights(trt_smrs))
+        else:
             wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
     try:
@@ -216,7 +219,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         if oq.fastmean:
-            getter.weights = weights
+            getter.gweights = gweights
         else:
             getter.wgets = wgets
         if oq.site_labels:
@@ -369,15 +372,18 @@ class MapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_fast_mean(self, gweights):
+    def get_fast_mean(self):
         """
-        :param gweights: an array of shape (G,)
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
         M = self.M
         L1 = self.L // M
         means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
+            if len(self.ilabels):
+                gweights = self.gweights[self.ilabels[sid]]
+            else:
+                gweights = self.gweights[0]
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
             means.array[idx] = (rates @ gweights).reshape((M, L1))

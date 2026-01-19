@@ -29,7 +29,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
-from openquake.hazardlib import valid, InvalidFile, logictree
+from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -221,7 +221,7 @@ def fast_mean(pgetter, monitor):
         return {}
 
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(pgetter.weights)
+        hcurves = pgetter.get_fast_mean()
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -528,7 +528,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
