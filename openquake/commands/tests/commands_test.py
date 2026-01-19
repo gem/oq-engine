@@ -288,7 +288,7 @@ class RunShowExportTestCase(unittest.TestCase):
     
     def test_workflow(self):
         base = pathlib.Path(case_4a.__file__).parent
-        run_workflow(dict(description='test_workflow'), [base / 'jobs.toml'])
+        run_workflow(base / 'jobs.toml', dict(description='test_workflow'))
 
     def test_show_calc(self):
         with Print.patch() as p:

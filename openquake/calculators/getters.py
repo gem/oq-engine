@@ -152,20 +152,31 @@ def get_pmaps_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs
 
 
-def get_num_chunks_sites(dstore):
+def get_num_chunks(dstore):
     """
-    :returns: (number of postclassical tasks to generate, number of sites)
+    :returns: number of chunks to generate (determine postclassical tasks)
 
-    It is 20 times the number of GB required to store the rates.
+    For performance, it is important to generate few chunks.
+    There are three regimes:
+
+    - few sites, num_chunks=N
+    - regular, num_chunks=concurrent_tasks/2
+    - lots of data, num_chunks=req_gb
     """
+    oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
-    max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
     try:
-        req_gb = dstore['source_groups'].attrs['req_gb']
-    except KeyError:
-        return max_chunks, N
-    chunks = max(int(20 * req_gb), max_chunks)
-    return chunks, N
+        req_gb = int(dstore['source_groups'].attrs['req_gb'])
+    except KeyError: # in classical_bcr
+        req_gb = 1
+    ct2 = oq.concurrent_tasks // 2 or 1
+    if N < ct2:
+        return N
+    elif req_gb > ct2:
+        return int(req_gb)
+    return ct2
+    # for EUR on cole concurrent_tasks=256
+    # req_gb=202, N=260,000 and we get req_gb
 
 
 def map_getters(dstore, full_lt=None, disagg=False):
@@ -173,10 +184,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = dstore['oqparam']
-    # disaggregation is meant for few sites, i.e. no tiling
-    n, N = get_num_chunks_sites(dstore)
-    if disagg and N > n:
-        raise ValueError('There are %d sites but only %d chunks' % (N, n))
+    n = get_num_chunks(dstore)
 
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
@@ -194,7 +202,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
             flt.__dict__.update(attrs)
             flt.gsim_lt = dstore['gsim_lt' + label]
             flt.init()
-            weights.append(full_lt.weights)
+            weights.append(flt.weights)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']

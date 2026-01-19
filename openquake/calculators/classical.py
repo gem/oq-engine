@@ -55,6 +55,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
+    # NB: this is faster if num_chunks is not too large
     if len(rates) == 0:
         return
     newh5 = h5 is None
@@ -487,7 +488,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.num_chunks, _N = getters.get_num_chunks_sites(self.datastore)
+        self.num_chunks = getters.get_num_chunks(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
