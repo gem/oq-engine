@@ -263,12 +263,17 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
-def install_standalone(venv):
+def install_or_postinstall_standalone(venv, is_install=True):
     """
-    Install the standalone Django applications if possible
+    Install the standalone Django applications if possible or
+    run '<app>_postinstall' command if it exists
     """
     errors = []
-    print("The standalone applications are not installed yet")
+    if is_install:
+        print("The standalone applications are not installed yet")
+    else:
+        print("Run '<app>_postinstall' command for each standalone\n"
+              " Django applications, if it exists")
     if sys.platform == "win32":
         if os.path.exists("python\\python._pth.old"):
             pycmd = inst.VENV + "\\python.exe"
@@ -276,24 +281,48 @@ def install_standalone(venv):
             pycmd = inst.VENV + "\\Scripts\\python.exe"
     else:
         pycmd = inst.VENV + "/bin/python3"
-    for app in [
-        "oq-platform-standalone",
-        "oq-platform-ipt",
-        "oq-platform-taxonomy",
-        "django-gem-taxonomy",
-    ]:
-        try:
-            print("Applications " + app + " are not installed yet \n")
 
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
-                 app]
-            )
-        except Exception as exc:
-            # for instance is somebody removed a wheel from the wheelhouse
-            errors.append("%s: could not install %s" % (exc, app))
+    STANDALONE_APP_INFO = [
+        {"pkg": "oq-platform-standalone", "name": None},
+        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
+        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
+        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
+    ]
+
+    if is_install:
+        for app in STANDALONE_APP_INFO:
+            try:
+                print("Applications " + app['pkg'] + " are not installed yet \n")
+
+                subprocess.check_call(
+                    [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
+                     app['pkg']]
+                )
+            except Exception as exc:
+                # for instance is somebody removed a wheel from the wheelhouse
+                errors.append("%s: could not install %s" % (exc, app['pkg']))
+    else:
+        for app in STANDALONE_APP_INFO:
+            if not app['name']:
+                continue
+
+            try:
+                subprocess.check_call(
+                    [os.path.join(inst.VENV, "bin", "django-admin"),
+                     "openquake_engine_postinstall", app['name']]
+                )
+            except Exception as exc:
+                # for instance is somebody removed a wheel from the wheelhouse
+                errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
+
     return errors
 
+
+def install_standalone(venv):
+    return install_or_postinstall_standalone(venv, is_install=True)
+
+def postinstall_standalone(venv):
+    return install_or_postinstall_standalone(venv, is_install=False)
 
 def before_checks(inst, venv, port, remove, usage):
     """
@@ -506,6 +535,8 @@ def install(inst, version, from_fork):
 
     if inst in (user, devel):  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
+
+    errors += postinstall_standalone(inst.VENV)
 
     if (
         inst is server
