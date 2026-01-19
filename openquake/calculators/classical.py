@@ -64,23 +64,31 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
+    data = AccumDict(accum=[])
     for chunk in numpy.arange(num_chunks):
         ch_rates = rates[chunks == chunk]
         if len(ch_rates) == 0:
             continue
-        try:
-            h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
-            hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
-        except ValueError:  # already created
-            offset = len(h5['_rates/sid'])
-        else:
-            offset = 0
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
-        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
-        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
-        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+        data['sid'].append(ch_rates['sid'])
+        data['gid'].append(ch_rates['gid'])
+        data['lid'].append(ch_rates['lid'])
+        data['rate'].append(ch_rates['rate'])
+    for key in data:
+        dt = data[key][0].dtype
+        data[key] = numpy.concatenate(data[key], dtype=dt)
+    try:
+        h5.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
+        hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
+    except ValueError:  # already created
+        offset = len(h5['_rates/sid'])
+    else:
+        offset = 0
+    idx_start_stop.append((chunk, offset, offset + len(data['sid'])))
+    hdf5.extend(h5['_rates/sid'], data['sid'])
+    hdf5.extend(h5['_rates/gid'], data['gid'])
+    hdf5.extend(h5['_rates/lid'], data['lid'])
+    hdf5.extend(h5['_rates/rate'], data['rate'])
     iss = numpy.array(idx_start_stop, getters.slice_dt)
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
