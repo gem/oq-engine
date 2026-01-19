@@ -171,7 +171,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
     # determine if to use tiling
-    req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
+    req_gb, trt_rlzs, trt_smrs = getters.get_pmaps_gb(dstore, csm.full_lt)
     max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
     regular = (req_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
