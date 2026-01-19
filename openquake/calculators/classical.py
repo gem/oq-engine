@@ -64,8 +64,10 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
     idx_start_stop = []
-    for chunk in numpy.unique(chunks):
+    for chunk in numpy.arange(num_chunks):
         ch_rates = rates[chunks == chunk]
+        if len(ch_rates) == 0:
+            continue
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
