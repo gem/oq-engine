@@ -1,8 +1,12 @@
+import pytest
 from openquake.server.tests.pages.aelo_page import AeloPage
 from playwright.sync_api import expect
 
 
-def test_aelo_run_job(authenticated_page):
+@pytest.mark.parametrize("user", [1, 2], indirect=True)
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_aelo_run_job(application_mode, authenticated_page, user):
+    assert user.profile.level in {1, 2}
     page = AeloPage(authenticated_page)
 
     page.set_location(45, 9)
@@ -19,6 +23,6 @@ def test_aelo_run_job(authenticated_page):
 
     job_row = page.latest_job_row()
     expect(job_row.get_by_text("executing")).to_be_visible(timeout=10_000)
-    job_row.get_by_role("link", name="AbortFIXME").click(timeout=10_000)
+    job_row.get_by_role("link", name="Abort").click(timeout=10_000)
     authenticated_page.get_by_role("button", name="Yes, abort").click(timeout=10_000)
     expect(job_row.get_by_text("aborted")).to_be_visible(timeout=10_000)
