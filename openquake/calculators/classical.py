@@ -63,19 +63,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
-    idx_start_stop = []
     data = AccumDict(accum=[])
-    for chunk in numpy.arange(num_chunks):
-        ch_rates = rates[chunks == chunk]
-        if len(ch_rates) == 0:
-            continue
-        data['sid'].append(ch_rates['sid'])
-        data['gid'].append(ch_rates['gid'])
-        data['lid'].append(ch_rates['lid'])
-        data['rate'].append(ch_rates['rate'])
-    for key in data:
-        dt = data[key][0].dtype
-        data[key] = numpy.concatenate(data[key], dtype=dt)
     try:
         h5.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
@@ -84,7 +72,21 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         offset = len(h5['_rates/sid'])
     else:
         offset = 0
-    idx_start_stop.append((chunk, offset, offset + len(data['sid'])))
+    idx_start_stop = []
+    for chunk in numpy.arange(num_chunks):
+        ch_rates = rates[chunks == chunk]
+        n = len(ch_rates)
+        if n == 0:
+            continue
+        data['sid'].append(ch_rates['sid'])
+        data['gid'].append(ch_rates['gid'])
+        data['lid'].append(ch_rates['lid'])
+        data['rate'].append(ch_rates['rate'])
+        idx_start_stop.append((chunk, offset, offset + n))
+        offset += n
+    for key in data:
+        dt = data[key][0].dtype
+        data[key] = numpy.concatenate(data[key], dtype=dt)
     hdf5.extend(h5['_rates/sid'], data['sid'])
     hdf5.extend(h5['_rates/gid'], data['gid'])
     hdf5.extend(h5['_rates/lid'], data['lid'])
