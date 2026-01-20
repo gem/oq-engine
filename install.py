@@ -311,10 +311,14 @@ def install_or_postinstall_standalone(venv, is_install=True):
                     django_admin = ['Scripts', 'django-admin.exe']
                 else:
                     django_admin = ["bin", "django-admin"]
+
+                django_env = os.environ.copy()
+                django_env["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
+
                 subprocess.check_call(
                     [os.path.join(inst.VENV, *django_admin),
-                     "openquake_engine_postinstall", app['name']]
-                )
+                     "openquake_engine_postinstall", app['name']],
+                    env=django_env)
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
