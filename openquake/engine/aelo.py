@@ -58,6 +58,8 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
         a dictionary with sites, vs30, siteid, asce_version, site_class
     :param mosaic_dir:
         directory where the mosaic is located
+    :param exclude:
+        mosaic models to exclude from the site->model association (if any)
     :param ini:
         path of the job ini file (if specified, mosaic_dir will be ignored)
 
@@ -78,7 +80,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
         ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
-    params['description'] = 'AELO for ' + inputs['siteid']
+    params['description'] = inputs.get('description', f'AELO({lon}, {lat})')
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
@@ -86,6 +88,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = inputs['sites']
+    params['siteid'] = inputs['siteid']
     params['max_sites_disagg'] = len(lonlats)
     if 'vs30' in inputs:
         if inputs['vs30']:

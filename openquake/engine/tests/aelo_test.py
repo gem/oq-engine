@@ -61,17 +61,16 @@ ASCE41_23 = ['1.35000', '1.25951', '0.90000', '0.73729', '0.60000', '0.60000',
 def test_PAC():
     # test with same name sources and semicolon convention, full enum
     job_ini = os.path.join(MOSAIC_DIR, 'PAC/in/job_vs30.ini')
-    siteid = 'PAC-first PAC-second'
     with logs.init(job_ini) as log:
-        log.params['siteid'] = siteid
         sites = log.get_oqparam().sites
         # site (160, -9.5), first level of PGA
         lon = sites[1][0]
         lat = sites[1][1]
         lon2 = sites[0][0]
         lat2 = sites[0][1]
-        dic = dict(siteid=siteid, sites='%s %s, %s %s' % (lon, lat, lon2, lat2),
-                   vs30='760')
+        site = 'PAC-first PAC-second'
+        dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2),
+                   siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
@@ -110,7 +109,6 @@ def test_KOR():
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
     dic = dict(sites='129 35.9', siteid='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
-        log.params['siteid'] = dic['siteid']
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
@@ -130,7 +128,6 @@ def test_CCA():
     for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_16):
         dic = dict(sites='%s %s' % (lon, lat), siteid=site, vs30='760')
         with logs.init(job_ini) as log:
-            log.params['siteid'] = dic['siteid']
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -182,7 +179,6 @@ def test_CCA_asce7_22():
         dic = dict(sites='%s %s' % (lon, lat), siteid=site,
                    vs30='760', asce_version='ASCE7-22')
         with logs.init(job_ini) as log:
-            log.params['siteid'] = dic['siteid']
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -208,7 +204,6 @@ def test_WAF():
     job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
     dic = dict(sites='7.5 9', siteid='WAF-site', vs30='760')
     with logs.init(job_ini) as log:
-        log.params['siteid'] = dic['siteid']
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         log.params.update(params)
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -260,7 +255,6 @@ def test_JPN():
     dic = dict(sites='139 36', siteid='JPN-site', vs30='260 365 530',
                asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
-        log.params['siteid'] = dic['siteid']
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         params['maximum_distance'] = '300'
         log.params.update(params)
@@ -308,11 +302,10 @@ def test_MFK():
     with (mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}),
           mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 5),
           logs.init(job_ini) as log):
-        site = 'MFK'
-        log.params['siteid'] = site
         sites = log.get_oqparam().sites
         lon = sites[0][0]
         lat = sites[0][1]
+        site = 'MFK'
         dic = dict(sites='%s %s' % (lon, lat), siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR, (), job_ini))
         base.calculators(log.get_oqparam(), log.calc_id).run()
