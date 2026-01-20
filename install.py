@@ -251,7 +251,8 @@ def get_requirements_branch(version, inst, from_fork):
         # retrieve the tag name of the current stable version
         with urlopen("https://pypi.org/pypi/openquake.engine/json") as resp:
             content = resp.read()
-        version = json.loads(content)["info"]["version"]  # '3.24.1'
+        version = json.loads(content)["info"]["version"]  # i.e. '3.24.1'
+        return f"v{version}"
     mo = re.match(r"(\d+\.\d+)+", version)
     if mo:
         return "engine-" + mo.group(0)
