@@ -1379,7 +1379,7 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(sites='%s %s' % (lon, lat), siteid=siteid,
+            dict(sites='%s %s' % (lon, lat),
                  asce_version=asce_version, site_class=site_class, vs30=vs30,
                  description=f'AELO for {siteid}'),
             config.directory.mosaic_dir, exclude=['USA'])
@@ -1390,8 +1390,6 @@ def aelo_run(request):
         logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    # convert the 'siteid' field (a description) into a custom_site_id
-    params['siteid'] = readinput.get_custom_site_id(params['siteid'])
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_username(request), None)
