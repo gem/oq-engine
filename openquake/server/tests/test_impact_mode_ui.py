@@ -13,6 +13,10 @@ def test_impact_ui_level_0(application_mode, authenticated_page, user):
     #       * only shared calculations are visible
 
 
+# TODO (for all workflows):
+# make sure that the correct elements of the UI are shown/hidden at each stage
+
+
 @pytest.mark.parametrize("user", [1], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 def test_impact_ui_level_1(application_mode, authenticated_page, user):
