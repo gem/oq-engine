@@ -169,7 +169,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
         params = dict(
-            lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
+            lon=lon, lat=lat, vs30='800.0', siteid='CCA SITE')
         self.aelo_run_then_remove(params)
 
     # NOTE: we can easily add tests for other models as follows:
