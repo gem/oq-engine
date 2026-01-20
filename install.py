@@ -328,6 +328,8 @@ def before_checks(inst, args, usage):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
     elif inst is devel:
+        if shutil.which("git") is None:
+            raise RuntimeError("git is missing, please install it")
         try:
             branch = subprocess.check_output(
                 ['git', 'branch', '--show-current']
