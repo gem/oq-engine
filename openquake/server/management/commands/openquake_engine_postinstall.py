@@ -29,7 +29,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('django_app',
                             help='django application name')
-    
+
     def handle(self, *args, **options):
         found = False
         for app in django_apps.get_app_configs():
@@ -38,20 +38,18 @@ class Command(BaseCommand):
                 found = True
                 break
 
-        
         if not found:
             self.stdout.write(
                 self.style.ERROR(
                     "No django app '%s' found." % (options['django_app'],))
                 )
             sys.exit(1)
-            
-        
+
         postinstall_cmd = options['django_app'] + '_postinstall'
         django_cmds = get_commands()
         if not (postinstall_cmd in django_cmds):
             self.stdout.write(
-                self.style.SUCCESS(
+                self.style.WARNING(
                     "No 'postinst' action needed for app %s, skipped." % (options['django_app'],))
                 )
             sys.exit(0)

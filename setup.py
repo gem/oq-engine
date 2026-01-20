@@ -114,14 +114,15 @@ setup(
         'Environment :: Web Environment',
     ],
     packages=find_namespace_packages(include=[
-                                    "openquake.*"],
-                                    exclude=[
-                                    "qa_tests", "qa_tests.*",
-                                    "tools",
-                                    "*.*.tests", "*.*.tests.*",
-                                    "openquake.engine.bin",
-                                    "openquake.engine.bin.*"]
-                                     ),
+                                         "openquake.*",
+                                     ],
+                                     exclude=[
+                                         "qa_tests", "qa_tests.*",
+                                         "tools",
+                                         "*.*.tests", "*.*.tests.*",
+                                         "openquake.engine.bin",
+                                         "openquake.engine.bin.*",
+                                     ]),
     py_modules=PY_MODULES,
     include_package_data=True,
     package_data={"openquake.engine": [
