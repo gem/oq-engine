@@ -84,6 +84,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         data['rate'].append(ch_rates['rate'])
         idx_start_stop.append((chunk, offset, offset + n))
         offset += n
+    iss = numpy.array(idx_start_stop, getters.slice_dt)
     for key in data:
         dt = data[key][0].dtype
         data[key] = numpy.concatenate(data[key], dtype=dt)
@@ -91,7 +92,6 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     hdf5.extend(h5['_rates/gid'], data['gid'])
     hdf5.extend(h5['_rates/lid'], data['lid'])
     hdf5.extend(h5['_rates/rate'], data['rate'])
-    iss = numpy.array(idx_start_stop, getters.slice_dt)
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
         fname = h5.filename
