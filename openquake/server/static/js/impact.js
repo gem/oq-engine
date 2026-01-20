@@ -215,6 +215,60 @@ window.initImpactForm = function() {
         }
         $('#submit_impact_calc').prop('disabled', lonValue === '');
     }
+
+    $('input[name="impact_approach"]').change(function () {
+        const selected_approach = $(this).val();
+        set_retrieve_data_btn_state('initial');
+        reset_impact_forms();
+        if (approaches_requiring_usgs_id.includes(selected_approach)) {
+            $('.usgs_id_grp').removeClass('hidden');
+        } else {
+            $('.usgs_id_grp').addClass('hidden');
+        }
+        if (['use_shakemap_fault_rup_from_usgs', 'use_finite_fault_model_from_usgs'].includes(selected_approach)) {
+            $('#rupture_from_usgs_grp').removeClass('hidden');
+        } else {
+            $('#rupture_from_usgs_grp').addClass('hidden');
+        }
+        if (selected_approach == 'provide_rup') {
+            $('#upload_rupture_grp').removeClass('hidden');
+            $("#usgs_id").val('FromFile');
+        } else {
+            $('#upload_rupture_grp').addClass('hidden');
+            $('#usgs_id').val('');
+        }
+        if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
+            $('#rup_params').removeClass('hidden');
+            $('div#msr').removeClass('hidden');
+            $('div#aspect_ratio').removeClass('hidden');
+            if (selected_approach == 'provide_rup_params') {
+                $('#usgs_id').val('UserProvided');
+            }
+        } else {
+            $('#rup_params').addClass('hidden');
+            $('div#msr').addClass('hidden');
+            $('div#aspect_ratio').addClass('hidden');
+        }
+        if (selected_approach == 'build_rup_from_usgs') {
+            $('div#nodal_plane').removeClass('hidden');
+        } else {
+            $('div#nodal_plane').addClass('hidden');
+        }
+        if (selected_approach == 'use_shakemap_from_usgs') {
+            $('div.hidden-for-shakemap').addClass('hidden');
+        } else {
+            $('div.hidden-for-shakemap').removeClass('hidden');
+            if (!approaches_requiring_usgs_id.includes(selected_approach)) {
+                $('.usgs_id_grp').addClass('hidden');
+            }
+        }
+        if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+            $('div#shakemap_version_grp').removeClass('hidden');
+        } else {
+            $('div#shakemap_version_grp').addClass('hidden');
+        }
+    });
+
     toggleRunCalcBtnState();
 
     let usgsTypingTimer = null;
@@ -294,59 +348,6 @@ window.initImpactForm = function() {
     $('input#truncation_level').on('input', function() {
         if ($(this).val() != '0') {
             $('input#no_uncertainty').prop('checked', false);
-        }
-    });
-
-    $('input[name="impact_approach"]').change(function () {
-        const selected_approach = $(this).val();
-        set_retrieve_data_btn_state('initial');
-        reset_impact_forms();
-        if (approaches_requiring_usgs_id.includes(selected_approach)) {
-            $('.usgs_id_grp').removeClass('hidden');
-        } else {
-            $('.usgs_id_grp').addClass('hidden');
-        }
-        if (['use_shakemap_fault_rup_from_usgs', 'use_finite_fault_model_from_usgs'].includes(selected_approach)) {
-            $('#rupture_from_usgs_grp').removeClass('hidden');
-        } else {
-            $('#rupture_from_usgs_grp').addClass('hidden');
-        }
-        if (selected_approach == 'provide_rup') {
-            $('#upload_rupture_grp').removeClass('hidden');
-            $("#usgs_id").val('FromFile');
-        } else {
-            $('#upload_rupture_grp').addClass('hidden');
-            $('#usgs_id').val('');
-        }
-        if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
-            $('#rup_params').removeClass('hidden');
-            $('div#msr').removeClass('hidden');
-            $('div#aspect_ratio').removeClass('hidden');
-            if (selected_approach == 'provide_rup_params') {
-                $('#usgs_id').val('UserProvided');
-            }
-        } else {
-            $('#rup_params').addClass('hidden');
-            $('div#msr').addClass('hidden');
-            $('div#aspect_ratio').addClass('hidden');
-        }
-        if (selected_approach == 'build_rup_from_usgs') {
-            $('div#nodal_plane').removeClass('hidden');
-        } else {
-            $('div#nodal_plane').addClass('hidden');
-        }
-        if (selected_approach == 'use_shakemap_from_usgs') {
-            $('div.hidden-for-shakemap').addClass('hidden');
-        } else {
-            $('div.hidden-for-shakemap').removeClass('hidden');
-            if (!approaches_requiring_usgs_id.includes(selected_approach)) {
-                $('.usgs_id_grp').addClass('hidden');
-            }
-        }
-        if (approaches_requiring_shakemap_version.includes(selected_approach)) {
-            $('div#shakemap_version_grp').removeClass('hidden');
-        } else {
-            $('div#shakemap_version_grp').addClass('hidden');
         }
     });
 
