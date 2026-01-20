@@ -1375,13 +1375,14 @@ def aelo_run(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat, siteid, asce_version, site_class, vs30 = res
+    description = f'AELO for {siteid}'
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
             dict(sites='%s %s' % (lon, lat),
                  asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=f'AELO for {siteid}'),
+                 description=description),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -1423,7 +1424,7 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, site_class, jobctx,
+        lon, lat, vs30, siteid, description, asce_version, site_class, jobctx,
         job_owner_email, outputs_uri_web, config.directory.mosaic_dir,
         aelo_callback)).start()
     return JsonResponse(response_data, status=200)

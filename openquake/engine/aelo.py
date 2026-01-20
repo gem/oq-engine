@@ -136,6 +136,7 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: str,
+         description: str,
          asce_version: str,
          site_class: str,
          jobctx,
@@ -150,6 +151,7 @@ def main(lon: valid.longitude,
     oqvalidation.OqParam.asce_version.validator(asce_version)
     oqvalidation.OqParam.site_class.validator(site_class)
     inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
+                  description=description,
                   asce_version=asce_version, site_class=site_class)
     warnings = []
 
