@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import read_cmakers, get_unique_inverse
+from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -43,10 +43,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, wget, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
+    weights = wget.weights
     poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
@@ -56,7 +57,7 @@ def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
         # this is slower since the arrays are shorter
         for imt in imtls:
             slc = imtls(imt)
-            ws = wget(weights, imt)
+            ws = wget(None, imt)
             if not ws.sum():  # expect no data for this IMT
                 continue
             if use_rates:
@@ -149,7 +150,7 @@ def get_pmaps_gb(dstore, full_lt=None):
         trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
-    return max_gb, trt_rlzs
+    return max_gb, trt_rlzs, trt_smrs
 
 
 def get_num_chunks(dstore):
@@ -165,6 +166,8 @@ def get_num_chunks(dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
+    if oq.calculation_mode == 'disaggregation':
+        return N  # one chunk per site
     try:
         req_gb = int(dstore['source_groups'].attrs['req_gb'])
     except KeyError: # in classical_bcr
@@ -189,20 +192,22 @@ def map_getters(dstore, full_lt=None, disagg=False):
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean and not disagg:  # in classical
-        # pass gweights
-        weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
-        trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+    _req_gb, trt_rlzs, trt_smrs = get_pmaps_gb(dstore, full_lt)
+    attrs = vars(full_lt)
+    full_lt.init()
+    if oq.fastmean:
+        gweights = [full_lt.g_weights(trt_smrs)]
     else:
-        attrs = vars(full_lt)
-        weights = [full_lt.weights]
-        for label in oq.site_labels:
-            flt = copy.copy(full_lt)
-            flt.__dict__.update(attrs)
-            flt.gsim_lt = dstore['gsim_lt' + label]
-            flt.init()
-            weights.append(flt.weights)
+        wgets = [full_lt.gsim_lt.wget]
+    for label in oq.site_labels:
+        flt = copy.copy(full_lt)
+        flt.__dict__.update(attrs)
+        flt.gsim_lt = dstore['gsim_lt' + label]
+        flt.init()
+        if oq.fastmean:
+            gweights.append(flt.g_weights(trt_smrs))
+        else:
+            wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
@@ -215,7 +220,10 @@ def map_getters(dstore, full_lt=None, disagg=False):
     out = []
     for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
-        getter.weights = weights
+        if oq.fastmean:
+            getter.gweights = gweights
+        else:
+            getter.wgets = wgets
         if oq.site_labels:
             getter.ilabels = dstore['sitecol'].ilabel
         out.append(getter)
@@ -366,7 +374,7 @@ class MapGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    def get_fast_mean(self, gweights):
+    def get_fast_mean(self):
         """
         :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
@@ -374,6 +382,10 @@ class MapGetter(object):
         L1 = self.L // M
         means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
+            if len(self.ilabels):
+                gweights = self.gweights[self.ilabels[sid]]
+            else:
+                gweights = self.gweights[0]
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
             means.array[idx] = (rates @ gweights).reshape((M, L1))

@@ -132,7 +132,15 @@ exp_res = np.array(
 
        [[ -4.47648083,  -6.86694079,  -8.94356238, -10.2203591 ],
         [ -4.57481616,  -6.0255732 ,  -7.4984945 ,  -9.08773001],
-        [ -5.62184187,  -6.99839488,  -8.30351301,  -9.43848431]]]  
+        [ -5.62184187,  -6.99839488,  -8.30351301,  -9.43848431]],
+        
+       [[ -3.78597101,  -6.14730859,  -8.20325218,  -9.4758267 ],
+        [ -4.27635487,  -5.81900136,  -7.3559493 ,  -8.95798877],
+        [ -5.13226886,  -6.73870963,  -8.20396313,  -9.3711234 ]],
+
+       [[ -4.47648083,  -6.86694079,  -8.94356238, -10.2203591 ],
+        [ -4.57481616,  -6.0255732 ,  -7.4984945 ,  -9.08773001],
+        [ -5.62184187,  -6.99839488,  -8.30351301,  -9.43848431]]]
         )
 
 # AbrahamsonGulerce2020SInter (all adj vs no adj)
@@ -241,6 +249,13 @@ a20_ak23 = valid.gsim('[AbrahamsonGulerce2020SInter]\nak23_bias_adj=true')
 p20_ak23 = valid.gsim('[ParkerEtAl2020SInter]\nak23_bias_adj=true')  
 k20_ak23 = valid.gsim('[KuehnEtAl2020SInter]\nak23_bias_adj=true')
 
+# Alaska 2023 version of K20 uses the CB14 sigma model to account for
+# non-linear behaviour in soil (test here also combined with bias adj)
+k20_cb14 = valid.gsim('[KuehnEtAl2020SSlab]\nak23_cb14_sig=true')
+k20_cb14_full = valid.gsim('[KuehnEtAl2020SInter]\n'
+                           'ak23_bias_adj=true\n'
+                           'ak23_cb14_sig=true') 
+
 gmms = [ag_adj,
         k20_adj,
         p20_adj,
@@ -267,7 +282,9 @@ gmms = [ag_adj,
         ngaeast_both,
         a20_ak23,
         p20_ak23,
-        k20_ak23]
+        k20_ak23,
+        k20_cb14,
+        k20_cb14_full]
 
 
 class US23AdjustmentTestCase(unittest.TestCase):       
@@ -276,8 +293,7 @@ class US23AdjustmentTestCase(unittest.TestCase):
         """
         Test the execution and correctness of values for GMMs as
         adjusted within the Conterminous US 2023 NSHM. We also test
-        the 2023 Alaska USGS model bias adjustments to the global
-        variants of the NGA-Subduction GMMs here.
+        the 2023 Alaska USGS model GMM adjustments here.
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']

@@ -18,21 +18,22 @@
 Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
-
 import abc
 import numpy as np
 from scipy.interpolate import interp1d
+
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 
 class GenericGmpeAvgSA(GMPE):
     """
-    Implements a modified GMPE class that can be used to compute average
-    ground motion over several spectral ordinates from an arbitrary GMPE.
-    The mean and standard deviation are computed according to:
+    Implements a modified GMPE class that can be used to compute indirect
+    average ground motion over several spectral ordinates from an arbitrary
+    GMPE. The mean and standard deviation are computed according to:
     Kohrangi M., Reddy Kotha S. and Bazzurro P., 2018, Ground-motion models
     for average spectral acceleration in a period range: direct and indirect
     methods, Bull. Earthquake. Eng., 16, pp. 45–65.
@@ -50,7 +51,6 @@ class GenericGmpeAvgSA(GMPE):
         different spectral acceleration ordinates. Valid options are:
         'baker_jayaram', 'akkar', 'eshm20', 'none'. Default is none.
     """
-
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -85,16 +85,25 @@ class GenericGmpeAvgSA(GMPE):
             self.corr_func = \
                 CORRELATION_FUNCTION_HANDLES[corr_func](avg_periods)
 
-        # Check if this GMPE has the necessary requirements
-        # TO-DO
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        :param imts: must be a single IMT of kind AvgSA
+        Compute the indirect AvgSA using the correlation model and the
+        specified GMPE for a prespecified list of averaging periods.
+        
+        Also, compute the other IMTs using the underlying GMPE (as
+        expected, an error will be raised if the underlying GMPE does
+        not support the IMT). NOTE: Specifying additional IMTs does not
+        affect the AvgSA values because means and std devs are first
+        computed within `get_mean_stds` only for the averaging periods
+        (i.e., we just update the indices of the non-AvgSA arrays in
+        the mean and std dev arrays post AvgSA calculation - checked
+        in classical/case34).
         """
-        sas = [SA(period) for period in self.avg_periods]
-        out = contexts.get_mean_stds(self.gmpe, ctx, sas)
+        # Get mean and std devs for averaging periods
+        averaging_periods = [SA(period) for period in self.avg_periods]
+        out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods)
 
+        # Compute average SA
         stddvs_avgsa = 0.
         for i1 in range(self.tnum):
             mean[:] += out[0, i1]
@@ -105,9 +114,45 @@ class GenericGmpeAvgSA(GMPE):
         mean[:] /= self.tnum
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
+        # Now update the indices in the mean and std devs that are not AvgSA
+        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
+        if non_avgSA:
+            compute_imts_subset(
+                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
+
+
+def _get_periods(t_low, t_high, t_num, max_num_per, imts):
+    """
+    Used in GmpeIndirectAvgSA class to compute target periods per AvgSA
+    IMT and determine if interpolation is required.
+    """
+    # For each IMT get target period range 
+    periods_per_avgsa_imt = {
+        imt.string: np.linspace(
+            t_low * imt.period, t_high * imt.period, t_num)
+            for imt in imts if imt.name == "AvgSA"}
+
+    # Get the unique periods over all the AvgSA imts
+    unique_periods = np.unique(np.concatenate(list(
+        periods_per_avgsa_imt.values())))
+
+    if len(unique_periods) > max_num_per:
+        # Maximum number of periods exceeded, so now define a set of
+        # max_num_per periods linearly spaced between the lower and
+        # upper bound of the total period range considered
+        periods_all = np.linspace(
+            unique_periods[0], unique_periods[-1], max_num_per)
+        apply_interpolation = True
+    else:
+        periods_all = unique_periods
+        apply_interpolation = False
+    
+    return periods_all, apply_interpolation, periods_per_avgsa_imt
+
 
 class GmpeIndirectAvgSA(GMPE):
-    """Implements an alternative form of GMPE for indirect Average SA (AvgSA)
+    """
+    Implements an alternative form of GMPE for indirect Average SA (AvgSA)
     that allows for AvgSA to be defined as a vector quantity described by an
     anchoring period (T0) and a set of n_per spectral accelerations linearly
     spaced between t_low * T0 and t_high * T0. This corresponds to the more
@@ -145,7 +190,6 @@ class GmpeIndirectAvgSA(GMPE):
         Maximum number of periods permissible for direct calculation of
         AvgSA before switching to an interpolation approach
     """
-
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -186,70 +230,71 @@ class GmpeIndirectAvgSA(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
+        Compute the indirect AvgSA using the correlation model and the
+        specified GMPE for linspaced t_num periods between t_low and
+        t_high, and switch to interpolation if exceeding max_num_per.
+        
+        Also, compute the other IMTs using the underlying GMPE (as
+        expected, an error will be raised if the underlying GMPE does
+        not support the IMT).
         """
-        # Gather together all of the needed periods for the set of imts
-        t0s = np.array([imt.period for imt in imts])
-        periods = []
-        idxs = []
-        for i, period in enumerate(t0s):
-            periods.extend(np.linspace(self.t_low * period,
-                                       self.t_high * period,
-                                       self.t_num))
-            idxs.extend(i * np.ones(self.t_num, dtype=int))
-        periods = np.array(periods)
-        idxs = np.array(idxs)
-        if len(periods) > self.max_num_per:
-            # Maximum number of periods exceeded, so now define a set of
-            # max_num_per periods linearly spaced between the lower and
-            # upper bound of the total period range considered
-            periods = np.linspace(periods[0], periods[-1], self.max_num_per)
-            apply_interpolation = True
-        else:
-            apply_interpolation = False
+        # Check if any non-AvgSA IMTs
+        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
+        if non_avgSA:
+            compute_imts_subset(
+                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
+
+        # Get periods
+        periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
+            self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
+        
         # Get mean and stddevs for all required periods
-        new_imts = [SA(per) for per in periods]
-        mean_sa = np.zeros([len(new_imts), len(ctx)])
-        sigma_sa = np.zeros_like(mean_sa)
-        tau_sa = np.zeros_like(mean_sa)
-        phi_sa = np.zeros_like(mean_sa)
+        new_imts = [SA(per) for per in periods_all]
+        sh = (len(new_imts), len(ctx))
+        mean_sa, sigma_sa, tau_sa, phi_sa =\
+              np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
-            if apply_interpolation:
-                # Interpolate mean and sigma to the t_num selected periods
-                target_periods = np.linspace(self.t_low * imt.period,
-                                             self.t_high * imt.period,
-                                             self.t_num)
+            if imt.name == "AvgSA": # Only proceed for AvgSA imts
+                
+                # Target periods for given IMT
+                target_periods = periods_per_avgsa_imt[imt.string]
 
-                ipl_mean = interp1d(
-                    periods, mean_sa.T, bounds_error=False,
-                    fill_value=(mean_sa[0, :], mean_sa[-1, :]),
-                    assume_sorted=True)
-                mean[m] += ((1.0 / self.t_num) * np.sum(
-                    ipl_mean(target_periods).T, axis=0))
+                if apply_interpolation:
+                    # Interpolate mean and sigma
+                    ipl_mean = interp1d(periods_all, mean_sa.T,
+                                        bounds_error=False,
+                                        fill_value=(
+                                            mean_sa[0, :], mean_sa[-1, :]),
+                                            assume_sorted=True)
+                    m_target = ipl_mean(target_periods).T
+                    
+                    ipl_sig = interp1d(periods_all, sigma_sa.T,
+                                       bounds_error=False,
+                                       fill_value=(
+                                           sigma_sa[0, :], sigma_sa[-1, :]),
+                                           assume_sorted=True)
+                    sig_target = ipl_sig(target_periods).T
 
-                ipl_sig = interp1d(
-                    periods, sigma_sa.T, bounds_error=False,
-                    fill_value=(sigma_sa[0, :], sigma_sa[-1, :]),
-                    assume_sorted=True)
-                sig_target = ipl_sig(target_periods).T
-            else:
-                # For the given IM simply select the mean and sigma for the
-                # corresponding periods
-                idx = idxs == m
-                target_periods = periods[idx]
-                mean[m] += ((1.0 / self.t_num) * np.sum(mean_sa[idx, :],
-                                                        axis=0))
-                sig_target = sigma_sa[idx, :]
+                else:
+                    # For the given IM simply select the mean and
+                    # sigma for the corresponding periods
+                    idx = np.searchsorted(periods_all, target_periods)
+                    m_target = mean_sa[idx, :]
+                    sig_target = sigma_sa[idx, :]
 
-            # For the total standard deviation sum the standard deviations
-            # accounting for the cross-correlation
-            for j, t_1 in enumerate(target_periods):
-                for k, t_2 in enumerate(target_periods):
-                    rho = 1.0 if j == k else self.corr_func.get_correlation(
-                        t_1, t_2)
-                    sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
-            sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
+                # Calculate Mean for index m
+                mean[m] = (1.0 / self.t_num) * np.sum(m_target, axis=0)
 
+                # For the total standard deviation sum the standard deviations
+                # accounting for the cross-correlation
+                for j, t_1 in enumerate(target_periods):
+                    for k, t_2 in enumerate(target_periods):
+                        rho = 1.0 if j == k else self.corr_func.get_correlation(
+                            t_1, t_2)
+                        sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
+                sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
+    
 
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
@@ -464,9 +509,10 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
 
 
 class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
-    """Variation of the Baker & Jayaram (2007) cross-correlation model with
+    """
+    Variation of the Baker & Jayaram (2007) cross-correlation model with
     coefficients calibrated on European data, and with separate functions
-    for correlation in between-event, between-site and within-event residuals
+    for correlation in between-event, between-site and within-event residuals.
     """
 
     @staticmethod
@@ -495,7 +541,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_between_event_correlation(t1, t2):
-        """As per the get_correlation function but for the between-event
+        """
+        As per the get_correlation function but for the between-event
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-event"]
@@ -504,7 +551,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_between_site_correlation(t1, t2):
-        """As per the get_correlation function but for the between-site
+        """
+        As per the get_correlation function but for the between-site
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-site"]
@@ -513,7 +561,8 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
 
     @staticmethod
     def get_within_event_correlation(t1, t2):
-        """As per the get_correlation function but for the between-event
+        """
+        As per the get_correlation function but for the between-event
         residuals only
         """
         d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["within-event"]

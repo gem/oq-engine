@@ -63,23 +63,35 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     chunks = rates['sid'] % num_chunks
+    data = AccumDict(accum=[])
+    try:
+        h5.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
+        hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
+    except ValueError:  # already created
+        offset = len(h5['_rates/sid'])
+    else:
+        offset = 0
     idx_start_stop = []
-    for chunk in numpy.unique(chunks):
+    for chunk in numpy.arange(num_chunks):
         ch_rates = rates[chunks == chunk]
-        try:
-            h5.create_df(
-                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
-            hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
-        except ValueError:  # already created
-            offset = len(h5['_rates/sid'])
-        else:
-            offset = 0
-        idx_start_stop.append((chunk, offset, offset + len(ch_rates)))
-        hdf5.extend(h5['_rates/sid'], ch_rates['sid'])
-        hdf5.extend(h5['_rates/gid'], ch_rates['gid'])
-        hdf5.extend(h5['_rates/lid'], ch_rates['lid'])
-        hdf5.extend(h5['_rates/rate'], ch_rates['rate'])
+        n = len(ch_rates)
+        if n == 0:
+            continue
+        data['sid'].append(ch_rates['sid'])
+        data['gid'].append(ch_rates['gid'])
+        data['lid'].append(ch_rates['lid'])
+        data['rate'].append(ch_rates['rate'])
+        idx_start_stop.append((chunk, offset, offset + n))
+        offset += n
     iss = numpy.array(idx_start_stop, getters.slice_dt)
+    for key in data:
+        dt = data[key][0].dtype
+        data[key] = numpy.concatenate(data[key], dtype=dt)
+    hdf5.extend(h5['_rates/sid'], data['sid'])
+    hdf5.extend(h5['_rates/gid'], data['gid'])
+    hdf5.extend(h5['_rates/lid'], data['lid'])
+    hdf5.extend(h5['_rates/rate'], data['rate'])
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
         fname = h5.filename
@@ -221,7 +233,7 @@ def fast_mean(pgetter, monitor):
         return {}
 
     with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean(pgetter.weights)
+        hcurves = pgetter.get_fast_mean()
 
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
@@ -231,14 +243,11 @@ def fast_mean(pgetter, monitor):
     return pmap_by_kind
 
 
-def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
+def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param wget: function (weights[:, :], imt) -> weights[:]
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
@@ -292,12 +301,12 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                         pc[:, r].reshape(M, L1))
             if hstats:
                 if len(pgetter.ilabels):
-                    weights = pgetter.weights[pgetter.ilabels[sid]]
+                    wget = pgetter.wgets[pgetter.ilabels[sid]]
                 else:
-                    weights = pgetter.weights[0]
+                    wget = pgetter.wgets[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, weights, wget, pgetter.use_rates)
+                        pc, imtls, stat, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -531,7 +540,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
@@ -651,6 +660,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Saving %s', self.rmap)
 
         def genargs():
+            # produce Gt arguments (i.e. tasks when custom_tmp is set)
             for g, j in self.rmap.jid.items():
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
@@ -795,9 +805,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        wget = self.full_lt.wget
-        allargs = [(getter, wget, hstats, oq.individual_rlzs,
-                    oq.max_sites_disagg, self.amplifier)
+        allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
