@@ -216,51 +216,61 @@ window.initImpactForm = function() {
     }
     toggleRunCalcBtnState();
 
+    let usgsTypingTimer = null;
+    const USGS_ID_TYPING_DELAY = 500; // milliseconds
 
-    $('input[name="usgs_id"]').on('input', function() {
-        reset_rupture_form_inputs();
-        const selected_approach = get_selected_approach();
-        if (approaches_requiring_shakemap_version.includes(selected_approach)) {
-            set_shakemap_version_selector();
-        }
-        if (selected_approach === 'build_rup_from_usgs') {
-            // retrieve nodal planes only when building rupture from USGS nodal plane solutions
-            var formData = {
-                usgs_id: $.trim($("#usgs_id").val()),
-            };
-            $('#submit_impact_get_rupture').prop('disabled', true);
-            $('input[name="impact_approach"]').prop('disabled', true);
-            set_retrieve_data_btn_state('retrieving_nodal_planes');
-            $.ajax({
-                type: "POST",
-                url: gem_oq_server_url + "/v1/impact_get_nodal_planes_and_info",
-                data: formData,
-                dataType: "json",
-                encode: true,
-            }).done(function (data) {
-                if ('nodal_planes' in data && data.nodal_planes) {
-                    populate_nodal_plane_selector(data.nodal_planes);
-                    $('input#lon').val(data.info.lon);
-                    $('input#lat').val(data.info.lat);
-                    $('input#dep').val(data.info.dep);
-                    $('input#mag').val(data.info.mag);
+    $('input[name="usgs_id"]').on('input', function () {
+        clearTimeout(usgsTypingTimer);
+        usgsTypingTimer = setTimeout(function () {
+            reset_rupture_form_inputs();
+            const selected_approach = get_selected_approach();
+            if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                set_shakemap_version_selector();
+            }
+            if (selected_approach === 'build_rup_from_usgs') {
+                // retrieve nodal planes only when building rupture from USGS nodal plane solutions
+                const usgs_id = $.trim($("#usgs_id").val());
+                if (!usgs_id) {
+                    return; // guard against empty input
                 }
-                if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
-                    let nodal_plane = $('select#nodal_plane');
-                    nodal_plane.empty();
-                    const option = $('<option>').val('').text('Unable to retrieve nodal planes');
-                    nodal_plane.append(option);
-                    diaerror.show(false, "Note", data.nodal_planes_issue);
-                }
-            }).error(function (data) {
-                diaerror.show(false, "Error", "Unable to retrieve nodal planes");
-            }).always(function (data) {
-                $('#submit_impact_get_rupture').prop('disabled', false);
-                $('input[name="impact_approach"]').prop('disabled', false);
-                set_retrieve_data_btn_state('initial');
-                // $('.submit_impact_get_rupture_waiting').hide();
-            });
-        }
+                const formData = { usgs_id };
+                $('#submit_impact_get_rupture').prop('disabled', true);
+                $('input[name="impact_approach"]').prop('disabled', true);
+                set_retrieve_data_btn_state('retrieving_nodal_planes');
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/impact_get_nodal_planes_and_info",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                })
+                .done(function (data) {
+                    if ('nodal_planes' in data && data.nodal_planes) {
+                        populate_nodal_plane_selector(data.nodal_planes);
+                        $('input#lon').val(data.info.lon);
+                        $('input#lat').val(data.info.lat);
+                        $('input#dep').val(data.info.dep);
+                        $('input#mag').val(data.info.mag);
+                    }
+                    if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
+                        const nodal_plane = $('select#nodal_plane');
+                        nodal_plane.empty().append(
+                            $('<option>').val('').text('Unable to retrieve nodal planes')
+                        );
+                        diaerror.show(false, "Note", data.nodal_planes_issue);
+                    }
+                })
+                .fail(function () {
+                    diaerror.show(false, "Error", "Unable to retrieve nodal planes");
+                })
+                .always(function () {
+                    $('#submit_impact_get_rupture').prop('disabled', false);
+                    $('input[name="impact_approach"]').prop('disabled', false);
+                    set_retrieve_data_btn_state('initial');
+                    // $('.submit_impact_get_rupture_waiting').hide();
+                });
+            }
+        }, USGS_ID_TYPING_DELAY);
     });
 
     $('input#no_uncertainty').on('change', function() {
