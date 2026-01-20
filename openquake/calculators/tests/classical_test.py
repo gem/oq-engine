@@ -39,9 +39,9 @@ from openquake.qa_tests_data.classical import (
     case_40, case_41, case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
-    case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91, case_92)
+    case_67, case_68, case_69, case_70, case_72, case_74, case_75, case_76,
+    case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
+    case_86, case_87, case_88, case_89, case_90, case_91)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -776,6 +776,16 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurves = self.calc.datastore['hcurves-stats'][:]
         self.assertEqual(hcurves.sum(), 0)
 
+    def test_case_68(self):
+        # Tests calculation of non-AvgSA IMTs using the underlying GMPE specified
+        # within an indirect AvgSA GMPE when NO AvgSA IMTs are specified in the
+        # job file.
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(0.1).csv',
+            'hazard_curve-mean-SA(0.2).csv'],
+            case_68.__file__)
+
     def test_case_69(self):
         # collapse areaSource with no nodal planes/hypocenters
         self.run_calc(case_69.__file__, 'job.ini')
@@ -1037,13 +1047,3 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-AvgSA(2.0).csv',
             'hazard_curve-mean-SA(0.1).csv'],
             case_91.__file__)
-
-    def test_case_92(self):
-        # Tests calculation of non-AvgSA IMTs using the underlying GMPE specified
-        # within an indirect AvgSA GMPE when NO AvgSA IMTs are specified in the
-        # job file.
-        self.assert_curves_ok([
-            'hazard_curve-mean-PGA.csv',
-            'hazard_curve-mean-SA(0.1).csv',
-            'hazard_curve-mean-SA(0.2).csv'],
-            case_92.__file__)
