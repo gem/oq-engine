@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Extended `install.py devel` to infer the version from the branch name
+
   [Christopher Brooks]
   * Added the option of using a modified form of the Campbell and Bozorgnia
     (2014) GMM's sigma model within the Kuehn et al. (2020) GMMs as required
