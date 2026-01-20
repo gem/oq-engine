@@ -307,8 +307,12 @@ def install_or_postinstall_standalone(venv, is_install=True):
                 continue
 
             try:
+                if sys.platform == "win32":
+                    django_admin = ['Scripts', 'django-admin.exe']
+                else:
+                    django_admin = ["bin", "django-admin"]
                 subprocess.check_call(
-                    [os.path.join(inst.VENV, "bin", "django-admin"),
+                    [os.path.join(inst.VENV, *django_admin),
                      "openquake_engine_postinstall", app['name']]
                 )
             except Exception as exc:
