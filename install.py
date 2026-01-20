@@ -335,7 +335,7 @@ def before_checks(inst, args, usage):
                 ['git', 'branch', '--show-current']
             ).decode('utf8').strip()
         except subprocess.CalledProcessError:
-            raise RuntimeError('install.py must be called from the git '
+            raise RuntimeError('install.py must be called from the engine '
                                f'repository, not from {os.getcwd()}')
         if branch.startswith('engine-') and not args.version:
             # use version consistent with the branch
