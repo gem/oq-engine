@@ -937,7 +937,8 @@ def aelo_callback(
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
     reply_to = settings.EMAIL_SUPPORT
-    site_name = inputs['description']
+    # e.g. 'AELO for CCA'->'CCA'
+    site_name = inputs['description'][9:]
     lon, lat = inputs['sites'].split()
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
