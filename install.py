@@ -39,7 +39,6 @@ import glob
 import shutil
 import socket
 import getpass
-import zipfile
 import tempfile
 import argparse
 import platform
@@ -208,7 +207,6 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
-DEMOS = "https://artifacts.openquake.org/travis/demos-master.zip"
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
@@ -253,9 +251,8 @@ def get_requirements_branch(version, inst, from_fork):
         # retrieve the tag name of the current stable version
         with urlopen("https://pypi.org/pypi/openquake.engine/json") as resp:
             content = resp.read()
-        stable_version_number = json.loads(content)["info"]["version"]
-        stable_version_tag_name = f"v{stable_version_number}"
-        return stable_version_tag_name
+        version = json.loads(content)["info"]["version"]  # i.e. '3.24.1'
+        return f"v{version}"
     mo = re.match(r"(\d+\.\d+)+", version)
     if mo:
         return "engine-" + mo.group(0)
@@ -471,7 +468,6 @@ def install(inst, version, from_fork):
         f"https://raw.githubusercontent.com/gem/oq-engine/{branch}/"
         "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform]
                                           + mac))
-
     subprocess.check_call(
         [
             pycmd,
@@ -501,9 +497,22 @@ def install(inst, version, from_fork):
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print("Installing commit", commit)
-        subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", GITBRANCH % commit]
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            custom_env = os.environ.copy()
+            custom_env["TMPDIR"] = tmp  # Linux/macOS
+            custom_env["TEMP"] = tmp    # Windows
+            subprocess.check_call(
+                [pycmd, "-m", "pip", "install",
+                 "--upgrade", GITBRANCH % commit, "--no-clean"],
+                env=custom_env)
+
+            for build in os.listdir(tmp):
+                if build.startswith("pip-req-build-"):
+                    demos= os.path.join(tmp, build, 'demos')
+                    shutil.copytree(demos, os.path.join(inst.VENV, 'demos'))
+                    break
+            else:
+                raise RuntimeError('Could not find where pip installed the zip')
         fix_version(commit, inst.VENV)
 
     errors = install_standalone(inst.VENV)
@@ -576,26 +585,14 @@ def install(inst, version, from_fork):
             subprocess.check_call(["systemctl", "start", service_name])
 
     if inst in (user, server):
-        # download and unzip the demos
-        try:
-            with urlopen(DEMOS) as f:
-                data = f.read()
-        except OSError:
-            msg = "However, we could not download the demos from %s" % DEMOS
-        else:
-            th, tmp = tempfile.mkstemp(suffix=".zip")
-            with os.fdopen(th, "wb") as t:
-                t.write(data)
-            zipfile.ZipFile(tmp).extractall(inst.VENV)
-            os.remove(tmp)
-            path = os.path.join(
-                inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
-                "job.ini")
-            msg = (
-                "You can run a test calculation with the command\n"
-                f"{oqreal} engine --run {path}"
-            )
-            print("The engine was installed successfully.\n" + msg)
+        path = os.path.join(
+            inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
+            "job.ini")
+        msg = (
+            "You can run a test calculation with the command\n"
+            f"{oqreal} engine --run {path}"
+        )
+        print("The engine was installed successfully.\n" + msg)
 
     return errors
 
