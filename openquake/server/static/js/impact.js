@@ -125,6 +125,8 @@ window.initImpactForm = function() {
     }
 
     function set_shakemap_version_selector() {
+        const usgs_id = $.trim($("#usgs_id").val());
+        if (usgs_id == '') return;
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('#getStationDataFromUsgs').prop('disabled', true);
         $('#submit_impact_calc').prop('disabled', true);
@@ -132,7 +134,6 @@ window.initImpactForm = function() {
         $('.populating_shakemap_version').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> Retrieving ShakeMap versions...');
         $('input[name="impact_approach"]').prop('disabled', true);
         var formData = new FormData();
-        const usgs_id = $.trim($("#usgs_id").val());
         formData.append('usgs_id', usgs_id);
         $.ajax({
             type: "POST",
