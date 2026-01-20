@@ -755,6 +755,11 @@ class CompositeSourceModel:
         return max_weight
 
     def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
+        """
+        :returns:
+            quartets (cmaker, tilegetters, blocks, extra)
+            for atomic + non-atomic source groups
+        """
         atomic = []
         non_atomic = []
         for cmaker, tilegetters, blocks, extra in self.split(

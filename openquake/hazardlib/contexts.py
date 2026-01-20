@@ -1543,7 +1543,7 @@ class RmapMaker(object):
         totlen = 0
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
-        # using most memory here; limited by pmap_max_gb
+        # using most memory here, limited by tiling
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)

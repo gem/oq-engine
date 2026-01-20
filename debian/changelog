@@ -1,6 +1,18 @@
+  [Christopher Brooks]
+  * Added the option of using a modified form of the Campbell and Bozorgnia
+    (2014) GMM's sigma model within the Kuehn et al. (2020) GMMs as required
+    for the 2023 USGS Alaska model.
+  * Refactored the indirect AvgSA GMPEs capabilities to permit the
+    calculation of non-AvgSA IMTs using the underlying GMPE (added
+    new unit test of classical/case_91 for checking this works within
+    GmpeIndirectAvgSA and updated classical/case34 for checking this
+    works within GenericGmpeAvgSA).
+
   [Michele Simionato]
-  * Improved the number of tasks generated in postclassical (they were too
-    many for EUR)
+  * Internal: removed configuration parameter `pmap_max_gb`
+  * Implemented the "ilabel" feature i.e. region-dependent gsim logic trees
+  * Reduced the number of chunks generated in classical calculations, which
+    has a huge effect on performance if you have 192 cores or more
 
   [Christopher Brooks]
   * Fixing class inheritances in MorikawaFujiwara2013 GMMs.
