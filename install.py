@@ -294,14 +294,14 @@ def install_standalone(venv):
     return errors
 
 
-def before_checks(inst, venv, port, remove, usage):
+def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
-    if venv:
-        inst.VENV = os.path.abspath(os.path.expanduser(venv))
-    if port:
-        inst.DBPORT = int(port)
+    if args.venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
+    if args.dbport:
+        inst.DBPORT = int(args.dbport)
 
     # check platform
     if (inst is server and sys.platform != "linux") or (
@@ -327,9 +327,22 @@ def before_checks(inst, venv, port, remove, usage):
             inst is devel and user == "root"):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
+    elif inst is devel:
+        if shutil.which("git") is None:
+            raise RuntimeError("git is missing, please install it")
+        try:
+            branch = subprocess.check_output(
+                ['git', 'branch', '--show-current']
+            ).decode('utf8').strip()
+        except subprocess.CalledProcessError:
+            raise RuntimeError('install.py must be called from the engine '
+                               f'repository, not from {os.getcwd()}')
+        if branch.startswith('engine-') and not args.version:
+            # use version consistent with the branch
+            args.version == branch
 
     # check if there is a DbServer running
-    if not remove:
+    if not args.remove:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(("localhost", inst.DBPORT))
@@ -638,8 +651,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove,
-                      parser.format_usage())
+        before_checks(inst, args, parser.format_usage())
         if args.remove:
             remove(inst)
         else:

@@ -45,10 +45,10 @@ CONSTS = {
     }
 
 # CyberShake basin adjustments for ASK14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/ASK14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
-IMT   a44cy    a45cy   
+IMT   a44cy    a45cy                      
 2.0   0.048    0.114     
 3.0   0.092    0.223
 4.0   0.202    0.333

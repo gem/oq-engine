@@ -53,6 +53,43 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
+
+def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
+    """
+    Compute mean and sigms only for the required imts, and then assign them
+    to their correct positions in the original mean, sig, tau and phi arrays.
+
+    In the context of conditional GMPEs, it is used to compute the means and
+    sigmas for the IMTs required for the conditional models using the
+    underlying GMPE the predictions will be conditioned upon.
+
+    NOTE: This function is also used in the indirect AvgSA GMPE classes to
+    compute the non-AvgSA IMTs (in the case that non-AvgSA IMTs have been
+    specified in the job file and the user wishes to use the specified GMPE
+    to also compute predictions for these IMTs too in a single calculation).
+    """
+    # Need to map original order of IMTs for reordering
+    imts_map = {imt: i for i, imt in enumerate(imts)}
+
+    # Compute the original mean and std devs for required IMTs
+    shp = (len(imts_comp), len(ctx_copy))
+    mean_t, sig_t, tau_t, phi_t = (
+        np.empty(shp), np.empty(shp), np.empty(shp), np.empty(shp))
+    gmpe.compute(
+        ctx_copy, imts_comp, mean_t, sig_t, tau_t, phi_t)
+    
+    # For instance in test case_90 one has
+    # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
+    # and imts_base = {SA(1.0), SA(0.2), PGA}
+    # then `m` takes the values [4, 3, 0] for `idx` in [0, 1, 2]
+    for idx, imt in enumerate(imts_comp):
+        m = imts_map[imt]
+        mean[m] = mean_t[idx]
+        sig[m] = sig_t[idx]
+        tau[m] = tau_t[idx]
+        phi[m] = phi_t[idx]
+
+
 def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     """
     This function:
@@ -91,23 +128,8 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # where only IA from Macedo 2019 is required). In this case the
     # the means and std devs will be returned as zeroed arrays
     if imts_base:
-        # Need to map original order of IMTs for reordering
-        imts_map = {imt: i for i, imt in enumerate(imts)}
-
-        # Compute the original mean and std devs for required IMTs
-        self.gmpe.compute(ctx_copy, imts_base, mean, sig, tau, phi)
-        arrays = [mean.copy(), sig.copy(), tau.copy(), phi.copy()]
-
-        # For instance in test case_90 one has
-        # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
-        # and imts_base = {SA(1.0), SA(0.2), PGA}
-        # then `m` takes the values [4, 3, 0] for `idx` in [0, 1, 2]
-        for idx, imt in enumerate(imts_base):
-            m = imts_map[imt]
-            mean[m] = arrays[0][idx]
-            sig[m] = arrays[1][idx]
-            tau[m] = arrays[2][idx]
-            phi[m] = arrays[3][idx]
+        compute_imts_subset(
+            self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
 
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):

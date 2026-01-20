@@ -135,7 +135,8 @@ CONSTS = {
 METRES_PER_KM = 1000.
 
 # Alaska 2023 USGS model bias adjustment coefficients. The coeffs
-# have been taken from https://code.usgs.gov/ghsc/nshmp
+# have been taken from:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-sub-ak-interface-adjustment.csv
 AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")

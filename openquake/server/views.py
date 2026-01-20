@@ -992,9 +992,11 @@ def impact_callback(
     exclude_from_print = ['rupture_from_usgs']
     if 'shakemap_uri' in params:
         exclude_from_print.extend([
-            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
+            'station_data_file', 'station_data_issue',
+            'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
-            'gsim', 'shakemap_uri', 'rupture_file', 'title', 'mmi_file', 'rake'])
+            'gsim', 'shakemap_uri', 'rupture_file', 'title', 'mmi_file',
+            'rake'])
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
@@ -1181,13 +1183,13 @@ def create_impact_job(request, params):
 
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
             impact_callback)
-    #if 'pytest' in sys.argv[0]:
-    #    # hack for debugging the tests
-    #    # unfortunately it does not work yet because check_email
-    #    # is meant to work with a subprocess
-    #    impact.main_web(*args)
-    #else:
-    # spawn the Aristotle main process
+    # if 'pytest' in sys.argv[0]:
+    #     # hack for debugging the tests
+    #     # unfortunately it does not work yet because check_email
+    #     # is meant to work with a subprocess
+    #     impact.main_web(*args)
+    # else:
+    #  spawn the Aristotle main process
     mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
@@ -1366,8 +1368,8 @@ def aelo_run(request):
     Run an AELO calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, siteid, asce_version,
-        site_class, vs30
+        a `django.http.HttpRequest` object containing lon, lat, siteid,
+        asce_version, site_class, vs30
     """
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
@@ -1377,8 +1379,9 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(sites='%s %s' % (lon, lat), siteid=siteid,
-                 asce_version=asce_version, site_class=site_class, vs30=vs30),
+            dict(sites='%s %s' % (lon, lat),
+                 asce_version=asce_version, site_class=site_class, vs30=vs30,
+                 description=f'AELO for {siteid}'),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:

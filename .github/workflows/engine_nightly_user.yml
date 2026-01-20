@@ -8,7 +8,7 @@ on:
         required: true
       debug_enabled:
         type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        description: 'SSH Connection '
         required: false
         default: false
   schedule:
@@ -44,6 +44,10 @@ jobs:
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
+      - name: Setup debugging session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 60
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: (Scheduled) Test WebUI and run https calculation
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
