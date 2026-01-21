@@ -3,7 +3,8 @@ include README.md LICENSE CONTRIBUTORS.txt
 # OpenQuake config file
 include openquake/engine/openquake.cfg
 # demos folder
-recursive-include demos *
+recursive-include demos/hazard *.* 
+recursive-include demos/risk *.* 
 
 # OpenQuake server config examples
 include openquake/server/local_settings.py.pam
