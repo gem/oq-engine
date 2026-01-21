@@ -133,8 +133,15 @@ def _get_periods(t_low, t_high, t_num, max_num_per, imts):
             for imt in imts if imt.name == "AvgSA"}
 
     # Get the unique periods over all the AvgSA imts
-    unique_periods = np.unique(np.concatenate(list(
-        periods_per_avgsa_imt.values())))
+    if periods_per_avgsa_imt != {}:
+        unique_periods = np.unique(
+            np.concatenate(list(periods_per_avgsa_imt.values())))
+    else:
+        # No AvgSA IMTs - edge case where the user is specifying indirect
+        # AvgSA model BUT only has non-AvgSA IMTs in job file (return empty
+        # list of averaging periods to permit still using underlying GMPE to
+        # compute "regular" IMTs - "AvgSA" part of compute method is skipped)
+        return list(), False, periods_per_avgsa_imt
 
     if len(unique_periods) > max_num_per:
         # Maximum number of periods exceeded, so now define a set of
@@ -247,7 +254,7 @@ class GmpeIndirectAvgSA(GMPE):
         # Get periods
         periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
             self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
-        
+
         # Get mean and stddevs for all required periods
         new_imts = [SA(per) for per in periods_all]
         sh = (len(new_imts), len(ctx))

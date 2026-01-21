@@ -43,6 +43,7 @@
 |case\_64|LanzanoEtAl2016 with bas term|
 |case\_65|Test for the multi fault source|
 |case\_66|Tests sites\_slice and site <-> sitemodel association|
+|case\_68|Check indirect AvgSA GMPEs can still compute non-AvgSA IMTs using underlying GMPE if no AvgSA IMTs in job file|
 |case\_69|Collapse area source, 1 site|
 |case\_70|Test abrahamson\_gulerce\_2020|
 |case\_72|Test calculation with a subset of the 2014 US model|
