@@ -1856,14 +1856,14 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
     _, full_lt = get_model_lts(dstore)[-1]
-    rlzs = full_lt.rlzs
-    if len(rlzs) > 1:
+    R = full_lt.get_num_paths()
+    if R > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
     if 'mmi_tags' in hdf5:
         dskeys.add('mmi_tags')
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
-        if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
+        if oq.hazard_stats() or oq.individual_rlzs or R == 1:
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
@@ -1873,7 +1873,7 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
         # the quantiles are computed across simulations, as in the
         # ScenarioRisk demo which contains a single GSIM/realization
         dskeys.add('aggrisk-stats')
-    elif len(rlzs) > 1 and not oq.collect_rlzs:
+    elif R > 1 and not oq.collect_rlzs:
         if 'aggrisk' in dstore:
             dskeys.add('aggrisk-stats')
         if 'aggcurves' in dstore:
@@ -1882,9 +1882,9 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
             for out in ['avg_losses-rlzs', 'aggrisk', 'aggcurves']:
                 if out in dskeys:
                     dskeys.remove(out)
-    if 'curves-rlzs' in dstore and len(rlzs) == 1:
+    if 'curves-rlzs' in dstore and R == 1:
         dskeys.add('loss_curves-rlzs')
-    if 'curves-stats' in dstore and len(rlzs) > 1:
+    if 'curves-stats' in dstore and R > 1:
         dskeys.add('loss_curves-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
@@ -1897,6 +1897,8 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
             dskeys.add('event_based_mfd')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
+    if 'hmaps-stats' in dskeys and (R == 1 or not oq.hazard_maps):
+        dskeys.remove('hmaps-stats')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
         # the calculation has not been imported in the db yet
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,

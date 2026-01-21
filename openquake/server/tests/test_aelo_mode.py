@@ -132,7 +132,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 self.assertIn('To: django-test-user@email.test', email_content)
                 self.assertIn(f'Reply-To: {email_to}', email_content)
                 self.assertIn(
-                    f"Site name: {params['siteid']}\n"
+                    f"Site name: {params['site_name']}\n"
                     f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
                     f"Site Class: Vs30 = {params['vs30']} m/s\n"
                     f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
@@ -168,8 +168,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
+        # NOTE: the site_name is transformed into a description and a custom_site_id
         params = dict(
-            lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
+            lon=lon, lat=lat, vs30='800.0', site_name='CCA SITE')
         self.aelo_run_then_remove(params)
 
     # NOTE: we can easily add tests for other models as follows:
@@ -177,18 +178,18 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     # def test_aelo_successful_run_EUR(self):
     #     lon, lat = self.get_tested_lon_lat('EUR')
     #     params = dict(
-    #         lon=lon, lat=lat, vs30='800.0', siteid='EUR_SITE')
+    #         lon=lon, lat=lat, vs30='800.0', site_name='EUR_SITE')
     #     self.aelo_run_then_remove(params)
 
     # def test_aelo_successful_run_JPN(self):
     #     lon, lat = self.get_tested_lon_lat('JPN')
     #     params = dict(
-    #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
+    #         lon=lon, lat=lat, vs30='800.0', site_name='JPN_SITE')
     #     self.aelo_run_then_remove(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
-            lon='-86.0', lat='88.0', vs30='800.0', siteid='SOMEWHERE')
+            lon='-86.0', lat='88.0', vs30='800.0', site_name='SOMEWHERE')
         failure_reason = (
             f"Site at lon={params['lon']} lat={params['lat']}"
             f" is not covered by any model!")
@@ -205,22 +206,22 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.assertIn(expected_error, resp_dict['error_msg'])
 
     def test_aelo_invalid_latitude(self):
-        params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
+        params = dict(lon='-86', lat='100', vs30='800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'latitude 100.0 > 90')
 
     def test_aelo_invalid_longitude(self):
-        params = dict(lon='-186', lat='12', vs30='800', siteid='CCA_SITE')
+        params = dict(lon='-186', lat='12', vs30='800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'longitude -186.0 < -180')
 
     def test_aelo_invalid_vs30(self):
-        params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
+        params = dict(lon='-86', lat='12', vs30='-800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'vs30 -800.0 is smaller than the minimum (150)')
-        params = dict(lon='-86', lat='12', vs30='4000', siteid='CCA_SITE')
+        params = dict(lon='-86', lat='12', vs30='4000', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (1525)')
 
-    def test_aelo_invalid_siteid(self):
-        siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
-        params = dict(lon='-86', lat='12', vs30='800', siteid=siteid)
+    def test_aelo_invalid_site_name(self):
+        site_name = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
+        params = dict(lon='-86', lat='12', vs30='800', site_name=site_name)
         self.aelo_invalid_input(
             params,
             "site name can not be longer than %s characters" %

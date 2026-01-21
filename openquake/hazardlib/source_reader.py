@@ -37,7 +37,9 @@ TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
+weight = operator.attrgetter('weight')
 bybranch = operator.attrgetter('branch')
+checksum = operator.attrgetter('checksum')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
@@ -52,8 +54,6 @@ source_info_dt = numpy.dtype([
     ('mutex_weight', numpy.float64),   # 7
     ('trti', numpy.uint8),             # 8
 ])
-
-checksum = operator.attrgetter('checksum')
 
 
 def check_unique(ids, msg='', strict=True):
@@ -763,7 +763,7 @@ class CompositeSourceModel:
         atomic = []
         non_atomic = []
         for cmaker, tilegetters, blocks, extra in self.split(
-            cmdict, sitecol, max_weight, num_chunks, tiling):
+                cmdict, sitecol, max_weight, num_chunks, tiling):
             if extra['atomic']:
                 atomic.append((cmaker, tilegetters, blocks, extra))
             else:
@@ -806,17 +806,15 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tiles = max(hint, splits)
+            ntiles = max(hint, splits)
         elif hint > oq.max_blocks:
             # double the tiles and reduce by half the blocks (less transfer)
-            blocks = list(general.split_in_blocks(
-                sg, hint / 2, lambda s: s.weight))
-            tiles = splits * 2
+            blocks = list(general.split_in_blocks(sg, hint/2, weight))
+            ntiles = splits * 2
         else:
-            blocks = list(general.split_in_blocks(
-                sg, hint, lambda s: s.weight))
-            tiles = splits
-        tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
+            blocks = list(general.split_in_blocks(sg, hint, weight))
+            ntiles = splits
+        tilegetters = list(sitecol.split(ntiles, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
                      blocks=len(blocks),
