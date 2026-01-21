@@ -47,7 +47,7 @@ class Command(BaseCommand):
 
         postinstall_cmd = options['django_app'] + '_postinstall'
         django_cmds = get_commands()
-        if not (postinstall_cmd in django_cmds):
+        if postinstall_cmd not in django_cmds:
             self.stdout.write(
                 self.style.WARNING(
                     "No 'postinst' action needed for app %s, skipped." % (options['django_app'],))
