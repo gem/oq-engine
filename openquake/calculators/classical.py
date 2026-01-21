@@ -656,10 +656,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     return T * L * len(cmaker.gid) * 12  # 12 bytes per rate
             for tgetters in block_splitter(tilegetters, max_size, weight):
                 allargs.append((block, tgetters, cmaker, ex['num_chunks'], ds))
-                n_out.append(len(tgetters))
+                n_out.append(tgetters.weight)
         logging.warning('This is a tiling calculation with '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        len(allargs), min(n_out), max(n_out))
+                        f'%d tasks, max_size={humansize(max(n_out))}',
+                        len(allargs))
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)
