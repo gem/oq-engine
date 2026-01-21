@@ -24,6 +24,15 @@ from setuptools import setup, find_namespace_packages
 if sys.version_info < (3, 11):
     sys.exit('Sorry, Python < 3.11 is not supported')
 
+# --- 1. Helper Function for Demos ---
+def generate_data_files(source_dir):
+    data_files_list = []
+    for root, dirs, files in os.walk(source_dir):
+        if files:
+            target_dir = root 
+            source_files = [os.path.join(root, f) for f in files]
+            data_files_list.append((target_dir, source_files))
+    return data_files_list
 
 def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
@@ -124,7 +133,8 @@ setup(
     package_data={"openquake.engine": [
         "openquake.cfg", "README.md",
         "LICENSE", "CONTRIBUTORS.txt"]},
-    namespace_packages=['openquake'],
+# This installs 'demos' into the root of the Virtual Env (sys.prefix)
+    data_files=generate_data_files('demos'),
     install_requires=install_requires,
     extras_require=extras_require,
     entry_points={
