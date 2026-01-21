@@ -43,7 +43,8 @@
 
   [Michele Simionato]
   * Added a consistency check on the effective time when starting from SES
-  * Added a new exporter hmaps-stats producing one file per return period
+  * Added a new exporter hmaps-stats producing one file per IMT,
+    associated to the display name "Hazard Maps Statistics"
 
   [Maoxin Wang]
   * Added a new gsim file wang_2025_turkey.py to implement the Turkey-specific
