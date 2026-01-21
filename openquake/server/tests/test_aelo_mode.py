@@ -168,7 +168,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
-        # NB: even without a description the test passes
+        # NOTE: the site_name is transformed into a description and a siteid
         params = dict(
             lon=lon, lat=lat, vs30='800.0', site_name='CCA SITE')
         self.aelo_run_then_remove(params)
