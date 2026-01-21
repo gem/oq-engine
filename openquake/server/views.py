@@ -1376,7 +1376,7 @@ def aelo_run(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat, site_name, asce_version, site_class, vs30 = res
-    # NOTE: the site_name is transformed into a description and a siteid
+    # NOTE: the site_name is transformed into a description and a custom_site_id
     description = f'AELO for {site_name}'
 
     # build a LogContext object associated to a database job
