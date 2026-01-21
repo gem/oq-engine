@@ -8,7 +8,7 @@ class AeloPage(EnginePage):
         self.page.locator("#lon").fill(str(lon))
 
     def set_site_name(self, name):
-        self.page.locator("#siteid").fill(name)
+        self.page.locator("#site_name").fill(name)
 
     def select_asce_version(self, version):
         self.page.locator("#asce_version").select_option(version)
