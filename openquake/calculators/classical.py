@@ -222,11 +222,12 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     rmap = result.pop('rmap').remove_zeros()
     # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
     if config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, num_chunks, None, monitor)
+        for rates in rmap.gen_chunks(cmaker.gid, num_chunks):
+            _store(rates, num_chunks, None, monitor)
     else:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    return result
+        for rates in rmap.gen_chunks(cmaker.gid, num_chunks):
+            result['rmap'] = rates
+            yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -436,6 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
+                # the rmap contains data from a single chunk
                 _store(rmap, self.num_chunks, self.datastore)
         else:
             # aggregating rates is ultra-fast compared to storing

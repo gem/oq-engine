@@ -375,13 +375,21 @@ class MapArray(object):
         pnes[pnes == 0.] = 1.11E-16
         return self.new(-numpy.log(pnes) / itime)
 
+    def gen_chunks(self, gid, num_chunks):
+        for c in range(num_chunks):
+            outs = []
+            for i, g in enumerate(gid):
+                r = from_rates_g(self.array[:, :, i], g, self.sids)
+                outs.append(r[r['sid'] % num_chunks == c])
+            out = numpy.concatenate(outs, dtype=rates_dt)
+            if len(out):
+                yield out
+
     def to_array(self, gid):
         """
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if len(gid) == 0:
-            return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
             rates_g = self.array[:, :, i]
