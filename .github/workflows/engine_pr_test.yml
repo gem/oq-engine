@@ -160,6 +160,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Actualize 'aelo' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.aelo.tmpl; do
+              cp -- "$file" "${file%.aelo.tmpl}"
+          done
       - name: Install dependencies
         run: |
           if [[ $FROM_FORK == "true" ]]; then
@@ -167,11 +172,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'aelo' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.aelo.tmpl; do
-              cp -- "$file" "${file%.aelo.tmpl}"
-          done
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -199,6 +199,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
       - name: Install dependencies
         run: |
           if [[ $FROM_FORK == "true" ]]; then
@@ -206,11 +211,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'impact' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.impact.tmpl; do
-              cp -- "$file" "${file%.impact.tmpl}"
-          done
       - name: Server 'ARISTOTLE' mode tests
         run: |
           set -x
