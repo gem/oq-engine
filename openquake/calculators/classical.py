@@ -70,7 +70,7 @@ def split_in_chunks(rates, num_chunks):
     :returns: list [(chunkno, chunk), ...]
     """
     chunks = rates['sid'] % num_chunks
-    if (chunks != chunks[0]).any():  # there is a single chunk
+    if (chunks == chunks[0]).all():  # there is a single chunk
         return [(0, rates)]
     out = []
     for i in range(num_chunks):
