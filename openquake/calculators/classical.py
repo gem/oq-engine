@@ -232,7 +232,7 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
                 res['rmap'] = rates
                 yield res
             else:
-                yield {'rmap': rates}
+                yield {'rmap': rates, 'grp_id': result['grp_id']}
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
