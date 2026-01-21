@@ -110,7 +110,7 @@ jobs:
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           mv exposure.hdf5 $oq_basedir/openquake/qa_tests_data/mosaic/
           for file in $oq_basedir/openquake/server/templates/registration/*.default.tmpl; do
-              cp -- "$file" "${file%.impact.tmpl}"
+              cp -- "$file" "${file%.default.tmpl}"
           done
           set -x
           oq --version
