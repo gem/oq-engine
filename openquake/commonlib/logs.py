@@ -71,7 +71,7 @@ def dbcmd(action, *args):
             # a query like SELECT name FROM sqlite_master WHERE name='job'
             return dbapi.db(action, *args)
         else:
-           return func(dbapi.db, *args)
+            return func(dbapi.db, *args)
 
     # send a command to the database
     tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
