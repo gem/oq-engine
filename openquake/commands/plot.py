@@ -42,6 +42,9 @@ ZOOM_MARGIN = 8
 
 
 def make_figure_magdist(extractors, what):
+    """
+    Plotting the magnitude-distance filter
+    """
     plt = import_plt()
     _fig, ax = plt.subplots()
     [ex] = extractors
