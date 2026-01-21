@@ -28,7 +28,8 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -44,6 +45,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
+TWO20 = 2 ** 20  # 1 MB
 TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
@@ -207,7 +209,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         yield result
 
 
-def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
+def tiling(grp_ids, tilegetters, cmaker, num_chunks, dstore, monitor):
     """
     Tiling calculator
     """
@@ -218,15 +220,16 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
                   for gid in grp_ids]
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
-    result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
-    rmap = result.pop('rmap').remove_zeros()
-    # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
-    if config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, num_chunks, None, monitor)
-    else:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    return result
+    for tgetter in tilegetters:
+        result = hazclassical(group, tgetter(sitecol, cmaker.ilabel), cmaker)
+        rmap = result.pop('rmap').remove_zeros()
+        # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
+        if config.directory.custom_tmp:
+            rates = rmap.to_array(cmaker.gid)
+            _store(rates, num_chunks, None, monitor)
+        else:
+            result['rmap'] = rmap.to_array(cmaker.gid)
+        yield result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -641,24 +644,22 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        rbytes = []
         L = self.oqparam.imtls.size
-        for cmaker, tgetters, [block], ex in self.csm.split_atomic(
+        max_size = int(config.memory.pmap_max_mb)* TWO20
+        for cmaker, tilegetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
             if isinstance(block, int):
                 block = [block]
-            for tgetter in tgetters:
-                T = tgetter.get_tile_size(self.sitecol)
-                allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
-                rbytes.append(ratebytes(T, L, cmaker.gid))
-            n_out.append(len(tgetters))
-        max_rbytes = max(rbytes)
+                def weight(tgetter):
+                    T = tgetter.get_tile_size(self.sitecol)
+                    return T * L * len(cmaker.gid) * 12  # 12 bytes per rate
+            for tgetters in block_splitter(tilegetters, max_size, weight):
+                allargs.append((block, tgetters, cmaker, ex['num_chunks'], ds))
+                n_out.append(len(tgetters))
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         len(allargs), min(n_out), max(n_out))
-        logging.info(f'At max {humansize(max_rbytes)} will be stored per task')
-
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)

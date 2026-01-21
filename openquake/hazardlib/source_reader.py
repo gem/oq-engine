@@ -27,6 +27,7 @@ import numpy
 from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.site import TileGetter
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -802,19 +803,19 @@ class CompositeSourceModel:
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 12 / 1024**2  # 12 bytes per rate
         G = len(cmaker.gsims)
-        splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            ntiles = max(hint, splits)
         elif hint > oq.max_blocks:
             # double the tiles and reduce by half the blocks (less transfer)
             blocks = list(general.split_in_blocks(sg, hint/2, weight))
-            ntiles = splits * 2
         else:
             blocks = list(general.split_in_blocks(sg, hint, weight))
-            ntiles = splits
-        tilegetters = list(sitecol.split(ntiles, oq.max_sites_disagg))
+        if tiling:
+            tilegetters = list(sitecol.split(num_chunks))
+        else:
+            tilegetters = [TileGetter(i, num_chunks)
+                           for i in range(num_chunks)]
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
                      blocks=len(blocks),
