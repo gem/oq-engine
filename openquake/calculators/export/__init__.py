@@ -68,6 +68,7 @@ DISPLAY_NAME = {
     'site_model': 'Site Model',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
+    'hmaps-stats': 'Hazard Maps Statistics',
     'uhs': 'Uniform Hazard Spectra',
     'disagg-rlzs': 'Disaggregation Outputs Per Realization',
     'disagg-stats': 'Statistical Disaggregation Outputs',
