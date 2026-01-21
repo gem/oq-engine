@@ -546,5 +546,4 @@ class RateMap:
         returns a composite array with fields sid, lid, gid, rate
         """
         rates_g = self.array[:, :, self.jid[g]]
-        breakpoint()
         return from_rates_g(rates_g, g, self.sids)
