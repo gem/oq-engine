@@ -224,10 +224,15 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     if config.directory.custom_tmp:
         for rates in rmap.gen_chunks(cmaker.gid, num_chunks):
             _store(rates, num_chunks, None, monitor)
+        yield result
     else:
-        for rates in rmap.gen_chunks(cmaker.gid, num_chunks):
-            result['rmap'] = rates
-            yield result
+        for i, rates in enumerate(rmap.gen_chunks(cmaker.gid, num_chunks)):
+            if i == 0:
+                res = result.copy()
+                res['rmap'] = rates
+                yield res
+            else:
+                yield {'rmap': rates}
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
