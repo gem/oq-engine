@@ -505,14 +505,6 @@ def install(inst, version, from_fork):
                 [pycmd, "-m", "pip", "install",
                  "--upgrade", GITBRANCH % commit, "--no-clean"],
                 env=custom_env)
-
-            for build in os.listdir(tmp):
-                if build.startswith("pip-req-build-"):
-                    demos= os.path.join(tmp, build, 'demos')
-                    shutil.copytree(demos, os.path.join(inst.VENV, 'demos'))
-                    break
-            else:
-                raise RuntimeError('Could not find where pip installed the zip')
         fix_version(commit, inst.VENV)
 
     errors = install_standalone(inst.VENV)
