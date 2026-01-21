@@ -294,8 +294,15 @@ def create_outputs(db, job_id, keysize, ds_size):
     :param keysize: a list of pairs (key, size_mb)
     :param ds_size: total datastore size in MB
     """
+    # the DbServer should accept missing output types
+    # (it happens if the DbServer is outdated)
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
+    if getpass.getuser() != 'openquake':
+        # outside of the DbServer we should raise a clear error instead
+        for key, size in keysize:
+            if key not in DISPLAY_NAME:
+                raise NameError(f'{key} is missing in DISPLAY_NAME')
     db('UPDATE job SET size_mb=?x WHERE id=?x', ds_size, job_id)
     db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
