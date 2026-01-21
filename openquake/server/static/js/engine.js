@@ -842,7 +842,7 @@ site-specific hazard and site response could be warranted.`;
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    siteid: $("#siteid").val(),
+                    site_name: $("#site_name").val(),
                     asce_version: asce_version,
                     site_class: site_class,
                     vs30: vs30
