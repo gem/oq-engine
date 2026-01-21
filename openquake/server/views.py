@@ -111,7 +111,7 @@ AELO_FORM_LABELS = {
     'lat': 'Latitude',
     'site_class': 'Site class',
     'vs30': 'Vs30 (m/s)',
-    'siteid': 'Site name',
+    'site_name': 'Site name',
     'asce_version': 'ASCE standards',
 }
 
@@ -121,7 +121,7 @@ AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
     'vs30': f'float {AELO_VALID_VS30_RANGE}',
-    'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
+    'site_name': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
 
@@ -937,7 +937,8 @@ def aelo_callback(
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
     reply_to = settings.EMAIL_SUPPORT
-    siteid = inputs['siteid']
+    # e.g. 'AELO for CCA'->'CCA'
+    site_name = inputs['description'][9:]
     lon, lat = inputs['sites'].split()
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
@@ -951,7 +952,7 @@ def aelo_callback(
             asce_version][site_class]['display_name']
         site_class_vs30_str = f'Site Class: {site_class_display_name}'
     aelo_version = base.get_aelo_version()
-    body = (f"Site name: {siteid}\n"
+    body = (f"Site name: {site_name}\n"
             f"Latitude: {lat}, Longitude: {lon}\n"
             f"{site_class_vs30_str}\n"
             f"ASCE standard: {asce_version_str}\n"
@@ -1299,16 +1300,16 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        siteid = request.POST.get('siteid')
-        if not siteid:
+        site_name = request.POST.get('site_name')
+        if not site_name:
             raise ValueError("can not be empty")
-        if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
+        if len(site_name) > settings.MAX_AELO_SITE_NAME_LEN:
             raise ValueError(
                 "site name can not be longer than %s characters" %
                 settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['siteid']] = str(exc)
-        invalid_inputs.append('siteid')
+        validation_errs[AELO_FORM_LABELS['site_name']] = str(exc)
+        invalid_inputs.append('site_name')
     try:
         asce_version = request.POST.get(
             'asce_version', oqvalidation.OqParam.asce_version.default)
@@ -1357,7 +1358,7 @@ def aelo_validate(request):
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
         return JsonResponse(response_data, status=400)
-    return lon, lat, siteid, asce_version, site_class, vs30
+    return lon, lat, site_name, asce_version, site_class, vs30
 
 
 @csrf_exempt
@@ -1368,20 +1369,23 @@ def aelo_run(request):
     Run an AELO calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, siteid,
+        a `django.http.HttpRequest` object containing lon, lat, site_name,
         asce_version, site_class, vs30
     """
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, siteid, asce_version, site_class, vs30 = res
+    lon, lat, site_name, asce_version, site_class, vs30 = res
+    # NOTE: the site_name is transformed into a description and a custom_site_id
+    description = f'AELO for {site_name}'
 
     # build a LogContext object associated to a database job
     try:
+        # NOTE: get_params_from transforms the site_name into a siteid
         params = get_params_from(
             dict(sites='%s %s' % (lon, lat),
                  asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=f'AELO for {siteid}'),
+                 description=description),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -1423,7 +1427,7 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, site_class, jobctx,
+        lon, lat, vs30, params['siteid'], description, asce_version, site_class, jobctx,
         job_owner_email, outputs_uri_web, config.directory.mosaic_dir,
         aelo_callback)).start()
     return JsonResponse(response_data, status=200)
