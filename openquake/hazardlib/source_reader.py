@@ -800,7 +800,7 @@ class CompositeSourceModel:
         N = len(sitecol)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
-        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
+        mb_per_gsim = oq.imtls.size * N * 12 / 1024**2  # 12 bytes per rate
         G = len(cmaker.gsims)
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight

@@ -59,7 +59,7 @@ def ratebytes(N, L, gid):
     :param L: number of levels (total)
     :param gid: array of indices in the range 0..Gt-1
     :returns: the size in bytes
-     """
+    """
     return rates_dt.itemsize * N * L * len(gid)
 
 
