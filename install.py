@@ -210,7 +210,7 @@ PLATFORM = {
 }
 DEMOS = "https://artifacts.openquake.org/travis/demos-master.zip"
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/b3.23-pre5/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
 
 
 def ensure(pip=None, pyvenv=None):
