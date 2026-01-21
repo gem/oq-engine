@@ -2,6 +2,8 @@
 include README.md LICENSE CONTRIBUTORS.txt
 # OpenQuake config file
 include openquake/engine/openquake.cfg
+# demos folder
+graft demos
 
 # OpenQuake server config examples
 include openquake/server/local_settings.py.pam
