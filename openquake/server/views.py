@@ -60,8 +60,8 @@ from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture_webmercator
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
-from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
@@ -1066,8 +1066,8 @@ def impact_get_rupture_data(request):
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
     elif rup is not None:
-        img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
-                                  return_base64=True)
+        img_base64 = plot_rupture_webmercator(rup, backend='Agg', figsize=(8, 8),
+                                              return_base64=True)
         rupdic['rupture_png'] = img_base64
     if request.user.level < 2 and 'warning_msg' in rupdic:
         # we don't want to show the warning to level 1 users

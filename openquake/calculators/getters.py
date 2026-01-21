@@ -52,7 +52,7 @@ def build_stat_curve(hcurve, imtls, stat, wget, use_rates=False):
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
-    
+
     if weights.shape[1] > 1:  # IMT-dependent weights
         # this is slower since the arrays are shorter
         for imt in imtls:
@@ -262,7 +262,7 @@ class CurveGetter(object):
         dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
         for sid in rates:
             dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
-        return dic                
+        return dic
 
     def __init__(self, sid, rates, trt_rlzs, R):
         self.sid = sid

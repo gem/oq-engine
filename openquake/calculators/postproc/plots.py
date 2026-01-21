@@ -20,6 +20,8 @@ import io
 import os
 import base64
 import numpy
+import contextily
+from pyproj import Transformer
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
@@ -31,6 +33,22 @@ def import_plt():
     else:
         import matplotlib.pyplot as plt
     return plt
+
+
+def add_basemap(ax, x_min, y_min, x_max, y_max,
+                source=contextily.providers.CartoDB.Positron):
+    # NOTE: another interesting option:
+    # source = contextily.providers.TopPlusOpen.Grey
+    img, extent = contextily.bounds2img(x_min, y_min, x_max, y_max, source=source)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
+    ax.text(
+        0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
+        source['attribution'],
+        transform=ax.transAxes,  # Place text relative to axes
+        fontsize=8, color="black", alpha=0.5,
+        ha="left",  # Horizontal alignment
+        va="bottom",  # Vertical alignment
+    )
 
 
 def auto_limits(ax):
@@ -127,22 +145,28 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
     title = 'Avg GMF for %s' % imt
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
-    markersize = 5
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
+    markersize = 0.005
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    x_webmercator, y_webmercator = transformer.transform(
+        shakemap_array['lon'], shakemap_array['lat'])
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
+                      alpha=0.4)
     plt.colorbar(coll)
     if rupture is not None:
-        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-                    surf_facecolor='none', surf_linestyle='--')
+        add_rupture_webmercator(
+            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=1,
+            surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, alpha=0.2)
-    adjust_limits(ax, xlim, ylim)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
+    adjust_limits(ax, xlim, ylim, padding=0.005)
     if with_cities:
         add_cities(ax, xlim, ylim)
     if return_base64:
@@ -155,10 +179,9 @@ def plot_avg_gmf(ex, imt):
     plt = import_plt()
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-
     title = 'Avg GMF for %s' % imt
     assetcol = get_assetcol(ex.calc_id)
     if assetcol is not None:
@@ -166,17 +189,19 @@ def plot_avg_gmf(ex, imt):
         if country_iso_codes is not None:
             title += ' (Countries: %s)' % country_iso_codes
     ax.set_title(title)
-
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
-                      s=markersize)
-    plt.colorbar(coll)
-
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    x_webmercator, y_webmercator = transformer.transform(
+        avg_gmf['lons'], avg_gmf['lats'])
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
+    plt.colorbar(coll, ax=ax)
     xlim, ylim = auto_limits(ax)
-    add_borders(ax)
-    adjust_limits(ax, xlim, ylim)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
+    adjust_limits(ax, xlim, ylim, padding=1E5)
     return plt
 
 
@@ -191,6 +216,21 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
     ax.fill(*surface.get_surface_boundaries(), **fill_params)
 
 
+def add_surface_webmercator(
+        ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    lon, lat = surface.get_surface_boundaries()
+    x, y = transformer.transform(lon, lat)  # Transform lat/lon to Web Mercator
+    fill_params = {
+        'alpha': alpha,
+        'edgecolor': 'grey',
+        'label': label
+    }
+    if facecolor is not None:
+        fill_params['facecolor'] = facecolor
+    ax.fill(x, y, **fill_params)
+
+
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
                 surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
@@ -203,6 +243,25 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
+
+
+def add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
+        surf_facecolor=None, surf_linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    if hasattr(rup.surface, 'surfaces'):
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            add_surface_webmercator(
+                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                facecolor=surf_facecolor, linestyle=surf_linestyle)
+    else:
+        add_surface_webmercator(
+            ax, rup.surface, 'Surface', alpha=surf_alpha,
+            facecolor=surf_facecolor, linestyle=surf_linestyle)
+    hypo_x, hypo_y = transformer.transform(rup.hypocenter.longitude,
+                                           rup.hypocenter.latitude)
+    ax.plot(hypo_x, hypo_y, marker='*', color='orange', label='Hypocenter',
+            alpha=hypo_alpha, linestyle='', markersize=hypo_markersize)
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
@@ -229,6 +288,31 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         add_cities(ax, xlim, ylim)
     adjust_limits(ax, xlim, ylim, padding=3)
     ax.legend()
+    if return_base64:
+        return plt_to_base64(plt)
+    else:
+        return plt
+
+
+def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10), return_base64=False):
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    if backend is not None:
+        # we may need to use a non-interactive backend
+        import matplotlib
+        matplotlib.use(backend)
+    _fig, ax = plt.subplots(figsize=figsize)
+    ax.set_aspect('equal')
+    # ax.grid(True)
+    add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.3,
+        surf_linestyle='--')
+    xlim, ylim = auto_limits(ax)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max,
+                source=contextily.providers.TopPlusOpen.Color)
+    adjust_limits(ax, xlim, ylim, padding=1E5)
     if return_base64:
         return plt_to_base64(plt)
     else:
