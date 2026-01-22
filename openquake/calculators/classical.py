@@ -63,19 +63,19 @@ def ratebytes(N, L, gid):
     return rates_dt.itemsize * N * L * len(gid)
 
 
-def gen_chunks(rates, num_chunks):
+def gen_chunks(sids, num_chunks):
     """
-    :yields: chunkno, chunk
+    :yields: chunkno, mask
     """
-    idxs = rates['sid'] % num_chunks  # indices in the range 0..num_chunks-1
+    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
     idx = numpy.unique(idxs)
     if len(idx) == 1:  # there is a single chunk
-        yield idx[0], rates
+        yield idx[0], slice(None)
     else:
         for i in idx:
-            chunk = rates[idxs == i]
-            if len(chunk):
-                yield i, chunk
+            ok = idxs == i
+            if ok.any():
+                yield i, ok
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
@@ -95,7 +95,8 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk, ch_rates in gen_chunks(rates, num_chunks):
+    for chunk, mask in gen_chunks(rates['sid'], num_chunks):
+        ch_rates = rates[mask]
         n = len(ch_rates)
         data['sid'].append(ch_rates['sid'])
         data['gid'].append(ch_rates['gid'])
@@ -153,10 +154,9 @@ def save_rates(g, N, jid, num_chunks, mon):
     with mon.shared['rates'] as rates:
         rates_g = rates[:, :, jid[g]]
         sids = numpy.arange(N)
-        for chunk in range(num_chunks):
-            ch = sids % num_chunks == chunk
-            rmap = MapArray(sids[ch], rates.shape[1], 1)
-            rmap.array = rates_g[ch, :, None]
+        for chunk, mask in gen_chunks(sids, num_chunks):
+            rmap = MapArray(sids[mask], rates.shape[1], 1)
+            rmap.array = rates_g[mask, :, None]
             rats = rmap.to_array([g])
             _store(rats, num_chunks, None, mon)
 
