@@ -332,7 +332,7 @@ def install_standalone(venv):
 def postinstall_standalone(venv):
     return install_or_postinstall_standalone(venv, is_install=False)
 
-def before_checks(inst, venv, port, remove, usage):
+def before_checks(inst, venv, port, remove, no_venv, usage):
     """
     Checks to perform before the installation
     """
@@ -340,6 +340,10 @@ def before_checks(inst, venv, port, remove, usage):
         inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
+
+    if no_venv:
+        inst.VENV = os.path.join(os.getenv('LocalAppData'), 'Programs',
+                                 'OpenQuake Engine', 'python3')
 
     # check platform
     if (inst is server and sys.platform != "linux") or (
@@ -457,8 +461,7 @@ def install(inst, version, from_fork, no_venv):
         else:
             pycmd = inst.VENV + "/bin/python3"
     else:
-        pycmd = os.path.join(os.getenv('LocalAppData'), 'Programs',
-                             'OpenQuake Engine', 'python3', 'python.exe')
+        pycmd = os.path.join(inst.VENV, 'python.exe')
     # upgrade pip and before check that it is installed in venv
     if sys.platform != "win32":
         ensure(pip=pycmd)
@@ -668,7 +671,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove,
+        before_checks(inst, args.venv, args.dbport, args.remove, args.no_venv,
                       parser.format_usage())
         if args.remove:
             remove(inst)
