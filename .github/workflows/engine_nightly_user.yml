@@ -41,7 +41,15 @@ jobs:
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
-          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
+          # Resolve demos branch:
+          # PyPI LTS installs do not correspond to a Git ref;
+          # demos are taken from the matching engine-* branch.
+          if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
+              RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
+          else
+              RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
+          fi
+          curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
@@ -63,7 +71,6 @@ jobs:
           echo "Test WebUI with curl "
           sleep 1
           curl --fail -L -I -X GET http://127.0.0.1:8800
-
           # Run all demos
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
