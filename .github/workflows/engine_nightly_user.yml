@@ -41,7 +41,7 @@ jobs:
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
-          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
