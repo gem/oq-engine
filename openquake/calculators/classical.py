@@ -502,8 +502,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
                 mean_rates_by_src, dic)
 
-        # create empty dataframes
         self.num_chunks = getters.get_num_chunks(self.datastore)
+        logging.info('Using num_chunks=', self.num_chunks)
+
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
