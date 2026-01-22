@@ -29,7 +29,7 @@ jobs:
         # engine-ref values:
         # - Git branches: master, engine-X.Y
         # - current LTS released on PyPI (TODO: keep the LTS version updated)
-        # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed 
+        # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed
         # after the maxtrix
         engine-ref: ["master", "engine-3.23", "engine-3.24", "3.23"]
     if: github.event.inputs.git-ref == ''
@@ -41,7 +41,7 @@ jobs:
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
-          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
@@ -94,7 +94,7 @@ jobs:
       - name: Install OQ (Custom Ref)
         run: |
           set -x
-          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ github.event.inputs.git-ref }}/install.py
           python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
