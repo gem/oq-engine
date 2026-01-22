@@ -28,13 +28,14 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -52,30 +53,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
-
-def ratebytes(N, L, gid):
-    """
-    :param N: number of sites (in a tile)
-    :param L: number of levels (total)
-    :param gid: array of indices in the range 0..Gt-1
-    :returns: the size in bytes
-     """
-    return rates_dt.itemsize * N * L * len(gid)
-
-
-def gen_chunks(sids, num_chunks):
-    """
-    :yields: chunkno, mask
-    """
-    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
-    idx = numpy.unique(idxs)
-    if len(idx) == 1:  # there is a single chunk
-        yield idx[0], slice(None)
-    else:
-        for i in idx:
-            ok = idxs == i
-            if ok.any():
-                yield i, ok
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
@@ -95,7 +72,13 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk, mask in gen_chunks(rates['sid'], num_chunks):
+    # NB: for unknown reasons the postclassical becomes 5x slower
+    # if you enter in the `if` branch :-(
+    # if isinstance(mon, U32):  # chunk number
+    #    pairs = [(mon, slice(None))]  # single chunk
+    # else:
+    pairs = gen_chunks(rates['sid'], num_chunks)
+    for chunk, mask in pairs:
         ch_rates = rates[mask]
         n = len(ch_rates)
         data['sid'].append(ch_rates['sid'])
@@ -228,14 +211,19 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    # NB: using general.getsizeof I proved that the size of the result is
+    # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
     rmap = result.pop('rmap').remove_zeros()
-    # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
+    yield result  # metadata without the rates
     if config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, num_chunks, None, monitor)
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            _store(rates, num_chunks, None, monitor)
     else:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    return result
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            res = {'rmap': rates, 'grp_id': result['grp_id'],
+                   'chunkno': no, 'cfactor': numpy.zeros(2),
+                   'dparam_mb': 0., 'source_mb': 0.}
+            yield res
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -445,7 +433,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore)
+                _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap += rmap
@@ -516,8 +504,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
                 mean_rates_by_src, dic)
 
-        # create empty dataframes
         self.num_chunks = getters.get_num_chunks(self.datastore)
+        logging.info('Using num_chunks=%d', self.num_chunks)
+
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
@@ -628,8 +617,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        sum(n_out), len(allargs), min(n_out), max(n_out))
+                        '%d tasks, min_tiles=%d, max_tiles=%d', sum(n_out),
+                        len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
@@ -650,8 +639,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        rbytes = []
-        L = self.oqparam.imtls.size
         for cmaker, tgetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
@@ -660,13 +647,10 @@ class ClassicalCalculator(base.HazardCalculator):
             for tgetter in tgetters:
                 T = tgetter.get_tile_size(self.sitecol)
                 allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
-                rbytes.append(ratebytes(T, L, cmaker.gid))
             n_out.append(len(tgetters))
-        max_rbytes = max(rbytes)
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         len(allargs), min(n_out), max(n_out))
-        logging.info(f'At max {humansize(max_rbytes)} will be stored per task')
 
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
