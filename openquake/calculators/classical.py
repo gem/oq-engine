@@ -640,6 +640,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tgetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
+            cmaker.tiling = True
             if isinstance(block, int):
                 block = [block]
             for tgetter in tgetters:

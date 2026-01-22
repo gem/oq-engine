@@ -1468,6 +1468,7 @@ class RmapMaker(object):
     def __init__(self, cmaker, sitecol, group):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
+        self.tiling = getattr(cmaker, 'tiling', False)
         if hasattr(sitecol, 'sitecol'):
             self.srcfilter = sitecol
         else:
@@ -1568,16 +1569,17 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
-        for src in self.sources:
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(src.nsites)
-            self.source_data['esites'].append(src.esites)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(
-                dt * src.nsites / totlen if totlen else dt / nsrcs)
-            self.source_data['taskno'].append(cm.task_no)
+        if not self.tiling:
+            for src in self.sources:
+                self.source_data['src_id'].append(src.source_id)
+                self.source_data['grp_id'].append(src.grp_id)
+                self.source_data['nsites'].append(src.nsites)
+                self.source_data['esites'].append(src.esites)
+                self.source_data['nrupts'].append(src.num_ruptures)
+                self.source_data['weight'].append(src.weight)
+                self.source_data['ctimes'].append(
+                    dt * src.nsites / totlen if totlen else dt / nsrcs)
+                self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
@@ -1614,14 +1616,15 @@ class RmapMaker(object):
             weight += src.weight
         pmap.array *= self.grp_probability
         dt = time.time() - t0
-        self.source_data['src_id'].append(valid.basename(src))
-        self.source_data['grp_id'].append(src.grp_id)
-        self.source_data['nsites'].append(nsites)
-        self.source_data['esites'].append(esites)
-        self.source_data['nrupts'].append(nctxs)
-        self.source_data['weight'].append(weight)
-        self.source_data['ctimes'].append(dt)
-        self.source_data['taskno'].append(cm.task_no)
+        if not self.tiling:
+            self.source_data['src_id'].append(valid.basename(src))
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nsites'].append(nsites)
+            self.source_data['esites'].append(esites)
+            self.source_data['nrupts'].append(nctxs)
+            self.source_data['weight'].append(weight)
+            self.source_data['ctimes'].append(dt)
+            self.source_data['taskno'].append(cm.task_no)
         return ~pmap
 
     def make(self):
