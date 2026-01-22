@@ -424,7 +424,7 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
-def install(inst, version, from_fork, keepvenv):
+def install(inst, version, from_fork, no_venv):
     """
     Install the engine in one of the three possible modes
     """
@@ -444,19 +444,21 @@ def install(inst, version, from_fork, keepvenv):
         if inst is server or inst is devel_server:
             subprocess.check_call(["chown", "openquake", inst.OQDATA])
 
-    if not keepvenv:
+    if not no_venv:
         # recreate the openquake venv
         ensure(pyvenv=inst.VENV)
         print("Created %s" % inst.VENV)
 
-    if sys.platform == "win32":
-        if os.path.exists("python\\python._pth.old"):
-            pycmd = inst.VENV + "\\python.exe"
+        if sys.platform == "win32":
+            if os.path.exists("python\\python._pth.old"):
+                pycmd = inst.VENV + "\\python.exe"
+            else:
+                pycmd = inst.VENV + "\\Scripts\\python.exe"
         else:
-            pycmd = inst.VENV + "\\Scripts\\python.exe"
+            pycmd = inst.VENV + "/bin/python3"
     else:
-        pycmd = inst.VENV + "/bin/python3"
-
+        pycmd = os.path.join(os.getenv('LocalAppData'), 'Programs',
+                             'OpenQuake Engine', 'python3', 'python.exe')
     # upgrade pip and before check that it is installed in venv
     if sys.platform != "win32":
         ensure(pip=pycmd)
@@ -651,7 +653,7 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
-    parser.add_argument("--keepvenv", action="store_false",
+    parser.add_argument("--no-venv", action="store_false",
                         help="keep the current virtual environment")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
@@ -671,7 +673,7 @@ if __name__ == "__main__":
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.keepvenv)
+            errors = install(inst, args.version, args.from_fork, args.no_venv)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
