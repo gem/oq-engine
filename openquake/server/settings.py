@@ -225,8 +225,8 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
-# IMPACT_DEFAULT_USGS_ID = ''
-IMPACT_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
+IMPACT_DEFAULT_USGS_ID = ''
+# IMPACT_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # IMPACT_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
 
 EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
