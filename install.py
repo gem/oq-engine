@@ -424,7 +424,7 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
-def install(inst, version, from_fork):
+def install(inst, version, from_fork, keepvenv):
     """
     Install the engine in one of the three possible modes
     """
@@ -444,9 +444,10 @@ def install(inst, version, from_fork):
         if inst is server or inst is devel_server:
             subprocess.check_call(["chown", "openquake", inst.OQDATA])
 
-    # recreate the openquake venv
-    ensure(pyvenv=inst.VENV)
-    print("Created %s" % inst.VENV)
+    if not keepvenv:
+        # recreate the openquake venv
+        ensure(pyvenv=inst.VENV)
+        print("Created %s" % inst.VENV)
 
     if sys.platform == "win32":
         if os.path.exists("python\\python._pth.old"):
@@ -650,6 +651,8 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
+    parser.add_argument("--keepvenv", action="store_false",
+                        help="keep the current virtual environment")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version", help="version to install (default stable)")
@@ -668,7 +671,7 @@ if __name__ == "__main__":
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork)
+            errors = install(inst, args.version, args.from_fork, args.keepvenv)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
