@@ -72,10 +72,12 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    if isinstance(mon, U32):  # chunk number
-        pairs = [(mon, slice(None))]  # single chunk
-    else:
-        pairs = gen_chunks(rates['sid'], num_chunks)
+    # NB: for unknown reasons the postclassical becomes 5x slower
+    # if you enter in the `if` branch :-(
+    # if isinstance(mon, U32):  # chunk number
+    #    pairs = [(mon, slice(None))]  # single chunk
+    # else:
+    pairs = gen_chunks(rates['sid'], num_chunks)
     for chunk, mask in pairs:
         ch_rates = rates[mask]
         n = len(ch_rates)
