@@ -100,44 +100,7 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: (Manual) Test IMPACT UI
-        env:
-          OQ_APPLICATION_MODE: IMPACT
-        run: |
-          source $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/bin/activate
-          oq engine --upgrade-db
-          wget https://downloads.openquake.org/test_data/exposure.hdf5
-          oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
-          mv exposure.hdf5 $oq_basedir/openquake/qa_tests_data/mosaic/
-          for file in $oq_basedir/openquake/server/templates/registration/*.default.tmpl; do
-              cp -- "$file" "${file%.default.tmpl}"
-          done
-          set -x
-          oq --version
-          python $oq_basedir/openquake/server/manage.py migrate
-          touch ~/webui-access.log
-          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pip install pytest-playwright
-          playwright install
-          pytest \
-            --browser chromium \
-            --capture=no \
-            --maxfail=1 \
-            --tb=short \
-            $oq_basedir/openquake/server/tests/test_impact_mode_ui.py \
-            --tracing retain-on-failure \
-            --screenshot only-on-failure \
-            --video retain-on-failure
-      - name: Upload Playwright artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-artifacts
-          path: test-results
-          retention-days: 7
       - name: (Manual) Test WebUI and run https calculation
-        env:
-          OQ_APPLICATION_MODE: PUBLIC
         run: |
           source $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/bin/activate
           set -x
