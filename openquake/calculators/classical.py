@@ -245,7 +245,6 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
             result['rmap'] = rates[mask]
             result['chunkno'] = no
             yield result
-    return result
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
