@@ -72,7 +72,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    if isinstance(mon, int):  # chunk number
+    if isinstance(mon, U32):  # chunk number
         pairs = [(mon, slice(None))]  # single chunk
     else:
         pairs = gen_chunks(rates['sid'], num_chunks)
