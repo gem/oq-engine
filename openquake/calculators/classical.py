@@ -614,8 +614,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks, max_tiles=%d', sum(n_out),
-                        len(allargs), max(n_out))
+                        '%d tasks, min_tiles=%d, max_tiles=%d', sum(n_out),
+                        len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
