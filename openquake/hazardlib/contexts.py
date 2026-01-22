@@ -1543,11 +1543,10 @@ class RmapMaker(object):
         totlen = 0
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
-        # using most memory here, limited by tiling
+        # using memory here, limited by tiling and pmap_max_mb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
-        print(f'{pnemap.size_mb=}')
         for src in self.sources:
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
@@ -1556,6 +1555,7 @@ class RmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
+                    # allctxs is at most a few dozens of MB
                     for ctx in concat(allctxs):
                         cm.update(pnemap, ctx)
                     allctxs.clear()
