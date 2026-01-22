@@ -50,15 +50,18 @@ def gen_chunks(sids, num_chunks):
     """
     :yields: chunkno, mask
     """
-    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
-    idx = numpy.unique(idxs)
-    if len(idx) == 1:  # there is a single chunk
-        yield idx[0], slice(None)
+    if num_chunks == 1:
+        yield 0, slice(None)
     else:
-        for i in idx:
-            ok = idxs == i
-            if ok.any():
-                yield i, ok
+        idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+        idx = numpy.unique(idxs)
+        if len(idx) == 1:  # there is a single chunk
+            yield idx[0], slice(None)
+        else:
+            for i in idx:
+                ok = idxs == i
+                if ok.any():
+                    yield i, ok
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -395,7 +398,7 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        _no, rates = self.gen_chunks(gid, 1)
+        [(_no, rates)] = self.gen_rates(gid, 1)
         return rates
 
     def gen_rates(self, gid, num_chunks):
