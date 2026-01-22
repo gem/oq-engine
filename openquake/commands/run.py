@@ -117,7 +117,7 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    if job_ini.endswith('.ini'):
+    if job_ini.endswith(('.ini', '.zip')):
         mode = 'ini'
     elif job_ini.endswith('.toml'):
         mode = 'toml'

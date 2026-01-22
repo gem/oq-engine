@@ -121,6 +121,12 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
+    def get_tile_size(self, complete):
+        """
+        :returns: how many sites per tile (at max)
+        """
+        return int(numpy.ceil(len(complete) / self.ntiles))
+
     def __call__(self, complete, ilabel=None):
         if self.ntiles == 1 and ilabel is None:
             return complete

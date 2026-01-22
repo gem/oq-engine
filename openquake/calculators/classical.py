@@ -28,13 +28,14 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -56,13 +57,11 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
-    if len(rates) == 0:
-        return
+    logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
-    chunks = rates['sid'] % num_chunks
     data = AccumDict(accum=[])
     try:
         h5.create_df(
@@ -73,11 +72,13 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk in numpy.arange(num_chunks):
-        ch_rates = rates[chunks == chunk]
+    if isinstance(mon, U32):  # chunk number
+        pairs = [(mon, slice(None))]  # single chunk
+    else:
+        pairs = gen_chunks(rates['sid'], num_chunks)
+    for chunk, mask in pairs:
+        ch_rates = rates[mask]
         n = len(ch_rates)
-        if n == 0:
-            continue
         data['sid'].append(ch_rates['sid'])
         data['gid'].append(ch_rates['gid'])
         data['lid'].append(ch_rates['lid'])
@@ -134,10 +135,9 @@ def save_rates(g, N, jid, num_chunks, mon):
     with mon.shared['rates'] as rates:
         rates_g = rates[:, :, jid[g]]
         sids = numpy.arange(N)
-        for chunk in range(num_chunks):
-            ch = sids % num_chunks == chunk
-            rmap = MapArray(sids[ch], rates.shape[1], 1)
-            rmap.array = rates_g[ch, :, None]
+        for chunk, mask in gen_chunks(sids, num_chunks):
+            rmap = MapArray(sids[mask], rates.shape[1], 1)
+            rmap.array = rates_g[mask, :, None]
             rats = rmap.to_array([g])
             _store(rats, num_chunks, None, mon)
 
@@ -209,13 +209,19 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    # NB: using general.getsizeof I proved that the size of the result is
+    # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
     rmap = result.pop('rmap').remove_zeros()
+    yield result  # metadata without the rates
     if config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, num_chunks, None, monitor)
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            _store(rates, num_chunks, None, monitor)
     else:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    return result
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            res = {'rmap': rates, 'grp_id': result['grp_id'],
+                   'chunkno': no, 'cfactor': numpy.zeros(2),
+                   'dparam_mb': 0., 'source_mb': 0.}
+            yield res
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -425,7 +431,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore)
+                _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap += rmap
@@ -496,8 +502,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
                 mean_rates_by_src, dic)
 
-        # create empty dataframes
         self.num_chunks = getters.get_num_chunks(self.datastore)
+        logging.info('Using num_chunks=%d', self.num_chunks)
+
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
@@ -608,8 +615,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        sum(n_out), len(allargs), min(n_out), max(n_out))
+                        '%d tasks, min_tiles=%d, max_tiles=%d', sum(n_out),
+                        len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
@@ -636,6 +643,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if isinstance(block, int):
                 block = [block]
             for tgetter in tgetters:
+                T = tgetter.get_tile_size(self.sitecol)
                 allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
             n_out.append(len(tgetters))
         logging.warning('This is a tiling calculation with '

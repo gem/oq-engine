@@ -46,6 +46,24 @@ def combine_probs(array, other, rlzs):
                     1. - (1. - array[li, ri]) * (1. - other[li]))
 
 
+def gen_chunks(sids, num_chunks):
+    """
+    :yields: chunkno, mask
+    """
+    if num_chunks == 1:
+        yield 0, slice(None)
+    else:
+        idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+        idx = numpy.unique(idxs)
+        if len(idx) == 1:  # there is a single chunk
+            yield idx[0], slice(None)
+        else:
+            for i in idx:
+                ok = idxs == i
+                if ok.any():
+                    yield i, ok
+
+
 def get_mean_curve(dstore, imt, site_id=0):
     """
     Extract the mean hazard curve from the datastore for the first site.
@@ -380,15 +398,24 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if len(gid) == 0:
-            return numpy.array([], rates_dt)
-        outs = []
-        for i, g in enumerate(gid):
-            rates_g = self.array[:, :, i]
-            outs.append(from_rates_g(rates_g, g, self.sids))
-        if len(outs) == 1:
-            return outs[0]
-        return numpy.concatenate(outs, dtype=rates_dt)
+        [(_no, rates)] = self.gen_rates(gid, 1)
+        return rates
+
+    def gen_rates(self, gid, num_chunks):
+        """
+        :yields: pairs (chunkno, rates for that chunck of sites)
+        """
+        for no, mask in gen_chunks(self.sids, num_chunks):
+            sids = self.sids[mask]
+            outs = []
+            for i, g in enumerate(gid):
+                rates = from_rates_g(self.array[mask, :, i], g, sids)
+                outs.append(rates)
+            if len(outs) == 1:
+                yield no, outs[0]
+            else:
+                out = numpy.concatenate(outs, dtype=rates_dt)
+                yield no, out
 
     def interp4D(self, imtls, poes):
         """
@@ -501,6 +528,8 @@ def from_rates_g(rates_g, g, sids):
     :param g: an integer representing a GSIM index
     :param sids: an array of site IDs
     """
+    # sanity check
+    assert len(rates_g) == len(sids), (len(rates_g), len(sids))
     outs = []
     for lid, rates in enumerate(rates_g.T):
         idxs, = rates.nonzero()
