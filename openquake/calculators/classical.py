@@ -95,7 +95,11 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk, mask in gen_chunks(rates['sid'], num_chunks):
+    if isinstance(mon, int):  # chunk number
+        pairs = [(mon, slice(None))]  # single chunk
+    else:
+        pairs = gen_chunks(rates['sid'], num_chunks)
+    for chunk, mask in pairs:
         ch_rates = rates[mask]
         n = len(ch_rates)
         data['sid'].append(ch_rates['sid'])
@@ -232,9 +236,15 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
-        _store(rates, num_chunks, None, monitor)
+        for no, mask in gen_chunks(rates['sid'], num_chunks):
+            _store(rates[mask], num_chunks, None, monitor)
+        yield result
     else:
-        result['rmap'] = rmap.to_array(cmaker.gid)
+        rates = rmap.to_array(cmaker.gid)
+        for no, mask in gen_chunks(rates['sid'], num_chunks):
+            result['rmap'] = rates[mask]
+            result['chunkno'] = no
+            yield result
     return result
 
 
@@ -445,7 +455,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore)
+                _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap += rmap
