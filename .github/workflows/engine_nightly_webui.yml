@@ -1,0 +1,84 @@
+name: WebUI frontend UI tests
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+  schedule:
+    - cron: "30 23 * * *"
+
+jobs:
+  server_impact_mode:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11", "3.12"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      OQ_APPLICATION_MODE: IMPACT
+    steps:
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
+      - name: Server 'IMPACT' mode tests
+        run: |
+          set -x
+          date
+          wget https://downloads.openquake.org/test_data/exposure.hdf5
+          date
+          mv exposure.hdf5 openquake/qa_tests_data/mosaic/
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          ./openquake/server/manage.py migrate
+          touch ~/webui-access.log
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_impact_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: test-results
+          retention-days: 7

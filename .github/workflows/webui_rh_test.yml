@@ -92,15 +92,6 @@ jobs:
         for file in openquake/server/templates/registration/*.default.tmpl; do
             cp -- "$file" "${file%.default.tmpl}"
         done
-    - name: IMPACT UI
-      env:
-        OQ_APPLICATION_MODE: IMPACT
-      run: |
-         set -o pipefail
-         source /opt/openquake/venv/bin/activate
-         runuser -l openquake -c 'echo $OQ_APPLICATION_MODE'
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
-         exit 1
     - name: WebUI and calculation with Auth
       run: |
          set -o pipefail
