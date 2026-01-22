@@ -34,7 +34,7 @@ from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -61,21 +61,6 @@ def ratebytes(N, L, gid):
     :returns: the size in bytes
      """
     return rates_dt.itemsize * N * L * len(gid)
-
-
-def gen_chunks(sids, num_chunks):
-    """
-    :yields: chunkno, mask
-    """
-    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
-    idx = numpy.unique(idxs)
-    if len(idx) == 1:  # there is a single chunk
-        yield idx[0], slice(None)
-    else:
-        for i in idx:
-            ok = idxs == i
-            if ok.any():
-                yield i, ok
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
@@ -235,14 +220,12 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     rmap = result.pop('rmap').remove_zeros()
     # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
     if config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        for no, mask in gen_chunks(rates['sid'], num_chunks):
-            _store(rates[mask], num_chunks, None, monitor)
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            _store(rates, num_chunks, None, monitor)
         yield result
     else:
-        rates = rmap.to_array(cmaker.gid)
-        for no, mask in gen_chunks(rates['sid'], num_chunks):
-            result['rmap'] = rates[mask]
+        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
+            result['rmap'] = rates
             result['chunkno'] = no
             yield result
 

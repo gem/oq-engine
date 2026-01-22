@@ -46,6 +46,21 @@ def combine_probs(array, other, rlzs):
                     1. - (1. - array[li, ri]) * (1. - other[li]))
 
 
+def gen_chunks(sids, num_chunks):
+    """
+    :yields: chunkno, mask
+    """
+    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+    idx = numpy.unique(idxs)
+    if len(idx) == 1:  # there is a single chunk
+        yield idx[0], slice(None)
+    else:
+        for i in idx:
+            ok = idxs == i
+            if ok.any():
+                yield i, ok
+
+
 def get_mean_curve(dstore, imt, site_id=0):
     """
     Extract the mean hazard curve from the datastore for the first site.
@@ -380,15 +395,21 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if len(gid) == 0:
-            return numpy.array([], rates_dt)
-        outs = []
-        for i, g in enumerate(gid):
-            rates_g = self.array[:, :, i]
-            outs.append(from_rates_g(rates_g, g, self.sids))
-        if len(outs) == 1:
-            return outs[0]
-        return numpy.concatenate(outs, dtype=rates_dt)
+        _no, rates = self.gen_chunks(gid, 1)
+        return rates
+
+    def gen_rates(self, gid, num_chunks):
+        """
+        :yields: pairs (chunkno, rates for that chunck of sites)
+        """
+        for no, mask in gen_chunks(self.sids, num_chunks):
+            outs = []
+            for i, g in enumerate(gid):
+                outs.append(from_rates_g(self.array[mask, :, i], g, self.sids))
+            if len(outs) == 1:
+                yield no, outs[0]
+            else:
+                yield no, numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
