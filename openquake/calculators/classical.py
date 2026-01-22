@@ -28,7 +28,8 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
+from openquake.baselib.general import (
+    AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -208,6 +209,8 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    # NB: using general.getsizeof I proved that the size of the result is
+    # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
     rmap = result.pop('rmap').remove_zeros()
     yield result  # metadata without the rates
     if config.directory.custom_tmp:
