@@ -53,15 +53,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 
-def ratebytes(N, L, gid):
-    """
-    :param N: number of sites (in a tile)
-    :param L: number of levels (total)
-    :param gid: array of indices in the range 0..Gt-1
-    :returns: the size in bytes
-     """
-    return rates_dt.itemsize * N * L * len(gid)
-
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
@@ -642,8 +633,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        rbytes = []
-        L = self.oqparam.imtls.size
         for cmaker, tgetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
@@ -652,13 +641,10 @@ class ClassicalCalculator(base.HazardCalculator):
             for tgetter in tgetters:
                 T = tgetter.get_tile_size(self.sitecol)
                 allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
-                rbytes.append(ratebytes(T, L, cmaker.gid))
             n_out.append(len(tgetters))
-        max_rbytes = max(rbytes)
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         len(allargs), min(n_out), max(n_out))
-        logging.info(f'At max {humansize(max_rbytes)} will be stored per task')
 
         t0 = time.time()
         self.datastore.swmr_on()  # must come before the Starmap
