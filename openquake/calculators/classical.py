@@ -63,16 +63,28 @@ def ratebytes(N, L, gid):
     return rates_dt.itemsize * N * L * len(gid)
 
 
+def gen_chunks(sids, num_chunks):
+    """
+    :yields: chunkno, mask
+    """
+    idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+    idx = numpy.unique(idxs)
+    if len(idx) == 1:  # there is a single chunk
+        yield idx[0], slice(None)
+    else:
+        for i in idx:
+            ok = idxs == i
+            if ok.any():
+                yield i, ok
+
+
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
-    if len(rates) == 0:
-        return
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
-    chunks = rates['sid'] % num_chunks
     data = AccumDict(accum=[])
     try:
         h5.create_df(
@@ -83,11 +95,9 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk in numpy.arange(num_chunks):
-        ch_rates = rates[chunks == chunk]
+    for chunk, mask in gen_chunks(rates['sid'], num_chunks):
+        ch_rates = rates[mask]
         n = len(ch_rates)
-        if n == 0:
-            continue
         data['sid'].append(ch_rates['sid'])
         data['gid'].append(ch_rates['gid'])
         data['lid'].append(ch_rates['lid'])
@@ -144,10 +154,9 @@ def save_rates(g, N, jid, num_chunks, mon):
     with mon.shared['rates'] as rates:
         rates_g = rates[:, :, jid[g]]
         sids = numpy.arange(N)
-        for chunk in range(num_chunks):
-            ch = sids % num_chunks == chunk
-            rmap = MapArray(sids[ch], rates.shape[1], 1)
-            rmap.array = rates_g[ch, :, None]
+        for chunk, mask in gen_chunks(sids, num_chunks):
+            rmap = MapArray(sids[mask], rates.shape[1], 1)
+            rmap.array = rates_g[mask, :, None]
             rats = rmap.to_array([g])
             _store(rats, num_chunks, None, mon)
 
