@@ -406,13 +406,16 @@ class MapArray(object):
         :yields: pairs (chunkno, rates for that chunck of sites)
         """
         for no, mask in gen_chunks(self.sids, num_chunks):
+            sids = self.sids[mask]
             outs = []
             for i, g in enumerate(gid):
-                outs.append(from_rates_g(self.array[mask, :, i], g, self.sids))
+                rates = from_rates_g(self.array[mask, :, i], g, sids)
+                outs.append(rates)
             if len(outs) == 1:
                 yield no, outs[0]
             else:
-                yield no, numpy.concatenate(outs, dtype=rates_dt)
+                out = numpy.concatenate(outs, dtype=rates_dt)
+                yield no, out
 
     def interp4D(self, imtls, poes):
         """
@@ -525,6 +528,8 @@ def from_rates_g(rates_g, g, sids):
     :param g: an integer representing a GSIM index
     :param sids: an array of site IDs
     """
+    # sanity check
+    assert len(rates_g) == len(sids), (len(rates_g), len(sids))
     outs = []
     for lid, rates in enumerate(rates_g.T):
         idxs, = rates.nonzero()
