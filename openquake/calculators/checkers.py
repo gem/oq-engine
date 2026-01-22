@@ -77,7 +77,7 @@ def assert_close(tbl, fname, atol=1E-5, rtol=1E-4):
 
 
 def check(ini, hc_id=None, exports='', what='', prefix='',
-          atol=1E-5, rtol=1E-4, tiling=False):
+          atol=1E-5, rtol=1E-4, tiling=None):
     """
     Perform a calculation and compare a view ("what") with the content of
     a corrisponding file (.txt or .org).
