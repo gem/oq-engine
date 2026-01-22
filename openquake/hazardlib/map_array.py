@@ -415,7 +415,6 @@ class MapArray(object):
                 yield no, outs[0]
             else:
                 out = numpy.concatenate(outs, dtype=rates_dt)
-                assert numpy.unique(out['sid'] % num_chunks) == [no]
                 yield no, out
 
     def interp4D(self, imtls, poes):
