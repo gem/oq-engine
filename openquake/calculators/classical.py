@@ -209,16 +209,16 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
     rmap = result.pop('rmap').remove_zeros()
-    # NB: rmap.to_array(gid) is consuming memory, up to max_rbytes
+    yield result  # metadata without the rates
     if config.directory.custom_tmp:
         for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
             _store(rates, num_chunks, None, monitor)
-        yield result
     else:
         for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
-            result['rmap'] = rates
-            result['chunkno'] = no
-            yield result
+            res = {'rmap': rates, 'grp_id': result['grp_id'],
+                   'chunkno': no, 'cfactor': numpy.zeros(2),
+                   'dparam_mb': 0, 'source_mb': 0}
+            yield res
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
