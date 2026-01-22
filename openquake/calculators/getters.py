@@ -175,11 +175,11 @@ def get_num_chunks(dstore):
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2:
         return N
-    elif req_gb > ct2:
-        return int(req_gb)
+    elif req_gb > ct2 / 2:
+        return int(req_gb) * 2
     return ct2
     # for EUR on cole concurrent_tasks=256
-    # req_gb=202, N=260,000 and we get req_gb
+    # req_gb=202, N=260,000 and we get 404 chunks
 
 
 def map_getters(dstore, full_lt=None, disagg=False):

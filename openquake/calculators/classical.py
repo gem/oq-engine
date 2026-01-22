@@ -640,10 +640,10 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tgetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
+            cmaker.tiling = True
             if isinstance(block, int):
                 block = [block]
             for tgetter in tgetters:
-                T = tgetter.get_tile_size(self.sitecol)
                 allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
             n_out.append(len(tgetters))
         logging.warning('This is a tiling calculation with '
