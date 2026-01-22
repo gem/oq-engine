@@ -503,7 +503,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         self.num_chunks = getters.get_num_chunks(self.datastore)
-        logging.info('Using num_chunks=', self.num_chunks)
+        logging.info('Using num_chunks=%d', self.num_chunks)
 
         # create empty dataframes
         self.datastore.create_df(
