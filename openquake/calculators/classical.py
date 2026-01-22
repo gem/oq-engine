@@ -63,16 +63,28 @@ def ratebytes(N, L, gid):
     return rates_dt.itemsize * N * L * len(gid)
 
 
+def gen_chunks(rates, num_chunks):
+    """
+    :yields: chunkno, chunk
+    """
+    idxs = rates['sid'] % num_chunks  # indices in the range 0..num_chunks-1
+    idx = numpy.unique(idxs)
+    if len(idx) == 1:  # there is a single chunk
+        yield idx[0], rates
+    else:
+        for i in idx:
+            chunk = rates[idxs == i]
+            if len(chunk):
+                yield i, chunk
+
+
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
-    if len(rates) == 0:
-        return
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
         scratch = parallel.scratch_dir(mon.calc_id)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
-    chunks = rates['sid'] % num_chunks
     data = AccumDict(accum=[])
     try:
         h5.create_df(
@@ -83,11 +95,8 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     else:
         offset = 0
     idx_start_stop = []
-    for chunk in numpy.arange(num_chunks):
-        ch_rates = rates[chunks == chunk]
+    for chunk, ch_rates in gen_chunks(rates, num_chunks):
         n = len(ch_rates)
-        if n == 0:
-            continue
         data['sid'].append(ch_rates['sid'])
         data['gid'].append(ch_rates['gid'])
         data['lid'].append(ch_rates['lid'])
