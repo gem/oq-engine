@@ -19,7 +19,8 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
+
 
 if sys.version_info < (3, 9):
     sys.exit('Sorry, Python < 3.9 is not supported')
@@ -112,11 +113,16 @@ setup(
         'Environment :: Console',
         'Environment :: Web Environment',
     ],
-    packages=find_packages(exclude=["qa_tests", "qa_tests.*",
-                                    "tools",
-                                    "*.*.tests", "*.*.tests.*",
-                                    "openquake.engine.bin",
-                                    "openquake.engine.bin.*"]),
+    packages=find_namespace_packages(include=[
+                                         "openquake.*",
+                                     ],
+                                     exclude=[
+                                         "qa_tests", "qa_tests.*",
+                                         "tools",
+                                         "*.*.tests", "*.*.tests.*",
+                                         "openquake.engine.bin",
+                                         "openquake.engine.bin.*",
+                                     ]),
     py_modules=PY_MODULES,
     include_package_data=True,
     package_data={"openquake.engine": [
