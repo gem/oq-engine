@@ -217,7 +217,7 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
         for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
             res = {'rmap': rates, 'grp_id': result['grp_id'],
                    'chunkno': no, 'cfactor': numpy.zeros(2),
-                   'dparam_mb': 0, 'source_mb': 0}
+                   'dparam_mb': 0., 'source_mb': 0.}
             yield res
 
 
@@ -611,8 +611,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        sum(n_out), len(allargs), min(n_out), max(n_out))
+                        '%d tasks, max_tiles=%d', sum(n_out),
+                        len(allargs), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
