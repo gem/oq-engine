@@ -98,7 +98,7 @@ jobs:
       run: |
          set -o pipefail
          source /opt/openquake/venv/bin/activate
-         runuser -l openquake -c 'printenv'
+         runuser -l openquake -c '/usr/bin/printenv'
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
          exit 1
     - name: WebUI and calculation with Auth
