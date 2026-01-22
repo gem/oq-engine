@@ -332,7 +332,7 @@ def install_standalone(venv):
 def postinstall_standalone(venv):
     return install_or_postinstall_standalone(venv, is_install=False)
 
-def before_checks(inst, venv, port, remove, no_venv, usage):
+def before_checks(inst, venv, port, remove, novenv, usage):
     """
     Checks to perform before the installation
     """
@@ -341,7 +341,7 @@ def before_checks(inst, venv, port, remove, no_venv, usage):
     if port:
         inst.DBPORT = int(port)
 
-    if no_venv:
+    if novenv:
         inst.VENV = os.path.join(os.getenv('LocalAppData'), 'Programs',
                                  'OpenQuake Engine', 'python3')
 
@@ -428,7 +428,7 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
-def install(inst, version, from_fork, no_venv):
+def install(inst, version, from_fork, novenv):
     """
     Install the engine in one of the three possible modes
     """
@@ -448,7 +448,7 @@ def install(inst, version, from_fork, no_venv):
         if inst is server or inst is devel_server:
             subprocess.check_call(["chown", "openquake", inst.OQDATA])
 
-    if not no_venv:
+    if not novenv:
         # recreate the openquake venv
         ensure(pyvenv=inst.VENV)
         print("Created %s" % inst.VENV)
@@ -656,7 +656,7 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
-    parser.add_argument("--no-venv", action="store_false",
+    parser.add_argument("--novenv", action="store_false",
                         help="keep the current virtual environment")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
@@ -671,12 +671,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove, args.no_venv,
+        before_checks(inst, args.venv, args.dbport, args.remove, args.novenv,
                       parser.format_usage())
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.no_venv)
+            errors = install(inst, args.version, args.from_fork, args.novenv)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
