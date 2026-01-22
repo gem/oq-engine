@@ -1547,6 +1547,7 @@ class RmapMaker(object):
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
+        print(f'{pnemap.size_mb=}')
         for src in self.sources:
             src.nsites = 0
             for ctx in self.gen_ctxs(src):
