@@ -21,7 +21,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import general, hdf5
+from openquake.baselib import general, hdf5, config
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
@@ -171,15 +171,17 @@ def get_num_chunks(dstore):
     try:
         req_gb = int(dstore['source_groups'].attrs['req_gb'])
     except KeyError: # in classical_bcr
-        req_gb = 1
+        req_gb = .1
+    max_gb = int(config.memory.pmap_max_mb) / 1024
+    ntiles = numpy.ceil(req_gb / max_gb)
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2:
         return N
-    elif req_gb > ct2 / 2:
-        return int(req_gb) * 2
+    elif ntiles > ct2:
+        return ntiles
     return ct2
     # for EUR on cole concurrent_tasks=256
-    # req_gb=202, N=260,000 and we get 404 chunks
+    # req_gb=202, N=260,000
 
 
 def map_getters(dstore, full_lt=None, disagg=False):
