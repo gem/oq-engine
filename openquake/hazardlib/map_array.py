@@ -406,14 +406,17 @@ class MapArray(object):
         :yields: pairs (chunkno, rates for that chunck of sites)
         """
         for no, mask in gen_chunks(self.sids, num_chunks):
+            sids = self.sids[mask]
             outs = []
             for i, g in enumerate(gid):
-                rates = from_rates_g(self.array[mask, :, i], g, self.sids[mask])
+                rates = from_rates_g(self.array[mask, :, i], g, sids)
                 outs.append(rates)
             if len(outs) == 1:
                 yield no, outs[0]
             else:
-                yield no, numpy.concatenate(outs, dtype=rates_dt)
+                out = numpy.concatenate(outs, dtype=rates_dt)
+                assert numpy.unique(out['sid'] % num_chunks) == [no]
+                yield no, out
 
     def interp4D(self, imtls, poes):
         """
