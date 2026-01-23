@@ -555,17 +555,18 @@ class RateMap:
     size_mb = MapArray.size_mb
     __repr__ = MapArray.__repr__
 
-    def __init__(self, sids, L, gids):
+    def __init__(self, sids, L, gids, Gt):
         self.sids = sids
         self.shape = len(sids), L, len(gids)
         self.array = numpy.zeros(self.shape, F32)
         self.jid = {g: j for j, g in enumerate(gids)}
+        self.Gt = Gt
 
     def __iadd__(self, other):
-        G = self.shape[2]
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
-            iadd(self.array[:, :, self.jid[g]], other.array[:, :, i % G], sidx)
+            oarray = other.array[:, :, i % self.Gt]
+            iadd(self.array[:, :, self.jid[g]], oarray, sidx)
         return self
 
     def to_array(self, g):

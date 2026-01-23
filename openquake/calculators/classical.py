@@ -441,7 +441,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
-            self.rmap += rmap
+            try:
+                self.rmap[grp_id] += rmap
+            except KeyError:
+                breakpoint()
         return acc
 
     def create_rup(self):
@@ -630,8 +633,9 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        Gt = self.cmdict['Default'].Gt
-        self.rmap = RateMap(self.sitecol.sids, L, numpy.arange(Gt))
+        cmakers = self.cmdict['Default']
+        self.rmap = {grp_id: RateMap(self.sitecol.sids, L, cm.gid, cmakers.Gt)
+                     for grp_id, cm in enumerate(cmakers)}
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -668,28 +672,18 @@ class ClassicalCalculator(base.HazardCalculator):
     def _post_regular(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
-        if self.rmap.size_mb:
-            logging.info('Saving %s', self.rmap)
+        logging.info('Saving RateMaps')
 
         def genargs():
             # produce Gt arguments (i.e. tasks when custom_tmp is set)
-            for g, j in self.rmap.jid.items():
-                yield g, self.N, self.rmap.jid, self.num_chunks
+            for grp_id, rmap in self.rmap.items():
+                for g, j in rmap.jid.items():
+                    yield grp_id, g, self.N, rmap.jid, self.num_chunks
 
-        if (self.rmap.size_mb > 200 and config.directory.custom_tmp and
-                parallel.oq_distribute() != 'no'):
-            # tested in the oq-risk-tests
-            self.datastore.swmr_on()  # must come before the Starmap
-            savemap = parallel.Starmap(save_rates, genargs(),
-                                       h5=self.datastore,
-                                       distribute='processpool')
-            savemap.share(rates=self.rmap.array)
-            savemap.reduce()
-        elif self.rmap.size_mb:
-            for g, N, jid, num_chunks in genargs():
-                rates = self.rmap.to_array(g)
-                _store(rates, self.num_chunks, self.datastore)
-        del self.rmap
+        for grp_id, g, N, jid, num_chunks in genargs():
+            rates = self.rmap[grp_id].to_array(g)
+            _store(rates, self.num_chunks, self.datastore)
+
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
             if oq.use_rates and self.N == 1:  # sanity check
