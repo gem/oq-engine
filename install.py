@@ -428,7 +428,7 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
-def install(inst, version, from_fork, novenv):
+def install(inst, version, from_fork, novenv, noupgrade):
     """
     Install the engine in one of the three possible modes
     """
@@ -465,19 +465,21 @@ def install(inst, version, from_fork, novenv):
     # upgrade pip and before check that it is installed in venv
     if sys.platform != "win32":
         ensure(pip=pycmd)
-        subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel"]
-        )
+        subprocess.check_call([pycmd, "-m", "pip", "install"] + [
+        ] if noupgrade else ["--upgrade"] + [
+            "pip", "wheel"])
     else:
         if os.path.exists("python\\python._pth.old"):
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
-                 "urllib3"])
+            subprocess.check_call([pycmd, "-m", "pip", "install"] + [
+            ] if noupgrade else ["--upgrade"] + [
+                "pip", "wheel", "urllib3"])
         else:
-            subprocess.check_call([pycmd, "-m", "ensurepip", "--upgrade"])
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
-                 "urllib3"])
+            subprocess.check_call([pycmd, "-m", "ensurepip"] + [
+            ] if noupgrade else ["--upgrade"])
+            
+            subprocess.check_call([pycmd, "-m", "pip", "install"] + [
+            ] if noupgrade else ["--upgrade"] + [
+                "pip", "wheel", "urllib3"])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)
@@ -509,18 +511,20 @@ def install(inst, version, from_fork, novenv):
         subprocess.check_call([pycmd, "-m", "pip", "install", "-e", CDIR])
     elif version is None:  # install the stable version
         subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", "openquake.engine"]
+            [pycmd, "-m", "pip", "install"] + [
+                ] if noupgrade else ["--upgrade"] + ["openquake.engine"]
         )
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade",
-             "openquake.engine==" + version]
+            [pycmd, "-m", "pip", "install"] + [
+                ] if noupgrade else ["--upgrade"] + ["openquake.engine==" + version]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print("Installing commit", commit)
         subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", GITBRANCH % commit]
+            [pycmd, "-m", "pip", "install"] + [
+                ] if noupgrade else ["--upgrade"] + [GITBRANCH % commit]
         )
         fix_version(commit, inst.VENV)
 
@@ -657,7 +661,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--venv", help="venv directory")
     parser.add_argument("--novenv", action="store_false",
-                        help="keep the current virtual environment")
+                        help="keep the current python environment")
+    parser.add_argument("--noupgrade", action="store_false",
+                        help="not use '--upgrade' in pip install calls")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version", help="version to install (default stable)")
@@ -676,7 +682,7 @@ if __name__ == "__main__":
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.novenv)
+            errors = install(inst, args.version, args.from_fork, args.novenv, args.noupgrade)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
