@@ -694,7 +694,7 @@ def read_src_groups(hdf5, grp_id):
     grp_str = str(grp_id)
     keys = [key for key in hdf5['_csm'] if key.split('-')[0] == grp_str]
     for key in keys:
-        yield read_src_group(hdf5, key) 
+        yield read_src_group(hdf5, key)
 
 
 def read_csm(hdf5, full_lt=None):

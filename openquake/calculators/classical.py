@@ -164,7 +164,6 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
-            print(result['rmap'].array)
             yield result
         return
 
@@ -196,14 +195,14 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         yield result
 
 
-def update_dic(result, res):
+def _update_dic(result, res):
     if not result:
         result.update(res)
-        return
-    result['rmap'].array += res['rmap'].array
-    result['cfactor'] += res['cfactor']
-    result['dparam_mb'] += res['dparam_mb']
-    result['source_mb'] += res['source_mb']
+    else:
+        result['rmap'].array += res['rmap'].array
+        result['cfactor'] += res['cfactor']
+        result['dparam_mb'] += res['dparam_mb']
+        result['source_mb'] += res['source_mb']
 
 
 def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
@@ -217,9 +216,8 @@ def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
         tgetter = tilegetter(sitecol, cmaker.ilabel)
         for grp in read_src_groups(dstore, grp_id):
             res = hazclassical(grp, tgetter, cmaker)
-            update_dic(result, res)
-    # NB: using general.getsizeof I proved that the size of the result is
-    # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
+            _update_dic(result, res)
+
     rmap = result.pop('rmap').remove_zeros()
     yield result  # metadata without the rates
     if config.directory.custom_tmp:

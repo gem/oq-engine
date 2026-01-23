@@ -173,7 +173,7 @@ def get_num_chunks(dstore):
     except KeyError: # in classical_bcr
         req_gb = .1
     max_gb = int(config.memory.pmap_max_mb) / 1024
-    ntiles = numpy.ceil(req_gb / max_gb)
+    ntiles = int(numpy.ceil(req_gb / max_gb))
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2:
         return N
