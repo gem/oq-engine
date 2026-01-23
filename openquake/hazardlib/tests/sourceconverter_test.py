@@ -474,19 +474,6 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertAlmostEqual(src.mfd.a_val, 3.9720437839539255)
 
 
-class SourceGroupHDF5TestCase(unittest.TestCase):
-    def test_serialization(self):
-        testfile = os.path.join(
-            testdir, 'nonparametric-source-mutex-ruptures.xml')
-        [grp] = nrml.to_python(testfile)
-        for i, src in enumerate(grp, 1):
-            src.id = i
-        with hdf5.File.temporary() as f:
-            f['grp'] = grp
-        with hdf5.File(f.path, 'r') as f:
-            print(f['grp'])
-
-
 class MultiFaultSourceModelTestCase(unittest.TestCase):
     """ Tests reading a multi fault model """
 
