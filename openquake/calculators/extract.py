@@ -1137,11 +1137,7 @@ def extract_exposure_by_location(dstore, what):
     """
     Aggregate exposure and occupants by geographic location.
 
-    By default, aggregates all asset fields starting with:
-      - 'value-'
-      - 'occupants_'
-
-    :returns: pandas.DataFrame (lon, lat, value-*, occupants_*)
+    :returns: a DataFrame (lon, lat, ``value-*``, ``occupants_*``)
     """
     assetcol = dstore['assetcol']
     lonlats = assetcol[['ordinal', 'lon', 'lat']]
