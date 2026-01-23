@@ -376,26 +376,6 @@ class SourceGroup(collections.abc.Sequence):
     def __len__(self):
         return len(self.sources)
 
-    def __toh5__(self):
-        lst = []
-        for i, src in enumerate(self.sources):
-            buf = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
-            lst.append((src.id, src.num_ruptures,
-                        numpy.frombuffer(buf, numpy.uint8)))
-        attrs = dict(
-            trt=self.trt,
-            name=self.name or '',
-            src_interdep=self.src_interdep,
-            rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability or '1')
-        return numpy.array(lst, source_dt), attrs
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.sources = []
-        for row in array:
-            self.sources.append(pickle.loads(memoryview(row['pik'])))
-
 
 def split_coords_2d(seq):
     """

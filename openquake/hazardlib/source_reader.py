@@ -41,6 +41,7 @@ weight = operator.attrgetter('weight')
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 
+NUM_BLOCKS = 10  # split each source group in blocks of sources
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 source_info_dt = numpy.dtype([
