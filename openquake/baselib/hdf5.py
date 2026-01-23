@@ -508,8 +508,12 @@ class File(h5py.File):
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
         elif isinstance(obj, numpy.ndarray) and obj.shape:
+            # called when storing _csm
             d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
-            d[:] = obj
+            try:
+                d[:] = obj
+            except:
+                breakpoint()
         elif (isinstance(obj, numpy.ndarray) and
               obj.dtype.name.startswith('bytes')):
             self._set(path, numpy.void(bytes(obj)))

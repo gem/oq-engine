@@ -91,6 +91,13 @@ def zpik(obj):
     return numpy.frombuffer(gz, numpy.uint8)
 
 
+def zunpik(data):
+    """
+    unzip and unpickle some data array
+    """
+    return pickle.loads(zlib.decompress(data.tobytes())) 
+
+
 def create_source_info(csm, h5):
     """
     Creates source_info, trt_smrs, toms
@@ -825,21 +832,19 @@ class CompositeSourceModel:
         return cmaker, tilegetters, blocks, extra
 
     def __toh5__(self):
-        G = len(self.src_groups)
-        arr = numpy.zeros(G + 1, hdf5.vuint8)
-        for grp_id, grp in enumerate(self.src_groups):
-            arr[grp_id] = zpik(grp)
-        arr[G] = zpik(self.source_info)
-        size = sum(len(val) for val in arr)
+        dic = {str(grp_id): zpik(grp)
+               for grp_id, grp in enumerate(self.src_groups)}
+        size = sum(len(val) for val in dic.values())
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
-        return arr, {}
+        dic['source_info'] = zpik(self.source_info)
+        return dic, {'G': len(self.src_groups)}
 
-    # tested in case_36
-    def __fromh5__(self, arr, attrs):
-        objs = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
-        self.src_groups = objs[:-1]
-        self.source_info = objs[-1]
+    # tested in case_65
+    def __fromh5__(self, dic, attrs):
+        grp_ids = [str(grp_id) for grp_id in range(attrs['G'])]
+        self.src_groups = [zunpik(dic[grp_id][:]) for grp_id in grp_ids]
+        self.source_info = zunpik(dic['source_info'][:])
 
     def __repr__(self):
         """

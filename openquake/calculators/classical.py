@@ -31,6 +31,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.source_reader import zunpik
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -152,9 +153,8 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         if isinstance(sources, numpy.ndarray):
             assert extra['atomic']
             # read the grp_ids from the datastore
-            dset = dstore.getitem('_csm')
-            sources = [pickle.loads(zlib.decompress(dset[gid][:].tobytes()))
-                       for gid in sources]
+            dgroup = dstore.getitem('_csm')
+            sources = [zunpik(dgroup[str(grp_id)][:]) for grp_id in sources]
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -203,9 +203,8 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     with dstore:
-        dset = dstore.getitem('_csm')
-        groups = [pickle.loads(zlib.decompress(dset[gid][:].tobytes()))
-                  for gid in grp_ids]
+        dgroup = dstore.getitem('_csm')
+        groups = [zunpik(dgroup[str(grp_id)][:])  for grp_id in grp_ids]
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
