@@ -2269,7 +2269,10 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     display_names = {'aggrisk_tags': 'Impact',
-                     'mmi_tags': 'Exposure by MMI'}
+                     'mmi_tags': 'Exposure by MMI',
+                     'losses_by_site': 'Losses by site',
+                     'losses_by_location': 'Losses by location',
+                     'exposure_by_location': 'Exposure by location'}
     table_name = display_names[name] if name in display_names else name
     table_header = []
     for short_name in table.columns:
