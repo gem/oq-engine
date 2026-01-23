@@ -660,9 +660,9 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
-    parser.add_argument("--novenv", action="store_false",
+    parser.add_argument("--novenv", action="store_true",
                         help="keep the current python environment")
-    parser.add_argument("--noupgrade", action="store_false",
+    parser.add_argument("--noupgrade", action="store_true",
                         help="not use '--upgrade' in pip install calls")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
