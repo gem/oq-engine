@@ -1132,6 +1132,42 @@ def extract_losses_by_location(dstore, what):
     return pandas.DataFrame(dic)
 
 
+@extract.add('exposure_by_location')
+def extract_exposure_by_location(dstore, what):
+    """
+    Aggregate exposure and occupants by geographic location.
+
+    By default, aggregates all asset fields starting with:
+      - 'value-'
+      - 'occupants_'
+
+    :returns: pandas.DataFrame (lon, lat, value-*, occupants_*)
+    """
+    assetcol = dstore['assetcol']
+    lonlats = assetcol[['ordinal', 'lon', 'lat']]
+    # this is fast enough, we can do millions of assets in seconds
+    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
+            for row in lonlats]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    lons, lats = [], []
+    for lonlat in uniq:
+        lo, la = lonlat.split(',')
+        lons.append(lo)
+        lats.append(la)
+    dic = {'lon': F32(lons),
+           'lat': F32(lats)}
+    fields = [
+        name for name in assetcol[:].dtype.names
+        if name.startswith('value-') or name.startswith('occupants_')
+    ]
+    for field in fields:
+        values = assetcol[field][lonlats['ordinal']]
+        dic[field] = F32(general.fast_agg(indices, values))
+    logging.info('There are {:_d} assets on {:_d} locations'.format(
+            len(lonlats), len(lons)))
+    return pandas.DataFrame(dic)
+
+
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])

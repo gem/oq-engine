@@ -140,6 +140,7 @@ EXTRACTABLE_RESOURCES = [
     'disagg_layer',
     'events',
     'exposure_metadata',
+    'exposure_by_location',
     'gmf_data',
     'hcurves',
     'hmaps',
