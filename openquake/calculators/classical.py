@@ -210,11 +210,12 @@ def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
     Tiling calculator
     """
     cmaker.init_monitoring(monitor)
+    mon = monitor('reading sources', measuremem=True)
     result = {}
     with dstore:
         sitecol = dstore['sitecol'].complete  # super-fast
         tgetter = tilegetter(sitecol, cmaker.ilabel)
-        for grp in read_src_groups(dstore, grp_id):
+        for grp in read_src_groups(dstore, grp_id, mon):
             res = hazclassical(grp, tgetter, cmaker)
             _update_dic(result, res)
 

@@ -24,7 +24,7 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.baselib import config, python3compat, hdf5
+from openquake.baselib import config, python3compat, hdf5, performance
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, groupby)
 from openquake.hazardlib.calc.filters import split_source
@@ -678,14 +678,16 @@ def store_src_groups(hdf5, grp_id, group, num_blocks):
     return keys
             
 
-def read_src_group(hdf5, key):
+def read_src_group(hdf5, key, mon=performance.Monitor()):
     """
     Read the source group determined by the key.
     """
-    return zunpik(hdf5[f"_csm/{key}"][:])
+    with mon:
+        grp = zunpik(hdf5[f"_csm/{key}"][:])
+    return grp
 
-    
-def read_src_groups(hdf5, grp_id):
+
+def read_src_groups(hdf5, grp_id, mon=performance.Monitor()):
     """
     :yield: the list of subgroups associated to grp_id
 
@@ -694,7 +696,7 @@ def read_src_groups(hdf5, grp_id):
     grp_str = str(grp_id)
     keys = [key for key in hdf5['_csm'] if key.split('-')[0] == grp_str]
     for key in keys:
-        yield read_src_group(hdf5, key)
+        yield read_src_group(hdf5, key, mon)
 
 
 def read_csm(hdf5, full_lt=None):
