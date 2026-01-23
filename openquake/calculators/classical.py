@@ -199,13 +199,13 @@ def update_dic(result, res):
     if not result:
         result.update(res)
         return
-    result['rmap'] += res['rmap']
+    result['rmap'].array += res['rmap'].array
     result['cfactor'] += res['cfactor']
     result['dparam_mb'] += res['dparam_mb']
     result['source_mb'] += res['source_mb']
 
 
-def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
+def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     Tiling calculator
     """
@@ -214,10 +214,9 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     with dstore:
         sitecol = dstore['sitecol'].complete  # super-fast
         tgetter = tilegetter(sitecol, cmaker.ilabel)
-        for grp_id in grp_ids:
-            for grp in read_src_groups(dstore, grp_id):
-                res = hazclassical(grp, tgetter, cmaker)
-                update_dic(result, res)
+        for grp in read_src_groups(dstore, grp_id):
+            res = hazclassical(grp, tgetter, cmaker)
+            update_dic(result, res)
     # NB: using general.getsizeof I proved that the size of the result is
     # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
     rmap = result.pop('rmap').remove_zeros()
@@ -644,14 +643,12 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tgetters, [block], ex in self.csm.split_atomic(
+        for cmaker, tgetters, [grp_id], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
             cmaker.tiling = True
-            if isinstance(block, int):
-                block = [block]
             for tgetter in tgetters:
-                allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
+                allargs.append((grp_id, tgetter, cmaker, ex['num_chunks'], ds))
             n_out.append(len(tgetters))
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
