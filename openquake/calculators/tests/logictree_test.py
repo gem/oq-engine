@@ -61,19 +61,24 @@ class LogicTreeTestCase(CalculatorTestCase):
         if 'hcurves-stats' not in self.calc.datastore:  # not produced
             return
         oq = self.calc.oqparam
+        csm = self.calc.csm
+        csm_read = source_group.read_csm(self.calc.datastore)
+        # make sure the csm read from the datastore is the same as the original
+        for sg_orig, sg in zip(csm.src_groups, csm_read.src_groups):
+            if len(sg_orig) != len(sg):
+                raise RuntimeError(f'Inconsistent {sg=}, {sg_orig=}')
+
         if oq.use_rates:  # compare with mean_rates
             print('Comparing mean_rates')
             poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
             exp_rates = to_rates(poes)  # shape (N, M, L1)
             # NB: the exp_rates are wrong at small levels because the hcurves
             # are stored at 32 bit and that make a big difference around log(0)
-            csm = source_group.read_csm(self.calc.datastore)
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
-            rmap = get_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
-            breakpoint()
+            rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)

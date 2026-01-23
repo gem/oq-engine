@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
-from openquake.hazardlib import pmf, geo, source_reader
+from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
