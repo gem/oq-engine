@@ -19,8 +19,6 @@
 import io
 import os
 import time
-import zlib
-import pickle
 import psutil
 import logging
 import operator
@@ -31,7 +29,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_reader import zunpik
+from openquake.hazardlib.source_group import read_csm, read_src_groups
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -152,9 +150,8 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
     with dstore:
         if isinstance(sources, numpy.ndarray):
             assert extra['atomic']
-            # read the grp_ids from the datastore
-            dgroup = dstore.getitem('_csm')
-            sources = [zunpik(dgroup[str(grp_id)][:]) for grp_id in sources]
+            # read the atomic groups from the datastore
+            sources = [read_src_groups(dstore, grp_id)[0] for grp_id in sources]
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -166,6 +163,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
+            print(result['rmap'].array)
             yield result
         return
 
@@ -197,17 +195,29 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         yield result
 
 
+def update_dic(result, res):
+    if not result:
+        result.update(res)
+        return
+    result['rmap'] += res['rmap']
+    result['cfactor'] += res['cfactor']
+    result['dparam_mb'] += res['dparam_mb']
+    result['source_mb'] += res['source_mb']
+
+
 def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     Tiling calculator
     """
     cmaker.init_monitoring(monitor)
+    result = {}
     with dstore:
-        dgroup = dstore.getitem('_csm')
-        groups = [zunpik(dgroup[str(grp_id)][:])  for grp_id in grp_ids]
         sitecol = dstore['sitecol'].complete  # super-fast
-    group = groups[0] if len(groups) == 1 else groups
-    result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
+        tgetter = tilegetter(sitecol, cmaker.ilabel)
+        for grp_id in grp_ids:
+            for grp in read_src_groups(dstore, grp_id):
+                res = hazclassical(grp, tgetter, cmaker)
+                update_dic(result, res)
     # NB: using general.getsizeof I proved that the size of the result is
     # the expected one, pmap_max_mb; the memory is consumed elsewhere :-(
     rmap = result.pop('rmap').remove_zeros()
@@ -221,7 +231,6 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
                    'chunkno': no, 'cfactor': numpy.zeros(2),
                    'dparam_mb': 0., 'source_mb': 0.}
             yield res
-
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
@@ -532,8 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Reading from parent calculation')
             parent = self.datastore.parent
             self.full_lt = parent['full_lt'].init()
-            self.csm = parent['_csm']
-            self.csm.init(self.full_lt)
+            self.csm = read_csm(parent)
             self.datastore['source_info'] = parent['source_info'][:]
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])

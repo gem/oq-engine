@@ -26,7 +26,8 @@ from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
-from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.source_group import (
+    SourceGroup, store_src_groups, NUM_SITES, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -185,7 +186,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         logging.info('Requiring mem_gb = %.2f', req_gb)
 
-    # store source_groups
+    # store source groups
+    for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
+        store_src_groups(dstore, grp_id, csm.src_groups[grp_id], num_blocks)
+    dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=req_gb, tiling=tiling))
     return req_gb, max_weight, trt_rlzs
@@ -363,12 +367,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         if not hasattr(self, 'csm'):  # used only for post_process
             return
         self.populate_csm()
-        try:
-            self.datastore['_csm'] = self.csm
-        except RuntimeError as exc:
-            # this happens when setrecursionlimit is too low
-            # we can continue anyway, this is not critical
-            logging.error(str(exc), exc_info=True)
         return self.csm
 
     def post_execute(self, csm):
@@ -378,8 +376,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset(
             'weights',
             F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
-        totsites = sum(row[source_reader.NUM_SITES]
-                       for row in self.csm.source_info.values())
+        totsites = sum(row[NUM_SITES] for row in self.csm.source_info.values())
         if totsites == 0:
             if self.N == 1:
                 logging.error('There are no sources close to the site!')
@@ -390,7 +387,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         fname = self.oqparam.inputs.get('delta_rates')
         if fname:
-            idx_nr = {row[0]: (idx, row[source_reader.NUM_RUPTURES])
+            idx_nr = {row[0]: (idx, row[NUM_RUPTURES])
                       for idx, row in enumerate(self.csm.source_info.values())}
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
