@@ -151,7 +151,8 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         if isinstance(sources, numpy.ndarray):
             assert extra['atomic']
             # read the atomic groups from the datastore
-            sources = [read_src_groups(dstore, grp_id)[0] for grp_id in sources]
+            sources = [next(read_src_groups(dstore, grp_id))
+                       for grp_id in sources]
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel

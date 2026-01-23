@@ -687,11 +687,14 @@ def read_src_group(hdf5, key):
     
 def read_src_groups(hdf5, grp_id):
     """
-    :returns: the list of subgroups associated to grp_id
+    :yield: the list of subgroups associated to grp_id
+
+    NB: this is a generator to save memory (crucial!)
     """
     grp_str = str(grp_id)
     keys = [key for key in hdf5['_csm'] if key.split('-')[0] == grp_str]
-    return [read_src_group(hdf5, key) for key in keys]
+    for key in keys:
+        yield read_src_group(hdf5, key) 
 
 
 def read_csm(hdf5, full_lt=None):
@@ -700,7 +703,7 @@ def read_csm(hdf5, full_lt=None):
     """
     src_groups = []
     for grp_id in range(hdf5['_csm'].attrs['num_src_groups']):
-        groups = read_src_groups(hdf5, grp_id)
+        groups = list(read_src_groups(hdf5, grp_id))
         group = groups[0]
         group.sources = list(group.sources)
         for grp in groups[1:]:
