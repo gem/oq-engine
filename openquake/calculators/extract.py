@@ -1101,29 +1101,42 @@ def extract_losses_by_site(dstore, what):
     return pandas.DataFrame(dic)
 
 
-@extract.add('losses_by_location')
-def extract_losses_by_location(dstore, what):
+def _group_assets_by_location(assetcol):
     """
-    :returns: a DataFrame (lon, lat, number, structural, ...)
+    Group assets by rounded (lon, lat).
+
+    :param assetcol: asset collection
+    :returns: (lonlats, indices, lons, lats)
     """
-    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
-    try:
-        grp = dstore.getitem('avg_losses-stats')
-    except KeyError:
-        # there is only one realization
-        grp = dstore.getitem('avg_losses-rlzs')
-    dic = {}
+    lonlats = assetcol[['ordinal', 'lon', 'lat']]
     # this is fast enough, we can do millions of assets in seconds
-    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
-            for row in lonlats]
+    tags = [
+        '%.5f,%.5f' % (row['lon'], row['lat'])
+        for row in lonlats
+    ]
     uniq, indices = numpy.unique(tags, return_inverse=True)
     lons, lats = [], []
     for lonlat in uniq:
         lo, la = lonlat.split(',')
         lons.append(lo)
         lats.append(la)
-    dic['lon'] = F32(lons)
-    dic['lat'] = F32(lats)
+    return lonlats, indices, lons, lats
+
+
+@extract.add('losses_by_location')
+def extract_losses_by_location(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    assetcol = dstore['assetcol']
+    lonlats, indices, lons, lats = _group_assets_by_location(assetcol)
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
+    dic = {'lon': F32(lons),
+           'lat': F32(lats)}
     for loss_type in grp:
         losses = grp[loss_type][:, 0][lonlats['ordinal']]
         dic[loss_type] = F32(general.fast_agg(indices, losses))
@@ -1140,16 +1153,7 @@ def extract_exposure_by_location(dstore, what):
     :returns: a DataFrame (lon, lat, ``value-*``, ``occupants_*``)
     """
     assetcol = dstore['assetcol']
-    lonlats = assetcol[['ordinal', 'lon', 'lat']]
-    # this is fast enough, we can do millions of assets in seconds
-    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
-            for row in lonlats]
-    uniq, indices = numpy.unique(tags, return_inverse=True)
-    lons, lats = [], []
-    for lonlat in uniq:
-        lo, la = lonlat.split(',')
-        lons.append(lo)
-        lats.append(la)
+    lonlats, indices, lons, lats = _group_assets_by_location(assetcol)
     dic = {'lon': F32(lons),
            'lat': F32(lats)}
     fields = [
@@ -1160,7 +1164,7 @@ def extract_exposure_by_location(dstore, what):
         values = assetcol[field][lonlats['ordinal']]
         dic[field] = F32(general.fast_agg(indices, values))
     logging.info('There are {:_d} assets on {:_d} locations'.format(
-            len(lonlats), len(lons)))
+        len(lonlats), len(lons)))
     return pandas.DataFrame(dic)
 
 
