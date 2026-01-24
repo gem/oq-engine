@@ -193,7 +193,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
                 extra['blocks'] == 1 and not cmaker.disagg_by_src):
             rates = rmap.to_array(cmaker.gid)
             _store(rates, extra['num_chunks'], None, monitor)
-        elif extra['blocks'] == 1:
+        elif not cmaker.disagg_by_src and extra['blocks'] == 1:
             result['rmap'] = rmap.to_array(cmaker.gid)
             result['chunkno'] = None
         elif rmap.size_mb:
