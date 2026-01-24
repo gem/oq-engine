@@ -627,7 +627,12 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        self.rmap = {blks[0][0].grp_id: RateMap(self.sitecol.sids, L, cm.gid)
+        def grp_id(blks):
+            src = blks[0][0]
+            if isinstance(src, U16):  # grp_id was passed
+                return src
+            return src.grp_id
+        self.rmap = {grp_id(blks): RateMap(self.sitecol.sids, L, cm.gid)
                      for cm, _t, blks, _e in data}
 
         self.datastore.swmr_on()  # must come before the Starmap
