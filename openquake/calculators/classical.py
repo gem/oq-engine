@@ -53,6 +53,11 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 
+def _grp_id(blks):
+    # NB: grp_id may by passed instead of a source
+    src = blks[0][0]
+    return src if isinstance(src, U16) else src.grp_id
+
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
@@ -610,10 +615,14 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
+        L = self.oqparam.imtls.size
+        self.rmap = {}
         data = self.csm.split_atomic(
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
             tiling=False)
         for cmaker, tilegetters, blocks, extra in data:
+            grp_id = _grp_id(blocks)
+            self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
@@ -625,15 +634,6 @@ class ClassicalCalculator(base.HazardCalculator):
         srcs = [src for src in self.csm.get_sources() if src.weight]
         maxsrc = max(srcs, key=lambda s: s.weight)
         logging.info('Heaviest: %s', maxsrc)
-
-        L = self.oqparam.imtls.size
-        def grp_id(blks):
-            src = blks[0][0]
-            if isinstance(src, U16):  # grp_id was passed
-                return src
-            return src.grp_id
-        self.rmap = {grp_id(blks): RateMap(self.sitecol.sids, L, cm.gid)
-                     for cm, _t, blks, _e in data}
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
