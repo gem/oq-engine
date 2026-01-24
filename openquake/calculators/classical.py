@@ -193,6 +193,9 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
                 extra['blocks'] == 1 and not cmaker.disagg_by_src):
             rates = rmap.to_array(cmaker.gid)
             _store(rates, extra['num_chunks'], None, monitor)
+        elif extra['blocks'] == 1:
+            result['rmap'] = rmap.to_array(cmaker.gid)
+            result['chunkno'] = None
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
@@ -613,6 +616,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return sgs, ds
 
     def _execute_regular(self, sgs, ds):
+        oq = self.oqparam
         allargs = []
         n_out = []
         L = self.oqparam.imtls.size
@@ -621,8 +625,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
             tiling=False)
         for cmaker, tilegetters, blocks, extra in data:
-            grp_id = _grp_id(blocks)
-            self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+            if oq.disagg_by_src or len(blocks) > 1:
+                grp_id = _grp_id(blocks)
+                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
