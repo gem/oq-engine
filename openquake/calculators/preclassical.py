@@ -149,8 +149,11 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
 
 
 def _grp_id(blks):
-    # NB: grp_id may by passed instead of a source
-    src = blks[0][0]
+    # NB: grp_id may by passed instead of a source or a block
+    blk = blks[0]
+    if isinstance(blk, (U16, int)):
+        return blk
+    src = blk[0]
     return src if isinstance(src, U16) else src.grp_id
 
 
