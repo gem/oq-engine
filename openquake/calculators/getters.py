@@ -344,8 +344,10 @@ class MapGetter(object):
                 slices = slices[slices['idx'] == self.chunk]
                 for start, stop in zip(slices['start'], slices['stop']):
                     df = dstore.read_df('_rates', slc=slice(start, stop))
-                    idxs = [sid2idx[sid] for sid in df.sid]
-                    self.array[idxs, df.lid, df.gid] += df.rate
+                    idxs = U32([sid2idx[sid] for sid in df.sid])
+                    lid = df.lid.to_numpy()
+                    gid = df.gid.to_numpy()
+                    self.array[idxs, lid, gid] += df.rate
         self.sid2idx = sid2idx
         return self.array
 
