@@ -165,7 +165,7 @@ def get_req_gb(data, N, oq):
     L = oq.imtls.size
     for rec in data:
         if oq.disagg_by_src or rec['blocks'] > 1:
-            out[rec['grp_id']] = N * L * rec['gsims'] * 4 / GB
+            out[rec['grp_id']] = N * L * float(rec['gsims']) * 4 / GB
     return out
 
 
