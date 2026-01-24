@@ -812,7 +812,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
-                   for getter in getters.map_getters(dstore, self.full_lt)]
+                   for getter in getters.map_getters(dstore, self.full_lt, oq)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
             return

@@ -184,11 +184,11 @@ def get_num_chunks(dstore):
     # req_gb=202, N=260,000
 
 
-def map_getters(dstore, full_lt=None, disagg=False):
+def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
-    oq = dstore['oqparam']
+    oq = oq or dstore['oqparam']
     n = get_num_chunks(dstore)
 
     # full_lt is None in classical_risk, classical_damage
