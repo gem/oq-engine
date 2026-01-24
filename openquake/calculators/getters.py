@@ -256,9 +256,9 @@ class CurveGetter(object):
         """
         rates = {}
         for mgetter in map_getters(dstore):
-            pmap = mgetter.init()
-            for sid in pmap:
-                rates[sid] = pmap[sid]  # shape (L, G)
+            array = mgetter.init()
+            for sid, idx in mgetter.sid2idx.items():
+                rates[sid] = array[idx]  # shape (L, G)
         dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
         for sid in rates:
             dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
