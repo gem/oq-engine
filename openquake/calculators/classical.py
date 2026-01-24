@@ -242,8 +242,6 @@ def fast_mean(pgetter, monitor):
     """
     with monitor('reading rates', measuremem=True):
         pgetter.init()
-    if not pgetter.sids:  # can happen with tiling
-        return {}
 
     with monitor('compute stats', measuremem=True):
         hcurves = pgetter.get_fast_mean()
@@ -270,8 +268,6 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     """
     with monitor('reading rates', measuremem=True):
         pgetter.init()
-    if not pgetter.sids:  # can happen with tiling
-        return {}
 
     if amplifier:
         # amplification is meant for few sites, i.e. no tiling
