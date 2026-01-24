@@ -437,10 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
-            try:
-                self.rmap[grp_id] += rmap
-            except KeyError:
-                breakpoint()
+            self.rmap[grp_id] += rmap
         return acc
 
     def create_rup(self):
@@ -613,9 +610,10 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, extra in self.csm.split_atomic(
-                self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-                tiling=False):
+        data = self.csm.split_atomic(
+            self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
+            tiling=False)
+        for cmaker, tilegetters, blocks, extra in data:
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
@@ -629,9 +627,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        cmakers = self.cmdict['Default']
-        self.rmap = {grp_id: RateMap(self.sitecol.sids, L, cm.gid)
-                     for grp_id, cm in enumerate(cmakers)}
+        self.rmap = {blks[0][0].grp_id: RateMap(self.sitecol.sids, L, cm.gid)
+                     for cm, _t, blks, _e in data}
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
