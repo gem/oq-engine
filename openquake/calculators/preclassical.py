@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base, getters
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -165,6 +165,7 @@ def get_req_gb(data, N, oq):
     L = oq.imtls.size
     for rec in data:
         if oq.disagg_by_src or rec['blocks'] > 1:
+            # NB: the float(rec['gsims']) is necessary for case_lisa
             out[rec['grp_id']] = N * L * float(rec['gsims']) * 4 / GB
     return out
 
