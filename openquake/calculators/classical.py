@@ -53,11 +53,6 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 
-def _grp_id(blks):
-    # NB: grp_id may by passed instead of a source
-    src = blks[0][0]
-    return src if isinstance(src, U16) else src.grp_id
-
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     # NB: this is faster if num_chunks is not too large
@@ -493,10 +488,9 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.req_gb, self.max_weight, self.trt_rlzs = \
-                preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol,
-                    self.cmdict['Default'])
+            self.req_gb, self.max_weight = preclassical.store_tiles(
+                self.datastore, self.csm, self.sitecol,
+                self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
         self.dparam_mb = 0
@@ -626,7 +620,7 @@ class ClassicalCalculator(base.HazardCalculator):
             tiling=False)
         for cmaker, tilegetters, blocks, extra in data:
             if oq.disagg_by_src or len(blocks) > 1:
-                grp_id = _grp_id(blocks)
+                grp_id = preclassical._grp_id(blocks)
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
