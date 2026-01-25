@@ -29,7 +29,8 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import read_csm, read_src_groups
+from openquake.hazardlib.source_group import (
+    read_csm, read_src_groups, read_src_group)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -141,18 +142,18 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
+def classical(key, tilegetters, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if isinstance(sources, numpy.ndarray):
+        if isinstance(key, list):  # New Madrid or Japan
             assert extra['atomic']
-            # read the atomic groups from the datastore
-            sources = [next(read_src_groups(dstore, grp_id))
-                       for grp_id in sources]
+            sources = [read_src_group(dstore, grp_id) for grp_id in key]
+        else:
+            sources = read_src_group(dstore, key)
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -619,12 +620,21 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
             tiling=False)
         for cmaker, tilegetters, blocks, extra in data:
+            grp_id = preclassical._grp_id(blocks)
             if oq.disagg_by_src or len(blocks) > 1:
-                grp_id = preclassical._grp_id(blocks)
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            for block in blocks:
-                allargs.append((block, tilegetters, cmaker, extra, ds))
+
+            if len(blocks) == 1 and extra['atomic']:
+                assert isinstance(blocks[0][0], U16), blocks
+                # case_80, New Madrid or case_27, Japan
+                keys = [f'{b}' for b in blocks[0]]
+                allargs.append((keys, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
+            else:
+                for b, block in enumerate(blocks):
+                    key = f'{grp_id}-{b}'
+                    allargs.append((key, tilegetters, cmaker, extra, ds))
+                    n_out.append(len(tilegetters))
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d', sum(n_out),
                         len(allargs), min(n_out), max(n_out))
