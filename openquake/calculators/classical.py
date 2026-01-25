@@ -142,18 +142,18 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(key, tilegetters, cmaker, extra, dstore, monitor):
+def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if isinstance(key, list):  # New Madrid or Japan
+        if isinstance(grp_key, list):  # New Madrid or Japan
             assert extra['atomic']
-            sources = [read_src_group(dstore, grp_id) for grp_id in key]
+            grp = [read_src_group(dstore, grp_id) for grp_id in grp_key]
         else:
-            sources = read_src_group(dstore, key)
+            grp = read_src_group(dstore, grp_key)
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -161,7 +161,7 @@ def classical(key, tilegetters, cmaker, extra, dstore, monitor):
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        for srcs in groupby(sources, valid.basename).values():
+        for srcs in groupby(grp, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
@@ -169,7 +169,7 @@ def classical(key, tilegetters, cmaker, extra, dstore, monitor):
         return
 
     for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(sources, tileget(sitecol, cmaker.ilabel), cmaker)
+        result = hazclassical(grp, tileget(sitecol, cmaker.ilabel), cmaker)
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
