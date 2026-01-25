@@ -142,22 +142,27 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
+def read_grp_sitecol(dstore, grp_key):
     """
-    Call the classical calculator in hazardlib
+    :returns: source group(s) associated to the key and site collection
     """
-    # NB: removing the yield would cause terrible slow tasks
-    cmaker.init_monitoring(monitor)
     with dstore:
         if isinstance(grp_key, list):  # New Madrid or Japan
-            assert extra['atomic']
             grp = [read_src_group(dstore, grp_id) for grp_id in grp_key]
         else:
             grp = read_src_group(dstore, grp_key)
         sitecol = dstore['sitecol'].complete  # super-fast
+    return grp, sitecol
 
+
+def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with few sites
+    """
     # NB: disagg_by_src does not work with ilabel
-    if cmaker.disagg_by_src and not extra['atomic']:
+    cmaker.init_monitoring(monitor)
+    grp, sitecol = read_grp_sitecol(dstore, grp_key)
+    if not extra['atomic']:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -168,6 +173,21 @@ def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
             yield result
         return
 
+    result = hazclassical(grp, sitecol, cmaker)
+    # do not remove zeros, otherwise AELO for JPN will break
+    # since there are 4 sites out of 18 with zeros
+    result['rmap'] = result.pop('rmap')
+    result['rmap'].gid = cmaker.gid
+    result['rmap'].wei = cmaker.wei
+    yield result
+
+
+def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with many sites
+    """
+    cmaker.init_monitoring(monitor)
+    grp, sitecol = read_grp_sitecol(dstore, grp_key)
     for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(grp, tileget(sitecol, cmaker.ilabel), cmaker)
         if tileno:
@@ -177,19 +197,14 @@ def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
                 if key in ('weight', 'nrupts'):
                     # avoid bogus weights in `oq show task:classical`
                     lst[:] = [0. for _ in range(len(lst))]
-        if cmaker.disagg_by_src:
-            # do not remove zeros, otherwise AELO for JPN will break
-            # since there are 4 sites out of 18 with zeros
-            rmap = result.pop('rmap')
-        else:
-            rmap = result.pop('rmap').remove_zeros()
+        rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
 
         if (rmap.size_mb and config.directory.custom_tmp and
-                extra['blocks'] == 1 and not cmaker.disagg_by_src):
+                extra['blocks'] == 1):
             rates = rmap.to_array(cmaker.gid)
             _store(rates, extra['num_chunks'], None, monitor)
-        elif not cmaker.disagg_by_src and extra['blocks'] == 1:
+        elif extra['blocks'] == 1:
             result['rmap'] = rmap.to_array(cmaker.gid)
             result['chunkno'] = None
         elif rmap.size_mb:
@@ -645,8 +660,11 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        if not self.oqparam.disagg_by_src:
+        if oq.disagg_by_src:
+            smap = parallel.Starmap(
+                classical_disagg, allargs, h5=self.datastore.hdf5)
+        else:
+            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
             smap.expected_outputs = sum(n_out)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_regular(acc)
