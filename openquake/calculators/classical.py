@@ -162,24 +162,24 @@ def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
     # NB: disagg_by_src does not work with ilabel
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_key)
-    if not extra['atomic']:
-        # in case_27 (Japan) we do NOT enter here;
-        # disagg_by_src still works since the atomic group contains a single
+    if extra['atomic']:
+        # case_27 (Japan)
+        # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
+        result = hazclassical(grp, sitecol, cmaker)
+        # do not remove zeros, otherwise AELO for JPN will break
+        # since there are 4 sites out of 18 with zeros
+        result['rmap'] = result.pop('rmap')
+        result['rmap'].gid = cmaker.gid
+        result['rmap'].wei = cmaker.wei
+        yield result
+    else:
+        # yield a result for each base source
         for srcs in groupby(grp, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
             yield result
-        return
-
-    result = hazclassical(grp, sitecol, cmaker)
-    # do not remove zeros, otherwise AELO for JPN will break
-    # since there are 4 sites out of 18 with zeros
-    result['rmap'] = result.pop('rmap')
-    result['rmap'].gid = cmaker.gid
-    result['rmap'].wei = cmaker.wei
-    yield result
 
 
 def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
@@ -207,7 +207,7 @@ def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
         elif extra['blocks'] == 1:
             result['rmap'] = rmap.to_array(cmaker.gid)
             result['chunkno'] = None
-        elif rmap.size_mb:
+        else:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
@@ -705,9 +705,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 for g, j in rmap.jid.items():
                     yield grp_id, g, self.N, rmap.jid, self.num_chunks
 
+        mon = self.monitor('storing rates', measuremem=True)
         for grp_id, g, N, jid, num_chunks in genargs():
-            rates = self.rmap[grp_id].to_array(g)
-            _store(rates, self.num_chunks, self.datastore)
+            with mon:
+                rates = self.rmap[grp_id].to_array(g)
+                _store(rates, self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
