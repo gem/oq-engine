@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the management of the RateMap in the classical calculator
   * Optimized the reading of the rates by vectorizing on the sites
   * Bug fix: `use_rates` was not overridden by the child calculation
   * Extended `install.py devel` to infer the version from the branch name
