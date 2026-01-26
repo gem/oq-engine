@@ -35,6 +35,13 @@ def application_mode(settings, request):
 
 
 @pytest.fixture
+def default_usgs_id(settings, request):
+    mode = request.param
+    settings.IMPACT_DEFAULT_USGS_ID = mode
+    return mode
+
+
+@pytest.fixture
 def test_credentials():
     return {
         "username": "test_user",

@@ -7,11 +7,12 @@ class ImpactPage(EnginePage):
     def set_rupture_identifier(self, usgs_id):
         self.page.locator('#usgs_id').fill(usgs_id)
 
-    def select_shakemap_version(self):
-        self.page.wait_for_function(
-            "document.querySelector('select#shakemap_version').options.length > 0",
-            timeout=30_000
-        )
+    def select_shakemap_version(self, value):
+        shakemap_version_select = self.page.locator('select#shakemap_version')
+        expect(shakemap_version_select.locator(
+            f'option[value="{value}"]')).to_have_count(1)
+        shakemap_version_select.select_option(value=value)
+        expect(shakemap_version_select).to_have_value(value)
 
     def retrieve_data(self):
         self.page.locator("#submit_impact_get_rupture").click()
@@ -25,7 +26,14 @@ class ImpactPage(EnginePage):
         selector.select_option(label=value)
 
     def set_no_uncertainty(self):
-        self.no_uncertainty_ckb().check()
+        no_uncertainty_ckb = self.page.locator('input#no_uncertainty')
+        expect(no_uncertainty_ckb).to_be_visible()
+        expect(no_uncertainty_ckb).not_to_be_checked()
+        no_uncertainty_ckb.check()
+        expect(self.page.locator(
+            'input#truncation_level')).to_have_value('0')
+        expect(self.page.locator(
+            'input#number_of_ground_motion_fields')).to_have_value('1')
 
     def rupture_identifier(self):
         return self.page.locator('input#usgs_id')
@@ -113,10 +121,14 @@ class ImpactPageLevel2(ImpactPage):
             timeout=30_000
         )
 
-    def retrieve_stations_from_usgs(self):
+    def retrieve_stations_from_usgs(self, expect_no_seismic_stations=False):
         get_stations_btn = self.page.get_by_role("button",
                                                  name="Retrieve from the USGS")
         expect(get_stations_btn).to_be_visible()
         get_stations_btn.click()
-        expect(self.page.locator(
-               'input#station_data_file_loaded')).not_to_have_value('')
+        station_data_loaded = self.page.locator('input#station_data_file_loaded')
+        if expect_no_seismic_stations:
+            self.page.get_by_role("button", name="Close").click()
+            expect(station_data_loaded).to_have_value('N.A. (conversion issue)')
+        else:
+            expect(station_data_loaded).not_to_have_value('')
