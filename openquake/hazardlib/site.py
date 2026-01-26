@@ -139,6 +139,10 @@ class TileGetter:
         sc.complete = complete
         return sc
 
+    def __repr__(self):
+        return  '<%s %d of %d>' % (self.__class__.__name__,
+                                   self.tileno, self.ntiles)
+
 
 class Site(object):
     """

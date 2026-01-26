@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import os
-import time
 import psutil
 import logging
 import operator
@@ -29,8 +27,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import (
-    read_csm, read_src_groups, read_src_group)
+from openquake.hazardlib.source_group import read_csm, read_src_group
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -203,9 +200,9 @@ def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
             extra['blocks'] == 1):
         rates = rmap.to_array(cmaker.gid)
         _store(rates, extra['num_chunks'], None, monitor)
+        result['rmap'] = None
     elif extra['blocks'] == 1:
         result['rmap'] = rmap.to_array(cmaker.gid)
-        result['chunkno'] = None
     else:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
@@ -410,15 +407,6 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
-            """
-            afename = '_afes/' + source_id
-            try:
-                rm = self.datastore[afename]
-            except KeyError:  # store the rates
-                self.datastore[afename] = rmap / oq.investigation_time
-            else:  # update the rates
-                self.datastore[afename] = rm + rmap / oq.investigation_time
-            """
             acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
@@ -426,7 +414,7 @@ class ClassicalCalculator(base.HazardCalculator):
         elif isinstance(rmap, numpy.ndarray):
             # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
+                _store(rmap, self.num_chunks, self.datastore)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap[grp_id] += rmap
@@ -603,7 +591,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         data = self.csm.split_atomic(
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=oq.tiling)
+            tiling=self.tiling)
         for cmaker, tilegetters, blocks, extra in data:
             cmaker.tiling = self.tiling
             grp_id = preclassical._grp_id(blocks)
