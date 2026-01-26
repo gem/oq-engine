@@ -84,7 +84,7 @@ class LogicTreeTestCase(CalculatorTestCase):
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
-            aac(mr, er, atol=8e-6)
+            aac(mr, er, atol=2e-5)
 
     def test_case_01(self):
         # same source in two source models

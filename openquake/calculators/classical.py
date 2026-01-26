@@ -182,36 +182,35 @@ def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
             yield result
 
 
-def classical(grp_key, tilegetters, cmaker, extra, dstore, monitor):
+def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_key)
-    for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(grp, tileget(sitecol, cmaker.ilabel), cmaker)
-        if tileno:
-            # source_data has keys src_id, grp_id, nsites, esites, nrupts,
-            # weight, ctimes, taskno
-            for key, lst in result['source_data'].items():
-                if key in ('weight', 'nrupts'):
-                    # avoid bogus weights in `oq show task:classical`
-                    lst[:] = [0. for _ in range(len(lst))]
-        rmap = result.pop('rmap').remove_zeros()
-        # print(f"{monitor.task_no=} {rmap=}")
+    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    if isinstance(grp_key, str) and (
+            grp_key.endswith('-0') or '-' not in grp_key):
+        # source_data has keys src_id, grp_id, nsites, esites, nrupts,
+        # weight, ctimes, taskno
+        for key, lst in result['source_data'].items():
+            if key in ('weight', 'nrupts'):
+                # avoid bogus weights in `oq show task:classical`
+                lst[:] = [0. for _ in range(len(lst))]
 
-        if (rmap.size_mb and config.directory.custom_tmp and
-                extra['blocks'] == 1):
-            rates = rmap.to_array(cmaker.gid)
-            _store(rates, extra['num_chunks'], None, monitor)
-        elif extra['blocks'] == 1:
-            result['rmap'] = rmap.to_array(cmaker.gid)
-            result['chunkno'] = None
-        else:
-            result['rmap'] = rmap
-            result['rmap'].gid = cmaker.gid
-            result['rmap'].wei = cmaker.wei
-        yield result
+    rmap = result.pop('rmap').remove_zeros()
+    if (rmap.size_mb and config.directory.custom_tmp and
+            extra['blocks'] == 1):
+        rates = rmap.to_array(cmaker.gid)
+        _store(rates, extra['num_chunks'], None, monitor)
+    elif extra['blocks'] == 1:
+        result['rmap'] = rmap.to_array(cmaker.gid)
+        result['chunkno'] = None
+    else:
+        result['rmap'] = rmap
+        result['rmap'].gid = cmaker.gid
+        result['rmap'].wei = cmaker.wei
+    return result
 
 
 def _update_dic(result, res):
@@ -628,7 +627,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         oq = self.oqparam
         allargs = []
-        n_out = []
+        n_out = 0
         L = self.oqparam.imtls.size
         self.rmap = {}
         data = self.csm.split_atomic(
@@ -638,21 +637,21 @@ class ClassicalCalculator(base.HazardCalculator):
             grp_id = preclassical._grp_id(blocks)
             if oq.disagg_by_src or len(blocks) > 1:
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-
-            if len(blocks) == 1 and extra['atomic']:
-                assert isinstance(blocks[0][0], U16), blocks
-                # case_80, New Madrid or case_27, Japan
-                keys = [f'{b}' for b in blocks[0]]
-                allargs.append((keys, tilegetters, cmaker, extra, ds))
-                n_out.append(len(tilegetters))
-            else:
-                for b, block in enumerate(blocks):
-                    key = f'{grp_id}-{b}'
-                    allargs.append((key, tilegetters, cmaker, extra, ds))
-                    n_out.append(len(tilegetters))
+            if oq.disagg_by_src:
+                assert len(tilegetters) == 1, "disagg_by_src has no tiles"
+            for tgetter in tilegetters:
+                if len(blocks) == 1 and extra['atomic']:
+                    assert isinstance(blocks[0][0], U16), blocks
+                    # case_80, New Madrid or case_27, Japan
+                    keys = [f'{b}' for b in blocks[0]]
+                    allargs.append((keys, tgetter, cmaker, extra, ds))
+                else:
+                    for b, block in enumerate(blocks):
+                        key = f'{grp_id}-{b}'
+                        allargs.append((key, tgetter, cmaker, extra, ds))
+                n_out += len(blocks)
         logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks, min_tiles=%d, max_tiles=%d', sum(n_out),
-                        len(allargs), min(n_out), max(n_out))
+                        '%d tasks', n_out, len(allargs))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
@@ -661,12 +660,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         if oq.disagg_by_src:
-            assert max(n_out) == 1, "disagg_by_src does not admit tiles"
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-            smap.expected_outputs = sum(n_out)
+            smap.expected_outputs = n_out
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_regular(acc)
 
