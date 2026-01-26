@@ -1101,7 +1101,7 @@ def extract_losses_by_site(dstore, what):
     return pandas.DataFrame(dic)
 
 
-def _group_assets_by_location(assetcol):
+def group_assets_by_location(assetcol):
     """
     Group assets by rounded (lon, lat).
 
@@ -1129,7 +1129,7 @@ def extract_losses_by_location(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     assetcol = dstore['assetcol']
-    lonlats, indices, lons, lats = _group_assets_by_location(assetcol)
+    lonlats, indices, lons, lats = group_assets_by_location(assetcol)
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
@@ -1153,7 +1153,7 @@ def extract_exposure_by_location(dstore, what):
     :returns: a DataFrame (lon, lat, ``value-*``, ``occupants_*``)
     """
     assetcol = dstore['assetcol']
-    lonlats, indices, lons, lats = _group_assets_by_location(assetcol)
+    lonlats, indices, lons, lats = group_assets_by_location(assetcol)
     dic = {'lon': F32(lons),
            'lat': F32(lats)}
     fields = [
