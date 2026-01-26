@@ -553,12 +553,12 @@ class CompositeSourceModel:
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
-        splits = G * mb_per_gsim / max_mb
+        splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
         else:
-            blocks = list(split_in_blocks(sg, hint, weight))
+            blocks = list(split_in_blocks(sg, hint/splits, weight))
         tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
