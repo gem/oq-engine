@@ -557,15 +557,9 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            ntiles = max(hint, splits)
-        elif hint > oq.max_blocks:
-            # double the tiles and reduce by half the blocks (less transfer)
-            blocks = list(split_in_blocks(sg, hint/2, weight))
-            ntiles = splits * 2
         else:
             blocks = list(split_in_blocks(sg, hint, weight))
-            ntiles = splits
-        tilegetters = list(sitecol.split(ntiles, oq.max_sites_disagg))
+        tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
                      blocks=len(blocks),
