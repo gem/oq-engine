@@ -562,11 +562,10 @@ class RateMap:
         self.jid = {g: j for j, g in enumerate(gids)}
 
     def __iadd__(self, other):
-        G = self.shape[2]
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
-            iadd(self.array[:, :, self.jid[g]],
-                 other.array[:, :, i % G], sidx)
+            oarray = other.array[:, :, i]
+            self.array[sidx, :, self.jid[g]] += oarray
         return self
 
     def to_array(self, g):
