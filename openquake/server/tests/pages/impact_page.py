@@ -10,7 +10,7 @@ class ImpactPage(EnginePage):
     def select_shakemap_version(self, value):
         shakemap_version_select = self.page.locator('select#shakemap_version')
         expect(shakemap_version_select.locator(
-            f'option[value="{value}"]')).to_have_count(1)
+            f'option[value="{value}"]')).to_have_count(1, timeout=20_000)
         shakemap_version_select.select_option(value=value)
         expect(shakemap_version_select).to_have_value(value)
 
