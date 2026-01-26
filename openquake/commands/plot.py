@@ -43,7 +43,7 @@ ZOOM_MARGIN = 8
 
 def make_figure_magdist(extractors, what):
     """
-    oq plot "magdist?"
+    $ oq plot "magdist?"
     """
     plt = import_plt()
     _fig, ax = plt.subplots()
