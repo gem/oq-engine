@@ -661,6 +661,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         if oq.disagg_by_src:
+            assert max(n_out) == 1, "disagg_by_src does not admit tiles"
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
