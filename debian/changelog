@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Added an extractor `exposure_by_location`
+
   [Michele Simionato]
   * Optimized the management of the RateMap in the classical calculator
   * Optimized the reading of the rates by vectorizing on the sites
