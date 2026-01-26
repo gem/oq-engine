@@ -188,6 +188,9 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
                 extra['blocks'] == 1 and not cmaker.disagg_by_src):
             rates = rmap.to_array(cmaker.gid)
             _store(rates, extra['num_chunks'], None, monitor)
+        elif not cmaker.disagg_by_src and extra['blocks'] == 1:
+            result['rmap'] = rmap.to_array(cmaker.gid)
+            result['chunkno'] = None
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
@@ -437,7 +440,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
         else:
             # aggregating rates is ultra-fast compared to storing
-            self.rmap += rmap
+            self.rmap[grp_id] += rmap
         return acc
 
     def create_rup(self):
@@ -485,10 +488,9 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.req_gb, self.max_weight, self.trt_rlzs = \
-                preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol,
-                    self.cmdict['Default'])
+            self.req_gb, self.max_weight = preclassical.store_tiles(
+                self.datastore, self.csm, self.sitecol,
+                self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
         self.dparam_mb = 0
@@ -608,11 +610,18 @@ class ClassicalCalculator(base.HazardCalculator):
         return sgs, ds
 
     def _execute_regular(self, sgs, ds):
+        oq = self.oqparam
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, extra in self.csm.split_atomic(
-                self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-                tiling=False):
+        L = self.oqparam.imtls.size
+        self.rmap = {}
+        data = self.csm.split_atomic(
+            self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
+            tiling=False)
+        for cmaker, tilegetters, blocks, extra in data:
+            if oq.disagg_by_src or len(blocks) > 1:
+                grp_id = preclassical._grp_id(blocks)
+                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
@@ -624,10 +633,6 @@ class ClassicalCalculator(base.HazardCalculator):
         srcs = [src for src in self.csm.get_sources() if src.weight]
         maxsrc = max(srcs, key=lambda s: s.weight)
         logging.info('Heaviest: %s', maxsrc)
-
-        L = self.oqparam.imtls.size
-        Gt = self.cmdict['Default'].Gt
-        self.rmap = RateMap(self.sitecol.sids, L, numpy.arange(Gt))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -664,28 +669,18 @@ class ClassicalCalculator(base.HazardCalculator):
     def _post_regular(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
-        if self.rmap.size_mb:
-            logging.info('Saving %s', self.rmap)
+        logging.info('Saving RateMaps')
 
         def genargs():
             # produce Gt arguments (i.e. tasks when custom_tmp is set)
-            for g, j in self.rmap.jid.items():
-                yield g, self.N, self.rmap.jid, self.num_chunks
+            for grp_id, rmap in self.rmap.items():
+                for g, j in rmap.jid.items():
+                    yield grp_id, g, self.N, rmap.jid, self.num_chunks
 
-        if (self.rmap.size_mb > 200 and config.directory.custom_tmp and
-                parallel.oq_distribute() != 'no'):
-            # tested in the oq-risk-tests
-            self.datastore.swmr_on()  # must come before the Starmap
-            savemap = parallel.Starmap(save_rates, genargs(),
-                                       h5=self.datastore,
-                                       distribute='processpool')
-            savemap.share(rates=self.rmap.array)
-            savemap.reduce()
-        elif self.rmap.size_mb:
-            for g, N, jid, num_chunks in genargs():
-                rates = self.rmap.to_array(g)
-                _store(rates, self.num_chunks, self.datastore)
-        del self.rmap
+        for grp_id, g, N, jid, num_chunks in genargs():
+            rates = self.rmap[grp_id].to_array(g)
+            _store(rates, self.num_chunks, self.datastore)
+
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
             if oq.use_rates and self.N == 1:  # sanity check

@@ -32,12 +32,13 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base, getters
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PMAP_MAX_GB = 8
@@ -147,11 +148,33 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         yield {grp_id: splits}
 
 
+def _grp_id(blks):
+    # NB: grp_id may by passed instead of a source or a block
+    blk = blks[0]
+    if isinstance(blk, (U16, int)):
+        return blk
+    src = blk[0]
+    return src if isinstance(src, U16) else src.grp_id
+
+
+def get_req_gb(data, N, oq):
+    """
+    :returns: an array with the required GB for the RateMaps
+    """
+    out = numpy.zeros(len(data))
+    L = oq.imtls.size
+    for rec in data:
+        if oq.disagg_by_src or rec['blocks'] > 1:
+            # NB: the float(rec['gsims']) is necessary for case_lisa
+            out[rec['grp_id']] = N * L * float(rec['gsims']) * 4 / GB
+    return out
+
+
 # executed at the end of preclassical
 def store_tiles(dstore, csm, sitecol, cmakers):
     """
     Store a `tiles` array if the calculation is large enough.
-    :returns: a triple (req_gb, max_weight, trt_rlzs)
+    :returns: (req_gb, max_weight)
     """
     if sitecol is None:
         N = 0
@@ -166,14 +189,15 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                 for g, cmaker in enumerate(cmakers.to_array())
                 for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
-        [(grp_id, len(cm.gsims), len(tgets), len(blocks),
+        [(_grp_id(blocks), len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
-         for grp_id, (cm, tgets, blocks, extra) in enumerate(quartets)],
+         for cm, tgets, blocks, extra in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
+    req_gb = get_req_gb(data, N, oq)
 
     # determine if to use tiling
-    req_gb, trt_rlzs, trt_smrs = getters.get_pmaps_gb(dstore, csm.full_lt)
+    req_gb = get_req_gb(data, N, oq).sum()
     regular = (req_gb < PMAP_MAX_GB or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
@@ -192,7 +216,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=req_gb, tiling=tiling))
-    return req_gb, max_weight, trt_rlzs
+    return req_gb, max_weight
 
 
 @base.calculators.add('preclassical')
@@ -394,7 +418,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'source_groups'
         if self.sitecol is not None:
-            self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
+            self.req_gb, self.max_weight = store_tiles(
                 self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims

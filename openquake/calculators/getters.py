@@ -169,10 +169,7 @@ def get_num_chunks(dstore):
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
-    try:
-        req_gb = int(dstore['source_groups'].attrs['req_gb'])
-    except KeyError: # in classical_bcr
-        req_gb = .1
+    req_gb, _, _ = get_pmaps_gb(dstore)
     max_gb = int(config.memory.pmap_max_mb) / 1024
     ntiles = int(numpy.ceil(req_gb / max_gb))
     return ntiles if ntiles > ct2 else ct2
