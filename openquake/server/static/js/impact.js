@@ -512,8 +512,11 @@ window.initImpactForm = function() {
     });
 
     $("#getStationDataFromUsgs").click(function () {
+        $('input#usgs_id').prop('disabled', true);
+        $('select#shakemap_version').prop('disabled', true);
         $('#submit_impact_calc').prop('disabled', true);
-        $('#getStationDataFromUsgs').text('Loading...');
+        $('#getStationDataFromUsgs').prop('disabled', true);
+        $('#get_stations_from_usgs_waiting').html('<img src="/static/img/spinner.gif" class="loading-spinner" /> Loading...');
         $('input[name="impact_approach"]').prop('disabled', true);
         $('#station_data_file_loaded').val('');
         var formData = new FormData();
@@ -543,8 +546,11 @@ window.initImpactForm = function() {
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
             toggleRunCalcBtnState();
-            $('#getStationDataFromUsgs').text('Retrieve from the USGS');
+            $('#getStationDataFromUsgs').prop('disabled', false);
+            $('#get_stations_from_usgs_waiting').hide();
             $('input[name="impact_approach"]').prop('disabled', false);
+            $('input#usgs_id').prop('disabled', false);
+            $('select#shakemap_version').prop('disabled', false);
         });
     });
 
