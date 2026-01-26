@@ -76,10 +76,8 @@ def create_source_info(csm, h5):
     """
     Creates source_info, trt_smrs, toms
     """
-    data = csm.get_source_info()
-    #logging.info('There are %d groups and %d sources',
-    #             len(csm.src_groups), len(data))
-    num_srcs = len(data)
+    csm.source_info = csm.get_source_info()
+    num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info', (num_srcs,), source_info_dt)
 
