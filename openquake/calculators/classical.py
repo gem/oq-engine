@@ -637,6 +637,8 @@ class ClassicalCalculator(base.HazardCalculator):
             grp_id = preclassical._grp_id(blocks)
             if oq.disagg_by_src or len(blocks) > 1:
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+            if oq.disagg_by_src:
+                assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
                 if len(blocks) == 1 and extra['atomic']:
                     assert isinstance(blocks[0][0], U16), blocks
@@ -658,7 +660,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         if oq.disagg_by_src:
-            assert max(n_out) == 1, "disagg_by_src does not admit tiles"
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
