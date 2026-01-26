@@ -565,7 +565,7 @@ class RateMap:
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
             oarray = other.array[:, :, i]
-            iadd(self.array[:, :, self.jid[g]], oarray, sidx)
+            self.array[sidx, :, self.jid[g]] += oarray
         return self
 
     def to_array(self, g):
