@@ -506,7 +506,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical', concurrent_tasks='4')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id)
+                      hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
