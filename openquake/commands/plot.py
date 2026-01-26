@@ -1159,7 +1159,7 @@ def make_figure_sites(extractors, what):
 
 def make_figure_show_png(extractors, what):
     """
-    oq plot "show_png?site.png"
+    $ oq plot "show_png?site.png"
 
     shows an image stored in 'png/IMAGE_NAME'
     """
