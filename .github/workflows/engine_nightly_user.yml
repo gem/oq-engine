@@ -12,7 +12,7 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "35 3,10 * * *"
+    - cron: "00 3,11 * * *"
 
 jobs:
   Scheduled_demos_and_WebUI:
