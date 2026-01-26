@@ -223,32 +223,6 @@ def _update_dic(result, res):
         result['source_mb'] += res['source_mb']
 
 
-def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
-    """
-    Tiling calculator
-    """
-    cmaker.init_monitoring(monitor)
-    mon = monitor('reading sources', measuremem=True)
-    result = {}
-    with dstore:
-        sitecol = dstore['sitecol'].complete  # super-fast
-        tgetter = tilegetter(sitecol, cmaker.ilabel)
-        for grp in read_src_groups(dstore, grp_id, mon):
-            res = hazclassical(grp, tgetter, cmaker)
-            _update_dic(result, res)
-
-    rmap = result.pop('rmap').remove_zeros()
-    yield result  # metadata without the rates
-    if config.directory.custom_tmp:
-        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
-            _store(rates, num_chunks, None, monitor)
-    else:
-        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
-            res = {'rmap': rates, 'grp_id': result['grp_id'],
-                   'chunkno': no, 'cfactor': numpy.zeros(2),
-                   'dparam_mb': 0., 'source_mb': 0.}
-            yield res
-
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
 # NB: fast_mean is used only if there are no site_labels
@@ -576,10 +550,7 @@ class ClassicalCalculator(base.HazardCalculator):
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
         sgs, ds = self._pre_execute()
-        if self.tiling:
-            self._execute_tiling(sgs, ds)
-        else:
-            self._execute_regular(sgs, ds)
+        self._execute(sgs, ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -624,7 +595,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
 
-    def _execute_regular(self, sgs, ds):
+    def _execute(self, sgs, ds):
         oq = self.oqparam
         allargs = []
         n_out = 0
@@ -632,8 +603,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         data = self.csm.split_atomic(
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=False)
+            tiling=oq.tiling)
         for cmaker, tilegetters, blocks, extra in data:
+            cmaker.tiling = self.tiling
             grp_id = preclassical._grp_id(blocks)
             if oq.disagg_by_src or len(blocks) > 1:
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
@@ -666,34 +638,9 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
             smap.expected_outputs = n_out
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        self._post_regular(acc)
+        self._post_execute(acc)
 
-    def _execute_tiling(self, sgs, ds):
-        allargs = []
-        n_out = []
-        for cmaker, tgetters, [grp_id], ex in self.csm.split_atomic(
-                self.cmdict, self.sitecol, self.max_weight,
-                self.num_chunks, tiling=True):
-            cmaker.tiling = True
-            for tgetter in tgetters:
-                allargs.append((grp_id, tgetter, cmaker, ex['num_chunks'], ds))
-            n_out.append(len(tgetters))
-        logging.warning('This is a tiling calculation with '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        len(allargs), min(n_out), max(n_out))
-
-        t0 = time.time()
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)
-        smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-
-        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction:
-            est_time = time.time() - t0 / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours '
-                         '(upper limit)', est_time / 3600)
-
-    def _post_regular(self, acc):
+    def _post_execute(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
         logging.info('Saving RateMaps')
