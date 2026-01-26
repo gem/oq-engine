@@ -1117,9 +1117,9 @@ def _group_assets_by_location(assetcol):
     uniq, indices = numpy.unique(tags, return_inverse=True)
     lons, lats = [], []
     for lonlat in uniq:
-        lo, la = lonlat.split(',')
-        lons.append(lo)
-        lats.append(la)
+        lon, lat = lonlat.split(',')
+        lons.append(lon)
+        lats.append(lat)
     return lonlats, indices, lons, lats
 
 
