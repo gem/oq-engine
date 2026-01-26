@@ -170,11 +170,10 @@ def get_num_chunks(dstore):
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
     req_gb, _, _ = get_pmaps_gb(dstore)
-    max_gb = int(config.memory.pmap_max_mb) / 1024
-    ntiles = int(numpy.ceil(req_gb / max_gb))
+    ntiles = int(numpy.ceil(req_gb))
     return ntiles if ntiles > ct2 else ct2
     # for EUR on cole concurrent_tasks=256
-    # req_gb=202, N=260,000
+    # req_gb=202, N=260,000 => 202
 
 
 def map_getters(dstore, full_lt=None, oq=None, disagg=False):
