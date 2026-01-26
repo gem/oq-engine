@@ -166,29 +166,22 @@ def get_num_chunks(dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['sitecol/sids'])
-    if oq.calculation_mode == 'disaggregation':
-        return N  # one chunk per site
-    try:
-        req_gb = int(dstore['source_groups'].attrs['req_gb'])
-    except KeyError: # in classical_bcr
-        req_gb = .1
-    max_gb = int(config.memory.pmap_max_mb) / 1024
-    ntiles = numpy.ceil(req_gb / max_gb)
     ct2 = oq.concurrent_tasks // 2 or 1
-    if N < ct2:
-        return N
-    elif ntiles > ct2:
-        return ntiles
-    return ct2
+    if N < ct2 or oq.calculation_mode == 'disaggregation':
+        return N  # one chunk per site
+    req_gb, _, _ = get_pmaps_gb(dstore)
+    max_gb = int(config.memory.pmap_max_mb) / 1024
+    ntiles = int(numpy.ceil(req_gb / max_gb))
+    return ntiles if ntiles > ct2 else ct2
     # for EUR on cole concurrent_tasks=256
     # req_gb=202, N=260,000
 
 
-def map_getters(dstore, full_lt=None, disagg=False):
+def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
-    oq = dstore['oqparam']
+    oq = oq or dstore['oqparam']
     n = get_num_chunks(dstore)
 
     # full_lt is None in classical_risk, classical_damage
@@ -220,8 +213,10 @@ def map_getters(dstore, full_lt=None, disagg=False):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(scratch_dir, f))
     out = []
+    sids = dstore['sitecol/sids'][:]
     for chunk in range(n):
-        getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
+        tile = sids[sids % n == chunk]
+        getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq)
         if oq.fastmean:
             getter.gweights = gweights
         else:
@@ -258,9 +253,9 @@ class CurveGetter(object):
         """
         rates = {}
         for mgetter in map_getters(dstore):
-            pmap = mgetter.init()
-            for sid in pmap:
-                rates[sid] = pmap[sid]  # shape (L, G)
+            array = mgetter.init()
+            for sid, idx in mgetter.sid2idx.items():
+                rates[sid] = array[idx]  # shape (L, G)
         dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
         for sid in rates:
             dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
@@ -299,29 +294,25 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filenames, idx, trt_rlzs, R, oq):
+    def __init__(self, filenames, chunk, trt_rlzs, sids, R, oq):
         self.filenames = filenames
-        self.idx = idx
+        self.chunk = chunk
         self.trt_rlzs = trt_rlzs
+        self.sids = sids
         self.R = R
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.use_rates = oq.use_rates
         self.eids = None
         self.ilabels = ()  # overridden in case of ilabels
-        self._map = {}
-
-    @property
-    def sids(self):
-        self.init()
-        return list(self._map)
+        self.array = None
 
     @property
     def imts(self):
         return list(self.imtls)
 
     @property
-    def G(self):
+    def Gt(self):
         return len(self.trt_rlzs)
 
     @property
@@ -330,8 +321,7 @@ class MapGetter(object):
 
     @property
     def N(self):
-        self.init()
-        return len(self._map)
+        return len(self.sids)
 
     @property
     def M(self):
@@ -339,39 +329,36 @@ class MapGetter(object):
 
     def init(self):
         """
-        Build the _map from the underlying dataframes
+        Build the array from the underlying dataframes
         """
-        if self._map:
-            return self._map
+        if self.array is not None:
+            return self.array
+        sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
+        self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
         for fname in self.filenames:
             with hdf5.File(fname) as dstore:
                 slices = dstore['_rates/slice_by_idx'][:]
-                slices = slices[slices['idx'] == self.idx]
+                slices = slices[slices['idx'] == self.chunk]
                 for start, stop in zip(slices['start'], slices['stop']):
-                    rates_df = dstore.read_df('_rates', slc=slice(start, stop))
-                    # not using groupby to save memory
-                    for sid in rates_df.sid.unique():
-                        df = rates_df[rates_df.sid == sid]
-                        try:
-                            array = self._map[sid]
-                        except KeyError:
-                            array = numpy.zeros((self.L, self.G))
-                            self._map[sid] = array
-                        array[df.lid, df.gid] += df.rate
-        return self._map
+                    df = dstore.read_df('_rates', slc=slice(start, stop))
+                    idxs = U32([sid2idx[sid] for sid in df.sid])
+                    lid = df.lid.to_numpy()
+                    gid = df.gid.to_numpy()
+                    self.array[idxs, lid, gid] += df.rate
+        self.sid2idx = sid2idx
+        return self.array
 
     def get_hcurve(self, sid):  # used in classical
         """
         :param sid: a site ID
         :returns: an array of shape (L, R) for the given site ID
         """
-        pmap = self.init()
+        array = self.init()
         r0 = numpy.zeros((self.L, self.R))
-        if sid not in pmap:  # no hazard for sid
-            return r0
+        idx = self.sid2idx[sid]
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid][:, g]
+            rates = array[idx, :, g]
             for rlz in rlzs:
                 r0[:, rlz] += rates
         return to_probs(r0)
@@ -384,13 +371,13 @@ class MapGetter(object):
         L1 = self.L // M
         means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
+            rates = self.array[self.sid2idx[sid]]  # shape (L, G)
             if len(self.ilabels):
                 gweights = self.gweights[self.ilabels[sid]]
             else:
                 gweights = self.gweights[0]
-            idx = means.sidx[sid]
-            rates = self._map[sid]  # shape (L, G)
-            means.array[idx] = (rates @ gweights).reshape((M, L1))
+            sidx = means.sidx[sid]
+            means.array[sidx] = (rates @ gweights).reshape((M, L1))
         means.array[:] = to_probs(means.array)
         return means
 

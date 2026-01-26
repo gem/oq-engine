@@ -48,6 +48,7 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -1223,8 +1224,7 @@ class HazardCalculator(BaseCalculator):
 
         # sanity check on the total weight
         totw = sum(src.weight for src in self.csm.get_sources())
-        saved = sum(row[source_reader.WEIGHT]
-                    for row in self.csm.source_info.values())
+        saved = sum(row[WEIGHT] for row in self.csm.source_info.values())
         numpy.testing.assert_allclose(totw, saved, atol=1E-3)
 
     def post_process(self):

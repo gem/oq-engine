@@ -49,7 +49,7 @@ from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, RmapMaker
-from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.source_group import SourceGroup
 
 
 def classical(group, sitecol, cmaker):

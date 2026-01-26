@@ -26,6 +26,7 @@ from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
+from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators import preclassical
 from openquake.calculators.views import view, text_table
@@ -505,7 +506,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical', concurrent_tasks='4')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id)
+                      hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -721,12 +722,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
         # reading/writing a multiFaultSource
-        csm = self.calc.datastore['_csm']
+        grp = read_src_group(self.calc.datastore, '0-0')
+        [src] = grp  # there is a single group with a single source
         tmpname = general.gettemp()
-        [src] = csm.src_groups[0].sources
         src._rupture_idxs = [
             tuple(map(str, idxs)) for idxs in src.rupture_idxs]
-        out = write_source_model(tmpname, csm.src_groups)
+        out = write_source_model(tmpname, [grp])
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')
 

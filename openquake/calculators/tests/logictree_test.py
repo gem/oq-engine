@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts, InvalidFile
+from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     get_rmap, calc_mean_rates, to_rates)
 from openquake.commonlib import readinput
@@ -61,18 +61,24 @@ class LogicTreeTestCase(CalculatorTestCase):
         if 'hcurves-stats' not in self.calc.datastore:  # not produced
             return
         oq = self.calc.oqparam
+        csm = self.calc.csm
+        csm_read = source_group.read_csm(self.calc.datastore)
+        # make sure the csm read from the datastore is the same as the original
+        for sg_orig, sg in zip(csm.src_groups, csm_read.src_groups):
+            if len(sg_orig) != len(sg):
+                raise RuntimeError(f'Inconsistent {sg=}, {sg_orig=}')
+
         if oq.use_rates:  # compare with mean_rates
             print('Comparing mean_rates')
             poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
             exp_rates = to_rates(poes)  # shape (N, M, L1)
             # NB: the exp_rates are wrong at small levels because the hcurves
             # are stored at 32 bit and that make a big difference around log(0)
-            csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
-            rmap = get_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
+            rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
@@ -176,7 +182,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         fname = general.gettemp(view('sm_rlzs', self.calc.datastore))
         self.assertEqualFiles('expected/sm_rlzs.org', fname)
 
-        csm = self.calc.datastore['_csm']
+        csm = source_group.read_csm(self.calc.datastore)
         source_ids = [src.source_id for src in csm.get_sources(0)]
         assert source_ids == ['2', '1']
         source_ids = [src.source_id for src in csm.get_sources(1)]
