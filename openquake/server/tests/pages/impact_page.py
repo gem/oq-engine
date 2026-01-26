@@ -112,3 +112,11 @@ class ImpactPageLevel2(ImpactPage):
             "document.querySelector('select#nodal_plane').options.length > 0",
             timeout=30_000
         )
+
+    def retrieve_stations_from_usgs(self):
+        get_stations_btn = self.page.get_by_role("button",
+                                                 name="Retrieve from the USGS")
+        expect(get_stations_btn).to_be_visible()
+        get_stations_btn.click()
+        expect(self.page.locator(
+               'input#station_data_file_loaded')).not_to_have_value('')

@@ -322,7 +322,6 @@ window.initImpactForm = function() {
                     $('#submit_impact_get_rupture').prop('disabled', false);
                     $('input[name="impact_approach"]').prop('disabled', false);
                     set_retrieve_data_btn_state('initial');
-                    // $('.submit_impact_get_rupture_waiting').hide();
                 });
             }
         }, USGS_ID_TYPING_DELAY);
