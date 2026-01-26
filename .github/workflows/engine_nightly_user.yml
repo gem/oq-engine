@@ -12,7 +12,7 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "55 3,12 * * *"
+    - cron: "00 3,08 * * *"
 
 jobs:
   Scheduled_demos_and_WebUI:
@@ -62,6 +62,8 @@ jobs:
           set -x
           oq engine --upgrade-db
           oq --version
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           # START WEBUI
           oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
@@ -70,7 +72,8 @@ jobs:
           done
           echo "Test WebUI with curl "
           sleep 1
-          curl --fail -L -I -X GET http://127.0.0.1:8800
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+          sleep 1
           # Run all demos
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
@@ -85,9 +88,6 @@ jobs:
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
           bash ./run-demos.sh demos ${qa_tests_data_dir}
-          # Run a calcs using https
-          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
   Manual_demos_and_WebUI:
     name: OQ ${{ github.event.inputs.git-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
