@@ -719,7 +719,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
         # reading/writing a multiFaultSource
-        grp = read_src_group(self.calc.datastore, '0-0')
+        grp = read_src_group(self.calc.datastore, '0')
         [src] = grp  # there is a single group with a single source
         tmpname = general.gettemp()
         src._rupture_idxs = [
