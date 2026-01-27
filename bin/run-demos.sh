@@ -39,7 +39,7 @@ for ini in $(find $1 -name job.tmp.ini | sort); do
     oq engine --run $ini --exports csv,hdf5
 done
 
-oq export hcurves 16  # export with GMPETables
+oq export hcurves 18  # export with GMPETables
 
 # test the --eos option
 oq engine --eos -1 /tmp
