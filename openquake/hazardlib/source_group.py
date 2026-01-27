@@ -677,7 +677,7 @@ def store_src_groups(hdf5, grp_id, group, num_blocks):
     """
     keys = []
     blocks = numpy.array_split(group, num_blocks)
-    if group.atomic or num_blocks == 1:
+    if num_blocks == 1:
         key = f"_csm/{grp_id}"
         hdf5[key] = zpik(group)
         keys.append(key)
