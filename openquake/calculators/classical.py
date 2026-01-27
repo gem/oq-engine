@@ -196,22 +196,17 @@ def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
                 lst[:] = [0. for _ in range(len(lst))]
 
     rmap = result.pop('rmap').remove_zeros()
-    yield result  # metadata without the rates
     if (rmap.size_mb and config.directory.custom_tmp and
             extra['blocks'] == 1):
         rates = rmap.to_array(cmaker.gid)
         _store(rates, extra['num_chunks'], None, monitor)
     elif extra['blocks'] == 1:
-        for no, rates in rmap.gen_rates(cmaker.gid, extra['num_chunks']):
-            res = {'rmap': rates, 'grp_id': result['grp_id'],
-                   'chunkno': no, 'cfactor': numpy.zeros(2),
-                   'dparam_mb': 0., 'source_mb': 0.}
-            yield res
+        result['rmap'] = rmap.to_array(cmaker.gid)
     else:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
         result['rmap'].wei = cmaker.wei
-        yield result
+    return result
 
 
 def _update_dic(result, res):
