@@ -152,18 +152,18 @@ def read_grp_sitecol(dstore, grp_key):
     return grp, sitecol
 
 
-def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
+def classical_disagg(grp_key, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites
     """
-    # NB: disagg_by_src does not work with ilabel
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_key)
+    sites = tilegetter(sitecol, cmaker.ilabel)
     if extra['atomic']:
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grp, sitecol, cmaker)
+        result = hazclassical(grp, sites, cmaker)
         # do not remove zeros, otherwise AELO for JPN will break
         # since there are 4 sites out of 18 with zeros
         result['rmap'] = result.pop('rmap')
@@ -173,7 +173,7 @@ def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
     else:
         # yield a result for each base source
         for srcs in groupby(grp, valid.basename).values():
-            result = hazclassical(srcs, sitecol, cmaker)
+            result = hazclassical(srcs, sites, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
             yield result
@@ -196,18 +196,22 @@ def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
                 lst[:] = [0. for _ in range(len(lst))]
 
     rmap = result.pop('rmap').remove_zeros()
+    yield result  # metadata without the rates
     if (rmap.size_mb and config.directory.custom_tmp and
             extra['blocks'] == 1):
         rates = rmap.to_array(cmaker.gid)
         _store(rates, extra['num_chunks'], None, monitor)
-        result['rmap'] = None
     elif extra['blocks'] == 1:
-        result['rmap'] = rmap.to_array(cmaker.gid)
+        for no, rates in rmap.gen_rates(cmaker.gid, extra['num_chunks']):
+            res = {'rmap': rates, 'grp_id': result['grp_id'],
+                   'chunkno': no, 'cfactor': numpy.zeros(2),
+                   'dparam_mb': 0., 'source_mb': 0.}
+            yield res
     else:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
         result['rmap'].wei = cmaker.wei
-    return result
+        yield result
 
 
 def _update_dic(result, res):
@@ -586,7 +590,6 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute(self, sgs, ds):
         oq = self.oqparam
         allargs = []
-        n_out = 0
         L = self.oqparam.imtls.size
         self.rmap = {}
         data = self.csm.split_atomic(
@@ -596,9 +599,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tilegetters, blocks, extra in data:
             cmaker.tiling = self.tiling
             grp_id = preclassical._grp_id(blocks)
-            if oq.disagg_by_src or len(blocks) > 1:
+            if self.few_sites or oq.disagg_by_src or len(blocks) > 1:
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if oq.disagg_by_src:
+            if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
                 if len(blocks) == 1 and extra['atomic']:
@@ -610,11 +613,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     for b, block in enumerate(blocks):
                         key = f'{grp_id}-{b}'
                         allargs.append((key, tgetter, cmaker, extra, ds))
-                n_out += len(blocks)
                 maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
-        logging.warning('This is a %s calculation with %d outputs, '
-                        '%d tasks, maxtiles=%d', kind, n_out, len(allargs),
+        logging.warning('This is a %s calculation with '
+                        '%d tasks, maxtiles=%d', kind, len(allargs),
                         maxtiles)
 
         # log info about the heavy sources
@@ -623,12 +625,11 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
-        if oq.disagg_by_src:
+        if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-            smap.expected_outputs = n_out
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
 

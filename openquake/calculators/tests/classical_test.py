@@ -28,7 +28,6 @@ from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
-from openquake.calculators import preclassical
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract

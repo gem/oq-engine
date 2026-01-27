@@ -60,8 +60,7 @@ def gen_chunks(sids, num_chunks):
         else:
             for i in idx:
                 ok = idxs == i
-                if ok.any():
-                    yield i, ok
+                yield i, ok
 
 
 def get_mean_curve(dstore, imt, site_id=0):
