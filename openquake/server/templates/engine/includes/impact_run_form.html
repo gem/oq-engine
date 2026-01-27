@@ -50,6 +50,7 @@
                 <input class="impact-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
                 <button type="button" class="station-btn" id="clearStationDataFromUsgs">Clear Data</button>
                 <button type="button" class="station-btn" id="getStationDataFromUsgs">Retrieve from the USGS</button>
+                <span id="get_stations_from_usgs_waiting"></span>
               </div>
               <div class="impact_form_row hidden-for-shakemap hidden">
                 <label for"station_data_file">{{ impact_form_labels.station_data_file }}</label>
@@ -67,4 +68,6 @@
               <div class="impact_form_row">
                 <button id="submit_impact_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
                 <!-- <input type="submit"> -->
+                <br/>
+                <span class="submit_impact_calc_waiting"></span>
               </div>

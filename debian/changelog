@@ -1,4 +1,7 @@
   [Paolo Tormene]
+  * Refactored the WebUI, separating its logic into multiple files
+  * Added Playwright tests to test the WebUI frontend in different
+    application modes
   * Added an extractor `exposure_by_location`
 
   [Michele Simionato]
