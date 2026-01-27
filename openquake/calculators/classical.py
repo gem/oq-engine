@@ -186,8 +186,7 @@ def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_key)
     result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker)
-    if isinstance(grp_key, str) and (
-            grp_key.endswith('-0') or '-' not in grp_key):
+    if isinstance(grp_key, str) and '-' not in grp_key:
         # source_data has keys src_id, grp_id, nsites, esites, nrupts,
         # weight, ctimes, taskno
         for key, lst in result['source_data'].items():
@@ -600,11 +599,15 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                if len(blocks) == 1 and extra['atomic']:
-                    assert isinstance(blocks[0][0], U16), blocks
-                    # case_80, New Madrid or case_27, Japan
-                    keys = [f'{b}' for b in blocks[0]]
-                    allargs.append((keys, tgetter, cmaker, extra, ds))
+                if len(blocks) == 1:
+                    if extra['atomic']:
+                        assert isinstance(blocks[0][0], U16), blocks
+                        # case_80, New Madrid or case_27, Japan
+                        keys = [f'{b}' for b in blocks[0]]
+                        allargs.append((keys, tgetter, cmaker, extra, ds))
+                    else:
+                        key = str(grp_id)
+                        allargs.append((key, tgetter, cmaker, extra, ds))
                 else:
                     for b, block in enumerate(blocks):
                         key = f'{grp_id}-{b}'
