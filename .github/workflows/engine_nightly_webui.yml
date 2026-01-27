@@ -80,6 +80,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-python${{ matrix.python-version }}
+          name: playwright-artifacts-impact-python${{ matrix.python-version }}-{{ matrix.os }}
           path: test-results
           retention-days: 7
