@@ -201,14 +201,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         assert not oq.disagg_by_src
         assert N > oq.max_sites_disagg
     else:
-        logging.info(f'Requiring {req_gb} GB for the RateMaps')
+        logging.info(f'Requiring {req_gb.sum():.1f} GB for the RateMaps')
 
     # store source groups
     for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
         store_src_groups(dstore, grp_id, csm.src_groups[grp_id], num_blocks)
     dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
-                       attrs=dict(req_gb=req_gb, mem_gb=req_gb,
+                       attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
                                   tiling=oq.tiling))
     return req_gb, max_weight
 
