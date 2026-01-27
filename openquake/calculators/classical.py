@@ -610,8 +610,9 @@ class ClassicalCalculator(base.HazardCalculator):
                         key = f'{grp_id}-{b}'
                         allargs.append((key, tgetter, cmaker, extra, ds))
                 n_out += len(blocks)
-        logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks', n_out, len(allargs))
+        kind = 'tiling' if oq.tiling else 'regular'
+        logging.warning('This is a %s calculation with %d outputs, '
+                        '%d tasks', kind, n_out, len(allargs))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]

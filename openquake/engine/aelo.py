@@ -96,10 +96,11 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = inputs['sites']
-    params['max_sites_disagg'] = len(lonlats)
     if 'vs30' in inputs:
         if inputs['vs30']:
             params['override_vs30'] = '%(vs30)s' % inputs
+            params['max_sites_disagg'] = str(
+                len(lonlats) * len(inputs['vs30'].split()))
     params['distance_bin_width'] = '20'
     params['num_epsilon_bins'] = '10'
     params['mag_bin_width'] = '0.1'

@@ -557,8 +557,12 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tilegetters = list(sitecol.split(
-                max(hint, splits), minsize=oq.max_sites_disagg))
+            maxhint = max(hint, splits)
+            if N / maxhint < oq.max_sites_disagg:
+                # in test_JPN there are 3 sites which we don't want to split
+                # in that case hint=15.238, splits=1, max_sites_disagg=3
+                maxhint = N / oq.max_sites_disagg  # becomes 1
+            tilegetters = list(sitecol.split(maxhint))
         else:
             blocks = list(split_in_blocks(sg, hint/splits, weight))
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
