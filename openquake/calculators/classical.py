@@ -416,9 +416,10 @@ class ClassicalCalculator(base.HazardCalculator):
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates directly for tiling without custom_tmp
+            # store the rates; for classical they can with a single chunkno
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore)
+                chunkno = dic.get('chunkno')
+                _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap[grp_id] += rmap
