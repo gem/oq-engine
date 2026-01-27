@@ -27,7 +27,7 @@ from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
-    SourceGroup, store_src_groups, NUM_SITES, NUM_RUPTURES)
+    SourceGroup, _grp_id, store_src_groups, NUM_SITES, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -147,15 +147,6 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         yield {grp_id: splits}
 
 
-def _grp_id(blks):
-    # NB: grp_id may by passed instead of a source or a block
-    blk = blks[0]
-    if isinstance(blk, (U16, int)):
-        return blk
-    src = blk[0]
-    return src if isinstance(src, U16) else src.grp_id
-
-
 def get_req_gb(data, N, oq):
     """
     :returns: an array with the required GB for the RateMaps
@@ -188,7 +179,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                 for g, cmaker in enumerate(cmakers.to_array())
                 for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
-        [(_grp_id(blocks), len(cm.gsims), len(tgets), len(blocks),
+        [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
          for cm, tgets, blocks, extra in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
