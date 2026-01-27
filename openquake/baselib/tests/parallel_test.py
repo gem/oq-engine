@@ -242,15 +242,6 @@ class SplitTaskTestCase(unittest.TestCase):
             smap.submit_split((elements, timefactor), duration, outs_per_task)
             res = smap.reduce(acc=0)
         self.assertAlmostEqual(res, 48.6718458266)
-        """
-        with hdf5.File(tmp, 'w') as h5:
-            performance.init_performance(h5)
-            res = parallel.Starmap.apply_split(
-                process_elements, (elements, timefactor),
-                h5=h5, duration=duration
-            ).reduce(acc=0)
-        self.assertAlmostEqual(res, 48.6718458266)
-        """
         shutil.rmtree(tmpdir)
 
 

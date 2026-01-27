@@ -598,8 +598,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                for grp_key in grp_keys:
-                    allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+                allargs.append((grp_keys, tgetter, cmaker, extra, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
@@ -616,7 +615,9 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
-            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+            smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+            for args in allargs:
+                smap.submit_split(args, oq.time_per_task, oq.outs_per_task)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
 

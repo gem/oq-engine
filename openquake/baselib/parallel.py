@@ -775,18 +775,6 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
-    def apply_split(cls, task, allargs, concurrent_tasks=None,
-                    maxweight=None, weight=lambda item: 1,
-                    key=lambda item: 'Unspecified',
-                    distribute=None, progress=logging.info, h5=None,
-                    duration=300, outs_per_task=5):
-        """
-        Same as Starmap.apply, but possibly produces subtasks
-        """
-        args = (allargs[0], task, allargs[1:], duration, outs_per_task)
-        return cls.apply(split_task, args, concurrent_tasks or 2*num_cores,
-                         maxweight, weight, key, distribute, progress, h5)
-
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, h5=None):
         self.__class__.init(distribute=distribute)
