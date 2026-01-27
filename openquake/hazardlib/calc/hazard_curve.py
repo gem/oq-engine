@@ -64,7 +64,7 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    if getattr(group[0], 'atomic', False):
+    if isinstance(group[0], SourceGroup):
         # tested in case_80 with 5 subgroups of 3 sources each
         dic = RmapMaker(cmaker, sitecol, group[0]).make()
         for grp in group[1:]:
