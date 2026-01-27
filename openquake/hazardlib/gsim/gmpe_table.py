@@ -87,9 +87,10 @@ def _return_tables(self, mag, imt, which):
     assert which in "IMLs Total", which
     if imt.string not in self.imls and imt.name != "SA":
         # Scalar IMT is not supported (case of conditional GMPEs where
-        # we need to still set an arbitrary empty table in ctx maker)
+        # we need to still set an arbitrary empty table in ctx maker for
+        # non-supported scalar IMTs)
         empty = self.imls[next(iter(self.imls))].shape
-        iml_table = np.empty((empty[0], empty[2])) # Make dims consistent
+        return np.empty((empty[0], empty[2])) # Make dims consistent
     elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
         if which == "IMLs":
@@ -129,6 +130,7 @@ def _return_tables(self, mag, imt, which):
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
     m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
+
     return 10.0 ** m_interpolator(mag)
 
 
