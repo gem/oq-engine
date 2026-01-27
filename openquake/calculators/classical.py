@@ -592,6 +592,7 @@ class ClassicalCalculator(base.HazardCalculator):
         data = self.csm.split_atomic(
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
             tiling=self.tiling)
+        maxtiles = 1
         for cmaker, tilegetters, blocks, extra in data:
             cmaker.tiling = self.tiling
             grp_id = preclassical._grp_id(blocks)
@@ -610,9 +611,11 @@ class ClassicalCalculator(base.HazardCalculator):
                         key = f'{grp_id}-{b}'
                         allargs.append((key, tgetter, cmaker, extra, ds))
                 n_out += len(blocks)
+                maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with %d outputs, '
-                        '%d tasks', kind, n_out, len(allargs))
+                        '%d tasks, maxtiles=%d', kind, n_out, len(allargs),
+                        maxtiles)
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
