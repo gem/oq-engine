@@ -43,6 +43,14 @@ weight = operator.attrgetter('weight')
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 
+def _grp_id(blk):
+    # NB: grp_id may by passed instead of a source or a block
+    if isinstance(blk, (U16, int)):
+        return blk
+    src = blk[0]
+    return src if isinstance(src, U16) else src.grp_id
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -515,10 +523,15 @@ class CompositeSourceModel:
         non_atomic = []
         for cmaker, tilegetters, blocks, extra in self.split(
                 cmdict, sitecol, max_weight, num_chunks, tiling):
-            if extra['atomic']:
-                atomic.append((cmaker, tilegetters, blocks, extra))
+            grp_id = _grp_id(blocks[0])
+            if len(blocks) == 1:
+                grp_keys = [str(grp_id)]
             else:
-                non_atomic.append((cmaker, tilegetters, blocks, extra))
+                grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
+            if extra['atomic']:
+                atomic.append((cmaker, tilegetters, grp_keys, extra))
+            else:
+                non_atomic.append((cmaker, tilegetters, grp_keys, extra))
         return collect_atomic(atomic) + non_atomic
 
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
@@ -626,16 +639,16 @@ def collect_atomic(allargs):
     blocks_ = AccumDict(accum=[])
     tilegetters_ = {}
     cmaker_ = {}
-    for cmaker, tilegetters, blocks, extra in allargs:
+    for cmaker, tilegetters, grp_keys, extra in allargs:
         gid = tuple(cmaker.gid)
         tilegetters_[gid] = tilegetters
-        blocks_[gid].extend(blocks)
+        blocks_[gid].extend(grp_keys)
         cmaker_[gid] = cmaker
     out = []
     extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
         for tgetter in tgetters:
-            out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
+            out.append((cmaker_[gid], [tgetter], blocks_[gid], extra))
     logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
     return out
 
