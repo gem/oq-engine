@@ -1311,7 +1311,6 @@ class ContextMaker(object):
         :returns: (weight, estimate_sites)
         """
         eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
-        src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
         # sanity check, preclassical must has set .num_ruptures
@@ -1321,20 +1320,14 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return eps, 0
         src.nsites = len(sites)
-        t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
-        src.dt = time.time() - t0
         if not ctxs:
             return eps, 0
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
+        weight = lenctx * len(self.gsims) 
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
@@ -1347,8 +1340,6 @@ class ContextMaker(object):
         else:
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(src, srcfilter)
-                # if src.code == b'S':
-                #     print(src, src.dt, src.num_ruptures / self.num_rups)
 
 
 def by_dists(gsim):
