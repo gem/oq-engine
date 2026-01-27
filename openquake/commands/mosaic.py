@@ -159,7 +159,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
 
 def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = None, vs30: str = '760',
+             concurrent_jobs: int = None, vs30: float = 760,
              asce_version: str = oqvalidation.OqParam.asce_version.default):
     """
     Run a PSHA analysis on the given sites or given a CSV file
