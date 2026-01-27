@@ -46,6 +46,7 @@
 |case\_68|Check indirect AvgSA GMPEs can still compute non-AvgSA IMTs using underlying GMPE if no AvgSA IMTs in job file|
 |case\_69|Collapse area source, 1 site|
 |case\_70|Test abrahamson\_gulerce\_2020|
+|case\_71|Test NGAEast (gmpe table) as underlying GSIM when using conditional GMPEs|
 |case\_72|Test calculation with a subset of the 2014 US model|
 |case\_74|Tests EAS-based calculation|
 |case\_75|Tests calculation with multi-fault source|
