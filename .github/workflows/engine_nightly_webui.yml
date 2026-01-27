@@ -7,7 +7,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "30 23 * * *"
+    - cron: "10 09 * * *"
 
 jobs:
   server_impact_mode:
