@@ -85,11 +85,11 @@ def _return_tables(self, mag, imt, which):
        the string "IMLs" or "Total"
     """
     assert which in "IMLs Total", which
-    if imt.string not in self.imls:
-        # IMT is not supported (case of conditional GMPEs where
-        # we need to still set an arbitrary table in ctx maker)
-        ec = self.imls[next(iter(self.imls))].shape
-        iml_table = np.empty((ec[0], ec[2]))
+    if imt.string not in self.imls and imt.name != "SA":
+        # Scalar IMT is not supported (case of conditional GMPEs where
+        # we need to still set an arbitrary empty table in ctx maker)
+        empty = self.imls[next(iter(self.imls))].shape
+        iml_table = np.empty((empty[0], empty[2])) # Make dims consistent
     elif imt.string in ('PGA, PGV'):
         # Get supported scalar imt
         if which == "IMLs":
