@@ -200,6 +200,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         assert oq.calculation_mode != 'disaggregation'
         assert not oq.disagg_by_src
         assert N > oq.max_sites_disagg
+    else:
+        logging.info(f'Requiring {req_gb} GB for the RateMaps')
 
     # store source groups
     for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
