@@ -108,7 +108,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
             ids[model] = df.ID.to_numpy()
             sites = ','.join('%s %s' % tuple(lonlat)
                              for lonlat in lonlats[df.index])
-            dic = dict(sites=sites, vs30=vs30, asce_version=asce_version,
+            dic = dict(sites=sites, vs30=str(vs30), asce_version=asce_version,
                        siteid=' '.join(map(str, ids[model])))
             params = get_params_from(dic, mosaic_dir)
             # del params['postproc_func']
@@ -159,7 +159,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
 
 def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = None, vs30: float = 760,
+             concurrent_jobs: int = None, vs30: str = '760',
              asce_version: str = oqvalidation.OqParam.asce_version.default):
     """
     Run a PSHA analysis on the given sites or given a CSV file
