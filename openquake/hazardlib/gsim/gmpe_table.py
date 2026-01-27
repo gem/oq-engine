@@ -85,16 +85,21 @@ def _return_tables(self, mag, imt, which):
        the string "IMLs" or "Total"
     """
     assert which in "IMLs Total", which
-    if imt.string in 'PGA PGV':
-        # Get scalar imt
+    if imt.string not in self.imls:
+        # IMT is not supported (case of conditional GMPEs where
+        # we need to still set an arbitrary table in ctx maker)
+        ec = self.imls[next(iter(self.imls))].shape
+        iml_table = np.empty((ec[0], ec[2]))
+    elif imt.string in ('PGA, PGV'):
+        # Get supported scalar imt
         if which == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
             iml_table = self.stddev[imt.string][:]
-
         n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
+        # Get SA
         if which == "IMLs":
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
