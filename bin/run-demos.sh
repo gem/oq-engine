@@ -45,7 +45,7 @@ oq export hcurves 18  # export with GMPETables
 oq engine --eos -1 /tmp
 
 # extract disaggregation data
-oq extract "disagg_layer?" 14
+oq extract "disagg_layer?" 15
 
 # do something with the generated data, 9 is the AreaSource demo
 oq engine --lhc
