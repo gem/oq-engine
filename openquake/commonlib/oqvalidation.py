@@ -774,7 +774,7 @@ tile_spec:
 tiling:
   Used to force the tiling or non-tiling strategy in classical calculations
   Example: *tiling = true*.
-  Default: None, meaning the engine will decide what to do
+  Default: False
 
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
@@ -1163,7 +1163,7 @@ class OqParam(valid.ParamSet):
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.coordinates, ())
     tile_spec = valid.Param(valid.tile_spec, None)
-    tiling = valid.Param(valid.boolean, None)
+    tiling = valid.Param(valid.boolean, False)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])

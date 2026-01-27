@@ -41,7 +41,6 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-PMAP_MAX_GB = 8
 
 
 def source_data(sources):
@@ -196,26 +195,21 @@ def store_tiles(dstore, csm, sitecol, cmakers):
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
     req_gb = get_req_gb(data, N, oq)
 
-    # determine if to use tiling
-    req_gb = get_req_gb(data, N, oq).sum()
-    regular = (req_gb < PMAP_MAX_GB or oq.disagg_by_src or
-               N < oq.max_sites_disagg or oq.tile_spec)
-    if oq.tiling is None:
-        tiling = not regular
+    # sanity checks
+    if oq.tiling:
+        assert oq.calculation_mode != 'disaggregation'
+        assert not oq.disagg_by_src
+        assert N > oq.max_sites_disagg
     else:
-        tiling = oq.tiling
-
-    if tiling:
-        logging.info('Not requiring mem_gb = %.2f', req_gb)
-    else:
-        logging.info('Requiring mem_gb = %.2f', req_gb)
+        logging.info(f'Requiring {req_gb.sum():.1f} GB for the RateMaps')
 
     # store source groups
     for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
         store_src_groups(dstore, grp_id, csm.src_groups[grp_id], num_blocks)
     dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
-                       attrs=dict(req_gb=req_gb, mem_gb=req_gb, tiling=tiling))
+                       attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
+                                  tiling=oq.tiling))
     return req_gb, max_weight
 
 
