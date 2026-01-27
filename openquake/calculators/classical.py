@@ -139,15 +139,12 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def read_grp_sitecol(dstore, grp_key):
+def read_grp_sitecol(dstore, grp_keys):
     """
-    :returns: source group(s) associated to the key and site collection
+    :returns: source groups associated to the keys and site collection
     """
     with dstore:
-        if isinstance(grp_key, list):  # New Madrid or Japan
-            grp = [read_src_group(dstore, grp_id) for grp_id in grp_key]
-        else:
-            grp = read_src_group(dstore, grp_key)
+        grp = [read_src_group(dstore, grp_id) for grp_id in grp_keys]
         sitecol = dstore['sitecol'].complete  # super-fast
     return grp, sitecol
 
@@ -594,13 +591,15 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         for cmaker, tilegetters, grp_keys, extra in data:
             cmaker.tiling = self.tiling
-            grp_id = int(grp_keys[0].split('-')[0])
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
-                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+                for grp_key in grp_keys:
+                    g = int(grp_key.split('-')[0])
+                    self.rmap[g] = RateMap(self.sitecol.sids, L, cmaker.gid)
             if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                allargs.append((grp_keys, tgetter, cmaker, extra, ds))
+                for grp_key in grp_keys:
+                    allargs.append(([grp_key], tgetter, cmaker, extra, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
