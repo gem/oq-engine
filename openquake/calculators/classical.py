@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import os
-import time
 import psutil
 import logging
 import operator
@@ -29,8 +27,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import (
-    read_csm, read_src_groups, read_src_group)
+from openquake.hazardlib.source_group import read_csm, read_src_group
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -155,18 +152,18 @@ def read_grp_sitecol(dstore, grp_key):
     return grp, sitecol
 
 
-def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
+def classical_disagg(grp_key, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites
     """
-    # NB: disagg_by_src does not work with ilabel
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_key)
+    sites = tilegetter(sitecol, cmaker.ilabel)
     if extra['atomic']:
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grp, sitecol, cmaker)
+        result = hazclassical(grp, sites, cmaker)
         # do not remove zeros, otherwise AELO for JPN will break
         # since there are 4 sites out of 18 with zeros
         result['rmap'] = result.pop('rmap')
@@ -176,7 +173,7 @@ def classical_disagg(grp_key, dummy, cmaker, extra, dstore, monitor):
     else:
         # yield a result for each base source
         for srcs in groupby(grp, valid.basename).values():
-            result = hazclassical(srcs, sitecol, cmaker)
+            result = hazclassical(srcs, sites, cmaker)
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
             yield result
@@ -205,7 +202,6 @@ def classical(grp_key, tilegetter, cmaker, extra, dstore, monitor):
         _store(rates, extra['num_chunks'], None, monitor)
     elif extra['blocks'] == 1:
         result['rmap'] = rmap.to_array(cmaker.gid)
-        result['chunkno'] = None
     else:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
@@ -222,32 +218,6 @@ def _update_dic(result, res):
         result['dparam_mb'] += res['dparam_mb']
         result['source_mb'] += res['source_mb']
 
-
-def tiling(grp_id, tilegetter, cmaker, num_chunks, dstore, monitor):
-    """
-    Tiling calculator
-    """
-    cmaker.init_monitoring(monitor)
-    mon = monitor('reading sources', measuremem=True)
-    result = {}
-    with dstore:
-        sitecol = dstore['sitecol'].complete  # super-fast
-        tgetter = tilegetter(sitecol, cmaker.ilabel)
-        for grp in read_src_groups(dstore, grp_id, mon):
-            res = hazclassical(grp, tgetter, cmaker)
-            _update_dic(result, res)
-
-    rmap = result.pop('rmap').remove_zeros()
-    yield result  # metadata without the rates
-    if config.directory.custom_tmp:
-        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
-            _store(rates, num_chunks, None, monitor)
-    else:
-        for no, rates in rmap.gen_rates(cmaker.gid, num_chunks):
-            res = {'rmap': rates, 'grp_id': result['grp_id'],
-                   'chunkno': no, 'cfactor': numpy.zeros(2),
-                   'dparam_mb': 0., 'source_mb': 0.}
-            yield res
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
@@ -436,23 +406,15 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
-            """
-            afename = '_afes/' + source_id
-            try:
-                rm = self.datastore[afename]
-            except KeyError:  # store the rates
-                self.datastore[afename] = rmap / oq.investigation_time
-            else:  # update the rates
-                self.datastore[afename] = rm + rmap / oq.investigation_time
-            """
             acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates directly for tiling without custom_tmp
+            # store the rates
             with self.monitor('storing rates', measuremem=True):
-                _store(rmap, self.num_chunks, self.datastore, dic['chunkno'])
+                chunkno = dic.get('chunkno')  # None with the current impl.
+                _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap[grp_id] += rmap
@@ -576,10 +538,7 @@ class ClassicalCalculator(base.HazardCalculator):
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
         sgs, ds = self._pre_execute()
-        if self.tiling:
-            self._execute_tiling(sgs, ds)
-        else:
-            self._execute_regular(sgs, ds)
+        self._execute(sgs, ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -624,20 +583,21 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
 
-    def _execute_regular(self, sgs, ds):
+    def _execute(self, sgs, ds):
         oq = self.oqparam
         allargs = []
-        n_out = 0
         L = self.oqparam.imtls.size
         self.rmap = {}
         data = self.csm.split_atomic(
             self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=False)
+            tiling=self.tiling)
+        maxtiles = 1
         for cmaker, tilegetters, blocks, extra in data:
+            cmaker.tiling = self.tiling
             grp_id = preclassical._grp_id(blocks)
-            if oq.disagg_by_src or len(blocks) > 1:
+            if self.few_sites or oq.disagg_by_src or len(blocks) > 1:
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if oq.disagg_by_src:
+            if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
                 if len(blocks) == 1 and extra['atomic']:
@@ -649,9 +609,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     for b, block in enumerate(blocks):
                         key = f'{grp_id}-{b}'
                         allargs.append((key, tgetter, cmaker, extra, ds))
-                n_out += len(blocks)
-        logging.warning('This is a regular calculation with %d outputs, '
-                        '%d tasks', n_out, len(allargs))
+                maxtiles = max(maxtiles, len(tilegetters))
+        kind = 'tiling' if oq.tiling else 'regular'
+        logging.warning('This is a %s calculation with '
+                        '%d tasks, maxtiles=%d', kind, len(allargs),
+                        maxtiles)
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
@@ -659,41 +621,15 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
-        if oq.disagg_by_src:
+        if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-            smap.expected_outputs = n_out
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-        self._post_regular(acc)
+        self._post_execute(acc)
 
-    def _execute_tiling(self, sgs, ds):
-        allargs = []
-        n_out = []
-        for cmaker, tgetters, [grp_id], ex in self.csm.split_atomic(
-                self.cmdict, self.sitecol, self.max_weight,
-                self.num_chunks, tiling=True):
-            cmaker.tiling = True
-            for tgetter in tgetters:
-                allargs.append((grp_id, tgetter, cmaker, ex['num_chunks'], ds))
-            n_out.append(len(tgetters))
-        logging.warning('This is a tiling calculation with '
-                        '%d tasks, min_tiles=%d, max_tiles=%d',
-                        len(allargs), min(n_out), max(n_out))
-
-        t0 = time.time()
-        self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(tiling, allargs, h5=self.datastore.hdf5)
-        smap.reduce(self.agg_dicts, AccumDict(accum=0.))
-
-        fraction = os.environ.get('OQ_SAMPLE_SOURCES')
-        if fraction:
-            est_time = time.time() - t0 / float(fraction)
-            logging.info('Estimated time for the classical part: %.1f hours '
-                         '(upper limit)', est_time / 3600)
-
-    def _post_regular(self, acc):
+    def _post_execute(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
         logging.info('Saving RateMaps')

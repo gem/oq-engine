@@ -28,7 +28,6 @@ from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
-from openquake.calculators import preclassical
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -298,7 +297,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # workers would read the real custom_tmp and not the mocked one
         tmp = tempfile.gettempdir()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
-             mock.patch.dict(vars(preclassical), {'PMAP_MAX_GB': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -307,20 +305,19 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(0.5).csv',
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
-        ], case_22.__file__, delta=1E-6)
+            ], case_22.__file__, delta=1E-6, tiling=True)
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
-        self.assertEqual(data['blocks'], 2)
+        self.assertEqual(data['gsims'], [4])
+        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['blocks'], [1])
 
     def test_case_22_bis(self):
         # crossing date line calculation for Alaska
         # this also tests full tiling without custom_dir
         # NB: requires disabling the parallelization otherwise the
         # workers would read the real custom_tmp and not the mocked one
-        with mock.patch.dict(vars(preclassical), {'PMAP_MAX_GB': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': ''}), \
+        with mock.patch.dict(config.directory, {'custom_tmp': ''}), \
              mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -329,12 +326,12 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(0.5).csv',
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
-        ], case_22.__file__, delta=1E-6)
+            ], case_22.__file__, delta=1E-6, tiling=True)
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
-        self.assertEqual(data['blocks'], 2)
+        self.assertEqual(data['gsims'], [4])
+        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

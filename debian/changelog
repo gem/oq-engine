@@ -1,4 +1,9 @@
+  [Paolo Tormene]
+  * Added an extractor `exposure_by_location`
+
   [Michele Simionato]
+  * Turned tiling into an explicit parameter (i.e. you must pass it to
+    enable the full tiling algorithm, before it was automagic)
   * Optimized the management of the RateMap in the classical calculator
   * Optimized the reading of the rates by vectorizing on the sites
   * Bug fix: `use_rates` was not overridden by the child calculation
