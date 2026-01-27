@@ -411,9 +411,9 @@ class ClassicalCalculator(base.HazardCalculator):
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates; for classical they can with a single chunkno
+            # store the rates
             with self.monitor('storing rates', measuremem=True):
-                chunkno = dic.get('chunkno')
+                chunkno = dic.get('chunkno')  # None with the current impl.
                 _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
             # aggregating rates is ultra-fast compared to storing
