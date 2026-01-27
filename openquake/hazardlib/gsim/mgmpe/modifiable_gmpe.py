@@ -130,7 +130,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     if imts_base:
         compute_imts_subset(
             self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
-
+    
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     """
@@ -431,7 +431,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
         # Instantiate here and store for later
         [(gmpe_name, kw)] = cond_gmpe_by_imt[imt]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
-        cond.from_mgpme = True
+        cond.from_mgmpe = True
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "
                              f"REQUIRES_IMTS attribute - this is "
@@ -447,6 +447,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
 
         # Add each required IMT so we compute all using underlying GMM once
         imts_req.update(cond.REQUIRES_IMTS)
+
     return sorted(imts_req)
 
 
