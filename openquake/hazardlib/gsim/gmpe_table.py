@@ -90,7 +90,7 @@ def _return_tables(self, mag, imt, which):
         # we need to still set an arbitrary empty table in ctx maker)
         empty = self.imls[next(iter(self.imls))].shape
         iml_table = np.empty((empty[0], empty[2])) # Make dims consistent
-    elif imt.string in ('PGA, PGV'):
+    elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
         if which == "IMLs":
             iml_table = self.imls[imt.string][:]
