@@ -1310,25 +1310,24 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (eps, 0)
+            return (0, 0) if src.code in b'pP' else (EPS, 0)
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps, 0
+            return EPS, 0
         src.nsites = len(sites)
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         if not ctxs:
-            return eps, 0
+            return EPS, 0
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
-        weight = lenctx * len(self.gsims) 
-        return max(weight, eps), int(esites)
+        weight = lenctx * len(self.gsims) / 1000.
+        return max(weight, EPS), int(esites)
 
     def set_weight(self, sources, srcfilter):
         """
