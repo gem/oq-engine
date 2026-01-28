@@ -1064,6 +1064,7 @@ class List(list):
     weight = 0
 
 
+# associated to submit_split and tested in SplitTaskTestCase
 def split_task(elements, func, args, duration, outs_per_task, monitor):
     """
     :param func: a task function with a monitor as last argument

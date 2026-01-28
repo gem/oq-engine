@@ -231,6 +231,11 @@ class ImpactModeTestCase(django.test.TestCase):
         losses_by_location = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
             {item: losses_by_location[item] for item in losses_by_location})
+        ret = self.get('%s/extract/exposure_by_location' % job_id)
+        content = self.get_response_content(ret)
+        exposure_by_location = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: exposure_by_location[item] for item in exposure_by_location})
 
         # check that users can download hidden outputs only if their level is at
         # least 2 or if they have the can_view_exposure permission

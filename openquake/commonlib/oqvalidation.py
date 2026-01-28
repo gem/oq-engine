@@ -479,9 +479,6 @@ max:
   Example: *max = true*.
   Default: False
 
-max_blocks:
-  INTERNAL. Used in classical calculations
-
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
@@ -777,7 +774,7 @@ tile_spec:
 tiling:
   Used to force the tiling or non-tiling strategy in classical calculations
   Example: *tiling = true*.
-  Default: None, meaning the engine will decide what to do
+  Default: False
 
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
@@ -1099,7 +1096,6 @@ class OqParam(valid.ParamSet):
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
@@ -1167,7 +1163,7 @@ class OqParam(valid.ParamSet):
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.coordinates, ())
     tile_spec = valid.Param(valid.tile_spec, None)
-    tiling = valid.Param(valid.boolean, None)
+    tiling = valid.Param(valid.boolean, False)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])

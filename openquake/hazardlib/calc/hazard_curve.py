@@ -49,7 +49,7 @@ from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, RmapMaker
-from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.source_group import SourceGroup
 
 
 def classical(group, sitecol, cmaker):
@@ -64,7 +64,7 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    if getattr(group[0], 'atomic', False):
+    if isinstance(group[0], SourceGroup):
         # tested in case_80 with 5 subgroups of 3 sources each
         dic = RmapMaker(cmaker, sitecol, group[0]).make()
         for grp in group[1:]:
