@@ -53,10 +53,8 @@ To implement a conditional GMPE within the OQ Engine, the implementation procedu
 The first thing to note, is that you must add an attribute to the parent `GSIM` class called `REQUIRES_IMTS` which is a list containing (as `imt` objects) the
 IMTs required by the conditional GMPE for the conditioning process. For example, the `MacedoEtAl2019SInter` GMPE requires both `PGA` and `SA(1.0)` for the
 prediction of `IA` (Arias Intensity) and therefore this information must be provided in the `GSIM` class for use within `ModifiableGMPE` when it is handling
-the IMTs that are needed for each conditional GMPE. Please refer to `AbrahamsonBhasin2020` for a (slightly) more complex example of how this attribute can be
-managed if necessary (there is a case where the conditioning period of the spectral acceleration is magnitude-dependent and therefore unknowable apriori). An error
-is raised in `ModifiableGMPE` if a conditional GMPE lacks this attribute.  It is also important to emphasise that `REQUIRED_IMTS` is different to the information
-stored within `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
+the IMTs that are needed for each conditional GMPE. It is also important to emphasise that `REQUIRED_IMTS` is different to the information stored within
+`DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
 
 The second thing to note, is that you must add `conditional = True` to
 the `GSIM` class. If the `conditional` flag is missing or not set to

@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added support for GMPE tables to be specifiable as the underlying
+    GSIMs within conditional GMPEs.
+
   [Paolo Tormene]
   * Added an extractor `exposure_by_location`
 
