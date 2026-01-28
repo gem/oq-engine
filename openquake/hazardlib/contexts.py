@@ -1307,7 +1307,7 @@ class ContextMaker(object):
         """
         Set the weight attribute on each prefiltered source
         """
-        if sitecol is None or sitecol.orig_len <= 10:
+        if sitecol is None or len(sitecol.complete) <= 10:
             # use num_ruptures as weight
             for src in sources:
                 src.weight = src.num_ruptures

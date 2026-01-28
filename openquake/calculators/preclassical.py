@@ -255,7 +255,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         # do nothing for atomic sources except counting the ruptures
         if sites:
             reduced = general.reduce_object(sites, 'array', 50)
-            reduced.orig_len = len(sites)
             sf = SourceFilter(reduced, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
