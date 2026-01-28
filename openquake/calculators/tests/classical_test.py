@@ -352,7 +352,7 @@ class ClassicalTestCase(CalculatorTestCase):
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [1560, 5])
+        numpy.testing.assert_equal(self.calc.cfactor, [1560, 260])
         # NB: rjb is depth-independent, the hypocenters could be collapsed
 
     def test_case_25(self):  # negative depths
