@@ -1312,7 +1312,7 @@ def reduce_object(obj, attr, ntimes):
     """
     Reduce an object containing an attribute which is a sequence by
     returning a copy of the object with a reduced (reversed) sequence.
-    If the sequence length is less than ntimes, returns the last element.
+    If the sequence length is less than ntimes, don't reduce it.
     For instance
 
     >>> class Obj:
@@ -1321,12 +1321,14 @@ def reduce_object(obj, attr, ntimes):
     ...     def __repr__(self):
     ...         return '<Obj %r>' % self.lst
     >>> obj = Obj([1, 2, 3, 4, 5])
-    >>> reduce_object(obj, 'lst', 2)
-    <Obj [5, 3, 1]>
-    >>> reduce_object(Obj([1, 2]), 'lst', 2)
-    <Obj [2]>
+    >>> reduce_object(obj, 'lst', 3)
+    <Obj [5, 2]>
+    >>> reduce_object(Obj([1, 2]), 'lst', 3)
+    <Obj [1, 2]>
     """
     seq = getattr(obj, attr)
+    if len(seq) < ntimes:
+        return obj
     new = copy.copy(obj)
     setattr(new, attr, seq[::-ntimes])
     return new

@@ -1303,42 +1303,20 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter):
-        """
-        :param src: a source object
-        :param srcfilter: a SourceFilter instance
-        :returns: (weight, estimate_sites)
-        """
-        if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (EPS, 0)
-        # sanity check, preclassical must has set .num_ruptures
-        assert src.num_ruptures, src
-        sites = srcfilter.get_close_sites(src)
-        if sites is None:
-            # may happen for CollapsedPointSources
-            return EPS, 0
-        src.nsites = len(sites)
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
-        if not ctxs:
-            return EPS, 0
-        lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = (lenctx * src.num_ruptures /
-                  self.num_rups * srcfilter.multiplier)
-        # NB: num_rups is set by get_ctx_iter
-        weight = lenctx * len(self.gsims) / 1000.
-        return max(weight, EPS), int(esites)
-
-    def set_weight(self, sources, srcfilter):
+    def set_weight(self, sources, sitecol):
         """
         Set the weight attribute on each prefiltered source
         """
-        if srcfilter.sitecol is None:
+        if sitecol is None:
+            # use num_ruptures as weight
             for src in sources:
-                src.weight = EPS
+                src.weight = src.num_ruptures
         else:
+            # use the calculation time as weight
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(src, srcfilter)
+                t0 = time.time()
+                RmapMaker(self, sitecol, [src]).make(step=5)
+                src.weight = time.time() - t0
 
 
 def by_dists(gsim):

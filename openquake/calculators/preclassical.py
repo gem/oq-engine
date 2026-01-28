@@ -143,7 +143,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     if splits:
         mon = monitor('weighting sources', measuremem=False)
         with mon:
-            cmaker.set_weight(splits, sf)
+            cmaker.set_weight(splits[::5], sf.sitecol)
         yield {grp_id: splits}
 
 
@@ -254,7 +254,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # do nothing for atomic sources except counting the ruptures
         if sites:
-            reduced = general.reduce_object(sites, 'array', 100)
+            reduced = general.reduce_object(sites, 'array', 10)
             sf = SourceFilter(reduced, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
