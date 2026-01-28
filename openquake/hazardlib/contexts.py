@@ -1320,7 +1320,7 @@ class ContextMaker(object):
                     src.weight = 0 if src.code in b'pP' else EPS
                 else:
                     src.weight = src.dt * src.num_ruptures / self.num_rups
-                    if src.code == b'p':  # CollapsedPointSources too light
+                    if src.code in b'pN':  # heavier then they look
                         src.weight *= 2
 
 
