@@ -1501,7 +1501,7 @@ class RmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def gen_ctxs(self, src):
+    def gen_ctxs(self, src, step=1):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
@@ -1513,7 +1513,7 @@ class RmapMaker(object):
             # tested in oq-risk-tests/test/classical/usa_ucerf
             tiles = sites.split_in_tiles(len(sites) // 5000)
         for tile in tiles:
-            for ctx in self.cmaker.get_ctx_iter(src, tile):
+            for ctx in self.cmaker.get_ctx_iter(src, tile, step):
                 if self.cmaker.deltagetter:
                     # adjust occurrence rates in case of aftershocks
                     with self.cmaker.delta_mon:
@@ -1526,7 +1526,7 @@ class RmapMaker(object):
                     self.rupdata.append(ctx)
                 yield ctx
 
-    def _make_src_indep(self):
+    def _make_src_indep(self, step):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
@@ -1540,7 +1540,7 @@ class RmapMaker(object):
             not self.cluster).fill(self.cluster)
         for src in self.sources:
             src.nsites = 0
-            for ctx in self.gen_ctxs(src):
+            for ctx in self.gen_ctxs(src, step):
                 ctxlen += len(ctx)
                 src.nsites += len(ctx)
                 totlen += len(ctx)
@@ -1572,7 +1572,7 @@ class RmapMaker(object):
                 self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
-    def _make_src_mutex(self):
+    def _make_src_mutex(self, step):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
@@ -1588,7 +1588,7 @@ class RmapMaker(object):
             pm = MapArray(
                 pmap.sids, cm.imtls.size, len(cm.gsims)
             ).fill(not self.rup_mutex)
-            ctxs = list(self.gen_ctxs(src))
+            ctxs = list(self.gen_ctxs(src, step))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
@@ -1617,14 +1617,14 @@ class RmapMaker(object):
             self.source_data['taskno'].append(cm.task_no)
         return ~pmap
 
-    def make(self):
+    def make(self, step=1):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
-            pnemap = self._make_src_indep()
+            pnemap = self._make_src_indep(step)
         else:
-            pnemap = self._make_src_mutex()
+            pnemap = self._make_src_mutex(step)
         if self.cluster:
             with self.cmaker.clu_mon:
                 MINFLOAT = 1.4E-45  # minimum 32 bit float

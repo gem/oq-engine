@@ -1308,6 +1308,30 @@ def deprecated(func, msg='', *args, **kw):
     return func(*args, **kw)
 
 
+def reduce_object(obj, attr, ntimes):
+    """
+    Reduce an object containing an attribute which is a sequence by
+    returning a copy of the object with a reduced (reversed) sequence.
+    If the sequence length is less than ntimes, returns the last element.
+    For instance
+
+    >>> class Obj:
+    ...     def __init__(self, lst):
+    ...         self.lst = lst
+    ...     def __repr__(self):
+    ...         return '<Obj %r>' % self.lst
+    >>> obj = Obj([1, 2, 3, 4, 5])
+    >>> reduce_object(obj, 'lst', 2)
+    <Obj [5, 3, 1]>
+    >>> reduce_object(Obj([1, 2]), 'lst', 2)
+    <Obj [2]>
+    """
+    seq = getattr(obj, attr)
+    new = copy.copy(obj)
+    setattr(new, attr, seq[::-ntimes])
+    return new
+
+
 def random_filter(objects, reduction_factor, seed=42):
     """
     Given a list of objects, returns a sublist by extracting randomly
