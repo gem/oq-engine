@@ -791,7 +791,8 @@ def view_task_hazard(token, dstore):
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
+        [grp_id] = sd.grp_id.unique()
+        msg = f'{taskno=:d}, {grp_id=:d} {weight=:.0f}, {time=:.0f}s\n%s' % df
         return msg
     else:
         msg = ''
