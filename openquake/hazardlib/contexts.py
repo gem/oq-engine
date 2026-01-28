@@ -1516,8 +1516,8 @@ class RmapMaker(object):
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
+        t0 = time.time()
         for src in self.sources:
-            t0 = time.time()
             src.nsites = 0
             for ctx in self.gen_ctxs(src, step):
                 ctxlen += len(ctx)
@@ -1529,15 +1529,17 @@ class RmapMaker(object):
                         cm.update(pnemap, ctx)
                     allctxs.clear()
                     ctxlen = 0
-            if allctxs:
-                # all sources have the same tom by construction
-                for ctx in concat(allctxs):
-                    cm.update(pnemap, ctx)
-                allctxs.clear()
-            src.dt = time.time() - t0
+        if allctxs:
+            # all sources have the same tom by construction
+            for ctx in concat(allctxs):
+                cm.update(pnemap, ctx)
+            allctxs.clear()
+        dt = time.time() - t0
 
-        if not self.tiling:
-            for src in self.sources:
+        ns = len(self.sources)
+        for src in self.sources:
+            src.dt = dt / ns
+            if not self.tiling:
                 self.source_data['src_id'].append(src.source_id)
                 self.source_data['grp_id'].append(src.grp_id)
                 self.source_data['nsites'].append(src.nsites)
