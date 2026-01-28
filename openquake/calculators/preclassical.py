@@ -41,7 +41,7 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-REDUCE_SITES = 50
+REDUCE_SITES = 100
 
 def source_data(sources):
     """
@@ -253,8 +253,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                             general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
-        if sites:
+        if sites and len(sites) > 3*REDUCE_SITES:
             reduced = general.reduce_object(sites, 'array', REDUCE_SITES)
+            sf = SourceFilter(reduced, oq.maximum_distance)
+        elif sites:
+            reduced = general.reduce_object(sites, 'array', 3)
             sf = SourceFilter(reduced, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
