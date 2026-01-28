@@ -1047,6 +1047,7 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None) and step == 1:
+            self.num_rups = src.num_ruptures
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1318,7 +1319,7 @@ class ContextMaker(object):
                 if src.nsites == 0:  # was discarded by prefiltering
                     src.weight = 0 if src.code in b'pP' else EPS
                 else:
-                    src.weight = src.dt
+                    src.weight = src.dt * src.num_ruptures / self.num_rups
 
 
 def by_dists(gsim):
