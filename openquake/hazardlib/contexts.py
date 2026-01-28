@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -68,6 +67,7 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
 EPS = 1E-9
+STEP = 5
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1297,7 +1297,7 @@ class ContextMaker(object):
         from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)
-        ctx = self.from_planar(rup, hdist=500, step=-5)
+        ctx = self.from_planar(rup, hdist=500, step=-STEP)
         mea, sig, tau, phi = self.get_mean_stds([ctx])
         return (interp1d(ctx.rrup, mea),
                 interp1d(ctx.rrup, sig),
@@ -1315,7 +1315,7 @@ class ContextMaker(object):
         else:
             # use the calculation time as weight
             for src in sources:
-                RmapMaker(self, sitecol, [src]).make(step=5)
+                RmapMaker(self, sitecol, [src]).make(step=-STEP)
                 if src.nsites == 0:  # was discarded by prefiltering
                     src.weight = 0 if src.code in b'pP' else EPS
                 else:
