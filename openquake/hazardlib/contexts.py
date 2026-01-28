@@ -1297,7 +1297,7 @@ class ContextMaker(object):
         from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)
-        ctx = self.from_planar(rup, hdist=500, step=5)
+        ctx = self.from_planar(rup, hdist=500, step=-5)
         mea, sig, tau, phi = self.get_mean_stds([ctx])
         return (interp1d(ctx.rrup, mea),
                 interp1d(ctx.rrup, sig),
