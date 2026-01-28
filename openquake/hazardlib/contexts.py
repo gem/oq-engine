@@ -67,7 +67,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = 1E-9
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1316,7 +1316,10 @@ class ContextMaker(object):
             for src in sources:
                 t0 = time.time()
                 RmapMaker(self, sitecol, [src]).make(step=5)
-                src.weight = time.time() - t0
+                if src.nsites == 0:  # was discarded by prefiltering
+                    src.weight = 0 if src.code in b'pP' else EPS
+                else:
+                    src.weight = time.time() - t0
 
 
 def by_dists(gsim):
@@ -1542,7 +1545,6 @@ class RmapMaker(object):
                 self.source_data['src_id'].append(src.source_id)
                 self.source_data['grp_id'].append(src.grp_id)
                 self.source_data['nsites'].append(src.nsites)
-                self.source_data['esites'].append(src.esites)
                 self.source_data['nrupts'].append(src.num_ruptures)
                 self.source_data['weight'].append(src.weight)
                 self.source_data['ctimes'].append(
@@ -1556,7 +1558,6 @@ class RmapMaker(object):
         t0 = time.time()
         weight = 0.
         nsites = 0
-        esites = 0
         nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
@@ -1572,7 +1573,6 @@ class RmapMaker(object):
                 continue
             nctxs += len(ctxs)
             nsites += n
-            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1588,7 +1588,6 @@ class RmapMaker(object):
             self.source_data['src_id'].append(valid.basename(src))
             self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(esites)
             self.source_data['nrupts'].append(nctxs)
             self.source_data['weight'].append(weight)
             self.source_data['ctimes'].append(dt)
