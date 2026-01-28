@@ -107,6 +107,10 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     if: github.event.inputs.git-ref != ''
     steps:
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Install OQ (Custom Ref)
         run: |
           set -x
