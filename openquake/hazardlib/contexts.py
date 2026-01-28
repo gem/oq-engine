@@ -1318,7 +1318,7 @@ class ContextMaker(object):
                 src.weight = EPS
                 if src.nsites:  # was not discarded by prefiltering
                     for ctx in self.get_ctx_iter(src, sitecol):
-                        src.weight += len(ctx) * ngsims / 1E6
+                        src.weight += len(ctx) * ngsims / 1E3
 
 
 def by_dists(gsim):
