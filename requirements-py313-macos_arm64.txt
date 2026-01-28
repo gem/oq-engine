@@ -44,7 +44,7 @@ https://wheelhouse.openquake.org/v3/py/mccabe-0.7.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/mpmath-1.3.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/munch-4.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-3.2.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/packaging-23.2-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/packaging-26.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pbr-6.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/protobuf-4.25.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
