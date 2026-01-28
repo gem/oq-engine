@@ -1320,6 +1320,8 @@ class ContextMaker(object):
                     src.weight = 0 if src.code in b'pP' else EPS
                 else:
                     src.weight = src.dt * src.num_ruptures / self.num_rups
+                    if src.code == b'p':  # CollapsedPointSources too light
+                        src.weight *= 3
 
 
 def by_dists(gsim):
