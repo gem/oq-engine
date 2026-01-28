@@ -1496,7 +1496,7 @@ class RmapMaker(object):
             # tested in oq-risk-tests/test/classical/usa_ucerf
             tiles = sites.split_in_tiles(len(sites) // 5000)
         for tile in tiles:
-            for ctx in self.cmaker.get_ctx_iter(src, tile, step):
+            for ctx in self.cmaker.get_ctx_iter(src, tile, step=step):
                 if self.cmaker.deltagetter:
                     # adjust occurrence rates in case of aftershocks
                     with self.cmaker.delta_mon:
