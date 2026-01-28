@@ -66,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 1E-9
+EPS = 1E-6
 STEP = 5
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
@@ -1315,12 +1315,10 @@ class ContextMaker(object):
         else:
             ngsims = len(self.gsims)
             for src in sources:
-                if src.nsites == 0:  # was discarded by prefiltering
-                    src.weight = 0 if src.code in b'pP' else EPS
-                else:
-                    src.weight = 0
+                src.weight = EPS
+                if src.nsites:  # was not discarded by prefiltering
                     for ctx in self.get_ctx_iter(src, sitecol):
-                        src.weight += len(ctx) * ngsims
+                        src.weight += len(ctx) * ngsims / 1E6
 
 
 def by_dists(gsim):
