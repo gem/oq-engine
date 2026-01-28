@@ -1313,15 +1313,14 @@ class ContextMaker(object):
             for src in sources:
                 src.weight = src.num_ruptures
         else:
-            # use the calculation time as weight
+            ngsims = len(self.gsims)
             for src in sources:
-                RmapMaker(self, sitecol, [src]).make(step=-STEP)
                 if src.nsites == 0:  # was discarded by prefiltering
                     src.weight = 0 if src.code in b'pP' else EPS
                 else:
-                    src.weight = src.dt * src.num_ruptures / self.num_rups
-                    if src.code in b'pN':  # heavier then they look
-                        src.weight *= 2
+                    src.weight = 0
+                    for ctx in self.get_ctx_iter(src, sitecol):
+                        src.weight += len(ctx) * ngsims
 
 
 def by_dists(gsim):
