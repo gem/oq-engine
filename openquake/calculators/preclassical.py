@@ -41,7 +41,7 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-
+REDUCE_SITES = 100
 
 def source_data(sources):
     """
@@ -143,7 +143,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     if splits:
         mon = monitor('weighting sources', measuremem=False)
         with mon:
-            cmaker.set_weight(splits, sf)
+            cmaker.set_weight(splits, sf.sitecol)
         yield {grp_id: splits}
 
 
@@ -253,9 +253,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                             general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
-        if sites:
-            sf = SourceFilter(sites, oq.maximum_distance).reduce(
-                multiplier=1 + len(sites) // 10_000)
+        if sites and len(sites) > 3*REDUCE_SITES:
+            reduced = general.reduce_object(sites, 'array', REDUCE_SITES)
+            sf = SourceFilter(reduced, oq.maximum_distance)
+        elif sites:
+            reduced = general.reduce_object(sites, 'array', 3)
+            sf = SourceFilter(reduced, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
         atomic_sources = []
@@ -279,7 +282,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 # compute weight sequentially
                 for src in sg:
                     src.num_ruptures = src.count_ruptures()
-                cmakers[grp_id].set_weight(sg, sf)
+                cmakers[grp_id].set_weight(sg, sf.sitecol)
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
