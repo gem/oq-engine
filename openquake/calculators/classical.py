@@ -180,7 +180,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
 
 def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
-    Call the classical calculator in hazardlib with many sites
+    Call the classical calculator in hazardlib with many sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
@@ -194,16 +196,16 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
                 lst[:] = [0. for _ in range(len(lst))]
 
     rmap = result.pop('rmap').remove_zeros()
-    if (rmap.size_mb and config.directory.custom_tmp and
-            extra['blocks'] == 1):
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, extra['num_chunks'], None, monitor)
-    elif extra['blocks'] == 1:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    else:
+    to_ratemap = any('-' in grp_key for grp_key in grp_keys)
+    if to_ratemap:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
         result['rmap'].wei = cmaker.wei
+    elif rmap.size_mb and config.directory.custom_tmp:
+        rates = rmap.to_array(cmaker.gid)
+        _store(rates, extra['num_chunks'], None, monitor)
+    else:  # return raw array that will be stored immediately
+        result['rmap'] = rmap.to_array(cmaker.gid)
     return result
 
 
