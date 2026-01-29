@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import copy
 import time
@@ -1047,7 +1048,6 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None) and step == 1:
-            self.num_rups = src.num_ruptures
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1481,7 +1481,7 @@ class RmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def gen_ctxs(self, src, step=1):
+    def gen_ctxs(self, src):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
@@ -1508,22 +1508,24 @@ class RmapMaker(object):
                     self.rupdata.append(ctx)
                 yield ctx
 
-    def _make_src_indep(self, step):
+    def _make_src_indep(self):
         # sources with the same ID
         cm = self.cmaker
         allctxs = []
         ctxlen = 0
+        totlen = 0
+        t0 = time.time()
         sids = self.srcfilter.sitecol.sids
         # using memory here, limited by tiling and pmap_max_mb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
-        t0 = time.time()
         for src in self.sources:
             src.nsites = 0
-            for ctx in self.gen_ctxs(src, step):
+            for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
                 src.nsites += len(ctx)
+                totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     # allctxs is at most a few dozens of MB
@@ -1536,42 +1538,44 @@ class RmapMaker(object):
             for ctx in concat(allctxs):
                 cm.update(pnemap, ctx)
             allctxs.clear()
-        dt = time.time() - t0
 
-        ns = len(self.sources)
-        for src in self.sources:
-            src.dt = dt / ns
-            if not self.tiling:
+        dt = time.time() - t0
+        nsrcs = len(self.sources)
+        if not self.tiling:
+            for src in self.sources:
                 self.source_data['src_id'].append(src.source_id)
                 self.source_data['grp_id'].append(src.grp_id)
                 self.source_data['nsites'].append(src.nsites)
+                self.source_data['esites'].append(src.esites)
                 self.source_data['nrupts'].append(src.num_ruptures)
                 self.source_data['weight'].append(src.weight)
-                self.source_data['ctimes'].append(src.dt)
+                self.source_data['ctimes'].append(dt / nsrcs)
                 self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
-    def _make_src_mutex(self, step):
+    def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
         weight = 0.
+        nsites = 0
+        esites = 0
         nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
         for src in self.sources:
             t0 = time.time()
-            src.nsites = 0
             pm = MapArray(
                 pmap.sids, cm.imtls.size, len(cm.gsims)
             ).fill(not self.rup_mutex)
-            ctxs = list(self.gen_ctxs(src, step))
+            ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
             nctxs += len(ctxs)
-            src.nsites += n
+            nsites += n
+            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1582,26 +1586,26 @@ class RmapMaker(object):
                 pmap.array += (1. - pm.array) * src.mutex_weight
             weight += src.weight
             src.dt = time.time() - t0
-        pmap.array *= self.grp_probability
-        if not self.tiling:
-            for src in self.sources:
+            if not self.tiling:
                 self.source_data['src_id'].append(valid.basename(src))
                 self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nsites'].append(src.nsites)
+                self.source_data['nsites'].append(nsites)
+                self.source_data['esites'].append(esites)
                 self.source_data['nrupts'].append(nctxs)
                 self.source_data['weight'].append(weight)
                 self.source_data['ctimes'].append(src.dt)
                 self.source_data['taskno'].append(cm.task_no)
+        pmap.array *= self.grp_probability
         return ~pmap
 
-    def make(self, step=1):
+    def make(self):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
-            pnemap = self._make_src_indep(step)
+            pnemap = self._make_src_indep()
         else:
-            pnemap = self._make_src_mutex(step)
+            pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
                 MINFLOAT = 1.4E-45  # minimum 32 bit float
