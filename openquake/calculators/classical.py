@@ -592,14 +592,14 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tilegetters, grp_keys, extra in data:
             cmaker.tiling = self.tiling
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
-                for grp_key in grp_keys:
-                    g = int(grp_key.split('-')[0])
-                    self.rmap[g] = RateMap(self.sitecol.sids, L, cmaker.gid)
+                grp_id = int(grp_keys[0].split('-')[0])
+                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
                 if extra['atomic']:
-                    # JPN, send the grp_keys together
+                    # JPN, send the grp_keys together, they will all send
+                    # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, extra, ds))
                 else:
                     # send a grp_key at the time
