@@ -137,9 +137,9 @@ class HcurvesGetter(object):
 
 
 # NB: using 32 bit ratemaps
-def get_pmaps_gb(dstore, full_lt=None):
+def get_rmap_gb(dstore, full_lt=None):
     """
-    :returns: memory required on the master node to keep the pmaps
+    :returns: (size_of_the_global_RateMap_in_GB, trt_rlzs, trt_smrs)
     """
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
@@ -169,7 +169,7 @@ def get_num_chunks(dstore):
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
-    req_gb, _, _ = get_pmaps_gb(dstore)
+    req_gb, _, _ = get_rmap_gb(dstore)
     ntiles = int(numpy.ceil(req_gb))
     return ntiles if ntiles > ct2 else ct2
     # for EUR on cole concurrent_tasks=256
@@ -186,7 +186,7 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs, trt_smrs = get_pmaps_gb(dstore, full_lt)
+    _req_gb, trt_rlzs, trt_smrs = get_rmap_gb(dstore, full_lt)
     attrs = vars(full_lt)
     full_lt.init()
     if oq.fastmean:

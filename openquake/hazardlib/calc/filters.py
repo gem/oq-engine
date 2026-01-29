@@ -482,6 +482,18 @@ class SourceFilter(object):
         self.integration_distance = integration_distance
         self.slc = slice(None)  # TODO: check if we can remove this
 
+    def reduce(self, multiplier=5):
+        """
+        Reduce the SourceFilter to a subset of sites
+        """
+        idxs = numpy.arange(0, len(self.sitecol), multiplier)
+        sc = object.__new__(site.SiteCollection)
+        sc.array = self.sitecol[idxs]
+        sc.complete = self.sitecol.complete
+        new = self.__class__(sc, self.integration_distance)
+        new.multiplier = multiplier
+        return new
+
     def get_enlarged_box(self, src, maxdist=None):
         """
         Get the enlarged bounding box of a source.
