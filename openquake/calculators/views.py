@@ -45,7 +45,7 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
-    get_ebrupture, MapGetter, get_pmaps_gb)
+    get_ebrupture, MapGetter, get_rmap_gb)
 from openquake.calculators.base import get_model_lts, get_weights
 from openquake.calculators.extract import extract
 
@@ -1555,7 +1555,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore)[0])
+    return humansize(get_rmap_gb(dstore)[0])
 
 
 @view.add('rup_stats')
