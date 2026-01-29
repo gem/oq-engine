@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
-from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
+from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
     RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
@@ -150,6 +150,16 @@ def read_grp_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
+def hazclassical(grp, sites, cmaker, remove_zeros=False):
+    # small wrapper over hazard_curve.classical
+    result = hazard_curve.classical(grp, sites, cmaker)
+    if remove_zeros:
+        result['rmap'] = result['rmap'].remove_zeros()
+    result['rmap'].gid = cmaker.gid
+    result['rmap'].wei = cmaker.wei
+    return result
+
+
 def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites.
@@ -165,18 +175,12 @@ def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
         # source 'case' (mutex combination of case:01, case:02)
         result = hazclassical(grp, sites, cmaker)
         # do not remove zeros, otherwise AELO for JPN will break
-        # since there are 4 sites out of 18 with zeros
-        result['rmap'] = result.pop('rmap')
-        result['rmap'].gid = cmaker.gid
-        result['rmap'].wei = cmaker.wei
         yield result
     else:
         # yield a result for each base source
         for g in grp:
             for srcs in groupby(g, valid.basename).values():
                 result = hazclassical(srcs, sites, cmaker)
-                result['rmap'].gid = cmaker.gid
-                result['rmap'].wei = cmaker.wei
                 yield result
 
 
@@ -188,7 +192,8 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
-    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker,
+                          remove_zeros=True)
     if len(grp_keys) > 1:
         # source_data has keys src_id, grp_id, nsites, esites, nrupts,
         # weight, ctimes, taskno
@@ -197,28 +202,15 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
                 # avoid bogus weights in `oq show task:classical`
                 lst[:] = [0. for _ in range(len(lst))]
 
-    rmap = result.pop('rmap').remove_zeros()
     to_ratemap = any('-' in grp_key for grp_key in grp_keys)
-    if to_ratemap:
-        result['rmap'] = rmap
-        result['rmap'].gid = cmaker.gid
-        result['rmap'].wei = cmaker.wei
-    elif rmap.size_mb and config.directory.custom_tmp:
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, extra['num_chunks'], None, monitor)
-    else:  # return raw array that will be stored immediately
-        result['rmap'] = rmap.to_array(cmaker.gid)
+    if not to_ratemap:
+        rates = result.pop('rmap').to_array(cmaker.gid)
+        if len(rates) >= 296 and config.directory.custom_tmp:
+            # 296 is the number of rates in classical/case_22
+            _store(rates, extra['num_chunks'], None, monitor)
+        else:  # return raw array that will be stored immediately
+            result['rmap'] = rates
     return result
-
-
-def _update_dic(result, res):
-    if not result:
-        result.update(res)
-    else:
-        result['rmap'].array += res['rmap'].array
-        result['cfactor'] += res['cfactor']
-        result['dparam_mb'] += res['dparam_mb']
-        result['source_mb'] += res['source_mb']
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
