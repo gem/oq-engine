@@ -160,6 +160,7 @@ def hazclassical(grp, sites, cmaker, remove_zeros=False):
     return result
 
 
+# NB: the tilegetter here is trivial unless there are ilabels
 def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites.
