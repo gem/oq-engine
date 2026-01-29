@@ -86,10 +86,11 @@ def _return_tables(self, mag, imt, which):
     """
     assert which in "IMLs Total", which
     if imt.string not in self.imls and imt.name != "SA":
-        # Scalar IMT is not supported but still need to set an
-        # arbitrary table (occurs in case of conditional GMPEs)
-        empty = self.imls[next(iter(self.imls))].shape
-        return np.empty((empty[0], empty[2])) # Make dims consistent
+        # Scalar IMT is not supported (conditional GMPEs -
+        # we in effect skip setting a table which ensures
+        # an error is still raised when an unsupported IMT
+        # is specified outside of conditional GMPE usage)
+        return
     elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
         if which == "IMLs":
