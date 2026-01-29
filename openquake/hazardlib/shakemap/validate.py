@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
-from openquake.commonlib.calc import get_close_mosaic_models
+from openquake.commonlib.calc import get_close_regions
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
@@ -260,8 +260,8 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     inputdic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
-               strike=None, description=None)
+                    mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+                    strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -360,8 +360,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     trts = {}
     expo = getattr(AristotleParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
-    with monitor('get_close_mosaic_models'):
-        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+    with monitor('get_close_regions'):
+        mosaic_models = get_close_regions(rupdic['lon'], rupdic['lat'], 5,
+                                          region_kind='mosaic_model')
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts

@@ -28,6 +28,7 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
+from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
@@ -592,3 +593,19 @@ class ReadSourceModelsTestCase(unittest.TestCase):
                     for rup in src.iter_ruptures():
                         nrups += 1
         self.assertEqual(nrups, 3)
+
+
+class GetCloseRegionsTestCase(unittest.TestCase):
+    def test_get_close_mosaic_models(self):
+        lon, lat = 124.0, 8.5
+        mosaic_models = get_close_regions(
+            lon, lat, buffer_radius=5, region_kind='mosaic_model')
+        self.assertEqual(mosaic_models, ['IDN', 'PHL', 'SEA'])
+        get_close_regions(lon, lat, buffer_radius=0.5, region_kind='mosaic_model')
+        mosaic_models = ['PHL']
+
+    def test_get_close_countries(self):
+        lon, lat = 124.0, 8.5
+        countries = get_close_regions(
+            lon, lat, buffer_radius=0.5, region_kind='country')
+        self.assertEqual(countries, ['PHL'])

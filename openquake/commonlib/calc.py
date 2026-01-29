@@ -175,7 +175,7 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
     proxies = []
     try:
         h5 = datastore.read(filename)
-    except ValueError: # cannot extract calc_id
+    except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
         rupgeoms = h5['rupgeoms']
@@ -221,7 +221,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']        
+        n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
@@ -480,7 +480,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     return smap
 
 
-def get_close_mosaic_models(lon, lat, buffer_radius):
+def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):
     """
     :param lon: longitude
     :param lat: latitude
@@ -489,19 +489,28 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
         creating a circular buffer region around the point
-    :returns: list of mosaic models intersecting the circle
+    :param region_kind: either 'mosaic_model' or 'country',
+        determining which data source will be used to read boundaries from
+    :returns: list of regions intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
-    hypocenter = Point(lon, lat)
-    hypo_buffer = hypocenter.buffer(buffer_radius)
-    geoms = numpy.array([hypo_buffer])
-    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
-    if not close_mosaic_models:
+    if region_kind == 'mosaic_model':
+        regions_df = readinput.read_mosaic_df(buffer=1)
+    elif region_kind == 'country':
+        regions_df = readinput.read_countries_df(buffer=1)
+    else:
+        raise NotImplementedError(f'Unexpected {region_kind=}')
+    center = Point(lon, lat)
+    buffer = center.buffer(buffer_radius)
+    geoms = numpy.array([buffer])
+    [close_regions] = geo.utils.geolocate_geometries(geoms, regions_df)
+    if not close_regions:
         raise ValueError(
-            f'({lon}, {lat}) is farther than {buffer_radius} deg'
-            f' from any mosaic model!')
-    elif len(close_mosaic_models) > 1:
-        logging.info('(%s, %s) is close to the following mosaic models: %s',
-                     lon, lat, close_mosaic_models)
-    return close_mosaic_models
+            f"({lon}, {lat}) is farther than {buffer_radius} deg"
+            f" from any {region_kind.replace('_', ' ')}!")
+    elif len(close_regions) > 1:
+        logging.info(
+            f"({lon}, {lat}) is close to the following"
+            f" {region_kind.replace('_', ' ')}(s): %s",
+            lon, lat, close_regions)
+    return close_regions
