@@ -2,12 +2,13 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/windows/py313/h3-4.4.1-cp313-cp313-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py313/onnxruntime-1.23.2-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/fiona-1.10.1-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/gdal-3.10.2-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/h5py-3.13.0-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/numba-0.61.2-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/numpy-2.2.6-cp313-cp313-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py313/onnxruntime-1.23.2-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/pandas-2.2.3-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/pyogrio-0.11.1-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py313/pyproj-3.7.2-cp313-cp313-win_amd64.whl
