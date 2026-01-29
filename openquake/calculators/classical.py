@@ -522,7 +522,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_rmap_gb(
                 self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
