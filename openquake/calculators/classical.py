@@ -194,22 +194,10 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
     result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker,
                           remove_zeros=True)
-    if len(grp_keys) > 1:
-        # source_data has keys src_id, grp_id, nsites, esites, nrupts,
-        # weight, ctimes, taskno
-        for key, lst in result['source_data'].items():
-            if key in ('weight', 'nrupts'):
-                # avoid bogus weights in `oq show task:classical`
-                lst[:] = [0. for _ in range(len(lst))]
-
-    to_ratemap = any('-' in grp_key for grp_key in grp_keys)
-    if not to_ratemap:
+    if all('-' not in grp_key for grp_key in grp_keys):
+        # single groups, return raw array that will be stored immediately
         rates = result.pop('rmap').to_array(cmaker.gid)
-        if len(rates) >= 296 and config.directory.custom_tmp:
-            # 296 is the number of rates in classical/case_22
-            _store(rates, extra['num_chunks'], None, monitor)
-        else:  # return raw array that will be stored immediately
-            result['rmap'] = rates
+        result['rmap'] = rates
     return result
 
 
@@ -566,10 +554,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        if config.directory.custom_tmp:
-            scratch = parallel.scratch_dir(self.datastore.calc_id)
-            logging.info('Storing the rates in %s', scratch)
-            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if self.tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
@@ -627,7 +611,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Saving RateMaps')
 
         def genargs():
-            # produce Gt arguments (i.e. tasks when custom_tmp is set)
+            # produce Gt arguments
             for grp_id, rmap in self.rmap.items():
                 for g, j in rmap.jid.items():
                     yield grp_id, g, self.N, rmap.jid, self.num_chunks
@@ -767,7 +751,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore.parent
         allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt, oq)]
-        if not config.directory.custom_tmp and not allargs:  # case_60
+        if not allargs:  # case_60
             logging.warning('No rates were generated')
             return
         self.hazard = {}  # kind -> array
