@@ -1,7 +1,7 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 #
-https://wheelhouse.openquake.org/v3/windows/py311/h3-3.7.7-cp311-cp311-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py311/h3-4.4.1-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.7.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pyogrio-0.11.1-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/gdal-3.10.2-cp311-cp311-win_amd64.whl

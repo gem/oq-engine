@@ -5,7 +5,7 @@ https://wheelhouse.openquake.org/v3/windows/py312/gdal-3.10.2-cp312-cp312-win_am
 https://wheelhouse.openquake.org/v3/windows/py312/fiona-1.10.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyogrio-0.11.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyproj-3.7.2-cp312-cp312-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py312/h3-3.7.7-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/h3-4.4.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/matplotlib-3.10.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/numba-0.61.2-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.6-cp312-cp312-win_amd64.whl
