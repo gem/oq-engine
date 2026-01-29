@@ -513,15 +513,6 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
-        """
-        :returns:
-            quartets (cmaker, tilegetters, blocks, extra)
-            for atomic + non-atomic source groups
-        """
-        allargs = self.split(cmdict, sitecol, max_weight, num_chunks, tiling)
-        return collect_atomic(allargs)
-
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
@@ -618,12 +609,13 @@ def _strip_colons(sources):
     return sorted(ids)
 
 
-def collect_atomic(allargs):
+def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
     """
-    Generates tasks arguments from atomic and non-atomic groups
+    Generates task arguments from atomic and non-atomic groups
     """
     out = []
     atomic = []
+    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks, tiling)
     for cmaker, tilegetters, blocks, extra in allargs:
         n = len(blocks)
         grp_id = _grp_id(blocks[0])

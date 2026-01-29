@@ -27,7 +27,8 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import read_csm, read_src_group
+from openquake.hazardlib.source_group import (
+    read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -585,9 +586,8 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         L = self.oqparam.imtls.size
         self.rmap = {}
-        data = self.csm.split_atomic(
-            self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=self.tiling)
+        data = get_allargs(self.csm, self.cmdict, self.sitecol,
+                           self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         for cmaker, tilegetters, grp_keys, extra in data:
             cmaker.tiling = self.tiling
