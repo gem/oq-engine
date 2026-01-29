@@ -143,7 +143,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     if splits:
         mon = monitor('weighting sources', measuremem=False)
         with mon:
-            cmaker.set_weight(splits, sf)
+            cmaker.set_weight(splits, sf.sitecol)
         yield {grp_id: splits}
 
 
@@ -279,7 +279,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 # compute weight sequentially
                 for src in sg:
                     src.num_ruptures = src.count_ruptures()
-                cmakers[grp_id].set_weight(sg, sf)
+                cmakers[grp_id].set_weight(sg, sf.sitecol)
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
