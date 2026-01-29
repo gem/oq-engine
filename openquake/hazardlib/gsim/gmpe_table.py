@@ -86,10 +86,9 @@ def _return_tables(self, mag, imt, which):
     """
     assert which in "IMLs Total", which
     if imt.string not in self.imls and imt.name != "SA":
-        # Scalar IMT is not supported (conditional GMPEs -
-        # we in effect skip setting a table which ensures
-        # an error is still raised when an unsupported IMT
-        # is specified outside of conditional GMPE usage)
+        # Scalar IMT is not supported (conditional GMPEs - we in skip
+        # setting a table which ensures an error is still raised when
+        # unsupported IMT is specified outside of conditional GMPE use)
         return
     elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
