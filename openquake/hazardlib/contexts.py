@@ -1577,8 +1577,7 @@ class RmapMaker(object):
                 self.source_data['esites'].append(src.esites)
                 self.source_data['nrupts'].append(src.num_ruptures)
                 self.source_data['weight'].append(src.weight)
-                self.source_data['ctimes'].append(
-                    dt * src.nsites / totlen if totlen else dt / nsrcs)
+                self.source_data['ctimes'].append(dt / nsrcs)
                 self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
@@ -1614,17 +1613,17 @@ class RmapMaker(object):
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
             weight += src.weight
+            src.dt = time.time() - t0
+            if not self.tiling:
+                self.source_data['src_id'].append(valid.basename(src))
+                self.source_data['grp_id'].append(src.grp_id)
+                self.source_data['nsites'].append(nsites)
+                self.source_data['esites'].append(esites)
+                self.source_data['nrupts'].append(nctxs)
+                self.source_data['weight'].append(weight)
+                self.source_data['ctimes'].append(src.dt)
+                self.source_data['taskno'].append(cm.task_no)
         pmap.array *= self.grp_probability
-        dt = time.time() - t0
-        if not self.tiling:
-            self.source_data['src_id'].append(valid.basename(src))
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(esites)
-            self.source_data['nrupts'].append(nctxs)
-            self.source_data['weight'].append(weight)
-            self.source_data['ctimes'].append(dt)
-            self.source_data['taskno'].append(cm.task_no)
         return ~pmap
 
     def make(self):
