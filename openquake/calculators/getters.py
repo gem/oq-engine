@@ -139,7 +139,7 @@ class HcurvesGetter(object):
 # NB: using 32 bit ratemaps
 def get_rmap_gb(dstore, full_lt=None):
     """
-    :returns: memory required to keep the global RateMap
+    :returns: (size_of_the_global_RateMap_in_GB, trt_rlzs, trt_smrs)
     """
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
