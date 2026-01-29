@@ -14,13 +14,14 @@ Requirements
 
 Requirements are:
 
--  Windows 11 (64bit)
--  at least 16 GB of RAM (32GB recommended)
+-  Windows 10 or 11 (64bit)
+-  at least 16 GB of RAM (32GB recommended for Windows 11)
 -  4 GB of free disk space
 
-**Windows 7** and **Windows 8** and **Windows 10** are not supported.
+**Windows 7** and **Windows 8** are not supported.
 
-We recommend using a Linux server for large calculations such as national or regional-scale models.
+We recommend using a Linux server for large calculations such as
+national or regional-scale models.
 
 Installation Procedure
 ----------------------

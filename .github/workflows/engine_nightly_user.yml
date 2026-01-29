@@ -56,12 +56,23 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 60
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: (Scheduled) Run demos 
+      - name: (Scheduled) Test WebUI and run https calculation
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          # START WEBUI
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 5 # wait for 1/10 of the second before check again
+          done
+          echo "Test WebUI with curl "
+          sleep 1
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
           sleep 1
           # Run all demos
           # Resolve demos branch:
@@ -77,23 +88,6 @@ jobs:
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
           bash -x ./run-demos.sh demos ${qa_tests_data_dir}
-          deactivate
-      - name: (Scheduled) Test WebUI and run https calculation
-        run: |
-          source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
-          set -x
-          # Run a calcs using https
-          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-          # START WEBUI
-          oq webui start 127.0.0.1:8800 -s &
-          echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z localhost 8800; do
-            sleep 7 # wait for 1/10 of the second before check again
-          done
-          echo "Test WebUI with curl "
-          sleep 1
-          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
-          sleep 1
   Manual_demos_and_WebUI:
     name: OQ ${{ github.event.inputs.git-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -121,32 +115,28 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: (Manual) Run demos
-        run: |
-          source $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/bin/activate
-          oq engine --upgrade-db
-          oq --version
-          # Run all demos
-          cd $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/
-          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${{ github.event.inputs.git-ref }}/bin/run-demos.sh
-          oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
-          qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
-          bash -x ./run-demos.sh demos ${qa_tests_data_dir}
-          deactivate
       - name: (Manual) Test WebUI and run https calculation
         run: |
           source $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/bin/activate
           set -x
+          oq engine --upgrade-db
+          oq --version
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           # START WEBUI
           oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z localhost 8800; do
-            sleep 7 # wait for 1/10 of the second before check again
+            sleep 5 # wait for 1/10 of the second before check again
           done
           echo "Test WebUI with curl "
           sleep 1
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
           # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
+          # Run all demos
+          cd $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}/
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${{ github.event.inputs.git-ref }}/bin/run-demos.sh
+          oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
+          qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
+          bash -x ./run-demos.sh demos ${qa_tests_data_dir}

@@ -33,7 +33,6 @@ from openquake.commonlib import readinput
 from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.source_group import read_csm
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.getters import get_ebrupture
@@ -1081,7 +1080,7 @@ def make_figure_sources(extractors, what):
     else:
         codes = []
     print('Reading sources...')
-    csm = read_csm(dstore)
+    csm = dstore['_csm']
     srcs = filter_sources(csm, src_ids, codes, excluded_codes)
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
