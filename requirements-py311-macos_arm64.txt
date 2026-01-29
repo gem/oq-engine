@@ -2,7 +2,8 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
-https://wheelhouse.openquake.org/v3/macos/arm64/py311/h3-3.7.7-cp311-cp311-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/v3/macos/arm64/py311/onnxruntime-1.23.2-cp311-cp311-macosx_13_0_arm64.whl
+https://wheelhouse.openquake.org/v3/macos/arm64/py311/h3-4.4.1-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/pyproj-3.7.2-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/fiona-1.10.1-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/gdal-3.10.3-cp311-cp311-macosx_11_0_arm64.whl
@@ -11,7 +12,6 @@ https://wheelhouse.openquake.org/v3/macos/arm64/py311/matplotlib-3.10.1-cp311-cp
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/numba-0.61.2-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/numpy-2.2.6-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/shapely-2.1.0-cp311-cp311-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/v3/macos/arm64/py311/onnxruntime-1.23.2-cp311-cp311-macosx_13_0_universal2.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/llvmlite-0.44.0-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/contourpy-1.3.2-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py311/scipy-1.15.3-cp311-cp311-macosx_12_0_arm64.whl
@@ -37,7 +37,7 @@ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/django-4.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django-4.2.27-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl

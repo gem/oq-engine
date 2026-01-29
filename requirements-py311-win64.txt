@@ -1,7 +1,7 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 #
-https://wheelhouse.openquake.org/v3/windows/py311/h3-3.7.7-cp311-cp311-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py311/h3-4.4.1-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.7.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pyogrio-0.11.1-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/gdal-3.10.2-cp311-cp311-win_amd64.whl
@@ -36,7 +36,7 @@ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/django-4.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django-4.2.27-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
