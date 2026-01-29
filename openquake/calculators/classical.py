@@ -598,8 +598,13 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                for grp_key in grp_keys:
-                    allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+                if extra['atomic']:
+                    # JPN, send the grp_keys together
+                    allargs.append((grp_keys, tgetter, cmaker, extra, ds))
+                else:
+                    # send a grp_key at the time
+                    for grp_key in grp_keys:
+                        allargs.append(([grp_key], tgetter, cmaker, extra, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
