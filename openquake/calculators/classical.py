@@ -608,8 +608,8 @@ class ClassicalCalculator(base.HazardCalculator):
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
-                        '%d tasks, maxtiles=%d', kind, len(allargs),
-                        maxtiles)
+                        '%d tasks, maxtiles=%d', kind,
+                        len(allargs), maxtiles)
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
