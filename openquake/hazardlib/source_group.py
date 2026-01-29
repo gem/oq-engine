@@ -640,7 +640,9 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
     for gid, tgetters in tilegetters_.items():
         grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
         out.append((cmaker_[gid], tgetters, grp_keys, extra))
-    logging.info('Collapsed %d atomic tasks into %d', len(atomic), len(cmaker_))
+    if atomic:
+        logging.info('Collapsed %d atomic tasks into %d',
+                     len(atomic), len(cmaker_))
     return out
 
 
