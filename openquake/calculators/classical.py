@@ -592,6 +592,11 @@ class ClassicalCalculator(base.HazardCalculator):
                         '%d tasks, maxtiles=%d', kind,
                         len(allargs), maxtiles)
 
+        # save grp_keys by task
+        keys = numpy.array([' '.join(args[0]).encode('ascii')
+                            for args in allargs])
+        self.datastore.create_dset('grp_keys', keys)
+
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
         maxsrc = max(srcs, key=lambda s: s.weight)
