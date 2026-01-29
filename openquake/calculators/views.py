@@ -780,19 +780,20 @@ def view_task_hazard(token, dstore):
     if len(dstore['source_data/src_id']):
         sdata = dstore.read_df('source_data')
         sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(4))
-        for src_id, nsites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.nrupts, sd.weight, sd.ctimes):
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts,
+                sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
-                [nsites, nrupts, weight, ctimes])
+                [nsites, esites, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nsites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(
+                ['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        [grp_id] = sd.grp_id.unique()
-        msg = f'{taskno=:d}, {grp_id=:d} {weight=:.0f}, {time=:.0f}s\n%s' % df
+        msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
         return msg
     else:
         msg = ''
