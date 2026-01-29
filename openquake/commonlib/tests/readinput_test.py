@@ -21,6 +21,7 @@ import tempfile
 import unittest.mock as mock
 import unittest
 import pandas
+import pytest
 from io import BytesIO
 
 from openquake.baselib import general
@@ -604,6 +605,7 @@ class GetCloseRegionsTestCase(unittest.TestCase):
         get_close_regions(lon, lat, buffer_radius=0.5, region_kind='mosaic_model')
         mosaic_models = ['PHL']
 
+    @pytest.mark.slow  # it takes ~1min (FIXME: is this acceptable?)
     def test_get_close_countries(self):
         lon, lat = 124.0, 8.5
         countries = get_close_regions(
