@@ -594,7 +594,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if self.few_sites or oq.disagg_by_src:
+            if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
                 if extra['atomic']:
