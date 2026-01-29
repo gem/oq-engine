@@ -152,7 +152,9 @@ def read_grp_sitecol(dstore, grp_keys):
 
 def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
-    Call the classical calculator in hazardlib with few sites
+    Call the classical calculator in hazardlib with few sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
@@ -182,7 +184,7 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case
-    of multiple atomic groups
+    of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
