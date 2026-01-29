@@ -27,7 +27,8 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import read_csm, read_src_group
+from openquake.hazardlib.source_group import (
+    read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -151,7 +152,9 @@ def read_grp_sitecol(dstore, grp_keys):
 
 def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
-    Call the classical calculator in hazardlib with few sites
+    Call the classical calculator in hazardlib with few sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
@@ -179,7 +182,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
 
 def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
-    Call the classical calculator in hazardlib with many sites
+    Call the classical calculator in hazardlib with many sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
@@ -193,16 +198,16 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
                 lst[:] = [0. for _ in range(len(lst))]
 
     rmap = result.pop('rmap').remove_zeros()
-    if (rmap.size_mb and config.directory.custom_tmp and
-            extra['blocks'] == 1):
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, extra['num_chunks'], None, monitor)
-    elif extra['blocks'] == 1:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    else:
+    to_ratemap = any('-' in grp_key for grp_key in grp_keys)
+    if to_ratemap:
         result['rmap'] = rmap
         result['rmap'].gid = cmaker.gid
         result['rmap'].wei = cmaker.wei
+    elif rmap.size_mb and config.directory.custom_tmp:
+        rates = rmap.to_array(cmaker.gid)
+        _store(rates, extra['num_chunks'], None, monitor)
+    else:  # return raw array that will be stored immediately
+        result['rmap'] = rmap.to_array(cmaker.gid)
     return result
 
 
@@ -585,26 +590,30 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         L = self.oqparam.imtls.size
         self.rmap = {}
-        data = self.csm.split_atomic(
-            self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=self.tiling)
+        data = get_allargs(self.csm, self.cmdict, self.sitecol,
+                           self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         for cmaker, tilegetters, grp_keys, extra in data:
             cmaker.tiling = self.tiling
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
-                for grp_key in grp_keys:
-                    g = int(grp_key.split('-')[0])
-                    self.rmap[g] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if self.few_sites or oq.disagg_by_src:
+                grp_id = int(grp_keys[0].split('-')[0])
+                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+            if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                for grp_key in grp_keys:
-                    allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+                if extra['atomic']:
+                    # JPN, send the grp_keys together, they will all send
+                    # rates to the RateMap associated to the first grp_id
+                    allargs.append((grp_keys, tgetter, cmaker, extra, ds))
+                else:
+                    # send a grp_key at the time
+                    for grp_key in grp_keys:
+                        allargs.append(([grp_key], tgetter, cmaker, extra, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
-                        '%d tasks, maxtiles=%d', kind, len(allargs),
-                        maxtiles)
+                        '%d tasks, maxtiles=%d', kind,
+                        len(allargs), maxtiles)
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]

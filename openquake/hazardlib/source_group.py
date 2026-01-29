@@ -513,27 +513,6 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
-        """
-        :returns:
-            quartets (cmaker, tilegetters, blocks, extra)
-            for atomic + non-atomic source groups
-        """
-        atomic = []
-        non_atomic = []
-        for cmaker, tilegetters, blocks, extra in self.split(
-                cmdict, sitecol, max_weight, num_chunks, tiling):
-            grp_id = _grp_id(blocks[0])
-            if len(blocks) == 1:
-                grp_keys = [str(grp_id)]
-            else:
-                grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
-            if extra['atomic']:
-                atomic.append((cmaker, tilegetters, grp_keys, extra))
-            else:
-                non_atomic.append((cmaker, tilegetters, grp_keys, extra))
-        return collect_atomic(atomic) + non_atomic
-
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
@@ -630,26 +609,38 @@ def _strip_colons(sources):
     return sorted(ids)
 
 
-def collect_atomic(allargs):
+def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
     """
-    Generates tasks arguments from atomic groups
+    Generates task arguments from atomic and non-atomic groups
     """
-    if not allargs:
-        return []
+    out = []
+    atomic = []
+    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks, tiling)
+    for cmaker, tilegetters, blocks, extra in allargs:
+        n = len(blocks)
+        grp_id = _grp_id(blocks[0])
+        if extra['atomic']:
+            atomic.append((cmaker, tilegetters, blocks, extra))
+        else:
+            if n > 1:
+                grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
+            else:
+                grp_keys = [str(grp_id)]
+            out.append((cmaker, tilegetters, grp_keys, extra))
+    # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     tilegetters_ = {}
     cmaker_ = {}
-    for cmaker, tilegetters, grp_keys, extra in allargs:
+    for cmaker, tilegetters, blocks, extra in atomic:
         gid = tuple(cmaker.gid)
         tilegetters_[gid] = tilegetters
-        blocks_[gid].extend(grp_keys)
+        blocks_[gid].extend(blocks)
         cmaker_[gid] = cmaker
-    out = []
     extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
-        for tgetter in tgetters:
-            out.append((cmaker_[gid], [tgetter], blocks_[gid], extra))
-    logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
+        grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
+        out.append((cmaker_[gid], tgetters, grp_keys, extra))
+    logging.info('Collapsed %d atomic tasks into %d', len(atomic), len(cmaker_))
     return out
 
 
