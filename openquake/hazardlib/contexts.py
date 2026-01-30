@@ -1338,12 +1338,15 @@ class ContextMaker(object):
         """
         Set the weight attribute on each prefiltered source
         """
-        if srcfilter.sitecol is None:
+        for src in sources:
+            src.weight = EPS
+        if srcfilter.sitecol:
+            G = len(self.gsims)
             for src in sources:
-                src.weight = EPS
-        else:
-            for src in sources:
-                src.weight = self.estimate_weight(src, srcfilter)
+                for ctx in self.get_ctx_iter(src, srcfilter.sitecol, step=5):
+                    mul = (src.num_ruptures / self.num_rups *
+                           srcfilter.multiplier * G)
+                    src.weight += len(ctx) * mul
 
 
 def by_dists(gsim):
