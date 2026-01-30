@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,9 @@ def print_(aw):
     if hasattr(aw, 'shape_descr'):
         print(text_table(aw.to_dframe(), ext='org'))
     elif hasattr(aw, 'array'):
-        if aw.array.dtype.name == 'object':  # array of objects
+        if isinstance(aw.array, str):
+            print(aw.array)
+        elif aw.array.dtype.name == 'object':  # array of objects
             for el in aw.array:
                 print(el.decode('utf-8') if isinstance(el, bytes) else el)
         elif aw.array.dtype.names:  # structured array

@@ -215,6 +215,10 @@ nav.main-nav ul li.admin{
    border-bottom: solid #ff0000 5px;
 }
 
+nav.main-nav ul li.manage-tags {
+   border-bottom: solid #d60000 5px;
+}
+
 nav.main-nav ul li:hover{
     border-bottom: solid #fff 5px;
 }
@@ -231,6 +235,10 @@ nav.main-nav ul li.calc label{
 
 nav.main-nav ul li.tools {
    border-bottom: solid #eb737d 5px;
+}
+
+.nav-engine-items {
+    width: auto;
 }
 
 #license p{
@@ -422,6 +430,10 @@ tr.asce_output {
 }
 .my-pngs, .bottom-right-btns {
     margin-bottom: 3px;
+}
+
+#summary-btn {
+    margin-top: 10px;
 }
 
 .outputs-general-btns-left,

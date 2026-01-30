@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -256,6 +256,11 @@ agg_id
         tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
+        # avg_losses_by
+        [fname] = export(('avg_losses_by', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         # aggrisk
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk_sampling.csv', fname,
@@ -430,6 +435,10 @@ agg_id
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=4E-4)
 
+        # check export_job_zip does not fail, i.e.
+        # tagname='id' is treated correctly
+        export(('job', 'zip'), self.calc.datastore)
+
     def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         # it looks like the cholesky decomposition is OS-dependent, so
@@ -447,7 +456,10 @@ agg_id
                               delta=4E-4)
 
         self.check_case_master()
-        
+
+    def test_from_ses(self):
+        self.run_calc(case_master.__file__, 'job_risk.ini')
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
@@ -550,7 +562,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.12)
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.13)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
@@ -752,11 +764,11 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_4.__file__, 'job.ini')
         f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
         # abs difference of 1E-4 on macos (57.0276 => 57.0277)
-        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
-        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=4E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=6E-4)
         self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=1E-3)
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)

@@ -5,7 +5,10 @@
         <logicTreeBranchingLevel branchingLevelID="sourceModel">
             <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
                 <logicTreeBranch branchID="fs">
-                    <uncertaintyModel>ssm02.xml</uncertaintyModel>
+                  <uncertaintyModel>
+                    <!-- adding a source from EUR to test double counting -->
+                    ssm02.xml ../../EUR/in/HeA_IF2222222_M40.xml
+                  </uncertaintyModel>
                     <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>

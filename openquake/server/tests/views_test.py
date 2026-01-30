@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,10 +20,35 @@ import os
 import sys
 import json
 import time
-
+import string
+import secrets
+import random
 import django
+from django.contrib.auth import get_user_model
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
+
+
+def random_string(length=10):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
+def get_or_create_user(level):
+    # creating/getting a user of the given level
+    # and returning the user object and its plain password
+    User = get_user_model()
+    username = f'django-test-user-level-{level}'
+    email = f'django-test-user-level-{level}@email.test'
+    password = ''.join((secrets.choice(
+        string.ascii_letters + string.digits + string.punctuation)
+        for i in range(8)))
+    user, created = User.objects.get_or_create(username=username, email=email)
+    if created:
+        user.set_password(password)
+    user.save()
+    user.profile.level = level
+    user.profile.save()
+    return user, password  # user.password is the hashed password instead
 
 
 class EngineServerTestCase(django.test.TestCase):
@@ -74,7 +99,7 @@ class EngineServerTestCase(django.test.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 if os.environ.get('OQ_APPLICATION_MODE') in ('AELO',
-                                                             'ARISTOTLE'):
+                                                             'IMPACT'):
                     # NOTE: some more time is needed in order to wait for the
                     # callback to finish and produce the email notification
                     time.sleep(1)

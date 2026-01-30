@@ -515,6 +515,12 @@ want to batch-produce hundreds of plots, or you may want to plot the
 results of a postprocessing operation. In such cases you need to use
 the extract API and to write your own plotting/postprocessing code.
 
+***************************************************************
+how do I read the sources of a calculation programmatically?
+***************************************************************
+
+See the manual, https://docs.openquake.org/oq-engine/master/manual/contributing/developing-with-the-engine.html#reading-the-hazard-sources-programmatically
+
 .. _faq-risk:
 
 FAQ about running risk calculations

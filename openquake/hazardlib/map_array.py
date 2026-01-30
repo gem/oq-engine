@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2025 GEM Foundation
+# Copyright (c) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,6 +44,24 @@ def combine_probs(array, other, rlzs):
             if other[li] != 0.:
                 array[li, ri] = (
                     1. - (1. - array[li, ri]) * (1. - other[li]))
+
+
+def gen_chunks(sids, num_chunks):
+    """
+    :yields: chunkno, mask
+    """
+    if num_chunks == 1:
+        yield 0, slice(None)
+    else:
+        idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+        idx = numpy.unique(idxs)
+        if len(idx) == 1:  # there is a single chunk
+            yield idx[0], slice(None)
+        else:
+            for i in idx:
+                ok = idxs == i
+                if ok.any():
+                    yield i, ok
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -185,13 +203,13 @@ def get_lvl(hcurve, imls, poe):
 
     >>> imls = numpy.array([.1, .2, .3, .4])
     >>> hcurve = numpy.array([1., .99, .90, .8])
-    >>> get_lvl(hcurve, imls, 1)
+    >>> int(get_lvl(hcurve, imls, 1))
     0
-    >>> get_lvl(hcurve, imls, .99)
+    >>> int(get_lvl(hcurve, imls, .99))
     1
-    >>> get_lvl(hcurve, imls, .91)
+    >>> int(get_lvl(hcurve, imls, .91))
     2
-    >>> get_lvl(hcurve, imls, .8)
+    >>> int(get_lvl(hcurve, imls, .8))
     3
     """
     [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
@@ -380,15 +398,24 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if len(gid) == 0:
-            return numpy.array([], rates_dt)
-        outs = []
-        for i, g in enumerate(gid):
-            rates_g = self.array[:, :, i]
-            outs.append(from_rates_g(rates_g, g, self.sids))
-        if len(outs) == 1:
-            return outs[0]
-        return numpy.concatenate(outs, dtype=rates_dt)
+        [(_no, rates)] = self.gen_rates(gid, 1)
+        return rates
+
+    def gen_rates(self, gid, num_chunks):
+        """
+        :yields: pairs (chunkno, rates for that chunck of sites)
+        """
+        for no, mask in gen_chunks(self.sids, num_chunks):
+            sids = self.sids[mask]
+            outs = []
+            for i, g in enumerate(gid):
+                rates = from_rates_g(self.array[mask, :, i], g, sids)
+                outs.append(rates)
+            if len(outs) == 1:
+                yield no, outs[0]
+            else:
+                out = numpy.concatenate(outs, dtype=rates_dt)
+                yield no, out
 
     def interp4D(self, imtls, poes):
         """
@@ -426,11 +453,12 @@ class MapArray(object):
         arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update_indep(self, poes, ctxt, itime):
+    def update_indep(self, poes, ctxt, itime, rates=None):
         """
         Update probabilities for independent ruptures
         """
-        rates = ctxt.occurrence_rate
+        if rates is None:
+            rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
         if self.rates:
             update_pmap_r(self.array, poes, rates, ctxt.probs_occur,
@@ -500,6 +528,8 @@ def from_rates_g(rates_g, g, sids):
     :param g: an integer representing a GSIM index
     :param sids: an array of site IDs
     """
+    # sanity check
+    assert len(rates_g) == len(sids), (len(rates_g), len(sids))
     outs = []
     for lid, rates in enumerate(rates_g.T):
         idxs, = rates.nonzero()
@@ -532,11 +562,10 @@ class RateMap:
         self.jid = {g: j for j, g in enumerate(gids)}
 
     def __iadd__(self, other):
-        G = self.shape[2]
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
-            iadd(self.array[:, :, self.jid[g]],
-                 other.array[:, :, i % G], sidx)
+            oarray = other.array[:, :, i]
+            self.array[sidx, :, self.jid[g]] += oarray
         return self
 
     def to_array(self, g):

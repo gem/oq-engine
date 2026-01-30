@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,15 +37,18 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
-path_adj_table = os.path.join(os.path.dirname(__file__),
-                              '..', '..', 'gsim', 'chiou_youngs_2014',
-                              'path_adjustment_table_target_region_idaho.txt')
+
+SRC_ADJ_TABLE = os.path.join(os.path.dirname(__file__),'..', '..', 'gsim',
+                             'cy14_host_to_target', 'source_function_table.txt')
+PATH_ADJ_TABLE = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'gsim', 'cy14_host_to_target',
+    'path_adjustment_table_target_region_idaho_central_branch.txt')
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
 
-    # Test data were obtained from a tool given by the authorst
+    # Test data were obtained from a tool given by the authors
     # in tests/gsim/data/NGA/CY14
 
     def test_mean_hanging_wall_normal_slip(self):
@@ -156,7 +159,7 @@ def _make_rupture():
     default_arguments = {
         'mag': 6.5,
         'rake': 180.,
-        'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+        'tectonic_region_type': const.TRT.ACTIVE_SHALLOW_CRUST,
         'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
         'surface': SimpleFaultSurface.from_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
@@ -199,12 +202,13 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         the central branch (branch 3) values for use in these unit tests.
         """
         # Create GMMs
-        gmm_ori = ChiouYoungs2014()
         gmm_adj_src = ChiouYoungs2014(stress_par_host=100,
-                                      stress_par_target=120)
+                                      stress_par_target=120,
+                                      source_function_tab=SRC_ADJ_TABLE)
         gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
-                                      delta_gamma_tab=path_adj_table)
+                                      source_function_tab=SRC_ADJ_TABLE,
+                                      delta_gamma_tab=PATH_ADJ_TABLE)
 
         # Settings
         imt_str = 'SA(0.1)'
@@ -216,11 +220,6 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
                      z1pt0=25.0, z2pt5=1.)
         mags_str = [f'{r.mag:.2f}' for r in rups]
         oqp = {'imtls': {k: [] for k in [imt_str]}, 'mags': mags_str}
-
-        # ContextMaker for the ORIGINAL version of CY14
-        ctxm_ori = ContextMaker('fake', [gmm_ori], oqp)
-        ctxs_ori = list(ctxm_ori.get_ctx_iter(rups, SiteCollection([site1])))
-        ctxs_ori = ctxs_ori[0]
 
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
@@ -235,7 +234,6 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         ctxs_adj_all = ctxs_adj_all[0]
 
         # Compute mean values of ground motion
-        [_, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
 
@@ -253,7 +251,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         self.assertAlmostEqual(delta_cm, expected_delta_cm, msg=msg)
 
         # Test stress scaling term
-        C = gmm_ori.COEFFS[imt]
+        C = gmm_adj_src.COEFFS[imt]
         scalf_adj = get_magnitude_scaling(C, ctxs_adj_all[0].mag, delta_cm)
         expected_scalf_adj = np.array([0.665226, 0.665226])
         msg = f"The value of the scaling factor {scalf_adj} is different \n"

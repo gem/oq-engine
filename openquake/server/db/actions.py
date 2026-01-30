@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2025 GEM Foundation
+# Copyright (C) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -60,6 +60,18 @@ def reset_is_running(db):
        "WHERE is_running=1 OR status='executing'")
 
 
+def keep(db, workflow_id):
+    """
+    Set relevant to true and drop all irrelevant workflows
+    """
+    cursor = db("UPDATE job SET relevant=true "
+                "WHERE calculation_mode='workflow' AND id=?x", workflow_id)
+    if cursor.rowcount:
+        cursor = db("DELETE FROM job WHERE calculation_mode='workflow' "
+                    "AND NOT relevant", workflow_id)
+    return cursor.rowcount
+
+
 def set_status(db, job_id, status):
     """
     Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
@@ -88,7 +100,7 @@ def set_status(db, job_id, status):
 
 def create_job(db, datadir, calculation_mode='to be set',
                description='just created', user_name=None,
-               hc_id=None, host=None):
+               hc_id=None, host=None, workflow_id=None):
     """
     Create job for the given user, return it.
 
@@ -106,16 +118,21 @@ def create_job(db, datadir, calculation_mode='to be set',
         ID of the parent job (if any)
     :param host:
         machine where the calculation is running (master)
+    :param workflow_id:
+        ID of the associated workflow, if any
     :returns:
         the job ID
     """
-    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    # NB: is_running=1 is needed to make views_test.py happy
     job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
+               ds_calc_dir=datadir, hazard_calculation_id=hc_id,
+               host=host, relevant=calculation_mode != 'workflow')
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
+    if workflow_id:
+        db('UPDATE job SET workflow_id=?x WHERE id=?x', workflow_id, job_id)
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
        os.path.join(datadir, 'calc_%s' % job_id), job_id)
     return job_id
@@ -213,13 +230,14 @@ def list_calculations(db, job_type, user_name):
     if len(jobs) == 0:
         out.append('None')
     else:
-        out.append('job_id |     status |          start_time | '
-                   '        description')
+        out.append('   job_id|  calculation_mode|   status|'
+                   '          start_time|                   '
+                   '          description')
         for job in jobs:
-            descr = job.description
-            start_time = job.start_time
-            out.append('%6d | %10s | %s | %s' % (
-                job.id, job.status, start_time, descr))
+            descr = job.description[:39]
+            start_time = str(job.start_time)[:19]
+            out.append('%9d|%18s|%9s| %s| %s' % (
+                job.id, job.calculation_mode, job.status, start_time, descr))
     return out
 
 
@@ -276,8 +294,15 @@ def create_outputs(db, job_id, keysize, ds_size):
     :param keysize: a list of pairs (key, size_mb)
     :param ds_size: total datastore size in MB
     """
+    # the DbServer should accept missing output types
+    # (it happens if the DbServer is outdated)
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
+    if getpass.getuser() != 'openquake':
+        # outside of the DbServer we should raise a clear error instead
+        for key, size in keysize:
+            if key not in DISPLAY_NAME:
+                raise NameError(f'{key} is missing in DISPLAY_NAME')
     db('UPDATE job SET size_mb=?x WHERE id=?x', ds_size, job_id)
     db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
@@ -291,7 +316,7 @@ def finish(db, job_id, status):
     :param job_id:
         ID of the current job
     :param status:
-        a string such as 'successful' or 'failed'
+        a string such as 'complete' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
        dict(is_running=False, status=status, stop_time=datetime.now(UTC)),
@@ -504,46 +529,110 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, calculation_mode,
-                        job_is_running, job_description, host)
+        list of tuples (id, user_name, status, calculation_mode, is_running,
+                        description, pid, hazard_calculation_id, size_mb,
+                        host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
+    query_params = []
     filterdict = {}
 
     if id is not None:
-        filterdict['id'] = id
+        filterdict['j.id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get(
-            'calculation_mode')
+        filterdict['j.calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
-        filterdict['is_running'] = valid.boolean(is_running)
+        filterdict['j.is_running'] = valid.boolean(is_running)
 
-    if 'limit' in request_get_dict:
-        limit = int(request_get_dict.get('limit'))
-    else:
-        limit = 100
+    query_params.append(filterdict)
 
-    if 'start_time' in request_get_dict:
-        # assume an ISO date string
-        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
-    else:
-        time_filter = 1
+    include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if user_acl_on:
-        users_filter = "user_name IN (?X)"
+        users_filter = "j.user_name IN (?X)"
+        query_params.append(allowed_users)
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
-              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
-              % (users_filter, time_filter, limit), filterdict, allowed_users)
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        user_name_like_filter = "j.user_name LIKE ?x"
+        query_params.append(name_pattern)
+    else:
+        user_name_like_filter = 1
+
+    if 'start_time' in request_get_dict:
+        # assume an ISO date string
+        start_time = request_get_dict.get('start_time')
+        time_filter = "j.start_time >= ?x"
+        query_params.append(start_time)
+    else:
+        time_filter = 1
+
+    preferred_only = int(request_get_dict.get('preferred_only', 0))
+    filter_by_tag = request_get_dict.get('filter_by_tag', 0)
+
+    limit = int(request_get_dict.get('limit', 100))
+    offset = int(request_get_dict.get('offset', 0))
+    allowed_sort_fields = [
+        'id', 'start_time', 'user_name', 'calculation_mode', 'status', 'description',
+        'size_mb']
+    order_by = request_get_dict.get('order_by', 'id')
+    if order_by not in allowed_sort_fields:
+        order_by = 'j.id'
+    order_dir = request_get_dict.get('order_dir', 'DESC').upper()
+    if order_dir not in ('ASC', 'DESC'):
+        order_dir = 'DESC'
+    tags_query = "GROUP_CONCAT(tag_value, ', ') AS tags"
+    where_clause = f"?A AND ({users_filter} AND {user_name_like_filter}"
+    if include_shared:
+        where_clause += " OR j.status == 'shared'"
+    where_clause += f") AND {time_filter} AND j.status != 'deleted'"
+    if preferred_only:
+        where_clause += (
+            " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
+    if filter_by_tag and filter_by_tag != '0':
+        where_clause += (
+            " AND j.id IN ("
+            "SELECT jt.job_id "
+            "FROM job_tag jt "
+            "JOIN tag tg ON tg.id = jt.tag_id "
+            "WHERE tg.name = ?x"
+            ")")
+        query_params.append(filter_by_tag)
+
+    # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
+    # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
+
+    query = f"""
+SELECT j.*, {tags_query}
+FROM job AS j
+LEFT JOIN (
+    SELECT
+        jt.job_id,
+        CASE
+            WHEN jt.is_preferred THEN t.name || '★'
+            ELSE t.name
+        END AS tag_value
+    FROM job_tag jt
+    JOIN tag t ON t.id = jt.tag_id
+    ORDER BY jt.is_preferred DESC, t.name
+) jt ON jt.job_id = j.id
+WHERE {where_clause}
+GROUP BY j.id
+ORDER BY {order_by} {order_dir}
+LIMIT {limit} OFFSET {offset}
+    """
+
+    jobs = db(query, *query_params)
+
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time, job.relevant)
+             job.start_time, job.relevant, job.tags)
             for job in jobs]
 
 
@@ -591,6 +680,161 @@ def share_job(db, job_id, share):
                 f' from "{initial_status}" to "{new_status}"'}
     return {'success': f'The status of calculation {job_id} was changed'
                        f' from "{initial_status}" to "{new_status}"'}
+
+
+def _get_or_create_tag_id(db, tag_name):
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    if rows:
+        return rows[0].id
+
+    db("INSERT INTO tag (name) VALUES (?x)", tag_name)
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    return rows[0].id
+
+
+def _get_tag_id(db, tag_name):
+    """
+    Resolve an existing tag name to tag_id.
+    Raises KeyError if the tag does not exist.
+    """
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    if not rows:
+        raise KeyError(f"Tag '{tag_name}' does not exist")
+    return rows[0].id
+
+
+def add_tag_to_job(db, job_id, tag_name):
+    try:
+        tag_id = _get_or_create_tag_id(db, tag_name)
+        db("""
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
+VALUES (?x, ?x, 0)
+           """, job_id, tag_id)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'The tag {tag_name} was added to job {job_id}'}
+
+
+def remove_tag_from_job(db, job_id, tag_name):
+    try:
+        tag_id = _get_tag_id(db, tag_name)
+    except KeyError:
+        return {'success': f'Tag {tag_name} was not associated with job {job_id}'}
+    try:
+        db("""
+DELETE FROM job_tag
+WHERE job_id = ?x AND tag_id = ?x
+        """, job_id, tag_id)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} was removed from job {job_id}'}
+
+
+def set_preferred_job_for_tag(db, job_id, tag_name):
+    try:
+        tag_id = _get_or_create_tag_id(db, tag_name)
+
+        db("BEGIN")
+
+        db("""
+UPDATE job_tag
+SET is_preferred = 0
+WHERE tag_id = ?x AND is_preferred = 1
+        """, tag_id)
+
+        db("""
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
+VALUES (?x, ?x, 1)
+ON CONFLICT(job_id, tag_id) DO UPDATE
+SET is_preferred = 1
+        """, job_id, tag_id)
+
+        db("COMMIT")
+
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Job {job_id} was set as preferred for tag {tag_name}'}
+
+
+def unset_preferred_job_for_tag(db, tag_name):
+    try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+        if not rows:
+            return {'success': f'Tag {tag_name} has no preferred job now'}
+
+        tag_id = rows[0].id
+
+        db("""
+UPDATE job_tag
+SET is_preferred = 0
+WHERE tag_id = ?x AND is_preferred = 1
+        """, tag_id)
+
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} has no preferred job now'}
+
+
+def get_preferred_job_for_tag(db, tag_name):
+    try:
+        ret = db("""
+SELECT j.*
+FROM job AS j
+JOIN job_tag jt ON j.id = jt.job_id
+JOIN tag t ON t.id = jt.tag_id
+WHERE t.name = ?x AND jt.is_preferred = 1
+        """, tag_name)
+
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        if len(ret) == 0:
+            return {'success': 'ok', 'job_id': None}
+        elif len(ret) == 1:
+            return {'success': 'ok', 'job_id': ret[0].id}
+        else:
+            return {'error': f'Unexpected multiple preferred jobs for tag {tag_name}'}
+
+
+def create_tag(db, name):
+    try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", name)
+        if rows:
+            return {'success': f'Tag {name} already exists'}
+        db("INSERT INTO tag (name) VALUES (?x)", name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {name} was created'}
+
+
+def delete_tag(db, name):
+    try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", name)
+        if not rows:
+            return {'success': f'Tag {name} does not exist'}
+
+        tag_id = rows[0].id
+
+        db("""
+DELETE from tag
+WHERE id = ?x
+        """, tag_id)
+
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {name} was deleted'}
+
+
+def list_tags(db):
+    rows = db("SELECT name FROM tag ORDER BY name")
+    tags = [row.name for row in rows]
+    return {'success': 'ok', 'tags': tags}
 
 
 def update_parent_child(db, parent_child):
@@ -649,7 +893,7 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    log = db("SELECT * FROM log WHERE job_id=?x AND level='ERROR'",
+    log = db("SELECT message FROM log WHERE job_id=?x AND level='ERROR'",
              job_id)
     if not log:
         return []
@@ -746,26 +990,6 @@ ORDER BY julianday(stop_time) - julianday(start_time)'''
 
 # checksums
 
-def add_checksum(db, job_id, value):
-    """
-    :param db:
-        a :class:`openquake.commonlib.dbapi.Db` instance
-    :param job_id:
-        job ID
-    :param value:
-        value of the checksum (32 bit integer)
-    :returns:
-        The unique job_id with that checksum or None
-    """
-    try:
-        jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
-                 value, scalar=True)
-    except NotFound:
-        db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)
-    else:
-        return jid
-
-
 def update_job_checksum(db, job_id, checksum):
     """
     :param db:
@@ -775,8 +999,11 @@ def update_job_checksum(db, job_id, checksum):
     :param checksum:
         the checksum (32 bit integer)
     """
-    return db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
-              job_id, checksum).lastrowid
+    updated = db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+                 job_id, checksum).rowcount
+    if not updated:  # the checksum is new
+        db('INSERT INTO checksum (job_id, hazard_checksum) VALUES (?x, ?x)',
+           job_id, checksum)
 
 
 def get_checksum_from_job(db, job_id):
@@ -803,9 +1030,8 @@ def get_job_from_checksum(db, checksum):
         the job associated to the checksum or None
     """
     # there is an UNIQUE constraint both on hazard_checksum and job_id
-    jobs = db('SELECT * FROM job WHERE id = ('
-              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
-              checksum)  # 0 or 1 jobs
+    jobs = db('SELECT job.* FROM job, checksum WHERE hazard_checksum=?x '
+              'AND job.id=job_id AND status == "complete"', checksum)
     if not jobs:
         return
     return jobs[0]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -123,9 +123,9 @@ def closest_to_ref(arrays, ref, cutoff=1E-12):
     since it has a larger weight. You can check that it is indeed true by
     computing the sum of the quadratic deviations:
 
-    >>> ((c0 - mean)**2).sum()
+    >>> float(((c0 - mean)**2).sum())
     0.0004480000000000008
-    >>> ((c1 - mean)**2).sum()
+    >>> float(((c1 - mean)**2).sum())
     0.0010079999999999985
 
     If the 2 realizations have equal weights the distance from the mean will be

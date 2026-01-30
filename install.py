@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2025 GEM Foundation
+# Copyright (C) 2020-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,6 @@ import glob
 import shutil
 import socket
 import getpass
-import zipfile
 import tempfile
 import argparse
 import platform
@@ -208,7 +207,6 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
-DEMOS = "https://artifacts.openquake.org/travis/demos-master.zip"
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
@@ -253,9 +251,8 @@ def get_requirements_branch(version, inst, from_fork):
         # retrieve the tag name of the current stable version
         with urlopen("https://pypi.org/pypi/openquake.engine/json") as resp:
             content = resp.read()
-        stable_version_number = json.loads(content)["info"]["version"]
-        stable_version_tag_name = f"v{stable_version_number}"
-        return stable_version_tag_name
+        version = json.loads(content)["info"]["version"]  # i.e. '3.24.1'
+        return f"v{version}"
     mo = re.match(r"(\d+\.\d+)+", version)
     if mo:
         return "engine-" + mo.group(0)
@@ -294,14 +291,14 @@ def install_standalone(venv):
     return errors
 
 
-def before_checks(inst, venv, port, remove, usage):
+def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
-    if venv:
-        inst.VENV = os.path.abspath(os.path.expanduser(venv))
-    if port:
-        inst.DBPORT = int(port)
+    if args.venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
+    if args.dbport:
+        inst.DBPORT = int(args.dbport)
 
     # check platform
     if (inst is server and sys.platform != "linux") or (
@@ -327,9 +324,22 @@ def before_checks(inst, venv, port, remove, usage):
             inst is devel and user == "root"):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
+    elif inst is devel:
+        if shutil.which("git") is None:
+            raise RuntimeError("git is missing, please install it")
+        try:
+            branch = subprocess.check_output(
+                ['git', 'branch', '--show-current']
+            ).decode('utf8').strip()
+        except subprocess.CalledProcessError:
+            raise RuntimeError('install.py must be called from the engine '
+                               f'repository, not from {os.getcwd()}')
+        if branch.startswith('engine-') and not args.version:
+            # use version consistent with the branch
+            args.version == branch
 
     # check if there is a DbServer running
-    if not remove:
+    if not args.remove:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(("localhost", inst.DBPORT))
@@ -384,6 +394,19 @@ def fix_version(commit, venv):
             lines.append(line)
     with open(fname, "w") as f:
         f.write("".join(lines))
+
+
+def normalize_version(version):
+    """
+    Convert a user-supplied --version argument into a pip-compatible
+    version specifier.
+    """
+    if version.count('.') == 1:
+        # e.g. "3.23" -> latest patch in that series, expands to >=3.23.0,<3.24
+        return f"~={version}.0"
+    else:
+        # e.g. "3.23.4" -> exact match
+        return f"=={version}"
 
 
 def install(inst, version, from_fork):
@@ -445,7 +468,6 @@ def install(inst, version, from_fork):
         f"https://raw.githubusercontent.com/gem/oq-engine/{branch}/"
         "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform]
                                           + mac))
-
     subprocess.check_call(
         [
             pycmd,
@@ -470,14 +492,19 @@ def install(inst, version, from_fork):
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
             [pycmd, "-m", "pip", "install", "--upgrade",
-             "openquake.engine==" + version]
+             f"openquake.engine{normalize_version(version)}"]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print("Installing commit", commit)
-        subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", GITBRANCH % commit]
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            custom_env = os.environ.copy()
+            custom_env["TMPDIR"] = tmp  # Linux/macOS
+            custom_env["TEMP"] = tmp    # Windows
+            subprocess.check_call(
+                [pycmd, "-m", "pip", "install",
+                 "--upgrade", GITBRANCH % commit, "--no-clean"],
+                env=custom_env)
         fix_version(commit, inst.VENV)
 
     errors = install_standalone(inst.VENV)
@@ -500,6 +527,7 @@ def install(inst, version, from_fork):
         oqreal = "%s\\Scripts\\oq" % inst.VENV
     else:
         oqreal = "%s/bin/oq" % inst.VENV
+
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
 
@@ -549,26 +577,14 @@ def install(inst, version, from_fork):
             subprocess.check_call(["systemctl", "start", service_name])
 
     if inst in (user, server):
-        # download and unzip the demos
-        try:
-            with urlopen(DEMOS) as f:
-                data = f.read()
-        except OSError:
-            msg = "However, we could not download the demos from %s" % DEMOS
-        else:
-            th, tmp = tempfile.mkstemp(suffix=".zip")
-            with os.fdopen(th, "wb") as t:
-                t.write(data)
-            zipfile.ZipFile(tmp).extractall(inst.VENV)
-            os.remove(tmp)
-            path = os.path.join(
-                inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
-                "job.ini")
-            msg = (
-                "You can run a test calculation with the command\n"
-                f"{oqreal} engine --run {path}"
-            )
-            print("The engine was installed successfully.\n" + msg)
+        path = os.path.join(
+            inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
+            "job.ini")
+        msg = (
+            "You can run a test calculation with the command\n"
+            f"{oqreal} engine --run {path}"
+        )
+        print("The engine was installed successfully.\n" + msg)
 
     return errors
 
@@ -624,8 +640,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove,
-                      parser.format_usage())
+        before_checks(inst, args, parser.format_usage())
         if args.remove:
             remove(inst)
         else:

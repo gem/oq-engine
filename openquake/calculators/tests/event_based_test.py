@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -190,10 +190,15 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 4)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)
 
+    def test_case_1_from_ses(self):
+        self.run_calc(case_1.__file__, 'job_from_ses.ini')
+        self.assertEqual(len(self.calc.datastore['events']), 4906)
+
+        
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
@@ -309,12 +314,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'AA~A': 308,  # w = .6 * .5 = .30
-                          b'AA~B': 173,  # w = .6 * .3 = .18
-                          b'AA~C': 119,  # w = .6 * .2 = .12
-                          b'AB~A': 192,  # w = .4 * .5 = .20
-                          b'AB~B': 127,  # w = .4 * .3 = .12
-                          b'AB~C': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'A~A': 308,  # w = .6 * .5 = .30
+                          b'A~B': 173,  # w = .6 * .3 = .18
+                          b'A~C': 119,  # w = .6 * .2 = .12
+                          b'B~A': 192,  # w = .4 * .5 = .20
+                          b'B~B': 127,  # w = .4 * .3 = .12
+                          b'B~C': 81},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -381,13 +386,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # checking mea_tau_phi
         df = self.calc.datastore.read_df('mea_tau_phi')
-        ae(len(df.rup_id.unique()), 12)
+        ae(len(df.rup_id.unique()), 1)
         ae(sorted(df.site_id.unique()), [101, 108])
-        ae(sorted(df.gsim_id.unique()), [0, 1, 3])
+        ae(sorted(df.gsim_id.unique()), [3])
         ae(sorted(df.imt_id.unique()), [0, 1, 2])
-        ae(len(df.mea.unique()), 54)
-        ae(len(df.tau.unique()), 7)
-        ae(len(df.phi.unique()), 7)
+        ae(len(df.mea.unique()), 6)
+        ae(len(df.tau.unique()), 3)
+        ae(len(df.phi.unique()), 3)
 
     def test_case_17(self):  # oversampling
         # also, grp-00 does not produce ruptures
@@ -417,7 +422,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 3)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 70)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
@@ -444,7 +449,7 @@ class EventBasedTestCase(CalculatorTestCase):
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
         [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-data-from-ruptures.csv', gmf)
+        self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
@@ -543,7 +548,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # splitting ruptures + gmf1 + gmf2
         self.run_calc(case_27.__file__, 'job.ini',
                       ground_motion_fields="false")
-        self.assertEqual(len(self.calc.datastore['ruptures']), 15)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 17)
         hc_id = str(self.calc.datastore.calc_id)
 
         self.run_calc(case_27.__file__, 'job.ini', tile_spec="[1,2]",
@@ -626,7 +631,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
         # make sure starting from ruptures without logic tree is possible
-        self.run_calc(case_30.__file__, 'job.ini', sites='-123 49',
+        self.run_calc(case_30.__file__, 'job.ini', sites='-124 51',
                       ground_motion_fields='true',
                       intensity_measure_types='PGA',
                       gsim_logic_tree_file='',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,7 +36,7 @@ from openquake.baselib.general import (
     sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module, InvalidFile
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
@@ -207,6 +207,8 @@ class Oq(object):
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
+    minimum_intensity = {}
+    sec_imts = []
     inputs = ()
 
     def __init__(self, **hparams):
@@ -600,7 +602,6 @@ class ContextMaker(object):
             self.imtls = imt_module.dictarray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
-        self.cache_distances = param.get('cache_distances', False)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
@@ -687,7 +688,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.clu_mon = monitor('cluster loop', measuremem=True)
+        self.clu_mon = monitor('cluster loop', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1251,6 +1252,12 @@ class ContextMaker(object):
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
+            if gsim.conditional and not gsim.from_mgmpe:
+                url = ('https://docs.openquake.org/oq-engine/master/manual/'
+                       'contributing/implementing-new-gsim.html')
+                raise NotImplementedError(
+                    f'{gsim} was not instantiated with a '
+                    f'ModifiableGMPE, please read {url}')
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
@@ -1303,37 +1310,29 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
+        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (eps, 0)
+            return 0 if src.code in b'pP' else eps
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps, 0
+            return eps
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return eps, 0
-        lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = (lenctx * src.num_ruptures /
-                  self.num_rups * srcfilter.multiplier)
+            return eps
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code in b'NX':  # increase weight
-            weight *= 5.
-        elif src.code == b'S':  # needed for SAM
-            weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
-            weight *= 10  # make fault sources much heavier
-        elif len(sites) > 100:  # many sites, raise the weight for many gsims
-            # important for USA 2023
-            weight *= (1 + len(self.gsims) // 5)
-        return max(weight, eps), int(esites)
+        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
+        if src.code in b'NSX':  # increase weight
+            weight *= 12.
+        # raise the weight according to the gsims (needed for USA 2023)
+        weight *= (1 + len(self.gsims) / 5)
+        return max(weight, eps)
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1344,9 +1343,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(src, srcfilter)
-                # if src.code == b'S':
-                #     print(src, src.dt, src.num_ruptures / self.num_rups)
+                src.weight = self.estimate_weight(src, srcfilter)
 
 
 def by_dists(gsim):
@@ -1466,6 +1463,7 @@ class RmapMaker(object):
     def __init__(self, cmaker, sitecol, group):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
+        self.tiling = getattr(cmaker, 'tiling', False)
         if hasattr(sitecol, 'sitecol'):
             self.srcfilter = sitecol
         else:
@@ -1512,13 +1510,13 @@ class RmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        # to avoid running OOM in multifault sources when building
-        # the dparam cache, we split the sites in tiles
         tiles = [sites]
         if src.code == b'F':
+            # to avoid running OOM in multifault sources when building
+            # the dparam cache, we split the sites in tiles;
+            # this is ESSENTIAL for the USA 2023 model
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            if len(sites) >= 2000:
-                tiles = sites.split_in_tiles(len(sites) // 1000)
+            tiles = sites.split_in_tiles(len(sites) // 5000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
@@ -1526,7 +1524,7 @@ class RmapMaker(object):
                     with self.cmaker.delta_mon:
                         delta = self.cmaker.deltagetter(src.id)
                         ctx.occurrence_rate += delta[ctx.rup_id]
-                if self.fewsites:  # keep rupdata in memory (before collapse)
+                if self.fewsites:  # keep rupdata in memory
                     if self.src_mutex:
                         # needed for Disaggregator.init
                         ctx.src_id = valid.fragmentno(src)
@@ -1541,18 +1539,17 @@ class RmapMaker(object):
         totlen = 0
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
-        # using most memory here; limited by pmap_max_gb
+        # using memory here, limited by tiling and pmap_max_mb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
-                src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
+                    # allctxs is at most a few dozens of MB
                     for ctx in concat(allctxs):
                         cm.update(pnemap, ctx)
                     allctxs.clear()
@@ -1565,26 +1562,21 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
-        for src in self.sources:
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(src.nsites)
-            self.source_data['esites'].append(src.esites)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(
-                dt * src.nsites / totlen if totlen else dt / nsrcs)
-            self.source_data['taskno'].append(cm.task_no)
+        if not self.tiling:
+            for src in self.sources:
+                self.source_data['src_id'].append(src.source_id)
+                self.source_data['grp_id'].append(src.grp_id)
+                self.source_data['nctxs'].append(totlen / nsrcs)
+                self.source_data['nrupts'].append(src.num_ruptures)
+                self.source_data['weight'].append(src.weight)
+                self.source_data['ctimes'].append(dt / nsrcs)
+                self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
-        weight = 0.
-        nsites = 0
-        esites = 0
-        nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
@@ -1597,9 +1589,6 @@ class RmapMaker(object):
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
-            nctxs += len(ctxs)
-            nsites += n
-            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1608,17 +1597,16 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            weight += src.weight
+            src.dt = time.time() - t0
+            if not self.tiling:
+                self.source_data['src_id'].append(valid.basename(src))
+                self.source_data['grp_id'].append(src.grp_id)
+                self.source_data['nctxs'].append(n)
+                self.source_data['nrupts'].append(src.num_ruptures)
+                self.source_data['weight'].append(src.weight)
+                self.source_data['ctimes'].append(src.dt)
+                self.source_data['taskno'].append(cm.task_no)
         pmap.array *= self.grp_probability
-        dt = time.time() - t0
-        self.source_data['src_id'].append(valid.basename(src))
-        self.source_data['grp_id'].append(src.grp_id)
-        self.source_data['nsites'].append(nsites)
-        self.source_data['esites'].append(esites)
-        self.source_data['nrupts'].append(nctxs)
-        self.source_data['weight'].append(weight)
-        self.source_data['ctimes'].append(dt)
-        self.source_data['taskno'].append(cm.task_no)
         return ~pmap
 
     def make(self):
@@ -1631,8 +1619,14 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
+                MINFLOAT = 1.4E-45  # minimum 32 bit float
                 probs = F32(self.tom.get_probability_n_occurrences(
                     self.tom.occurrence_rate, numpy.arange(20)))
+                # the probs are usually very small, like
+                # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
+                # they rapidly go below the minimum 32 bit float, so
+                # the length of the loop can be reduced (i.e. from 20 to 7)
+                probs = probs[probs > MINFLOAT]
                 array = numpy.full(pnemap.shape, probs[0], dtype=F32)
                 for nocc, probn in enumerate(probs[1:], 1):
                     array += pnemap.array ** nocc * probn
@@ -1692,7 +1686,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
+# mock site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1919,6 +1913,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
+    def get_gids(self):
+        """
+        :returns: list of gid arrays, one for each underlying cmaker
+        """
+        return [cm.gid for cm in self.cmakers]
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -1932,7 +1932,7 @@ class ContextMakerSequence(collections.abc.Sequence):
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
-    def calc_rmap(self, src_groups, sitecol):
+    def get_rmap(self, src_groups, sitecol):
         """
         :returns: a RateMap of shape (N, L, Gt)
         """
@@ -1944,6 +1944,33 @@ class ContextMakerSequence(collections.abc.Sequence):
         for group, cmaker in zip(src_groups, cmakers):
             rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
         return rmap
+
+    def get_rmaps(self, sources, sitecol):
+        """
+        :param sources: a list of R variations of the same source
+        :param sitecol: a SiteCollection instance
+        :returns: a list of RateMaps of shape (N, L, G), one per smr
+        """
+        # FIXME: works only for logic trees not changing the geometries
+        # and only for pointlike sources
+        R = len(sources)
+        cmaker = self.cmakers[0]
+        assert cmaker.oq.use_rates
+        assert len(self) == R, (len(self), R)
+        L = cmaker.imtls.size
+        G = len(cmaker.gsims)
+        tom = PoissonTOM(cmaker.oq.investigation_time)
+        pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
+        [ctx] = cmaker.from_srcs([sources[0]], sitecol)
+        magrates = [{numpy.round(mag, 3): rate
+                     for mag, rate in src.get_annual_occurrence_rates()}
+                     for src in sources]
+        for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):
+            mag = ctxt.mag[0]  # ctxt contains a single magnitude
+            for smr, magrate in enumerate(magrates):
+                orate = ctxt.occurrence_rate / magrates[0][mag] * magrate[mag]
+                pmaps[smr].update_indep(poes, ctxt, tom.time_span, orate)
+        return [pmap.to_rates() for pmap in pmaps]
 
     def combine_rates(self, rmap):
         """
@@ -1987,16 +2014,16 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
-    all_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
+    unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
+    gweights = full_lt.g_weights(unique_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
-    for grp_id, trt_smrs in enumerate(all_trt_smrs):
+    for grp_id, trt_smrs in enumerate(unique_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
@@ -2005,7 +2032,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm.trti = trti
         cm.trt_smrs = trt_smrs
         cmakers.append(cm)
-    gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
+    gids = full_lt.get_gids(unique_trt_smrs)
     for cm, gid in zip(cmakers, gids):
         cm.gid = gid
         cm.wei = gweights[gid]
@@ -2028,19 +2055,47 @@ def read_cmakers(dstore, full_lt=None):
     return cmakers
 
 
-def read_full_lt_by_label(dstore):
+def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt'].init()
+    glt = full_lt.gsim_lt
     attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
-        dic[label] = copy.copy(full_lt)
+        dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
+        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
+        flt.label = label
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+        flt.weights = numpy.array(
+            [rlz.weight for rlz in flt.get_realizations()])
+
+        # all gsim logic trees in the dictionary must have the same
+        # trts and the same number of gsims per trt
+        exp = list(glt.values)
+        got = list(flt.gsim_lt.values)
+        if exp != got:
+            raise InvalidFile(
+                f'{oq.inputs["gsim_logic_tree"]}: expected {exp} got {got}')
+        for trt, gsims in full_lt.gsim_lt.values.items():
+            got = len(gsims)
+            exp = len(glt.values[trt])
+            if exp != got:
+                raise InvalidFile(
+                    f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
+                    f'got {got} for {trt=}')
+
+    # sanity check: the gids must be consistent
+    unique_trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+    default_gids = dic['Default'].get_gids(unique_trt_smrs)
+    for label in list(dic)[1:]:
+        gids = dic[label].get_gids(unique_trt_smrs)
+        numpy.testing.assert_equal(gids, default_gids)
     return dic
 
 

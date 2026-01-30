@@ -9,7 +9,7 @@ on:
         required: true
   push:
     # TODO: it would be better to point to ltr and latest
-    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22, engine-3.23 ]
+    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22, engine-3.23, engine-3.24 ]
 jobs:
   demos:
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           zip -q -r /tmp/demos.zip demos/
-          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/ openquake/qa_tests_data/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos

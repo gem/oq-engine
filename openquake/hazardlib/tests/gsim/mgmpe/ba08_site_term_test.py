@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -32,8 +32,8 @@ exp_gmm_origin = np.array([[ 2.95002695,  2.95002695,  2.95002695,  2.95002695],
                            [-0.00382746, -0.00382746, -0.00382746, -0.00382746]])
 
 exp_with_ba08 = np.array([[3.05906356, 3.15177686, 3.21616174, 3.23047657],
-                           [3.53086955, 3.61696047, 3.67674643, 3.69003877],
-                           [0.44547026, 0.44547026, 0.44547026, 0.44547026]])
+                          [3.53086955, 3.61696047, 3.67674643, 3.69003877],
+                          [0.44547026, 0.44547026, 0.44547026, 0.44547026]])
 
 
 class BA08SiteTermTestCase(unittest.TestCase):
@@ -81,7 +81,7 @@ class BA08SiteTermTestCase(unittest.TestCase):
         ctx.vs30 = 760. # BA08 reference velocity
         ctx.vs30measured = 1
         mea, sig, _, _ = cmaker.get_mean_stds([ctx]) # imtls on bedrock
-        
+
         aae(mea[0], mea[1])
         aae(sig[0], sig[1])
 
@@ -90,14 +90,14 @@ class BA08SiteTermTestCase(unittest.TestCase):
         am09 = valid.gsim('AtkinsonMacias2009')
         gmpe = valid.modified_gsim(am09)
         # Instantiate from mgmpe class + from regular mgmpe
-        mgmpe2 = BA08SiteTerm(gmpe_name='AtkinsonMacias2009')
         mgmpe1 = valid.modified_gsim(am09, ba08_site_term={})
+        mgmpe2 = BA08SiteTerm(gmpe_name='AtkinsonMacias2009')
 
         ctx.vs30 = 400.
         cmaker = simple_cmaker(
             [gmpe, mgmpe1, mgmpe2], ['PGA', 'SA(0.1)', 'SA(1.0)'])
         mea, sig, _, _ = cmaker.get_mean_stds([ctx]) # imtls on soil
-
+        
         aae(mea[0], exp_gmm_origin) # Check expected is observed
         aae(mea[1], exp_with_ba08)  # (original vs modified with
         aae(mea[2], exp_with_ba08)  # with site term)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -46,13 +46,22 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_alpha
 
 
 # Path to the within-model epistemic adjustment tables
-BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020_tables")
+BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020")
 
 # Path to the model coefficients
-KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
+KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020",
+                            "kuehn_2020_coeffs.csv")
+
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-sub-ak-interface-adjustment.csv
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
 
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
@@ -148,9 +157,6 @@ REGION_TERMS_IF = {
         },
 }
 
-METRES_PER_KM = 1000.
-
-
 # Regional terms for the in-slab events
 REGION_TERMS_SLAB = {
     # Global - to be used in any other subduction region
@@ -236,7 +242,6 @@ REGION_TERMS_SLAB = {
         },
 }
 
-
 # Constants independent of region
 CONSTS = {"c_10": 0.0,
           "c": 1.88,
@@ -247,8 +252,8 @@ CONSTS = {"c_10": 0.0,
           "z_ref_if": 15.0,
           "z_ref_slab": 50.0,
           "z_b_if": 30.0,
-          "z_b_slab": 80.0}
-
+          "z_b_slab": 80.0,
+          "phi_lnAF": 0.3} # USGS java code sets square of this value (0.09)
 
 # Basin depth model parameters for each of the regions for which a
 # basin response model is defined
@@ -279,6 +284,8 @@ Z_MODEL = {
         "c_z_4": 0.43671101999999995,
         }
 }
+
+METRES_PER_KM = 1000.
 
 
 def get_base_term(C, trt, region):
@@ -397,21 +404,22 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
     """
     # c7 is the same for interface or inslab - so just read from interface
     c_7 = C[REGION_TERMS_IF[region]["c7"]]
+
     # Get linear site term
     vs_mod = vs30 / C["k1"]
     f_site_g = c_7 * np.log(vs_mod)
     idx = vs30 > C["k1"]
-    f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
-                                     np.log(vs_mod[idx]))
+    f_site_g[
+        idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] * np.log(vs_mod[idx]))
 
     # Get nonlinear site response term
     idx = np.logical_not(idx)
     if np.any(idx):
         f_site_g[idx] = f_site_g[idx] + C["k2"] * (
-                np.log(pga1100[idx] +
-                       CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
-                np.log(pga1100[idx] + CONSTS["c"])
-        )
+            np.log(pga1100[idx] + CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
+            np.log(pga1100[idx] + CONSTS["c"])
+            )
+        
     return f_site_g
 
 
@@ -674,13 +682,11 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         # Extend for extreme periods as needed
         if np.any(imt.period > model["periods"][-1]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
-                axis=2)
+                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]), axis=2)
             model_t = np.concatenate((model_t, [imt.period]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
-                axis=2)
+                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model), axis=2)
             model_t = np.concatenate(([imt.period], model_t), axis=0)
 
         # Linear interpolation
@@ -688,10 +694,48 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
             (model_m, model_r, np.log(model_t)), sigma_mu_model,
             bounds_error=False, fill_value=None)
         sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
-                     axis=1))
+            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
 
     return sigma_mu
+
+
+def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
+    """
+    Return sigma of the original K20 model OR use CB14 sigma model with
+    K20 coefficients (this is used in the Alaska 2023 USGS model).
+    """
+    if cb14_sig:
+        # USGS implementation skips the mag-dep defined in eqs 27 and 28 of CB14.
+        tau_lny_b = C["tau"]
+        phi_lny = C["phi"]
+        tau_lnpga_b = C_PGA["tau"]
+        phi_lnpga_b = C_PGA["phi"]
+        rho_lny = C["rho"] 
+
+        # Get alpha (scalar per site describing PGA on bedrock vs given vs30)
+        alpha = _get_alpha(C, ctx.vs30, pga1100)
+
+        # Compute tau using eq 29 of CB14 
+        alpha_tau = alpha * tau_lnpga_b
+        tau = np.sqrt(
+            alpha_tau**2 + tau_lny_b**2 + (2.0 * alpha * rho_lny * tau_lny_b * tau_lnpga_b))
+
+        # Compute phi using eq 30 of CB14
+        phi_lny_b = np.sqrt(phi_lny**2 - CONSTS["phi_lnAF"]**2)
+        a_phi_lnpga_b = alpha * np.sqrt(phi_lnpga_b**2 - CONSTS["phi_lnAF"]**2)
+        phi = np.sqrt(
+            phi_lny**2 + a_phi_lnpga_b**2 + (2.0 * rho_lny * phi_lny_b * a_phi_lnpga_b))
+
+        # Total sigma
+        sig = np.sqrt(tau**2 + phi**2)
+
+    else:
+        # Original Kuehn et al. (2020) sigma model
+        tau = C["tau"]
+        phi = C["phi"]
+        sig = np.sqrt(C["tau"]**2.0 + C["phi"]**2.0)
+
+    return sig, tau, phi
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -748,6 +792,11 @@ class KuehnEtAl2020SInter(GMPE):
                       logic tree context. The scenario and period specific
                       sigma_mu values are read in from hdf5 binary files and
                       interpolated to the magnitude and distances required
+    ak23_bias_adj: Period-dependent bias adjustment as applied within the USGS
+                   2023 USGS model for Alaska
+    ak23_cb14_sig: Adjusted sigma model based on Campbell and Bozorgnia 2014 to
+                   account for aleatory variability associated with non-linear
+                   site amplification
     """
     experimental = True
 
@@ -784,7 +833,8 @@ class KuehnEtAl2020SInter(GMPE):
                            'usgs_basin_scaling', 'sigma_mu_epsilon'}
 
     def __init__(self, region="GLO", m_b=None, m9_basin_term=None,
-                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0,
+                 ak23_bias_adj=False, ak23_cb14_sig=False):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -819,6 +869,21 @@ class KuehnEtAl2020SInter(GMPE):
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
             self.sigma_mu_model = {}
+
+        # Alaska 2023 USGS model adjustments
+        self.ak23_bias_adj = ak23_bias_adj
+        self.ak23_cb14_sig = ak23_cb14_sig
+        if self.ak23_bias_adj: # NOTE: Don't raise an error if using the CB14
+                               # based sigma outside Alaska USGS model context
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
+                not const.TRT.SUBDUCTION_INTERFACE or
+                    self.region != "GLO"):
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
+                                 f'should only be applied to the "global"'
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -876,15 +941,20 @@ class KuehnEtAl2020SInter(GMPE):
                                           trt, m_break, ctx, pga1100,
                                           m9_basin_term=self.m9_basin_term,
                                           usgs_bs=self.usgs_basin_scaling)
+                
+            if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
+
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
                     self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
+
             # Get standard deviations
-            tau[m] = C["tau"]
-            phi[m] = C["phi"]
-            sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+            sig[m], tau[m], phi[m] = get_std_dev(
+                C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:
@@ -921,7 +991,6 @@ REGION_ALIASES = {
     "TWN": "Taiwan",
     "SEA": "CascadiaSeattleBasin",
 }
-
 
 for region in SUPPORTED_REGIONS[1:]:
     add_alias("KuehnEtAl2020SInter" + REGION_ALIASES[region],

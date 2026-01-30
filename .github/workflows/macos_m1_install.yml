@@ -22,10 +22,10 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
@@ -127,7 +127,7 @@ jobs:
           oq info venv
           oq info cfg
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine
-          bin/run-demos.sh demos
+          bin/run-demos.sh demos/ openquake/qa_tests_data/
       - name: Run tests for calculators to test installation
         if: always()
         run: |

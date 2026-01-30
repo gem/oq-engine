@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1241,10 +1241,10 @@ class Exposure(object):
             rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
-            df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            df = hdf5.read_csv(fname, conv, rename, errors=errors, dframe=True)
             asset = os.environ.get('OQ_DEBUG_ASSET')
             if asset:
-                df = df[df.index == asset]
+                df = df[df.id == asset]
                 if len(df) == 0:
                     continue
             add_dupl_fields(df, oqfields)
@@ -1252,10 +1252,11 @@ class Exposure(object):
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
+                # tested in scenario_risk/case_13
                 df = general.random_filter(df, sa)
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))
-            yield fname, df
+            yield fname, df.set_index('id')
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """

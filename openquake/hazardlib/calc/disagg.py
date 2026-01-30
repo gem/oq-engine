@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -700,7 +700,8 @@ def collect_std(disaggs, Ma, D, M, G):
             zeros = sig[:, :, m, g] == 0
             if zeros.any():
                 magi, dsti = numpy.where(~zeros)
-                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+                if len(magi) and len(dsti):
+                    sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
     return sig
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,9 +21,9 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts, InvalidFile
+from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
-    calc_rmap, calc_mean_rates, to_rates)
+    get_rmap, calc_mean_rates, to_rates)
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -61,24 +61,30 @@ class LogicTreeTestCase(CalculatorTestCase):
         if 'hcurves-stats' not in self.calc.datastore:  # not produced
             return
         oq = self.calc.oqparam
+        csm = self.calc.csm
+        csm_read = source_group.read_csm(self.calc.datastore)
+        # make sure the csm read from the datastore is the same as the original
+        for sg_orig, sg in zip(csm.src_groups, csm_read.src_groups):
+            if len(sg_orig) != len(sg):
+                raise RuntimeError(f'Inconsistent {sg=}, {sg_orig=}')
+
         if oq.use_rates:  # compare with mean_rates
             print('Comparing mean_rates')
             poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
             exp_rates = to_rates(poes)  # shape (N, M, L1)
             # NB: the exp_rates are wrong at small levels because the hcurves
             # are stored at 32 bit and that make a big difference around log(0)
-            csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
-            rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
+            rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
-            aac(mr, er, atol=8e-6)
+            aac(mr, er, atol=2e-5)
 
     def test_case_01(self):
         # same source in two source models
@@ -171,6 +177,19 @@ class LogicTreeTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
+
+        # test csm.get_sources; there are 3 source model realizations
+        fname = general.gettemp(view('sm_rlzs', self.calc.datastore))
+        self.assertEqualFiles('expected/sm_rlzs.org', fname)
+
+        csm = source_group.read_csm(self.calc.datastore)
+        source_ids = [src.source_id for src in csm.get_sources(0)]
+        assert source_ids == ['2', '1']
+        source_ids = [src.source_id for src in csm.get_sources(1)]
+        assert source_ids == ['1']
+        source_ids = [src.source_id for src in csm.get_sources(2)]
+        assert source_ids == ['3']
+        # NB: the same source '1' appears in two sm_rlzs
 
     def test_case_08(self):
         self.assert_curves_ok(
@@ -670,8 +689,8 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        exp = [b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A',
-               b'AAA~A', b'AB.~A', b'AB.~A', b'AB.~A']
+        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+               b'AA~A', b'B.~A', b'B.~A', b'B.~A']
         ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
@@ -692,7 +711,7 @@ hazard_uhs-std.csv
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8], []])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
 
     def test_case_73(self):

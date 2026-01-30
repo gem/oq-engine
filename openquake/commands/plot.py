@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,6 +33,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
+from openquake.hazardlib.source_group import read_csm
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.getters import get_ebrupture
@@ -556,12 +557,22 @@ def make_figure_ebruptures(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
-    hypo = ex.get(what)['hypo']
+    sitecol = ex.get('sitecol')
+    ebrs = ex.get(what)
+    out = ebrs['model'] == b'???'
+    in_ = ~out
     _fig, ax = plt.subplots()
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.grid(True)
-    ax.scatter(hypo[:, 0], hypo[:, 1])
-    ax.set_title('%d ruptures' % len(hypo))
+    ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
+               label='sites')
+    hypo_in = ebrs[in_]['hypo']
+    ax.scatter(hypo_in[:, 0], hypo_in[:, 1], marker='*', label='ruptures in')
+    hypo_out = ebrs[out]['hypo']
+    ax.scatter(hypo_out[:, 0], hypo_out[:, 1], marker='x', label='ruptures out',
+               alpha=0.5)
+    ax.set_title('%d+%d ruptures' % (len(hypo_in), len(hypo_out)))
+    ax.legend()
     return plt
 
 
@@ -1070,7 +1081,7 @@ def make_figure_sources(extractors, what):
     else:
         codes = []
     print('Reading sources...')
-    csm = dstore['_csm']
+    csm = read_csm(dstore)
     srcs = filter_sources(csm, src_ids, codes, excluded_codes)
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
@@ -1149,7 +1160,7 @@ def make_figure_sites(extractors, what):
 
 def make_figure_show_png(extractors, what):
     """
-    oq plot "show_png?site.png"
+    $ oq plot "show_png?site.png"
 
     shows an image stored in 'png/IMAGE_NAME'
     """
@@ -1236,7 +1247,7 @@ def plot_csv(fname):
 
 
 def main(what,
-         calc_id: int = -1,
+         calc_id: str = -1,
          others: int = [],
          *,
          save_to: str = None,
@@ -1246,6 +1257,9 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
+    if isinstance(calc_id, str) and not calc_id.endswith('.hdf5'):
+        # assume calc_id is an integer
+        calc_id = int(calc_id)
     if what.endswith('.csv'):
         plot_csv(what)
         return
@@ -1312,7 +1326,7 @@ def main(what,
 
 
 main.what = 'what to extract (try examples)'
-main.calc_id = 'computation ID'
+main.calc_id = 'computation ID or .hdf5 file'
 main.others = dict(help='IDs of other computations', nargs='*')
 main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'

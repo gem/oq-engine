@@ -18,10 +18,10 @@ jobs:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
       matrix:
-        python-version: [python3.11]
-        req-version: [py311]
+        python-version: [python3.12]
+        req-version: [py312]
     container:
-      image: fedora:39
+      image: fedora:41
       options: --privileged
     steps:
     - name: Clone Repository (Master)
@@ -92,75 +92,116 @@ jobs:
         for file in openquake/server/templates/registration/*.default.tmpl; do
             cp -- "$file" "${file%.default.tmpl}"
         done
-    - name: Test WebUI and run https calculation
+    - name: WebUI and calculation with Auth
       run: |
-         set -x
+         set -o pipefail
          source /opt/openquake/venv/bin/activate
          pip freeze
-         mkdir /var/log/oq-engine/
+         mkdir -p /var/log/oq-engine/
          chown -R openquake /var/log/oq-engine/
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db &'
-         # Wait the DbServer to come up
-         #echo "Waiting DBServer up on port 1907...."
-         #while ! nc -z localhost 1907; do
-         #  sleep 2 # wait for 1/10 of the second before check again
-         #done
-         #sleep 3
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
          oq --version
          #
          echo "Add settings for login and logging on webui before to start"
          cd /__w/oq-engine/oq-engine/
          cd openquake/server
          cat > local_settings.py << EOF
-         LOCKDOWN = True
-         #
+         APPLICATION_MODE = "RESTRICTED"
+         EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+         EMAIL_HOST = 'smtp.gmail.com'
+         EMAIL_PORT = 587
+         EMAIL_USE_TLS = True
+         EMAIL_HOST_USER = 'admin@reply.com'
+         EMAIL_HOST_PASSWORD = 'polhjuih@'
+         EMAIL_SUPPORT = 'noreply@reply.com'
          WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
          EOF
          echo "DISPLAY content of local_settings"
          cat local_settings.py
-         # START WEBUI
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
-         echo "Waiting WEBUI up on port 8800...."
-         while ! nc -z localhost 8800; do
-           sleep 5 # wait for 1/10 of the second before check again
-         done
-         echo "Test WebUI with curl before to test django"
-         sleep 1
          # Perform migration after setup local_settings
          cd /__w/oq-engine/oq-engine/openquake/engine/
          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
-         sleep 1
-         curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
-         echo -n "Test Standalone Tools pages"
-         curl --fail -I -L -X GET http://127.0.0.1:8800/
-         curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
-         curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
+         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email'
+         # Run help on manage.py
+         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py help'
+         # START WEBUI
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+         echo "Waiting WEBUI up on port 8800...."
+         echo "Test WebUI with curl before to test django"
+         while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+           echo "Still waiting WEBUI account login up on port 8800...."
+           sleep 5 # wait for 5 seconds before check again
+         done
          echo -n "TEST DJANGO LOGIN "
          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-         YOUR_USER='username'
-         YOUR_PASS='password'
+         YOUR_USER='openquake'
+         YOUR_PASS='level_1_password'
          COOKIES=cookies.txt
          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
          echo -n "Django Auth: get csrftoken ..."
-         $CURL_BIN $LOGIN_URL > /dev/null
+         $CURL_BIN $LOGIN_URL -o /dev/null
          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
          echo " perform login ..."
-         $CURL_BIN \
+         status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -X POST $LOGIN_URL > /dev/null
+             -X POST $LOGIN_URL -o /dev/null)
+         if [ $status_code != "302" ]; then
+           echo "Unable to login"
+           exit 1
+         fi
          echo "--------------------"
          echo "display log of webui"
          echo "--------------------"
          cat /var/log/oq-engine/webui-access.log
          if [ -s /var/log/oq-engine/webui-access.log ]; then
-         # The file is not-empty.
-         cat /var/log/oq-engine/webui-access.log
+           # The file is not-empty.
+           cat /var/log/oq-engine/webui-access.log
          else
-         ## The file is empty.
-         echo "Something not work as expected"
-         exit 1
+           echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
+           exit 1
          fi
-         # Run a calcs using https
-         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+         echo " Run a calc using https"
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
          sleep 5
-         $CURL_BIN -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+         status_code=$($CURL_BIN -w "%{http_code}"\
+             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+             -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
+         if [ $status_code != "200" ]; then
+           echo "Unable to visualize outputs"
+           exit 1
+         fi
+
+    - name: WebUI on PUBLIC
+      run: |
+         set -o pipefail
+         source /opt/openquake/venv/bin/activate
+         echo "Restart WebUI without authentication"
+         runuser -l openquake -c 'pkill oq-webui'
+         sleep 5
+         runuser -l openquake -c 'OQ_APPLICATION_MODE=PUBLIC /opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+         echo "Waiting WEBUI up on port 8800...."
+         while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/engine/)" != "200" ]]; do
+           echo "Still waiting WEBUI on port 8800...."
+           sleep 5 # wait for 5 seconds before check again
+         done
+         echo -n "Test Standalone Tools pages (without authentication)"
+         read status_code redirect_url <<<"$(
+           curl -s -o /dev/null -w "%{http_code} %{redirect_url}" http://127.0.0.1:8800/
+         )"
+         if [ "$status_code" != "301" ] || [ "$redirect_url" != "http://127.0.0.1:8800/engine/" ]; then
+           echo "Unexpected redirect: status=$status_code redirect=$redirect_url"
+           echo "Should redirect to http://127.0.0.1:8800/engine/"
+           exit 1
+         fi
+         status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/taxonomy/)
+         if [ $status_code != "200" ]; then
+           echo "Unable access the taxonomy standalone app"
+           exit 1
+         fi
+         status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/ipt/)
+         if [ $status_code != "200" ]; then
+           echo "Unable to access the ipt standalone app"
+           exit 1
+         fi
+         echo " Run a calc using https"
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'

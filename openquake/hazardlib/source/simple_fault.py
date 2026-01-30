@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -208,9 +208,15 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         if self.num_ruptures:
             return self.num_ruptures
-        whole_fault_surface = SimpleFaultSurface.from_fault_data(
-            self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
+        try:
+            whole_fault_surface = SimpleFaultSurface.from_fault_data(
+                self.fault_trace, self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth, self.dip,
+                self.rupture_mesh_spacing)
+        except Exception as exc:
+            source_id = self.source_id
+            exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
+            raise
         whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)

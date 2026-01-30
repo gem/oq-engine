@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2025 GEM Foundation
+# Copyright (C) 2017-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -472,19 +472,6 @@ class SourceConverterTestCase(unittest.TestCase):
         testfile = os.path.join(testdir, 'source_with_slip_rate.xml')
         src = nrml.to_python(testfile).src_groups[0][0]
         self.assertAlmostEqual(src.mfd.a_val, 3.9720437839539255)
-
-
-class SourceGroupHDF5TestCase(unittest.TestCase):
-    def test_serialization(self):
-        testfile = os.path.join(
-            testdir, 'nonparametric-source-mutex-ruptures.xml')
-        [grp] = nrml.to_python(testfile)
-        for i, src in enumerate(grp, 1):
-            src.id = i
-        with hdf5.File.temporary() as f:
-            f['grp'] = grp
-        with hdf5.File(f.path, 'r') as f:
-            print(f['grp'])
 
 
 class MultiFaultSourceModelTestCase(unittest.TestCase):

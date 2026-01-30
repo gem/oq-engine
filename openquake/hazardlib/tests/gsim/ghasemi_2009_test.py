@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,6 @@ class Ghasemi2009TestCase(BaseGSIMTestCase):
     # Tables created from Excel calculation file of the proposed model 
 
     def test_all(self):
-        self.check('Ghasemi09.csv',
+        self.check('GA09/Ghasemi09.csv',
                    max_discrep_percentage=0.1)
 

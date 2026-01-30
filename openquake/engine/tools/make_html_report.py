@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -131,6 +131,6 @@ def make_report(isodate='today'):
     page = make_tabs(tag_ids, tag_status, tag_contents) + (
         'Report last updated: %s' % datetime.now())
     fname = 'jobs-%s.html' % isodate
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         f.write(PAGE_TEMPLATE % page)
     return fname

@@ -79,6 +79,7 @@ class AristotleParam:
             self.trt = next(iter(trts[self.mosaic_model]))
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
+            base_path='',  # no .ini file
             description=self.description,
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
@@ -152,6 +153,7 @@ IMPACT_FORM_LABELS = {
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
     'description': 'Description',
+    'no_uncertainty': 'No uncertainty',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {

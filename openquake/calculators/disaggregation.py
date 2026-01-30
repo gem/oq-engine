@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -196,15 +196,22 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)
+        # the real test for this is case_multi in the oq-risk-tests
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in range(self.N):
-                    hcurve = self.mgetters[sid].get_hcurve(sid)
-                    mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
-                        full_lt.wget)
+                    mgetter = self.mgetters[sid]
+                    hcurve = mgetter.get_hcurve(sid)  # shape (L, R)
+                    if oq.fastmean:
+                        # reshape mean (N, M, L1) -> (N, L) with N=1
+                        mean = mgetter.get_fast_mean().array.reshape((1, -1))
+                    else:
+                        mean = getters.build_stat_curve(
+                            hcurve, oq.imtls, stats.mean_curve,
+                            full_lt.gsim_lt.wget)
+                    # mean has shape (1, L)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs

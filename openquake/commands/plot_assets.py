@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2025 GEM Foundation
+# Copyright (C) 2017-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,6 @@ def main(calc_id: int = -1, site_model=False,
     """
     Plot the sites, the assets and also rupture and stations if available
     """
-
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
@@ -65,10 +64,9 @@ def main(calc_id: int = -1, site_model=False,
             sm_lons %= 360
         p.scatter(sm_lons, sm_lats, marker='.', color='orange',
                   label='site model', s=markersize_site_model)
-    # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
-    #           color='gray', label='grid')
+
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
-              label='assets', s=markersize_assets)
+              label='assets', s=markersize_assets, alpha=.5)
     if not assets_only:
         p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
                   label='sites', s=markersize_sitecol)
@@ -92,17 +90,21 @@ def main(calc_id: int = -1, site_model=False,
                              facecolors='none')
         else:
             kw_params = dict(label='all stations', c='brown')
-        # NOTE: we might filter out the stations that were considered, and plot only
-        # the discarded ones, but the output looks similar if we plot all stations
-        # here, then overlap them with plotting the considered ones on top
-        p.scatter(stations['lon'], stations['lat'], marker='D', s=markersize_site_model,
+        # NOTE: we might filter out the stations that were considered, and plot
+        # only the discarded ones, but the output looks similar if we plot all
+        # stations here, then overlap them with plotting the considered ones
+        # on top
+        p.scatter(stations['lon'], stations['lat'], marker='D',
+                  s=markersize_site_model,
                   **kw_params)
         if 'stations_considered' in dstore:
             # NOTE: overlapping the used ones on top of the full set
             stations_considered = dstore['stations_considered']
             if len(stations_considered) > 0:
-                p.scatter(stations_considered['lon'], stations_considered['lat'],
-                          marker='D', c='brown', label='considered stations',
+                p.scatter(stations_considered['lon'],
+                          stations_considered['lat'],
+                          marker='D', c='brown',
+                          label='considered stations',
                           s=markersize_site_model)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
@@ -114,7 +116,7 @@ def main(calc_id: int = -1, site_model=False,
             dist = sitecol.get_cdist(rec)
             print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        if (os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE'
+        if (os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT'
                 and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
@@ -122,6 +124,11 @@ def main(calc_id: int = -1, site_model=False,
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
+    elif 'ruptures' in dstore:
+        hypos = dstore['ruptures']['hypo']
+        xlon, xlat = hypos[:, 0], hypos[:, 1]
+        p.scatter(xlon, xlat, marker='*', color='orange',
+                  label='hypocenter', alpha=.1)
     else:
         xlon, xlat = [], []
 
@@ -136,7 +143,8 @@ def main(calc_id: int = -1, site_model=False,
     adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
-    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)
+    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0),
+                         borderaxespad=0.)
     if country_iso_codes is not None:
         # NOTE: use following lines to add custom items without changing title
         # ax.plot([], [], ' ', label=country_iso_codes)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
+from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -33,14 +34,14 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
-    case_12, case_18, case_22, case_23, case_24, case_25, case_26, case_27,
-    case_29, case_32, case_33, case_34, case_35, case_37, case_38, case_40,
-    case_41, case_42, case_43, case_44, case_47, case_48, case_49,
+    case_09, case_12, case_18, case_22, case_23, case_24, case_25, case_26,
+    case_27, case_29, case_32, case_33, case_34, case_35, case_37, case_38,
+    case_40, case_41, case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
-    case_60, case_61, case_62, case_63, case_64, case_65, case_66,
-    case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89)
+    case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
+    case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
+    case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
+    case_86, case_87, case_88, case_89, case_90, case_91)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -108,10 +109,11 @@ class ClassicalTestCase(CalculatorTestCase):
         sitecol = self.calc.sitecol
         full_lt = self.calc.full_lt
         oq = self.calc.oqparam
-        hcurve = calc.mean_rates.calc_mcurves(
-            src_groups, sitecol, full_lt, oq)[0, 0]
-        pga = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        aac(pga, hcurve, rtol=6e-5)
+        hcurves, gweights = calc.mean_rates.calc_mcurves(
+            src_groups, sitecol, full_lt, oq)
+        pga = self.calc.datastore['hcurves-stats'][0]
+        aac(pga, hcurves, rtol=6e-5)
+        aac(gweights, [1.])  # see case_06 for a nontrivial test
 
     def test_case_03(self):
         # test for min_mag, https://github.com/gem/oq-engine/issues/8941
@@ -149,33 +151,73 @@ class ClassicalTestCase(CalculatorTestCase):
         # the default logic tree has 3 realizations, one of zero weight
         aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
-        # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
+        toml = [gsim._toml for gsim in flt2.get_rlzs_by_gsim_dic()[0]]
+        assert toml == [
+            '[NSHMP2014]\ngmpe_name = "BooreEtAl2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "CampbellBozorgnia2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "ChiouYoungs2014"\nsgn = 0']
         sitecol = self.calc.sitecol
         sites0 = sitecol.filter(sitecol.ilabel == 0)
         sites1 = sitecol.filter(sitecol.ilabel == 1)
         sites2 = sitecol.filter(sitecol.ilabel == 2)
         src_groups = self.calc.csm.src_groups
-        hcurve0 = calc.mean_rates.calc_mcurves(
-            src_groups, sites0, flt0, oq)[0, 0]
-        hcurve1 = calc.mean_rates.calc_mcurves(
-            src_groups, sites1, flt1, oq)[0, 0]
-        hcurve2 = calc.mean_rates.calc_mcurves(
-            src_groups, sites2, flt2, oq)[0, 0]
-        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
-        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
-        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
-        aac(hcurve0, pga0, rtol=2e-5)
-        aac(hcurve1, pga1, rtol=2e-5)
-        aac(hcurve2, pga2, rtol=2e-5)
 
-        # testing (over)sampling
+        # check the mean hazard curves manually
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        ae(wei0, [.5, .5, 0, 1.])
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        ae(wei1, [.1, .9, 0, 1.])
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        ae(wei2, [.5, .25, .25, 1.])
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
+        aac(hcurve0, pga0, rtol=3e-6)
+        aac(hcurve1, pga1, rtol=3e-6)
+        aac(hcurve2, pga2, rtol=3e-6)
+
+    def test_case_06_sampling(self):
+        # testing oversampling
         self.run_calc(case_06.__file__, 'job.ini',
-                      number_of_logic_tree_samples='10')
+                      number_of_logic_tree_samples='5')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/uhs.csv', fname)
+        self.assertEqualFiles('expected/uhs_sampling.csv', fname)
+
+        oq = self.calc.oqparam
+        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+            self.calc.datastore).values()
+        ae(flt0.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~AA', 'A~BA', 'A~AA'])
+        ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
+        ae(flt2.rlzs['branch_path'], ['A~CA', 'A~CA', 'A~AA', 'A~CA', 'A~AA'])
+
+        sitecol = self.calc.sitecol
+        sites0 = sitecol.filter(sitecol.ilabel == 0)
+        sites1 = sitecol.filter(sitecol.ilabel == 1)
+        sites2 = sitecol.filter(sitecol.ilabel == 2)
+        src_groups = self.calc.csm.src_groups
+
+        # check the mean hazard curves manually
+        hcurve0, wei0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)
+        aac(wei0, [0.4, 0.6, 0., 1.], atol=1e-12)
+        hcurve1, wei1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)
+        aac(wei1, [0., 1., 0., 1.], atol=1e-12)
+        hcurve2, wei2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)
+        aac(wei2, [0.4, 0., 0.6, 1.], atol=1e-12)
+        pga0 = self.calc.datastore['hcurves-stats'][0]
+        pga1 = self.calc.datastore['hcurves-stats'][1]
+        pga2 = self.calc.datastore['hcurves-stats'][2]
+        aac(hcurve0, pga0, rtol=3e-6)
+        aac(hcurve1, pga1, rtol=3e-6)
+        aac(hcurve2, pga2, rtol=3e-6)
 
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
@@ -187,6 +229,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_08.__file__, 'job.ini')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
+
+    def test_case_09(self):
+        # Macedo 2019 conditional GMPE based on KuehnEtAl2020SInter
+        self.run_calc(case_09.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-IA.csv', f1)
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -249,7 +297,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # workers would read the real custom_tmp and not the mocked one
         tmp = tempfile.gettempdir()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
-             mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
              mock.patch.dict(config.directory, {'custom_tmp': tmp}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -258,20 +305,19 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(0.5).csv',
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
-        ], case_22.__file__, delta=1E-6)
+            ], case_22.__file__, delta=1E-6, tiling=True)
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
-        self.assertEqual(data['blocks'], 2)
+        self.assertEqual(data['gsims'], [4])
+        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['blocks'], [1])
 
     def test_case_22_bis(self):
         # crossing date line calculation for Alaska
         # this also tests full tiling without custom_dir
         # NB: requires disabling the parallelization otherwise the
         # workers would read the real custom_tmp and not the mocked one
-        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}), \
-             mock.patch.dict(config.directory, {'custom_tmp': ''}), \
+        with mock.patch.dict(config.directory, {'custom_tmp': ''}), \
              mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
@@ -280,12 +326,12 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(0.5).csv',
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
-        ], case_22.__file__, delta=1E-6)
+            ], case_22.__file__, delta=1E-6, tiling=True)
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
-        self.assertEqual(data['blocks'], 2)
+        self.assertEqual(data['gsims'], [4])
+        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -384,9 +430,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
 
     def test_case_34(self):
-        # spectral averaging
+        # Spectral averaging, with SA(2.0) also being computed to check
+        # that GenericGmpeAvgSA can also computed non-AvgSA IMTs using
+        # the underlying GMPE
         self.assert_curves_ok([
-            'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
+            'hazard_curve-mean-AvgSA.csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_34.__file__)
 
         # test prefer_global_site_params
         ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
@@ -453,7 +503,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical', concurrent_tasks='4')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id)
+                      hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
@@ -669,12 +719,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
         # reading/writing a multiFaultSource
-        csm = self.calc.datastore['_csm']
+        grp = read_src_group(self.calc.datastore, '0')
+        [src] = grp  # there is a single group with a single source
         tmpname = general.gettemp()
-        [src] = csm.src_groups[0].sources
         src._rupture_idxs = [
             tuple(map(str, idxs)) for idxs in src.rupture_idxs]
-        out = write_source_model(tmpname, csm.src_groups)
+        out = write_source_model(tmpname, [grp])
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')
 
@@ -724,6 +774,16 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurves = self.calc.datastore['hcurves-stats'][:]
         self.assertEqual(hcurves.sum(), 0)
 
+    def test_case_68(self):
+        # Tests calculation of non-AvgSA IMTs using the underlying GMPE specified
+        # within an indirect AvgSA GMPE when NO AvgSA IMTs are specified in the
+        # job file.
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(0.1).csv',
+            'hazard_curve-mean-SA(0.2).csv'],
+            case_68.__file__)
+
     def test_case_69(self):
         # collapse areaSource with no nodal planes/hypocenters
         self.run_calc(case_69.__file__, 'job.ini')
@@ -735,6 +795,15 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_70.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_71(self):
+        # Test use of table-based GMPE as the underlying GSIM when
+        # using conditional GMPEs
+        self.assert_curves_ok([
+            "hazard_curve-mean-IA.csv",
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-PGV.csv'],
+            case_71.__file__)
 
     def test_case_72(self):
         # reduced USA model
@@ -784,6 +853,18 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_75_pre(self):
         # test preclassical without sites, as requested by Richard Styron
         self.run_calc(case_75.__file__, 'pre.ini')
+
+        # reset .msparams to emulate reading csm without preclassical
+        for src in self.calc.csm.get_sources():
+            if src.code == b'F':
+                delattr(src, 'msparams')
+        self.calc.csm.set_msparams()
+
+        # count the ruptures
+        nrup = 0
+        for src in self.calc.csm.get_sources():
+            nrup += sum(1 for rup in src.iter_ruptures())
+        self.assertEqual(nrup, 5)
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs
@@ -940,3 +1021,36 @@ class ClassicalTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError) as job:
             self.run_calc(case_89.__file__, 'job_error.ini')
         self.assertIn('float -100.0 < 0 or not equal to -999', str(job.exception))
+
+    def test_case_90(self):
+        # Check execution of conditional GMPEs specified within a
+        # ModifiableGMPE. Here we test using Macedo et al. (2019)
+        # for prediction of Arias Intensity and Abrahamson & Bhasin
+        # (2020) for prediction of PGV with AbrahamsonGulerce2020SInter
+        # as the underlying GMM used to condition predictions upon. This
+        # test is also important because it ensures the reordering of the
+        # means and sigmas per IMT are handled correctly (in the conditional
+        # GMPEs we need to initially "skip" IMTs which are not supported by
+        # the underlying GMPE).
+        self.assert_curves_ok([
+            "hazard_curve-mean-IA.csv",
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-PGV.csv',
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv'],
+            case_90.__file__)
+
+    def test_case_91(self):
+        # Tests handling of IMTs when using GmpeIndirectAvgSA when
+        # non-AvgSA IMTs also are specified in the job file (ensure there
+        # is no overwrite of SA and AvgSA with the same ordinal - this
+        # test in effect checks that different (and correct) hazard curves
+        # are obtained for SA(0.1) and AvgSA(0.1) which of course have the
+        # same period attribute - previously identical hazard curves were
+        # being returned because of this being handled incorrectly).
+        self.assert_curves_ok([
+            "hazard_curve-mean-AvgSA(0.1).csv",
+            'hazard_curve-mean-AvgSA(0.75).csv',
+            'hazard_curve-mean-AvgSA(2.0).csv',
+            'hazard_curve-mean-SA(0.1).csv'],
+            case_91.__file__)

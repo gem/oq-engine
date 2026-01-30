@@ -59,48 +59,9 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
         parameters (i.e. xvf will be zero for most models).
 
 """
-
-import os
-import logging
-import numpy
-from openquake.baselib import performance, sap, hdf5
-from openquake.hazardlib import gsim_lt
-from openquake.commonlib import readinput, datastore
-from openquake.calculators import base
+from openquake.baselib import sap
+from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
-
-
-MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-'''.split())
-
-dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
-
-
-def read_job_inis(mosaic_dir, INPUTS):
-    out = []
-    rows = []
-    for model in INPUTS.pop('models'):
-        fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-        dic = readinput.get_params(fname)
-        del dic['intensity_measure_types_and_levels']
-        dic.update(INPUTS)
-        if 'truncation_level' not in dic:  # CAN
-            dic['truncation_level'] = '5'
-        if model in ("KOR", "JPN"):
-            dic['investigation_time'] = '50'
-            dic['ses_per_logic_tree_path'] = str(
-                int(dic['ses_per_logic_tree_path']) // 50)
-        dic['mosaic_model'] = model
-        gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
-        for trt, gsims in gslt.values.items():
-            for gsim in gsims:
-                q = (model, trt, gsim._toml, gsim.weight['default'])
-                rows.append(q)
-        out.append(dic)
-    return out, rows
-
 
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
@@ -108,39 +69,10 @@ def main(mosaic_dir, out, models='ALL', *,
     """
     Storing global SES
     """
-    if models == 'ALL':
-        models = MODELS
-    else:
-        models = models.split(',')
-        for model in models:
-            assert model in MODELS, model
-    if 'KOR' in models or 'JPN' in models:
-        if ses_per_logic_tree_path % 50:
-            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
-    INPUTS = dict(
-        calculation_mode='event_based',
-        number_of_logic_tree_samples= str(number_of_logic_tree_samples),
-        ses_per_logic_tree_path = str(ses_per_logic_tree_path),
-        investigation_time='1',
-        ground_motion_fields='false',
-        models=models)
-    if minimum_magnitude:
-        INPUTS[minimum_magnitude] = str(minimum_magnitude)
-    job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
-    with performance.Monitor(measuremem=True) as mon:
-        with hdf5.File(out, 'w') as h5:
-            h5['models'] = models
-            h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.run_jobs(
-            engine.create_jobs(job_inis, log_level=logging.WARN))
-        fnames = [datastore.read(job.calc_id).filename for job in jobs]
-        logging.warning(f'Saving {out}')
-        with hdf5.File(out, 'a') as h5:
-            base.import_sites_hdf5(h5, fnames)
-            base.import_ruptures_hdf5(h5, fnames)
-            h5['/'].attrs.update(INPUTS)
-    print(mon)
-    return fnames
+    ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
+                            number_of_logic_tree_samples,
+                            ses_per_logic_tree_path, minimum_magnitude)
+    return engine.run_workflow(ses_toml, {})
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'

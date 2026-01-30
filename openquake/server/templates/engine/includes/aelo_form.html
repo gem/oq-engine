@@ -12,14 +12,14 @@
                   <tr>
                     <th><label class="aelo-label" for"lat">{{ aelo_form_labels.lat }}</label></th>
                     <th><label class="aelo-label" for"lon">{{ aelo_form_labels.lon }}</label></th>
-                    <th><label class="aelo-label" for"siteid">{{ aelo_form_labels.siteid }}</label></th>
+                    <th><label class="aelo-label" for"site_name">{{ aelo_form_labels.site_name }}</label></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td><input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/></td>
                     <td><input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/></td>
-                    <td><input class="aelo-input aelo-input-siteid" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
+                    <td><input class="aelo-input aelo-input-site_name" type="text" id="site_name" name="site_name" placeholder="{{ aelo_form_placeholders.site_name }}"/></td>
                   </tr>
                 </tbody>
               </table>
@@ -44,7 +44,7 @@
                         {% endfor %}
                         </select>
                     </td>
-                    <td><select class="aelo-select" name="site_class" id="site_class"><option value="BC">BC</option></select></td>
+                    <td><select class="aelo-select" name="site_class" id="site_class"><option value="BC">B-C boundary</option></select></td>
                     <td><span class="vs30"><input class="aelo-input" type="text" id="vs30" name="vs30" value='760' placeholder="{{ aelo_form_placeholders.vs30 }}" disabled/></span></td>
                   </tr>
                 </tbody>

@@ -1,5 +1,5 @@
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
+# Copyright (C) 2025-2026 GEM Foundation
 #
 #                `.......      `....     `..`...     `..`... `......
 #                `..    `..  `..    `..  `..`. `..   `..     `..
@@ -348,13 +348,13 @@ class Analysis:
                 rpaths = rlzs[srcid]
                 n = len(rpaths[0])
                 # Create the general pattern. This will select everything
-                pattern = '..' + ''.join('.' for i in range(4, n)) + '~.'
+                pattern = ''.join('.' for i in range(2, n)) + '~.'
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 if ipath == -1:
-                    ipath = n - 2
-                chars = [path[ipath+1] for path in rpaths]
-                patt = [pattern[:ipath+1] + char + pattern[ipath+2:]
+                    ipath = n - 1
+                chars = [path[ipath] for path in rpaths]
+                patt = [pattern[:ipath] + char + pattern[ipath+1:]
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:

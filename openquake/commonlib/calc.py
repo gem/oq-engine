@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -166,8 +166,10 @@ def make_uhs(hmap, info):
     return uhs
 
 
-def get_proxies(filename, rup_array, min_mag=0):
+def get_proxies(filename, rup_array=slice(None), min_mag=0):
     """
+    :param filename: where the ruptures and geometries are stored
+    :param rup_array: an array of ruptures or a slice
     :returns: a list of RuptureProxies
     """
     proxies = []
@@ -206,13 +208,6 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, ordinal):
-        """
-        :returns: a composite array with the associations eid->rlz
-        """
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        return {ordinal: get_events(proxies, rlzs, self.scenario)}
-
     def import_rups_events(self, rup_array):
         """
         Import an array of ruptures and store the associated events.
@@ -222,8 +217,6 @@ class RuptureImporter(object):
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
-        self.datastore['rup_start_stop'] = performance.idx_start_stop(
-            rup_array['trt_smr'])
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
@@ -232,7 +225,6 @@ class RuptureImporter(object):
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
-        self.datastore.create_dset('trt_smr_start_stop', idx_start_stop)
         self._save_events(rup_array, idx_start_stop)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
@@ -250,39 +242,22 @@ class RuptureImporter(object):
         oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
+        assert E < TWO32, E
         events = numpy.zeros(E, rupture.events_dt)
-        # DRAMATIC! the event IDs will be overridden a few lines below,
-        # see the line events['id'] = numpy.arange(len(events))
 
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        # build the associations eid -> rlz sequentially or in parallel
-        # this is very fast: I saw 30 million events associated in 1 minute!
-        iterargs = []
+        # build the associations eid -> rlz; this is very fast:
+        # I saw 30 million events associated in 1 minute!
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
-        filename = self.datastore.filename
-        for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
-            slc = slice(start, stop)
-            proxies = get_proxies(filename, rup_array[slc])
-            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
-        acc = general.AccumDict()  # ordinal -> eid_rlz
-        if len(events) < 1E5:
-            for args in iterargs:
-                acc += self.get_eid_rlz(*args)
-        else:
-            self.datastore.swmr_on()  # before the Starmap
-            for res in parallel.Starmap(
-                    self.get_eid_rlz, iterargs,
-                    h5=self.datastore,
-                    progress=logging.debug):
-                acc += res
         i = 0
-        for ordinal, eid_rlz in sorted(acc.items()):
-            for er in eid_rlz:
-                events[i] = er
-                i += 1
-                if i >= TWO32:
-                    raise ValueError('There are more than %d events!' % i)
+        for trt_smr, start, stop in idx_start_stop:
+            rlzs = numpy.concatenate(
+                list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
+            records = get_events(rup_array[start:stop], rlzs, self.scenario)
+            nr = len(records)
+            events[i:i + nr] = records  # (id, rup_id, rlz_id)
+            i += nr
 
         # sanity check
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
@@ -290,7 +265,6 @@ class RuptureImporter(object):
         # set event year and event ses starting from 1
         nses = oq.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
-
         rng = numpy.random.default_rng(oq.ses_seed)
         if oq.investigation_time:
             R = len(self.datastore['weights'])
@@ -299,7 +273,9 @@ class RuptureImporter(object):
                 ok, = numpy.where(events['rlz_id'] == r)
                 extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
+        self.datastore.create_dset(
+            'events', util.compose_arrays(events, extra))
+        self.datastore.flush()
 
     def check_overflow(self, E):
         """

@@ -2,6 +2,13 @@
 {% load servertags %}
   <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
 
+  {% block nav-items %}
+  {{ block.super }}
+                <li class="calc">
+                    <a href="{% url "index" %}">Back to Calculations</a>
+                </li>
+  {% endblock nav-items %}
+
   {% block main %}
   {{ block.super }}
   <div class="content-wrap">
@@ -24,13 +31,13 @@
             </div>
             {% endcomment %}
             <div class="outputs-general-btns-left">
-              {% for img in avg_gmf %}
+              {% for img in pngs.avg_gmf %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
                   Show average GMF - {{ img|get_imt }}</a>
               </div>
               {% endfor %}
-              {% if assets %}
+              {% if pngs.assets %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>

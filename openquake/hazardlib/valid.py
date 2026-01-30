@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import os
 import re
 import ast
 import json
+import string
 import toml
 import socket
 import logging
@@ -39,6 +40,9 @@ from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
 from openquake.sep import classes
+
+BASE64 = set(
+    string.ascii_uppercase + string.ascii_lowercase + string.digits + "-_")
 
 RENAMED_SEPS = {
     'NewmarkDisplacement': "Jibson2007BLandslides",
@@ -166,6 +170,19 @@ def _fix_toml(v):
     elif isinstance(v, numpy.float64):
         return float(v)
     return v
+
+
+def calculation(value):
+    """
+    Convert a string into an integer calculation ID
+    or return it as it is if it ends with .ini or .hdf5
+    """
+    try:
+        return int(value)
+    except ValueError:
+        if not value.endswith(('.ini', '.hdf5')):
+            raise ValueError(value)
+        return value
 
 
 # more tests are in tests/valid_test.py
@@ -451,6 +468,26 @@ def utf8(value):
 def utf8_not_empty(value):
     """Check that the string is UTF-8 and not empty"""
     return utf8(not_empty(value))
+
+
+def base64names(value):
+    """
+    :param value: input string
+    :returns: list of strings with characters in base64
+
+    >>> base64names('XYzu- f_')
+    ['XYzu-', 'f_']
+    >>> base64names('XYzu+')
+    Traceback (most recent call last):
+    ...
+    ValueError: List of names containing an invalid name: 'XYzu+'
+    """
+    names = value.split()
+    for name in names:
+        if set(name) - BASE64:
+            raise ValueError('List of names containing an invalid name:'
+                             f' {name!r}')
+    return names
 
 
 def namelist(value):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 import sys
 import runpy
 import numpy
+from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.commonlib import readinput, logs, datastore
@@ -101,11 +102,15 @@ class OpenQuake(object):
 def main(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
-    run a Python script in the engine environment.
+    run a Python script/module with a main function in the engine environment.
     """
-    if script:
+    if script and script.endswith('.py'):
         sys.argv = sys.argv[2:]  # strip ['oq', 'shell']
         runpy.run_path(script, run_name='__main__')
+        return
+    elif script:  # assume a dotted name was given
+        args = " ".join(sys.argv[2:])  # strip ['oq', 'shell']
+        sap.runline(f'{script} {args}')
         return
     o = OpenQuake()  # noqa
     try:
@@ -115,7 +120,6 @@ def main(script=None, args=()):
         import code
         code.interact(banner='Python shell with a global object "o"',
                       local=dict(o=o))
-
 
 main.script = 'python script to run (if any)'
 main.args = dict(help='arguments to pass to the script', nargs='*')

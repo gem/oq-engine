@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,15 +28,16 @@ import tempfile
 import string
 import random
 import logging
-
 import django
-from django.test import Client
+from django.test import LiveServerTestCase, Client, override_settings
 from unittest import skipIf
+from threading import Event
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
+from openquake.server.views import job_complete_callback_state
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 from openquake.qa_tests_data.classical import case_01
 
@@ -88,6 +89,8 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertGreater(len(log), 0)
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
+        # check that a hidden output is visible and downloadable in PUBLIC mode
+        self.assertIn('exposure', [res['type'] for res in results])
         for res in results:
             for etype in res['outtypes']:  # test all export types
                 text = self.get_text(
@@ -98,6 +101,15 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # test no filtering in actions.get_calcs
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
+
+        # make it call db.actions.get_calcs with most parameters, to make sure it does
+        # not raise exceptions when making the query
+        list_url = ('list?user_name_like=%test%&is_running=1'
+                    '&calculation_mode=event_based'
+                    '&order_by=description&order_dir=ASC'
+                    '&limit=1&offset=1&include_shared=1'
+                    '&start_time=2022-01-01')
+        self.assertIsInstance(self.get(list_url), list)
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
@@ -203,9 +215,9 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
         resnames = [res['name'] for res in results]
-        self.assertGreaterEqual(resnames, ['Full Report', 'Hazard Curves',
-                                           'Hazard Maps',  'Input Files',
-                                           'Realizations'])
+        self.assertEqual(resnames, ['Full Report', 'Hazard Curves',
+                                    'Hazard Maps', 'Hazard Maps Statistics',
+                                    'Realizations'])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -293,6 +305,13 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         if dic['error_msg'] is None:  # this should not happen
             raise django.test.SkipTest(dic)
 
+    def test_validate_ini(self):
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
+        resp = self.post('validate_ini', dict(job_ini=job_ini))
+        assert resp.status_code == 200, resp
+        dic = json.loads(resp.content.decode('utf8'))
+        pprint.pprint(dic)
+
     def test_can_not_run_aelo_calc(self):
         params = dict(
             lon=10, lat=45, vs30='800.0', siteid='SITE')
@@ -377,3 +396,46 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertEqual(resp.status_code, 200)
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
+
+
+@override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')
+class CallbackTest(LiveServerTestCase):
+    """
+    Integration test checking the callback on job completion
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.on_job_complete_event = Event()
+        self.on_job_complete_data = {}
+        job_complete_callback_state['event'] = self.on_job_complete_event
+        job_complete_callback_state['data'] = self.on_job_complete_data
+
+    def test_callback_on_job_successfully_completed(self):
+        notify_to = (f"{self.live_server_url}/test/check_callback?"
+                     "first=one&second=two")
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
+        post_args = dict(
+            job_ini=job_ini,
+            notify_to=notify_to,
+            job_owner='custom_owner',
+        )
+        resp = self.client.post('/v1/calc/run_ini', post_args)
+        self.assertEqual(resp.status_code, 200)
+        job_info = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(job_info['user_name'], 'custom_owner')
+        job_id = job_info['job_id']
+        self.on_job_complete_event.wait(timeout=30)
+        self.assertTrue(self.on_job_complete_event.is_set(),
+                        "Expected on_job_complete_event to be set, "
+                        "but it was not.")
+        body = self.on_job_complete_data['body']
+        get_params = self.on_job_complete_data['GET']
+        self.assertEqual(body['job_id'], job_id)
+        self.assertEqual(body['status'], 'complete')
+        self.assertEqual(body['user_name'], 'custom_owner')
+        self.assertEqual(get_params['first'], 'one')
+        self.assertEqual(get_params['second'], 'two')
+
+    # TODO: we could add a test to test the callback in case of a job that starts
+    # successfully (the inputs are valid) but fails afterwards.

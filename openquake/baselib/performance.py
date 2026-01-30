@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -75,7 +75,7 @@ def print_stats(pr, fname):
     """
     Print the stats of a Profile instance
     """
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
         ps.print_stats()
 
@@ -338,6 +338,9 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
+        if getattr(h5, 'mode', 'r') == 'r':
+            # in AristotleParam h5 is replaced with a dictionary
+            return
         data = self.get_data()
         if len(data):
             hdf5.extend(h5['performance_data'], data)
@@ -510,9 +513,10 @@ def get_slices(uint32s):
     :param uint32s: a sequence of uint32 integers (with repetitions)
     :returns: a dict integer -> [(start, stop), ...]
 
-    >>> from pprint import pprint
-    >>> pprint(get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0])))
-    {0: [(0, 2), (7, 8)], 2: [(5, 7)], 3: [(2, 5)]}
+    >>> slices = get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0]))
+    >>> slices
+    {0: array([[0, 2],
+           [7, 8]]), 3: array([[2, 5]]), 2: array([[5, 7]])}
     """
     if len(uint32s) == 0:
         return {}
@@ -521,7 +525,7 @@ def get_slices(uint32s):
         if idx not in indices:
             indices[idx] = []
         indices[idx].append((start, stop))
-    return indices
+    return {int(i): numpy.array(indices[i]) for i in indices}
 
 
 # this is used in split_array and it may dominate the performance

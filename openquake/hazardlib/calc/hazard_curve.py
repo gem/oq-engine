@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,7 +49,7 @@ from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, RmapMaker
-from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.source_group import SourceGroup
 
 
 def classical(group, sitecol, cmaker):
@@ -59,19 +59,22 @@ def classical(group, sitecol, cmaker):
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
+    :param group: a list of sources or of atomic groups
+    :param sitecol: a filtered SiteCollection instance
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    trts = set()
-    for src in group:
-        if not src.num_ruptures:
-            # not be set in hazardlib, but always in the engine
-            src.num_ruptures = src.count_ruptures()
-        trts.add(src.tectonic_region_type)
-    [trt] = trts  # there must be a single tectonic region type
-    if cmaker.trt != '*':
-        assert trt == cmaker.trt, (trt, cmaker.trt)
-    dic = RmapMaker(cmaker, sitecol, group).make()
+    if isinstance(group[0], SourceGroup):
+        # tested in case_80 with 5 subgroups of 3 sources each
+        dic = RmapMaker(cmaker, sitecol, group[0]).make()
+        for grp in group[1:]:
+            res = RmapMaker(cmaker, sitecol, grp).make()
+            dic['rmap'].array += res['rmap'].array
+            dic['source_data'] += res['source_data']
+            dic['dparam_mb'] += cmaker.dparam_mb
+            dic['source_mb'] += cmaker.source_mb
+    else:  # simply a list of sources
+        dic = RmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
@@ -152,21 +155,3 @@ def calc_hazard_curves(
             rmap = dic['rmap']
             pmap.array[:] = 1. - (1.-pmap.array) * numpy.exp(-rmap.array)
     return pmap.convert(imtls, len(sitecol.complete))
-
-
-# called in adv-manual/developing.rst and in SingleSiteOptTestCase
-def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
-    """
-    :param site1: site collection with a single site
-    :param src: a seismic source object
-    :param gsims: a list of GSIM objects
-    :param oqparam: an object with attributes .maximum_distance, .imtls
-    :param monitor: a Monitor instance (optional)
-    :returns: an array of shape (L, G)
-    """
-    assert len(site1) == 1, site1
-    trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
-    cmaker.tom = src.temporal_occurrence_model
-    rmap = RmapMaker(cmaker, site1, [src]).make()['rmap']
-    return 1. - numpy.exp(-rmap.array[0])

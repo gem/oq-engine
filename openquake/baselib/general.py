@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -61,9 +61,6 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-BASE33489 = []  # built in 0.003 seconds
-for a, b in itertools.product(BASE183, BASE183):
-    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 
@@ -1309,6 +1306,32 @@ def deprecated(func, msg='', *args, **kw):
         func.called = 0
     func.called += 1
     return func(*args, **kw)
+
+
+def reduce_object(obj, attr, ntimes):
+    """
+    Reduce an object containing an attribute which is a sequence by
+    returning a copy of the object with a reduced (reversed) sequence.
+    If the sequence length is less than ntimes, don't reduce it.
+    For instance
+
+    >>> class Obj:
+    ...     def __init__(self, lst):
+    ...         self.lst = lst
+    ...     def __repr__(self):
+    ...         return '<Obj %r>' % self.lst
+    >>> obj = Obj([1, 2, 3, 4, 5])
+    >>> reduce_object(obj, 'lst', 3)
+    <Obj [5, 2]>
+    >>> reduce_object(Obj([1, 2]), 'lst', 3)
+    <Obj [1, 2]>
+    """
+    seq = getattr(obj, attr)
+    if len(seq) < ntimes:
+        return obj
+    new = copy.copy(obj)
+    setattr(new, attr, seq[::-ntimes])
+    return new
 
 
 def random_filter(objects, reduction_factor, seed=42):

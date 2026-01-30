@@ -28,7 +28,7 @@
         <uncertaintyWeight>0.50</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="dummy">
-        <uncertaintyModel>DummyGMPE</uncertaintyModel>
+        <uncertaintyModel ordinal="1">DummyGMPE</uncertaintyModel>
         <uncertaintyWeight>0.0</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
@@ -41,14 +41,14 @@
         uncertaintyType="gmpeModel">
       <logicTreeBranch branchID="ASK14_MEAN">
         <uncertaintyModel>AbrahamsonEtAl2014NSHMPMean</uncertaintyModel>
-        <uncertaintyWeight>0.50</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="BSSA14_MEAN">
         <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
-        <uncertaintyWeight>0.50</uncertaintyWeight>
+        <uncertaintyWeight>0.90</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="dummy">
-        <uncertaintyModel>DummyGMPE</uncertaintyModel>
+        <uncertaintyModel ordinal="2">DummyGMPE</uncertaintyModel>
         <uncertaintyWeight>0.0</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>

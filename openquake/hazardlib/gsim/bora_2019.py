@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,10 +27,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import FAS, DRVT
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
-B_COEFFS = os.path.join(os.path.dirname(__file__),
+B_COEFFS = os.path.join(os.path.dirname(__file__), "bora_2019",
                           "bora_2019.csv")
 
-B_DVRT_COEFFS = os.path.join(os.path.dirname(__file__),
+B_DVRT_COEFFS = os.path.join(os.path.dirname(__file__), "bora_2019",
                           "bora_2019_DVRT.csv")
 
 CONSTANTS = {"r0": 1,

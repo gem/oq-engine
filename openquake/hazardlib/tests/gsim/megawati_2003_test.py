@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,4 +25,4 @@ class Megawati2003TestCase(BaseGSIMTestCase):
 
     def test_all(self):
         # built with utils/build_vtable MegawatiEtAl2003
-        self.check('MegawatiEtAl2003.csv', max_discrep_percentage=1.0)
+        self.check('MW13/MegawatiEtAl2003.csv', max_discrep_percentage=1.0)

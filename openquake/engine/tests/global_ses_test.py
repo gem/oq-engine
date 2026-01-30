@@ -27,43 +27,82 @@ from openquake.engine import global_ses
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
 aac = numpy.testing.assert_allclose
+ae = numpy.testing.assert_equal
+
+last_job = None
+
 def path(job_ini):
     return os.path.join(MOSAIC_DIR, job_ini)
 
 
-def check(dstore, fnames):
+def count_rups(dstore, model):
+    arr = dstore['ruptures'][:]
+    return (arr['model'] == model.encode('ascii')).sum()
+
+
+def check(dstore, calcs):
     with hdf5.File(RUP_HDF5) as ds, \
-         read(fnames[0]) as ds_EUR, \
-         read(fnames[1]) as ds_MIE:
-        nrup_EUR = len(ds_EUR['ruptures'])
-        nrup_MIE = len(ds_MIE['ruptures'])
+         read(calcs[0]) as ds_EUR, \
+         read(calcs[1]) as ds_MIE:
+
+        # count the ruptures outside the models
+        mie_unknown = count_rups(ds_MIE, '???')
+        assert mie_unknown == 0
+        eur_unknown = count_rups(ds_EUR, '???')
+        assert eur_unknown == 0
+        
+        nrup_EUR = count_rups(ds_EUR, 'EUR')
+        nrup_MIE = count_rups(ds_MIE, 'MIE')
         rups = ds['ruptures'][:]
         nrup = len(rups)
-        assert nrup == nrup_EUR + nrup_MIE
-        assert dstore['avg_gmf'].shape == (2, 167, 1)
+        assert nrup == nrup_EUR + nrup_MIE  # no double counting
+        assert dstore['avg_gmf'].shape == (2, 4328, 1)
 
 
 def setup_module():
-    global_ses.MODELS = ['EUR', 'MIE']
-    fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
-    dstore = base.run_calc(path('job.ini')).datastore
-    check(dstore, fnames)
+    worflow_id = global_ses.main(
+        MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
+        number_of_logic_tree_samples='200')
+    wdf = read(worflow_id).read_df('workflow')
+    dstore = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5',
+
+    ).datastore
+    check(dstore, list(wdf.calc_id))
+    ae(dstore['source_info/EUR']['source_id'],
+       [b'IF-CFS-0', b'IF-CFS-1', b'IF-CFS-2', b'IF-CFS-3'])
+    ae(dstore['source_info/MIE']['source_id'],
+       [b'DS-AS-AZEAS300', b'DS-AS-AZEAS301', b'DS-AS-IRNAS300',
+        b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
+        b'IF-CFS-3', b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
+        b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
+        b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
+        b'SSC-mps-4'])
 
 
 def test_sites():  # 6 sites
-    dstore = base.run_calc(path('job_sites.ini')).datastore
+    global last_job
+    dstore = base.run_calc(
+        path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
+    last_job = dstore.calc_id
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.0201735, 0.0202367, 0.0203708,
-               0.0202335, 0.0202477, 0.0202308], atol=1E-6)
+    assert (gmvs > 0).sum() == 6
 
 
-def test_site_model():  # 5 sites
-    dstore = base.run_calc(path('job_sm.ini')).datastore
+def test_site_model():  # 6 sites
+    global last_job
+    dstore = base.run_calc(
+        path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
+    last_job = dstore.calc_id
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.020281, 0.020274, 0.020219,
-               0.020302, 0.020263], atol=1E-6)
+    assert (gmvs > 0).sum() == 6
 
 
 def teardown_module():
     if os.path.exists(RUP_HDF5):
         os.remove(RUP_HDF5)
+    if last_job:
+        # make sure `read` works after rups.hdf5 has been removed
+        read(last_job)

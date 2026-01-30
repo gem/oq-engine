@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -85,16 +85,21 @@ def _return_tables(self, mag, imt, which):
        the string "IMLs" or "Total"
     """
     assert which in "IMLs Total", which
-    if imt.string in 'PGA PGV':
-        # Get scalar imt
+    if imt.string not in self.imls and imt.name != "SA":
+        # Scalar IMT is not supported (conditional GMPEs - we in skip
+        # setting a table which ensures an error is still raised when
+        # unsupported IMT is specified outside of conditional GMPE use)
+        return
+    elif imt.string in ("PGA", "PGV"): 
+        # Get supported scalar imt
         if which == "IMLs":
             iml_table = self.imls[imt.string][:]
         else:
             iml_table = self.stddev[imt.string][:]
-
         n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
+        # Get SA
         if which == "IMLs":
             periods = self.imls["T"][:]
             iml_table = self.imls["SA"][:]
@@ -124,6 +129,7 @@ def _return_tables(self, mag, imt, which):
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
     m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
+
     return 10.0 ** m_interpolator(mag)
 
 
