@@ -257,6 +257,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             lowres = sites.lower_res(res=4)[0]
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
+            logging.info('Reducing %d->%d sites', len(sites), len(lowres))
         else:
             sf = SourceFilter(None)
         atomic_sources = []
