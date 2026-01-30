@@ -1544,10 +1544,8 @@ class RmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
-                src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
@@ -1568,7 +1566,7 @@ class RmapMaker(object):
             for src in self.sources:
                 self.source_data['src_id'].append(src.source_id)
                 self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nsites'].append(src.nsites)
+                self.source_data['nctxs'].append(totlen / nsrcs)
                 self.source_data['nrupts'].append(src.num_ruptures)
                 self.source_data['weight'].append(src.weight)
                 self.source_data['ctimes'].append(dt / nsrcs)
@@ -1579,9 +1577,6 @@ class RmapMaker(object):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
-        weight = 0.
-        nsites = 0
-        nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
@@ -1594,8 +1589,6 @@ class RmapMaker(object):
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
-            nctxs += len(ctxs)
-            nsites += n
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1604,14 +1597,13 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            weight += src.weight
             src.dt = time.time() - t0
             if not self.tiling:
                 self.source_data['src_id'].append(valid.basename(src))
                 self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nsites'].append(nsites)
-                self.source_data['nrupts'].append(nctxs)
-                self.source_data['weight'].append(weight)
+                self.source_data['nctxs'].append(n)
+                self.source_data['nrupts'].append(src.num_ruptures)
+                self.source_data['weight'].append(src.weight)
                 self.source_data['ctimes'].append(src.dt)
                 self.source_data['taskno'].append(cm.task_no)
         pmap.array *= self.grp_probability

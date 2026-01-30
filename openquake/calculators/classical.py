@@ -665,7 +665,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # producing 20 effective ruptures for the N-n points outside;
         # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
         # it gives impact = 38, i.e. there are 38 effective ruptures
-        df['impact'] = df.nsites / self.N
+        df['impact'] = df.nctxs / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 

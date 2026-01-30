@@ -40,7 +40,7 @@ TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 weight = operator.attrgetter('weight')
-CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
+CALC_TIME, NUM_CTXS, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 
 def _grp_id(blk):
@@ -429,13 +429,13 @@ class CompositeSourceModel:
             self.source_info = self.get_source_info()
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
-        for src_id, nsites, weight, ctimes in python3compat.zip(
-                source_data['src_id'], source_data['nsites'],
+        for src_id, nctxs, weight, ctimes in python3compat.zip(
+                source_data['src_id'], source_data['nctxs'],
                 source_data['weight'], source_data['ctimes']):
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_SITES] = nsites
+            row[NUM_CTXS] = nctxs
 
     def count_ruptures(self):
         """

@@ -336,7 +336,6 @@ def view_eff_ruptures(token, dstore):
     return df
 
 
-
 @view.add('sdata')
 def view_sdata(token, dstore):
     # source_data grouped by taskno
@@ -345,6 +344,7 @@ def view_sdata(token, dstore):
     sdata = df.groupby('taskno').sum()
     sdata['grp_key'] = decode(dstore['grp_keys'][sdata.index])
     return sdata.sort_values('ctimes')
+
 
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
@@ -792,12 +792,12 @@ def view_task_hazard(token, dstore):
         sdata = dstore.read_df('source_data')
         sd = sdata[sdata.taskno == taskno]
         acc = AccumDict(accum=numpy.zeros(4))
-        for src_id, nsites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.nrupts, sd.weight, sd.ctimes):
+        for src_id, nctxs, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
-                [nsites, nrupts, weight, ctimes])
+                [nctxs, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nsites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
