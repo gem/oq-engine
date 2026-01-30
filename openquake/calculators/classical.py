@@ -205,8 +205,12 @@ def classical(grp_keys, tilegetters, cmaker, extra, dstore, monitor):
             rates = result.pop('rmap').to_array(cmaker.gid)
             result['rmap'] = rates
         yield result
+        # the following only works if there are at least 3 tiles
         if time.time() - t0 > cmaker.oq.time_per_task and t < T1:
-            yield classical, grp_keys, tilegetters[t+1:], cmaker, extra, dstore
+            tgetters = tilegetters[t+1:T1]
+            yield classical, grp_keys, tgetters, cmaker, extra, dstore
+            yield classical(grp_keys, [tilegetters[T1]], cmaker, extra,
+                            dstore, monitor)
             break
 
 
