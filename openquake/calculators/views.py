@@ -344,7 +344,7 @@ def view_sdata(token, dstore):
     del df['grp_id'], df['impact']
     sdata = df.groupby('taskno').sum()
     sdata['grp_key'] = decode(dstore['grp_keys'][sdata.index])
-    return sdata
+    return sdata.sort_values('ctimes')
 
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
