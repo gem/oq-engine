@@ -252,10 +252,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(f'Global RateMap of %s ({Gt=}%s)',
                             general.humansize(nbytes), extra)
 
-        # do nothing for atomic sources except counting the ruptures
         if sites:
-            sf = SourceFilter(sites, oq.maximum_distance).reduce(
-                multiplier=1 + len(sites) // 10_000)
+            # in SAM from 539,831 -> 11,430 sites
+            lowres = sites.lower_res(res=4)[0]
+            sf = SourceFilter(lowres, oq.maximum_distance)
+            sf.multiplier = len(sites) / len(lowres)
         else:
             sf = SourceFilter(None)
         atomic_sources = []
@@ -275,6 +276,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
+            # do nothing for atomic sources except counting the ruptures
             if sg.atomic:
                 # compute weight sequentially
                 for src in sg:
