@@ -54,7 +54,7 @@ def source_data(sources):
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
-        data['nctxs'].append(src.nsites)
+        data['nctxs'].append(src.nsites * src.num_ruptures)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
         data['ctimes'].append(0)
