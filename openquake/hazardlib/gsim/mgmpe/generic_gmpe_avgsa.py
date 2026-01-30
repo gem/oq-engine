@@ -19,7 +19,9 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
 import abc
+import h5py
 import numpy as np
+from pathlib import Path
 from scipy.interpolate import interp1d, RegularGridInterpolator
 
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -27,7 +29,9 @@ from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
-import openquake.hazardlib.gsim.mgmpe.clemett_corr_coeffs as ccc
+
+CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
+
 
 class GenericGmpeAvgSA(GMPE):
     """
@@ -532,15 +536,38 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         interper = self.interpers["dWS_es"]
         return self._get_correlation(interper, t1, t2)
 
-    
+
+def load_corr_coeff_data_from_hdf5(fp, group_name):
+    """
+    Loads an HDF5 group into a dictionary of numpy arrays.
+    """
+    with h5py.File(fp, "r") as f:
+        if group_name not in f:
+            raise KeyError(f"Group '{group_name}' not found.")
+        
+        group = f[group_name]
+        
+        # Dictionary comprehension: 
+        # item[()] loads the dataset into a numpy array
+        rho_dict = {
+            key: item[()] 
+            for key, item in group.items() 
+            if isinstance(item, h5py.Dataset)
+        }
+
+    periods = rho_dict.pop("periods")
+        
+    return rho_dict, periods
+
+
 class ClemettCorrelationModelAsc(EmpiricalAvgSACorrelationModel):
     """
     Correlation model for the active shallow crust regions in Europe
     Clemett and Gündel (2026) - Paper in preparation
     """
     def __init__(self, avg_periods):
-        rho_arrays = ccc.CORR_COEFFS["asc"] 
-        rho_periods = ccc.PERIODS
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "asc")
         super().__init__(avg_periods, rho_arrays, rho_periods) 
 
 
@@ -550,8 +577,8 @@ class ClemettCorrelationModelSInter(EmpiricalAvgSACorrelationModel):
     Clemett and Gündel (2026) - Paper in preparation
     """
     def __init__(self, avg_periods):
-        rho_arrays = ccc.CORR_COEFFS["sinter"] 
-        rho_periods = ccc.PERIODS
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sinter")
         super().__init__(avg_periods, rho_arrays, rho_periods) 
 
 
@@ -561,8 +588,8 @@ class ClemettCorrelationModelSSlab(EmpiricalAvgSACorrelationModel):
     Clemett and Gündel (2026) - Paper in preparation
     """
     def __init__(self, avg_periods):
-        rho_arrays = ccc.CORR_COEFFS["sslab"] 
-        rho_periods = ccc.PERIODS
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sslab")
         super().__init__(avg_periods, rho_arrays, rho_periods)  
 
 
@@ -572,8 +599,8 @@ class ClemettCorrelationModelVrancea(EmpiricalAvgSACorrelationModel):
     Clemett and Gündel (2026) - Paper in preparation
     """
     def __init__(self, avg_periods):
-        rho_arrays = ccc.CORR_COEFFS["vrancea"] 
-        rho_periods = ccc.PERIODS
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "vrancea")
         super().__init__(avg_periods, rho_arrays, rho_periods)  
 
 

@@ -29,8 +29,6 @@ from openquake.hazardlib.gsim.mgmpe.generic_gmpe_avgsa import (
     ClemettCorrelationModelVrancea
 )
 
-import openquake.hazardlib.gsim.mgmpe.clemett_corr_coeffs as ccc
-
 class BaseAvgSACorrelationModelTestCase(unittest.TestCase):
     """
     Testing instantiation of the BaseAvgSACorrelationModel class
