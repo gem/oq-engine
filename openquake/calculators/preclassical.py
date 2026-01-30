@@ -154,7 +154,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         if cmaker.ps_grid_spacing:            
             splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
-        for block in block_splitter(splits, 500):
+        for block in block_splitter(splits, 100):
             yield set_weight, list(block), sf, cmaker
 
 
