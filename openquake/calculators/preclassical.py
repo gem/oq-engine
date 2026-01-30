@@ -167,11 +167,13 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         if cmaker.ps_grid_spacing:            
             splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
-        pointlike, other = partition(splits)
-        for block in block_splitter(pointlike, 100):
-            yield set_weight, list(block), sf, cmaker
-        for block in block_splitter(other, 10):
-            yield set_weight, list(block), sf, cmaker
+        if len(splits) >= 5:
+            # produce 5 set_weight tasks
+            for i in range(5):
+                yield set_weight, splits[i::5], sf, cmaker
+        else:
+            # compute weights in the same core
+            yield set_weight(splits, sf, cmaker, monitor)
 
 
 def get_req_gb(data, N, oq):
