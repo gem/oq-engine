@@ -781,7 +781,7 @@ def view_task_hazard(token, dstore):
         grp_keys = dstore['grp_keys'][taskno].decode('ascii')
         sdata = dstore.read_df('source_data')
         sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(5))
+        acc = AccumDict(accum=numpy.zeros(4))
         for src_id, nsites, nrupts, weight, ctimes in zip(
                 sd.src_id, sd.nsites, sd.nrupts, sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
