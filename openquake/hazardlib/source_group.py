@@ -556,7 +556,7 @@ class CompositeSourceModel:
                 maxhint = N / oq.max_sites_disagg  # becomes 1
             tilegetters = list(sitecol.split(maxhint))
         else:
-            blocks = list(split_in_blocks(sg, hint, weight))
+            blocks = list(split_in_blocks(sg, hint/2, weight))
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
