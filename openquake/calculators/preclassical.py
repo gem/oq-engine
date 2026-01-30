@@ -22,7 +22,7 @@ import operator
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
-from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
@@ -108,19 +108,6 @@ def set_weight(srcs, sf, cmaker, monitor):
     """
     cmaker.set_weight(srcs, sf)
     return {srcs[0].grp_id: srcs}
-
-
-def partition(sources):
-    """
-    :returns: (pointlike, other)
-    """    
-    pointlike, other = [], []
-    for src in sources:
-        if hasattr(src, 'nodal_plane_distribution'):
-            pointlike.append(src)
-        else:
-            other.append(src)
-    return pointlike, other
 
     
 def preclassical(srcs, sf, cmaker, secparams, monitor):
@@ -340,7 +327,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
-                pointlike, _ = partition(srcs)
+                pointlike = [src for src in srcs
+                             if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
                 smap.submit((srcs, sf, cmaker, secparams))
             res = smap.reduce()
