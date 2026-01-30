@@ -74,6 +74,23 @@ class GenericGMPEAvgSaTablesTestCaseBakerJayaram(BaseGSIMTestCase):
             corr_func="baker_jayaram")
 
 
+class GenericGMPEAvgSaTablesTestCaseClemettAsc(BaseGSIMTestCase):
+    """
+    Conventional GMPE test case for the Clemett active shallow crust 
+    correlation model
+    """
+    GSIM_CLASS = GenericGmpeAvgSA
+
+    def test_all(self):
+        self.check(
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_mean.csv',
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_stddev.csv',
+            max_discrep_percentage=0.01,
+            gmpe_name="KothaEtAl2020ESHM20",
+            avg_periods=[0.3, 0.4, 0.5],
+            corr_func="clemett_asc")
+
+
 class GmpeIndirectAvgSAGeneralTestCase(unittest.TestCase):
     """General test case for the GmpeIndirectAvgSA, specifically verifying
     that it produces identical outputs to the GenericGmpeAvgSA when the

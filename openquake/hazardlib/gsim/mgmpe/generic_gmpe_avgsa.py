@@ -19,14 +19,18 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
 import abc
+import h5py
 import numpy as np
-from scipy.interpolate import interp1d
+from pathlib import Path
+from scipy.interpolate import interp1d, RegularGridInterpolator
 
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
+
+CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
 
 
 class GenericGmpeAvgSA(GMPE):
@@ -233,7 +237,7 @@ class GmpeIndirectAvgSA(GMPE):
         if corr_func not in CORRELATION_FUNCTION_HANDLES:
             raise ValueError('Not a valid correlation function')
         else:
-            self.corr_func = CORRELATION_FUNCTION_HANDLES[corr_func]
+            self.corr_func = CORRELATION_FUNCTION_HANDLES[corr_func]()
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -307,15 +311,297 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models used in spectral period averaging.
     """
-    def __init__(self, avg_periods):
+    def __init__(self, avg_periods=None):
+
         self.avg_periods = avg_periods
-        self.build_correlation_matrix()
+
+        if avg_periods is not None:
+            self.build_correlation_matrix()
+        else:
+            self.rho = None
 
     def build_correlation_matrix(self):
         pass
 
     def __call__(self, i, j):
-        return self.rho[i, j]
+        if (self.rho is not None) and (self.avg_periods is not None):
+            return self.rho[i, j]
+        raise RuntimeError("Correlation Matrix not built. "
+                           "Provide 'avg_periods' at init.")
+
+
+class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
+    """
+    Intermediate class to handle the interpolation of empirical correlation 
+    data and the construction of the correlation matrices.
+    """
+    def __init__(self, avg_periods, rho_arrays, rho_periods):
+        """       
+        :param np.ndarray avg_periods : 
+            The periods used for calculating the spectral acceleration
+        
+        :param dict[str, np.ndarray] rho_arrays: 
+            The correlation data. The keys rho_arrays are strings that represent
+            the type of residual that the associated array corresponds to. 
+        
+        :param np.ndarray rho_periods: 
+            A 1D array of the spectral periods that correspond to the rows and 
+            columns of the correlation data
+
+        Notes:
+        1)  It is assumed that the same periods apply to all correlation 
+            matrices in the same correlation model.
+        
+        2)  The keys for rho_arrays follow the notation of Al Atik et al (2010).
+            Each key maps to a method that returns the appropriate
+            correlation coefficient. Currently the this is:
+            "total"  -> get_correlation()
+            "dB_e"   -> get_between_event_correlation()
+            "dS2S_s" -> get_between_site_correlation()
+            "dWS_es" -> get_within_event_correlation()
+            The class can be instantiated using a dict that doesn't contain all
+            the keys, however if the mapped function is called then a ValueError
+            will be raised. The provided dict must have as a minimum the key
+            "total".
+        """
+        # rho_arrays is dictionary of the arrays of corr coeffs that are part
+        # of the correlation model. The keys of this dictionary indicate what
+        # correlation functions can be called without raising an error. 
+
+        if not isinstance(rho_arrays, dict):
+            raise TypeError("rho_arrays must be of type dict")
+        if "total" not in rho_arrays.keys():
+            raise ValueError("rho_arrays must contain the key 'total'")
+        
+        # store the raw correlation data
+        self.raw_rhos = rho_arrays
+        self.raw_Ts = rho_periods
+        self.valid_residual_types = rho_arrays.keys() 
+
+        # create the interpolation functions for each residual type / array
+        self._create_interpers()
+
+        if avg_periods is not None:
+            if any(avg_periods < min(rho_periods)):
+                raise ValueError(f"Period ({min(avg_periods):.3f}) is less "
+                                f"than the minimum allowable period for the "
+                                f"correlation model ({min(rho_periods):.3f}).")
+            
+            if any(avg_periods > max(rho_periods)):
+                raise ValueError(f"Period ({max(avg_periods):.3f}) is greater "
+                                f"than the maximum allowable period for the "
+                                f"correlation model ({max(rho_periods):.3f}).")
+    
+        super().__init__(avg_periods)
+        
+    def build_correlation_matrix(self):
+        """
+        Interpolate the raw correlation data for required periods (avg_periods)
+        """
+        self.rho_mats = self._build_correlation_matrices() # dict of rho_mats
+        self.rho = self.rho_mats["total"]
+
+    def _build_correlation_matrices(self):
+        """
+        Interpolate the raw correlation data for required periods (avg_periods).
+        Returns a dict with keys indicating the type of residual and the values 
+        being 2D numpy arrays of interpolated corr coeffs.
+        """
+        # interpolates the raw coeff data for all the provided matrices and 
+        # returns a dictionary with the keys indicating the type of residual
+        # and the values being 2D numpy arrays of interpolated corr coeffs.
+
+        corr_mats = {}
+        for residual_type, interper in self.interpers.items():
+            corr_mats[residual_type] = self._interpolate_matrix(
+                interper, self.avg_periods)
+        return corr_mats
+
+    def _create_interpers(self):
+        """
+        Creates an interpolation function for each correlation matrix in the 
+        model and stores them in a dictionary for later use. The keys of the
+        dict are the type of residual, e.g. dB_e, dS2S_s etc...
+        """
+        interpers = {}
+        for residual_type, rho_mat in self.raw_rhos.items():
+            interper = RegularGridInterpolator(
+                points=(self.raw_Ts, self.raw_Ts),
+                values=rho_mat,
+                method="linear"
+                )
+            interpers[residual_type] = interper
+        self.interpers = interpers  
+
+    def _interpolate_matrix(self, interper, new_Ts):
+        """
+        2D interpolation of the correlation matrix.
+        Returns a symmetric nxn matrix with 1s on the diagonal
+        
+        :param RegularGridInterpolator interper: 
+            interpolation function to be used
+        
+        :param np.ndarray new_Ts:
+            array of periods at which the matrix should be interpolated
+        """
+        # create an array of interp points with shape (N*N, 2)
+        t1, t2 = np.meshgrid(new_Ts, new_Ts, indexing="ij") # t1 and t2 have shape (N, N)
+        interp_pts = np.column_stack([t1.ravel(), t2.ravel()])
+        interped_rhos = interper(interp_pts).reshape(len(new_Ts), -1)
+
+        # make sure the diagonal terms are equal to 1.0
+        np.fill_diagonal(interped_rhos, 1.0)
+
+        return interped_rhos
+    
+    def _check_valid_residual_type(self, residual_type):
+        if not residual_type in self.valid_residual_types:
+            raise ValueError(f"Invalid type of residual ({residual_type}) for "
+                             f"correlation model.")
+    
+    def _get_correlation(self, interper, t1, t2):
+        """
+        Computes the correlation coefficient for the specified periods for the
+        correlation matrix defined in the interpolation function.
+        
+        :param RegularGridInterpolator interper: 
+            interpolation function for the correlation matrix
+        
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The estimated correlation coefficient.
+        """
+
+        if all(min(t1, t2) < self.raw_Ts):
+             raise ValueError(f"Period {min(t1, t2):.2f} is outside the "
+                             "allowable range.")
+        
+        elif all(max(t1, t2) > self.raw_Ts):
+            raise ValueError(f"Period {max(t1, t2):.2f} is outside the "
+                             "allowable range.")
+        
+        if t1 == t2:
+            return 1.0  # the same period must have a correlation of 1.0
+        
+        rho = interper(np.array([[t1, t2]]))
+        return float(rho[0])
+    
+    def get_correlation(self, t1, t2):
+        """
+        Computes the correlation coefficient for the specified periods for the
+        total standard deviation
+               
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The estimated correlation coefficient.
+        """
+        self._check_valid_residual_type("total")
+        interper = self.interpers["total"]
+        return self._get_correlation(interper, t1, t2)
+        
+    def get_between_event_correlation(self, t1, t2):
+        """
+        As per the get_correlation function but for the between-event
+        residuals only. dB_e - using the Al Atik et al. (2010) notation
+        """ 
+        self._check_valid_residual_type("dB_e")      
+        interper = self.interpers["dB_e"]
+        return self._get_correlation(interper, t1, t2)
+
+    def get_between_site_correlation(self, t1, t2):
+        """
+        As per the get_correlation function but for the between-site
+        residuals only. dS2S_s - using the Al Atik et al. (2010) notation
+        """
+        self._check_valid_residual_type("dS2S_s")
+        interper = self.interpers["dS2S_s"]
+        return self._get_correlation(interper, t1, t2)
+
+    def get_within_event_correlation(self, t1, t2):
+        """
+        As per the get_correlation function but for the within-event
+        residuals only. dWS_es - using the Al Atik et al. (2010) notation
+        """
+        self._check_valid_residual_type("dWS_es")
+        interper = self.interpers["dWS_es"]
+        return self._get_correlation(interper, t1, t2)
+
+
+def load_corr_coeff_data_from_hdf5(fp, group_name):
+    """
+    Loads an HDF5 group into a dictionary of numpy arrays.
+    """
+    with h5py.File(fp, "r") as f:
+        if group_name not in f:
+            raise KeyError(f"Group '{group_name}' not found.")
+        
+        group = f[group_name]
+        
+        # Dictionary comprehension: 
+        # item[()] loads the dataset into a numpy array
+        rho_dict = {
+            key: item[()] 
+            for key, item in group.items() 
+            if isinstance(item, h5py.Dataset)
+        }
+
+    periods = rho_dict.pop("periods")
+        
+    return rho_dict, periods
+
+
+class ClemettCorrelationModelAsc(EmpiricalAvgSACorrelationModel):
+    """
+    Correlation model for the active shallow crust regions in Europe
+    Clemett and Gündel (2026) - Paper in preparation
+    """
+    def __init__(self, avg_periods):
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "asc")
+        super().__init__(avg_periods, rho_arrays, rho_periods) 
+
+
+class ClemettCorrelationModelSInter(EmpiricalAvgSACorrelationModel):
+    """
+    Correlation model for subduction interface regions in Europe
+    Clemett and Gündel (2026) - Paper in preparation
+    """
+    def __init__(self, avg_periods):
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sinter")
+        super().__init__(avg_periods, rho_arrays, rho_periods) 
+
+
+class ClemettCorrelationModelSSlab(EmpiricalAvgSACorrelationModel):
+    """
+    Correlation model for subduction slab regions in Europe
+    Clemett and Gündel (2026) - Paper in preparation
+    """
+    def __init__(self, avg_periods):
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sslab")
+        super().__init__(avg_periods, rho_arrays, rho_periods)  
+
+
+class ClemettCorrelationModelVrancea(EmpiricalAvgSACorrelationModel):
+    """
+    Correlation model for the Vrancea deep seismicity region in Europe
+    Clemett and Gündel (2026) - Paper in preparation
+    """
+    def __init__(self, avg_periods):
+        fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
+        rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "vrancea")
+        super().__init__(avg_periods, rho_arrays, rho_periods)  
 
 
 class AkkarCorrelationModel(BaseAvgSACorrelationModel):
@@ -342,8 +628,8 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         ipl2 = interp1d(iper, ipl1(self.avg_periods), axis=0)
         self.rho = ipl2(self.avg_periods)
 
-    @staticmethod
-    def get_correlation(t1, t2):
+
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -390,8 +676,7 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
     def build_correlation_matrix(self):
         self.rho = np.ones([len(self.avg_periods), len(self.avg_periods)])
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -496,8 +781,7 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
                 self.rho[i, i + j] = self.get_correlation(t1, t2)
         self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -522,8 +806,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
     for correlation in between-event, between-site and within-event residuals.
     """
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods for the
         total standard deviation
@@ -546,8 +829,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_between_event_correlation(t1, t2):
+    def get_between_event_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-event
         residuals only
@@ -556,8 +838,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_between_site_correlation(t1, t2):
+    def get_between_site_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-site
         residuals only
@@ -566,8 +847,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_within_event_correlation(t1, t2):
+    def get_within_event_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-event
         residuals only
@@ -581,5 +861,9 @@ CORRELATION_FUNCTION_HANDLES = {
     'baker_jayaram': BakerJayaramCorrelationModel,
     'akkar': AkkarCorrelationModel,
     "eshm20": ESHM20CorrelationModel,
+    "clemett_asc": ClemettCorrelationModelAsc,
+    "clemett_sinter": ClemettCorrelationModelSInter,
+    "clemett_sslab": ClemettCorrelationModelSSlab,
+    "clemett_vrancea": ClemettCorrelationModelVrancea,
     'none': DummyCorrelationModel
 }
