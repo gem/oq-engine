@@ -358,7 +358,6 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         ipl2 = interp1d(iper, ipl1(self.avg_periods), axis=0)
         self.rho = ipl2(self.avg_periods)
 
-    @staticmethod
     def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
