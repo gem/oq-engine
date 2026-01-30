@@ -101,12 +101,20 @@ def _filter(srcs, min_mag):
     return out
 
 
-def preclassical(srcs, sf, cmaker, secparams, monitor):
+def set_weight(srcs, sf, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    grp_id = srcs[0].grp_id
+    cmaker.set_weight(srcs, sf)
+    return {srcs[0].grp_id: srcs}
+
+
+def preclassical(srcs, sf, cmaker, secparams, monitor):
+    """
+    Split the sources if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources.
+    """
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -140,11 +148,14 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         else:
             splits.append(src)
     splits = _filter(splits, cmaker.oq.minimum_magnitude)
+    before_after = U32([len(splits), len(splits)])
+    yield {'before_after': before_after}
     if splits:
-        mon = monitor('weighting sources', measuremem=False)
-        with mon:
-            cmaker.set_weight(splits, sf)
-        yield {grp_id: splits}
+        if cmaker.ps_grid_spacing:            
+            splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
+            before_after[1] = len(splits)
+        for block in block_splitter(splits, 500):
+            yield set_weight, list(block), sf, cmaker
 
 
 def get_req_gb(data, N, oq):
@@ -300,55 +311,36 @@ class PreClassicalCalculator(base.HazardCalculator):
 
     def _process(self, atomic_sources, normal_sources, sf, secparams):
         # run preclassical in parallel for non-atomic sources
-        sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
-        logging.info('Starting preclassical with %d source groups',
-                     len(sources_by_key))
-        if sys.platform != 'darwin':
-            # avoid a segfault in macOS
-            self.datastore.swmr_on()
-        before_after = numpy.zeros(2, dtype=int)
-        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        cmakers = self.cmakers.to_array()
-        for grp_id, srcs in sources_by_key.items():
-            cmaker = cmakers[grp_id]
-            cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
-            pointsources, pointlike, others = [], [], []
-            for src in srcs:
-                if hasattr(src, 'location'):
-                    pointsources.append(src)
-                elif hasattr(src, 'nodal_plane_distribution'):
-                    pointlike.append(src)
-                elif src.code in b'CFN':  # other heavy sources
-                    smap.submit(([src], sf, cmaker, secparams))
-                else:
-                    others.append(src)
-            check_maxmag(pointlike)
-            if pointsources or pointlike:
-                spacing = self.oqparam.ps_grid_spacing
-                if spacing:
-                    logging.info(f'Splitting/gridding point sources {grp_id=}')
-                    for plike in pointlike:
-                        pointsources.extend(split_source(plike))  # slow
-                    cpsources = grid_point_sources(pointsources, spacing)
-                    before_after += [len(pointsources), len(cpsources)]
-                    for block in block_splitter(cpsources, 200):
-                        smap.submit((block, sf, cmaker, secparams))
-                else:
-                    for block in block_splitter(pointsources, 2000):
-                        smap.submit((block, sf, cmaker, secparams))
-                    others.extend(pointlike)
-            for block in block_splitter(others, 40):
-                smap.submit((block, sf, cmaker, secparams))
-        res = smap.reduce()
+        if normal_sources:
+            sources_by_key = groupby(
+                normal_sources, operator.attrgetter('grp_id'))
+            logging.info('Starting preclassical with %d source groups',
+                         len(sources_by_key))
+            if sys.platform != 'darwin':
+                # avoid a segfault in macOS
+                self.datastore.swmr_on()
+            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+            cmakers = self.cmakers.to_array()
+            for grp_id, srcs in sources_by_key.items():
+                cmaker = cmakers[grp_id]
+                cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
+                pointlike = [src for src in srcs
+                             if hasattr(src, 'nodal_plane_distribution')]
+                check_maxmag(pointlike)
+                smap.submit((srcs, sf, cmaker, secparams))
+            res = smap.reduce()
+            before_after = res.pop('before_after')
+            if before_after[0] != before_after[1]:
+                logging.info(
+                    'Reduced the number of sources from {:_d} -> {:_d}'.
+                    format(before_after[0], before_after[1]))
+        else:
+            res = {}
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
                     atomic_sources, lambda src: src.grp_id).items():
                 res[grp_id] = srcs
-        if before_after[0] != before_after[1]:
-            logging.info(
-                'Reduced the number of point sources from {:_d} -> {:_d}'.
-                format(before_after[0], before_after[1]))
         acc = AccumDict(accum=0)
         code2cls = get_code2cls()
         for grp_id, srcs in res.items():
