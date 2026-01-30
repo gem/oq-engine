@@ -206,7 +206,7 @@ def classical(grp_keys, tilegetters, cmaker, extra, dstore, monitor):
             result['rmap'] = rates
         yield result
         if time.time() - t0 > cmaker.oq.time_per_task and t < T1:
-            yield classical, grp_keys, tilegetters[t:], cmaker, extra, dstore
+            yield classical, grp_keys, tilegetters[t+1:], cmaker, extra, dstore
             break
 
 
