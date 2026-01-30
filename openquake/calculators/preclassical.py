@@ -110,6 +110,19 @@ def set_weight(srcs, sf, cmaker, monitor):
     return {srcs[0].grp_id: srcs}
 
 
+def partition(sources):
+    """
+    :returns: (pointlike, other)
+    """    
+    pointlike, other = [], []
+    for src in sources:
+        if hasattr(src, 'nodal_plane_distribution'):
+            pointlike.append(src)
+        else:
+            other.append(src)
+    return pointlike, other
+
+    
 def preclassical(srcs, sf, cmaker, secparams, monitor):
     """
     Split the sources if split_sources is true. If
@@ -154,7 +167,10 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         if cmaker.ps_grid_spacing:            
             splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
-        for block in block_splitter(splits, 100):
+        pointlike, other = partition(splits)
+        for block in block_splitter(pointlike, 100):
+            yield set_weight, list(block), sf, cmaker
+        for block in block_splitter(other, 10):
             yield set_weight, list(block), sf, cmaker
 
 
@@ -324,8 +340,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
-                pointlike = [src for src in srcs
-                             if hasattr(src, 'nodal_plane_distribution')]
+                pointlike, _ = partition(srcs)
                 check_maxmag(pointlike)
                 smap.submit((srcs, sf, cmaker, secparams))
             res = smap.reduce()
