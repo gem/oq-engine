@@ -1,3 +1,8 @@
+  [Nicholas Clemett]
+  * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional argument
+  * Added EmpiricalAvgSACorrelationModel
+  * Added classes for the Clemett correlation models for active shallow crust, subduction interface, subduction slab and vrancea regions in europe based on the ESHM20 GMMs.
+  
   [Christopher Brooks]
   * Added support for GMPE tables to be specifiable as the underlying
     GSIMs within conditional GMPEs.
