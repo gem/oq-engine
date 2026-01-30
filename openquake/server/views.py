@@ -32,6 +32,7 @@ import zlib
 import re
 import psutil
 from threading import Event
+from unittest.mock import patch
 from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
@@ -460,6 +461,38 @@ def validate_nrml(request):
         return _make_response(error_msg=None, error_line=None, valid=True)
 
 
+def validate_job(job_file):
+    try:
+        oq = readinput.get_oqparam(job_file)
+        with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+            base.calculators(oq, calc_id=None).run()
+    except Exception as exc:
+        return _make_response(str(exc), None, valid=False)
+    else:
+        return _make_response(None, None, valid=True)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_ini(request):
+    """
+    Leverage the engine libraries to check if a given local file is a valid
+    calculation input
+
+    :param request:
+        a `django.http.HttpRequest` object containing a zip archive
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided archive is valid
+        * 'error_msg': the error message, if any error was found
+                       (None otherwise)
+    """
+    ini = request.FILES.get('job_ini')
+    # assume ini is a full accessible path name
+    return validate_job(ini)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -480,13 +513,7 @@ def validate_zip(request):
     if not archive:
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
-    try:
-        oq = readinput.get_oqparam(job_zip)
-        base.calculators(oq, calc_id=None).read_inputs()
-    except Exception as exc:
-        return _make_response(str(exc), None, valid=False)
-    else:
-        return _make_response(None, None, valid=True)
+    return validate_job(job_zip)
 
 
 @require_http_methods(['GET'])
@@ -860,8 +887,9 @@ def calc_run(request):
         together.
         If the request has the attribute `notify_to`, and it starts with
         'http[s]://', the engine will send a notification to the given url.
-        If the request has the attribute `job_owner`, the owner of the job will be set
-        to that string instead of the name of the user performing the request.
+        If the request has the attribute `job_owner`, the owner of the job will
+        be set to that string instead of the name of the user performing the
+        request.
 
     :returns:
         A `django.http.JsonResponse` object containing:
@@ -877,7 +905,8 @@ def calc_run(request):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
     try:
-        job_id = submit_job(request.FILES, ini, username, hazard_job_id, notify_to)
+        job_id = submit_job(
+            request.FILES, ini, username, hazard_job_id, notify_to)
     except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -918,7 +947,8 @@ def calc_run_ini(request):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
     try:
-        job_id = submit_job([], ini, username, hazard_job_id, notify_to=notify_to)
+        job_id = submit_job(
+            [], ini, username, hazard_job_id, notify_to=notify_to)
     except Exception as exc:  # job failed, for instance missing .ini file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
