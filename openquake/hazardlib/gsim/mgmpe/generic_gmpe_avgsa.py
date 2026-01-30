@@ -233,7 +233,7 @@ class GmpeIndirectAvgSA(GMPE):
         if corr_func not in CORRELATION_FUNCTION_HANDLES:
             raise ValueError('Not a valid correlation function')
         else:
-            self.corr_func = CORRELATION_FUNCTION_HANDLES[corr_func]
+            self.corr_func = CORRELATION_FUNCTION_HANDLES[corr_func]()
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -307,15 +307,23 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models used in spectral period averaging.
     """
-    def __init__(self, avg_periods):
+    def __init__(self, avg_periods=None):
+
         self.avg_periods = avg_periods
-        self.build_correlation_matrix()
+
+        if avg_periods is not None:
+            self.build_correlation_matrix()
+        else:
+            self.rho = None
 
     def build_correlation_matrix(self):
         pass
 
     def __call__(self, i, j):
-        return self.rho[i, j]
+        if (self.rho is not None) and (self.avg_periods is not None):
+            return self.rho[i, j]
+        raise RuntimeError("Correlation Matrix not built. "
+                           "Provide 'avg_periods' at init.")
 
 
 class AkkarCorrelationModel(BaseAvgSACorrelationModel):
@@ -342,8 +350,8 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         ipl2 = interp1d(iper, ipl1(self.avg_periods), axis=0)
         self.rho = ipl2(self.avg_periods)
 
-    @staticmethod
-    def get_correlation(t1, t2):
+
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -390,8 +398,7 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
     def build_correlation_matrix(self):
         self.rho = np.ones([len(self.avg_periods), len(self.avg_periods)])
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -496,8 +503,7 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
                 self.rho[i, i + j] = self.get_correlation(t1, t2)
         self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -522,8 +528,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
     for correlation in between-event, between-site and within-event residuals.
     """
 
-    @staticmethod
-    def get_correlation(t1, t2):
+    def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods for the
         total standard deviation
@@ -546,8 +551,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_between_event_correlation(t1, t2):
+    def get_between_event_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-event
         residuals only
@@ -556,8 +560,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_between_site_correlation(t1, t2):
+    def get_between_site_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-site
         residuals only
@@ -566,8 +569,7 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
                                                         t1, t2)
 
-    @staticmethod
-    def get_within_event_correlation(t1, t2):
+    def get_within_event_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-event
         residuals only
