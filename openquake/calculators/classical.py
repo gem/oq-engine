@@ -207,6 +207,7 @@ def classical(grp_keys, tilegetters, cmaker, extra, dstore, monitor):
         yield result
         if time.time() - t0 > cmaker.oq.time_per_task and t < T1:
             yield classical, grp_keys, tilegetters[t:], cmaker, extra, dstore
+            break
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
