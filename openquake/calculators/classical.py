@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import time
 import psutil
 import logging
 import operator
@@ -161,7 +162,7 @@ def hazclassical(grp, sites, cmaker, remove_zeros=False):
 
 
 # NB: the tilegetter here is trivial unless there are ilabels
-def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
+def classical_disagg(grp_keys, tilegetters, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites.
     `grp_keys` contains always a single element except in the case
@@ -169,6 +170,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
+    [tilegetter] = tilegetters
     sites = tilegetter(sitecol, cmaker.ilabel)
     if extra['atomic']:
         # case_27 (Japan)
@@ -185,7 +187,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
                 yield result
 
 
-def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
+def classical(grp_keys, tilegetters, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case
@@ -193,13 +195,18 @@ def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grp, sitecol = read_grp_sitecol(dstore, grp_keys)
-    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker,
-                          remove_zeros=True)
-    if all('-' not in grp_key for grp_key in grp_keys):
-        # single groups, return raw array that will be stored immediately
-        rates = result.pop('rmap').to_array(cmaker.gid)
-        result['rmap'] = rates
-    return result
+    T1 = len(tilegetters) - 1
+    t0 = time.time()
+    for t, tilegetter in enumerate(tilegetters):
+        result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker,
+                              remove_zeros=True)
+        if all('-' not in grp_key for grp_key in grp_keys):
+            # single groups, return raw array that will be stored immediately
+            rates = result.pop('rmap').to_array(cmaker.gid)
+            result['rmap'] = rates
+        yield result
+        if time.time() - t0 > cmaker.oq.time_per_task and t < T1:
+            yield classical, grp_keys, tilegetters[t:], cmaker, extra, dstore
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -577,15 +584,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
-            for tgetter in tilegetters:
-                if extra['atomic']:
-                    # JPN, send the grp_keys together, they will all send
-                    # rates to the RateMap associated to the first grp_id
-                    allargs.append((grp_keys, tgetter, cmaker, extra, ds))
-                else:
-                    # send a grp_key at the time
-                    for grp_key in grp_keys:
-                        allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+            if extra['atomic']:
+                # JPN, send the grp_keys together, they will all send
+                # rates to the RateMap associated to the first grp_id
+                allargs.append((grp_keys, tilegetters, cmaker, extra, ds))
+            else:
+                # send a grp_key at the time
+                for grp_key in grp_keys:
+                    allargs.append(([grp_key], tilegetters, cmaker, extra, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
