@@ -1313,29 +1313,26 @@ class ContextMaker(object):
         eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (eps, 0)
+            return 0 if src.code in b'pP' else eps
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps, 0
+            return eps
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return eps, 0
-        lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = (lenctx * src.num_ruptures /
-                  self.num_rups * srcfilter.multiplier)
+            return eps
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
         if src.code in b'NSX':  # increase weight
             weight *= 12.
         # raise the weight according to the gsims (needed for USA 2023)
         weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps), int(esites)
+        return max(weight, eps)
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1346,9 +1343,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(src, srcfilter)
-                # if src.code == b'S':
-                #     print(src, src.dt, src.num_ruptures / self.num_rups)
+                src.weight = self.estimate_weight(src, srcfilter)
 
 
 def by_dists(gsim):
@@ -1574,7 +1569,6 @@ class RmapMaker(object):
                 self.source_data['src_id'].append(src.source_id)
                 self.source_data['grp_id'].append(src.grp_id)
                 self.source_data['nsites'].append(src.nsites)
-                self.source_data['esites'].append(src.esites)
                 self.source_data['nrupts'].append(src.num_ruptures)
                 self.source_data['weight'].append(src.weight)
                 self.source_data['ctimes'].append(dt / nsrcs)
@@ -1587,7 +1581,6 @@ class RmapMaker(object):
         t0 = time.time()
         weight = 0.
         nsites = 0
-        esites = 0
         nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
@@ -1603,7 +1596,6 @@ class RmapMaker(object):
                 continue
             nctxs += len(ctxs)
             nsites += n
-            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1618,7 +1610,6 @@ class RmapMaker(object):
                 self.source_data['src_id'].append(valid.basename(src))
                 self.source_data['grp_id'].append(src.grp_id)
                 self.source_data['nsites'].append(nsites)
-                self.source_data['esites'].append(esites)
                 self.source_data['nrupts'].append(nctxs)
                 self.source_data['weight'].append(weight)
                 self.source_data['ctimes'].append(src.dt)
