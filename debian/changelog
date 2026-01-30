@@ -1,3 +1,6 @@
+  [Michele Simionato
+  * Optimized preclassical by gridding the point sources in parallel
+
   [Christopher Brooks]
   * Added support for GMPE tables to be specifiable as the underlying
     GSIMs within conditional GMPEs.
