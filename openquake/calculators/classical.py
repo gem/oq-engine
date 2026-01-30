@@ -658,6 +658,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
         df = pandas.DataFrame(self.source_data)
+
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
         # for points within the pointsource_distance (n points) and

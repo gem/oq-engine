@@ -336,6 +336,16 @@ def view_eff_ruptures(token, dstore):
     return df
 
 
+
+@view.add('sdata')
+def view_sdata(token, dstore):
+    # source_data grouped by taskno
+    df = dstore.read_df('source_data', 'src_id')
+    del df['grp_id'], df['impact']
+    sdata = df.groupby('taskno').sum()
+    sdata['grp_key'] = decode(dstore['grp_keys'][sdata.index])
+    return sdata
+
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
     return dstore['source_info'][:maxrows]
