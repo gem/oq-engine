@@ -153,7 +153,7 @@ def get_rmap_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs, trt_smrs
 
 
-def get_num_chunks(dstore):
+def get_num_chunks(dstore, full_lt=None):
     """
     :returns: number of chunks to generate (determine postclassical tasks)
 
@@ -169,7 +169,7 @@ def get_num_chunks(dstore):
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
-    req_gb, _, _ = get_rmap_gb(dstore)
+    req_gb, _, _ = get_rmap_gb(dstore, full_lt)
     ntiles = int(numpy.ceil(req_gb))
     return ntiles if ntiles > ct2 else ct2
     # for EUR on cole concurrent_tasks=256
@@ -181,7 +181,7 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = oq or dstore['oqparam']
-    n = get_num_chunks(dstore)
+    n = get_num_chunks(dstore, full_lt)
 
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
