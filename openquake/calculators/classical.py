@@ -203,7 +203,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         t0 = time.time()
         for b, block in enumerate(blocks, 1):
             result += hazclassical(block, sites, cmaker)
-            if t0 > cmaker.oq.time_per_task:
+            if time.time() - t0 > cmaker.oq.time_per_task:
                 if b == 1:
                     for blk in blocks[1:]:
                         yield hazclassical, blk, sites, cmaker
