@@ -177,7 +177,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grps, sites, cmaker, False)
+        result = hazclassical(grps, sites, cmaker, remove_zeros=False)
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
@@ -208,14 +208,14 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        result = hazclassical(grps, sites, cmaker, True)
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1:
         blocks = list(split_in_blocks(grps[0], 5, get_weight))
         t0 = time.time()
-        res = hazclassical(list(blocks[0]), sites, cmaker, 0)
-        yield res
+        result = hazclassical(list(blocks[0]), sites, cmaker, 0)
+        yield result
         if time.time() - t0 > cmaker.oq.time_per_task:
             for blk in blocks[1:]:
                 yield hazclassical, list(blk), sites, cmaker, 0
@@ -225,7 +225,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
                 srcs.extend(blk)
             yield hazclassical(srcs, sites, cmaker, 0)
     else:
-        yield hazclassical(grps, sites, cmaker, True)
+        yield hazclassical(grps, sites, cmaker, remove_zeros=True)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
