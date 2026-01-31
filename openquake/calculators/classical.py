@@ -186,6 +186,13 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
                 yield result
 
 
+def _srcs(blocks, *indices):
+    out = []
+    for i in indices:
+        out.extend(blocks[i])
+    return out
+
+
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
@@ -209,18 +216,18 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
                         yield hazclassical, blk, sites, cmaker
                     break
                 elif b == 2:
-                    yield hazclassical, blocks[2:4], sites, cmaker
-                    yield hazclassical, blocks[4:6], sites, cmaker
-                    yield hazclassical, blocks[6:8], sites, cmaker
-                    yield hazclassical, blocks[8:10], sites, cmaker
+                    yield hazclassical, _srcs(blocks, 2, 3), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 4, 5), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 6, 7), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 8, 9), sites, cmaker
                     break
                 elif b == 3:
-                    yield hazclassical, blocks[3:6], sites, cmaker
-                    yield hazclassical, blocks[6:10], sites, cmaker
+                    yield hazclassical, _srcs(blocks, 3, 4, 5), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 6, 7, 8, 9), sites, cmaker
                     break
                 elif b == 4:
-                    yield hazclassical, blocks[4:7], sites, cmaker
-                    yield hazclassical, blocks[7:10], sites, cmaker
+                    yield hazclassical, _srcs(blocks, 4, 5, 6), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 7, 8, 9), sites, cmaker
                     break
     else:
         result = hazclassical(grps, sites, cmaker, remove_zeros=True)
