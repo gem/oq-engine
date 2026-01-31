@@ -1303,37 +1303,6 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter):
-        """
-        :param src: a source object
-        :param srcfilter: a SourceFilter instance
-        :returns: (weight, estimate_sites)
-        """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
-        src.dt = 0
-        if src.nsites == 0:  # was discarded by the prefiltering
-            return 0 if src.code in b'pP' else eps
-        # sanity check, preclassical must has set .num_ruptures
-        assert src.num_ruptures, src
-        sites = srcfilter.get_close_sites(src)
-        if sites is None:
-            # may happen for CollapsedPointSources
-            return eps
-        src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
-        src.dt = time.time() - t0
-        if not ctxs:
-            return eps
-        # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps)
-
     def set_weight(self, sources, srcfilter):
         """
         Set the weight attribute on each prefiltered source
@@ -1342,8 +1311,9 @@ class ContextMaker(object):
             for src in sources:
                 src.weight = EPS
         else:
+            G = len(self.gsims)
             for src in sources:
-                src.weight = self.estimate_weight(src, srcfilter)
+                src.weight = src.num_ruptures * src.nsites * G + EPS
 
 
 def by_dists(gsim):
