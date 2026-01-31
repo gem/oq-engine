@@ -210,29 +210,32 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
     elif len(grps) == 1:
         blocks = list(split_in_blocks(grps[0], 10, get_weight))
-        t0 = time.time()
         result = AccumDict()
+        t0 = time.time()
         for b, block in enumerate(blocks):
             # TODO: think about remove_zeros
             result += hazclassical(list(block), sites, cmaker)
             slow = time.time() - t0 > cmaker.oq.time_per_task
-            if slow and b == 0:
-                for blk in blocks[1:]:
-                    yield hazclassical, blk, sites, cmaker
-                break
-            elif slow and b == 1:
-                yield hazclassical, _srcs(blocks, 2, 3), sites, cmaker
-                yield hazclassical, _srcs(blocks, 4, 5), sites, cmaker
-                yield hazclassical, _srcs(blocks, 6, 7), sites, cmaker
-                yield hazclassical, _srcs(blocks, 8, 9), sites, cmaker
-                break
-            elif slow and b == 2:
-                yield hazclassical, _srcs(blocks, 3, 4, 5), sites, cmaker
-                yield hazclassical, _srcs(blocks, 6, 7, 8, 9), sites, cmaker
-                break
-            elif slow and b == 3:
-                yield hazclassical, _srcs(blocks, 4, 5, 6), sites, cmaker
-                yield hazclassical, _srcs(blocks, 7, 8, 9), sites, cmaker
+            if slow:
+                if b == 0:
+                    for blk in blocks[1:]:
+                        yield hazclassical, blk, sites, cmaker
+                elif b == 1:
+                    yield hazclassical, _srcs(blocks, 2, 3), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 4, 5), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 6, 7), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 8, 9), sites, cmaker
+                elif b == 2:
+                    yield hazclassical, _srcs(blocks, 3, 4, 5), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 6, 7, 8, 9), sites, cmaker
+                elif b == 3:
+                    yield hazclassical, _srcs(blocks, 4, 5, 6), sites, cmaker
+                    yield hazclassical, _srcs(blocks, 7, 8, 9), sites, cmaker
+                else:
+                    srcs = []
+                    for blk in blocks[b+1:]:
+                        srcs.extend(blk)
+                    result += hazclassical(srcs, sites, cmaker)
                 break
     else:
         result = hazclassical(grps, sites, cmaker, remove_zeros=True)
