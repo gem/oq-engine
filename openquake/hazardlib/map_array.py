@@ -498,11 +498,6 @@ class MapArray(object):
         G = other.array.shape[2]  # NLG
         for i, g in enumerate(other.gid):
             iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
-        # assume .gid and .wei are consistent
-        if hasattr(other, 'gid'):
-            self.gid = other.gid
-        if hasattr(other, 'wei'):
-            self.wei = other.wei
         return self
 
     def __toh5__(self):

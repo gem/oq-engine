@@ -207,21 +207,21 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
                 if b == 1:
                     for blk in blocks[1:]:
                         yield hazclassical, blk, sites, cmaker
+                    break
                 elif b == 2:
                     yield hazclassical, blocks[2:4], sites, cmaker
                     yield hazclassical, blocks[4:6], sites, cmaker
                     yield hazclassical, blocks[6:8], sites, cmaker
                     yield hazclassical, blocks[8:10], sites, cmaker
+                    break
                 elif b == 3:
                     yield hazclassical, blocks[3:6], sites, cmaker
                     yield hazclassical, blocks[6:10], sites, cmaker
+                    break
                 elif b == 4:
                     yield hazclassical, blocks[4:7], sites, cmaker
                     yield hazclassical, blocks[7:10], sites, cmaker
-                else:
-                    continue
-                break
-        result['rmap'] = result['rmap'].remove_zeros()
+                    break
     else:
         result = hazclassical(grps, sites, cmaker, remove_zeros=True)
     if fulltask:
