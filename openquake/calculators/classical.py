@@ -204,37 +204,38 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
-    if len(grps) == 1 and not fulltask:
-        result = AccumDict()
-        blocks = list(split_in_blocks(grps[0], 10))
-        t0 = time.time()
-        for b, block in enumerate(blocks, 1):
-            result += hazclassical(block, sites, cmaker)
-            if time.time() - t0 > cmaker.oq.time_per_task:
-                if b == 1:
-                    for blk in blocks[1:]:
-                        yield hazclassical, blk, sites, cmaker
-                    break
-                elif b == 2:
-                    yield hazclassical, _srcs(blocks, 2, 3), sites, cmaker
-                    yield hazclassical, _srcs(blocks, 4, 5), sites, cmaker
-                    yield hazclassical, _srcs(blocks, 6, 7), sites, cmaker
-                    yield hazclassical, _srcs(blocks, 8, 9), sites, cmaker
-                    break
-                elif b == 3:
-                    yield hazclassical, _srcs(blocks, 3, 4, 5), sites, cmaker
-                    yield hazclassical, _srcs(blocks, 6, 7, 8, 9), sites, cmaker
-                    break
-                elif b == 4:
-                    yield hazclassical, _srcs(blocks, 4, 5, 6), sites, cmaker
-                    yield hazclassical, _srcs(blocks, 7, 8, 9), sites, cmaker
-                    break
-    else:
-        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
     if fulltask:
         # return raw array that will be stored immediately
-        rates = result.pop('rmap').to_array(cmaker.gid)
-        result['rmap'] = rates
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+    elif len(grps) == 1:
+        blocks = list(split_in_blocks(grps[0], 10, get_weight))
+        t0 = time.time()
+        result = AccumDict()
+        for b, block in enumerate(blocks):
+            # TODO: think about remove_zeros
+            result += hazclassical(list(block), sites, cmaker)
+            slow = time.time() - t0 > cmaker.oq.time_per_task
+            if slow and b == 0:
+                for blk in blocks[1:]:
+                    yield hazclassical, blk, sites, cmaker
+                break
+            elif slow and b == 1:
+                yield hazclassical, _srcs(blocks, 2, 3), sites, cmaker
+                yield hazclassical, _srcs(blocks, 4, 5), sites, cmaker
+                yield hazclassical, _srcs(blocks, 6, 7), sites, cmaker
+                yield hazclassical, _srcs(blocks, 8, 9), sites, cmaker
+                break
+            elif slow and b == 2:
+                yield hazclassical, _srcs(blocks, 3, 4, 5), sites, cmaker
+                yield hazclassical, _srcs(blocks, 6, 7, 8, 9), sites, cmaker
+                break
+            elif slow and b == 3:
+                yield hazclassical, _srcs(blocks, 4, 5, 6), sites, cmaker
+                yield hazclassical, _srcs(blocks, 7, 8, 9), sites, cmaker
+                break
+    else:
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
     yield result
 
 
