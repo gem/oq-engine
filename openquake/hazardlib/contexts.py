@@ -1562,15 +1562,14 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
-        if not self.tiling:
-            for src in self.sources:
-                self.source_data['src_id'].append(src.source_id)
-                self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nctxs'].append(totlen / nsrcs)
-                self.source_data['nrupts'].append(src.num_ruptures)
-                self.source_data['weight'].append(src.weight)
-                self.source_data['ctimes'].append(dt / nsrcs)
-                self.source_data['taskno'].append(cm.task_no)
+        for src in self.sources:
+            self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nctxs'].append(totlen / nsrcs)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt / nsrcs)
+            self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
@@ -1598,14 +1597,13 @@ class RmapMaker(object):
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
             src.dt = time.time() - t0
-            if not self.tiling:
-                self.source_data['src_id'].append(valid.basename(src))
-                self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nctxs'].append(n)
-                self.source_data['nrupts'].append(src.num_ruptures)
-                self.source_data['weight'].append(src.weight)
-                self.source_data['ctimes'].append(src.dt)
-                self.source_data['taskno'].append(cm.task_no)
+            self.source_data['src_id'].append(valid.basename(src))
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nctxs'].append(n)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(src.dt)
+            self.source_data['taskno'].append(cm.task_no)
         pmap.array *= self.grp_probability
         return ~pmap
 
@@ -1637,8 +1635,6 @@ class RmapMaker(object):
         dic['cfactor'] = self.cmaker.cfactor
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
-        dic['task_no'] = self.task_no
-        dic['grp_id'] = self.sources[0].grp_id
         dic['dparam_mb'] = self.cmaker.dparam_mb
         dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
