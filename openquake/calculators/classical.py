@@ -210,17 +210,19 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1:
-        blocks = list(split_in_blocks(grps[0], 5, get_weight))
+        blocks = list(split_in_blocks(grps[0], 5, get_weight))[::-1]
         t0 = time.time()
-        yield hazclassical(list(blocks[0]), sites, cmaker, 0, monitor)
+        res = hazclassical(list(blocks[0]), sites, cmaker, 0, monitor)
         if time.time() - t0 > cmaker.oq.time_per_task:
+            yield res
             for blk in blocks[1:]:
                 yield hazclassical, list(blk), sites, cmaker, 0
         else:
             srcs = []
             for blk in blocks[1:]:
                 srcs.extend(blk)
-            yield hazclassical(srcs, sites, cmaker, 0, monitor)
+            res = AccumDict(res) + hazclassical(srcs, sites, cmaker, 0, monitor)
+            yield res
     else:
         yield hazclassical(grps, sites, cmaker, True, monitor)
 
