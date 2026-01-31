@@ -151,7 +151,9 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros, monitor):
+def hazclassical(grp, sites, cmaker, remove_zeros, monitor=None):
+    if monitor:
+        cmaker.init_monitoring(monitor)
     # small wrapper over hazard_curve.classical
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
@@ -175,14 +177,14 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grps, sites, cmaker, False, monitor)
+        result = hazclassical(grps, sites, cmaker, False)
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
         # yield a result for each base source
         for grp in grps:
             for srcs in groupby(grp, valid.basename).values():
-                result = hazclassical(srcs, sites, cmaker, False, monitor)
+                result = hazclassical(srcs, sites, cmaker, False)
                 yield result
 
 
@@ -206,13 +208,13 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        result = hazclassical(grps, sites, cmaker, True, monitor)
+        result = hazclassical(grps, sites, cmaker, True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1:
         blocks = list(split_in_blocks(grps[0], 5, get_weight))
         t0 = time.time()
-        res = hazclassical(list(blocks[0]), sites, cmaker, 0, monitor)
+        res = hazclassical(list(blocks[0]), sites, cmaker, 0)
         yield res
         if time.time() - t0 > cmaker.oq.time_per_task:
             for blk in blocks[1:]:
@@ -221,9 +223,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             srcs = []
             for blk in blocks[1:]:
                 srcs.extend(blk)
-            yield hazclassical(srcs, sites, cmaker, 0, monitor)
+            yield hazclassical(srcs, sites, cmaker, 0)
     else:
-        yield hazclassical(grps, sites, cmaker, True, monitor)
+        yield hazclassical(grps, sites, cmaker, True)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
