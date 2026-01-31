@@ -100,15 +100,6 @@ def _filter(srcs, min_mag):
         ss.num_ruptures = ss.count_ruptures()
     return out
 
-
-def set_weight(srcs, sf, cmaker, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
-    """
-    cmaker.set_weight(srcs, sf)
-    return {srcs[0].grp_id: srcs}
-
     
 def preclassical(srcs, sf, cmaker, secparams, monitor):
     """
@@ -154,11 +145,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         if cmaker.ps_grid_spacing:            
             splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
-        Ns = 10  # produce at most Ns subtasks of kind set_weight
-        for i in range(Ns):
-            lst = splits[i::Ns]
-            if lst:
-                yield set_weight, lst, sf, cmaker
+        cmaker.set_weight(splits, sf)
 
 
 def get_req_gb(data, N, oq):
