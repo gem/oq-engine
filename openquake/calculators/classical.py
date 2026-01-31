@@ -353,12 +353,12 @@ def make_hmap_png(hmap, lons, lats):
 
 
 # used in in disagg_by_src
-def get_rates(pmap, grp_id, M, itime):
+def get_rates(rmap, M, itime):
     """
-    :param pmap: a MapArray
+    :param rmap: a MapArray
     :returns: an array of rates of shape (N, M, L1)
     """
-    rates = pmap.array @ pmap.wei / itime
+    rates = rmap.array @ rmap.wei / itime
     return rates.reshape((len(rates), M, -1))
 
 
@@ -391,7 +391,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, source_data, rup_data
+        :param dic: dict with keys rmap, source_data, rup_data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
@@ -418,7 +418,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
-            acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
+            acc[source_id] += get_rates(rmap, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
