@@ -192,11 +192,12 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
+    # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
-    single_grps = all('-' not in grp_key for grp_key in grp_keys)
+    fulltask = all('-' not in grp_key for grp_key in grp_keys)
     result = hazclassical(grps, tilegetter(sitecol, cmaker.ilabel), cmaker,
                           remove_zeros=True)
-    if single_grps:
+    if fulltask:
         # return raw array that will be stored immediately
         rates = result.pop('rmap').to_array(cmaker.gid)
         result['rmap'] = rates
