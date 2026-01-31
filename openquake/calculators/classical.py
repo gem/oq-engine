@@ -140,7 +140,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def read_grp_sitecol(dstore, grp_keys):
+def read_groups_sitecol(dstore, grp_keys):
     """
     :returns: source groups associated to the keys and site collection
     """
@@ -161,42 +161,43 @@ def hazclassical(grp, sites, cmaker, remove_zeros=False):
 
 
 # NB: the tilegetter here is trivial unless there are ilabels
-def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
+def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites.
     `grp_keys` contains always a single element except in the case
     of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
-    grp, sitecol = read_grp_sitecol(dstore, grp_keys)
+    grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
-    if extra['atomic']:
+    if grps[0].atomic:
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grp, sites, cmaker)
+        result = hazclassical(grps, sites, cmaker)
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
         # yield a result for each base source
-        for g in grp:
-            for srcs in groupby(g, valid.basename).values():
+        for grp in grps:
+            for srcs in groupby(grp, valid.basename).values():
                 result = hazclassical(srcs, sites, cmaker)
                 yield result
 
 
-def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
+def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case
     of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
-    grp, sitecol = read_grp_sitecol(dstore, grp_keys)
-    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker,
+    grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    single_grps = all('-' not in grp_key for grp_key in grp_keys)
+    result = hazclassical(grps, tilegetter(sitecol, cmaker.ilabel), cmaker,
                           remove_zeros=True)
-    if all('-' not in grp_key for grp_key in grp_keys):
-        # single groups, return raw array that will be stored immediately
+    if single_grps:
+        # return raw array that will be stored immediately
         rates = result.pop('rmap').to_array(cmaker.gid)
         result['rmap'] = rates
     return result
@@ -570,7 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
-        for cmaker, tilegetters, grp_keys, extra in data:
+        for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.tiling = self.tiling
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
@@ -578,14 +579,14 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                if extra['atomic']:
+                if atomic:
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
-                    allargs.append((grp_keys, tgetter, cmaker, extra, ds))
+                    allargs.append((grp_keys, tgetter, cmaker, ds))
                 else:
                     # send a grp_key at the time
                     for grp_key in grp_keys:
-                        allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+                        allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
