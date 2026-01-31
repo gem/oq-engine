@@ -626,7 +626,7 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
                 grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
             else:
                 grp_keys = [str(grp_id)]
-            out.append((cmaker, tilegetters, grp_keys, extra))
+            out.append((cmaker, tilegetters, grp_keys, False))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     tilegetters_ = {}
@@ -636,10 +636,9 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
         tilegetters_[gid] = tilegetters
         blocks_[gid].extend(blocks)
         cmaker_[gid] = cmaker
-    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
         grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
-        out.append((cmaker_[gid], tgetters, grp_keys, extra))
+        out.append((cmaker_[gid], tgetters, grp_keys, True))
     if atomic:
         logging.info('Collapsed %d atomic tasks into %d',
                      len(atomic), len(cmaker_))
