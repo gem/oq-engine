@@ -118,6 +118,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
+    mon3 = monitor('gridding point sources', measuremem=True)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     sf.integration_distance = cmaker.maximum_distance
     maxdist = cmaker.maximum_distance.y[-1]
@@ -151,8 +152,9 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     before_after = U32([len(splits), len(splits)])
     yield {'before_after': before_after}
     if splits:
-        if cmaker.ps_grid_spacing:            
-            splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
+        if cmaker.ps_grid_spacing:
+            with mon3:
+                splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
         light = []
         for src in splits:
