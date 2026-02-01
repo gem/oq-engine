@@ -154,9 +154,16 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         if cmaker.ps_grid_spacing:            
             splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
             before_after[1] = len(splits)
+        nomultifault = []
+        for src in splits:
+            if src.code == b'F':
+                # to determine the weight of a multifault is expensive
+                yield set_weight, [src], sf, cmaker
+            else:
+                nomultifault.append(src)
         Ns = 10  # produce at most Ns subtasks of kind set_weight
         for i in range(Ns):
-            lst = splits[i::Ns]
+            lst = nomultifault[i::Ns]
             if lst:
                 yield set_weight, lst, sf, cmaker
 
