@@ -214,10 +214,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     yield result
     expected_time = sum(src.weight for grp in grps for src in grp
                         ) / preclassical.MUL_GROUPS
-    if actual_time > expected_time and grps[2:]:
+    if actual_time > expected_time and grps[3:]:
         print(f'{expected_time=:.1f}, {actual_time=:.1f}')
-        yield hazclassical, grps[1::2], sites, cmaker, True
-        yield hazclassical, grps[2::2], sites, cmaker, True
+        yield hazclassical, grps[1::3], sites, cmaker, True
+        yield hazclassical, grps[2::3], sites, cmaker, True
+        yield hazclassical, grps[1::3], sites, cmaker, True
     else:
         yield hazclassical(grps[1:], sites, cmaker, True)
 
@@ -603,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, ds))
                 else:
-                    # send 5 grp_keys at the time
+                    # send multiple grp_keys at the time
                     for keys in block_splitter(
                             grp_keys, preclassical.MUL_GROUPS):
                         allargs.append((keys, tgetter, cmaker, ds))

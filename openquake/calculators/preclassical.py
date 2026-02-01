@@ -41,7 +41,7 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-MUL_GROUPS = 5
+MUL_GROUPS = 7
 
 def source_data(sources):
     """
