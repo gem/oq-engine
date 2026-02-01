@@ -204,6 +204,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         return result
+    elif len(grps) == 1:
+        return hazclassical(grps[0], sites, cmaker, remove_zeros=True)
 
     # try to split the task
     t0 = time.time()
