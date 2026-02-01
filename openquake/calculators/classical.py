@@ -214,8 +214,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
                         ) / preclassical.MUL_GROUPS
     if actual_time > expected_time:
         print(f'{expected_time=:.1f}, {actual_time=:.1f}')
-        for grp in grps[1:]:
-            yield hazclassical, grp, sites, cmaker, True
+        yield hazclassical, grps[1::2], sites, cmaker, True
+        yield hazclassical, grps[2::2], sites, cmaker, True
     else:
         yield hazclassical(grps[1:], sites, cmaker, True)
 
