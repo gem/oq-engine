@@ -156,7 +156,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
             before_after[1] = len(splits)
         light = []
         for src in splits:
-            if src.code == b'C':
+            if src.code in b'CF':
                 # to determine the weight is expensive, use a subtask
                 yield set_weight, [src], sf, cmaker
             else:
