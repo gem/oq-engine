@@ -210,7 +210,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
     actual_time = time.time() - t0
     yield result
-    expected_time = sum(src.weight for grp in grps for src in grp)
+    expected_time = sum(src.weight for grp in grps for src in grp
+                        ) / preclassical.MUL_GROUPS
     if actual_time > expected_time:
         print(f'{expected_time=:.1f}, {actual_time=:.1f}')
         for grp in grps[1:]:
