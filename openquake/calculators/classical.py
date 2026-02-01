@@ -212,11 +212,10 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     yield result
     expected_time = sum(src.weight for grp in grps for src in grp
                         ) / preclassical.MUL_GROUPS
-    if actual_time > expected_time:
+    if actual_time > expected_time and grps[2:]:
         print(f'{expected_time=:.1f}, {actual_time=:.1f}')
         yield hazclassical, grps[1::2], sites, cmaker, True
-        if len(grps[2::2]):
-            yield hazclassical, grps[2::2], sites, cmaker, True
+        yield hazclassical, grps[2::2], sites, cmaker, True
     else:
         yield hazclassical(grps[1:], sites, cmaker, True)
 
