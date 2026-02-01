@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import time
 import psutil
 import logging
 import operator
@@ -25,7 +26,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize)
+    AccumDict, DictArray, groupby, block_splitter, humansize)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
@@ -150,9 +151,11 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros=False):
+def hazclassical(grps, sites, cmaker, remove_zeros=False, monitor=None):
     # small wrapper over hazard_curve.classical
-    result = hazard_curve.classical(grp, sites, cmaker)
+    if monitor:
+        cmaker.init_monitoring(monitor)
+    result = hazard_curve.classical(grps, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
     result['rmap'].gid = cmaker.gid
@@ -195,12 +198,26 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
-    result = hazclassical(grps, tilegetter(sitecol, cmaker.ilabel), cmaker,
-                          remove_zeros=True)
+    sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
-        # return raw array that will be stored immediately
-        rates = result.pop('rmap').to_array(cmaker.gid)
-        result['rmap'] = rates
+        # yield raw array that will be stored immediately
+        result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+        yield result
+        return
+    # try to split the task
+    t0 = time.time()
+    result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
+    actual_time = time.time() - t0
+    yield result
+    expected_time = sum(src.weight for grp in grps for src in grp)
+    print(expected_time, actual_time)
+    if actual_time > expected_time:
+        for grp in grps[1:]:
+            yield hazclassical, grp, sites, cmaker, True
+    else:
+        yield hazclassical(grps[1:], tilegetter(sitecol, cmaker.ilabel), cmaker,
+                           remove_zeros=True)
     return result
 
 
@@ -585,9 +602,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, ds))
                 else:
-                    # send a grp_key at the time
-                    for grp_key in grp_keys:
-                        allargs.append(([grp_key], tgetter, cmaker, ds))
+                    # send 5 grp_keys at the time
+                    for keys in block_splitter(grp_keys, 5):
+                        allargs.append((keys, tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '

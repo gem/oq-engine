@@ -186,7 +186,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         N = len(sitecol)
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**2
-    max_weight = csm.get_max_weight(oq)
+    max_weight = csm.get_max_weight(oq) / 5  # produce 5x tasks
 
     # build source_groups
     quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
