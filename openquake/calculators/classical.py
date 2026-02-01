@@ -200,25 +200,23 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
-        # yield raw array that will be stored immediately
+        # return raw array that will be stored immediately
         result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
-        yield result
-        return
+        return result
+
     # try to split the task
     t0 = time.time()
     result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
     actual_time = time.time() - t0
     yield result
     expected_time = sum(src.weight for grp in grps for src in grp)
-    print(expected_time, actual_time)
     if actual_time > expected_time:
+        print(f'{expected_time=:.1f}, {actual_time=:.1f}')
         for grp in grps[1:]:
             yield hazclassical, grp, sites, cmaker, True
     else:
-        yield hazclassical(grps[1:], tilegetter(sitecol, cmaker.ilabel), cmaker,
-                           remove_zeros=True)
-    return result
+        yield hazclassical(grps[1:], sites, cmaker, True)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -603,7 +601,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((grp_keys, tgetter, cmaker, ds))
                 else:
                     # send 5 grp_keys at the time
-                    for keys in block_splitter(grp_keys, 5):
+                    for keys in block_splitter(
+                            grp_keys, preclassical.MUL_GROUPS):
                         allargs.append((keys, tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
