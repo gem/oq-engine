@@ -201,13 +201,13 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         return result
     elif len(grps) == 1:
-        return hazclassical(grps[0], sites, cmaker, remove_zeros=True)
+        return hazclassical(grps, sites, cmaker, remove_zeros=True)
 
-    # try to split the task
+    # try to split the task in odd and even groups (at least 3 groups)
     t0 = time.time()
     result = hazclassical(grps[0], sites, cmaker, remove_zeros=True)
     actual_time = time.time() - t0
