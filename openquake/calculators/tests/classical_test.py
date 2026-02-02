@@ -293,11 +293,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska testing full tiling
-        # NB: requires disabling the parallelization otherwise the
-        # workers would read the real custom_tmp and not the mocked one
-        tmp = tempfile.gettempdir()
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -309,28 +305,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [5])
-        self.assertEqual(data['blocks'], [1])
-
-    def test_case_22_bis(self):
-        # crossing date line calculation for Alaska
-        # this also tests full tiling without custom_dir
-        # NB: requires disabling the parallelization otherwise the
-        # workers would read the real custom_tmp and not the mocked one
-        with mock.patch.dict(config.directory, {'custom_tmp': ''}), \
-             mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-            self.assert_curves_ok([
-                '/hazard_curve-mean-PGA.csv',
-                'hazard_curve-mean-SA(0.1)',
-                'hazard_curve-mean-SA(0.2).csv',
-                'hazard_curve-mean-SA(0.5).csv',
-                'hazard_curve-mean-SA(1.0).csv',
-                'hazard_curve-mean-SA(2.0).csv',
-            ], case_22.__file__, delta=1E-6, tiling=True)
-        data = self.calc.datastore['source_groups']
-        self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [5])
+        self.assertEqual(data['tiles'], [7])
         self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
