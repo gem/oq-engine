@@ -129,8 +129,8 @@ assets_per_site_limit:
 
 gmf_max_gb:
   If the size (in GB) of the GMFs is below this value, then compute avg_gmf
-  Example: *gmf_max_gb = .1*
-  Default: 0.01
+  Example: *gmf_max_gb = .01*
+  Default: 0.001
 
 avg_losses:
   Used in risk calculations to compute average losses.
@@ -1062,7 +1062,7 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
-    gmf_max_gb = valid.Param(valid.positivefloat, .01)
+    gmf_max_gb = valid.Param(valid.positivefloat, .001)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
