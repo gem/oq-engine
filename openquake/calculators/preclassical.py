@@ -165,7 +165,7 @@ def preclassical(sources, sf, cmaker, secparams, monitor):
     else:
         srcs = sources
 
-    Ns = 10  # produce at most Ns subtasks of kind set_weight
+    Ns = parallel.num_cores  # produce at most Ns subtasks of kind set_weight
     for i in range(Ns):
         lst = srcs[i::Ns]
         if lst:
