@@ -1,3 +1,8 @@
+  [Nicholas Clemett]
+  * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional argument
+  * Added EmpiricalAvgSACorrelationModel
+  * Added classes for the Clemett correlation models for active shallow crust, subduction interface, subduction slab and vrancea regions in europe based on the ESHM20 GMMs.
+  
   [Michele Simionato
   * Internal: introduced subtasks in classical calculations
   * Added endpoint `validate_ini` to validate local files
