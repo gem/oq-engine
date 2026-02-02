@@ -198,9 +198,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight(oq)
-    if N > oq.max_sites_disagg:  # produce less tasks
-        # NB: this has to be consistent with the maxw in classical _execute
-        max_weight *= 2
 
     # build source_groups
     quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
