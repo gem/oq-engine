@@ -92,7 +92,7 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter(srcs, min_mag):
+def _filter_mag(srcs, min_mag):
     # filter by magnitude and count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
@@ -110,20 +110,32 @@ def set_weight(srcs, sf, cmaker, monitor):
     return {srcs[0].grp_id: srcs}
 
     
-def preclassical(srcs, sf, cmaker, secparams, monitor):
+def preclassical(sources, sf, cmaker, secparams, monitor):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
     """
-    if cmaker.ps_grid_spacing:            
-        srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
-    splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     sf.integration_distance = cmaker.maximum_distance
     maxdist = cmaker.maximum_distance.y[-1]
     N = len(sf.sitecol) if sf.sitecol else 0
+
+    # split area and multipoint sources before filtering
+    if cmaker.ps_grid_spacing and cmaker.split_sources:
+        srcs = []
+        for src in sources:
+            if src.code in b'AM':
+                srcs.extend(split_source(src))
+            else:
+                srcs.append(src)
+        srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+    else:
+        srcs = sources
+
+    # filter and then split the heavy sources
+    splits = []
     for src in srcs:
         if src.code == b'F':
             if N and N <= cmaker.max_sites_disagg:
@@ -149,7 +161,9 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
-    splits = _filter(splits, cmaker.oq.minimum_magnitude)
+
+    # filter by magnitude the split sources
+    splits = _filter_mag(splits, cmaker.oq.minimum_magnitude)
     if splits:
         Ns = 10  # produce at most Ns subtasks of kind set_weight
         for i in range(Ns):
