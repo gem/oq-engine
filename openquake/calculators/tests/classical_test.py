@@ -309,7 +309,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['tiles'], [5])
         self.assertEqual(data['blocks'], [1])
 
     def test_case_22_bis(self):
@@ -330,7 +330,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [10])
+        self.assertEqual(data['tiles'], [5])
         self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
@@ -765,7 +765,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # check that you can specify both a site and a site model and the
         # engine will automatically get the closest site model parameters
         self.run_calc(case_66.__file__, 'job1.ini',
-                      calculation_mode='preclassical')
+                      calculation_mode='preclassical',
+                      time_per_task='0')
         self.assertEqual(self.calc.sitecol.vs30, [810.])
 
     def test_case_67(self):
