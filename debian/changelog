@@ -1,4 +1,5 @@
   [Michele Simionato
+  * Internal: introduced subtasks in classical calculations
   * Added endpoint `validate_ini` to validate local files
   * Optimized preclassical by gridding the point sources in parallel
 

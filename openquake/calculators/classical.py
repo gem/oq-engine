@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import time
 import psutil
 import logging
 import operator
@@ -150,8 +151,12 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros=False):
-    # small wrapper over hazard_curve.classical
+def hazclassical(grp, sites, cmaker, remove_zeros, monitor=None):
+    """
+    Wrapper over hazard_curve.classical
+    """
+    if monitor:
+        cmaker.init_monitoring(monitor)
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
@@ -174,15 +179,22 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grps, sites, cmaker)
+        result = hazclassical(grps, sites, cmaker, remove_zeros=False)
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
         # yield a result for each base source
         for grp in grps:
             for srcs in groupby(grp, valid.basename).values():
-                result = hazclassical(srcs, sites, cmaker)
+                result = hazclassical(srcs, sites, cmaker, remove_zeros=False)
                 yield result
+
+
+def split_in_blocks(sources, n):
+    sources.sort(key=get_weight)
+    for srcs in numpy.array_split(sources, n):
+        if len(srcs):
+            yield list(srcs)
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -195,14 +207,28 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
-    result = hazclassical(grps, tilegetter(sitecol, cmaker.ilabel), cmaker,
-                          remove_zeros=True)
+    sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        rates = result.pop('rmap').to_array(cmaker.gid)
-        result['rmap'] = rates
-    return result
-
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+        yield result
+    elif len(grps) == 1 and len(grps[0]) >= 3:
+        b0, b1, *blks = split_in_blocks(list(grps[0]), 8)
+        t0 = time.time()
+        res = hazclassical(b0, sites, cmaker, True)
+        dt = time.time() - t0
+        yield res
+        if dt > cmaker.oq.time_per_task:
+            for blk in blks:
+                yield hazclassical, blk, sites, cmaker, True
+            yield hazclassical(b1, sites, cmaker, True)
+        else:
+            for blk in blks:
+                b1.extend(blk)
+            yield hazclassical(b1, sites, cmaker, True)
+    else:
+        yield hazclassical(grps, sites, cmaker, True)
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
