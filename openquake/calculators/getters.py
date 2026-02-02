@@ -21,7 +21,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import general, hdf5, config
+from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs

@@ -869,8 +869,9 @@ class EventBasedCalculator(base.HazardCalculator):
         Compute and save avg_gmf, unless there are too many GMFs
         """
         N = len(self.sitecol.complete)
-        C = len(self.oqparam.all_imts())
-        size = N * C * 8
+        nrows = len(self.datastore['gmf_data/sid'])
+        df = self.datastore.read_df('gmf_data', slc=slice(0, 1))
+        size = df.memory_usage(index=False).sum() * nrows
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
         if size > maxsize:

@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Reduced the default `gmf_max_gb` to .001
+  * Fixed `avg_gmf` being computed in the wrong situation due to a logic bug
 
   [Nicholas Clemett]
   * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional argument
