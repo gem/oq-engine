@@ -196,7 +196,7 @@ def split_in_blocks(sources, n):
         if len(srcs):
             yield list(srcs)
 
-    
+
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
