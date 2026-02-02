@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -1327,7 +1326,7 @@ class ContextMaker(object):
             return EPS
         # NB: num_rups is set by get_ctx_iter
         weight = (src.dt * src.num_ruptures / self.num_rups *
-                  srcfilter.multiplier)
+                  srcfilter.multiplier * len(self.gsims))
         return weight
 
     def set_weight(self, sources, srcfilter):
