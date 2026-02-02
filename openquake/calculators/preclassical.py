@@ -148,7 +148,7 @@ def set_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, monitor):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
@@ -165,7 +165,8 @@ def preclassical(sources, sf, cmaker, secparams, monitor):
     else:
         srcs = sources
 
-    Ns = parallel.num_cores  # produce at most Ns subtasks of kind set_weight
+    Ns = parallel.num_cores // num_tasks + 1
+    # produce subtasks of kind set_weight
     for i in range(Ns):
         lst = srcs[i::Ns]
         if lst:
@@ -335,13 +336,14 @@ class PreClassicalCalculator(base.HazardCalculator):
                 self.datastore.swmr_on()
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
+            num_tasks = len(sources_by_key)
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                smap.submit((srcs, sf, cmaker, secparams))
+                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
             res = smap.reduce()
         else:
             res = {}
