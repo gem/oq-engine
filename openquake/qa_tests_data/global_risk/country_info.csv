@@ -1,0 +1,216 @@
+GEM_REGION,ISO3,GEM_COUNTRY,ENGLISH_COUNTRY,X_MIN,X_MAX,Y_MIN,Y_MAX,CAPITAL,CAPITAL_LON,CAPITAL_LAT,CRS,LEGEND_POSITION,HEX_RESOLUTION,PLOT_AGG,PLOT_HIGHRISE,PLOT_MACROTAXO,PLOT_OCCUPANTS,PLOT_4KM
+Caribbean_Central_America,ABW,Aruba,Aruba,-70.4,-69.6409,12.3,12.7,Oranjestad,-70.027,12.524,EPSG:4326,upper left,6,0,1,0,0,0
+South_Asia,AFG,Afghanistan,Afghanistan,59,76,28,39,Kabul,69.1723,34.5439,EPSG:4326,upper left,6,0,1,1,0,0
+Africa,AGO,Angola,Angola,9,25,-19,0,Luanda,13.23,-8.84,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,AIA,Anguilla,Anguilla,-64.1392,-62.7125,18.0615,19.2951,The Valley,-63.0578,18.217,EPSG:4326,upper left,6,0,1,0,0,0
+Europe,ALB,Albania,Albania,17,21.5,39,44,Tirana,19.8189,41.3275,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,AND,Andorra,Andorra,1,2,42,43,Andorra la Vella,1.5211,42.5078,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,ARE,United_Arab_Emirates,United Arab Emirates,51,57,22,27,Abu Dhabi,54.3773,24.4539,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,ARG,Argentina,Argentina,-81,-50,-56,-15,Buenos Aires,-58.3816,-34.6037,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,ARM,Armenia,Armenia,43,47,38.5,42.5,Yerevan,44.5152,40.1776,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,ASM,American_Samoa,American Samoa,-171,-168,-15,-10,Pago Pago,-170.702,-14.2781,EPSG:4326,upper left,7,0,1,1,0,0
+Caribbean_Central_America,ATG,Antigua_and_Barbuda,Antigua and Barbuda,-62.2,-61.5,16.8,17.9,St. John's,-61.8457,17.1172,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,AUS,Australia,Australia,107,157,-48,-8,Canberra,149.13,-35.2809,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,AUT,Austria,Austria,9,18,46,50,Vienna,16.3738,48.2082,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,AZE,Azerbaijan,Azerbaijan,42,51.5,38,43,Baku,49.8671,40.4093,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,BDI,Burundi,Burundi,28.8,31,-4.5,-2,Gitega,29.93,-3.43,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,BEL,Belgium,Belgium,2,7,49,52,Brussels,4.3517,50.8503,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,BEN,Benin,Benin,-1,4.5,6,12.5,Porto-Novo,2.6,6.47,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,BFA,Burkina_Faso,Burkina Faso,-7,3,9,16,Ouagadougou,-1.52,12.37,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,BGD,Bangladesh,Bangladesh,86,94,20,28,Dhaka,90.4125,23.8103,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,BGR,Bulgaria,Bulgaria,22,29,41,45,Sofia,23.3238,42.7105,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,BHR,Bahrain,Bahrain,50,51,25.25,27,Manama,50.5832,26.2285,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,BHS,Bahamas,Bahamas,-81,-70,20,28,Nassau,-77.3431,25.0582,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,BIH,Bosnia_and_Herzegovina,Bosnia and Herzegovina,14,20,42,46,Sarajevo,18.4214,43.8608,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,BLR,Belarus,Belarus,23,33,51,57,Minsk,27.5766,53.9678,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,BLZ,Belize,Belize,-89.5,-87.3,15.5,18.8,Belmopan,-88.7667,17.25,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,BOL,Bolivia,Bolivia,-75,-55,-25,-7.5,Sucre,-65.2627,-19.0353,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,BRA,Brazil,Brazil,-80,-32,-35,8,Brasília,-47.8825,-15.7942,EPSG:4326,lower left,6,0,1,1,0,0
+Caribbean_Central_America,BRB,Barbados,Barbados,-59.9,-59.3,12.9,13.5,Bridgetown,-59.6167,13.1,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,BRN,Brunei,Brunei,114,116,4,5.5,Bandar Seri Begawan,114.9398,4.9031,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,BTN,Bhutan,Bhutan,88,92.5,26.25,28.5,Thimphu,89.6362,27.4712,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,BWA,Botswana,Botswana,18,30,-27,-17,Gaborone,25.92,-24.65,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,CAF,Central_African_Republic,Central African Republic,13.5,28,1.5,12,Bangui,18.56,4.36,EPSG:4326,upper left,6,1,1,1,0,0
+North_America,CAN,Canada,Canada,-150,-50,41,84,Ottawa,-75.6972,45.4215,EPSG:4326,upper left,6,1,0,0,0,0
+Europe,CHE,Switzerland,Switzerland,5,11,45.5,48,Bern,7.4474,46.9481,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,CHL,Chile,Chile,-87,-62,-57,-15,Santiago,-70.6483,-33.4489,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,CHN,China,China,55,140,15,55,Beijing,116.4074,39.9042,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,CIV,Ivory_Coast,Côte d'Ivoire,-9,-2,4,12,Yamoussoukro,-5.28,6.82,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,CMR,Cameroon,Cameroon,8,17,1,14,Yaoundé,11.52,3.87,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,COD,Democratic_Republic_of_the_Congo,Democratic Republic of the Congo,11,32,-15,6,Kinshasa,15.31,-4.32,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,COG,Congo,Congo,10,19,-6,4,Brazzaville,15.28,-4.27,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,COK,Cook_Islands,Cook Islands,-161,-157,-21.5,-18.5,Avarua,-159.785,-21.2129,EPSG:4326,upper right,7,0,1,1,0,0
+South_America,COL,Colombia,Colombia,-82,-66,-5,15,Bogotá,-74.0721,4.711,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,COM,Comoros,Comoros,43,44.75,-12.75,-10.75,Moroni,43.26,-11.7,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,CPV,Cabo_Verde,Cabo Verde,-27,-22,14,18,Praia,-23.51,14.93,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,CRI,Costa_Rica,Costa Rica,-87.5,-82,7.5,12,San José,-84.0833,9.9333,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,CUB,Cuba,Cuba,-88,-73,19,26,Havana,-82.3666,23.1136,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,CYM,Cayman_Islands,Cayman Islands,-81.75,-79.5,19,20,George Town,-81.3856,19.2866,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,CYP,Cyprus,Cyprus,32,35,34,36,Nicosia,33.3736,35.1856,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,CZE,Czechia,Czechia,12,19,48,52,Prague,14.4378,50.0755,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,DEU,Germany,Germany,3,16,47,56,Berlin,13.405,52.52,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,DJI,Djibouti,Djibouti,41,44,10.5,13,Djibouti,43.15,11.59,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,DMA,Dominica,Dominica,-61.7,-61.1,15,15.8,Roseau,-61.387,15.301,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,DNK,Denmark,Denmark,7,14,54,58.5,Copenhagen,12.5683,55.6761,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,DOM,Dominican_Republic,Dominican Republic,-73.5,-68,17,21,Santo Domingo,-69.9001,18.4663,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,DZA,Algeria,Algeria,-9,14,18,38,Algiers,3.04,36.75,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,ECU,Ecuador,Ecuador,-83,-75,-5.5,2.5,Quito,-78.4678,-0.1807,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,EGY,Egypt,Egypt,22,38,21,35,Cairo,31.25,30.04,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,ERI,Eritrea,Eritrea,35.5,43.5,12,19,Asmara,38.93,15.33,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,ESP,Spain,Spain,-15,5,35,46,Madrid,-3.7038,40.4168,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,EST,Estonia,Estonia,21,29,57,60,Tallinn,24.7545,59.4389,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,ETH,Ethiopia,Ethiopia,30,50,3,16,Addis Ababa,38.76,9.03,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,FIN,Finland,Finland,17,33,59,72,Helsinki,24.9354,60.1695,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,FJI,Fiji,Fiji,175,180,-21,-12,Suva,178.4419,-18.1416,EPSG:4326,upper left,6,0,1,1,0,0
+Europe,FRA,France,France,-6,10,40,55,Paris,2.351,48.8567,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,FSM,Micronesia,Micronesia,150,164,3.5,9,Palikir,158.1491,6.9147,EPSG:4326,upper right,7,0,1,1,0,0
+Africa,GAB,Gabon,Gabon,8.1,15,-4.5,3,Libreville,9.45,0.39,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,GBR,United_Kingdom,United Kingdom,-10,3,49,62,London,-0.1276,51.5074,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,GEO,Georgia,Georgia,38,47,40,45,Tbilisi,44.8271,41.7151,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,GHA,Ghana,Ghana,-4,2,4,14,Accra,-0.19,5.56,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,GIB,Gibraltar,Gibraltar,-6,-5,36,37,Gibraltar,-5.3536,36.1408,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,GIN,Guinea,Guinea,-15.5,-7.3,7,13,Conakry,-13.7,9.54,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,GLP,Guadeloupe,Guadeloupe,-62.2,-60.8,15.7,16.6,Basse-Terre,-61.731,15.9985,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,GMB,Gambia,Gambia,-18,-13.5,13,14,Banjul,-16.58,13.45,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,GNB,Guinea_Bissau,Guinea-Bissau,-17,-13.5,10.5,13.5,Bissau,-15.6,11.86,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,GNQ,Equatorial_Guinea,Equatorial Guinea,8,11.5,0.5,5,Malabo,8.78,3.75,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,GRC,Greece,Greece,18,28,34,42,Athens,23.7275,37.9838,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,GRD,Grenada,Grenada,-61.9,-61.3,11.9,12.6,St. George's,-61.7486,12.0564,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,GTM,Guatemala,Guatemala,-92.7,-88,13.5,18.3,Guatemala City,-90.5133,14.6349,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,GUF,French_Guiana,French Guiana,-56,-51,1.5,6.5,Cayenne,-52.3346,4.9224,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,GUM,Guam,Guam,144.25,145.25,13,13.8,Hagåtña,144.7489,13.4757,EPSG:4326,upper left,7,0,1,1,0,0
+South_America,GUY,Guyana,Guyana,-63,-56,1,9,Georgetown,-58.1551,6.8013,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,HKG,Hong_Kong,Hong Kong,113.5,115,22.1,22.6,Hong Kong,114.1694,22.3193,EPSG:4326,upper left,7,0,1,1,0,0
+Caribbean_Central_America,HND,Honduras,Honduras,-91,-84.5,12.5,17,Tegucigalpa,-87.2167,14.1,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,HRV,Croatia,Croatia,13,20,42,47,Zagreb,15.9819,45.815,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,HTI,Haiti,Haiti,-75,-71.5,17.5,20.5,Port-au-Prince,-72.335,18.5392,EPSG:4326,upper left,6,0,1,1,0,0
+Europe,HUN,Hungary,Hungary,16,23,45,49,Budapest,19.0408,47.4984,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,IDN,Indonesia,Indonesia,75,145,-15,10,Jakarta,106.8456,-6.2088,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,IMN,Isle_of_Man,Isle of Man,-6,-3,53.5,55,Douglas,-4.4821,54.167,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,IND,India,India,60,99,5,40,New Delhi,77.209,28.6139,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,IRL,Ireland,Ireland,-11,-5,51,56,Dublin,-6.2603,53.3498,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,IRN,Iran,Iran,38,65,23,42,Tehran,51.389,35.6892,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,IRQ,Iraq,Iraq,38,49,28.5,38,Baghdad,44.3661,33.3152,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,ISL,Iceland,Iceland,-27,-12,63,68,Reykjavik,-21.8952,64.1353,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,ISR,Israel,Israel,33.5,36.5,29,35,Jerusalem,35.2137,31.7683,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,ITA,Italy,Italy,2,20,35,48,Rome,12.4823,41.8955,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,JAM,Jamaica,Jamaica,-78.9,-76,17.6,19.1,Kingston,-76.792,17.9714,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,JOR,Jordan,Jordan,34,40,29,34,Amman,35.9304,31.9497,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,JPN,Japan,Japan,122.5,154,24,46,Tokyo,139.6917,35.6895,EPSG:4326,upper left,6,1,1,1,0,0
+Central_Asia,KAZ,Kazakhstan,Kazakhstan,30,90,38,58,Astana,71.4491,51.1694,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,KEN,Kenya,Kenya,30,42,-5,5,Nairobi,36.82,-1.29,EPSG:4326,upper left,6,1,1,1,0,0
+Central_Asia,KGZ,Kyrgyzstan,Kyrgyzstan,62,82,39,44,Bishkek,74.5698,42.8746,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,KHM,Cambodia,Cambodia,100,108,10,15,Phnom Penh,104.916,11.5564,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,KIR,Kiribati,Kiribati,172,178,-3,3,South Tarawa,172.979,1.3278,EPSG:4326,upper right,7,0,1,1,0,0
+Caribbean_Central_America,KNA,Saint_Kitts_and_Nevis,Saint Kitts and Nevis,-63.4,-62.1,16.9,17.5,Basseterre,-62.7177,17.3026,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,KOR,South_Korea,South Korea,123,132,32.5,39,Seoul,126.978,37.5665,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,KWT,Kuwait,Kuwait,46,49,28,31,Kuwait City,47.9774,29.3759,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,LAO,Laos,Laos,97,109,13,23,Vientiane,102.6364,17.9757,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,LBN,Lebanon,Lebanon,35,37,33,35,Beirut,35.5018,33.8938,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,LBR,Liberia,Liberia,-12.5,-7,4,9,Monrovia,-10.8,6.3,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,LBY,Libya,Libya,5,27,19,36,Tripoli,13.19,32.89,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,LCA,Saint_Lucia,Saint Lucia,-61.6,-60.6,13.6,14.4,Castries,-60.9789,14.0101,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,LIE,Liechtenstein,Liechtenstein,8.5,10.5,46.5,48,Vaduz,9.5215,47.1411,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,LKA,Sri_Lanka,Sri Lanka,78,82.5,5.5,10.5,Colombo,79.8612,6.9271,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,LSO,Lesotho,Lesotho,26.5,30,-30.8,-28.5,Maseru,27.48,-29.31,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,LTU,Lithuania,Lithuania,19,27,53.5,57.5,Vilnius,25.2799,54.6896,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,LUX,Luxembourg,Luxembourg,5,7,49,51,Luxembourg City,6.1319,49.6117,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,LVA,Latvia,Latvia,19,29,55.5,58.5,Riga,24.1049,56.9465,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,MAC,Macao,Macao,113.5,113.6,22.1,22.25,Macao,113.5439,22.1987,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MAR,Morocco,Morocco,-18,0,20,37,Rabat,-6.83,34.02,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,MCO,Monaco,Monaco,7,8,43,44,Monaco,7.4246,43.7384,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,MDA,Moldova,Moldova,25,31,45,49.5,Chișinău,28.8353,47.0105,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MDG,Madagascar,Madagascar,42,51.5,-26,-11,Antananarivo,47.51,-18.88,EPSG:4326,upper left,6,1,1,1,0,0
+North_America,MEX,Mexico,Mexico,-118,-86,14,33,Mexico City,-99.1332,19.4326,EPSG:4326,upper right,6,1,0,0,0,0
+Oceania,MHL,Marshall_Islands,Marshall Islands,168,172.5,4,10,Majuro,171.1845,7.0897,EPSG:4326,upper left,7,0,1,1,0,0
+Europe,MKD,North_Macedonia,North Macedonia,20,23.5,40,43,Skopje,21.427,41.9981,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MLI,Mali,Mali,-13,6.5,9,26,Bamako,-8,12.65,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,MLT,Malta,Malta,13,16,35,37,Valletta,14.5146,35.8997,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,MMR,Myanmar,Myanmar,88,103,9,30,Naypyidaw,96.111,19.7489,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,MNE,Montenegro,Montenegro,18,20.5,41,44.5,Podgorica,19.2594,42.4304,EPSG:4326,upper left,6,1,1,1,0,0
+North_Asia,MNG,Mongolia,Mongolia,78,122,41,53,Ulaanbaatar,106.9057,47.9222,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,MNP,Northern_Mariana_Islands,Northern Mariana Islands,144.5,146.5,13.75,15.5,Saipan,145.7066,15.1778,EPSG:4326,upper left,7,0,1,1,0,0
+Africa,MOZ,Mozambique,Mozambique,28,42,-28,-10,Maputo,32.59,-25.96,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MRT,Mauritania,Mauritania,-18,-4,28,13,Nouakchott,-15.98,18.08,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,MSR,Montserrat,Montserrat,-62.4,-62,16.6,16.9,Brades,-62.21,16.78,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,MTQ,Martinique,Martinique,-61.5,-60.5,14.3,15,Fort-de-France,-61.0588,14.6104,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MUS,Mauritius,Mauritius,57,64,-22,-18,Port Louis,57.5,-20.16,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,MWI,Malawi,Malawi,30,36.5,-18,-9,Lilongwe,33.78,-13.96,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,MYS,Malaysia,Malaysia,90,120,-1,12,Kuala Lumpur,101.6869,3.139,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,NAM,Namibia,Namibia,6,26,-30,-15,Windhoek,17.08,-22.57,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,NCL,New_Caledonia,New Caledonia,162,169,-23,-19,Nouméa,166.4572,-22.2758,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,NER,Niger,Niger,-1,17,11,25,Niamey,2.12,13.52,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,NGA,Nigeria,Nigeria,-2,16,3,15,Abuja,7.49,9.06,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,NIC,Nicaragua,Nicaragua,-88.5,-82.5,10.5,15.5,Managua,-86.2504,12.1364,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,NIU,Niue,Niue,-171,-169,-19.5,-18.5,Alofi,-169.9187,-19.0544,EPSG:4326,upper left,7,0,1,1,0,0
+Europe,NLD,Netherlands,Netherlands,3,8,50,54,Amsterdam,4.9041,52.3676,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,NOR,Norway,Norway,4,32,57,72,Oslo,10.7522,59.9139,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,NPL,Nepal,Nepal,77,89,26,31.5,Kathmandu,85.324,27.7172,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,NRU,Nauru,Nauru,166.5,167.5,-0.75,-0.25,Yaren,166.9164,-0.5477,EPSG:4326,upper left,7,0,1,1,0,0
+Oceania,NZL,New_Zealand,New Zealand,164,179,-48,-33,Wellington,174.7762,-41.2865,EPSG:4326,upper left,6,0,1,1,0,0
+Middle_East,OMN,Oman,Oman,50,62,16,27,Muscat,58.398,23.5859,EPSG:4326,upper left,6,1,1,1,0,0
+South_Asia,PAK,Pakistan,Pakistan,59,79,22.5,38,Islamabad,73.0479,33.6844,EPSG:4326,upper left,6,0,1,1,0,0
+Caribbean_Central_America,PAN,Panama,Panama,-84,-77,7,11,Panama City,-79.5199,8.9833,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,PER,Peru,Peru,-84,-68,-19,1,Lima,-77.0428,-12.0464,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,PHL,Philippines,Philippines,116,128,4.5,21.5,Manila,120.9842,14.5995,EPSG:4326,upper left,6,0,1,1,0,0
+Oceania,PLW,Palau,Palau,133.5,135.5,6.5,8.25,Ngerulmud,134.6266,7.5006,EPSG:4326,upper left,7,0,1,1,0,0
+Oceania,PNG,Papua_New_Guinea,Papua New Guinea,140,157,-12,1,Port Moresby,147.1797,-9.4438,EPSG:4326,upper left,6,0,1,1,0,0
+Europe,POL,Poland,Poland,12,25,48,56,Warsaw,21.0122,52.2297,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,PRI,Puerto_Rico,Puerto Rico,-68,-65,17.4,19,San Juan,-66.1057,18.4655,EPSG:4326,upper left,6,1,1,1,0,0
+East_Asia,PRK,North_Korea,North Korea,124,131,37.5,43.1,Pyongyang,125.7625,39.0392,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,PRT,Portugal,Portugal,-11.5,-5.5,36,43,Lisbon,-9.1399,38.7223,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,PRY,Paraguay,Paraguay,-65,-53,-28,-18,Asunción,-57.5759,-25.2637,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,PSE,Palestine,Palestine,33.5,36,31,32.75,Jerusalem,35.2137,31.7683,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,QAT,Qatar,Qatar,50,52,24,27,Doha,51.531,25.2854,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,ROU,Romania,Romania,18,31,43,49,Bucharest,26.1025,44.4268,EPSG:4326,upper left,6,1,1,1,0,0
+North_Asia,RUS,Russia,Russia,15,155,40,85,Moscow,37.6173,55.7558,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,RWA,Rwanda,Rwanda,28,31,-3,-0.9,Kigali,30.06,-1.95,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,SAU,Saudi_Arabia,Saudi Arabia,30,58,15,35,Riyadh,46.7219,24.7136,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SDN,Sudan,Sudan,19,39.5,9,24,Khartoum,32.53,15.55,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SEN,Senegal,Senegal,-19,-11,12,17,Dakar,-17.45,14.69,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,SGP,Singapore,Singapore,103.4,104.4,1.1,1.8,Singapore,103.8198,1.3521,EPSG:4326,upper left,7,0,1,1,0,0
+Oceania,SLB,Solomon_Islands,Solomon Islands,152,168,-13,-5,Honiara,159.9498,-9.4456,EPSG:4326,upper left,6,0,1,1,0,0
+Africa,SLE,Sierra_Leone,Sierra Leone,-14,-10,6.5,10.5,Freetown,-13.23,8.48,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,SLV,El_Salvador,El Salvador,-91,-87,12.5,15,San Salvador,-89.2182,13.6929,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SOM,Somalia,Somalia,38,52,-2.6,12.5,Mogadishu,45.33,2.04,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,SRB,Serbia,Serbia,17,24,41.5,47.5,Belgrade,20.4489,44.7866,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SSD,South_Sudan,South Sudan,22.5,36.5,3,14,Juba,31.58,4.85,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,STP,Sao_Tome_and_Principe,São Tomé and Príncipe,6,8,-0.5,2,São Tomé,6.73,0.34,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,SUR,Suriname,Suriname,-60,-52,1,8,Paramaribo,-55.2038,5.852,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,SVK,Slovakia,Slovakia,16,23,47,50,Bratislava,17.1077,48.1486,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,SVN,Slovenia,Slovenia,12,18,44.5,47.5,Ljubljana,14.5058,46.0569,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,SWE,Sweden,Sweden,6,26,54,71,Stockholm,18.0686,59.3293,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SWZ,Eswatini,Eswatini,30,32.5,-27.5,-25.5,Mbabane,31.13,-26.32,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,SYC,Seychelles,Seychelles,54.5,56,-5,-4,Victoria,55.45,-4.62,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,SYR,Syria,Syria,34,43,32,38,Damascus,36.2765,33.5138,EPSG:4326,upper left,6,0,1,1,0,0
+Caribbean_Central_America,TCA,Turks_and_Caicos_Islands,Turks and Caicos Islands,-73.5,-70,21,22.5,Cockburn Town,-71.1419,21.4674,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,TCD,Chad,Chad,12,25,7,25,N'Djamena,15.05,12.11,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,TGO,Togo,Togo,-2,2.5,5.5,12,Lomé,1.222,6.1319,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,THA,Thailand,Thailand,92,107,5,22,Bangkok,100.5018,13.7563,EPSG:4326,upper left,6,1,1,1,0,0
+Central_Asia,TJK,Tajikistan,Tajikistan,66,76,36,42,Dushanbe,68.7738,38.5598,EPSG:4326,upper left,6,1,1,1,0,0
+Central_Asia,TKM,Turkmenistan,Turkmenistan,46,68,34,44,Ashgabat,58.3794,37.9601,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,TLS,Timor_Leste,Timor-Leste,122,128,-10,-7.5,Dili,125.5603,-8.5586,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,TON,Tonga,Tonga,-176,-173,-22,-18,Nuku'alofa,-175.2206,-21.1394,EPSG:4326,upper left,7,0,1,1,0,0
+Caribbean_Central_America,TTO,Trinidad_and_Tobago,Trinidad and Tobago,-62.2,-60,9.8,11.6,Port of Spain,-61.5161,10.6667,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,TUN,Tunisia,Tunisia,6,13,30,39,Tunis,10.18,36.8,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,TUR,Turkiye,Türkiye,18,46.5,34.5,44.5,Ankara,32.8597,39.9334,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,TUV,Tuvalu,Tuvalu,175,180,-10,-5,Funafuti,179.194,-8.5211,EPSG:4326,upper left,7,0,1,1,0,0
+East_Asia,TWN,Taiwan,Taiwan,118,123,21,26,Taipei,121.5654,25.033,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,TZA,Tanzania,Tanzania,26,41.5,-12,0,Dodoma,35.75,-6.17,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,UGA,Uganda,Uganda,29,35.5,-2,5,Kampala,32.58,0.31,EPSG:4326,upper left,6,1,1,1,0,0
+Europe,UKR,Ukraine,Ukraine,17,41,43,54,Kyiv,30.5234,50.4501,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,URY,Uruguay,Uruguay,-61,-52,-36,-29,Montevideo,-56.1645,-34.9011,EPSG:4326,upper left,6,1,1,1,0,0
+North_America,USA,United_States,United States,-180,-60,24,80,Washington D.C.,-77.0369,38.9072,EPSG:4326,upper right,6,1,0,0,0,0
+Central_Asia,UZB,Uzbekistan,Uzbekistan,50,74,36,48,Tashkent,69.2163,41.2995,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,VCT,Saint_Vincent_and_the_Grenadines,Saint Vincent and the Grenadines,-61.5,-60.9,12.5,13.6,Kingstown,-61.2242,13.16,EPSG:4326,upper left,6,1,1,1,0,0
+South_America,VEN,Venezuela,Venezuela,-76,-59,-1,16,Caracas,-66.9036,10.4806,EPSG:4326,upper left,6,1,1,1,0,0
+Caribbean_Central_America,VGB,British_Virgin_Islands,British Virgin Islands,-65,-64.2,18.2,18.8,Road Town,-64.6167,18.4167,EPSG:4326,upper left,6,0,1,1,0,0
+Caribbean_Central_America,VIR,US_Virgin_Islands,U.S. Virgin Islands,-65.2,-64.4,17.6,18.8,Charlotte Amalie,-64.9307,18.3419,EPSG:4326,upper left,6,1,1,1,0,0
+Southeast_Asia,VNM,Vietnam,Vietnam,96,111,8,24,Hanoi,105.8544,21.0285,EPSG:4326,upper left,6,1,1,1,0,0
+Oceania,VUT,Vanuatu,Vanuatu,166,171,-21,-13,Port Vila,168.3273,-17.7333,EPSG:4326,upper right,7,0,1,1,0,0
+Oceania,WSM,Samoa,Samoa,-174,-171,-14.5,-13,Apia,-171.7514,-13.8507,EPSG:4326,upper left,7,0,1,1,0,0
+Europe,XKX,Kosovo,Kosovo,19,23,41.5,43.5,Pristina,21.1662,42.6629,EPSG:4326,upper left,6,1,1,1,0,0
+Middle_East,YEM,Yemen,Yemen,41,54,12,20,Sana'a,44.207,15.3694,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,ZAF,South_Africa,South Africa,15,35,-36,-21,Pretoria,28.19,-25.75,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,ZMB,Zambia,Zambia,20,34.5,-19,-7.5,Lusaka,28.28,-15.41,EPSG:4326,upper left,6,1,1,1,0,0
+Africa,ZWE,Zimbabwe,Zimbabwe,24,33.5,-23,-15,Harare,31.05,-17.83,EPSG:4326,upper left,6,1,1,1,0,0
