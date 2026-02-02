@@ -376,7 +376,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         # store the raw correlation data
         self.raw_rhos = rho_arrays
         self.raw_Ts = rho_periods
-        self.valid_residual_types = rho_arrays.keys() 
+        self.valid_residual_types = list(rho_arrays.keys()) 
 
         # create the interpolation functions for each residual type / array
         self._create_interpers()
@@ -391,7 +391,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
                 raise ValueError(f"Period ({max(avg_periods):.3f}) is greater "
                                 f"than the maximum allowable period for the "
                                 f"correlation model ({max(rho_periods):.3f}).")
-    
+
         super().__init__(avg_periods)
         
     def build_correlation_matrix(self):
