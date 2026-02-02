@@ -115,6 +115,8 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
     """
+    if cmaker.ps_grid_spacing:            
+        srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -148,12 +150,7 @@ def preclassical(srcs, sf, cmaker, secparams, monitor):
         else:
             splits.append(src)
     splits = _filter(splits, cmaker.oq.minimum_magnitude)
-    before_after = U32([len(splits), len(splits)])
-    yield {'before_after': before_after}
     if splits:
-        if cmaker.ps_grid_spacing:            
-            splits = grid_point_sources(splits, cmaker.ps_grid_spacing)
-            before_after[1] = len(splits)
         Ns = 10  # produce at most Ns subtasks of kind set_weight
         for i in range(Ns):
             lst = splits[i::Ns]
@@ -332,11 +329,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                 check_maxmag(pointlike)
                 smap.submit((srcs, sf, cmaker, secparams))
             res = smap.reduce()
-            before_after = res.pop('before_after')
-            if before_after[0] != before_after[1]:
-                logging.info(
-                    'Reduced the number of sources from {:_d} -> {:_d}'.
-                    format(before_after[0], before_after[1]))
         else:
             res = {}
         atomic = set(src.grp_id for src in atomic_sources)
