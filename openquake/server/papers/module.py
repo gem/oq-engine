@@ -76,10 +76,10 @@ CONSEQUENCE = {
         os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_losses.csv")
         ]
         }
-TOD = "day"
+# TOD = "day"
 
 # Fixed inputs/constants
-FNAME = os.path.join(BASE,"inputs", "papers_ses.hdf5") # Datastore (the hdf5 containing the SES ruptures)
+FNAME = os.path.join(BASE,"inputs", "rups_eur_branch_faults.hdf5") # Datastore (the hdf5 containing the SES ruptures)
 TWO24 = 2 ** 24
 
 
@@ -278,7 +278,7 @@ def get_job_ctx(rup_id,
                 taxonomy_model_csv,
                 fragility_csv,
                 consequence_csv,
-                day_or_night,
+                # day_or_night,
                 hazard_only,
                 username):
     """
@@ -319,7 +319,7 @@ def get_job_ctx(rup_id,
         'ground_motion_correlation_model': 'JB2009',
         'ground_motion_correlation_params': '{"vs30_clustering":True}',
         'horiz_comp_to_geom_mean': 'true',
-        'time_event': day_or_night,
+        # 'time_event': day_or_night,
         'export_dir': '/tmp',
         'ground_motion_fields': 'true',
         'minimum_intensity': '0.05',
@@ -415,7 +415,7 @@ def run_scenario_calc_from_ses_rupture_ext(
         taxonomy,
         fragility,
         consequence,
-        day_or_night,
+        # day_or_night,
         hazard_only=False,
         notify_to=None,
         username=None
@@ -521,7 +521,7 @@ def run_scenario_calc_from_ses_rupture_ext(
                           taxonomy,
                           fragility,
                           consequence,
-                          day_or_night,
+                          # day_or_night,
                           hazard_only,
                           username)
 
@@ -558,7 +558,7 @@ def run_scenario_calc_from_ses_rupture(rup_id, notify_to=None, username=None):
         taxonomy=TAXONOMY,
         fragility=FRAGILITY,
         consequence=CONSEQUENCE,
-        day_or_night=TOD,
+        # day_or_night=TOD,
         hazard_only=HAZARD_ONLY,
         notify_to=notify_to,
         username=username
