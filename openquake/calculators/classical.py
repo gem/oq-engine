@@ -214,7 +214,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
-        b0, b1, *blks = split_in_blocks(list(grps[0]), 8)
+        # tested in case_66
+        b0, *blks = split_in_blocks(list(grps[0]), 8)
         t0 = time.time()
         res = hazclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
@@ -222,11 +223,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         if dt > cmaker.oq.time_per_task:
             for blk in blks:
                 yield hazclassical, blk, sites, cmaker, True
-            yield hazclassical(b1, sites, cmaker, True)
         else:
-            for blk in blks:
-                b1.extend(blk)
-            yield hazclassical(b1, sites, cmaker, True)
+            yield hazclassical(sum(blks, []), sites, cmaker, True)
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
