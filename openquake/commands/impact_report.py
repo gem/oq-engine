@@ -42,74 +42,107 @@ from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data import global_risk
 
 
-def plot_variable(df, country, admin_boundaries, column, plot_title,
-                  legend_title, cities, digits, x_limits, y_limits,
-                  colors, classifier, font_size, city_font_size,
-                  title_font_size, SAVE_DIRECTORY):
+def plot_variable(df, admin_boundaries, column, classifier, colors, *,
+                  country=None, plot_title=None, legend_title=None,
+                  cities=None, digits=2, x_limits=None, y_limits=None,
+                  basemap_path=None, font_size=10, city_font_size=8,
+                  legend_font_size=8,
+                  title_font_size=14, figsize=(10, 10)):
+    """
+    Plot a classified geospatial variable with optional basemap and annotations.
 
-    # 1. Calculate natural breaks
-    rounded_bins = np.round(classifier.bins, digits)
-    classifier.bins = rounded_bins  # overwrite the classifier boundaries
-
+    Parameters
+    ----------
+    df : geopandas.GeoDataFrame
+        Input data with geometry column.
+    admin_boundaries : geopandas.GeoDataFrame
+        Administrative boundaries to overlay.
+    column : str
+        Column to classify and plot.
+    classifier : mapclassify classifier
+        Fitted classifier (e.g. NaturalBreaks).
+    colors : list[str]
+        One color per class (length must equal classifier.k).
+    country : str, optional
+        Used only for output naming or titles.
+    plot_title : str, optional
+        Figure title.
+    legend_title : str, optional
+        Legend title.
+    cities : dict[str, tuple[float, float]], optional
+        Mapping of city name → (lon, lat).
+    digits : int
+        Decimal digits for bin labels.
+    x_limits, y_limits : tuple, optional
+        Axis limits.
+    basemap_path : Path or str, optional
+        Raster basemap path.
+    """
+    if len(colors) != classifier.k:
+        raise ValueError(
+            f"Expected {classifier.k} colors, got {len(colors)}"
+        )
+    if df.crs != admin_boundaries.crs:
+        raise ValueError("df and admin_boundaries CRS do not match")
     df = df.copy()
-    df['class'] = classifier(df[column])
+    df["class"] = classifier(df[column])
 
-    # 2. Prepare custom labels for the legend
-    bins = classifier.bins
-    labels = [f"{bins[i-1]:.{digits}f} - {bins[i]:.{digits}f}"
-              for i in range(1, len(bins))]
-    labels.insert(0, f"≤ {bins[0]:.{digits}f}")
+    # Prepare labels for the legend
+    bins = np.round(classifier.bins, digits)
+    labels = [f"≤ {bins[0]:.{digits}f}"]
+    labels += [
+        f"{bins[i-1]:.{digits}f} – {bins[i]:.{digits}f}"
+        for i in range(1, len(bins))
+    ]
     labels[-1] = f"> {bins[-2]:.{digits}f}"
+    if len(labels) != classifier.k:
+        raise RuntimeError("Generated labels do not match number of classes")
 
-    # 3. Define figure and axis
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=figsize)
 
-    # 4. Plot each class with its corresponding color
+    # Plot each class with its corresponding color
     for i, color in enumerate(colors):
-        subset = df[df['class'] == i]
-        if subset.empty:
-            continue  # skip classes with no geometries
-        subset.plot(ax=ax, color=color, edgecolor='none', label=labels[i])
+        subset = df[df["class"] == i]
+        if not subset.empty:  # skip classes with no geometries
+            subset.plot(ax=ax, color=color, edgecolor="none")
 
-    # 5. Manually create legend handles based on color and label
-    handles = [mpatches.Patch(color=color, label=label)
-               for color, label in zip(colors, labels)]
+    # Create legend handles based on color and label
+    handles = [mpatches.Patch(color=c, label=l)
+               for c, l in zip(colors, labels)]
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
-              title_fontsize=font_size, loc='upper left')
+              title_fontsize=font_size, fontsize=legend_font_size,
+              loc="upper left")
 
-    # 6. Plot administrative boundaries
-    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor='black',
-                          facecolor='none', linewidth=0.4)
+    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
+                          facecolor="none", linewidth=0.4)
 
-    # 7. Add basemap
-    # FIXME:
-    # tif_path = "../data/eo_base_2020_clean_geo.tif"
-    tif_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
-    with rasterio.open(tif_path) as src:
-        show(src, ax=ax, alpha=0.8)  # Adjust alpha as needed
+    if basemap_path is not None:
+        basemap_path = Path(basemap_path)
+        with rasterio.open(basemap_path) as src:
+            if src.crs != df.crs:
+                raise ValueError("Raster CRS does not match vector CRS")
+            show(src, ax=ax, alpha=0.8)
 
-    # 8. Set geographic limits
-    ax.set_xlim(x_limits)
-    ax.set_ylim(y_limits)
+    if x_limits:
+        ax.set_xlim(x_limits)
+    if y_limits:
+        ax.set_ylim(y_limits)
 
-    # 9. Annontate cities
-    for city, (x, y) in cities.items():
-        text = plt.text(x, y, city, fontsize=city_font_size,
-                        color='black', fontweight='bold')
-        text.set_path_effects(
-            [path_effects.Stroke(linewidth=1.5, foreground='white'),
-             path_effects.Normal()])
+    if cities:
+        for city, (x, y) in cities.items():
+            txt = ax.text(x, y, city, fontsize=city_font_size,
+                          color="black", fontweight="bold")
+            txt.set_path_effects([
+                path_effects.Stroke(linewidth=1.5, foreground="white"),
+                path_effects.Normal()])
 
-    # 10. Titles and labels
-    plt.title(f'{plot_title}', fontsize=title_font_size)
-    plt.xlabel('Longitude', fontsize=font_size)
-    plt.ylabel('Latitude', fontsize=font_size)
+    if plot_title:
+        ax.set_title(plot_title, fontsize=title_font_size)
 
-    # 11. Adjust layout
-    plt.tight_layout(rect=[0, 0, 0.85, 1])
-    fig.savefig(os.path.join(SAVE_DIRECTORY, f'{column}_{country}.png'),
-                dpi=300, bbox_inches='tight')
-    plt.close()
+    ax.set_xlabel("Longitude", fontsize=font_size)
+    ax.set_ylabel("Latitude", fontsize=font_size)
+    fig.tight_layout(rect=[0, 0, 0.85, 1])
+    return fig, ax
 
 
 def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
@@ -198,7 +231,7 @@ def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
         index=False, header=False)
 
     # Define your custom break thresholds (upper limits of each bin)
-    breaks = [1, 10, 100, 1000]
+    breaks = [1, 10, 100, 1000]  # , 10000]
 
     classifier_actual_fatalities = mapclassify.UserDefined(
         df_actual['Fatalities'], bins=breaks)
@@ -207,39 +240,58 @@ def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
     classifier_actual_buildings = mapclassify.UserDefined(
         df_actual['Buildings'], bins=breaks)
 
-    digits_losses = 0
+    digits_legend_losses = 0
 
     # Plot titles
     title_actual_fatalities = 'Fatalities'
     title_actual_homeless = 'Homeless'
     title_actual_buildings = 'Buildings beyond repair'
 
-    colors_fatalities = ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d']
-    colors_homeless = ['#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043']
-    colors_buildings = ['#ffffff', '#bdbdbd', '#737373', '#424242', '#000000']
+    colors_fatalities = ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d']  # , '#67000d']
+    colors_homeless = ['#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77']  # , '#980043']
+    colors_buildings = ['#ffffff', '#bdbdbd', '#737373', '#424242']  # , '#000000']
+
+    # FIXME:
+    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
+    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
 
     # Plots Actual
-    plot_variable(df_actual, country, admin_boundaries, 'Fatalities',
-                  title_actual_fatalities, 'Fatalities', cities, digits_losses,
-                  x_limits_country, y_limits_country, colors_fatalities,
-                  classifier_actual_fatalities, font_size, city_font_size,
-                  title_font_size, SAVE_DIRECTORY)
-
-    plot_variable(df_actual, country, admin_boundaries, 'Homeless',
-                  title_actual_homeless, 'Homeless', cities, digits_losses,
-                  x_limits_country, y_limits_country, colors_homeless,
-                  classifier_actual_homeless, font_size, city_font_size,
-                  title_font_size, SAVE_DIRECTORY)
-
-    plot_variable(df_actual, country, admin_boundaries, 'Buildings',
-                  title_actual_buildings, 'Buildings', cities, digits_losses,
-                  x_limits_country, y_limits_country, colors_buildings,
-                  classifier_actual_buildings, font_size, city_font_size,
-                  title_font_size, SAVE_DIRECTORY)
-
-    print(f"Total fatalities: {df_actual['Fatalities'].sum()}")
-    print(f"Total homeless: {df_actual['Homeless'].sum()}")
-    print(f"Total buildings beyond repair: {df_actual['Buildings'].sum()}")
+    fig, ax = plot_variable(df_actual, admin_boundaries, 'Fatalities',
+                            classifier_actual_fatalities, colors_fatalities,
+                            country=country, plot_title=title_actual_fatalities,
+                            legend_title='Fatalities', cities=cities,
+                            digits=digits_legend_losses, x_limits=x_limits_country,
+                            y_limits=y_limits_country,
+                            font_size=font_size, city_font_size=city_font_size,
+                            title_font_size=title_font_size,
+                            basemap_path=basemap_path)
+    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Fatalities_{country}.png'),
+                dpi=300, bbox_inches='tight')
+    fig, ax = plot_variable(df_actual, admin_boundaries, 'Homeless',
+                            classifier_actual_homeless, colors_homeless,
+                            country=country, plot_title=title_actual_homeless,
+                            legend_title='Homeless', cities=cities,
+                            digits=digits_legend_losses, x_limits=x_limits_country,
+                            y_limits=y_limits_country,
+                            font_size=font_size, city_font_size=city_font_size,
+                            title_font_size=title_font_size,
+                            basemap_path=basemap_path)
+    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Homeless_{country}.png'),
+                dpi=300, bbox_inches='tight')
+    fig, ax = plot_variable(df_actual, admin_boundaries, 'Buildings',
+                            classifier_actual_buildings, colors_buildings,
+                            country=country, plot_title=title_actual_buildings,
+                            legend_title='Buildings', cities=cities,
+                            digits=digits_legend_losses, x_limits=x_limits_country,
+                            y_limits=y_limits_country,
+                            font_size=font_size, city_font_size=city_font_size,
+                            title_font_size=title_font_size,
+                            basemap_path=basemap_path)
+    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Buildings_{country}.png'),
+                dpi=300, bbox_inches='tight')
+    # print(f"Total fatalities: {df_actual['Fatalities'].sum()}")
+    # print(f"Total homeless: {df_actual['Homeless'].sum()}")
+    # print(f"Total buildings beyond repair: {df_actual['Buildings'].sum()}")
 
 
 def _scaled_image(path, max_w, max_h):
