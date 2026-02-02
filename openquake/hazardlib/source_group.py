@@ -507,8 +507,7 @@ class CompositeSourceModel:
                 spc = oq.complex_fault_mesh_spacing
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        max_weight *= 1.05  # increased to produce fewer tasks
+        max_weight = tot_weight / (oq.concurrent_tasks // 2 or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
@@ -556,7 +555,7 @@ class CompositeSourceModel:
                 maxhint = N / oq.max_sites_disagg  # becomes 1
             tilegetters = list(sitecol.split(maxhint))
         else:
-            blocks = list(split_in_blocks(sg, hint / int(splits), weight))
+            blocks = split_in_blocks(sg, hint / int(splits), weight)
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
@@ -626,7 +625,7 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
                 grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
             else:
                 grp_keys = [str(grp_id)]
-            out.append((cmaker, tilegetters, grp_keys, extra))
+            out.append((cmaker, tilegetters, grp_keys, False))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     tilegetters_ = {}
@@ -636,10 +635,9 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
         tilegetters_[gid] = tilegetters
         blocks_[gid].extend(blocks)
         cmaker_[gid] = cmaker
-    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
         grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
-        out.append((cmaker_[gid], tgetters, grp_keys, extra))
+        out.append((cmaker_[gid], tgetters, grp_keys, True))
     if atomic:
         logging.info('Collapsed %d atomic tasks into %d',
                      len(atomic), len(cmaker_))

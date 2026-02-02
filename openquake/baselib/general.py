@@ -387,7 +387,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, total_weight / hint, weight, key)
+    return list(block_splitter(items, total_weight / hint, weight, key))
 
 
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
