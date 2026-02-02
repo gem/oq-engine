@@ -101,28 +101,58 @@ def _filter_mag(srcs, min_mag):
     return out
 
 
-def set_weight(srcs, sf, cmaker, monitor):
+def set_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    cmaker.set_weight(srcs, sf)
-    return {srcs[0].grp_id: srcs}
+    mon1 = monitor('building top of ruptures', measuremem=True)
+    mon2 = monitor('setting msparams', measuremem=False)
+    ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
+    sf.integration_distance = cmaker.maximum_distance
+    maxdist = cmaker.maximum_distance.y[-1]
+    N = len(sf.sitecol) if sf.sitecol else 0
+    splits = []
+    for src in srcs:
+        if src.code == b'F':
+            if N and N <= cmaker.max_sites_disagg:
+                mask = sf.get_close(secparams) > 0  # shape S
+            else:
+                mask = None
+            src.set_msparams(secparams, mask, ry0, mon1, mon2)
+        elif src.code in b'pP' and sf.sitecol:
+            # special case, compute distances
+            distances = sf.sitecol.get_cdist(src.location)
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = (distances <= maxdist + radius).sum()
+        elif sf.sitecol:
+            # NB: this is approximate, since the sites are sampled
+            src.nsites = len(sf.close_sids(src))  # can be 0
+            # print(f'{src.source_id=}, {src.nsites=}')
+        else:
+            src.nsites = 1
+        # NB: it is crucial to split only the close sources, for
+        # performance reasons (think of Ecuador in SAM)
+        if cmaker.split_sources and src.nsites and src.code != b'F':
+            # multifault source have been already split in save_and_split
+            splits.extend(split_source(src))
+        else:
+            splits.append(src)
 
-    
+    # filter by magnitude and count ruptures
+    splits = _filter_mag(splits, cmaker.oq.minimum_magnitude)
+    if not splits:
+        return {}
+
+    cmaker.set_weight(splits, sf)
+    return {splits[0].grp_id: splits}
+
+
 def preclassical(sources, sf, cmaker, secparams, monitor):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
     """
-    mon1 = monitor('building top of ruptures', measuremem=True)
-    mon2 = monitor('setting msparams', measuremem=False)
-    mon3 = monitor('prefiltering/splitting', measuremem=False)
-    ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
-    sf.integration_distance = cmaker.maximum_distance
-    maxdist = cmaker.maximum_distance.y[-1]
-    N = len(sf.sitecol) if sf.sitecol else 0
-
     # possibly grid the pointlike sources
     if cmaker.ps_grid_spacing and cmaker.split_sources:
         srcs = []
@@ -135,43 +165,11 @@ def preclassical(sources, sf, cmaker, secparams, monitor):
     else:
         srcs = sources
 
-    # filter and then split the heavy sources
-    with mon3:
-        splits = []
-        for src in srcs:
-            if src.code == b'F':
-                if N and N <= cmaker.max_sites_disagg:
-                    mask = sf.get_close(secparams) > 0  # shape S
-                else:
-                    mask = None
-                src.set_msparams(secparams, mask, ry0, mon1, mon2)
-            elif src.code in b'pP' and sf.sitecol:
-                # special case, compute distances
-                distances = sf.sitecol.get_cdist(src.location)
-                radius = src._get_max_rupture_projection_radius()
-                src.nsites = (distances <= maxdist + radius).sum()
-            elif sf.sitecol:
-                # NB: this is approximate, since the sites are sampled
-                src.nsites = len(sf.close_sids(src))  # can be 0
-                # print(f'{src.source_id=}, {src.nsites=}')
-            else:
-                src.nsites = 1
-            # NB: it is crucial to split only the close sources, for
-            # performance reasons (think of Ecuador in SAM)
-            if cmaker.split_sources and src.nsites and src.code != b'F':
-                # multifault source have been already split in save_and_split
-                splits.extend(split_source(src))
-            else:
-                splits.append(src)
-        # filter by magnitude and count ruptures
-        splits = _filter_mag(splits, cmaker.oq.minimum_magnitude)
-
-    if splits:
-        Ns = 10  # produce at most Ns subtasks of kind set_weight
-        for i in range(Ns):
-            lst = splits[i::Ns]
-            if lst:
-                yield set_weight, lst, sf, cmaker
+    Ns = 10  # produce at most Ns subtasks of kind set_weight
+    for i in range(Ns):
+        lst = srcs[i::Ns]
+        if lst:
+            yield set_weight, lst, sf, cmaker, secparams
 
 
 def get_req_gb(data, N, oq):
