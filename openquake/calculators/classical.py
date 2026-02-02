@@ -215,16 +215,16 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = split_in_blocks(list(grps[0]), 8)
+        blks = list(split_in_blocks(list(grps[0]), 6))
         t0 = time.time()
-        res = hazclassical(b0, sites, cmaker, True)
-        dt = time.time() - t0
-        yield res
-        if dt > cmaker.oq.time_per_task:
-            for blk in blks:
-                yield hazclassical, blk, sites, cmaker, True
-        else:
-            yield hazclassical(sum(blks, []), sites, cmaker, True)
+        for b, blk in enumerate(blks):
+            yield hazclassical(blk, sites, cmaker, True)
+            dt = time.time() - t0
+            if dt > cmaker.oq.time_per_task:
+                print(f'{monitor.task_no=}, {b=}, {len(blks[b+1:])=}')
+                for blk in blks[b+1:]:
+                    yield hazclassical, blk, sites, cmaker, True
+                return
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
