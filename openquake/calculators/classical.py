@@ -593,8 +593,10 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         L = self.oqparam.imtls.size
         self.rmap = {}
+        # in the case of many sites produce half the tasks
+        maxw = self.max_weight if self.few_sites else 2*self.max_weight
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           self.max_weight, self.num_chunks, tiling=self.tiling)
+                           maxw, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.tiling = self.tiling
