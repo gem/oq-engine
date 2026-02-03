@@ -232,7 +232,7 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
                 wfp, boundaries_dir, basemap_path, outputs_basedir):
 
-    save_dir = outputs_basedir / country
+    save_dir = Path(outputs_basedir) / country
     save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
@@ -364,7 +364,7 @@ def make_report_for_country(
                 wfp, boundaries_dir, basemap_path, outputs_dir)
 
     # Paths
-    country_pngs_dir = outputs_dir / country
+    country_pngs_dir = Path(outputs_dir) / country
     png1 = country_pngs_dir / f"Buildings_{country}.png"
     png2 = country_pngs_dir / f"Fatalities_{country}.png"
     png3 = country_pngs_dir / f"Homeless_{country}.png"
@@ -551,10 +551,19 @@ def _get_notes(oqparam):
     return notes
 
 
-def main(calc_id: int = -1, *, export_dir='.'):
+def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,
+         basemap_path=None, outputs_dir=None):
     """
     Create a PDF impact report
     """
+    # boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
+    # # FIXME:
+    # # basemap_path = "../data/eo_base_2020_clean_geo.tif"
+    # basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
+    if not outputs_dir:
+        oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
+        outputs_dir = oq_basedir / "outputs" / "impact"
+
     dstore = datastore.read(calc_id)
     dstore.export_dir = export_dir
     lon = dstore['oqparam'].rupture_dict['lon']
@@ -578,13 +587,6 @@ def main(calc_id: int = -1, *, export_dir='.'):
         lon, lat, buffer_radius=0.5, region_kind='country')
     iso3 = iso3_codes[0]  # TODO: handle multi-country case
 
-    boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
-    # FIXME:
-    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
-    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
-    oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
-    outputs_dir = oq_basedir / "outputs" / "impact"
-
     make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
@@ -592,4 +594,7 @@ def main(calc_id: int = -1, *, export_dir='.'):
 
 
 main.calc_id = 'number of the calculation'
+main.boundaries_dir = 'directory containing administrative boundaries'
+main.basemap_path = 'path to the basemap'
+main.outputs_dir = 'directory where to store impact outputs'
 main.export_dir = dict(help='export directory', abbrev='-d')
