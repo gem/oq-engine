@@ -152,7 +152,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     return fig, ax
 
 
-def load_admin_boundaries(*, country, iso3, adm_level, boundaries_dir, wfp,
+def load_admin_boundaries(country, iso3, adm_level, boundaries_dir, wfp,
                           crs="EPSG:4326"):
     if wfp:
         shp = (
@@ -226,7 +226,7 @@ def build_classifiers(df, *, breaks):
     }
 
 
-def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
+def plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country, font_size,
                 city_font_size, title_font_size, wfp, boundaries_dir,
                 basemap_path, outputs_basedir):
@@ -235,10 +235,7 @@ def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
     save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
-        country=country, iso3=iso3, adm_level=adm_level,
-        boundaries_dir=boundaries_dir, wfp=wfp)
-
-    losses_df = load_losses_csv(avg_losses_mean_fname)
+        country, iso3, adm_level, boundaries_dir, wfp)
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
@@ -297,7 +294,8 @@ def _scaled_image(path, max_w, max_h):
     )
 
 
-def _get_impact_summary_ranges(aggrisk_tags):
+def _get_impact_summary_ranges(dstore):
+    aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
         'Fatalities': 'occupants',
         'Displaced': 'residents',
@@ -317,46 +315,28 @@ def _get_impact_summary_ranges(aggrisk_tags):
     return summary_ranges
 
 
-def main(calc_id: int = -1, *, export_dir='.'):
-    """
-    Create a PDF impact report
-    """
-    dstore = datastore.read(calc_id)
-    dstore.export_dir = export_dir
-    lon = dstore['oqparam'].rupture_dict['lon']
-    lat = dstore['oqparam'].rupture_dict['lat']
-    tags_agg_losses = ["occupants", 'number', 'residents']
-    aggrisk_tags = extract(dstore, 'aggrisk_tags')
+def _get_losses(dstore):
+    # FIXME: probably there is a more efficient way, rather than
+    # exporting and reading the exported csv
     fnames = export(('avg_losses-stats', 'csv'), dstore)
-
-    oqparam = dstore['oqparam']
-    rupdic = oqparam.rupture_dict
-    event_date = oqparam.local_timestamp
-    event_name = rupdic['title']
-    shakemap_version = rupdic['shakemap_desc']
-
-    job = logs.dbcmd('get_job', calc_id)
-    time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
-
-    disclaimer_txt = 'TODO'
-    notes_txt = 'TODO'
-
-    dstore.close()
-
-    summary_ranges = _get_impact_summary_ranges(aggrisk_tags)
-
     avg_losses_mean_fname = [
         fname for fname in fnames if 'avg_losses-mean' in fname][0]
-    iso3_codes = get_close_regions(
-        lon, lat, buffer_radius=0.5, region_kind='country')
-    iso3 = iso3_codes[0]  # TODO: handle case multi-country
+    losses_df = load_losses_csv(avg_losses_mean_fname)
+    return losses_df
 
-    country_info_fname = os.path.join(
-        os.path.dirname(global_risk.__file__), 'country_info.csv')
-    df = pd.read_csv(country_info_fname)
+
+def make_report_for_country(
+        iso3, event_name, event_date, shakemap_version, time_of_calc,
+        disclaimer_txt, notes_txt, losses_df, summary_ranges):
+
+    tags_agg_losses = ["occupants", 'number', 'residents']
+
+    countries_info_fname = os.path.join(
+        os.path.dirname(global_risk.__file__), 'countries_info.csv')
+    country_info_df = pd.read_csv(countries_info_fname)
 
     # select the row of interest
-    row = df.loc[df["ISO3"] == iso3].iloc[0]
+    row = country_info_df.loc[country_info_df["ISO3"] == iso3].iloc[0]
 
     iso3 = row["ISO3"]
     country = row["ENGLISH_COUNTRY"]
@@ -390,7 +370,7 @@ def main(calc_id: int = -1, *, export_dir='.'):
     outputs_basedir = BASE / "outputs" / "impact"
 
     # Country-level comparison
-    plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
+    plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
                 font_size, city_font_size, title_font_size, wfp,
                 boundaries_dir, basemap_path, outputs_basedir)
@@ -558,6 +538,34 @@ def main(calc_id: int = -1, *, export_dir='.'):
     ]))
 
     doc.build([master_layout])
+
+
+def main(calc_id: int = -1, *, export_dir='.'):
+    """
+    Create a PDF impact report
+    """
+    dstore = datastore.read(calc_id)
+    dstore.export_dir = export_dir
+    lon = dstore['oqparam'].rupture_dict['lon']
+    lat = dstore['oqparam'].rupture_dict['lat']
+    summary_ranges = _get_impact_summary_ranges(dstore)
+    losses_df = _get_losses(dstore)
+    oqparam = dstore['oqparam']
+    rupdic = oqparam.rupture_dict
+    event_name = rupdic['title']
+    event_date = oqparam.local_timestamp
+    shakemap_version = rupdic['shakemap_desc']
+    job = logs.dbcmd('get_job', calc_id)
+    time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    disclaimer_txt = 'TODO'
+    notes_txt = 'TODO'
+    dstore.close()
+    iso3_codes = get_close_regions(
+        lon, lat, buffer_radius=0.5, region_kind='country')
+    iso3 = iso3_codes[0]  # TODO: handle multi-country case
+    make_report_for_country(
+        iso3, event_name, event_date, shakemap_version, time_of_calc,
+        disclaimer_txt, notes_txt, losses_df, summary_ranges)
 
 
 main.calc_id = 'number of the calculation'
