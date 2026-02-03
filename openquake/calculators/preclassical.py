@@ -19,6 +19,7 @@
 import sys
 import logging
 import operator
+import psutil
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
@@ -218,7 +219,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         assert not oq.disagg_by_src
         assert N > oq.max_sites_disagg
     else:
-        logging.info(f'Requiring {req_gb.sum():.1f} GB for the RateMaps')
+        required_gb = req_gb.sum()
+        avail_gb = psutil.virtual_memory().available / 1024**3
+        if required_gb > avail_gb:
+            raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
+        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
     for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
