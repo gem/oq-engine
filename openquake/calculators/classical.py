@@ -151,12 +151,17 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros, monitor=None):
+def hazclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
     """
     Wrapper over hazard_curve.classical
     """
     if monitor:
         cmaker.init_monitoring(monitor)
+    if dstore:
+        with dstore:
+            sites = tgetter(dstore['sitecol'], cmaker.ilabel)
+    else:
+        sites = tgetter
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
@@ -222,7 +227,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield res
         if dt > cmaker.oq.time_per_task:
             for blk in blks:
-                yield hazclassical, blk, sites, cmaker, True
+                yield hazclassical, blk, tilegetter, cmaker, True, dstore
         else:
             yield hazclassical(sum(blks, []), sites, cmaker, True)
     else:
@@ -594,9 +599,8 @@ class ClassicalCalculator(base.HazardCalculator):
         L = self.oqparam.imtls.size
         self.rmap = {}
         # in the case of many sites produce half the tasks
-        maxw = self.max_weight if self.few_sites else 2*self.max_weight
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           maxw, self.num_chunks, tiling=self.tiling)
+                           self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.tiling = self.tiling
@@ -729,7 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
+            slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
+                          dur.max() > 5 * oq.time_per_task)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
