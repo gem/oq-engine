@@ -52,16 +52,6 @@ AB20_COEFFS = {
 M1 = 5.0
 M2 = 7.0
 MAG_BINS = np.array([3.5, 4.5, 5.5, 6.5, 7.5, 8.5])
-T_REFS = np.array([0.20, 0.28, 0.40, 0.95, 1.40, 2.80])
-
-
-def _get_tref(ctx):
-    """
-    Magnitude-dependent conditioning period Tref (Table 3.1)
-    - used when the conditiong IMTs are not specified
-    """
-    idx = np.searchsorted(MAG_BINS, ctx.mag[0], side="left")
-    return T_REFS[min(idx, len(T_REFS) - 1)]
 
 
 def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):
@@ -176,10 +166,10 @@ class AbrahamsonBhasin2020(GMPE):
     # Conditional GMPE
     conditional = True
     kind = "general"
-    REQUIRES_IMTS = []
-    # the mean and std devs will be computed
-    # within this GSIM's compute method given they
-    # are ctx dependent (we cannot provide apriori)
+    REQUIRES_IMTS = [SA(0.2), SA(0.28), SA(0.40), SA(0.95), SA(1.4), SA(2.8)]
+    # The conditioning periods are selected from the following (and few in
+    # number) disrete periods based on the ctx's magnitude so we can just
+    # specify these values here
 
     def compute(self, ctx: np.recarray, base_preds: dict):
         """
@@ -196,16 +186,11 @@ class AbrahamsonBhasin2020(GMPE):
         # Get conditioning IMT based on self.kind
         c = AB20_COEFFS[self.kind]
         if self.kind == "general":
-            tref = _get_tref(ctx)  # Mag-dependent
+            # Mag-dependent conditioning period Tref (Table 3.1)
+            idx = np.searchsorted(MAG_BINS, ctx.mag[0], side="left")
+            t_refs = np.array([imt.period for imt in self.REQUIRES_IMTS])
+            tref = t_refs[min(idx, len(t_refs) - 1)]
             cond_imt = SA(tref)
-            # We cannot know apriori the cond_imt if using "general"
-            # given it is ctx-dependent so compute here using the
-            # underlying gsim instead
-            mean_t, sig_t, tau_t, phi_t = [
-                np.array([np.zeros_like(ctx.vs30)]) for _ in range(4)]
-            base_preds["base"].compute(ctx, [cond_imt], mean_t, sig_t, tau_t, phi_t)
-            base_preds[str(cond_imt)] = {
-                "mean": mean_t, "sig": sig_t, "tau": tau_t, "phi": phi_t}
         elif self.kind == "pga_based":
             cond_imt = PGA()
         else:

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import time
 import psutil
 import logging
 import operator
@@ -27,9 +28,10 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.source_group import read_csm, read_src_group
+from openquake.hazardlib.source_group import (
+    read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
-from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
+from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
     RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
@@ -139,7 +141,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def read_grp_sitecol(dstore, grp_keys):
+def read_groups_sitecol(dstore, grp_keys):
     """
     :returns: source groups associated to the keys and site collection
     """
@@ -149,72 +151,87 @@ def read_grp_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def classical_disagg(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
+def hazclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
     """
-    Call the classical calculator in hazardlib with few sites
+    Wrapper over hazard_curve.classical
     """
-    cmaker.init_monitoring(monitor)
-    grp, sitecol = read_grp_sitecol(dstore, grp_keys)
-    sites = tilegetter(sitecol, cmaker.ilabel)
-    if extra['atomic']:
-        # case_27 (Japan)
-        # disagg_by_src works since the atomic group contains a single
-        # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grp, sites, cmaker)
-        # do not remove zeros, otherwise AELO for JPN will break
-        # since there are 4 sites out of 18 with zeros
-        result['rmap'] = result.pop('rmap')
-        result['rmap'].gid = cmaker.gid
-        result['rmap'].wei = cmaker.wei
-        yield result
+    if monitor:
+        cmaker.init_monitoring(monitor)
+    if dstore:
+        with dstore:
+            sites = tgetter(dstore['sitecol'], cmaker.ilabel)
     else:
-        # yield a result for each base source
-        for g in grp:
-            for srcs in groupby(g, valid.basename).values():
-                result = hazclassical(srcs, sites, cmaker)
-                result['rmap'].gid = cmaker.gid
-                result['rmap'].wei = cmaker.wei
-                yield result
-
-
-def classical(grp_keys, tilegetter, cmaker, extra, dstore, monitor):
-    """
-    Call the classical calculator in hazardlib with many sites
-    """
-    cmaker.init_monitoring(monitor)
-    grp, sitecol = read_grp_sitecol(dstore, grp_keys)
-    result = hazclassical(grp, tilegetter(sitecol, cmaker.ilabel), cmaker)
-    if len(grp_keys) > 1:
-        # source_data has keys src_id, grp_id, nsites, esites, nrupts,
-        # weight, ctimes, taskno
-        for key, lst in result['source_data'].items():
-            if key in ('weight', 'nrupts'):
-                # avoid bogus weights in `oq show task:classical`
-                lst[:] = [0. for _ in range(len(lst))]
-
-    rmap = result.pop('rmap').remove_zeros()
-    if (rmap.size_mb and config.directory.custom_tmp and
-            extra['blocks'] == 1):
-        rates = rmap.to_array(cmaker.gid)
-        _store(rates, extra['num_chunks'], None, monitor)
-    elif extra['blocks'] == 1:
-        result['rmap'] = rmap.to_array(cmaker.gid)
-    else:
-        result['rmap'] = rmap
-        result['rmap'].gid = cmaker.gid
-        result['rmap'].wei = cmaker.wei
+        sites = tgetter
+    result = hazard_curve.classical(grp, sites, cmaker)
+    if remove_zeros:
+        result['rmap'] = result['rmap'].remove_zeros()
+    result['rmap'].gid = cmaker.gid
+    result['rmap'].wei = cmaker.wei
     return result
 
 
-def _update_dic(result, res):
-    if not result:
-        result.update(res)
+# NB: the tilegetter here is trivial unless there are ilabels
+def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with few sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups.
+    """
+    cmaker.init_monitoring(monitor)
+    grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    sites = tilegetter(sitecol, cmaker.ilabel)
+    if grps[0].atomic:
+        # case_27 (Japan)
+        # disagg_by_src works since the atomic group contains a single
+        # source 'case' (mutex combination of case:01, case:02)
+        result = hazclassical(grps, sites, cmaker, remove_zeros=False)
+        # do not remove zeros, otherwise AELO for JPN will break
+        yield result
     else:
-        result['rmap'].array += res['rmap'].array
-        result['cfactor'] += res['cfactor']
-        result['dparam_mb'] += res['dparam_mb']
-        result['source_mb'] += res['source_mb']
+        # yield a result for each base source
+        for grp in grps:
+            for srcs in groupby(grp, valid.basename).values():
+                result = hazclassical(srcs, sites, cmaker, remove_zeros=False)
+                yield result
 
+
+def split_in_blocks(sources, n):
+    sources.sort(key=get_weight)
+    for srcs in numpy.array_split(sources, n):
+        if len(srcs):
+            yield list(srcs)
+
+
+def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with many sites.
+    `grp_keys` contains always a single element except in the case
+    of multiple atomic groups.
+    """
+    cmaker.init_monitoring(monitor)
+    # grp_keys is multiple only for JPN and New Madrid groups
+    grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    fulltask = all('-' not in grp_key for grp_key in grp_keys)
+    sites = tilegetter(sitecol, cmaker.ilabel)
+    if fulltask:
+        # return raw array that will be stored immediately
+        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+        yield result
+    elif len(grps) == 1 and len(grps[0]) >= 3:
+        # tested in case_66
+        b0, *blks = split_in_blocks(list(grps[0]), 8)
+        t0 = time.time()
+        res = hazclassical(b0, sites, cmaker, True)
+        dt = time.time() - t0
+        yield res
+        if dt > cmaker.oq.time_per_task:
+            for blk in blks:
+                yield hazclassical, blk, tilegetter, cmaker, True, dstore
+        else:
+            yield hazclassical(sum(blks, []), sites, cmaker, True)
+    else:
+        yield hazclassical(grps, sites, cmaker, True)
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
@@ -338,12 +355,12 @@ def make_hmap_png(hmap, lons, lats):
 
 
 # used in in disagg_by_src
-def get_rates(pmap, grp_id, M, itime):
+def get_rates(rmap, M, itime):
     """
-    :param pmap: a MapArray
+    :param rmap: a MapArray
     :returns: an array of rates of shape (N, M, L1)
     """
-    rates = pmap.array @ pmap.wei / itime
+    rates = rmap.array @ rmap.wei / itime
     return rates.reshape((len(rates), M, -1))
 
 
@@ -376,7 +393,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, source_data, rup_data
+        :param dic: dict with keys rmap, source_data, rup_data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
@@ -403,7 +420,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
-            acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
+            acc[source_id] += get_rates(rmap, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
@@ -512,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Reading from parent calculation')
             parent = self.datastore.parent
             self.full_lt = parent['full_lt'].init()
-            self.csm = read_csm(parent)
+            self.csm = read_csm(parent, self.full_lt)
             self.datastore['source_info'] = parent['source_info'][:]
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
@@ -525,7 +542,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_rmap_gb(
                 self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
@@ -569,10 +586,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        if config.directory.custom_tmp:
-            scratch = parallel.scratch_dir(self.datastore.calc_id)
-            logging.info('Storing the rates in %s', scratch)
-            self.datastore.hdf5.attrs['scratch_dir'] = scratch
         if self.tiling:
             assert not oq.disagg_by_src
             assert self.N > self.oqparam.max_sites_disagg, self.N
@@ -585,26 +598,36 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         L = self.oqparam.imtls.size
         self.rmap = {}
-        data = self.csm.split_atomic(
-            self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
-            tiling=self.tiling)
+        # in the case of many sites produce half the tasks
+        data = get_allargs(self.csm, self.cmdict, self.sitecol,
+                           self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
-        for cmaker, tilegetters, grp_keys, extra in data:
+        for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.tiling = self.tiling
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
-                for grp_key in grp_keys:
-                    g = int(grp_key.split('-')[0])
-                    self.rmap[g] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if self.few_sites or oq.disagg_by_src:
+                grp_id = int(grp_keys[0].split('-')[0])
+                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+            if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                for grp_key in grp_keys:
-                    allargs.append(([grp_key], tgetter, cmaker, extra, ds))
+                if atomic:
+                    # JPN, send the grp_keys together, they will all send
+                    # rates to the RateMap associated to the first grp_id
+                    allargs.append((grp_keys, tgetter, cmaker, ds))
+                else:
+                    # send a grp_key at the time
+                    for grp_key in grp_keys:
+                        allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         kind = 'tiling' if oq.tiling else 'regular'
         logging.warning('This is a %s calculation with '
-                        '%d tasks, maxtiles=%d', kind, len(allargs),
-                        maxtiles)
+                        '%d tasks, maxtiles=%d', kind,
+                        len(allargs), maxtiles)
+
+        # save grp_keys by task
+        keys = numpy.array([' '.join(args[0]).encode('ascii')
+                            for args in allargs])
+        self.datastore.create_dset('grp_keys', keys)
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
@@ -626,7 +649,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Saving RateMaps')
 
         def genargs():
-            # produce Gt arguments (i.e. tasks when custom_tmp is set)
+            # produce Gt arguments
             for grp_id, rmap in self.rmap.items():
                 for g, j in rmap.jid.items():
                     yield grp_id, g, self.N, rmap.jid, self.num_chunks
@@ -667,13 +690,14 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
         df = pandas.DataFrame(self.source_data)
+
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
         # for points within the pointsource_distance (n points) and
         # producing 20 effective ruptures for the N-n points outside;
         # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
         # it gives impact = 38, i.e. there are 38 effective ruptures
-        df['impact'] = df.nsites / self.N
+        df['impact'] = df.nctxs / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
 
@@ -709,7 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
+            slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
+                          dur.max() > 5 * oq.time_per_task)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
@@ -766,7 +791,7 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore.parent
         allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt, oq)]
-        if not config.directory.custom_tmp and not allargs:  # case_60
+        if not allargs:  # case_60
             logging.warning('No rates were generated')
             return
         self.hazard = {}  # kind -> array

@@ -23,14 +23,14 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.gsim.gmpe_table import _return_tables
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
-
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 # Site terms imports
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import _get_bssa14_site_term
@@ -100,8 +100,18 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # Compute the means and std devs for IMTs required by conditional GMPEs
     imts_req = self.imts_req
     sh = (len(imts_req), len(ctx_copy))
-    mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
-                                   np.empty(sh), np.empty(sh))
+    mean_b, sig_b, tau_b, phi_b = (
+        np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh))
+    if hasattr(self.gmpe, "set_tables"):
+        # Set GMPE tables for additional IMTs required by conditional GMPE
+        for imt in imts_req:
+            for mag in ctx_copy.mag:
+                key = ('%.2f' % mag, imt.string)
+                self.gmpe.mean_table[key] =\
+                      _return_tables(self.gmpe, float(mag), imt, 'IMLs')
+                if self.gmpe.stddev is not None:
+                    self.gmpe.sig_table[key] =\
+                          _return_tables(self.gmpe, float(mag), imt, 'Total')
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
@@ -130,7 +140,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     if imts_base:
         compute_imts_subset(
             self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
-
+    
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     """
@@ -431,7 +441,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
         # Instantiate here and store for later
         [(gmpe_name, kw)] = cond_gmpe_by_imt[imt]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
-        cond.from_mgpme = True
+        cond.from_mgmpe = True
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "
                              f"REQUIRES_IMTS attribute - this is "
@@ -447,6 +457,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
 
         # Add each required IMT so we compute all using underlying GMM once
         imts_req.update(cond.REQUIRES_IMTS)
+
     return sorted(imts_req)
 
 

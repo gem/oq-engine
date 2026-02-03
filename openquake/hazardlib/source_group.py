@@ -40,7 +40,7 @@ TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 weight = operator.attrgetter('weight')
-CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
+CALC_TIME, NUM_CTXS, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
 
 def _grp_id(blk):
@@ -429,13 +429,13 @@ class CompositeSourceModel:
             self.source_info = self.get_source_info()
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
-        for src_id, nsites, weight, ctimes in python3compat.zip(
-                source_data['src_id'], source_data['nsites'],
+        for src_id, nctxs, weight, ctimes in python3compat.zip(
+                source_data['src_id'], source_data['nctxs'],
                 source_data['weight'], source_data['ctimes']):
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_SITES] = nsites
+            row[NUM_CTXS] = nctxs
 
     def count_ruptures(self):
         """
@@ -507,32 +507,10 @@ class CompositeSourceModel:
                 spc = oq.complex_fault_mesh_spacing
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        max_weight *= 1.05  # increased to produce fewer tasks
+        max_weight = 1.5 * tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
-
-    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
-        """
-        :returns:
-            quartets (cmaker, tilegetters, blocks, extra)
-            for atomic + non-atomic source groups
-        """
-        atomic = []
-        non_atomic = []
-        for cmaker, tilegetters, blocks, extra in self.split(
-                cmdict, sitecol, max_weight, num_chunks, tiling):
-            grp_id = _grp_id(blocks[0])
-            if len(blocks) == 1:
-                grp_keys = [str(grp_id)]
-            else:
-                grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
-            if extra['atomic']:
-                atomic.append((cmaker, tilegetters, grp_keys, extra))
-            else:
-                non_atomic.append((cmaker, tilegetters, grp_keys, extra))
-        return collect_atomic(atomic) + non_atomic
 
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
@@ -577,7 +555,7 @@ class CompositeSourceModel:
                 maxhint = N / oq.max_sites_disagg  # becomes 1
             tilegetters = list(sitecol.split(maxhint))
         else:
-            blocks = list(split_in_blocks(sg, hint, weight))
+            blocks = split_in_blocks(sg, hint / int(splits), weight)
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
@@ -630,26 +608,39 @@ def _strip_colons(sources):
     return sorted(ids)
 
 
-def collect_atomic(allargs):
+def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
     """
-    Generates tasks arguments from atomic groups
+    Generates task arguments from atomic and non-atomic groups
     """
-    if not allargs:
-        return []
+    out = []
+    atomic = []
+    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks, tiling)
+    for cmaker, tilegetters, blocks, extra in allargs:
+        n = len(blocks)
+        grp_id = _grp_id(blocks[0])
+        if extra['atomic']:
+            atomic.append((cmaker, tilegetters, blocks, extra))
+        else:
+            if n > 1:
+                grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
+            else:
+                grp_keys = [str(grp_id)]
+            out.append((cmaker, tilegetters, grp_keys, False))
+    # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     tilegetters_ = {}
     cmaker_ = {}
-    for cmaker, tilegetters, grp_keys, extra in allargs:
+    for cmaker, tilegetters, blocks, extra in atomic:
         gid = tuple(cmaker.gid)
         tilegetters_[gid] = tilegetters
-        blocks_[gid].extend(grp_keys)
+        blocks_[gid].extend(blocks)
         cmaker_[gid] = cmaker
-    out = []
-    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
-        for tgetter in tgetters:
-            out.append((cmaker_[gid], [tgetter], blocks_[gid], extra))
-    logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
+        grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
+        out.append((cmaker_[gid], tgetters, grp_keys, True))
+    if atomic:
+        logging.info('Collapsed %d atomic tasks into %d',
+                     len(atomic), len(cmaker_))
     return out
 
 
