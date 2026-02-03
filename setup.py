@@ -25,8 +25,8 @@ if sys.version_info < (3, 11):
     sys.exit('Sorry, Python < 3.11 is not supported')
 
 
-# --- 1. Helper Function for Demos ---
 def generate_data_files(source_dir):
+    # Helper function for demos
     data_files_list = []
     for target_dir, dirs, files in os.walk(source_dir):
         if files:
