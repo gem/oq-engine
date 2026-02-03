@@ -151,12 +151,17 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros, monitor=None):
+def hazclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
     """
     Wrapper over hazard_curve.classical
     """
     if monitor:
         cmaker.init_monitoring(monitor)
+    if dstore:
+        with dstore:
+            sites = tgetter(dstore['sitecol'], cmaker.ilabel)
+    else:
+        sites = tgetter
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
@@ -222,7 +227,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield res
         if dt > cmaker.oq.time_per_task:
             for blk in blks:
-                yield hazclassical, blk, sites, cmaker, True
+                yield hazclassical, blk, tilegetter, cmaker, True, dstore
         else:
             yield hazclassical(sum(blks, []), sites, cmaker, True)
     else:
