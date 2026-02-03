@@ -202,6 +202,13 @@ def split_in_blocks(sources, n):
             yield list(srcs)
 
 
+def _split(blocks, n):
+    for i in range(n):
+        out = sum(blocks[i::n], [])
+        if out:
+            yield out
+
+
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
@@ -220,16 +227,17 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = split_in_blocks(list(grps[0]), 8)
+        b0, *blks = split_in_blocks(list(grps[0]), 7)
         t0 = time.time()
         res = hazclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > cmaker.oq.time_per_task:
-            for blk in blks:
-                yield hazclassical, blk, tilegetter, cmaker, True, dstore
+            for srcs in _split(blks, 6):
+                yield hazclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            yield hazclassical(sum(blks, []), sites, cmaker, True)
+            for srcs in _split(blks, 2):
+                yield hazclassical, srcs, tilegetter, cmaker, True, dstore
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
