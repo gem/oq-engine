@@ -1327,7 +1327,7 @@ class ContextMaker(object):
             return EPS
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5 * len(self.gsims)
-        return weight
+        return max(weight, EPS)
 
     def set_weight(self, sources, srcfilter):
         """
