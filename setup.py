@@ -24,6 +24,7 @@ from setuptools import setup, find_namespace_packages
 if sys.version_info < (3, 11):
     sys.exit('Sorry, Python < 3.11 is not supported')
 
+
 # --- 1. Helper Function for Demos ---
 def generate_data_files(source_dir):
     data_files_list = []
@@ -32,6 +33,7 @@ def generate_data_files(source_dir):
             source_files = [os.path.join(target_dir, f) for f in files]
             data_files_list.append((target_dir, source_files))
     return data_files_list
+
 
 def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
@@ -111,9 +113,6 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
@@ -132,7 +131,7 @@ setup(
     package_data={"openquake.engine": [
         "openquake.cfg", "README.md",
         "LICENSE", "CONTRIBUTORS.txt"]},
-# This installs 'demos' into the root of the Virtual Env (sys.prefix)
+    # This installs 'demos' into the root of the Virtual Env (sys.prefix)
     data_files=generate_data_files('demos'),
     install_requires=install_requires,
     extras_require=extras_require,
