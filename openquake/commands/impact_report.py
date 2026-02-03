@@ -35,6 +35,7 @@ from reportlab.lib import colors
 from PIL import Image as PILImage
 import pandas as pd
 import geopandas as gpd
+from openquake import baselib
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.commonlib import datastore, logs
@@ -332,28 +333,24 @@ def _get_losses(dstore):
 
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges):
+        disclaimer_txt, notes_txt, losses_df, summary_ranges,
+        boundaries_dir, basemap_path, outputs_dir):
 
     tags_agg_losses = ["occupants", 'number', 'residents']
 
     countries_info_fname = os.path.join(
         os.path.dirname(global_risk.__file__), 'countries_info.csv')
-    country_info_df = pd.read_csv(countries_info_fname)
-
-    # select the row of interest
-    row = country_info_df.loc[country_info_df["ISO3"] == iso3].iloc[0]
-
-    iso3 = row["ISO3"]
-    country = row["ENGLISH_COUNTRY"]
-
-    # "GEM_REGION": row["GEM_REGION"],
-    # "CRS": row["CRS"],
-
-    x_limits_country = [row["X_MIN"], row["X_MAX"]]
-    y_limits_country = [row["Y_MIN"], row["Y_MAX"]]
-
-    cities = {row["CAPITAL"]: [
-        row["CAPITAL_LON"], row["CAPITAL_LAT"]]}
+    countries_info_df = pd.read_csv(countries_info_fname)
+    country_info = countries_info_df.loc[
+        countries_info_df["ISO3"] == iso3].iloc[0]
+    iso3 = country_info["ISO3"]
+    country = country_info["ENGLISH_COUNTRY"]
+    # "GEM_REGION": country_info["GEM_REGION"],
+    # "CRS": country_info["CRS"],
+    x_limits_country = [country_info["X_MIN"], country_info["X_MAX"]]
+    y_limits_country = [country_info["Y_MIN"], country_info["Y_MAX"]]
+    cities = {country_info["CAPITAL"]: [
+        country_info["CAPITAL_LON"], country_info["CAPITAL_LAT"]]}
     # # it might be needed if we have more than just the capital
     # cities = config.get("cities", {})
     # if isinstance(cities, dict) and len(cities) > 3:
@@ -367,21 +364,14 @@ def make_report_for_country(
     city_font_size = 14
     title_font_size = 20
 
-    boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
-    # FIXME:
-    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
-    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
-    BASE = Path(__file__).resolve().parent.parent.parent
-    outputs_basedir = BASE / "outputs" / "impact"
-
     # Country-level comparison
     plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
                 font_size, city_font_size, title_font_size, wfp,
-                boundaries_dir, basemap_path, outputs_basedir)
+                boundaries_dir, basemap_path, outputs_dir)
 
     # Paths
-    country_pngs_dir = BASE / "outputs" / "impact" / country
+    country_pngs_dir = outputs_dir / country
     png1 = country_pngs_dir / f"Buildings_{country}.png"
     png2 = country_pngs_dir / f"Fatalities_{country}.png"
     png3 = country_pngs_dir / f"Homeless_{country}.png"
@@ -428,7 +418,9 @@ def make_report_for_country(
     ]))
 
     # Path to your logo
-    LOGO_PATH = BASE / 'doc' / '_static' / 'OQ-Logo-Standard-RGB-72DPI-01.png'
+    oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
+    LOGO_PATH = (
+        oq_basedir / 'doc' / '_static' / 'OQ-Logo-Standard-RGB-72DPI-01.png')
     LOGO_W = 100
 
     # Event Header
@@ -569,9 +561,18 @@ def main(calc_id: int = -1, *, export_dir='.'):
     iso3_codes = get_close_regions(
         lon, lat, buffer_radius=0.5, region_kind='country')
     iso3 = iso3_codes[0]  # TODO: handle multi-country case
+
+    boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
+    # FIXME:
+    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
+    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
+    oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
+    outputs_dir = oq_basedir / "outputs" / "impact"
+
     make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges)
+        disclaimer_txt, notes_txt, losses_df, summary_ranges,
+        boundaries_dir, basemap_path, outputs_dir)
 
 
 main.calc_id = 'number of the calculation'
