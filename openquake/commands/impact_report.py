@@ -56,7 +56,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   legend_font_size=8,
                   title_font_size=14, figsize=(10, 10)):
     """
-    Plot a classified geospatial variable with optional basemap and annotations.
+    Plot a classified geospatial variable with optional basemap
+    and annotations.
 
     Parameters
     ----------
@@ -246,15 +247,19 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
     df = df.rename(columns=LOSS_TYPE_MAP)
 
     save_most_affected_regions(
-        df, adm_level=adm_level, output_path=save_dir / "most_affected_regions.txt")
+        df, adm_level=adm_level,
+        output_path=save_dir / "most_affected_regions.txt")
 
     classifiers = build_classifiers(
         df, breaks=[1, 10, 100, 1000])  # , 10000]
 
     colors = {
-        "Fatalities": ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d'],  # , '#67000d']
-        "Homeless": ['#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77'],  # , '#980043']
-        "Buildings": ['#ffffff', '#bdbdbd', '#737373', '#424242'],  # , '#000000']
+        "Fatalities": [
+            '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d'],  # , '#67000d']
+        "Homeless": [
+            '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77'],  # , '#980043']
+        "Buildings": [
+            '#ffffff', '#bdbdbd', '#737373', '#424242'],  # , '#000000']
     }
 
     titles = {
@@ -265,9 +270,9 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
 
     for loss_type in LOSS_TYPE_MAP.values():
         fig, ax = plot_variable(
-            df, admin_boundaries, loss_type, classifiers[loss_type], colors[loss_type],
-            country=country, plot_title=titles[loss_type], legend_title=loss_type,
-            cities=cities, digits=0,
+            df, admin_boundaries, loss_type, classifiers[loss_type],
+            colors[loss_type], country=country, plot_title=titles[loss_type],
+            legend_title=loss_type, cities=cities, digits=0,
             x_limits=x_limits_country, y_limits=y_limits_country,
             font_size=font_size, city_font_size=city_font_size,
             title_font_size=title_font_size, basemap_path=basemap_path,
@@ -403,7 +408,8 @@ def make_report_for_country(
     HEADER_H = 60
     NOTES_H = 80
     SAFETY_BUFFER = 20  # Buffer to ensure it stays on one page
-    GRID_TOTAL_H = page_height - DISCLAIMER_H - HEADER_H - NOTES_H - SAFETY_BUFFER
+    GRID_TOTAL_H = (
+        page_height - DISCLAIMER_H - HEADER_H - NOTES_H - SAFETY_BUFFER)
 
     ROW_H = GRID_TOTAL_H / 2
     COL_W = page_width / 2
