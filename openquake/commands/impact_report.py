@@ -538,6 +538,25 @@ def make_report_for_country(
     doc.build([master_layout])
 
 
+def _get_notes(oqparam):
+    notes = ''
+    notes += f'Mosaic model: {oqparam.mosaic_model}'
+    notes += f'. Number of ground motion fields: {oqparam.number_of_ground_motion_fields}'
+    notes += f'. Truncation level: {oqparam.truncation_level}'
+    notes += f'. Time of the event: {oqparam.time_event}'
+    notes += f'. Tectonic region type: {oqparam.tectonic_region_type}'
+    rupdic = oqparam.rupture_dict
+    notes += f'. Rupture identifier: {rupdic["usgs_id"]}'
+    notes += f'. Lon: {rupdic["lon"]}'
+    notes += f'. Lat: {rupdic["lat"]}'
+    notes += f'. Dep: {rupdic["dep"]}'
+    notes += f'. Mag: {rupdic["mag"]}'
+    notes += f'. Rake: {rupdic["rake"]}'
+    notes += f'. Dip: {rupdic["dip"]}'
+    notes += f'. Strike: {rupdic["strike"]}'
+    return notes
+
+
 def main(calc_id: int = -1, *, export_dir='.'):
     """
     Create a PDF impact report
@@ -555,8 +574,11 @@ def main(calc_id: int = -1, *, export_dir='.'):
     shakemap_version = rupdic['shakemap_desc']
     job = logs.dbcmd('get_job', calc_id)
     time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
-    disclaimer_txt = 'TODO'
-    notes_txt = 'TODO'
+    disclaimer_txt = '''
+    This is an automatically generated draft. Content has not been verified
+    for accuracy by a human reviewer. Please treat all figures as provisional
+    until a final validated version is issued.'''
+    notes_txt = _get_notes(oqparam)
     dstore.close()
     iso3_codes = get_close_regions(
         lon, lat, buffer_radius=0.5, region_kind='country')
