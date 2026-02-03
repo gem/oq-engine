@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_namespace_packages
 
-if sys.version_info < (3, 11):
-    sys.exit('Sorry, Python < 3.11 is not supported')
+if sys.version_info < (3, 10):
+    sys.exit('Sorry, Python < 3.10 is not supported')
 
 
 # --- 1. Helper Function for Demos ---
@@ -113,9 +113,6 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
