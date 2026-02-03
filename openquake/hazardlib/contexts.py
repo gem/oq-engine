@@ -1326,9 +1326,7 @@ class ContextMaker(object):
         if not ctxs:
             return EPS
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
+        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5 * len(self.gsims)
         return weight
 
     def set_weight(self, sources, srcfilter):
