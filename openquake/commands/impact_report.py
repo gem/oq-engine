@@ -53,9 +53,9 @@ LOSS_TYPE_MAP = {
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country=None, plot_title=None, legend_title=None,
                   cities=None, digits=2, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=10, city_font_size=8,
-                  legend_font_size=8,
-                  title_font_size=14, figsize=(10, 10)):
+                  basemap_path=None, font_size=18, city_font_size=14,
+                  legend_font_size=10,
+                  title_font_size=20, figsize=(10, 10)):
     """
     Plot a classified geospatial variable with optional basemap
     and annotations.
@@ -229,9 +229,8 @@ def build_classifiers(df, *, breaks):
 
 
 def plot_losses(country, iso3, adm_level, losses_df, cities,
-                tags_agg, x_limits_country, y_limits_country, font_size,
-                city_font_size, title_font_size, wfp, boundaries_dir,
-                basemap_path, outputs_basedir):
+                tags_agg, x_limits_country, y_limits_country,
+                wfp, boundaries_dir, basemap_path, outputs_basedir):
 
     save_dir = outputs_basedir / country
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -275,8 +274,7 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
             colors[loss_type], country=country, plot_title=titles[loss_type],
             legend_title=loss_type, cities=cities, digits=0,
             x_limits=x_limits_country, y_limits=y_limits_country,
-            font_size=font_size, city_font_size=city_font_size,
-            title_font_size=title_font_size, basemap_path=basemap_path,
+            basemap_path=basemap_path,
         )
 
         fig.savefig(save_dir / f"{loss_type}_{country}.png", dpi=300,
@@ -360,15 +358,10 @@ def make_report_for_country(
     wfp = True
     adm_level = 2
 
-    font_size = 18
-    city_font_size = 14
-    title_font_size = 20
-
     # Country-level comparison
     plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
-                font_size, city_font_size, title_font_size, wfp,
-                boundaries_dir, basemap_path, outputs_dir)
+                wfp, boundaries_dir, basemap_path, outputs_dir)
 
     # Paths
     country_pngs_dir = outputs_dir / country
@@ -541,7 +534,8 @@ def make_report_for_country(
 def _get_notes(oqparam):
     notes = ''
     notes += f'Mosaic model: {oqparam.mosaic_model}'
-    notes += f'. Number of ground motion fields: {oqparam.number_of_ground_motion_fields}'
+    notes += (f'. Number of ground motion fields:'
+              f' {oqparam.number_of_ground_motion_fields}')
     notes += f'. Truncation level: {oqparam.truncation_level}'
     notes += f'. Time of the event: {oqparam.time_event}'
     notes += f'. Tectonic region type: {oqparam.tectonic_region_type}'
