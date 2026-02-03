@@ -42,6 +42,13 @@ from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data import global_risk
 
 
+LOSS_TYPE_MAP = {
+    "occupants": "Fatalities",
+    "residents": "Homeless",
+    "number": "Buildings",
+}
+
+
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country=None, plot_title=None, legend_title=None,
                   cities=None, digits=2, x_limits=None, y_limits=None,
@@ -145,153 +152,134 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     return fig, ax
 
 
-def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
-                TAGS_AGG, x_limits_country, y_limits_country,
-                font_size, city_font_size, title_font_size, wfp):
-
-    # # INITIALISATION
-    boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
-
-    # Save directory
-    # SAVE_DIRECTORY = os.path.join('..', 'outputs', 'impact', f'{country}')
-    BASE = Path(__file__).resolve().parent.parent.parent
-    SAVE_DIRECTORY = BASE / 'outputs' / 'impact' / country
-
-    # Create folders
-    os.makedirs(os.path.join(SAVE_DIRECTORY), exist_ok=True)
-
-    # Shapefiles
+def load_admin_boundaries(*, country, iso3, adm_level, boundaries_dir, wfp,
+                          crs="EPSG:4326"):
     if wfp:
-        shapefile_path = os.path.join(
-            boundaries_dir, "ADMIN_boundaries_PilotCO",
-            "WFP_pilotCO_admin2.shp")
-        admin_boundaries = gpd.read_file(shapefile_path)
+        shp = (
+            Path(boundaries_dir)
+            / "ADMIN_boundaries_PilotCO"
+            / "WFP_pilotCO_admin2.shp"
+        )
+        admin_boundaries = gpd.read_file(shp)
         admin_boundaries = admin_boundaries[admin_boundaries["iso3"] == iso3]
-        admin_boundaries = admin_boundaries.to_crs("EPSG:4326")
     else:
-        # FIXME: missing
-        shapefile_path = os.path.join(
-            boundaries_dir, f'Adm{adm_level}_{country}.shp')
-        admin_boundaries = gpd.read_file(shapefile_path)
-        admin_boundaries = admin_boundaries.to_crs("EPSG:4326")
+        # FIXME: missing data
+        shp = Path(boundaries_dir) / f"Adm{adm_level}_{country}.shp"
+        admin_boundaries = gpd.read_file(shp)
 
-    # ACTUAL EXPOSURE
+    return admin_boundaries.to_crs(crs)
 
-    # Load Calculations for Actual Exposure
-    assets = pd.read_csv(avg_losses_mean_fname, header=[0, 1])
-    new_columns = assets.columns.get_level_values(1)
-    assets.columns = new_columns
-    assets = assets.drop(0, axis=0)
-    assets = assets.reset_index(drop=True)
 
-    # Create a GeoDataFrame from exposure data
-    try:
-        csv_data_geom_actual = gpd.GeoDataFrame(
-            assets, geometry=gpd.points_from_xy(
-                assets['lon'], assets['lat']))
-    except Exception as e:
-        print(f"Error creating GeoDataFrame: {e}")
+def load_losses_csv(csv_path):
+    df = pd.read_csv(csv_path, header=[0, 1])
+    df.columns = df.columns.get_level_values(1)
+    df = df.drop(index=0).reset_index(drop=True)
+    return df
 
-    csv_data_geom_actual.crs = admin_boundaries.crs
 
-    # Perform the spatial join
-    joined_data_actual = gpd.sjoin(
-        csv_data_geom_actual, admin_boundaries,
-        how='inner', predicate='within')
+def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
+    gdf = gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df[lon_col], df[lat_col]),
+        crs=crs,
+    )
+    return gdf
+
+
+def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level, wfp):
+    joined = gpd.sjoin(
+        points_gdf,
+        admin_gdf,
+        how="inner",
+        predicate="within",
+    )
 
     if wfp:
-        # Group by the correct column
-        aggregated_data_actual = joined_data_actual.groupby(
-            'adm2_id').agg({col: 'sum' for col in TAGS_AGG})
-
-        # Merge with admin boundaries using adm2_id
-        df_actual = admin_boundaries.merge(
-            aggregated_data_actual, on='adm2_id')
-
+        group_col = "adm2_id"
+        merge_args = dict(on="adm2_id")
     else:
-        # Group by the correct column
-        aggregated_data_actual = joined_data_actual.groupby(
-            f'ID_{adm_level}_right').agg({col: 'sum' for col in TAGS_AGG})
+        group_col = f"ID_{adm_level}_right"
+        merge_args = dict(left_on=f"ID_{adm_level}", right_index=True)
 
-        # Merge with admin boundaries using ID_2
-        df_actual = admin_boundaries.merge(
-            aggregated_data_actual, left_on=f'ID_{adm_level}',
-            right_index=True)
+    aggregated = (
+        joined
+        .groupby(group_col)
+        .agg({col: "sum" for col in tags_agg})
+    )
 
-    # (Optional) Print to verify
-    df_actual.rename(
-        columns={'occupants': 'Fatalities', 'residents': 'Homeless',
-                 'number': 'Buildings'}, inplace=True)
+    return admin_gdf.merge(aggregated, **merge_args)
 
-    # Determine the 5 most affected regions in terms of fatalities
-    most_affected_regions = df_actual.nlargest(5, 'Fatalities')[
-        f'adm{adm_level}_name']
-    most_affected_regions.to_csv(
-        os.path.join(SAVE_DIRECTORY, 'most_affected_regions.txt'),
-        index=False, header=False)
 
-    # Define your custom break thresholds (upper limits of each bin)
-    breaks = [1, 10, 100, 1000]  # , 10000]
+def save_most_affected_regions(df, *, adm_level, output_path, n=5):
+    region_col = f"adm{adm_level}_name"
+    (
+        df.nlargest(n, "Fatalities")[region_col]
+        .to_csv(output_path, index=False, header=False)
+    )
 
-    classifier_actual_fatalities = mapclassify.UserDefined(
-        df_actual['Fatalities'], bins=breaks)
-    classifier_actual_homeless = mapclassify.UserDefined(
-        df_actual['Homeless'], bins=breaks)
-    classifier_actual_buildings = mapclassify.UserDefined(
-        df_actual['Buildings'], bins=breaks)
 
-    digits_legend_losses = 0
+def build_classifiers(df, *, breaks):
+    return {
+        "Fatalities": mapclassify.UserDefined(df["Fatalities"], bins=breaks),
+        "Homeless": mapclassify.UserDefined(df["Homeless"], bins=breaks),
+        "Buildings": mapclassify.UserDefined(df["Buildings"], bins=breaks),
+    }
 
-    # Plot titles
-    title_actual_fatalities = 'Fatalities'
-    title_actual_homeless = 'Homeless'
-    title_actual_buildings = 'Buildings beyond repair'
 
-    colors_fatalities = ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d']  # , '#67000d']
-    colors_homeless = ['#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77']  # , '#980043']
-    colors_buildings = ['#ffffff', '#bdbdbd', '#737373', '#424242']  # , '#000000']
+def plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
+                tags_agg, x_limits_country, y_limits_country, font_size,
+                city_font_size, title_font_size, wfp, boundaries_dir,
+                basemap_path, outputs_basedir):
 
-    # FIXME:
-    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
-    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
+    save_dir = outputs_basedir / country
+    save_dir.mkdir(parents=True, exist_ok=True)
 
-    # Plots Actual
-    fig, ax = plot_variable(df_actual, admin_boundaries, 'Fatalities',
-                            classifier_actual_fatalities, colors_fatalities,
-                            country=country, plot_title=title_actual_fatalities,
-                            legend_title='Fatalities', cities=cities,
-                            digits=digits_legend_losses, x_limits=x_limits_country,
-                            y_limits=y_limits_country,
-                            font_size=font_size, city_font_size=city_font_size,
-                            title_font_size=title_font_size,
-                            basemap_path=basemap_path)
-    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Fatalities_{country}.png'),
-                dpi=300, bbox_inches='tight')
-    fig, ax = plot_variable(df_actual, admin_boundaries, 'Homeless',
-                            classifier_actual_homeless, colors_homeless,
-                            country=country, plot_title=title_actual_homeless,
-                            legend_title='Homeless', cities=cities,
-                            digits=digits_legend_losses, x_limits=x_limits_country,
-                            y_limits=y_limits_country,
-                            font_size=font_size, city_font_size=city_font_size,
-                            title_font_size=title_font_size,
-                            basemap_path=basemap_path)
-    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Homeless_{country}.png'),
-                dpi=300, bbox_inches='tight')
-    fig, ax = plot_variable(df_actual, admin_boundaries, 'Buildings',
-                            classifier_actual_buildings, colors_buildings,
-                            country=country, plot_title=title_actual_buildings,
-                            legend_title='Buildings', cities=cities,
-                            digits=digits_legend_losses, x_limits=x_limits_country,
-                            y_limits=y_limits_country,
-                            font_size=font_size, city_font_size=city_font_size,
-                            title_font_size=title_font_size,
-                            basemap_path=basemap_path)
-    fig.savefig(os.path.join(SAVE_DIRECTORY, f'Buildings_{country}.png'),
-                dpi=300, bbox_inches='tight')
-    # print(f"Total fatalities: {df_actual['Fatalities'].sum()}")
-    # print(f"Total homeless: {df_actual['Homeless'].sum()}")
-    # print(f"Total buildings beyond repair: {df_actual['Buildings'].sum()}")
+    admin_boundaries = load_admin_boundaries(
+        country=country, iso3=iso3, adm_level=adm_level,
+        boundaries_dir=boundaries_dir, wfp=wfp)
+
+    losses_df = load_losses_csv(avg_losses_mean_fname)
+
+    points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
+
+    df = aggregate_losses(
+        points_gdf=points_gdf, admin_gdf=admin_boundaries,
+        tags_agg=tags_agg, adm_level=adm_level, wfp=wfp)
+
+    df = df.rename(columns=LOSS_TYPE_MAP)
+
+    save_most_affected_regions(
+        df, adm_level=adm_level, output_path=save_dir / "most_affected_regions.txt")
+
+    classifiers = build_classifiers(
+        df, breaks=[1, 10, 100, 1000])  # , 10000]
+
+    colors = {
+        "Fatalities": ['#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d'],  # , '#67000d']
+        "Homeless": ['#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77'],  # , '#980043']
+        "Buildings": ['#ffffff', '#bdbdbd', '#737373', '#424242'],  # , '#000000']
+    }
+
+    titles = {
+        "Fatalities": "Fatalities",
+        "Homeless": "Homeless",
+        "Buildings": "Buildings beyond repair",
+    }
+
+    for loss_type in LOSS_TYPE_MAP.values():
+        fig, ax = plot_variable(
+            df, admin_boundaries, loss_type, classifiers[loss_type], colors[loss_type],
+            country=country, plot_title=titles[loss_type], legend_title=loss_type,
+            cities=cities, digits=0,
+            x_limits=x_limits_country, y_limits=y_limits_country,
+            font_size=font_size, city_font_size=city_font_size,
+            title_font_size=title_font_size, basemap_path=basemap_path,
+        )
+
+        fig.savefig(save_dir / f"{loss_type}_{country}.png", dpi=300,
+                    bbox_inches="tight")
+        plt.close(fig)
+        print(f"Total {loss_type}: {df[loss_type].sum()}")
 
 
 def _scaled_image(path, max_w, max_h):
@@ -394,13 +382,20 @@ def main(calc_id: int = -1, *, export_dir='.'):
     city_font_size = 14
     title_font_size = 20
 
+    boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
+    # FIXME:
+    # basemap_path = "../data/eo_base_2020_clean_geo.tif"
+    basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
+    BASE = Path(__file__).resolve().parent.parent.parent
+    outputs_basedir = BASE / "outputs" / "impact"
+
     # Country-level comparison
     plot_losses(country, iso3, adm_level, avg_losses_mean_fname, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
-                font_size, city_font_size, title_font_size, wfp)
+                font_size, city_font_size, title_font_size, wfp,
+                boundaries_dir, basemap_path, outputs_basedir)
 
     # Paths
-    BASE = Path(__file__).resolve().parent.parent.parent
     country_pngs_dir = BASE / "outputs" / "impact" / country
     png1 = country_pngs_dir / f"Buildings_{country}.png"
     png2 = country_pngs_dir / f"Fatalities_{country}.png"
