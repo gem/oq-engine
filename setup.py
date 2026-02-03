@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,10 +19,20 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
-if sys.version_info < (3, 9):
-    sys.exit('Sorry, Python < 3.9 is not supported')
+if sys.version_info < (3, 10):
+    sys.exit('Sorry, Python < 3.10 is not supported')
+
+
+# --- 1. Helper Function for Demos ---
+def generate_data_files(source_dir):
+    data_files_list = []
+    for target_dir, dirs, files in os.walk(source_dir):
+        if files:
+            source_files = [os.path.join(target_dir, f) for f in files]
+            data_files_list.append((target_dir, source_files))
+    return data_files_list
 
 
 def get_version():
@@ -103,26 +113,26 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
         'Environment :: Console',
         'Environment :: Web Environment',
     ],
-    packages=find_packages(exclude=["qa_tests", "qa_tests.*",
-                                    "tools",
-                                    "*.*.tests", "*.*.tests.*",
-                                    "openquake.engine.bin",
-                                    "openquake.engine.bin.*"]),
+    packages=find_namespace_packages(
+        include=["openquake.*"],
+        exclude=["qa_tests", "qa_tests.*",
+                 "tools",
+                 "*.*.tests", "*.*.tests.*",
+                 "openquake.engine.bin",
+                 "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
     include_package_data=True,
     package_data={"openquake.engine": [
         "openquake.cfg", "README.md",
         "LICENSE", "CONTRIBUTORS.txt"]},
-    namespace_packages=['openquake'],
+    # This installs 'demos' into the root of the Virtual Env (sys.prefix)
+    data_files=generate_data_files('demos'),
     install_requires=install_requires,
     extras_require=extras_require,
     entry_points={
