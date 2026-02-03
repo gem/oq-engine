@@ -67,7 +67,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = .1
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1310,29 +1310,17 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return 0 if src.code in b'pP' else eps
+            return EPS
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps
+            return EPS
         src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
-        src.dt = time.time() - t0
-        if not ctxs:
-            return eps
-        # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps)
+        return src.num_ruptures
 
     def set_weight(self, sources, srcfilter):
         """
