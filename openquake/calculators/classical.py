@@ -236,8 +236,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             for srcs in _split(blks, 6):
                 yield hazclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            for srcs in _split(blks, 2):
-                yield hazclassical, srcs, tilegetter, cmaker, True, dstore
+            odd, even = _split(blks, 2)
+            yield hazclassical, odd, tilegetter, cmaker, True, dstore
+            yield hazclassical(even, sites, cmaker, True)
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
