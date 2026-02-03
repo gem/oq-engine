@@ -60,3 +60,4 @@
 |case\_89|Tests execution of site model with non-measured (-999) z1pt0 and z2pt5 and basin-param using GMMs|
 |case\_90|Tests execution of multiple conditional GMPEs specified within a single ModifiableGMPE|
 |case\_91|Check SA and AvgSA with the same ordinal within indirect approach AvgSA are not overwritting each other in dstore|
+|case\_92|Tests use of correlation models using EmpiricalAvgSACorrelationModel|

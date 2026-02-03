@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
     case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
     case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91)
+    case_86, case_87, case_88, case_89, case_90, case_91, case_92)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1029,3 +1029,13 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-AvgSA(2.0).csv',
             'hazard_curve-mean-SA(0.1).csv'],
             case_91.__file__)
+
+    def test_case_92(self):
+        # Tests use of correlation models for indirect AvgSA relying on
+        # the EmpiricalAvgSACorrelationModel class
+        self.assert_curves_ok([
+            'hazard_curve-mean-AvgSA(0.2).csv',
+            'hazard_curve-mean-AvgSA(1.0).csv',
+            "hazard_curve-mean-SA(0.2).csv",
+            'hazard_curve-mean-SA(1.0).csv',],
+            case_92.__file__)
