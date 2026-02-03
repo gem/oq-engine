@@ -733,7 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
+            slow_tasks = (len(dur[dur > 3 * dur.mean()]) and
+                          dur.max() > 5 * oq.time_per_task)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
