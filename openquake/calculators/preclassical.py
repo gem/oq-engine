@@ -101,10 +101,10 @@ def _filter_mag(srcs, min_mag):
     return out
 
 
-def set_weight(srcs, sf, cmaker, secparams, monitor):
+def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
+    Filter and weight the sources. Also split them, except for
+    pointlike and multifault sources, which have been split already.
     """
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -165,12 +165,12 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
     else:
         srcs = sources
 
-    Ns = parallel.num_cores // num_tasks + 1
+    Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
     # produce subtasks of kind set_weight
     for i in range(Ns):
         lst = srcs[i::Ns]
         if lst:
-            yield set_weight, lst, sf, cmaker, secparams
+            yield filter_weight, lst, sf, cmaker, secparams
 
 
 def get_req_gb(data, N, oq):
