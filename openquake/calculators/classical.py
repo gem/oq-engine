@@ -196,7 +196,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 
 def split_in_blocks(sources, n):
-    sources.sort(key=get_weight)
+    sources.sort(key=get_weight, reverse=True)
     for srcs in numpy.array_split(sources, n):
         if len(srcs):
             yield list(srcs)
@@ -220,7 +220,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = split_in_blocks(list(grps[0]), 8)
+        b0, *blks = split_in_blocks(list(grps[0]), 7)
         t0 = time.time()
         res = hazclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
@@ -229,7 +229,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             for blk in blks:
                 yield hazclassical, blk, tilegetter, cmaker, True, dstore
         else:
-            yield hazclassical(sum(blks, []), sites, cmaker, True)
+            yield hazclassical, sum(blks[0::2], []), tilegetter, cmaker, True, dstore
+            yield hazclassical, sum(blks[1::2], []), tilegetter, cmaker, True, dstore
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
