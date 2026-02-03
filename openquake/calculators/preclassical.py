@@ -19,6 +19,7 @@
 import sys
 import logging
 import operator
+import psutil
 import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
@@ -101,10 +102,10 @@ def _filter_mag(srcs, min_mag):
     return out
 
 
-def set_weight(srcs, sf, cmaker, secparams, monitor):
+def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
+    Filter and weight the sources. Also split them, except for
+    pointlike and multifault sources, which have been split already.
     """
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -148,7 +149,7 @@ def set_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, monitor):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
@@ -165,11 +166,12 @@ def preclassical(sources, sf, cmaker, secparams, monitor):
     else:
         srcs = sources
 
-    Ns = parallel.num_cores  # produce at most Ns subtasks of kind set_weight
+    Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
+    # produce subtasks of kind set_weight
     for i in range(Ns):
         lst = srcs[i::Ns]
         if lst:
-            yield set_weight, lst, sf, cmaker, secparams
+            yield filter_weight, lst, sf, cmaker, secparams
 
 
 def get_req_gb(data, N, oq):
@@ -217,7 +219,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         assert not oq.disagg_by_src
         assert N > oq.max_sites_disagg
     else:
-        logging.info(f'Requiring {req_gb.sum():.1f} GB for the RateMaps')
+        required_gb = req_gb.sum()
+        avail_gb = psutil.virtual_memory().available / 1024**3
+        if required_gb > avail_gb:
+            raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
+        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
     for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
@@ -335,13 +341,14 @@ class PreClassicalCalculator(base.HazardCalculator):
                 self.datastore.swmr_on()
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
+            num_tasks = len(sources_by_key)
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                smap.submit((srcs, sf, cmaker, secparams))
+                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
             res = smap.reduce()
         else:
             res = {}
