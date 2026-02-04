@@ -227,13 +227,13 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = split_in_blocks(list(grps[0]), 7)
+        b0, *blks = split_in_blocks(list(grps[0]), 10)
         t0 = time.time()
         res = hazclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > cmaker.oq.time_per_task:
-            for srcs in _split(blks, 6):
+            for srcs in _split(blks, 9):
                 yield hazclassical, srcs, tilegetter, cmaker, True, dstore
         else:
             odd, even = _split(blks, 2)
