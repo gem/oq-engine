@@ -235,7 +235,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         blks = _split_src(list(grps[0]), 10)
         t0 = time.time()
         for i, blk in enumerate(blks, 1):
-            res += baseclassical(blk, sites, cmaker, False)
+            res += baseclassical(blk, sites, cmaker, 0)
             dt = time.time() - t0
             if dt > cmaker.oq.time_per_task:
                 rest = sum(blks[i:], [])
