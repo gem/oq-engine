@@ -30,7 +30,7 @@ def main(workflow_toml, hard=False):
             if hard:
                 git(repo_dir, ['fetch'])
                 git(repo_dir, ['clean', '-f'])
-                git(repo_dir, ['reset', '--hard', tag])
+                git(repo_dir, ['reset', '--hard', f'origin/{tag}'])
             else:
                 git(repo_dir, ['checkout', tag])
 
