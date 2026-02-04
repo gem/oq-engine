@@ -870,9 +870,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         N = len(self.sitecol.complete)
         C = len(self.oqparam.all_imts())
-        nrows = len(self.datastore['gmf_data/sid'])
-        df = self.datastore.read_df('gmf_data', slc=slice(0, 1))
-        size = df.memory_usage(index=False).sum() * nrows
+        size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
         if size > maxsize:
