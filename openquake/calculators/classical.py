@@ -195,11 +195,18 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
                 yield result
 
 
-def split_in_blocks(sources, n):
+def _split_src(sources, n):
     sources.sort(key=get_weight)
     for srcs in numpy.array_split(sources, n):
         if len(srcs):
             yield list(srcs)
+
+
+def _split_blk(blocks, n):
+    for i in range(n):
+        out = sum(blocks[i::n], [])
+        if out:
+            yield out
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -220,16 +227,18 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = split_in_blocks(list(grps[0]), 8)
+        b0, *blks = _split_src(list(grps[0]), 8)
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > cmaker.oq.time_per_task:
-            for blk in blks:
-                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            for srcs in _split_blk(blks, 7):
+                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            yield baseclassical(sum(blks, []), sites, cmaker, True)
+            odd, even = _split_blk(blks, 2)
+            yield baseclassical, odd, tilegetter, cmaker, True, dstore
+            yield baseclassical(even, sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
