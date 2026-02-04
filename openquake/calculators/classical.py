@@ -204,15 +204,6 @@ def _split_src(sources, n):
     return o
 
 
-def _split_blk(blocks, n):
-    o = []
-    for i in range(n):
-        out = sum(blocks[i::n], [])
-        if out:
-            o.append(out)
-    return o
-
-
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
@@ -239,19 +230,21 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             dt = time.time() - t0
             if dt > cmaker.oq.time_per_task:
                 rest = sum(blks[i:], [])
+                if not rest:
+                    break
                 if i == 1:
-                    for blk in _split_blk(blks[i:], 9):
+                    for blk in _split_src(rest, 9):
                         yield baseclassical, blk, tilegetter, cmaker, 1, dstore
                 elif i == 2:
-                    for blk in _split_blk(blks[i:], 4):
+                    for blk in _split_src(rest, 4):
                         yield baseclassical, blk, tilegetter, cmaker, 1, dstore
                 elif i == 3:
-                    for blk in _split_blk(blks[i:], 3):
+                    for blk in _split_src(rest, 3):
                         yield baseclassical, blk, tilegetter, cmaker, 1, dstore
                 elif i == 4:
-                    for blk in _split_blk(blks[i:], 2):
+                    for blk in _split_src(rest, 2):
                         yield baseclassical, blk, tilegetter, cmaker, 1, dstore
-                elif rest:
+                else:
                     yield baseclassical, rest, tilegetter, cmaker, 1, dstore
                 break
         yield res
