@@ -558,6 +558,15 @@ def read_many(workflow_toml, params={}, validate=True):
             wfdict = toml.load(f)
         if 'multi' in wfdict:
             multi = wfdict.pop('multi')
+
+            # include case
+            fnames = multi.pop('include', [])
+            if fnames:
+                for fname in fnames:
+                    out.extend(read_many(fname, multi, validate))
+                return out
+
+            # regular case
             for prefix, ddic in wfdict.items():
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
