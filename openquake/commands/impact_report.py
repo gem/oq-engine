@@ -17,14 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.patheffects as path_effects
-import rasterio
-from rasterio.plot import show
-import numpy as np
-import mapclassify
 from pathlib import Path
+
+# FIXME: add to engine requirements? Only for impact?
+import mapclassify
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Table, TableStyle,
@@ -32,12 +28,14 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
+
 from PIL import Image as PILImage
 import pandas as pd
 import geopandas as gpd
 from openquake import baselib
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.postproc.plots import import_plt, plot_variable
 from openquake.commonlib import datastore, logs
 from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data import global_risk
@@ -48,110 +46,6 @@ LOSS_TYPE_MAP = {
     "residents": "Homeless",
     "number": "Buildings",
 }
-
-
-def plot_variable(df, admin_boundaries, column, classifier, colors, *,
-                  country=None, plot_title=None, legend_title=None,
-                  cities=None, digits=2, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=18, city_font_size=14,
-                  legend_font_size=10,
-                  title_font_size=20, figsize=(10, 10)):
-    """
-    Plot a classified geospatial variable with optional basemap
-    and annotations.
-
-    Parameters
-    ----------
-    df : geopandas.GeoDataFrame
-        Input data with geometry column.
-    admin_boundaries : geopandas.GeoDataFrame
-        Administrative boundaries to overlay.
-    column : str
-        Column to classify and plot.
-    classifier : mapclassify classifier
-        Fitted classifier (e.g. NaturalBreaks).
-    colors : list[str]
-        One color per class (length must equal classifier.k).
-    country : str, optional
-        Used only for output naming or titles.
-    plot_title : str, optional
-        Figure title.
-    legend_title : str, optional
-        Legend title.
-    cities : dict[str, tuple[float, float]], optional
-        Mapping of city name → (lon, lat).
-    digits : int
-        Decimal digits for bin labels.
-    x_limits, y_limits : tuple, optional
-        Axis limits.
-    basemap_path : Path or str, optional
-        Raster basemap path.
-    """
-    if len(colors) != classifier.k:
-        raise ValueError(
-            f"Expected {classifier.k} colors, got {len(colors)}"
-        )
-    if df.crs != admin_boundaries.crs:
-        raise ValueError("df and admin_boundaries CRS do not match")
-    df = df.copy()
-    df["class"] = classifier(df[column])
-
-    # Prepare labels for the legend
-    bins = np.round(classifier.bins, digits)
-    labels = [f"≤ {bins[0]:.{digits}f}"]
-    labels += [
-        f"{bins[i-1]:.{digits}f} – {bins[i]:.{digits}f}"
-        for i in range(1, len(bins))
-    ]
-    labels[-1] = f"> {bins[-2]:.{digits}f}"
-    if len(labels) != classifier.k:
-        raise RuntimeError("Generated labels do not match number of classes")
-
-    fig, ax = plt.subplots(figsize=figsize)
-
-    # Plot each class with its corresponding color
-    for i, color in enumerate(colors):
-        subset = df[df["class"] == i]
-        if not subset.empty:  # skip classes with no geometries
-            subset.plot(ax=ax, color=color, edgecolor="none")
-
-    # Create legend handles based on color and label
-    handles = [mpatches.Patch(color=c, label=l)
-               for c, l in zip(colors, labels)]
-    ax.legend(handles=handles, title=legend_title, framealpha=0.7,
-              title_fontsize=font_size, fontsize=legend_font_size,
-              loc="upper left")
-
-    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
-                          facecolor="none", linewidth=0.4)
-
-    if basemap_path is not None:
-        basemap_path = Path(basemap_path)
-        with rasterio.open(basemap_path) as src:
-            if src.crs != df.crs:
-                raise ValueError("Raster CRS does not match vector CRS")
-            show(src, ax=ax, alpha=0.8)
-
-    if x_limits:
-        ax.set_xlim(x_limits)
-    if y_limits:
-        ax.set_ylim(y_limits)
-
-    if cities:
-        for city, (x, y) in cities.items():
-            txt = ax.text(x, y, city, fontsize=city_font_size,
-                          color="black", fontweight="bold")
-            txt.set_path_effects([
-                path_effects.Stroke(linewidth=1.5, foreground="white"),
-                path_effects.Normal()])
-
-    if plot_title:
-        ax.set_title(plot_title, fontsize=title_font_size)
-
-    ax.set_xlabel("Longitude", fontsize=font_size)
-    ax.set_ylabel("Latitude", fontsize=font_size)
-    fig.tight_layout(rect=[0, 0, 0.85, 1])
-    return fig, ax
 
 
 def load_admin_boundaries(country, iso3, adm_level, boundaries_dir, wfp,
@@ -231,7 +125,7 @@ def build_classifiers(df, *, breaks):
 def plot_losses(country, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
                 wfp, boundaries_dir, basemap_path, outputs_basedir):
-
+    plt = import_plt()
     save_dir = Path(outputs_basedir) / country
     save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -272,15 +166,15 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
         fig, ax = plot_variable(
             df, admin_boundaries, loss_type, classifiers[loss_type],
             colors[loss_type], country=country, plot_title=titles[loss_type],
-            legend_title=loss_type, cities=cities, digits=0,
+            legend_title=loss_type, cities=cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
             basemap_path=basemap_path,
         )
-
+        # NOTE: we might save it into the datastore instead
         fig.savefig(save_dir / f"{loss_type}_{country}.png", dpi=300,
                     bbox_inches="tight")
         plt.close(fig)
-        print(f"Total {loss_type}: {df[loss_type].sum()}")
+        # print(f"Total {loss_type}: {df[loss_type].sum()}")
 
 
 def _scaled_image(path, max_w, max_h):

@@ -20,6 +20,7 @@ import io
 import os
 import base64
 import numpy
+from pathlib import Path
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
@@ -286,3 +287,112 @@ def get_assetcol(calc_id):
         except AttributeError:
             assetcol = dstore['assetcol'].array
         return assetcol
+
+
+def plot_variable(df, admin_boundaries, column, classifier, colors, *,
+                  country=None, plot_title=None, legend_title=None,
+                  cities=None, legend_digits=0, x_limits=None, y_limits=None,
+                  basemap_path=None, font_size=18, city_font_size=14,
+                  legend_font_size=10,
+                  title_font_size=20, figsize=(10, 10)):
+    """
+    Plot a classified geospatial variable with optional basemap
+    and annotations.
+
+    Parameters
+    ----------
+    df : geopandas.GeoDataFrame
+        Input data with geometry column.
+    admin_boundaries : geopandas.GeoDataFrame
+        Administrative boundaries to overlay.
+    column : str
+        Column to classify and plot.
+    classifier : mapclassify classifier
+        Fitted classifier (e.g. NaturalBreaks).
+    colors : list[str]
+        One color per class (length must equal classifier.k).
+    country : str, optional
+        Used only for output naming or titles.
+    plot_title : str, optional
+        Figure title.
+    legend_title : str, optional
+        Legend title.
+    cities : dict[str, tuple[float, float]], optional
+        Mapping of city name → (lon, lat).
+    legend_digits : int
+        Decimal digits for legend bin labels.
+    x_limits, y_limits : tuple, optional
+        Axis limits.
+    basemap_path : Path or str, optional
+        Raster basemap path.
+    """
+    plt = import_plt()
+    import matplotlib.patheffects as path_effects
+    import matplotlib.patches as mpatches
+    import rasterio  # FIXME: to be added to engine requirements? Only to impact?
+    from rasterio.plot import show
+    if len(colors) != classifier.k:
+        raise ValueError(
+            f"Expected {classifier.k} colors, got {len(colors)}"
+        )
+    if df.crs != admin_boundaries.crs:
+        raise ValueError("df and admin_boundaries CRS do not match")
+    df = df.copy()
+    df["class"] = classifier(df[column])
+
+    # Prepare labels for the legend
+    bins = numpy.round(classifier.bins, legend_digits)
+    labels = [f"≤ {bins[0]:.{legend_digits}f}"]
+    labels += [
+        f"{bins[i-1]:.{legend_digits}f} – {bins[i]:.{legend_digits}f}"
+        for i in range(1, len(bins))
+    ]
+    labels[-1] = f"> {bins[-2]:.{legend_digits}f}"
+    if len(labels) != classifier.k:
+        raise RuntimeError("Generated labels do not match number of classes")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot each class with its corresponding color
+    for i, color in enumerate(colors):
+        subset = df[df["class"] == i]
+        if not subset.empty:  # skip classes with no geometries
+            subset.plot(ax=ax, color=color, edgecolor="none")
+
+    # Create legend handles based on color and label
+    handles = [mpatches.Patch(color=c, label=l)
+               for c, l in zip(colors, labels)]
+    ax.legend(handles=handles, title=legend_title, framealpha=0.7,
+              title_fontsize=font_size, fontsize=legend_font_size,
+              loc="upper left")
+
+    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
+                          facecolor="none", linewidth=0.4)
+
+    if basemap_path is not None:
+        basemap_path = Path(basemap_path)
+        with rasterio.open(basemap_path) as src:
+            if src.crs != df.crs:
+                raise ValueError("Raster CRS does not match vector CRS")
+            show(src, ax=ax, alpha=0.8)
+
+    if x_limits:
+        ax.set_xlim(x_limits)
+    if y_limits:
+        ax.set_ylim(y_limits)
+
+    if cities:
+        for city, (x, y) in cities.items():
+            txt = ax.text(x, y, city, fontsize=city_font_size,
+                          color="black", fontweight="bold")
+            txt.set_path_effects([
+                path_effects.Stroke(linewidth=1.5, foreground="white"),
+                path_effects.Normal()])
+
+    if plot_title:
+        ax.set_title(plot_title, fontsize=title_font_size)
+
+    ax.set_xlabel("Longitude", fontsize=font_size)
+    ax.set_ylabel("Latitude", fontsize=font_size)
+    fig.tight_layout(rect=[0, 0, 0.85, 1])
+    return fig, ax
