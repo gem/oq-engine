@@ -18,6 +18,7 @@
 Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
+import os
 import abc
 import h5py
 import numpy as np
@@ -27,7 +28,6 @@ from scipy.interpolate import interp1d, RegularGridInterpolator
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
-from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
@@ -376,7 +376,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         # store the raw correlation data
         self.raw_rhos = rho_arrays
         self.raw_Ts = rho_periods
-        self.valid_residual_types = rho_arrays.keys() 
+        self.valid_residual_types = list(rho_arrays.keys()) 
 
         # create the interpolation functions for each residual type / array
         self._create_interpers()
@@ -391,7 +391,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
                 raise ValueError(f"Period ({max(avg_periods):.3f}) is greater "
                                 f"than the maximum allowable period for the "
                                 f"correlation model ({max(rho_periods):.3f}).")
-    
+
         super().__init__(avg_periods)
         
     def build_correlation_matrix(self):
@@ -612,13 +612,29 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
     horizontal spectral amplitude ratios for the broader Europe region,
     Bull Earthquake Eng, 12, pp. 517-547.
     """
+    periods = [
+        0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.11, 0.12, 0.13, 0.14,
+        0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3,
+        0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55, 0.6,
+        0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.1, 1.2, 1.3, 1.4, 1.5,
+        1.6, 1.7, 1.8, 1.9, 2, 2.2, 2.4, 2.6, 2.8, 3, 3.2, 3.4, 3.6, 3.8, 4
+        ]
+
+    coeff_table = []
+    path = os.path.join(
+        os.path.dirname(__file__), "corr_coeffs", "akkar_coeff_table.csv")
+    with open(path) as f:
+        for row in f:
+            coeff_table.append(
+                [float(col) for col in row.split(',')])
+
     def build_correlation_matrix(self):
         """
         Constructs the correlation matrix by two-step linear interpolation
         from the correlation table
         """
-        irho = np.array(act.coeff_table)
-        iper = np.array(act.periods)
+        irho = np.array(self.coeff_table)
+        iper = np.array(self.periods)
         if np.any(self.avg_periods < iper[0]) or\
                 np.any(self.avg_periods > iper[-1]):
             raise ValueError("'avg_periods' contains values outside of the "
@@ -634,7 +650,7 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         Computes the correlation coefficient for the specified periods.
 
         :param float t1:
-            First period of interest.:w
+            First period of interest.
 
 
         :param float t2:
@@ -643,8 +659,8 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         :return float:
             The predicted correlation coefficient.
         """
-        periods = np.array(act.periods)
-        rho = np.array(act.coeff_table)
+        periods = np.array(self.periods)
+        rho = np.array(self.coeff_table)
         if t1 < periods[0] or t1 > periods[-1]:
             raise ValueError("t1 %.3f is out of valid period range (%.3f to "
                              "%.3f" % (t1, periods[0], periods[-1]))

@@ -151,12 +151,17 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, sites, cmaker, remove_zeros, monitor=None):
+def hazclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
     """
     Wrapper over hazard_curve.classical
     """
     if monitor:
         cmaker.init_monitoring(monitor)
+    if dstore:
+        with dstore:
+            sites = tgetter(dstore['sitecol'], cmaker.ilabel)
+    else:
+        sites = tgetter
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
@@ -214,19 +219,17 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
-        b0, b1, *blks = split_in_blocks(list(grps[0]), 8)
+        # tested in case_66
+        b0, *blks = split_in_blocks(list(grps[0]), 8)
         t0 = time.time()
         res = hazclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > cmaker.oq.time_per_task:
             for blk in blks:
-                yield hazclassical, blk, sites, cmaker, True
-            yield hazclassical(b1, sites, cmaker, True)
+                yield hazclassical, blk, tilegetter, cmaker, True, dstore
         else:
-            for blk in blks:
-                b1.extend(blk)
-            yield hazclassical(b1, sites, cmaker, True)
+            yield hazclassical(sum(blks, []), sites, cmaker, True)
     else:
         yield hazclassical(grps, sites, cmaker, True)
 
@@ -595,6 +598,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         L = self.oqparam.imtls.size
         self.rmap = {}
+        # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
@@ -729,7 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # no data
             pass
         else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()]) and dur.max() > 180
+            slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
+                          dur.max() > 5 * oq.time_per_task)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
