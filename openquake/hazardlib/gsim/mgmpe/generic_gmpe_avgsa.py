@@ -25,9 +25,10 @@ import numpy as np
 from pathlib import Path
 from scipy.interpolate import interp1d, RegularGridInterpolator
 
-from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA
+from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.gmpe_table import _return_tables
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
@@ -105,7 +106,11 @@ class GenericGmpeAvgSA(GMPE):
         """
         # Get mean and std devs for averaging periods
         averaging_periods = [SA(period) for period in self.avg_periods]
-        out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods)
+        kw = {}
+        if hasattr(self.gmpe, "set_tables"):
+            # Needed for GMPE Tables
+            kw['mags'] = [f'{mag:.2f}' for mag in ctx.mag]
+        out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods, **kw)
 
         # Compute average SA
         stddvs_avgsa = 0.
@@ -135,7 +140,7 @@ def _get_periods(t_low, t_high, t_num, max_num_per, imts):
         imt.string: np.linspace(
             t_low * imt.period, t_high * imt.period, t_num)
             for imt in imts if imt.name == "AvgSA"}
-
+    
     # Get the unique periods over all the AvgSA imts
     if periods_per_avgsa_imt != {}:
         unique_periods = np.unique(
@@ -146,7 +151,7 @@ def _get_periods(t_low, t_high, t_num, max_num_per, imts):
         # list of averaging periods to permit still using underlying GMPE to
         # compute "regular" IMTs - "AvgSA" part of compute method is skipped)
         return list(), False, periods_per_avgsa_imt
-
+    
     if len(unique_periods) > max_num_per:
         # Maximum number of periods exceeded, so now define a set of
         # max_num_per periods linearly spaced between the lower and
@@ -248,19 +253,24 @@ class GmpeIndirectAvgSA(GMPE):
         Also, compute the other IMTs using the underlying GMPE (as
         expected, an error will be raised if the underlying GMPE does
         not support the IMT).
-        """
-        # Check if any non-AvgSA IMTs
-        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
-        if non_avgSA:
-            compute_imts_subset(
-                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
-
+        """ 
         # Get periods
         periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
             self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
+        new_imts = [SA(per) for per in periods_all]
+        
+        # Check if any non-AvgSA IMTs
+        non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
+        if non_avgSA:
+            if hasattr(self.gmpe, "set_tables"):
+                req_imts = list(imts) + new_imts
+                # Underlying GMPE is tabular - set the tables first
+                self.gmpe.set_tables([f'{mag:.2f}' for mag in ctx.mag],
+                [imt.string for imt in req_imts]) # Set for all IMTs here
+            compute_imts_subset(
+                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
 
         # Get mean and stddevs for all required periods
-        new_imts = [SA(per) for per in periods_all]
         sh = (len(new_imts), len(ctx))
         mean_sa, sigma_sa, tau_sa, phi_sa =\
               np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh)
