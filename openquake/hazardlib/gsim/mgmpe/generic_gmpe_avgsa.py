@@ -257,8 +257,8 @@ class GmpeIndirectAvgSA(GMPE):
         periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
             self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
         
-        # Make new imts and if period is zero set to PGA (ensure tables work
-        # given they rely on strings of IMTs so SA(0.0) would raise key error)
+        # Make averaging periods as IMTs and if period is zero set to
+        # PGA (this ensures tables work - SA(0.0) would raise key error)
         new_imts = [PGA() if per == 0 else SA(per) for per in periods_all]
         
         # Check if any non-AvgSA IMTs
