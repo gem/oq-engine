@@ -151,7 +151,7 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def hazclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
+def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
     """
     Wrapper over hazard_curve.classical
     """
@@ -184,14 +184,14 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
-        result = hazclassical(grps, sites, cmaker, remove_zeros=False)
+        result = baseclassical(grps, sites, cmaker, remove_zeros=False)
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
         # yield a result for each base source
         for grp in grps:
             for srcs in groupby(grp, valid.basename).values():
-                result = hazclassical(srcs, sites, cmaker, remove_zeros=False)
+                result = baseclassical(srcs, sites, cmaker, remove_zeros=False)
                 yield result
 
 
@@ -215,23 +215,23 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        result = hazclassical(grps, sites, cmaker, remove_zeros=True)
+        result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
         b0, *blks = split_in_blocks(list(grps[0]), 8)
         t0 = time.time()
-        res = hazclassical(b0, sites, cmaker, True)
+        res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > cmaker.oq.time_per_task:
             for blk in blks:
-                yield hazclassical, blk, tilegetter, cmaker, True, dstore
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
         else:
-            yield hazclassical(sum(blks, []), sites, cmaker, True)
+            yield baseclassical(sum(blks, []), sites, cmaker, True)
     else:
-        yield hazclassical(grps, sites, cmaker, True)
+        yield baseclassical(grps, sites, cmaker, True)
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
