@@ -235,6 +235,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             dt = time.time() - t0
             if dt > cmaker.oq.time_per_task:
                 rest = sum(blks[i:], [])
+                print(f'{monitor.task_no=}, {i=}, {len(rest)=}')
                 if not rest:
                     break
                 if i == 1:
