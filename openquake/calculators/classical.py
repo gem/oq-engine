@@ -749,7 +749,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
-                logging.info(msg)
+                logging.warning(msg)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
