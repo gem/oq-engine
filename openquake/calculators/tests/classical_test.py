@@ -39,8 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
     case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
-    case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91, case_92)
+    case_77, case_78, case_79, case_80, case_81, case_82, case_83, case_84,
+    case_85, case_86, case_87, case_88, case_89, case_90, case_91, case_92)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -893,6 +893,15 @@ class ClassicalTestCase(CalculatorTestCase):
         dbm = view('disagg:Dist', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_dist.org', fname)
+
+    def test_case_79(self):
+        # Test use of table-based GMPE as the underlying GSIM when
+        # using either IndirectGMPEAvgSA or GenericGmpeAvgSA.
+        self.assert_curves_ok([
+            'hazard_curve-mean-AvgSA(2.0).csv',
+            "hazard_curve-mean-PGA.csv",
+            'hazard_curve-mean-SA(2.0).csv',],
+            case_79.__file__)
 
     def test_case_80(self):
         # New Madrid cluster with rup_mutex

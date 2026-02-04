@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1">
+                  <uncertaintyModel>
+                    [GenericGmpeAvgSA]
+                    gmpe_name = "NGAEastUSGSSeedPEER_GP"
+                    avg_periods = [0.5, 1.0, 2.0]
+                    corr_func = "eshm20"
+                  </uncertaintyModel>
+                  <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b2">
+                  <uncertaintyModel>
+                    [GmpeIndirectAvgSA]
+                    gmpe_name = "NGAEastUSGSSeedPEER_GP"
+                    corr_func = "eshm20"
+                    t_low = 0.5
+                    t_high = 2.0
+                    n_per = 10
+                  </uncertaintyModel>
+                  <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
