@@ -26,7 +26,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Table, TableStyle,
     Image, ListFlowable, ListItem, Spacer
 )
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 from PIL import Image as PILImage
@@ -223,6 +223,34 @@ def _get_losses(dstore):
     return losses_df
 
 
+def one_line_paragraph(text, base_style, max_width, min_font_size=8, step=0.5):
+    """
+    Try to keep paragraph on one line by reducing font size if needed.
+    """
+    font_size = base_style.fontSize
+
+    while font_size >= min_font_size:
+        style = ParagraphStyle(
+            name="tmp",
+            parent=base_style,
+            fontSize=font_size,
+            leading=font_size * 1.2,
+        )
+        p = Paragraph(text, style)
+        w, h = p.wrap(max_width, 1000)
+
+        # one line ≈ leading height
+        if h <= style.leading * 1.05:
+            return p
+
+        font_size -= step
+
+    # fallback: smallest font
+    style.fontSize = min_font_size
+    style.leading = min_font_size * 1.2
+    return Paragraph(text, style)
+
+
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
@@ -276,6 +304,13 @@ def make_report_for_country(
     )
 
     styles = getSampleStyleSheet()
+
+    event_style = ParagraphStyle(
+        "EventTitle",
+        parent=styles["Normal"],
+        fontSize=11,
+    )
+
     # A4 is (595.27, 841.89) points
     page_width = A4[0] - (2 * MARGIN)
     page_height = A4[1] - (2 * MARGIN)
@@ -310,9 +345,16 @@ def make_report_for_country(
         oq_basedir / 'doc' / '_static' / 'OQ-Logo-Standard-RGB-72DPI-01.png')
     LOGO_W = 100
 
+    event_text = f"<b>{event_name}, {event_date}</b>"
+    event_paragraph = one_line_paragraph(
+        event_text,
+        event_style,
+        max_width=page_width,
+    )
+
     # Event Header
     header_text = [
-        Paragraph(f"<b>{event_name}, {event_date}</b>", styles["Heading2"]),
+        event_paragraph,
         Paragraph(
             f"Time of the calculation: {time_of_calc} &nbsp;&nbsp;"
             f" ShakeMap version: {shakemap_version}",
