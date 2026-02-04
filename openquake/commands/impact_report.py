@@ -18,6 +18,7 @@
 
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 
 # FIXME: add to engine requirements? Only for impact?
 import mapclassify
@@ -487,6 +488,18 @@ def _get_notes(oqparam):
     return notes
 
 
+def to_utc_string(ts: str) -> str:
+    """
+    Convert a timestamp with timezone offset (e.g. '+08:00')
+    to the format: 'YYYY-MM-DD HH:MM:SS UTC'
+    """
+    dt = datetime.fromisoformat(ts)
+    if dt.tzinfo is None:
+        raise ValueError("Timestamp has no timezone information")
+    dt_utc = dt.astimezone(timezone.utc)
+    return dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+
+
 def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,
          basemap_path=None, outputs_dir=None):
     """
@@ -509,7 +522,9 @@ def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,
     oqparam = dstore['oqparam']
     rupdic = oqparam.rupture_dict
     event_name = rupdic['title']
-    event_date = oqparam.local_timestamp
+    # FIXME: do we prefer to show UTC or perhaps it is more intuitive
+    #        to show the local time?
+    event_date = to_utc_string(oqparam.local_timestamp)
     shakemap_version = rupdic['shakemap_desc']
     job = logs.dbcmd('get_job', calc_id)
     time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
