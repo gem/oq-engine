@@ -451,7 +451,7 @@ class _Workflow:
         self.workflow_dir = os.path.dirname(workflow_toml)
         self.defaults = defaults
         self.description = defaults.pop('description')
-        self.checkout = self.defaults.pop('checkout', {})
+        self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
@@ -570,14 +570,12 @@ def read_many(workflow_toml, params={}, validate=True):
             for prefix, ddic in wfdict.items():
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
-                wf.checkout = multi['workflow'].pop('checkout', {})
                 if validate:
                     wf.validate()
                 out.append(wf)
         elif 'workflow' in wfdict:
             defaults = wfdict.pop('workflow') | params
             wf = _Workflow(workflow_toml, defaults, wfdict)
-            wf.checkout = defaults.pop('checkout', {})
             if validate:
                 wf.validate()
             out.append(wf)
