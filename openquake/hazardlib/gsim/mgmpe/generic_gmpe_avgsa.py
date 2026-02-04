@@ -75,7 +75,7 @@ class GenericGmpeAvgSA(GMPE):
                 if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
                     setattr(self, key, getattr(self.gmpe, key))
 
-        # Ensure that it is always recogised that the AvgSA GMPE is defined
+        # Ensure that it is always recognised that the AvgSA GMPE is defined
         # only for total standard deviation even if the called GMPE is
         # defined for inter- and intra-event standard deviations too
         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
