@@ -26,9 +26,8 @@ from pathlib import Path
 from scipy.interpolate import interp1d, RegularGridInterpolator
 
 from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import AvgSA, SA
+from openquake.hazardlib.imt import PGA, AvgSA, SA
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.gmpe_table import _return_tables
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
@@ -257,7 +256,7 @@ class GmpeIndirectAvgSA(GMPE):
         # Get periods
         periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(
             self.t_low, self.t_high, self.t_num, self.max_num_per, imts)
-        new_imts = [SA(per) for per in periods_all]
+        new_imts = [SA(per) if per != 0 else PGA() for per in periods_all]
         
         # Check if any non-AvgSA IMTs
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
