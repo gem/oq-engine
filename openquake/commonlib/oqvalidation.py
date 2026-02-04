@@ -837,7 +837,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=300*
-  Default: 60
+  Default: 600
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1176,7 +1176,7 @@ class OqParam(valid.ParamSet):
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 60)
+    time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)

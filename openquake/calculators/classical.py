@@ -197,16 +197,20 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 def _split_src(sources, n):
     sources.sort(key=get_weight)
+    o = []
     for srcs in numpy.array_split(sources, n):
         if len(srcs):
-            yield list(srcs)
+            o.append(list(srcs))
+    return o
 
 
 def _split_blk(blocks, n):
+    o = []
     for i in range(n):
         out = sum(blocks[i::n], [])
         if out:
-            yield out
+            o.append(out)
+    return o
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -227,20 +231,32 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_66
-        b0, *blks = _split_src(list(grps[0]), 8)
+        res = AccumDict()
+        blks = _split_src(list(grps[0]), 10)
         t0 = time.time()
-        res = baseclassical(b0, sites, cmaker, True)
-        dt = time.time() - t0
+        for i, blk in enumerate(blks, 1):
+            res += baseclassical(blk, sites, cmaker, False)
+            dt = time.time() - t0
+            if dt > cmaker.oq.time_per_task:
+                rest = sum(blks[i:], [])
+                if i == 1:
+                    for blk in _split_blk(blks[i:], 9):
+                        yield baseclassical, blk, tilegetter, cmaker, 1, dstore
+                elif i == 2:
+                    for blk in _split_blk(blks[i:], 4):
+                        yield baseclassical, blk, tilegetter, cmaker, 1, dstore
+                elif i == 3:
+                    for blk in _split_blk(blks[i:], 3):
+                        yield baseclassical, blk, tilegetter, cmaker, 1, dstore
+                elif i == 4:
+                    for blk in _split_blk(blks[i:], 2):
+                        yield baseclassical, blk, tilegetter, cmaker, 1, dstore
+                elif rest:
+                    yield baseclassical, rest, tilegetter, cmaker, 1, dstore
+                break
         yield res
-        if dt > cmaker.oq.time_per_task:
-            for srcs in _split_blk(blks, 7):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
-        else:
-            odd, even = _split_blk(blks, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
     else:
-        yield baseclassical(grps, sites, cmaker, True)
+        yield baseclassical(grps, sites, cmaker, remove_zeros=True)
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
