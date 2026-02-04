@@ -228,8 +228,10 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         for i, blk in enumerate(blks, 1):
             out = baseclassical(blk, sites, cmaker, 0)
             gid = out['rmap'].gid
-            gid -= gid[0]  # change g-index offset
+            gid0 = gid[0]
+            gid -= gid0  # change g-index offset
             res += out
+            res['rmap'].gid += gid0  # restored offset
             dt = time.time() - t0
             if dt > cmaker.oq.time_per_task:
                 rest = sum(blks[i:], [])
