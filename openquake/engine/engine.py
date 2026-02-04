@@ -560,7 +560,7 @@ def read_many(workflow_toml, params={}, validate=True):
             multi = wfdict.pop('multi')
 
             # include case
-            fnames = multi.pop('include', [])
+            fnames = multi['workflow'].pop('include', [])
             if fnames:
                 for fname in fnames:
                     out.extend(read_many(fname, multi, validate))
