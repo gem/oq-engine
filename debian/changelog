@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added support for GMPE tables to be specifiable as the underlying
+    GSIMs within indirect approach AvgSA.
+
   [Michele Simionato]
   * Fixed `avg_gmf` being computed in the wrong situation due to a logic bug
 
