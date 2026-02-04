@@ -409,11 +409,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if dic is None:
             raise MemoryError('You ran out of memory!')
 
-        grp_id = dic.pop('grp_id')
-        sdata = dic.pop('source_data', None)
-        if sdata is not None:
-            self.source_data += sdata
-            self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        sdata = dic.pop('source_data')
+        grp_id = sdata['grp_id'][0]
+        self.source_data += sdata
+        self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         self.cfactor += dic.pop('cfactor')
         self.dparam_mb = max(dic.pop('dparam_mb'), self.dparam_mb)
         self.source_mb = max(dic.pop('source_mb'), self.source_mb)
