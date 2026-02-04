@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1">
+                  <uncertaintyModel>
+                    [GenericGmpeAvgSA]
+                    gmpe_name = "KothaEtAl2020ESHM20SlopeGeology"
+                    avg_periods = [0.5, 1.0, 2.0]
+                    corr_func = "clemett_asc"
+                    sigma_mu_epsilon = -2.85697000
+                    c3_epsilon = -1.73205100
+                  </uncertaintyModel>
+                  <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
