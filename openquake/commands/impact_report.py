@@ -145,15 +145,15 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
         output_path=save_dir / "most_affected_regions.txt")
 
     classifiers = build_classifiers(
-        df, breaks=[1, 10, 100, 1000])  # , 10000]
+        df, breaks=[1, 10, 100, 1000])
 
     colors = {
         "Fatalities": [
-            '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d'],  # , '#67000d']
+            '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d'],
         "Homeless": [
-            '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77'],  # , '#980043']
+            '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
         "Buildings": [
-            '#ffffff', '#bdbdbd', '#737373', '#424242'],  # , '#000000']
+            '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
     }
 
     titles = {

@@ -332,9 +332,9 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     import rasterio  # FIXME: to be added to engine requirements? Only to impact?
     from rasterio.plot import show
     if len(colors) != classifier.k:
-        raise ValueError(
-            f"Expected {classifier.k} colors, got {len(colors)}"
-        )
+        # NOTE: sometimes the classifier assumes a different number of bins, and
+        #       we need colors to adapt to it
+        colors = colors[:classifier.k]
     if df.crs != admin_boundaries.crs:
         raise ValueError("df and admin_boundaries CRS do not match")
     df = df.copy()
