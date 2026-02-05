@@ -176,8 +176,8 @@ def check_duplicates(smdict, strict):
 
     found = find_false_duplicates(smdict)
     if found:
-        logging.warning('Found different sources with same ID %s',
-                        general.shortlist(found))
+        logging.info('Found different sources with same ID %s',
+                     general.shortlist(found))
 
 
 def save_read_times(dstore, source_models):

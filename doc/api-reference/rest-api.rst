@@ -338,6 +338,23 @@ success, the message will contain a link to the web page showing the outputs of 
 describe the error that occurred.
 
 **************************
+POST /v1/calc/validate_ini
+**************************
+
+Check if a given job.ini local file is valid
+
+Parameters::
+
+	* job_ini: the local file to be validated
+
+Response:
+
+a JSON object, containing::
+
+	* valid: a boolean indicating if the provided file is valid
+	* error_msg: the error message, if any error was found (None otherwise)
+
+**************************
 POST /v1/calc/validate_zip
 **************************
 

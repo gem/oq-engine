@@ -836,8 +836,8 @@ time_event:
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
-  Example: *time_per_task=1000*
-  Default: 600
+  Example: *time_per_task=300*
+  Default: 60
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1176,7 +1176,7 @@ class OqParam(valid.ParamSet):
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 600)
+    time_per_task = valid.Param(valid.positivefloat, 60)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -2218,12 +2218,11 @@ class OqParam(valid.ParamSet):
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
-        The `complex_fault_mesh_spacing` parameter can be None only if
-        `rupture_mesh_spacing` is set. In that case it is identified with it.
+        The `complex_fault_mesh_spacing` parameter must be greater
+        than `rupture_mesh_spacing` (or at most equal).
         """
-        rms = getattr(self, 'rupture_mesh_spacing', None)
-        if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
-            self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        if self.complex_fault_mesh_spacing:
+            return self.complex_fault_mesh_spacing >= self.rupture_mesh_spacing
         return True
 
     def is_valid_collect_rlzs(self):

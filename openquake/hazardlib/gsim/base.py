@@ -115,7 +115,7 @@ def warn_adapted(cls):
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters', 'set_tables')
+              'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -398,16 +398,19 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     def __eq__(self, other):
         """
-        The GSIMs are equal if their string representations are equal
+        The GSIMs are equal if their TOML representations are equal
         """
-        return str(self) == str(other)
+        if self._toml:
+            return self._toml == other._toml
+        else:
+            return str(self) == str(other)
 
     def __hash__(self):
         """
-        We use the __str__ representation as hash: it means that we can
+        We use the TOML representation as hash: it means that we can
         use equivalently GSIM instances or strings as dictionary keys.
         """
-        return hash(str(self))
+        return hash(self._toml) if self._toml else hash(str(self))
 
     def __repr__(self):
         """

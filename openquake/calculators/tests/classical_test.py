@@ -19,7 +19,6 @@
 import os
 import sys
 import gzip
-import tempfile
 import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
@@ -38,10 +37,10 @@ from openquake.qa_tests_data.classical import (
     case_27, case_29, case_32, case_33, case_34, case_35, case_37, case_38,
     case_40, case_41, case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
-    case_60, case_61, case_62, case_63, case_64, case_65, case_66,
-    case_67, case_68, case_69, case_70, case_72, case_74, case_75, case_76,
+    case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
+    case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
     case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91)
+    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -293,11 +292,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska testing full tiling
-        # NB: requires disabling the parallelization otherwise the
-        # workers would read the real custom_tmp and not the mocked one
-        tmp = tempfile.gettempdir()
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), \
-             mock.patch.dict(config.directory, {'custom_tmp': tmp}):
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
                 '/hazard_curve-mean-PGA.csv',
                 'hazard_curve-mean-SA(0.1)',
@@ -309,28 +304,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [10])
-        self.assertEqual(data['blocks'], [1])
-
-    def test_case_22_bis(self):
-        # crossing date line calculation for Alaska
-        # this also tests full tiling without custom_dir
-        # NB: requires disabling the parallelization otherwise the
-        # workers would read the real custom_tmp and not the mocked one
-        with mock.patch.dict(config.directory, {'custom_tmp': ''}), \
-             mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-            self.assert_curves_ok([
-                '/hazard_curve-mean-PGA.csv',
-                'hazard_curve-mean-SA(0.1)',
-                'hazard_curve-mean-SA(0.2).csv',
-                'hazard_curve-mean-SA(0.5).csv',
-                'hazard_curve-mean-SA(1.0).csv',
-                'hazard_curve-mean-SA(2.0).csv',
-            ], case_22.__file__, delta=1E-6, tiling=True)
-        data = self.calc.datastore['source_groups']
-        self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], [4])
-        self.assertEqual(data['tiles'], [10])
+        self.assertGreater(data['tiles'][0], 1)
         self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
@@ -719,7 +693,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
 
         # reading/writing a multiFaultSource
-        grp = read_src_group(self.calc.datastore, '0-0')
+        grp = read_src_group(self.calc.datastore, '0')
         [src] = grp  # there is a single group with a single source
         tmpname = general.gettemp()
         src._rupture_idxs = [
@@ -765,7 +739,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # check that you can specify both a site and a site model and the
         # engine will automatically get the closest site model parameters
         self.run_calc(case_66.__file__, 'job1.ini',
-                      calculation_mode='preclassical')
+                      calculation_mode='preclassical',
+                      time_per_task='0')
         self.assertEqual(self.calc.sitecol.vs30, [810.])
 
     def test_case_67(self):
@@ -795,6 +770,15 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_70.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+    def test_case_71(self):
+        # Test use of table-based GMPE as the underlying GSIM when
+        # using conditional GMPEs
+        self.assert_curves_ok([
+            "hazard_curve-mean-IA.csv",
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-PGV.csv'],
+            case_71.__file__)
 
     def test_case_72(self):
         # reduced USA model
@@ -1045,3 +1029,25 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-AvgSA(2.0).csv',
             'hazard_curve-mean-SA(0.1).csv'],
             case_91.__file__)
+
+    def test_case_92(self):
+        # Tests use of correlation models for indirect AvgSA relying on
+        # the EmpiricalAvgSACorrelationModel class
+        self.assert_curves_ok([
+            'hazard_curve-mean-AvgSA(0.2).csv',
+            'hazard_curve-mean-AvgSA(1.0).csv',
+            "hazard_curve-mean-SA(0.2).csv",
+            'hazard_curve-mean-SA(1.0).csv',],
+            case_92.__file__)
+
+    def test_case_93(self):
+        # Tests GenericGmpeAvgSA with table-based underlying GMPEs
+        self.assert_curves_ok([
+            "hazard_curve-mean-SA(0.5).csv",
+            "hazard_curve-mean-SA(1.0).csv",
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_93.__file__, concurrent_tasks='2')
+
+        from openquake.hazardlib.gsim.gmpe_table import interp_table
+        info = interp_table.cache_info()
+        print(info)

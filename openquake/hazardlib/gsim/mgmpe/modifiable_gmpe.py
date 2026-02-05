@@ -20,20 +20,21 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
+import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
-
 # Site terms imports
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
-from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import _get_bssa14_site_term
+from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
+    _get_bssa14_site_term)
  
 # Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
@@ -100,8 +101,8 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # Compute the means and std devs for IMTs required by conditional GMPEs
     imts_req = self.imts_req
     sh = (len(imts_req), len(ctx_copy))
-    mean_b, sig_b, tau_b, phi_b = (np.empty(sh), np.empty(sh),
-                                   np.empty(sh), np.empty(sh))
+    mean_b, sig_b, tau_b, phi_b = (
+        np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh))
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
@@ -130,7 +131,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     if imts_base:
         compute_imts_subset(
             self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
-
+    
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     """
@@ -431,7 +432,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
         # Instantiate here and store for later
         [(gmpe_name, kw)] = cond_gmpe_by_imt[imt]["gmpe"].items()
         cond = registry[gmpe_name](**kw)
-        cond.from_mgpme = True
+        cond.from_mgmpe = True
         if not hasattr(cond, "REQUIRES_IMTS"):
             raise ValueError(f"{cond.__class__.__name__} lacks the "
                              f"REQUIRES_IMTS attribute - this is "
@@ -447,6 +448,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
 
         # Add each required IMT so we compute all using underlying GMM once
         imts_req.update(cond.REQUIRES_IMTS)
+
     return sorted(imts_req)
 
 
@@ -467,6 +469,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         # Create the original GMPE
+        _toml = toml.dumps(kwargs['gmpe'])
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
         g = globals()
@@ -474,6 +477,7 @@ class ModifiableGMPE(GMPE):
             if k not in g:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
+        self.gmpe._toml = _toml
         if hasattr(self.gmpe, 'gmpe_table'):
             self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
@@ -545,19 +549,8 @@ class ModifiableGMPE(GMPE):
                             self.params[key][subkey], subkey)
 
         if "conditional_gmpe" in self.params:
-            self.imts_req = init_underlying_gmpes(self.params["conditional_gmpe"])
-
-    # called by the ContextMaker
-    def set_tables(self, mags, imts):
-        """
-        :param mags: a list of magnitudes as strings
-        :param imts: a list of IMTs as strings
-
-        Set the .mean_table and .sig_table attributes on the underlying gmpe
-        """
-        if hasattr(self.gmpe, 'set_tables'):
-            assert len(mags)
-            self.gmpe.set_tables(mags, imts)
+            self.imts_req = init_underlying_gmpes(
+                self.params["conditional_gmpe"])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

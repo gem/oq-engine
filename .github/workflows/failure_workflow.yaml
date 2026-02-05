@@ -16,6 +16,7 @@ on:
       - "Test WebUI on RH based OS"
       - "Weekly Engine tests"
       - "Cluster ZMQ"
+      - "WebUI frontend UI tests" 
     types:
       - completed
 

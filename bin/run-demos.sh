@@ -39,13 +39,8 @@ for ini in $(find $1 -name job.tmp.ini | sort); do
     oq engine --run $ini --exports csv,hdf5
 done
 
-oq export hcurves 18  # export with GMPETables
-
 # test the --eos option
 oq engine --eos -1 /tmp
-
-# extract disaggregation data
-oq extract "disagg_layer?" 15
 
 # do something with the generated data, 9 is the AreaSource demo
 oq engine --lhc

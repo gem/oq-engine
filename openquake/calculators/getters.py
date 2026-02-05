@@ -21,7 +21,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import general, hdf5, config
+from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
@@ -137,9 +137,9 @@ class HcurvesGetter(object):
 
 
 # NB: using 32 bit ratemaps
-def get_pmaps_gb(dstore, full_lt=None):
+def get_rmap_gb(dstore, full_lt=None):
     """
-    :returns: memory required on the master node to keep the pmaps
+    :returns: (size_of_the_global_RateMap_in_GB, trt_rlzs, trt_smrs)
     """
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
@@ -153,7 +153,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs, trt_smrs
 
 
-def get_num_chunks(dstore):
+def get_num_chunks(dstore, full_lt=None):
     """
     :returns: number of chunks to generate (determine postclassical tasks)
 
@@ -169,7 +169,7 @@ def get_num_chunks(dstore):
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
-    req_gb, _, _ = get_pmaps_gb(dstore)
+    req_gb, _, _ = get_rmap_gb(dstore, full_lt)
     ntiles = int(numpy.ceil(req_gb))
     return ntiles if ntiles > ct2 else ct2
     # for EUR on cole concurrent_tasks=256
@@ -181,12 +181,12 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = oq or dstore['oqparam']
-    n = get_num_chunks(dstore)
+    n = get_num_chunks(dstore, full_lt)
 
     # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs, trt_smrs = get_pmaps_gb(dstore, full_lt)
+    _req_gb, trt_rlzs, trt_smrs = get_rmap_gb(dstore, full_lt)
     attrs = vars(full_lt)
     full_lt.init()
     if oq.fastmean:

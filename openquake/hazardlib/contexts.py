@@ -624,13 +624,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
-        for gsim in self.gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
 
     def _init2(self, param, extraparams):
         for req in self.REQUIRES:
@@ -1313,29 +1306,26 @@ class ContextMaker(object):
         eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (eps, 0)
+            return 0 if src.code in b'pP' else eps
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps, 0
+            return eps
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return eps, 0
-        lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = (lenctx * src.num_ruptures /
-                  self.num_rups * srcfilter.multiplier)
+            return eps
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
         if src.code in b'NSX':  # increase weight
             weight *= 12.
         # raise the weight according to the gsims (needed for USA 2023)
         weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps), int(esites)
+        return max(weight, eps)
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1346,9 +1336,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(src, srcfilter)
-                # if src.code == b'S':
-                #     print(src, src.dt, src.num_ruptures / self.num_rups)
+                src.weight = self.estimate_weight(src, srcfilter)
 
 
 def by_dists(gsim):
@@ -1468,7 +1456,6 @@ class RmapMaker(object):
     def __init__(self, cmaker, sitecol, group):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
-        self.tiling = getattr(cmaker, 'tiling', False)
         if hasattr(sitecol, 'sitecol'):
             self.srcfilter = sitecol
         else:
@@ -1549,10 +1536,8 @@ class RmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
-                src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
@@ -1569,27 +1554,20 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
-        if not self.tiling:
-            for src in self.sources:
-                self.source_data['src_id'].append(src.source_id)
-                self.source_data['grp_id'].append(src.grp_id)
-                self.source_data['nsites'].append(src.nsites)
-                self.source_data['esites'].append(src.esites)
-                self.source_data['nrupts'].append(src.num_ruptures)
-                self.source_data['weight'].append(src.weight)
-                self.source_data['ctimes'].append(
-                    dt * src.nsites / totlen if totlen else dt / nsrcs)
-                self.source_data['taskno'].append(cm.task_no)
+        for src in self.sources:
+            self.source_data['src_id'].append(src.source_id)
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nctxs'].append(totlen // nsrcs)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(dt / nsrcs)
+            self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
         t0 = time.time()
-        weight = 0.
-        nsites = 0
-        esites = 0
-        nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
@@ -1602,9 +1580,6 @@ class RmapMaker(object):
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
-            nctxs += len(ctxs)
-            nsites += n
-            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1613,18 +1588,15 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            weight += src.weight
-        pmap.array *= self.grp_probability
-        dt = time.time() - t0
-        if not self.tiling:
+            src.dt = time.time() - t0
             self.source_data['src_id'].append(valid.basename(src))
             self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(esites)
-            self.source_data['nrupts'].append(nctxs)
-            self.source_data['weight'].append(weight)
-            self.source_data['ctimes'].append(dt)
+            self.source_data['nctxs'].append(n)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(src.dt)
             self.source_data['taskno'].append(cm.task_no)
+        pmap.array *= self.grp_probability
         return ~pmap
 
     def make(self):
@@ -1656,7 +1628,6 @@ class RmapMaker(object):
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['grp_id'] = self.sources[0].grp_id
         dic['dparam_mb'] = self.cmaker.dparam_mb
         dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
@@ -1784,6 +1755,25 @@ def full_context(sites, rup, dctx=None):
         for par, val in vars(dctx).items():
             setattr(self, par, val)
     return self
+
+
+# this is the equivalent of the obsolete method gsim.get_mean_and_stddevs
+def get_mean_stds_slow(rup, sites, gsim, imt, **params):
+    """
+    Slow function not used by the engine, but still useful for
+    pedagogical applications (i.e. jupyter notebooks). For performance,
+    one should instantiate a ContextMaker and work on gsims, imts
+    and sources.
+
+    :param rup: a rupture instance
+    :param sites: a SiteCollection instance
+    :param gsim: a GSIM instance
+    :param imt_str: a string representing an IMT or an IMT
+    :return: 4 arrays (mean, sig, tau, phi) of N elements each.
+    """
+    cmaker = simple_cmaker([gsim], [str(imt)], **params)
+    ctxs = list(cmaker.get_ctx_iter([rup], sites))
+    return cmaker.get_mean_stds(ctxs)[:, 0, 0, :]  # (4, N)
 
 
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
