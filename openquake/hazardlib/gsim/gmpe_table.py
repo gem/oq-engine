@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
 in the form of binary tables
 """
 
-from functools import cache
+from functools import lru_cache
 import h5py
 from scipy.interpolate import interp1d
 import numpy as np
@@ -79,10 +79,10 @@ def todict(hdfgroup):
     return {key: hdfgroup[key][:] for key in hdfgroup}
 
 
-@cache
+@lru_cache(maxsize=10_000)
 # NB: the cache is based on the gsim TOML representation, the magnitude,
-# the imt and the which string; there are not too many combinations, so
-# no memory leak here
+# the imt and the which string; there are not too many combinations;
+# for CAN the maximum cache size I have seen is ~7000
 def interp_table(gsim, mag, imt, which):
     """
     :param gsim: table-based GSIM instance
