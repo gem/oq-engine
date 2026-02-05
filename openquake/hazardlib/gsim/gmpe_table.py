@@ -80,18 +80,23 @@ def todict(hdfgroup):
 
 
 @cache
-def interp_table(self, mag, imt, which):
+# NB: the cache is based on the gsim TOML representation, the magnitude,
+# the imt and the which string; there are not too many combinations, so
+# no memory leak here
+def interp_table(gsim, mag, imt, which):
     """
-    Returns the vector of ground motions or standard deviations
-    corresponding to the specific magnitude and intensity measure type.
-
-    :param which:
-       the string "IMLs" or "Total"
+    :param gsim: table-based GSIM instance
+    :param mag: magnitude, assumed rounded to 2 digits
+    :param imt: IMT instance
+    :param which: the string "IMLs" or "Total"
+    :return:
+        the vector of ground motions or standard deviations corresponding
+        to the specific magnitude and intensity measure type.
     """
     assert which in "IMLs Total", which
     assert isinstance(mag, FLOAT), mag  # assume rounded to 2 digits
     assert isinstance(imt, tuple), imt  # assume IMT object
-    if imt.string not in self.imls and imt.name != "SA":
+    if imt.string not in gsim.imls and imt.name != "SA":
         # Scalar IMT is not supported (conditional GMPEs - we in skip
         # setting a table which ensures an error is still raised when
         # unsupported IMT is specified outside of conditional GMPE use)
@@ -99,19 +104,19 @@ def interp_table(self, mag, imt, which):
     elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
         if which == "IMLs":
-            iml_table = self.imls[imt.string][:]
+            iml_table = gsim.imls[imt.string][:]
         else:
-            iml_table = self.stddev[imt.string][:]
+            iml_table = gsim.stddev[imt.string][:]
         n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
         # Get SA
         if which == "IMLs":
-            periods = self.imls["T"][:]
-            iml_table = self.imls["SA"][:]
+            periods = gsim.imls["T"][:]
+            iml_table = gsim.imls["SA"][:]
         else:
-            periods = self.stddev["T"][:]
-            iml_table = self.stddev["SA"][:]
+            periods = gsim.stddev["T"][:]
+            iml_table = gsim.stddev["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
@@ -126,16 +131,15 @@ def interp_table(self, mag, imt, which):
         iml_table = 10. ** interpolator(np.log10(imt.period))
 
     # do not allow "mag" to exceed maximum table magnitude
-    mag = np.clip(mag, None, self.m_w[-1])
+    mag = np.clip(mag, None, gsim.m_w[-1])
 
     # Get magnitude values
-    if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
+    if (mag < gsim.m_w[0]).any() or (mag > gsim.m_w[-1]).any():
         raise ValueError("Magnitude %.2f outside of supported range "
-                         "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
+                         "(%.2f to %.2f)" % (mag, gsim.m_w[0], gsim.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
-    m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
-
+    m_interpolator = interp1d(gsim.m_w, np.log10(iml_table), axis=1)
     return 10.0 ** m_interpolator(mag)
 
 
