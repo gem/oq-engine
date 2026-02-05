@@ -193,6 +193,10 @@ def _scaled_image(path, max_w, max_h):
     )
 
 
+def _fmt_int(v):
+    return "" if v is None else f"{int(round(v))}"
+
+
 def _get_impact_summary_ranges(dstore):
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
@@ -207,7 +211,7 @@ def _get_impact_summary_ranges(dstore):
     ]
 
     summary_ranges = {
-        label: f"{r.q05:.6g} - {r.q95:.6g}"
+        label: f"{_fmt_int(r.q05)} - {_fmt_int(r.q95)}"
         for label, lt in mapping.items()
         for r in [rows.loc[rows['loss_type'] == lt].iloc[0]]
     }
