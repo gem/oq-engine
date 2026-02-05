@@ -1,5 +1,7 @@
 [workflow]
 description = "global SES mockup"
+checkout.EUR = "master"
+checkout.MIE = "master"
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = 200
