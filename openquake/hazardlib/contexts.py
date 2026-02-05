@@ -624,13 +624,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
-        for gsim in self.gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
 
     def _init2(self, param, extraparams):
         for req in self.REQUIRES:

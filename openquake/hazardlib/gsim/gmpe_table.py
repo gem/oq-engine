@@ -21,6 +21,8 @@ Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
 :class:`openquake.hazardlib.gsim.gmpe_table.GMPETable` for defining GMPEs
 in the form of binary tables
 """
+
+from functools import lru_cache
 import h5py
 from scipy.interpolate import interp1d
 import numpy as np
@@ -33,6 +35,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
 _get_mean = CallableDict()
+FLOAT = (float, np.float32, np.float64)
 
 
 @_get_mean.add("base", "nga_east")
@@ -76,7 +79,8 @@ def todict(hdfgroup):
     return {key: hdfgroup[key][:] for key in hdfgroup}
 
 
-def _return_tables(self, mag, imt, which):
+#@lru_cache
+def interp_table(self, mag, imt, which):
     """
     Returns the vector of ground motions or standard deviations
     corresponding to the specific magnitude and intensity measure type.
@@ -85,6 +89,8 @@ def _return_tables(self, mag, imt, which):
        the string "IMLs" or "Total"
     """
     assert which in "IMLs Total", which
+    assert isinstance(mag, FLOAT), mag  # assume rounded to 2 digits
+    assert isinstance(imt, tuple), imt  # assume IMT object
     if imt.string not in self.imls and imt.name != "SA":
         # Scalar IMT is not supported (conditional GMPEs - we in skip
         # setting a table which ensures an error is still raised when
@@ -222,32 +228,7 @@ class GMPETable(GMPE):
         table_dists = self.distances[:, 0, idx - 1]
         dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            key = ('%.2f' % mag, imt.string)
-            imls = self.mean_table[key]
+            imls = interp_table(self, mag, imt, 'IMLs')
+            sigs = interp_table(self, mag, imt, 'Total')
             mean[m] = np.log(_get_mean(self.kind, imls, dists, table_dists))
-            sig[m] = _get_stddev(self.sig_table[key], dists, table_dists, imt)
-
-    # called by the ContextMaker
-    def set_tables(self, mags, imts):
-        """
-        :param mags: a list of magnitudes as strings
-        :param imts: a list of IMTs as strings
-
-        Set the .mean_table and .sig_table attributes
-        """
-        self.mean_table = {}  # dictionary mag_str, imt_str -> array
-        self.sig_table = {}  # dictionary mag_str, imt_str -> array
-        if 'PGA' in self.imls and 'PGA' not in imts:
-            # add PGA since it will be needed in get_mean_amp
-            imts = sorted(set(imts) | {'PGA'})
-        if 'SA(0.2)' not in imts:
-            # add SA(0.2) since it will be needed in get_mean_amp
-            imts = sorted(set(imts) | {'SA(0.2)'})
-        for imt in imts:
-            imt_obj = imt_module.from_string(imt)
-            for mag in mags:
-                self.mean_table[mag, imt] = _return_tables(
-                    self, float(mag), imt_obj, 'IMLs')
-                if self.stddev is not None:
-                    self.sig_table[mag, imt] = _return_tables(
-                        self, float(mag), imt_obj, 'Total')
+            sig[m] = _get_stddev(sigs, dists, table_dists, imt)

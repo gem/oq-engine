@@ -23,7 +23,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import _return_tables
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
@@ -102,16 +102,6 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     sh = (len(imts_req), len(ctx_copy))
     mean_b, sig_b, tau_b, phi_b = (
         np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh))
-    if hasattr(self.gmpe, "set_tables"):
-        # Set GMPE tables for additional IMTs required by conditional GMPE
-        for imt in imts_req:
-            for mag in ctx_copy.mag:
-                key = ('%.2f' % mag, imt.string)
-                self.gmpe.mean_table[key] =\
-                      _return_tables(self.gmpe, float(mag), imt, 'IMLs')
-                if self.gmpe.stddev is not None:
-                    self.gmpe.sig_table[key] =\
-                          _return_tables(self.gmpe, float(mag), imt, 'Total')
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
@@ -556,19 +546,8 @@ class ModifiableGMPE(GMPE):
                             self.params[key][subkey], subkey)
 
         if "conditional_gmpe" in self.params:
-            self.imts_req = init_underlying_gmpes(self.params["conditional_gmpe"])
-
-    # called by the ContextMaker
-    def set_tables(self, mags, imts):
-        """
-        :param mags: a list of magnitudes as strings
-        :param imts: a list of IMTs as strings
-
-        Set the .mean_table and .sig_table attributes on the underlying gmpe
-        """
-        if hasattr(self.gmpe, 'set_tables'):
-            assert len(mags)
-            self.gmpe.set_tables(mags, imts)
+            self.imts_req = init_underlying_gmpes(
+                self.params["conditional_gmpe"])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

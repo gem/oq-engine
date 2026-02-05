@@ -115,7 +115,7 @@ def warn_adapted(cls):
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters', 'set_tables')
+              'set_parameters')
 
 
 def bad_methods(clsdict):
