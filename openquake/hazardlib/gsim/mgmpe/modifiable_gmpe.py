@@ -20,10 +20,10 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
+import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
@@ -33,7 +33,8 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
-from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import _get_bssa14_site_term
+from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
+    _get_bssa14_site_term)
  
 # Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
@@ -468,6 +469,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         # Create the original GMPE
+        _toml = toml.dumps(kwargs['gmpe'])
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
         g = globals()
@@ -475,6 +477,7 @@ class ModifiableGMPE(GMPE):
             if k not in g:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
+        self.gmpe._toml = _toml
         if hasattr(self.gmpe, 'gmpe_table'):
             self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
