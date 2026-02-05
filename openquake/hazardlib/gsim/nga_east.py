@@ -392,7 +392,7 @@ def get_fnl(C_NL, pga_rock, vs30, period, us23=None):
     Returns the nonlinear mean amplification according to equation 2
     of Hashash et al. (2019)
     """
-    if period < 0.4:
+    if period <= 0.4:
         vref = 760.
     else:
         vref = 3000.
