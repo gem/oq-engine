@@ -1046,4 +1046,10 @@ class ClassicalTestCase(CalculatorTestCase):
             "hazard_curve-mean-SA(0.5).csv",
             "hazard_curve-mean-SA(1.0).csv",
             'hazard_curve-mean-SA(2.0).csv'],
-            case_93.__file__)
+            case_93.__file__, concurrent_tasks='0')
+
+        from openquake.hazardlib.gsim.gmpe_table import interp_table
+        info = interp_table.cache_info()
+        # the cache is not helpful in this test, but it helps a lot
+        # in realistic calculations
+        assert info.hits == info.misses == 176
