@@ -2216,6 +2216,15 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
+    def is_valid_complex_fault_mesh_spacing(self):
+        """
+        The `complex_fault_mesh_spacing` parameter must be greater
+        than `rupture_mesh_spacing` (or at most equal).
+        """
+        if self.complex_fault_mesh_spacing:
+            return self.complex_fault_mesh_spacing >= self.rupture_mesh_spacing
+        return True
+
     def is_valid_collect_rlzs(self):
         """
         sampling_method must be early_weights with collect_rlzs=true
