@@ -803,6 +803,8 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.ComplexFaultSource`
                   instance
         """
+        if not self.complex_fault_mesh_spacing:
+            raise ValueError('complex_fault_mesh_spacing is not set!')
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)
