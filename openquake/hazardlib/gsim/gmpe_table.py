@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
 in the form of binary tables
 """
 
-from functools import lru_cache
+from functools import cache
 import h5py
 from scipy.interpolate import interp1d
 import numpy as np
@@ -79,7 +79,7 @@ def todict(hdfgroup):
     return {key: hdfgroup[key][:] for key in hdfgroup}
 
 
-#@lru_cache
+@cache
 def interp_table(self, mag, imt, which):
     """
     Returns the vector of ground motions or standard deviations

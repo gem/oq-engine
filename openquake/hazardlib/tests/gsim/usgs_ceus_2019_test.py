@@ -71,6 +71,7 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
 # Verification Test Cases - Means and stddevs
 def make_test(alias, key):
     def test_all(self):
+        ceus.NGAEastUSGSGMPE._toml = alias
         self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
                    f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
                    max_discrep_percentage=0.15,

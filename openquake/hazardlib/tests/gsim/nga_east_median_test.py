@@ -35,6 +35,7 @@ MAX_DISC = 0.1
 
 def maketest(alias, key):
     def test(self):
+        ne.NGAEastGMPE._toml = alias
         self.check(f"nga_east_median_tables/NGAEast_{key}_MEAN.csv",
                    max_discrep_percentage=MAX_DISC,
                    gmpe_table=f"NGAEast_{key}.hdf5")
