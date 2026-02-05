@@ -62,6 +62,9 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ceus.NGAEastUSGSGMPE
 
     def test_median(self):
+        # avoid issues with the interp_table cache by changing
+        # the toml representation
+        ceus.NGAEastUSGSGMPE._toml = 'NGAEAST_SITE_MEDIAN_MEAN'
         self.check("usgs_ceus_2019/NGAEAST_SITE_MEDIAN_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_table="nga_east_PEER_EX.hdf5")
@@ -71,6 +74,8 @@ class NGAEastUSGSCEUSSiteAmpTestCase(BaseGSIMTestCase):
 # Verification Test Cases - Means and stddevs
 def make_test(alias, key):
     def test_all(self):
+        # avoid issues with the interp_table cache by changing
+        # the toml representation
         ceus.NGAEastUSGSGMPE._toml = alias
         self.check(f"usgs_ceus_2019/{alias}_MEAN.csv",
                    f"usgs_ceus_2019/{alias}_TOTAL_STDDEV.csv",
