@@ -1041,8 +1041,12 @@ class ClassicalTestCase(CalculatorTestCase):
             case_92.__file__)
 
     def test_case_93(self):
-        # Tests GenericGmpeAvgSA with table-based underlying GMPEs
+        # Tests GenericGmpeAvgSA and IndirecGmpeAvgSA with
+        # table-based underlying GMPEs
         self.assert_curves_ok([
+            "hazard_curve-mean-AvgSA(0.5).csv",
+            "hazard_curve-mean-AvgSA(1.0).csv",
+            'hazard_curve-mean-AvgSA(2.0).csv',
             "hazard_curve-mean-SA(0.5).csv",
             "hazard_curve-mean-SA(1.0).csv",
             'hazard_curve-mean-SA(2.0).csv'],
