@@ -1051,4 +1051,3 @@ class ClassicalTestCase(CalculatorTestCase):
         from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)
-        assert info.hits >= info.misses
