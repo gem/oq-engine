@@ -1765,7 +1765,7 @@ def full_context(sites, rup, dctx=None):
 
 
 # this is the equivalent of the obsolete method gsim.get_mean_and_stddevs
-def get_mean_stds_slow(rup, sites, gsim, imt_str, **params):
+def get_mean_stds_slow(rup, sites, gsim, imt, **params):
     """
     Slow function not used by the engine, but still useful for
     pedagogical applications (i.e. jupyter notebooks). For performance,
@@ -1775,10 +1775,10 @@ def get_mean_stds_slow(rup, sites, gsim, imt_str, **params):
     :param rup: a rupture instance
     :param sites: a SiteCollection instance
     :param gsim: a GSIM instance
-    :param imt_str: a string representing an IMT
+    :param imt_str: a string representing an IMT or an IMT
     :return: 4 arrays (mean, sig, tau, phi) of N elements each.
     """
-    cmaker = simple_cmaker([gsim], [imt_str], **params)
+    cmaker = simple_cmaker([gsim], [str(imt)], **params)
     ctxs = list(cmaker.get_ctx_iter([rup], sites))
     return cmaker.get_mean_stds(ctxs)[:, 0, 0, :]  # (4, N)
 

@@ -28,7 +28,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
     Effect, ContextMaker, get_distances, get_mean_stds_slow)
-from openquake.hazardlib import valid
+from openquake.hazardlib import imt, valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.rupture import \
@@ -391,7 +391,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
 
         # test get_mean_stds_slow runs
         mean_stds = get_mean_stds_slow(
-            rup, SiteCollection([s, s]), AbrahamsonEtAl2014(), 'PGA')
+            rup, SiteCollection([s, s]), AbrahamsonEtAl2014(), imt.PGA())
         self.assertEqual(mean_stds.shape, (4, 2))
 
         # test att_curves which are functions N-distances -> (G, M, N) arrays
