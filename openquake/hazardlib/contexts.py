@@ -624,13 +624,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
-        for gsim in self.gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
 
     def _init2(self, param, extraparams):
         for req in self.REQUIRES:
@@ -1762,6 +1755,25 @@ def full_context(sites, rup, dctx=None):
         for par, val in vars(dctx).items():
             setattr(self, par, val)
     return self
+
+
+# this is the equivalent of the obsolete method gsim.get_mean_and_stddevs
+def get_mean_stds_slow(rup, sites, gsim, imt, **params):
+    """
+    Slow function not used by the engine, but still useful for
+    pedagogical applications (i.e. jupyter notebooks). For performance,
+    one should instantiate a ContextMaker and work on gsims, imts
+    and sources.
+
+    :param rup: a rupture instance
+    :param sites: a SiteCollection instance
+    :param gsim: a GSIM instance
+    :param imt_str: a string representing an IMT or an IMT
+    :return: 4 arrays (mean, sig, tau, phi) of N elements each.
+    """
+    cmaker = simple_cmaker([gsim], [str(imt)], **params)
+    ctxs = list(cmaker.get_ctx_iter([rup], sites))
+    return cmaker.get_mean_stds(ctxs)[:, 0, 0, :]  # (4, N)
 
 
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):

@@ -2218,12 +2218,11 @@ class OqParam(valid.ParamSet):
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
-        The `complex_fault_mesh_spacing` parameter can be None only if
-        `rupture_mesh_spacing` is set. In that case it is identified with it.
+        The `complex_fault_mesh_spacing` parameter must be greater
+        than `rupture_mesh_spacing` (or at most equal).
         """
-        rms = getattr(self, 'rupture_mesh_spacing', None)
-        if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
-            self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        if self.complex_fault_mesh_spacing:
+            return self.complex_fault_mesh_spacing >= self.rupture_mesh_spacing
         return True
 
     def is_valid_collect_rlzs(self):
