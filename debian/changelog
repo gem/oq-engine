@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed AssertionError on len(mags) for GenericGmpeAvgSA with table-based
+    GMPEs
   * complex_fault_mesh_spacing is now mandatory in the job.ini file if
     the model contains complex fault sources
 

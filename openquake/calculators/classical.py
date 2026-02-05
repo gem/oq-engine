@@ -151,7 +151,8 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None, monitor=None):
+def baseclassical(grp, tgetter, cmaker, remove_zeros,
+                  dstore=None, monitor=None):
     """
     Wrapper over hazard_curve.classical
     """
