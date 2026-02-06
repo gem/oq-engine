@@ -1963,7 +1963,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         G = len(cmaker.gsims)
         tom = PoissonTOM(cmaker.oq.investigation_time)
         pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
-        [ctx] = cmaker.from_srcs([sources[0]], sitecol)
+        ctx = cmaker.from_srcs([sources[0]], sitecol)
         magrates = [{numpy.round(mag, 3): rate
                      for mag, rate in src.get_annual_occurrence_rates()}
                      for src in sources]
