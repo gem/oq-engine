@@ -1176,19 +1176,18 @@ class ContextMaker(object):
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
     # documented but not used in the engine
-    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
+    def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
-        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param ctx: a context array
         :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
         :returns: a MapArray
         """
         rup_indep = not rup_mutex
-        sids = numpy.unique(ctxs[0].sids)
+        sids = numpy.unique(ctx.sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         self.tom = tom or PoissonTOM(self.investigation_time)
-        for ctx in ctxs:
-            self.update(pmap, ctx, rup_mutex)
+        self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def get_rmap(self, srcgroup, sitecol):
@@ -1234,6 +1233,8 @@ class ContextMaker(object):
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
+        elif all(isinstance(ctx, numpy.ndarray) for ctx in ctxs):
+            recarrays = [concat(ctxs)]
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
