@@ -191,7 +191,7 @@ def get_req_gb(data, N, oq):
 def store_tiles(dstore, csm, sitecol, cmakers):
     """
     Store a `tiles` array if the calculation is large enough.
-    :returns: (req_gb, max_weight)
+    :returns: max_weight
     """
     if sitecol is None:
         N = 0
@@ -232,7 +232,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
                                   tiling=oq.tiling))
-    return req_gb, max_weight
+    return max_weight
 
 
 @base.calculators.add('preclassical')
@@ -414,7 +414,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'source_groups'
         if self.sitecol is not None:
-            self.req_gb, self.max_weight = store_tiles(
+            self.max_weight = store_tiles(
                 self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims

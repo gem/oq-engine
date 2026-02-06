@@ -807,11 +807,6 @@ split_sources:
 split_by_gsim:
   INTERNAL
 
-outs_per_task:
-  How many outputs per task to generate (honored in some calculators)
-  Example: *outs_per_task = 3*
-  Default: 4
-
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
   Example: *std = true*.
@@ -832,12 +827,6 @@ time_event:
   Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
-
-time_per_task:
-  Used in calculations with task splitting. If a task slice takes longer
-  then *time_per_task* seconds, then spawn subtasks for the other slices.
-  Example: *time_per_task=300*
-  Default: 60
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1172,11 +1161,9 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     split_by_gsim = valid.Param(valid.positiveint, 0)
-    outs_per_task = valid.Param(valid.positiveint, 4)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 60)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -1318,8 +1305,6 @@ class OqParam(valid.ParamSet):
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
             self.pointsource_distance = dict(default=40.)
-        if self.collapse_level >= 0:
-            self.time_per_task = 1_000_000  # disable task_splitting
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):

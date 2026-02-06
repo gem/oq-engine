@@ -196,16 +196,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
                 yield result
 
 
-def _split_src(sources, n):
-    sources.sort(key=get_weight)
-    for srcs in numpy.array_split(sources, n):
-        if len(srcs):
-            yield list(srcs)
-
-
-def _split_blk(blocks, n):
+def _split_src(srcs, n):
     for i in range(n):
-        out = sum(blocks[i::n], [])
+        out = srcs[i::n]
         if out:
             yield out
 
@@ -227,19 +220,22 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
-        # tested in case_66
+        # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 8)
+        rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
-        if dt > cmaker.oq.time_per_task:
-            for srcs in _split_blk(blks, 7):
+        if dt > 3 * cmaker.split_time:
+            # tested in the oq-risk-tests
+            for srcs in _split_src(rest, 7):
+                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+        elif dt > cmaker.split_time:
+            for srcs in _split_src(rest, 2):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            odd, even = _split_blk(blks, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
+            yield baseclassical(rest, sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
@@ -488,7 +484,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.req_gb, self.max_weight = preclassical.store_tiles(
+            self.max_weight = preclassical.store_tiles(
                 self.datastore, self.csm, self.sitecol,
                 self.cmdict['Default'])
 
@@ -551,9 +547,6 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
-        if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs, trt_smrs = getters.get_rmap_gb(
-                self.datastore, self.full_lt)
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -612,8 +605,11 @@ class ClassicalCalculator(base.HazardCalculator):
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
+        max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
+        self.split_time = split_time = max(max_gb * 10, 10)
+        logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
-            cmaker.tiling = self.tiling
+            cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
@@ -744,7 +740,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * oq.time_per_task)
+                          dur.max() > 5 * self.split_time)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
