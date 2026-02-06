@@ -92,7 +92,8 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
 
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
-            gmpe.get_mean_and_stddevs(ctx, ctx, ctx, im_type, std_types)
+            cmaker = contexts.simple_cmaker([gmpe], [im_type.string])
+            cmaker.get_mean_stds([cmaker.recarray([ctx])])[:, 0, 0, :]
             # confirm type and content of warning
             assert len(warning_stream) == 1
             assert issubclass(warning_stream[-1].category, UserWarning)
