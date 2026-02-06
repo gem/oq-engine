@@ -267,7 +267,7 @@ Then we can specify the sites and a source as follows::
 
 Then you can use the ``ContextMaker`` to generate context arrays from the sources::
 
-	>>> [ctx] = cmaker.from_srcs([src], sitecol)
+	>>> ctx = cmaker.from_srcs([src], sitecol)
 
 In our example, there are 15 magnitudes::
 
