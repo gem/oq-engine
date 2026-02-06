@@ -21,6 +21,8 @@ from django.apps import AppConfig
 from django.conf import settings
 from sqlite3 import OperationalError
 from openquake.baselib import config
+from openquake.hazardlib.geo.spatial_index import (
+    AdminSpatialIndex, MosaicSpatialIndex)
 from openquake.server import dbserver, db
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
@@ -38,6 +40,24 @@ class ServerConfig(AppConfig):
         #     AppConfig classes are defined, you can import them in ready()
         if settings.TEST:
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
+
+        # FIXME use openquake.cfg instead
+        self.mosaic_spatial_index = MosaicSpatialIndex(
+            settings.MOSAIC_PARQUET_PATH
+        )
+        self.admin_spatial_index = AdminSpatialIndex(
+            admin0=settings.ADMIN0_PARQUET_PATH,
+            admin1=settings.ADMIN1_PARQUET_PATH,
+            admin2=settings.ADMIN2_PARQUET_PATH,
+        )
+        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=0))
+        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=1))
+        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=2))
+        print(self.admin_spatial_index.nearby(lon=9, lat=45, admin_level=0,
+                                              threshold_deg=1))
+        print(self.mosaic_spatial_index.locate(lon=9, lat=45))
+        print(self.mosaic_spatial_index.nearby(lon=9, lat=45,
+                                               threshold_deg=0.2))
 
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
