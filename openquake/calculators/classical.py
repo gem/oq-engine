@@ -220,7 +220,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
-        # tested in case_66
+        # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 8)
         rest = sum(blks, [])
         t0 = time.time()
@@ -228,6 +228,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         dt = time.time() - t0
         yield res
         if dt > cmaker.split_time:
+            # tested in the oq-risk-tests
             for srcs in _split_src(rest, 7):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         else:

@@ -603,7 +603,6 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
