@@ -1680,30 +1680,6 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
-# used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
-def full_context(sites, rup, dctx=None):
-    """
-    :returns: a full RuptureContext with all the relevant attributes
-    """
-    self = RuptureContext()
-    self.src_id = 0
-    for par, val in vars(rup).items():
-        setattr(self, par, val)
-    if not hasattr(self, 'occurrence_rate'):
-        self.occurrence_rate = numpy.nan
-    if hasattr(sites, 'array'):  # is a SiteCollection
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-    else:  # sites is a SitesContext
-        for par, val in vars(sites).items():
-            setattr(self, par, val)
-    if dctx:
-        for par, val in vars(dctx).items():
-            setattr(self, par, val)
-    return self
-
-
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs

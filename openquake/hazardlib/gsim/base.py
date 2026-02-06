@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, simple_cmaker)
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -221,8 +220,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
-    #: Those attributes are then available in the
-    #: :class:`SitesContext` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -266,9 +263,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #:     :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #: ``rvolc``
     #:     Source to site distance passing through surface projection of volcanic zone.
-    #:
-    #: All the distances are available from the :class:`DistancesContext`
-    #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     _toml = ''  # set by valid.gsim
