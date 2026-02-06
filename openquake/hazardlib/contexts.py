@@ -1312,12 +1312,12 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=3))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
             return EPS
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
+        weight = src.dt * (src.num_ruptures / self.num_rups)
         return weight
 
     def set_weight(self, sources, srcfilter):
