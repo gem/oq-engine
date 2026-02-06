@@ -53,19 +53,13 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         ctx.mag = 5.0
         ctx.src_id = 0
         ctx.rup_id = 0
+        cmaker = simple_cmaker([self.GSIM_CLASS()], ["PGA"])
         ctx.rrup = numpy.array([0.0, 0.2])
-        cmaker  = simple_cmaker([self.GSIM_CLASS()], ["PGA"])
-        ctx1 = cmaker.recarray([ctx])
-        out1 = cmaker.get_mean_stds([ctx1])[:, 0, 0, :] 
-        mean_0 = out1[0]
-        stds_0 = out1[1]
+        out1 = cmaker.get_mean_stds([cmaker.recarray([ctx])])[:, 0, 0, :]
         ctx.rrup = numpy.array([1.0, 0.2])
-        ctx2 = cmaker.recarray([ctx])
-        out2 = cmaker.get_mean_stds([ctx2])[:, 0, 0, :] 
-        mean_01 = out2[0]
-        stds_01 = out2[1]
-        numpy.testing.assert_array_equal(mean_0, mean_01)
-        numpy.testing.assert_array_equal(stds_0, stds_01)
+        out2 = cmaker.get_mean_stds([cmaker.recarray([ctx])])[:, 0, 0, :]
+        numpy.testing.assert_array_equal(out1[0], out2[0])
+        numpy.testing.assert_array_equal(out2[1], out2[1])
 
     # Test data generated from subroutine getAB06 in hazgridXnga2.f
 
