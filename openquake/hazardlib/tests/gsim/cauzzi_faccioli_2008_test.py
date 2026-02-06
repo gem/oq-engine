@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008, FaccioliEtAl2010)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, simple_cmaker
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 
@@ -49,13 +49,14 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.rake = 0
         ctx.occurrence_rate = .0001
         ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
+        cmaker = simple_cmaker([self.GSIM_CLASS()], ["PGA"])
+        out_0 = cmaker.get_mean_stds(
+            [cmaker.recarray([ctx])])[:, 0, 0, :]
         ctx.rrup = numpy.array([0.0, 10.0, 17.0])
-        mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        numpy.testing.assert_array_equal(mean_0, mean_15)
-        numpy.testing.assert_array_equal(stds_0, stds_15)
+        out_15 = cmaker.get_mean_stds(
+            [cmaker.recarray([ctx])])[:, 0, 0, :]
+        numpy.testing.assert_array_equal(out_0[0], out_15[0])
+        numpy.testing.assert_array_equal(out_0[1], out_15[1])
 
 
 class FaccioliEtAl2010TestCase(BaseGSIMTestCase):
