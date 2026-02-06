@@ -6,49 +6,48 @@
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Non_cratonic">
 
-                <logicTreeBranch branchID="Allen2012_SS14">
+                <logicTreeBranch branchID="NGAEastUSGSSeedPEER_GP_indirect">
                     <uncertaintyModel>
-                        [GenericGmpeAvgSA]
-                        gmpe_name = "Allen2012_SS14"
-                        avg_periods = [0.5, 1.0, 2.0]
+                        [GmpeIndirectAvgSA]
+                        gmpe_name = "NGAEastUSGSSeedPEER_GP"
+                        t_low = 0.5
+                        t_high = 2.0
+                        n_per = 10
+                        corr_func="eshm20"
                     </uncertaintyModel>
-                    <uncertaintyWeight>0.29</uncertaintyWeight>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
-                <logicTreeBranch branchID="AtkinsonBoore2006">
+                <logicTreeBranch branchID="NGAEastAUS23_vs3000_indirect">
                     <uncertaintyModel>
-                        [GenericGmpeAvgSA]
-                        gmpe_name = "AtkinsonBoore2006"
-                        avg_periods = [0.5, 1.0, 2.0]
+                        [GmpeIndirectAvgSA]
+                        gmpe_name = "NGAEastAUS23_vs3000"
+                        t_low = 0.5
+                        t_high = 2.0
+                        n_per = 10
+                        corr_func="eshm20"
                     </uncertaintyModel>
-                    <uncertaintyWeight>0.15</uncertaintyWeight>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
-                <logicTreeBranch branchID="DrouetBrazil2015">
+                <logicTreeBranch branchID="NGAEastUSGSSeedPEER_GP_generic">
                     <uncertaintyModel>
                         [GenericGmpeAvgSA]
-                        gmpe_name = "DrouetBrazil2015"
+                        gmpe_name = "NGAEastUSGSSeedPEER_GP"
                         avg_periods = [0.5, 1.0, 2.0]
+                        corr_func="eshm20"
                     </uncertaintyModel>
-                    <uncertaintyWeight>0.17</uncertaintyWeight>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
-                <logicTreeBranch branchID="NGAEastGMPE">
+                <logicTreeBranch branchID="NGAEastAUS23_vs3000_generic">
                     <uncertaintyModel>
                         [GenericGmpeAvgSA]
                         gmpe_name = "NGAEastAUS23_vs3000"
                         avg_periods = [0.5, 1.0, 2.0]
+                        corr_func="eshm20"
                     </uncertaintyModel>
-                    <uncertaintyWeight>0.10</uncertaintyWeight>
-                </logicTreeBranch>
-
-                <logicTreeBranch branchID="SomervilleEtAl2009NonCratonic_SS14">
-                    <uncertaintyModel>
-                        [GenericGmpeAvgSA]
-                        gmpe_name = "SomervilleEtAl2009NonCratonic_SS14"
-                        avg_periods = [0.5, 1.0, 2.0]
-                    </uncertaintyModel>
-                    <uncertaintyWeight>0.29</uncertaintyWeight>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
            </logicTreeBranchSet>
