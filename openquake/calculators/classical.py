@@ -104,25 +104,24 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata_list, grp_id):
+def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts in the datastore
     """
-    for rupdata in rupdata_list:
-        nr = len(rupdata)
-        known = set(rupdata.dtype.names)
-        for par in dstore['rup']:
-            if par == 'rup_id':
-                rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
-                hdf5.extend(dstore['rup/rup_id'], rup_id)
-            elif par == 'grp_id':
-                hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
-            elif par == 'probs_occur':
-                dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
-            elif par in known:
-                hdf5.extend(dstore['rup/' + par], rupdata[par])
-            else:
-                hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
+    nr = len(rupdata)
+    known = set(rupdata.dtype.names)
+    for par in dstore['rup']:
+        if par == 'rup_id':
+            rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
+            hdf5.extend(dstore['rup/rup_id'], rup_id)
+        elif par == 'grp_id':
+            hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
+        elif par == 'probs_occur':
+            dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
+        elif par in known:
+            hdf5.extend(dstore['rup/' + par], rupdata[par])
+        else:
+            hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
 #  ########################### task functions ############################ #
