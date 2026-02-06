@@ -1308,13 +1308,11 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=3))  # reduced
-        src.dt = time.time() - t0
-        if not ctxs:
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=3))
+        if not C:
             return EPS
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups)
+        weight = C * src.num_ruptures / self.num_rups
         return weight
 
     def set_weight(self, sources, srcfilter):
