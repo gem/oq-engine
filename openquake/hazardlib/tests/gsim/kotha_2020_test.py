@@ -167,7 +167,7 @@ class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
     ##Testing the regional version of the GMPE
     GSIM_CLASS = KothaEtAl2020regional
     ## for a list of pre defined scenarios, the GMPE predictions
-    ## were calculated in a notebook using the 
+    ## were calculated in a notebook using the (now deprecated)
     ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
     def test_all(self):
         self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
