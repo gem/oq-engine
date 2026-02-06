@@ -41,14 +41,13 @@ class ServerConfig(AppConfig):
         if settings.TEST:
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
 
-        # FIXME use openquake.cfg instead
         self.mosaic_spatial_index = MosaicSpatialIndex(
-            settings.MOSAIC_PARQUET_PATH
+            config.directory['mosaic_parquet_path']
         )
         self.admin_spatial_index = AdminSpatialIndex(
-            admin0=settings.ADMIN0_PARQUET_PATH,
-            admin1=settings.ADMIN1_PARQUET_PATH,
-            admin2=settings.ADMIN2_PARQUET_PATH,
+            admin0=config.directory['admin0_parquet_path'],
+            admin1=config.directory['admin1_parquet_path'],
+            admin2=config.directory['admin2_parquet_path'],
         )
         print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=0))
         print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=1))
