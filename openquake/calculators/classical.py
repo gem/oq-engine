@@ -231,7 +231,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             for srcs in _split_src(rest, 7):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            yield baseclassical(rest, sites, cmaker, True)
+            odd, even = _split_src(rest, 2)
+            yield baseclassical, odd, tilegetter, cmaker, True, dstore
+            yield baseclassical(even, sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
@@ -602,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 20, 10)
+        self.split_time = split_time = max(max_gb * 20, 20)
         logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
