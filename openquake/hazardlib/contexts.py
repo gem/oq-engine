@@ -1175,7 +1175,7 @@ class ContextMaker(object):
                 # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
-    # documented but not used in the engine
+    # called by get_rmap
     def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
         :param ctx: a context array
@@ -1200,8 +1200,6 @@ class ContextMaker(object):
         """
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
-
-    ratesNLG = get_rmap  # for compatibility with the past
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
