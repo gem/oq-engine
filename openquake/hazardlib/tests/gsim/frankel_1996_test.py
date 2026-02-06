@@ -21,9 +21,8 @@ from openquake.hazardlib.gsim.frankel_1996 import (
     FrankelEtAl1996MblgJ1996NSHMP2008,
     FrankelEtAl1996MwNSHMP2008)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, simple_cmaker
 
 import numpy
 
@@ -54,44 +53,53 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         ctx.mag = 2.9434938048208452
         ctx.rhypo = ctx.rrup = numpy.array([1])
         ctx.sids = [0]
-        mean_mw3_d1, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
+        cmaker1 = simple_cmaker([self.GSIM_CLASS()], ["SA(0.1)"])
+
+        out_mw3_d1 = cmaker1.get_mean_stds(
+            [cmaker1.recarray([ctx])])[:, 0, 0, :]
 
         ctx.mag = 4.8927897867183798
         ctx.rhypo = numpy.array([10])
-        mean_mw4pt4_d10, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
-        self.assertAlmostEqual(float(mean_mw3_d1), float(mean_mw4pt4_d10))
+        out_mw4pt4_d10 = cmaker1.get_mean_stds(
+            [cmaker1.recarray([ctx])])[:, 0, 0, :]
+
+        self.assertAlmostEqual(float(out_mw3_d1[0]), float(out_mw4pt4_d10[0]))
 
         # rupture with Mw = 9 (Mblg = 8.2093636421088814) at rhypo = 1500 km
         # must give same mean as rupture with Mw = 8.2
         # (Mblg = 7.752253535347597) at rhypo = 1000
         ctx.mag = 8.2093636421088814
         ctx.rhypo = ctx.rrup = numpy.array([1500.])
-        mean_mw9_d1500, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
+
+        cmaker2 = simple_cmaker([self.GSIM_CLASS()], ["SA(0.1)"])
+        
+        out_mw9_d1500 = cmaker2.get_mean_stds(
+            [cmaker2.recarray([ctx])])[:, 0, 0, :]
 
         ctx.mag = 7.752253535347597
         ctx.rhypo = numpy.array([1000.])
-        mean_mw8pt2_d1000, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
 
-        self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
+        out_mw8pt2_d1000 = cmaker2.get_mean_stds(
+            [cmaker2.recarray([ctx])])[:, 0, 0, :]
+
+        self.assertAlmostEqual(out_mw9_d1500[0], out_mw8pt2_d1000[0])
 
     def test_dist_not_in_increasing_order(self):
         ctx = RuptureContext()
         ctx.mag = 5.
         ctx.sids = [0, 1]
         ctx.rhypo = ctx.rrup = numpy.array([150, 100])
-        mean_150_100, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
+        cmaker = simple_cmaker([self.GSIM_CLASS()], ["SA(0.1)"])
+        out_150_100 = cmaker.get_mean_stds(
+            [cmaker.recarray([ctx])])[:, 0, 0, :]
 
         ctx.rhypo = numpy.array([100, 150])
-        mean_100_150, _ = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, SA(0.1, 5), [StdDev.TOTAL])
-        self.assertAlmostEqual(mean_150_100[1], mean_100_150[0])
-        self.assertAlmostEqual(mean_150_100[0], mean_100_150[1])
+        out_100_150 = cmaker.get_mean_stds(
+            [cmaker.recarray([ctx])])[:, 0, 0, :]
+        
+        self.assertAlmostEqual(out_150_100[0][1], out_100_150[0][0])
+        self.assertAlmostEqual(out_150_100[0][0], out_100_150[0][1])
 
 
 class FrankelEtAl1996MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
