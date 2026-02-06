@@ -85,14 +85,13 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         ctx.vs30 = np.array([2000.])
         ctx.sids = [0]
         im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
-        std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
         # set critical value to trigger warning
         ctx.rake = np.array([-90.])
 
+        cmaker = contexts.simple_cmaker([gmpe], [im_type.string])
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
-            cmaker = contexts.simple_cmaker([gmpe], [im_type.string])
             cmaker.get_mean_stds([cmaker.recarray([ctx])])[:, 0, 0, :]
             # confirm type and content of warning
             assert len(warning_stream) == 1
