@@ -21,8 +21,7 @@ import geopandas as gpd
 
 def main(input_path, parquet_path):
     """
-    Convert a GeoPackage or a Shapefile to a Parquet binary file
-    suitable for fast spatial lookup.
+    Convert any OGR-supported vector dataset to Parquet (EPSG:4326).
     """
     gdf = gpd.read_file(input_path)
     if gdf.crs is None:
@@ -36,6 +35,5 @@ def main(input_path, parquet_path):
     print(f'Geographic data stored to {parquet_path}')
 
 
-main.input_path = dict(help='path of the GeoPackage or Shapefile to convert')
-main.parquet_path = dict(
-    help='path of the .parquet binary file to store data into')
+main.input_path = dict(help='input vector dataset (.gpkg, .shp, ...)')
+main.parquet_path = dict(help='output Parquet file')
