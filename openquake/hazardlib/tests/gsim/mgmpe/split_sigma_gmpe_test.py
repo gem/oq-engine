@@ -19,7 +19,7 @@ import numpy as np
 import unittest
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, simple_cmaker
 from openquake.hazardlib.gsim.mgmpe.split_sigma_gmpe import SplitSigmaGMPE
 
 
@@ -40,12 +40,13 @@ class SplitSigmaGMPETest(unittest.TestCase):
         ctx.vs30 = [760.] * 4
         ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.occurrence_rate = .0001
-        imt = PGA()
         stds_types = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                       const.StdDev.INTRA_EVENT]
+        cmaker = simple_cmaker([gmm], ["PGA"])
         # Compute results
-        _mean, stds = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stds_types)
-        return stds, stds_types
+        _, sig, tau, phi = cmaker.get_mean_stds(
+            [cmaker.recarray([ctx])])[:, 0, 0, :]
+        return (sig, tau, phi), stds_types
 
     def test_instantiation(self):
         within_absolute = 0.3
