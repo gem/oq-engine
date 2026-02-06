@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -67,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = .001
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -603,6 +602,7 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
@@ -623,6 +623,13 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
+        for gsim in self.gsims:
+            if hasattr(gsim, 'set_tables'):
+                if len(self.mags) == 0 and not is_modifiable(gsim):
+                    raise ValueError(
+                        'You must supply a list of magnitudes as 2-digit '
+                        'strings, like mags=["6.00", "6.10", "6.20"]')
+                gsim.set_tables(self.mags, self.imtls)
 
     def _init2(self, param, extraparams):
         for req in self.REQUIRES:
@@ -1302,29 +1309,24 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return 0 if src.code in b'pP' else eps
+            return EPS
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps
+            return EPS
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return eps
+            return EPS
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps)
+        weight = src.dt * src.num_ruptures / self.num_rups
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
