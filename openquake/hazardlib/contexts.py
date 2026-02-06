@@ -1669,53 +1669,6 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock site collection used in the tests and in the SMT module of the OQ-MBTK
-class SitesContext(BaseContext):
-    """
-    Sites calculation context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of the sites collection.
-    Every GSIM class is required to declare what :attr:`sites parameters
-    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
-    Only those required parameters are made available in a result context
-    object.
-    """
-    # _slots_ is used in hazardlib check_gsim and in the SMT
-    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
-                 sitecol=None):
-        self._slots_ = slots
-        if sitecol is not None:
-            self.sids = sitecol.sids
-            for slot in slots:
-                setattr(self, slot, getattr(sitecol, slot))
-
-    # used in the SMT
-    def __len__(self):
-        return len(self.sids)
-
-
-class DistancesContext(BaseContext):
-    """
-    Distances context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant distances between sites from the collection
-    and the rupture. Every GSIM class is required to declare what
-    :attr:`distance measures <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
-    does it need. Only those required values are calculated and made available
-    in a result context object.
-    """
-    _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall', 'rvolc')
-
-    def __init__(self, param_dist_pairs=()):
-        for param, dist in param_dist_pairs:
-            setattr(self, param, dist)
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1751,24 +1704,6 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-# used in openquake.smt
-def get_mean_stds_slow(rup_ctx, gsim, imt, **params):
-    """
-    Slow function not used by the engine, but still useful for
-    pedagogical applications (i.e. jupyter notebooks). For performance,
-    one should instantiate a ContextMaker and work on gsims, imts
-    and sources.
-
-    :param rup: a RuptureContext with site information
-    :param gsim: a GSIM instance
-    :param imt_str: a string representing an IMT or an IMT
-    :return: 4 arrays (mean, sig, tau, phi) of N elements each.
-    """
-    cmaker = simple_cmaker([gsim], [str(imt)], **params)
-    ctx = cmaker.recarray([rup_ctx])
-    return cmaker.get_mean_stds([ctx])[:, 0, 0, :]  # (4, N)
-
-
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
@@ -1797,10 +1732,8 @@ class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of a single rupture. Every
-    GSIM class is required to declare what :attr:`rupture parameters
+    Instances of this class represent relevant features of a single rupture.
+    Every GSIM class is required to declare what :attr:`rupture parameters
     <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>` does it need.
     Only those required parameters are made available in a result context
     object.

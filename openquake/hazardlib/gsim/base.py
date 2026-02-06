@@ -114,8 +114,7 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters')
+OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -141,9 +140,6 @@ class MetaGSIM(abc.ABCMeta):
         if len(bases) > 1:
             raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
                 name, ', '.join(b.__name__ for b in bases)))
-        if 'get_mean_and_stddevs' in dic and 'compute' in dic:
-            raise TypeError('You cannot define both get_mean_and_stddevs '
-                            'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
             sys.exit('%s cannot contain the methods %s' % (name, bad))
@@ -193,7 +189,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     This class is not intended to be subclassed directly, instead
     the actual GSIMs should subclass :class:`GMPE`.
 
-    Subclasses of both must implement :meth:`get_mean_and_stddevs`
+    Subclasses of both must implement :meth:`compute`
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
@@ -306,85 +302,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                   self.REQUIRES_RUPTURE_PARAMETERS |
                   self.REQUIRES_SITES_PARAMETERS)
         return tuple(sorted(tot))
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Calculate and return mean value of intensity distribution and it's
-        standard deviation.
-
-        Method must be implemented by subclasses.
-
-        :param sites:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`
-            with parameters of sites
-            collection assigned to respective values as numpy arrays.
-            Only those attributes that are listed in class'
-            :attr:`REQUIRES_SITES_PARAMETERS` set are available.
-        :param rup:
-            Instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
-            with parameters of a rupture
-            assigned to respective values. Only those attributes that are
-            listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
-            available.
-        :param dists:
-            Instance of :class:`DistancesContext` with values of distance
-            measures between the rupture and each site of the collection
-            assigned to respective values as numpy arrays. Only those
-            attributes that are listed in class' :attr:`REQUIRES_DISTANCES`
-            set are available.
-        :param imt:
-            An instance (not a class) of intensity measure type.
-            See :mod:`openquake.hazardlib.imt`.
-        :param stddev_types:
-            List of standard deviation types, constants from
-            :class:`openquake.hazardlib.const.StdDev`.
-            Method result value should include
-            standard deviation values for each of types in this list.
-
-        :returns:
-            Method should return a tuple of two items. First item should be
-            a numpy array of floats -- mean values of respective component
-            of a chosen intensity measure type, and the second should be
-            a list of numpy arrays of standard deviation values for the same
-            single component of the same single intensity measure type, one
-            array for each type in ``stddev_types`` parameter, preserving
-            the order.
-
-        Combining interface to mean and standard deviation values in a single
-        method allows to avoid redoing the same intermediate calculations
-        if there are some shared between stddev and mean formulae without
-        resorting to keeping any sort of internal state (and effectively
-        making GSIM not reenterable).
-
-        However it is advised to split calculation of mean and stddev values
-        and make ``get_mean_and_stddevs()`` just combine both (and possibly
-        compute interim steps).
-        """
-        # mean and stddevs by calling the underlying .compute method
-        N = len(sites)
-        mean = numpy.zeros((1, N))
-        sig = numpy.zeros((1, N))
-        tau = numpy.zeros((1, N))
-        phi = numpy.zeros((1, N))
-        if sites is not rup or dists is not rup:
-            # convert three old-style contexts to a single new-style context
-            ctx = full_context(sites, rup, dists)
-        else:
-            ctx = rup  # rup is already a good object
-        assert self.compute.__annotations__.get("ctx") is numpy.recarray
-        cmaker = simple_cmaker([self], [imt.string])
-        if not isinstance(ctx, numpy.ndarray):
-            ctx = cmaker.recarray([ctx])
-        self.compute(ctx, [imt], mean, sig, tau, phi)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sig[0])
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau[0])
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi[0])
-        return mean[0], stddevs
 
     def __lt__(self, other):
         """
