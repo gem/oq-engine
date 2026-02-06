@@ -16,11 +16,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.urls import re_path
-from openquake.server import views
-from openquake.server import urls as main_urls
+import pytest
+from openquake.server.tests.pages.aelo_page import AeloPage
+from playwright.sync_api import expect
 
-urlpatterns = [
-    *main_urls.urlpatterns,
-    re_path(r'^test/check_callback$', views.check_callback),
-]
+
+@pytest.mark.parametrize("user", [1, 2], indirect=True)
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_aelo_run_job(application_mode, authenticated_page, user):
+    page = AeloPage(authenticated_page)
+
+    page.set_location(45, 9)
+    page.set_site_name("Pavia")
+    page.select_asce_version("ASCE7-22")
+    page.select_site_class("E")
+
+    page.confirm_vs30_warning()
+
+    page.select_site_class("C")
+    expect(authenticated_page.locator("#site_class")).to_have_value("C")
+
+    page.run_aelo_calc()
+
+    page.abort_latest_job()
