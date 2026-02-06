@@ -20,7 +20,7 @@ import numpy as np
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, simple_cmaker
 from openquake.hazardlib.gsim.tromans_2019 import (
     TromansEtAl2019, TromansEtAl2019SigmaMu, HOMOSKEDASTIC_PHI,
     HOMOSKEDASTIC_TAU, HETEROSKEDASTIC_PHI, HETEROSKEDASTIC_TAU,
@@ -132,11 +132,15 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
 
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        self._compare_arrays(mean_1, mean_2, 1.2)
+        cmaker1 = simple_cmaker([gsim_1], ["PGA"])
+        out_1 = cmaker1.get_mean_stds(
+            [cmaker1.recarray([self.ctx])])[:, 0, 0, :]
+
+        cmaker2 = simple_cmaker([gsim_2], ["PGA"])
+        out_2 = cmaker2.get_mean_stds(
+            [cmaker2.recarray([self.ctx])])[:, 0, 0, :]
+
+        self._compare_arrays(out_1[0], out_2[0], 1.2)
 
     def test_vskappa_scaling(self):
         vskappa_dict = {"PGA": 1.2, "SA(0.2)": 1.3, "SA(1.0)": 1.4}
@@ -144,25 +148,36 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
                            vskappa=vskappa_dict)
 
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
+
         # PGA
-        self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        PGA(), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        PGA(), [const.StdDev.TOTAL])[0], 1.2)
+        cmaker1_pga = simple_cmaker([gsim_1], ["PGA"])
+        out_1_pga = cmaker1_pga.get_mean_stds(
+            [cmaker1_pga.recarray([self.ctx])])[:, 0, 0, :]
+
+        cmaker2_pga = simple_cmaker([gsim_2], ["PGA"])
+        out_2_pga = cmaker2_pga.get_mean_stds(
+            [cmaker2_pga.recarray([self.ctx])])[:, 0, 0, :]
+        self._compare_arrays(out_1_pga[0], out_2_pga[0], 1.2)
 
         # SA(0.2)
-        self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0], 1.3)
+        cmaker1_sa02 = simple_cmaker([gsim_1], ["SA(0.2)"])
+        out_1_sa02 = cmaker1_sa02.get_mean_stds(
+            [cmaker1_sa02.recarray([self.ctx])])[:, 0, 0, :]
+
+        cmaker2_sa02 = simple_cmaker([gsim_2], ["SA(0.2)"])
+        out_2_sa02 = cmaker2_sa02.get_mean_stds(
+            [cmaker2_sa02.recarray([self.ctx])])[:, 0, 0, :]
+        self._compare_arrays(out_1_sa02[0], out_2_sa02[0], 1.3)
+
         # SA(1.0)
-        self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(1.0), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(1.0), [const.StdDev.TOTAL])[0], 1.4)
+        cmaker1_sa1 = simple_cmaker([gsim_1], ["SA(1.0)"])
+        out_1_sa1 = cmaker1_sa1.get_mean_stds(
+            [cmaker1_sa1.recarray([self.ctx])])[:, 0, 0, :]
+
+        cmaker2_sa1 = simple_cmaker([gsim_2], ["SA(1.0)"])
+        out_2_sa1 = cmaker2_sa1.get_mean_stds(
+            [cmaker2_sa1.recarray([self.ctx])])[:, 0, 0, :]
+        self._compare_arrays(out_1_sa1[0], out_2_sa1[0], 1.4)
 
 
 class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
@@ -201,11 +216,15 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
 
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        self._compare_arrays(mean_1, mean_2, np.exp(0.083))
+        cmaker1 = simple_cmaker([gsim_1], ["PGA"])
+        cmaker2 = simple_cmaker([gsim_2], ["PGA"])
+
+        out1 = cmaker1.get_mean_stds(
+            [cmaker1.recarray([self.ctx])])[:, 0, 0, :]
+        out2 = cmaker2.get_mean_stds(
+            [cmaker2.recarray([self.ctx])])[:, 0, 0, :]
+
+        self._compare_arrays(out1[0], out2[0], np.exp(0.083))
 
 
 class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
