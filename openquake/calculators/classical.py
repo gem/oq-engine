@@ -231,9 +231,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             for srcs in _split_src(rest, 7):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         else:
-            odd, even = _split_src(rest, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
+            yield baseclassical(rest, sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
