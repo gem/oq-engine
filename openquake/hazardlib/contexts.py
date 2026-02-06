@@ -158,21 +158,19 @@ def is_modifiable(gsim):
 
 def concat(ctxs):
     """
-    Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
+    Concatenate context arrays
     """
     if not ctxs:
         return []
     ctx = ctxs[0]
-    out = []
     # if ctx has probs_occur, it is assumed to be non-poissonian
     if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
         # case 27, 29, 62, 65, 75, 78, 80
-        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
-            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
-            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+        [shp] = list(set(ctx.probs_occur.shape[1] for ctx in ctxs))
+        p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
+        out = numpy.concatenate(p_array).view(numpy.recarray)
     else:
-        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
+        out = numpy.concatenate(ctxs).view(numpy.recarray)
     return out
 
 
@@ -850,9 +848,9 @@ class ContextMaker(object):
     def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
         """
-        :param srcs: a list of Source objects
+        :param srcs: a list of Source objects with consistent TOM
         :param sitecol: a SiteCollection instance
-        :returns: a list of context arrays
+        :returns: a context array
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
@@ -1541,14 +1539,12 @@ class RmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     # allctxs is at most a few dozens of MB
-                    for ctx in concat(allctxs):
-                        cm.update(pnemap, ctx)
+                    cm.update(pnemap, concat(allctxs))
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            for ctx in concat(allctxs):
-                cm.update(pnemap, ctx)
+            cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
         dt = time.time() - t0
