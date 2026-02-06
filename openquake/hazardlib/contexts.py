@@ -1317,7 +1317,7 @@ class ContextMaker(object):
         if not ctxs:
             return EPS
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
+        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
         return weight
 
     def set_weight(self, sources, srcfilter):
