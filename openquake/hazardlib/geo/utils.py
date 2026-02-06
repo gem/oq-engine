@@ -118,7 +118,7 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
-@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+@compile(['(f8[:],f8[:])', '(f4[:],f4[:])'])
 def angular_mean_weighted(degrees, weights):
     # not using @ to avoid a NumbaPerformanceWarning:
     # '@' is faster on contiguous arrays
@@ -926,7 +926,7 @@ def geohash3(lons, lats):
     return arr[:, 0] * TWO10 + arr[:, 1] * 32 + arr[:, 2]
 
 
-def geolocate(lonlats, geom_df, exclude=()):
+def geolocate(lonlats, geom_df, exclude=(), spatial_index=None):
     """
     :param lonlats: array of shape (N, 2) or (N, 3)
     :param geom_df: DataFrame of geometries with a "code" field
@@ -937,6 +937,8 @@ def geolocate(lonlats, geom_df, exclude=()):
     different geometries with the same code, performs an "or", i.e.
     associates the code if at least one of the geometries matches
     """
+    if spatial_index is not None:
+        return geolocate_with_index(lonlats, spatial_index, exclude)
     codes = numpy.array(['???'] * len(lonlats))
     if exclude:
         filtered_df = geom_df[~geom_df['code'].isin(exclude)]
@@ -947,6 +949,25 @@ def geolocate(lonlats, geom_df, exclude=()):
         for geom in df.geom:
             ok |= contains_xy(geom, lonlats)
         codes[ok] = code
+    return codes
+
+
+def geolocate_with_index(lonlats, spatial_index, exclude=()):
+    """
+    :param lonlats: array of shape (N, 2) or (N, 3)
+    :param spatial_index: instance of SpatialIndex
+    :param exclude: iterable of codes to exclude
+    :returns: array of codes
+    """
+    codes = numpy.array(['???'] * len(lonlats), dtype=object)
+    for i, (lon, lat, *_) in enumerate(lonlats):
+        row = spatial_index.locate(lon, lat)
+        if row is None:
+            continue
+        code = row["code"]
+        if code in exclude:
+            continue
+        codes[i] = code
     return codes
 
 

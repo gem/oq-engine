@@ -18,13 +18,15 @@
 
 import pandas
 from openquake.baselib import sap, writers
-from openquake.commonlib import readinput
-from openquake.hazardlib.geo.utils import geolocate
+from openquake.hazardlib.geo.spatial_index import MosaicSpatialIndex
+from openquake.hazardlib.geo.utils import geolocate_with_index
 
 
-def main(lon_lat_csv, assoc_csv):
+def main(lon_lat_csv, assoc_csv, mosaic_parquet_path):
     df = pandas.read_csv(lon_lat_csv).sort_values(['lon', 'lat'])
-    models = geolocate(df[['lon', 'lat']], readinput.read_mosaic_df(buffer=0))
+    lonlats = df[['lon', 'lat']].to_numpy()
+    mosaic_spatial_index = MosaicSpatialIndex(mosaic_parquet_path)
+    models = geolocate_with_index(lonlats, mosaic_spatial_index)
     writers.write_csv(assoc_csv, zip(df.lon, df.lat, models),
                       ',', '%8.3f', ['lon', 'lat', 'model'])
 

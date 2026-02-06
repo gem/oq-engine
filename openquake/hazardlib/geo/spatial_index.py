@@ -34,7 +34,7 @@ class SpatialIndex:
     def _candidates(self, geom):
         return self.tree.query(geom)
 
-    def covers(self, lon, lat):
+    def locate(self, lon, lat):
         p = Point(lon, lat)
         for i in self._candidates(p):
             if self.geoms[i].covers(p):
@@ -63,7 +63,7 @@ class AdminSpatialIndex:
             self.spatial_indices[2] = SpatialIndex(admin2)
 
     def locate(self, lon, lat, admin_level):
-        return self.spatial_indices[admin_level].covers(lon, lat)
+        return self.spatial_indices[admin_level].locate(lon, lat)
 
     def nearby(self, lon, lat, admin_level, threshold_deg):
         # threshold is in degrees
@@ -76,7 +76,7 @@ class MosaicSpatialIndex(SpatialIndex):
         self.spatial_index = SpatialIndex(parquet_path)
 
     def locate(self, lon, lat):
-        return self.spatial_index.covers(lon, lat)
+        return self.spatial_index.locate(lon, lat)
 
     def nearby(self, lon, lat, threshold_deg):
         return self.spatial_index.nearby(lon, lat, threshold_deg)
