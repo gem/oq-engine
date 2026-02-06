@@ -604,9 +604,10 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = max(max_gb * 10, 10)
+        self.split_time = split_time = max(max_gb * 10, 10)
+        logging.info(f'{split_time=}')
         for cmaker, tilegetters, grp_keys, atomic in data:
-            cmaker.split_time = self.split_time
+            cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
