@@ -445,13 +445,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     tom = getattr(src, 'temporal_occurrence_model', None)
 
     if tom and isinstance(tom, NegativeBinomialTOM):
-        if hasattr(src, 'pointsources'):  # CollapsedPointSource
-            maxrate = max(max(ps.mfd.occurrence_rates)
-                          for ps in src.pointsources)
-        else:  # regular source
-            maxrate = max(src.mfd.occurrence_rates)
-        p_size = len(tom.get_pmf(maxrate))
-        dd['probs_occur'] = numpy.zeros(p_size)
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
