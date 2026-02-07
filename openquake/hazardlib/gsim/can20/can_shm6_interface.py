@@ -226,7 +226,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
 def _get_mean_760_am09(ctx, imt):
 
     """
-    See get_mean in AtkinsonMacias2009
+    See compute method in AtkinsonMacias2009
     """
     coeffs = AtkinsonMacias2009.COEFFS[imt]
     imean = (AM09._get_magnitude_term(coeffs, ctx.mag) +

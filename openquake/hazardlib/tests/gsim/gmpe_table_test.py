@@ -186,7 +186,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             str(ve.exception),
             "Spectral period 2.500 outside of valid range (0.100 to 2.000)")
 
-    def test_get_mean_and_stddevs_good(self):
+    def test_get_mean_and_stds_good(self):
         """
         Tests the full execution of the GMPE tables for valid data
         """
