@@ -429,10 +429,10 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 16)
+        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
         # where (2, 1) = (len(planar), len(sites))
         pmf = tom.get_pmf(planar.wlr[:, 2] * mrate).T
-        zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]  # (n, :, 16)
+        zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
 
