@@ -429,8 +429,9 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
-                          n_max=zeroctx['probs_occur'].shape[2])
+        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
+        # where (2, 1) = (len(planar), len(sites))
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate)
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
@@ -444,13 +445,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     tom = getattr(src, 'temporal_occurrence_model', None)
 
     if tom and isinstance(tom, NegativeBinomialTOM):
-        if hasattr(src, 'pointsources'):  # CollapsedPointSource
-            maxrate = max(max(ps.mfd.occurrence_rates)
-                          for ps in src.pointsources)
-        else:  # regular source
-            maxrate = max(src.mfd.occurrence_rates)
-        p_size = tom.get_pmf(maxrate).shape[1]
-        dd['probs_occur'] = numpy.zeros(p_size)
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
