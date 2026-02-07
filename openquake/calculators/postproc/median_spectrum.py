@@ -47,7 +47,7 @@ def set_imls(cmaker, uhs):
     return cmaker
 
 
-def get_mea_sig_wei(cmaker, ctx, uhs):
+def _mean_stds_wei(cmaker, ctx, uhs):
     """
     :param cmaker: a ContextMaker instance with G gsims and M imts
     :param ctx: a context array of size C
@@ -118,7 +118,7 @@ def compute_median_spectrum(
     for site_id in sids:
         ctx = context[context.sids == site_id]
         grp_id = ctx[0]['grp_id']
-        mea, sig, tau, wei = get_mea_sig_wei(cmaker, ctx, uhs[site_id])
+        mea, sig, tau, wei = _mean_stds_wei(cmaker, ctx, uhs[site_id])
         out = np.empty((3, M, P))  # <mea>, <sig>, tot_w
         out[0] = np.einsum("gmup,gmu->mp", wei, mea)
         out[1] = np.einsum("gmup,gmu->mp", wei, sig)
