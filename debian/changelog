@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the long time deprecated method `get_mean_and_stddevs` from the GSIMs;
+    you can use the helper function `contexts.mean_stds` instead
   * Internal: changed `cmaker.from_srcs` to return a context array and not a
     list with a single context array
   * Fixed AssertionError on len(mags) for GenericGmpeAvgSA with table-based
