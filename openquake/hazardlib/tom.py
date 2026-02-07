@@ -334,8 +334,7 @@ class NegativeBinomialTOM(BaseTOM):
         theta = tau / (tau + mean_rate * self.time_span)
         if isinstance(theta, numpy.ndarray):
             theta = theta[:, numpy.newaxis]  # shape (n, 1)
-        pmf = scipy.stats.nbinom.pmf(self.x, tau, theta).T
-        # shape (n_max,) if mean_rate is maxrate, else shape (n_max, n)
+        pmf = scipy.stats.nbinom.pmf(self.x, tau, theta)
         return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):

@@ -431,7 +431,7 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
         # into predetermined shape of probs_occur
         # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
         # where (2, 1) = (len(planar), len(sites))
-        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate).T
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate)
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
