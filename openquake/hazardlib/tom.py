@@ -236,7 +236,7 @@ class NegativeBinomialTOM(BaseTOM):
     """
     Negative Binomial temporal occurrence model.
     """
-    x = numpy.arange(16)  # determine the size of the returned PMF
+    x = numpy.arange(10)  # determine the size of the returned PMF
 
     def __init__(self, time_span, mu, alpha):
         """
