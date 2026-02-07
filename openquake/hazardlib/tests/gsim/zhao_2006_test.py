@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SSlabNSHMP2014,
                                                 ZhaoEtAl2006SInterCascadia,
                                                 ZhaoEtAl2006SSlabCascadia)
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, _mean_stds
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -100,11 +100,9 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
         ctx.hypo_depth = 0.0
         ctx.rrup = numpy.array([0.0, 0.2])
         ctx.occurrence_rate = .0001
-        mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        mean_0, stds_0 = _mean_stds(ctx, self.GSIM_CLASS(), 'PGA')
         ctx.rrup = numpy.array([0.1, 0.2])
-        mean_01, stds_01 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        mean_01, stds_01 = _mean_stds(ctx, self.GSIM_CLASS(), 'PGA')
         numpy.testing.assert_array_equal(mean_0, mean_01)
         numpy.testing.assert_array_equal(stds_0, stds_01)
 

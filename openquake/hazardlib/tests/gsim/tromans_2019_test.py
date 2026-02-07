@@ -18,9 +18,8 @@
 import unittest
 import numpy as np
 from openquake.hazardlib.imt import SA, PGA
-from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, _mean_stds
 from openquake.hazardlib.gsim.tromans_2019 import (
     TromansEtAl2019, TromansEtAl2019SigmaMu, HOMOSKEDASTIC_PHI,
     HOMOSKEDASTIC_TAU, HETEROSKEDASTIC_PHI, HETEROSKEDASTIC_TAU,
@@ -132,10 +131,8 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
 
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
+        mean_1 = _mean_stds(self.ctx, gsim_1, 'PGA')[0]
+        mean_2 = _mean_stds(self.ctx, gsim_2, 'PGA')[0]
         self._compare_arrays(mean_1, mean_2, 1.2)
 
     def test_vskappa_scaling(self):
@@ -146,23 +143,17 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
         # PGA
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        PGA(), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        PGA(), [const.StdDev.TOTAL])[0], 1.2)
+            _mean_stds(self.ctx, gsim_1, 'PGA')[0],
+            _mean_stds(self.ctx, gsim_2, 'PGA')[0], 1.2)
 
         # SA(0.2)
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0], 1.3)
+            _mean_stds(self.ctx, gsim_1, 'SA(0.2)')[0],
+            _mean_stds(self.ctx, gsim_2, 'SA(0.2)')[0], 1.3)
         # SA(1.0)
         self._compare_arrays(
-            gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(1.0), [const.StdDev.TOTAL])[0],
-            gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                        SA(1.0), [const.StdDev.TOTAL])[0], 1.4)
+            _mean_stds(self.ctx, gsim_1, 'SA(1.00)')[0],
+            _mean_stds(self.ctx, gsim_2, 'SA(1.0)')[0], 1.4)
 
 
 class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
@@ -201,10 +192,8 @@ class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
 
         gsim_2 = self.gsim(gmpe_name="BindiEtAl2014Rjb", branch="central")
 
-        mean_1 = gsim_1.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
-        mean_2 = gsim_2.get_mean_and_stddevs(self.ctx, self.ctx, self.ctx,
-                                             PGA(), [const.StdDev.TOTAL])[0]
+        mean_1 = _mean_stds(self.ctx, gsim_1, 'PGA')[0]
+        mean_2 = _mean_stds(self.ctx, gsim_2, 'PGA')[0]
         self._compare_arrays(mean_1, mean_2, np.exp(0.083))
 
 
