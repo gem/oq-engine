@@ -605,7 +605,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 10, 10)
+        self.split_time = split_time = max(max_gb * 20, 10)
         logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
