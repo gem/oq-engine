@@ -1303,11 +1303,13 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=2))
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
         if not C:
             return EPS
         weight = C * src.num_ruptures / self.num_rups
         # in the ComplexFault demo num_ruptures=743, num_rups=372
+        if src.code in b'CNX':  # such faults are much heavier
+            weight *= 5
         return weight
 
     def set_weight(self, sources, srcfilter):
