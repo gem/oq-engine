@@ -1307,6 +1307,7 @@ class ContextMaker(object):
         if not C:
             return EPS
         weight = C * src.num_ruptures / self.num_rups
+        # in the ComplexFault demo num_ruptures=743, num_rups=372
         return weight
 
     def set_weight(self, sources, srcfilter):

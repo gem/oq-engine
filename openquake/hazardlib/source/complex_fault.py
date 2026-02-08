@@ -204,7 +204,7 @@ class ComplexFaultSource(ParametricSeismicSource):
 
         # Loop over the range of magnitudes admitted
         rupture_counter = []
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
 
             # Computing rupture parameters
             rupture_area = msr.get_median_area(mag, self.rake)
