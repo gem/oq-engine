@@ -606,7 +606,8 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         self.split_time = split_time = max(max_gb * 20, 10)
-        logging.info(f'{split_time=:.0f} seconds')
+        if not self.few_sites:
+            logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
