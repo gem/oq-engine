@@ -181,16 +181,9 @@ class ComplexFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Uses :func:`_float_ruptures` for finding possible rupture locations
-        on the whole fault surface.
-        """
-        for r in self._iter_ruptures(**kwargs):
-            yield r
-
-    def _iter_ruptures(self, **kwargs):
-        """
-        Local rupture generator. It accepts some configuration parameters such
-        as a `step` parameter that controls the execution of additional checks
-        and the `count` flag, when True the function
+        on the whole fault surface. It accepts some configuration parameters
+        such as a `step` parameter that controls the execution of additional
+        checks and the `count` flag, when True the function
         """
         step = kwargs.get('step', 1)
         only_count = kwargs.get('count', False)
@@ -246,7 +239,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                     tmp_num_rups += len(rupture_slices)
                     continue
 
-                for rupture_slice in rupture_slices[::step**2]:
+                for rupture_slice in rupture_slices[::step]:
 
                     # Create the mesh of the rupture from the mesh of the
                     # complex fault
@@ -292,7 +285,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         if self.num_ruptures:
             return self.num_ruptures
         if not hasattr(self, '_nr'):
-            self._nr = list(self._iter_ruptures(count=True))[0]
+            self._nr = list(self.iter_ruptures(count=True))[0]
             self.num_ruptures = numpy.sum(self._nr)
         return self.num_ruptures
 
