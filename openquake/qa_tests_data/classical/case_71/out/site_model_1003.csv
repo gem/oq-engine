@@ -1,3 +1,0 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.25.0-gitc1ee1f1671', start_date='2026-02-06T12:37:00', checksum=857729807"
-sids,lon,lat,depth,vs30,vs30measured,z1pt0,z2pt5
-0,13.24805,42.55304,0.00000,6.00000E+02,1,4.57770E+02,1.75000E+00
