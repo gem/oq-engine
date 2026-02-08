@@ -66,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = .001
+EPS = 1E-6
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1306,9 +1306,9 @@ class ContextMaker(object):
         C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
         if not C:
             return EPS
-        weight = C * src.num_ruptures / self.num_rups / 1000
+        weight = EPS * C * src.num_ruptures / self.num_rups
         # in the ComplexFault demo num_ruptures=743, num_rups=372
-        if src.code in b'CNX':  # such faults are much heavier
+        if src.code in b'CFNX':  # such faults are much heavier
             weight *= 5
         return weight
 
