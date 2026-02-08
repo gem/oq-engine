@@ -158,21 +158,19 @@ def is_modifiable(gsim):
 
 def concat(ctxs):
     """
-    Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
+    Concatenate context arrays
     """
     if not ctxs:
         return []
     ctx = ctxs[0]
-    out = []
     # if ctx has probs_occur, it is assumed to be non-poissonian
     if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
         # case 27, 29, 62, 65, 75, 78, 80
-        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
-            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
-            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+        [shp] = list(set(ctx.probs_occur.shape[1] for ctx in ctxs))
+        p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
+        out = numpy.concatenate(p_array).view(numpy.recarray)
     else:
-        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
+        out = numpy.concatenate(ctxs).view(numpy.recarray)
     return out
 
 
@@ -431,8 +429,9 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
-                          n_max=zeroctx['probs_occur'].shape[2])
+        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
+        # where (2, 1) = (len(planar), len(sites))
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate)
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
@@ -446,13 +445,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     tom = getattr(src, 'temporal_occurrence_model', None)
 
     if tom and isinstance(tom, NegativeBinomialTOM):
-        if hasattr(src, 'pointsources'):  # CollapsedPointSource
-            maxrate = max(max(ps.mfd.occurrence_rates)
-                          for ps in src.pointsources)
-        else:  # regular source
-            maxrate = max(src.mfd.occurrence_rates)
-        p_size = tom.get_pmf(maxrate).shape[1]
-        dd['probs_occur'] = numpy.zeros(p_size)
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
@@ -850,9 +843,9 @@ class ContextMaker(object):
     def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
         """
-        :param srcs: a list of Source objects
+        :param srcs: a list of Source objects with consistent TOM
         :param sitecol: a SiteCollection instance
-        :returns: a list of context arrays
+        :returns: a context array
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
@@ -1177,20 +1170,19 @@ class ContextMaker(object):
                 # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
-    # documented but not used in the engine
-    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
+    # called by get_rmap
+    def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
-        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param ctx: a context array
         :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
         :returns: a MapArray
         """
         rup_indep = not rup_mutex
-        sids = numpy.unique(ctxs[0].sids)
+        sids = numpy.unique(ctx.sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         self.tom = tom or PoissonTOM(self.investigation_time)
-        for ctx in ctxs:
-            self.update(pmap, ctx, rup_mutex)
+        self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def get_rmap(self, srcgroup, sitecol):
@@ -1203,8 +1195,6 @@ class ContextMaker(object):
         """
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
-
-    ratesNLG = get_rmap  # for compatibility with the past
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
@@ -1236,6 +1226,8 @@ class ContextMaker(object):
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
+        elif all(isinstance(ctx, numpy.ndarray) for ctx in ctxs):
+            recarrays = [concat(ctxs)]
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
@@ -1541,14 +1533,12 @@ class RmapMaker(object):
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     # allctxs is at most a few dozens of MB
-                    for ctx in concat(allctxs):
-                        cm.update(pnemap, ctx)
+                    cm.update(pnemap, concat(allctxs))
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            for ctx in concat(allctxs):
-                cm.update(pnemap, ctx)
+            cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
         dt = time.time() - t0
@@ -1674,53 +1664,6 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock site collection used in the tests and in the SMT module of the OQ-MBTK
-class SitesContext(BaseContext):
-    """
-    Sites calculation context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of the sites collection.
-    Every GSIM class is required to declare what :attr:`sites parameters
-    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
-    Only those required parameters are made available in a result context
-    object.
-    """
-    # _slots_ is used in hazardlib check_gsim and in the SMT
-    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
-                 sitecol=None):
-        self._slots_ = slots
-        if sitecol is not None:
-            self.sids = sitecol.sids
-            for slot in slots:
-                setattr(self, slot, getattr(sitecol, slot))
-
-    # used in the SMT
-    def __len__(self):
-        return len(self.sids)
-
-
-class DistancesContext(BaseContext):
-    """
-    Distances context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant distances between sites from the collection
-    and the rupture. Every GSIM class is required to declare what
-    :attr:`distance measures <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
-    does it need. Only those required values are calculated and made available
-    in a result context object.
-    """
-    _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall', 'rvolc')
-
-    def __init__(self, param_dist_pairs=()):
-        for param, dist in param_dist_pairs:
-            setattr(self, param, dist)
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1732,47 +1675,17 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
-# used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
-def full_context(sites, rup, dctx=None):
-    """
-    :returns: a full RuptureContext with all the relevant attributes
-    """
-    self = RuptureContext()
-    self.src_id = 0
-    for par, val in vars(rup).items():
-        setattr(self, par, val)
-    if not hasattr(self, 'occurrence_rate'):
-        self.occurrence_rate = numpy.nan
-    if hasattr(sites, 'array'):  # is a SiteCollection
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-    else:  # sites is a SitesContext
-        for par, val in vars(sites).items():
-            setattr(self, par, val)
-    if dctx:
-        for par, val in vars(dctx).items():
-            setattr(self, par, val)
-    return self
-
-
-# this is the equivalent of the obsolete method gsim.get_mean_and_stddevs
-def get_mean_stds_slow(rup, sites, gsim, imt, **params):
-    """
-    Slow function not used by the engine, but still useful for
-    pedagogical applications (i.e. jupyter notebooks). For performance,
-    one should instantiate a ContextMaker and work on gsims, imts
-    and sources.
-
-    :param rup: a rupture instance
-    :param sites: a SiteCollection instance
-    :param gsim: a GSIM instance
-    :param imt_str: a string representing an IMT or an IMT
-    :return: 4 arrays (mean, sig, tau, phi) of N elements each.
-    """
-    cmaker = simple_cmaker([gsim], [str(imt)], **params)
-    ctxs = list(cmaker.get_ctx_iter([rup], sites))
-    return cmaker.get_mean_stds(ctxs)[:, 0, 0, :]  # (4, N)
+# used in a few hazardlib tests
+def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
+    # rctx: a RuptureContext with site information
+    # gsim: a GSIM instance
+    # imt: an IMT string
+    # idx: an index in the range 0..3 (default [0,1,2,3])
+    # returns two arrays (mean, stddevs)
+    cmaker = simple_cmaker([gsim], [imt])
+    ctx = cmaker.recarray([rctx])
+    out = cmaker.get_mean_stds([ctx])
+    return out[idx, 0, 0]
 
 
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
@@ -1803,10 +1716,8 @@ class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of a single rupture. Every
-    GSIM class is required to declare what :attr:`rupture parameters
+    Instances of this class represent relevant features of a single rupture.
+    Every GSIM class is required to declare what :attr:`rupture parameters
     <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>` does it need.
     Only those required parameters are made available in a result context
     object.
@@ -1968,7 +1879,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         G = len(cmaker.gsims)
         tom = PoissonTOM(cmaker.oq.investigation_time)
         pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
-        [ctx] = cmaker.from_srcs([sources[0]], sitecol)
+        ctx = cmaker.from_srcs([sources[0]], sitecol)
         magrates = [{numpy.round(mag, 3): rate
                      for mag, rate in src.get_annual_occurrence_rates()}
                      for src in sources]

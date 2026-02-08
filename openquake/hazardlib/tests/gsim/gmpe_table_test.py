@@ -186,13 +186,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
             str(ve.exception),
             "Spectral period 2.500 outside of valid range (0.100 to 2.000)")
 
-    def test_get_mean_and_stddevs_good(self):
+    def test_get_mean_and_stds_good(self):
         """
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         ctx = RuptureContext()
-        mags = ['6.00']
         ctx.mag = 6.0
         # Test values at the given distances and those outside range
         ctx.rjb = ctx.rrup = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
@@ -202,18 +201,15 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         expected_sigma = 0.5 * np.ones(5)
         imts = [imt_module.PGA(), imt_module.SA(1.0), imt_module.PGV()]
         # PGA
-        [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[0]], mags=mags)
+        [mean], [sigma], _, _ = contexts.get_mean_stds(gsim, ctx, [imts[0]])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, expected_sigma, 5)
         # SA
-        [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[1]], mags=mags)
+        [mean], [sigma], _, _ = contexts.get_mean_stds(gsim, ctx, [imts[1]])
         np.testing.assert_array_almost_equal(np.exp(mean), expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, 0.8 * np.ones(5), 5)
         # PGV
-        [mean], [sigma], _, _ = contexts.get_mean_stds(
-            gsim, ctx, [imts[2]], mags=mags)
+        [mean], [sigma], _, _ = contexts.get_mean_stds(gsim, ctx, [imts[2]])
         np.testing.assert_array_almost_equal(
             np.exp(mean), 10. * expected_mean, 5)
         np.testing.assert_array_almost_equal(sigma, expected_sigma, 5)
