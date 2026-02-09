@@ -24,7 +24,7 @@ from functools import lru_cache
 from shapely.geometry import Point
 from shapely.strtree import STRtree
 from openquake.baselib import config
-from openquake.qa_tests_data import global_risk
+from openquake.qa_tests_data import global_risk, mosaic
 
 
 class SpatialIndex:
@@ -103,9 +103,14 @@ def get_mosaic_spatial_index():
     try:
         geodata_path = config.directory['mosaic_geodata_path']
     except KeyError:
-        raise RuntimeError(
-            "Missing 'mosaic_geodata_path' in openquake.cfg [directory]"
-        )
+        mosaic_dir = config.directory.mosaic_dir
+        geodata_path = os.path.join(mosaic_dir, 'mosaic.gpkg')
+        if not os.path.exists(geodata_path):
+            geodata_path = os.path.join(
+                os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+        warnings.warn(
+            f"Missing 'mosaic_geodata_path' in openquake.cfg [directory]."
+            f" Using {geodata_path}.", RuntimeWarning)
     return MosaicSpatialIndex(geodata_path)
 
 
@@ -119,6 +124,9 @@ def get_admin_spatial_index(admin_level):
             geodata_path = os.path.join(
                 os.path.dirname(global_risk.__file__),
                 'geoBoundariesCGAZ_ADM0.gpkg')
+            warnings.warn(
+                f"Missing 'admin0_geodata_path' in openquake.cfg [directory]."
+                f" Using {geodata_path}.", RuntimeWarning)
         else:
             raise RuntimeError(
                 f"Missing f'admin{admin_level}_geodata_path' in"
