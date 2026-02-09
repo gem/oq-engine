@@ -124,7 +124,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     the Chiou and Youngs (2014) GMPE using the corrections described within
     the journal paper "PLACEHOLDER".
     """
-    DEFINED_FOR_REFERENCE_VELOCITY = 1130.
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     experimental = True
 
