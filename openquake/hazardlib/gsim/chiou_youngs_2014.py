@@ -738,6 +738,8 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Reference velocity taken from GSIM class (in case of EMME24
+        # backbone it is 800 m/s whereas in orig CY14 it is 1130 m/s)
         ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
