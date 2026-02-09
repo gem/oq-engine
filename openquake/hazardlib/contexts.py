@@ -1293,7 +1293,7 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        src.dt = 0
+        t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
             return EPS
         # sanity check, preclassical must has set .num_ruptures
@@ -1304,6 +1304,7 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
+        src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
@@ -1539,19 +1540,19 @@ class RmapMaker(object):
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
+            src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nctxs'].append(totlen // nsrcs)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt / nsrcs)
+            self.source_data['ctimes'].append(src.dt)
             self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
-        t0 = time.time()
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)

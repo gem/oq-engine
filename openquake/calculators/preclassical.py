@@ -58,7 +58,7 @@ def source_data(sources):
         data['nctxs'].append(src.nsites * src.num_ruptures)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
-        data['ctimes'].append(0)
+        data['ctimes'].append(src.dt)
     return data
 
 
