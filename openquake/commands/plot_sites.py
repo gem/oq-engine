@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import hdf5, sap
-from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 from openquake.calculators.postproc.plots import add_borders
@@ -52,7 +51,7 @@ def main(files_csv):
             ax.annotate(model, (lon, lat))
         # for model, id, lon, lat in zip(models, df.ID, df.lon, df.lat):
         #     ax.annotate(model + str(id), (lon, lat))
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, spatial_index=mosaic_spatial_index)
     p.show()
     return p
 

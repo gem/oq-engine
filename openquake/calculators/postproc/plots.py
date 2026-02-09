@@ -20,9 +20,12 @@ import io
 import os
 import base64
 import numpy
-from shapely.geometry import MultiPolygon
+from matplotlib.colors import Normalize
+from matplotlib.collections import PatchCollection
+from shapely.geometry import box, MultiPolygon, Polygon, GeometryCollection
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
+from openquake.hazardlib.geo.spatial_index import get_admin_spatial_index
 
 
 def import_plt():
@@ -62,18 +65,59 @@ def adjust_limits(ax, xlim, ylim, padding=1):
     ax.set_ylim(*ylim)
 
 
-def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
+def iter_polygons(geom):
+    """
+    Yield Polygon objects from Polygon, MultiPolygon or GeometryCollection.
+    """
+    if isinstance(geom, Polygon):
+        yield geom
+    elif isinstance(geom, MultiPolygon):
+        yield from geom.geoms
+    elif isinstance(geom, GeometryCollection):
+        for g in geom.geoms:
+            if isinstance(g, (Polygon, MultiPolygon, GeometryCollection)):
+                yield from iter_polygons(g)
+
+
+def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
+    """
+    Add polygon borders intersecting the current axis extent
+    using a SpatialIndex.
+
+    :param ax: matplotlib axis (lon/lat, EPSG:4326)
+    :param spatial_index: SpatialIndex instance
+    :param alpha: polygon transparency
+    :param cmap: matplotlib colormap name
+    """
+    if spatial_index is None:
+        spatial_index = get_admin_spatial_index(0)
     plt = import_plt()
-    polys = read_df(buffer)['geom']
-    cm = plt.get_cmap('RdBu')
-    num_colours = len(polys)
-    for idx, poly in enumerate(polys):
-        colour = cm(1. * idx / num_colours)
-        if isinstance(poly, MultiPolygon):
-            for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
-        else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
+    # Axis extent (lon/lat)
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    viewport = box(xmin, ymin, xmax, ymax)
+    idxs = spatial_index.tree.query(viewport)
+    if len(idxs) == 0:
+        return
+    gdf = spatial_index.gdf.iloc[idxs]
+    patches = []
+    colours = []
+    cm = plt.get_cmap(cmap)
+    norm = Normalize(vmin=0, vmax=len(gdf))
+    for i, geom in enumerate(gdf.geometry):
+        colour = cm(norm(i))
+        for poly in iter_polygons(geom):
+            patches.append(PolygonPatch(poly))
+            colours.append(colour)
+    if not patches:
+        return
+    collection = PatchCollection(
+        patches,
+        facecolor=colours,
+        edgecolor='none',
+        alpha=alpha
+    )
+    ax.add_collection(collection)
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,

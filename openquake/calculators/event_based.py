@@ -28,8 +28,7 @@ from openquake.baselib import (
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.geo.utils import geolocate
-from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
+from openquake.hazardlib.geo.utils import geolocate_with_geom_df
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -660,9 +659,8 @@ class EventBasedCalculator(base.HazardCalculator):
             with mon:
                 self.nruptures += len(rup_array)
                 if len(mosaic_df):
-                    mosaic_spatial_index = get_mosaic_spatial_index()
-                    rup_array['model'] = geolocate(
-                        rup_array['hypo'], mosaic_spatial_index)
+                    rup_array['model'] = geolocate_with_geom_df(
+                        rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)

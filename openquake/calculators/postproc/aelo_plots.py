@@ -18,10 +18,8 @@
 import io
 import os
 import numpy
-import json
 import matplotlib as mpl
 from scipy import interpolate
-from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
@@ -593,7 +591,7 @@ def plot_sites(dstore, update_dstore=False):
         padding = 0
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    add_borders(ax)
     adjust_limits(ax, xlim, ylim, padding=padding)
     if update_dstore:
         bio = io.BytesIO()

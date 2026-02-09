@@ -1780,16 +1780,6 @@ def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
-def read_countries_df(buffer=0.1):
-    """
-    :returns: a DataFrame of geometries for the world countries
-    """
-    logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
-    fname = os.path.join(os.path.dirname(global_risk.__file__),
-                         'geoBoundariesCGAZ_ADM0.gpkg')
-    return read_geometries(fname, 'shapeGroup', buffer)
-
-
 def read_cities_df(lon_field='longitude', lat_field='latitude',
                              label_field='name'):
     """
