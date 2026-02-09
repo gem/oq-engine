@@ -128,7 +128,8 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
 
     experimental = True
 
-    emme_site = True
+    emme_site = True # Use the EMME24 site model in underlying CY14 (also turns
+                     # of the basin term as not considered in EMME24 backbone)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

@@ -742,9 +742,10 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # If not using EMME24 site model set to False (i.e. regular site terms)
+        # If not using EMME24 site model set to False (use CY14 site model)
         if not hasattr(self, "emme_site"):
             setattr(self, "emme_site", False)
+            
         # Reference velocity taken from GSIM class (in case of EMME24
         # backbone it is 800 m/s whereas in orig CY14 it is 1130 m/s)
         ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
@@ -759,21 +760,25 @@ class ChiouYoungs2014(GMPE):
         # Compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
+
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     self.region, self.COEFFS[imt], ctx, imt, ref_vs30,
                     self.emme_site, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
+                
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
+                
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
