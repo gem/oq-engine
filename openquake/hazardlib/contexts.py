@@ -1308,10 +1308,10 @@ class ContextMaker(object):
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        weight = C * src.num_ruptures / self.num_rups / N
+        weight = len(self.gsims) * C * src.num_ruptures / self.num_rups / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
-            weight /= 7
+            weight /= 5
         return weight
 
     def set_weight(self, sources, srcfilter):
