@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -67,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = 1E-3
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1294,29 +1293,26 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
-        src.dt = 0
+        t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
-            return 0 if src.code in b'pP' else eps
+            return EPS
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps
+            return EPS
         src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
         src.dt = time.time() - t0
-        if not ctxs:
-            return eps
-        # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps)
+        if not C:
+            return EPS
+        N = len(srcfilter.sitecol.complete)
+        weight = C * src.num_ruptures / self.num_rups / N
+        # in the ComplexFault demo num_ruptures=743, num_rups=372
+        if src.code in b'pP':  # much lighter
+            weight /= 7
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1544,19 +1540,19 @@ class RmapMaker(object):
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
+            src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
             self.source_data['nctxs'].append(totlen // nsrcs)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt / nsrcs)
+            self.source_data['ctimes'].append(src.dt)
             self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
-        t0 = time.time()
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)

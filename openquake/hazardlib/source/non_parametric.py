@@ -80,7 +80,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             rupture.NonParametricProbabilisticRupture`.
         """
         step = kwargs.get('step', 1)
-        for rup, pmf in self.data[::step**2]:
+        for rup, pmf in self.data[::step]:
             yield NonParametricProbabilisticRupture(
                 rup.mag, rup.rake, self.tectonic_region_type,
                 rup.hypocenter, rup.surface, pmf,
