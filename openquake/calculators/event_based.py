@@ -659,6 +659,9 @@ class EventBasedCalculator(base.HazardCalculator):
             with mon:
                 self.nruptures += len(rup_array)
                 if len(mosaic_df):
+                    # TODO: this is the last remaining occurrence calling
+                    #       geolocate_with_geom_df. We could adapt this function
+                    #       to use its replacement geolocate using spatial index
                     rup_array['model'] = geolocate_with_geom_df(
                         rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
