@@ -346,7 +346,7 @@ def make_hmap_png(hmap, lons, lats):
     :param lats: an array of latitudes
     :returns: an Image object containing the hazard map
     """
-    os.environ['MPLBACKEND'] = 'Agg'  # disable interactive plotting
+    os.environ['MPLBACKEND'] = 'Agg'  # headless plotting
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111)
