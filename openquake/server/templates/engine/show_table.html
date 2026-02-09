@@ -1,6 +1,14 @@
 {% extends "engine/base.html" %}
 {% load servertags %}
 <title>{% block title %}OpenQuake engine: {{ table_name }} from calculation {{ calc_id }}{% endblock %}</title>
+
+{% block nav-items %}
+{{ block.super }}
+              <li class="calc">
+                  <a href="{% url "index" %}">Back to Calculations</a>
+              </li>
+{% endblock nav-items %}
+
 {% block main %}
 {{ block.super }}
   <div class="content-wrap">
@@ -38,6 +46,15 @@
                 {% endfor %}
               </tbody>
             </table>
+            {% if internal_name == 'aggrisk_tags' %}
+            <div id="summary-btn">
+              {% if is_summary %}
+              <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=0" class="btn btn-sm">Show full table</a>
+              {% else %}
+              <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">Show summary</a>
+              {% endif%}
+            </div>
+            {% endif %}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -215,6 +215,7 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
+        assert len(imls) > 1, (imt, imls)
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(
@@ -351,6 +352,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
+        if len(mlrs) == 1:
+            raise ValueError(f'The mean loss ratios for {self.id} are constant!')
         return self.__class__(
             self.id, self.imt, imls, mlrs, covs, self.distribution_name)
 
@@ -1694,11 +1697,19 @@ class RiskComputer(dict):
                 if len(outs) == 0:  # can happen for nonstructural_ins
                     continue
                 elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                    # computing the average dataframe for event_based_risk/case_8
+                    # computing average dataframe for event_based_risk/case_8
                     out[lt] = _agg(outs, weights[peril, lt])
                 elif len(outs) > 1:
-                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                    if outs[0].dtype.names:
+                        # tested case_lisa with a composite array 'loss', 'poe'
+                        out[lt] = outs[0]
+                        poes = numpy.sum([out['poe'] * wei for out, wei in zip(
+                            outs, weights[peril, lt])], axis=0)
+                        out[lt]['poe'] = poes
+                    else:
+                        # for oq-risk-tests test_ebd
+                        out[lt] = numpy.average(
+                            outs, weights=weights[peril, lt], axis=0)
                 else:
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based

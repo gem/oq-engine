@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,10 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 
+import logging
 import numpy
 import pandas
+from h3.api.numpy_int import geo_to_h3, h3_to_geo
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
@@ -32,7 +34,9 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
-U32LIMIT = 2 ** 32
+TWO32 = 2 ** 32
+U32 = numpy.uint32
+F32 = numpy.float32
 F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
 param = dict(
@@ -117,6 +121,12 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
+    def get_tile_size(self, complete):
+        """
+        :returns: how many sites per tile (at max)
+        """
+        return int(numpy.ceil(len(complete) / self.ntiles))
+
     def __call__(self, complete, ilabel=None):
         if self.ntiles == 1 and ilabel is None:
             return complete
@@ -128,6 +138,10 @@ class TileGetter:
             sc.array = array
         sc.complete = complete
         return sc
+
+    def __repr__(self):
+        return  '<%s %d of %d>' % (self.__class__.__name__,
+                                   self.tileno, self.ntiles)
 
 
 class Site(object):
@@ -301,15 +315,14 @@ def add(string, suffix, maxlen):
     Add a suffix to a string staying within the maxlen limit
 
     >>> add('pippo', ':xxx', 8)
-    'pipp:xxx'
+    'pippo:xx'
     >>> add('pippo', ':x', 8)
     'pippo:x'
     """
-    L = len(string)
-    assert L < maxlen, string
-    assert len(suffix) < maxlen, suffix
-    n = len(suffix)
-    return string[:maxlen-n] + suffix
+    n = len(string)
+    assert n < maxlen, string
+    assert len(suffix) <= maxlen, suffix
+    return string + suffix[:maxlen-n]
 
 
 class SiteCollection(object):
@@ -384,7 +397,7 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
-        assert len(lons) < U32LIMIT, len(lons)
+        assert len(lons) < TWO32, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
@@ -503,7 +516,6 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
@@ -515,8 +527,8 @@ class SiteCollection(object):
                  soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
-        NB: if there are multiple values the sites with vs30 = -999. are multiplied,
-        otherwise the given value is applied to all sites.
+        NB: if there are multiple values the sites with vs30 = -999. are
+        multiplied, otherwise the given value is applied to all sites.
         """
         classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
@@ -526,7 +538,7 @@ class SiteCollection(object):
         try:
             dt['custom_site_id']
         except KeyError:
-            new_csi = True
+            new_csi = True  # not already there
             dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
                 (n, dt[n]) for n in names]
             names.insert(0, 'custom_site_id')
@@ -555,10 +567,11 @@ class SiteCollection(object):
                 for name in names:
                     if name == 'custom_site_id' and new_csi:
                         # tested in classical/case_08
-                        rec[name] = add(f'{i}'.encode('ascii'), b':' + cl, 8)
+                        csi = f'{i}'.encode('ascii')
+                        rec[name] = add(csi[:5], b':' + cl, 8)
                     elif name == 'custom_site_id':
                         # tested in classical/case_38
-                        rec[name] = add(orig_rec[name], b':' + cl, 8)
+                        rec[name] = add(orig_rec[name][:5], b':' + cl, 8)
                     elif name == 'vs30':
                         rec[name] = vs30
                     elif name == 'sids':
@@ -608,6 +621,16 @@ class SiteCollection(object):
             if values is not None:
                 arr[colname] = values
             self.array = arr
+
+    def ensure_custom_site_id(self, size):
+        """
+        Add a custom_site_id if not present
+        """
+        if 'custom_site_id' not in self.array.dtype.names:
+            gh = self.geohash(size)
+            if len(numpy.unique(gh)) < len(gh):
+                logging.error('geohashes are not unique')
+            self.add_col('custom_site_id', f'S{size}', gh)
 
     def make_complete(self):
         """
@@ -788,7 +811,7 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
-    def assoc(self, site_model, assoc_dist, ignore=()):
+    def assoc(self, site_model, assoc_dist, mode, ignore=()):
         """
         Associate the `site_model` parameters to the sites.
         Log a warning if the site parameters are more distant than
@@ -797,16 +820,14 @@ class SiteCollection(object):
         :returns: the site model array reduced to the hazard sites
         """
         # NB: self != self.complete in the impact tests with stations
-        m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self.complete, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
         for name in ok:
-            vals = site_model[name]
-            self._set(name, vals[self.sids])
-            self.complete._set(name, vals)
+            self._set(name, site_model[name])
 
         # sanity check
         for param in self.req_site_params:
@@ -891,6 +912,22 @@ class SiteCollection(object):
         out.sort(order='num_sites')
         return out
 
+    def lower_res(self, res=2):
+        """
+        Collapse together points within the same hexagon (with an
+        edge of 84 km for res=2, the default).
+
+        :returns: (reduce sitecol, list of arrays orig_sids)
+        """
+        sids_by_hex = general.AccumDict(accum=[])
+        for sid, lon, lat in zip(self.sids, self.lons, self.lats):
+            h = geo_to_h3(lat, lon, res)
+            sids_by_hex[h].append(sid)
+        # build an array of shape (N, 2)
+        latlons = F32([h3_to_geo(h) for h in sids_by_hex])
+        orig_sids = [U32(sids) for sids in sids_by_hex.values()]
+        return self.from_points(latlons[:, 1], latlons[:, 0]), orig_sids
+
     def geohash(self, length):
         """
         :param length: length of the geohash in the range 1..8
@@ -964,8 +1001,9 @@ def check_all_equal(mosaic_model, dicts, *keys):
     for key in keys:
         for dic in dicts[1:]:
             if dic[key] != dic0[key]:
-                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
-                                   dic[key], dic0[key], mosaic_model)
+                raise RuntimeError(
+                    'Inconsistent key %s!=%s while processing %s',
+                    dic[key], dic0[key], mosaic_model)
 
 
 def merge_without_dupl(array1, array2, uniquefield):

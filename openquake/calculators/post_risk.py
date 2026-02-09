@@ -29,6 +29,7 @@ from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
 from openquake.calculators import base, views
 from openquake.calculators.base import expose_outputs
+from openquake.calculators.extract import extract
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -47,7 +48,7 @@ def fix_investigation_time(oq, dstore):
     If starting from GMFs, fix oq.investigation_time.
     :returns: the number of hazard realizations
     """
-    R = len(dstore['weights'])
+    R = oq.number_of_logic_tree_samples or len(dstore['weights'])
     if 'gmfs' in oq.inputs and not oq.investigation_time:
         attrs = dstore['gmf_data'].attrs
         inv_time = attrs['investigation_time']
@@ -70,7 +71,7 @@ def save_curve_stats(dstore):
         K = 0
     stats = oq.hazard_stats()
     S = len(stats)
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
@@ -120,22 +121,22 @@ def reagg_idxs(num_tags, tagnames):
 
     For instance reaggregating by taxonomy and region would give:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy', 'region']))  # 4x3
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy', 'region'])]  # 4x3
     [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
 
     Reaggregating by taxonomy and country would give:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy', 'country']))  # 4x2
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy', 'country'])]  # 4x2
     [0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7]
 
     Reaggregating by region and country would give:
 
-    >>> list(reagg_idxs(num_tags, ['region', 'country']))  # 3x2
+    >>> [int(x) for x in  reagg_idxs(num_tags, ['region', 'country'])]  # 3x2
     [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
 
     Here is an example of single tag aggregation:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy']))  # 4
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy'])]  # 4
     [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
     """
     shape = list(num_tags.values())
@@ -155,7 +156,7 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
     assert oq.investigation_time
-    weights = dstore['weights'][()]
+    weights = base.get_weights(oq, dstore)
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
@@ -202,7 +203,8 @@ def get_src_loss_table(dstore, loss_id):
     if len(alt) == 0:  # no losses for this loss type
         return [], ()
 
-    ws = dstore['weights'][:]
+    oq = dstore['oqparam']
+    ws = base.get_weights(oq, dstore)
     events = dstore['events'][:]
     ruptures = dstore['ruptures'][:]
     source_id = dstore['source_info']['source_id']
@@ -312,7 +314,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
     L = len(oq.loss_types)
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
@@ -433,7 +435,7 @@ def build_reinsurance(dstore, oq, num_events):
     if oq.investigation_time:
         tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
-            tr /= len(dstore['weights'])
+            tr /= len(base.get_weights(oq, dstore))
     events = dstore['events'][:]
     rlz_id = events['rlz_id']
     try:
@@ -580,7 +582,10 @@ class PostRiskCalculator(base.RiskCalculator):
                     eff_time)
                 return
         logging.info('Aggregating by %s', oq.aggregate_by)
-        if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
+        if ('source_info' in self.datastore and
+                hasattr(self.datastore['source_info'], 'shape') and
+                'risk' in oq.calculation_mode):
+            # NB: we are not computing src_loss_table in the global risk model
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
                 for loss_type in oq.loss_types:
@@ -608,11 +613,25 @@ class PostRiskCalculator(base.RiskCalculator):
             build_reinsurance(self.datastore, oq, self.num_events)
         return 1
 
+    def save_avg_losses_by(self, tagnames):
+        """
+        Aggregate the mean avg_losses by one tagname at the time and create
+        datagroups avg_losses_by/<tagname>.
+        """
+        aggtags = set()
+        for aggby in self.oqparam.aggregate_by:
+            aggtags.update(aggby)
+        for tag in tagnames:
+            if tag in aggtags:  # aggrisk already contains this aggregation
+                continue
+            name = f'avg_losses_by/{tag}'
+            self.datastore.create_df(name, extract(self.datastore, name))
+
     def post_execute(self, ok):
         """
         Sanity checks and save agg_curves-stats
         """
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
             try:
                 self._plot_assets()
             except Exception:
@@ -621,6 +640,14 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
+        if 'avg_losses-rlzs' in self.datastore and oq.collect_rlzs:
+            # in case of the global risk model create additional datasets
+            tagnames = ['taxonomy']
+            if 'MACRO_TAXONOMY' in self.assetcol.tagcol.tagnames:
+                tagnames.append('MACRO_TAXONOMY')
+            logging.info('Saving avg_losses_by %s', tagnames)
+            self.save_avg_losses_by(tagnames)
+
         if 'risk' in oq.calculation_mode:
             self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:

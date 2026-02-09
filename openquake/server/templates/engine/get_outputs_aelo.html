@@ -1,6 +1,13 @@
 {% extends "engine/base.html" %}
   <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
 
+  {% block nav-items %}
+  {{ block.super }}
+                <li class="calc">
+                    <a href="{% url "index" %}">Back to Calculations</a>
+                </li>
+  {% endblock nav-items %}
+
   {% block main %}
   {{ block.super }}
   <div class="content-wrap">
@@ -8,18 +15,38 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-              <h2>{{ site_name }}, Lat: {{ lat }}, Lon: {{ lon }}, Site Class: {{ site_class }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
-              {% if warnings %}
-              <div id="warnings-box" class="alert alert-warning" style=>
-                  WARNING: {{ warnings }}
-              </div>
-              {% endif %}
-              {% if notes %}
-              <div id="notes-box" class="alert alert-info" style=>
-                  NOTE: {{ notes }}
-              </div>
-              {% endif %}
-              <div id="my-outputs" class="well"></div>
+            <h2>Outputs for {{ site_name }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
+            <div class="table-responsive" style="max-width:100%; margin-bottom: 1em;">
+              <table class="table table-bordered table-sm table-striped" style="width:auto;">
+              <thead>
+                <tr>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>ASCE standards</th>
+                <th>Site class</th>
+                </tr>
+              </thead>
+              <tbody>
+                  <tr>
+                  <td>{{ lat }}</td>
+                  <td>{{ lon }}</td>
+                  <td>{{ asce_version }}</td>
+                  <td>{{ site_class }}</td>
+                  </tr>
+              </tbody>
+              </table>
+            </div>
+            {% if warnings %}
+            <div id="warnings-box" class="alert alert-warning" style=>
+                WARNING: {{ warnings }}
+            </div>
+            {% endif %}
+            {% if notes %}
+            <div id="notes-box" class="alert alert-info" style=>
+                NOTE: {{ notes }}
+            </div>
+            {% endif %}
+            <div id="my-outputs" class="well"></div>
             <div class="outputs-general-btns-left">
               <div id="to-full-outputs">
                 <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
@@ -27,16 +54,16 @@
               </div>
             </div>
             <div class="outputs-general-btns-center">
-              {% if site %}
+              {% if pngs.site %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/site.png" class="btn btn-sm">
                   Show site</a>
               </div>
               {% endif %}
-              {% if governing_mce %}
+              {% if pngs.governing_mce %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
-                  Show Multi-Period MCEr Spectrum</a>
+                  Show ASCE 7 MCEr Spectrum</a>
               </div>
               {% endif %}
             </div>
@@ -59,11 +86,11 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        <% if (['hmaps', 'hcurves', 'uhs', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src', 'site_model', 'mce'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'hmaps-stats', 'hcurves', 'uhs', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src', 'site_model', 'mce', 'spectra_asce41'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
-        <tr class= <%= ['asce07', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
+        <tr class= <%= ['asce07', 'asce41', 'asce41_sa_final', 'mce_governing'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
           <td><%= output.get('id') || 'New' %></td>
           <td>
             <%= output.get('name') %>

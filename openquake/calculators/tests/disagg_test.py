@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -241,7 +241,8 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_14(self):
         # check non-invertible hazard curve
         with mock.patch('logging.warning') as warn:
-            self.run_calc(case_14.__file__, 'job.ini', calculation_mode='classical')
+            self.run_calc(case_14.__file__, 'job.ini',
+                          calculation_mode='classical')
         self.assertIn('cannot be inverted reliably around poe=0.000404',
                       warn.call_args[0][0])
 

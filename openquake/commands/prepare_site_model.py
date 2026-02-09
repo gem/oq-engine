@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,7 @@ def associate(sitecol, vs30fnames, assoc_distance):
     logging.info('Associating {:_d} hazard sites to {:_d} site parameters'.
                  format(len(sitecol), len(vs30orig)))
     return sitecol.assoc(vs30orig, assoc_distance,
-                         ignore={'z1pt0', 'z2pt5'})
+                         'warn', ignore={'z1pt0', 'z2pt5'})
 
 
 def main(

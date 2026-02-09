@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -236,6 +236,8 @@ class NegativeBinomialTOM(BaseTOM):
     """
     Negative Binomial temporal occurrence model.
     """
+    x = numpy.arange(10, dtype=float)  # determine the size of the returned PMF
+
     def __init__(self, time_span, mu, alpha):
         """
         :param time_span:
@@ -252,7 +254,6 @@ class NegativeBinomialTOM(BaseTOM):
 
             where τ=1/α
         """
-
         super().__init__(time_span)
         self.mu = mu
         self.alpha = alpha
@@ -315,34 +316,25 @@ class NegativeBinomialTOM(BaseTOM):
         theta = tau / (tau + (mean_rate * self.time_span))
 
         if isinstance(seed, int):
+            # FIXME: this is bad, we should pass the rng
             numpy.random.seed(seed)
 
         return scipy.stats.nbinom.rvs(tau, theta)
 
-    def get_pmf(self, mean_rate, tol=1-1e-14, n_max=None):
+    def get_pmf(self, mean_rate):
         """
         :param mean_rate:
-            The average number of events per year.
-        :param tol:
-            Quantile value up to which calculate the pmf
+            The average number of events per year (scalar or array)
         :returns:
-            1D numpy array containing the probability mass distribution,
+            1D or 2D array containing the probability mass distribution,
             up to tolerance level.
         """
-        # Gets dispersion from source object
-        alpha = self.alpha
         # Recovers NB2 parametrization (tau/theta or n,p in literature)
-        tau = 1 / alpha
-        theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
-        if not n_max:
-            n_max = numpy.max(
-                scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
-            if n_max < 4:
-                # minimum n_max for which the hazard equation is integrated,
-                # to avoid precision issues for probabilities of occur (<1e-6)
-                n_max = 4
-        pmf = scipy.stats.nbinom.pmf(
-            numpy.arange(0, n_max), tau, theta[:, None])
+        tau = 1 / self.alpha
+        theta = tau / (tau + mean_rate * self.time_span)
+        if isinstance(theta, numpy.ndarray):
+            theta = theta[:, numpy.newaxis]  # shape (n, 1)
+        pmf = scipy.stats.nbinom.pmf(self.x, tau, theta)
         return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):

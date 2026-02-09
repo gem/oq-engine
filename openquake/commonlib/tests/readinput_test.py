@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -94,7 +94,6 @@ export_dir = %s
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
-                'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},

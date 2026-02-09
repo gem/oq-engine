@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -80,7 +80,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             rupture.NonParametricProbabilisticRupture`.
         """
         step = kwargs.get('step', 1)
-        for rup, pmf in self.data[::step**2]:
+        for rup, pmf in self.data[::step]:
             yield NonParametricProbabilisticRupture(
                 rup.mag, rup.rake, self.tectonic_region_type,
                 rup.hypocenter, rup.surface, pmf,

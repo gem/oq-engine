@@ -79,6 +79,7 @@ class AristotleParam:
             self.trt = next(iter(trts[self.mosaic_model]))
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
+            base_path='',  # no .ini file
             description=self.description,
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
@@ -152,6 +153,7 @@ IMPACT_FORM_LABELS = {
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
     'description': 'Description',
+    'no_uncertainty': 'No uncertainty',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -359,7 +361,12 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     expo = getattr(AristotleParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_mosaic_models'):
-        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+        try:
+            mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+        except ValueError as exc:
+            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
+            err = {"status": "failed", "error_msg": str(exc)}
+            return rup, rupdic, params, err
     for mosaic_model in mosaic_models:
         trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts

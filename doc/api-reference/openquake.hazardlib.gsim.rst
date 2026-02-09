@@ -30,6 +30,14 @@ abrahamson_2018
     :undoc-members:
     :show-inheritance:
 
+abrahamson_bhasin_2020
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.abrahamson_bhasin_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 abrahamson_gulerce_2020
 -----------------------------------------------
 
@@ -816,6 +824,14 @@ jaimes_2020
     :undoc-members:
     :show-inheritance:
 
+ji_karimzadeh_azores_island_2025
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ji_karimzadeh_azores_island_2025
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kale_2015
 -----------------------------------------
 
@@ -899,7 +915,7 @@ lin_2009
 lin_2011
 --------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.tem20.lin_2011
+.. automodule:: openquake.hazardlib.gsim.lin_2011
     :members:
     :undoc-members:
     :show-inheritance:
@@ -1165,6 +1181,14 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+scala_2025
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.scala_2025
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sera_amplification_models
 -------------------------------------------
 
@@ -1389,6 +1413,14 @@ vanhoutte_2018
     :undoc-members:
     :show-inheritance:
 
+wang_2025_turkey
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.wang_2025_turkey
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 weatherill_2024
 -------------------------------------------
 
@@ -1486,9 +1518,17 @@ zhao_2006_swiss_coeffs
     :show-inheritance:
 
 zhao_2016
------------------------------------------
+------------------------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+mohammadi_turkiye_2023
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mohammadi_turkiye_2023
     :members:
     :undoc-members:
     :show-inheritance:

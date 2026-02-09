@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,11 @@ import io
 import os
 import re
 import ast
+import sys
 import copy
 import zlib
+import base64
+import hashlib
 import shutil
 import zipfile
 import pathlib
@@ -245,6 +248,9 @@ def update(params, items, base_path):
 
 
 def check_params(cp, fname):
+    """
+    Check if the same parameter is defined in multiple sections of the ini file
+    """
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):
@@ -253,6 +259,18 @@ def check_params(cp, fname):
             raise InvalidFile(
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
+
+
+def get_model(job_ini):
+    """
+    If the path to job_ini contains a recognized mosaic model, returns the
+    model, else the empty string
+    """
+    from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
+    for mod in MODELS:
+        if mod in job_ini:
+            return mod
+    return ''
 
 
 # NB: this function must NOT log, since it is called when the logging
@@ -278,7 +296,6 @@ def get_params(job_ini, kw={}):
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_ini)
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
@@ -291,13 +308,15 @@ def get_params(job_ini, kw={}):
         raise IOError('File not found: %s' % job_ini)
 
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
+    if 'mosaic_model' not in dic:
+        # try to infer it from the name of the job.ini file
+        dic['mosaic_model'] = get_model(job_ini)
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
@@ -307,11 +326,16 @@ def get_params(job_ini, kw={}):
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
         items = dic.items()
-    update(params, items, base_path)
-
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    try:
+        update(params, items, base_path)
+        update(params, kw.items(), base_path)  # override on demand
+    except:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-    update(params, kw.items(), base_path)  # override on demand
+
     return params
 
 
@@ -347,6 +371,12 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
+
+    if os.environ.get('OQ_CHECK_INPUT'):
+        cmode = job_ini['calculation_mode']
+        if 'risk' in cmode or 'damage' in cmode or 'bcr' in cmode:
+            # avoid excessive checks in risk calculations
+            job_ini['hazard_calculation_id'] = '<fake>.ini'
 
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
@@ -387,8 +417,8 @@ def get_csv_header(fname, sep=','):
 
 def get_mesh_exp(oqparam, h5=None):
     """
-    Extract the mesh of points to compute from the sites,
-    the sites_csv, the region, the site model, the exposure in this order.
+    Extract the mesh of points from the sites, the sites file, the region,
+    the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -675,15 +705,14 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5:
         return h5['sitecol']
-    if oqparam.ruptures_hdf5:
-        with hdf5.File(oqparam.ruptures_hdf5) as r:
-            rup_sitecol = r['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        if oqparam.calculation_mode != 'preclassical':
+        if (oqparam.hazard_calculation_id is None and
+                oqparam.calculation_mode != 'preclassical'):
             raise InvalidFile(
                 'You are missing sites.csv or site_model.csv in %s'
                 % oqparam.inputs['job_ini'])
+        # a None sitecol is okay in preclassical
         return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
@@ -694,18 +723,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
-            assoc_dist = (oqparam.region_grid_spacing * 1.414
-                          if oqparam.region_grid_spacing else 10)
-            # 10 km is around the grid spacing used in the mosaic
-            sc = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-            logging.info('Associating the mesh to the site parameters')
-            sitecol, _array, _discarded = geo.utils.assoc(
-                sc, rup_sitecol, assoc_dist, 'filter')
-            sitecol.make_complete()
-            return _get_sitecol(sitecol, exp, oqparam, h5)
-        elif h5 and 'site_model' in h5:
+        if h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.impact and (
                     not oqparam.infrastructure_connectivity_analysis):
@@ -739,10 +757,7 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
     if oqparam.tile_spec:
-        if 'custom_site_id' not in sitecol.array.dtype.names:
-            gh = sitecol.geohash(6)
-            assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
-            sitecol.add_col('custom_site_id', 'S6', gh)
+        sitecol.ensure_custom_site_id(size=8)
         tileno, ntiles = oqparam.tile_spec
         assert len(sitecol) > ntiles, (len(sitecol), ntiles)
         mask = sitecol.sids % ntiles == tileno - 1
@@ -763,18 +778,20 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     sitecol.exposure = exp
 
     # add custom_site_id in risk calculations (or GMF calculations)
-    custom_site_id = any(x in oqparam.calculation_mode
-                         for x in ('scenario', 'event_based',
-                                   'risk', 'damage'))
-    if custom_site_id and 'custom_site_id' not in sitecol.array.dtype.names:
-        gh = sitecol.geohash(8)
-        if len(numpy.unique(gh)) < len(gh):
-            logging.error('geohashes are not unique')
-        sitecol.add_col('custom_site_id', 'S8', gh)
+    # or AELO calculations
+    if any(x in oqparam.calculation_mode
+           for x in ('scenario', 'event_based', 'risk', 'damage')):
+        sitecol.ensure_custom_site_id(size=8)
         if sitecol is not sitecol.complete:
             # tested in scenario_risk/test_case_8
-            gh = sitecol.complete.geohash(8)
-            sitecol.complete.add_col('custom_site_id', 'S8', gh)
+            sitecol.complete.add_custom_site_id(size=8)
+    elif oqparam.postproc_func == 'compute_rtgm.main':
+        # add custom_site_id if missing
+        if 'custom_site_id' not in sitecol.array.dtype.names:
+            if not oqparam.siteid:
+                raise InvalidFile(
+                    f"{oqparam.inputs['job_ini']}: missing siteid")
+            sitecol.add_col('custom_site_id', 'S8', oqparam.siteid)
 
     debug_site(oqparam, sitecol)
     if h5:
@@ -938,6 +955,7 @@ def check_min_mag(sources, minimum_magnitude):
     """
     Raise an error if all sources are below the minimum_magnitude
     """
+    assert sources
     ok = 0
     for src in sources:
         min_mag = getdefault(minimum_magnitude, src.tectonic_region_type)
@@ -1095,9 +1113,9 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            h6 = [x.encode('ascii') for x in sorted(set(
-                hex6(sm['lon'], sm['lat'])))]
-            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
+            hexes = sorted(set(hex6(sm['lon'], sm['lat'])))
+            hexes = [h.encode('ascii') for h in hexes]
+            exposure = asset.Exposure.read_around(fnames[0], hexes, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1277,7 +1295,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     if oqparam.aggregate_exposure:
         A = len(assetcol)
         assetcol = assetcol.agg_by_site()
-        logging.info(f'Aggregated {A} assets -> {len(assetcol)} assets')
+        logging.info(f'Aggregated {A:_d} assets -> {len(assetcol):_d} assets')
 
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
@@ -1690,24 +1708,23 @@ def _checksum(fnames, checksum=0):
 
 def get_checksum32(oqparam, h5=None):
     """
-    Build an unsigned 32 bit integer from the hazard input files
+    Build an unsigned 32 bit integer from oqparam and the input files
 
     :param oqparam: an OqParam instance
     """
-    checksum = _checksum(oqparam._input_files)
-    hazard_params = []
-    for key, val in sorted(vars(oqparam).items()):
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id', 'sites',
-                   'floating_x_step', 'floating_y_step'):
-            hazard_params.append('%s = %s' % (key, val))
-    data = '\n'.join(hazard_params).encode('utf8')
-    checksum = zlib.adler32(data, checksum)
+    ini = oqparam.to_ini().encode('utf8')
+    checksum = zlib.adler32(ini, _checksum(oqparam._input_files))
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
+
+
+def get_custom_site_id(descr):
+    """
+    Convert a string into a base64 custom_site_id string (8 chars)
+    """
+    digest = hashlib.sha256(descr.encode('utf8')).digest()
+    return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
 # NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
@@ -1749,14 +1766,17 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(buffer):
+def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
-        mosaic_boundaries_file = os.path.join(
-            os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+        mosaic_boundaries_file = os.path.join(mosaic_dir, 'mosaic.gpkg')
+        if not os.path.exists(mosaic_boundaries_file):
+            mosaic_boundaries_file = os.path.join(
+                os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+    print(f'Reading {mosaic_boundaries_file}')
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
@@ -1825,8 +1845,7 @@ def jobs_from_inis(inis):
     jids = []
     try:
         for ini in inis:
-            oq = get_oqparam(ini)
-            checksum = get_checksum32(oq)
+            checksum = get_checksum32(get_oqparam(ini))
             jobs = logs.dbcmd('SELECT job_id FROM checksum '
                               'WHERE hazard_checksum=?x', checksum)
             if jobs:

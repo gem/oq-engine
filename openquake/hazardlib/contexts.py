@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -36,7 +35,7 @@ from openquake.baselib.general import (
     sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module, InvalidFile
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
@@ -67,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = 1E-3
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -158,21 +157,19 @@ def is_modifiable(gsim):
 
 def concat(ctxs):
     """
-    Concatenate context arrays.
-    :returns: [] or [poisson_ctx] or [nonpoisson_ctx, ...]
+    Concatenate context arrays
     """
     if not ctxs:
         return []
     ctx = ctxs[0]
-    out = []
     # if ctx has probs_occur, it is assumed to be non-poissonian
     if hasattr(ctx, 'probs_occur') and ctx.probs_occur.shape[1] >= 1:
         # case 27, 29, 62, 65, 75, 78, 80
-        for shp in set(ctx.probs_occur.shape[1] for ctx in ctxs):
-            p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
-            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+        [shp] = list(set(ctx.probs_occur.shape[1] for ctx in ctxs))
+        p_array = [p for p in ctxs if p.probs_occur.shape[1] == shp]
+        out = numpy.concatenate(p_array).view(numpy.recarray)
     else:
-        out.append(numpy.concatenate(ctxs).view(numpy.recarray))
+        out = numpy.concatenate(ctxs).view(numpy.recarray)
     return out
 
 
@@ -207,6 +204,8 @@ class Oq(object):
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
+    minimum_intensity = {}
+    sec_imts = []
     inputs = ()
 
     def __init__(self, **hparams):
@@ -429,8 +428,9 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
-                          n_max=zeroctx['probs_occur'].shape[2])
+        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
+        # where (2, 1) = (len(planar), len(sites))
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate)
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
@@ -444,13 +444,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     tom = getattr(src, 'temporal_occurrence_model', None)
 
     if tom and isinstance(tom, NegativeBinomialTOM):
-        if hasattr(src, 'pointsources'):  # CollapsedPointSource
-            maxrate = max(max(ps.mfd.occurrence_rates)
-                          for ps in src.pointsources)
-        else:  # regular source
-            maxrate = max(src.mfd.occurrence_rates)
-        p_size = tom.get_pmf(maxrate).shape[1]
-        dd['probs_occur'] = numpy.zeros(p_size)
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
@@ -600,9 +594,7 @@ class ContextMaker(object):
             self.imtls = imt_module.dictarray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
-        self.cache_distances = param.get('cache_distances', False)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
@@ -623,13 +615,6 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = self.oq.split_sources
-        for gsim in self.gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
 
     def _init2(self, param, extraparams):
         for req in self.REQUIRES:
@@ -687,7 +672,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.clu_mon = monitor('cluster loop', measuremem=True)
+        self.clu_mon = monitor('cluster loop', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -857,9 +842,9 @@ class ContextMaker(object):
     def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
         """
-        :param srcs: a list of Source objects
+        :param srcs: a list of Source objects with consistent TOM
         :param sitecol: a SiteCollection instance
-        :returns: a list of context arrays
+        :returns: a context array
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
@@ -1184,20 +1169,19 @@ class ContextMaker(object):
                 # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
-    # documented but not used in the engine
-    def get_pmap(self, ctxs, tom=None, rup_mutex={}):
+    # called by get_rmap
+    def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
-        :param ctxs: a list of context arrays (only one for poissonian ctxs)
+        :param ctx: a context array
         :param tom: temporal occurrence model (default PoissonTom)
         :param rup_mutex: dictionary of weights (default empty)
         :returns: a MapArray
         """
         rup_indep = not rup_mutex
-        sids = numpy.unique(ctxs[0].sids)
+        sids = numpy.unique(ctx.sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         self.tom = tom or PoissonTOM(self.investigation_time)
-        for ctx in ctxs:
-            self.update(pmap, ctx, rup_mutex)
+        self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def get_rmap(self, srcgroup, sitecol):
@@ -1210,8 +1194,6 @@ class ContextMaker(object):
         """
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
-
-    ratesNLG = get_rmap  # for compatibility with the past
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
@@ -1243,6 +1225,8 @@ class ContextMaker(object):
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
+        elif all(isinstance(ctx, numpy.ndarray) for ctx in ctxs):
+            recarrays = [concat(ctxs)]
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
@@ -1251,6 +1235,12 @@ class ContextMaker(object):
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
+            if gsim.conditional and not gsim.from_mgmpe:
+                url = ('https://docs.openquake.org/oq-engine/master/manual/'
+                       'contributing/implementing-new-gsim.html')
+                raise NotImplementedError(
+                    f'{gsim} was not instantiated with a '
+                    f'ModifiableGMPE, please read {url}')
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
 
@@ -1303,37 +1293,26 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
-        src.dt = 0
+        t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
-            return (0, 0) if src.code in b'pP' else (eps, 0)
+            return EPS
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps, 0
+            return EPS
         src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
         src.dt = time.time() - t0
-        if not ctxs:
-            return eps, 0
-        lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = (lenctx * src.num_ruptures /
-                  self.num_rups * srcfilter.multiplier)
-        # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code in b'NX':  # increase weight
-            weight *= 5.
-        elif src.code == b'S':  # needed for SAM
-            weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
-            weight *= 10  # make fault sources much heavier
-        elif len(sites) > 100:  # many sites, raise the weight for many gsims
-            # important for USA 2023
-            weight *= (1 + len(self.gsims) // 5)
-        return max(weight, eps), int(esites)
+        if not C:
+            return EPS
+        N = len(srcfilter.sitecol.complete)
+        weight = C * src.num_ruptures / self.num_rups / N
+        # in the ComplexFault demo num_ruptures=743, num_rups=372
+        if src.code in b'pP':  # much lighter
+            weight /= 7
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1344,9 +1323,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(src, srcfilter)
-                # if src.code == b'S':
-                #     print(src, src.dt, src.num_ruptures / self.num_rups)
+                src.weight = self.estimate_weight(src, srcfilter)
 
 
 def by_dists(gsim):
@@ -1512,13 +1489,13 @@ class RmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        # to avoid running OOM in multifault sources when building
-        # the dparam cache, we split the sites in tiles
         tiles = [sites]
         if src.code == b'F':
+            # to avoid running OOM in multifault sources when building
+            # the dparam cache, we split the sites in tiles;
+            # this is ESSENTIAL for the USA 2023 model
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            if len(sites) >= 2000:
-                tiles = sites.split_in_tiles(len(sites) // 1000)
+            tiles = sites.split_in_tiles(len(sites) // 5000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
@@ -1526,7 +1503,7 @@ class RmapMaker(object):
                     with self.cmaker.delta_mon:
                         delta = self.cmaker.deltagetter(src.id)
                         ctx.occurrence_rate += delta[ctx.rup_id]
-                if self.fewsites:  # keep rupdata in memory (before collapse)
+                if self.fewsites:  # keep rupdata in memory
                     if self.src_mutex:
                         # needed for Disaggregator.init
                         ctx.src_id = valid.fragmentno(src)
@@ -1541,50 +1518,41 @@ class RmapMaker(object):
         totlen = 0
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
-        # using most memory here; limited by pmap_max_gb
+        # using memory here, limited by tiling and pmap_max_mb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
-            src.nsites = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
-                src.nsites += len(ctx)
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    for ctx in concat(allctxs):
-                        cm.update(pnemap, ctx)
+                    # allctxs is at most a few dozens of MB
+                    cm.update(pnemap, concat(allctxs))
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
             # all sources have the same tom by construction
-            for ctx in concat(allctxs):
-                cm.update(pnemap, ctx)
+            cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
         for src in self.sources:
+            src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(src.nsites)
-            self.source_data['esites'].append(src.esites)
+            self.source_data['nctxs'].append(totlen // nsrcs)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(
-                dt * src.nsites / totlen if totlen else dt / nsrcs)
+            self.source_data['ctimes'].append(src.dt)
             self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
-        t0 = time.time()
-        weight = 0.
-        nsites = 0
-        esites = 0
-        nctxs = 0
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
@@ -1597,9 +1565,6 @@ class RmapMaker(object):
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
                 continue
-            nctxs += len(ctxs)
-            nsites += n
-            esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
             if self.rup_mutex:
@@ -1608,17 +1573,15 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            weight += src.weight
+            src.dt = time.time() - t0
+            self.source_data['src_id'].append(valid.basename(src))
+            self.source_data['grp_id'].append(src.grp_id)
+            self.source_data['nctxs'].append(n)
+            self.source_data['nrupts'].append(src.num_ruptures)
+            self.source_data['weight'].append(src.weight)
+            self.source_data['ctimes'].append(src.dt)
+            self.source_data['taskno'].append(cm.task_no)
         pmap.array *= self.grp_probability
-        dt = time.time() - t0
-        self.source_data['src_id'].append(valid.basename(src))
-        self.source_data['grp_id'].append(src.grp_id)
-        self.source_data['nsites'].append(nsites)
-        self.source_data['esites'].append(esites)
-        self.source_data['nrupts'].append(nctxs)
-        self.source_data['weight'].append(weight)
-        self.source_data['ctimes'].append(dt)
-        self.source_data['taskno'].append(cm.task_no)
         return ~pmap
 
     def make(self):
@@ -1631,8 +1594,14 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
+                MINFLOAT = 1.4E-45  # minimum 32 bit float
                 probs = F32(self.tom.get_probability_n_occurrences(
                     self.tom.occurrence_rate, numpy.arange(20)))
+                # the probs are usually very small, like
+                # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
+                # they rapidly go below the minimum 32 bit float, so
+                # the length of the loop can be reduced (i.e. from 20 to 7)
+                probs = probs[probs > MINFLOAT]
                 array = numpy.full(pnemap.shape, probs[0], dtype=F32)
                 for nocc, probn in enumerate(probs[1:], 1):
                     array += pnemap.array ** nocc * probn
@@ -1644,7 +1613,6 @@ class RmapMaker(object):
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['grp_id'] = self.sources[0].grp_id
         dic['dparam_mb'] = self.cmaker.dparam_mb
         dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
@@ -1692,53 +1660,6 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
-class SitesContext(BaseContext):
-    """
-    Sites calculation context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of the sites collection.
-    Every GSIM class is required to declare what :attr:`sites parameters
-    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
-    Only those required parameters are made available in a result context
-    object.
-    """
-    # _slots_ is used in hazardlib check_gsim and in the SMT
-    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
-                 sitecol=None):
-        self._slots_ = slots
-        if sitecol is not None:
-            self.sids = sitecol.sids
-            for slot in slots:
-                setattr(self, slot, getattr(sitecol, slot))
-
-    # used in the SMT
-    def __len__(self):
-        return len(self.sids)
-
-
-class DistancesContext(BaseContext):
-    """
-    Distances context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant distances between sites from the collection
-    and the rupture. Every GSIM class is required to declare what
-    :attr:`distance measures <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
-    does it need. Only those required values are calculated and made available
-    in a result context object.
-    """
-    _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall', 'rvolc')
-
-    def __init__(self, param_dist_pairs=()):
-        for param, dist in param_dist_pairs:
-            setattr(self, param, dist)
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1750,28 +1671,17 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
-# used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
-def full_context(sites, rup, dctx=None):
-    """
-    :returns: a full RuptureContext with all the relevant attributes
-    """
-    self = RuptureContext()
-    self.src_id = 0
-    for par, val in vars(rup).items():
-        setattr(self, par, val)
-    if not hasattr(self, 'occurrence_rate'):
-        self.occurrence_rate = numpy.nan
-    if hasattr(sites, 'array'):  # is a SiteCollection
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-    else:  # sites is a SitesContext
-        for par, val in vars(sites).items():
-            setattr(self, par, val)
-    if dctx:
-        for par, val in vars(dctx).items():
-            setattr(self, par, val)
-    return self
+# used in a few hazardlib tests
+def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
+    # rctx: a RuptureContext with site information
+    # gsim: a GSIM instance
+    # imt: an IMT string
+    # idx: an index in the range 0..3 (default [0,1,2,3])
+    # returns two arrays (mean, stddevs)
+    cmaker = simple_cmaker([gsim], [imt])
+    ctx = cmaker.recarray([rctx])
+    out = cmaker.get_mean_stds([ctx])
+    return out[idx, 0, 0]
 
 
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
@@ -1802,10 +1712,8 @@ class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of a single rupture. Every
-    GSIM class is required to declare what :attr:`rupture parameters
+    Instances of this class represent relevant features of a single rupture.
+    Every GSIM class is required to declare what :attr:`rupture parameters
     <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>` does it need.
     Only those required parameters are made available in a result context
     object.
@@ -1919,6 +1827,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
+    def get_gids(self):
+        """
+        :returns: list of gid arrays, one for each underlying cmaker
+        """
+        return [cm.gid for cm in self.cmakers]
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -1961,7 +1875,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         G = len(cmaker.gsims)
         tom = PoissonTOM(cmaker.oq.investigation_time)
         pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
-        [ctx] = cmaker.from_srcs([sources[0]], sitecol)
+        ctx = cmaker.from_srcs([sources[0]], sitecol)
         magrates = [{numpy.round(mag, 3): rate
                      for mag, rate in src.get_annual_occurrence_rates()}
                      for src in sources]
@@ -2014,16 +1928,16 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
-    all_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
+    unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
+    gweights = full_lt.g_weights(unique_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
-    for grp_id, trt_smrs in enumerate(all_trt_smrs):
+    for grp_id, trt_smrs in enumerate(unique_trt_smrs):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
@@ -2032,7 +1946,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm.trti = trti
         cm.trt_smrs = trt_smrs
         cmakers.append(cm)
-    gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
+    gids = full_lt.get_gids(unique_trt_smrs)
     for cm, gid in zip(cmakers, gids):
         cm.gid = gid
         cm.wei = gweights[gid]
@@ -2055,19 +1969,47 @@ def read_cmakers(dstore, full_lt=None):
     return cmakers
 
 
-def read_full_lt_by_label(dstore):
+def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt'].init()
+    glt = full_lt.gsim_lt
     attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
-        dic[label] = copy.copy(full_lt)
+        dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
+        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
+        flt.label = label
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+        flt.weights = numpy.array(
+            [rlz.weight for rlz in flt.get_realizations()])
+
+        # all gsim logic trees in the dictionary must have the same
+        # trts and the same number of gsims per trt
+        exp = list(glt.values)
+        got = list(flt.gsim_lt.values)
+        if exp != got:
+            raise InvalidFile(
+                f'{oq.inputs["gsim_logic_tree"]}: expected {exp} got {got}')
+        for trt, gsims in full_lt.gsim_lt.values.items():
+            got = len(gsims)
+            exp = len(glt.values[trt])
+            if exp != got:
+                raise InvalidFile(
+                    f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
+                    f'got {got} for {trt=}')
+
+    # sanity check: the gids must be consistent
+    unique_trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+    default_gids = dic['Default'].get_gids(unique_trt_smrs)
+    for label in list(dic)[1:]:
+        gids = dic[label].get_gids(unique_trt_smrs)
+        numpy.testing.assert_equal(gids, default_gids)
     return dic
 
 

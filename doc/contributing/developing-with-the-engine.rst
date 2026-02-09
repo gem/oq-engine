@@ -95,13 +95,17 @@ Running calculations programmatically
 -------------------------------------
 
 Starting from engine v3.21 the recommended way to run a calculation
-programmatically is via the pair ``create_jobs/run_jobs``::
+programmatically is via the pair ``create_jobs/run_jobs``:
 
-	>> from openquake.engine import engine
+.. code-block:: python
+
+        >> from openquake.engine import engine
         >> jobs = engine.create_jobs(['job_ini'])  # one-element list
         >> engine.run_jobs(jobs)
 
-Then the results can be read from the datastore by using the extract API::
+Then the results can be read from the datastore by using the extract API:
+
+.. code-block:: python
 
 	>> from openquake.commonlib import datastore
 	>> from openquake.calculators.extract import extract
@@ -117,7 +121,7 @@ scenario risk calculations starting for the same planar rupture, but with
 different values of the strike angle (0, 90 and 180 degrees).
 The relevant code is something like this:
 
-.. python:
+.. code-block:: python
 
   """Sensitivity of the risk from the strike parameter"""
   import os
@@ -263,7 +267,7 @@ Then we can specify the sites and a source as follows::
 
 Then you can use the ``ContextMaker`` to generate context arrays from the sources::
 
-	>>> [ctx] = cmaker.from_srcs([src], sitecol)
+	>>> ctx = cmaker.from_srcs([src], sitecol)
 
 In our example, there are 15 magnitudes::
 
@@ -287,11 +291,11 @@ The contexts contain all the rupture, site and distance parameters.
 
 Then you have::
 
-	>>> ctx.mag[0]
+	>>> float(ctx.mag[0])
 	4.7
-	>>> round(ctx.rrup[0], 1)
+	>>> float(round(ctx.rrup[0], 1))
 	106.4
-	>>> round(ctx.rjb[0], 1)
+	>>> float(round(ctx.rjb[0], 1))
 	105.9
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site parameters, so calling ``ctx.vs30`` will raise an
@@ -332,6 +336,45 @@ curves can be extracted::
 If you want to know exactly how ``get_rmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
 
+Reading the hazard sources programmatically
+----------------------------------------------
+
+The engine provides an utility `get_composite_source_model` just for that.
+You can use it as in the example below:
+
+.. code-block:: python
+
+ >> from openquake.commonlib import readinput
+ >> oqparam = readinput.get_oqparam('job.ini')
+ >> csm = readinput.get_composite_source_model(oq)
+
+Then the CompositeSourceModel object (``csm`` in this example) has a
+method ``get_sources`` to extract the sources. From the sources one
+can directly sample the sources and emulate an event based
+calculation or can iterate on the ruptures by calling the
+``.iter_ruptures`` method. Be warned that in the case of
+MultiFaultSources you will incur in the ``AttributeError: msparams``
+which can be solved by calling ``csm.set_msparams()`` first. This is
+needed only if you plan to call ``.iter_ruptures()``, otherwise you
+can avoid calling it since it is an expensive operation for large
+models, like the USA one.
+
+It is also possible to work on one source model realization at the time,
+by specifying the source model realization index in ``csm.get_source(smr)``.
+You can see the source model
+realizations in a calculation with the command `oq show sm_rlzs <calc_id>`.
+For instance, the demo ``LogicTreeCase1ClassicalPSHA`` has two source
+model realizations as follows::
+
+ # oq show sm_rlzs
+ | ordinal | lt_path | value                  | samples | weight |
+ |---------+---------+------------------------+---------+--------|
+ | 0       | b1      | ['source_model_1.xml'] | 4       | 0.5000 |
+ | 1       | b2      | ['source_model_2.xml'] | 4       | 0.5000 |
+
+In this table ``ordinal`` is the same as the ``smr`` argument in
+``get_sources``. If ``smr`` is not passed all the sources from all
+source model realizations are returned.
 
 Generating ground motion fields from a rupture
 ----------------------------------------------

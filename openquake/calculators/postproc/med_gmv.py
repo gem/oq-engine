@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,9 @@ from openquake.hazardlib.valid import basename
 
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
-    ctxs = cmaker.from_srcs(src_frags, sitecol)
-    if ctxs:
-        mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
+    ctx = cmaker.from_srcs(src_frags, sitecol)
+    if len(ctx):
+        mean = cmaker.get_mean_stds([ctx])[0]  # shape (G, M, N)
         for m, imt in enumerate(cmaker.imtls):
             mean[:, m] = exp(mean[:, m], imt!='MMI')
         gsims = [str(gsim) for gsim in cmaker.gsims]

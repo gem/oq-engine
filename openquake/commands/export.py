@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     """
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
-    if parent_id:
+    if parent_id and isinstance(parent_id, int):
         dstore.parent = datastore.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:

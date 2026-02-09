@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ import pandas
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt, logictree
+from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid
 from openquake.commonlib import readinput, tests
 from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -1915,7 +1915,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
-        self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
+        gsims = (valid.gsim('ChiouYoungs2008'), valid.gsim('SadighEtAl1997'))
+        self.assertEqual(rlz.value, gsims)
         self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 

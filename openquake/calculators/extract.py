@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2025 GEM Foundation
+# Copyright (C) 2017-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,7 +43,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
-from openquake.calculators import getters
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -77,7 +77,7 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: li for li, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    num_rlzs = len(dstore['weights'])
+    num_rlzs = len(base.get_weights(oq, dstore))
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
@@ -816,6 +816,12 @@ def extract_agg_curves(dstore, what):
 
 
 def aggexp_tags(dstore):
+    """
+    Read agg_values and returns a datastore with fields like::
+
+            policy taxonomy  number  nonstructural  structural  area
+     agg_id
+    """
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
@@ -855,10 +861,8 @@ def extract_mmi_tags(dstore, what):
     Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
     """
     df = dstore.read_df('mmi_tags')
-
-    # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+    # NOTE: if admin2 is not available, ID_2 and NAME_2 store the admin1 values
     df.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
-
     return df
 
 
@@ -869,7 +873,7 @@ def extract_aggrisk_tags(dstore, what):
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
     oq = dstore['oqparam']
-    ws = dstore['weights'][:]
+    ws = base.get_weights(oq, dstore)
     aggrdf = dstore.read_df('aggrisk')
     aggrdf.loss *= ws[aggrdf.rlz_id]
     del aggrdf['rlz_id']
@@ -926,7 +930,7 @@ def extract_aggrisk_tags(dstore, what):
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
 
-        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1
         out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
         total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
 
@@ -1032,6 +1036,22 @@ def extract_aggregate(dstore, what):
     return aw
 
 
+@extract.add('avg_losses_by')
+def extract_avg_losses_by(dstore, tagname):
+    """
+    /extract/avg_losses_by/taxonomy
+
+    :returns: an aggregate DataFrame with fields (tagname, loss_type, ...)
+    """
+    oq = dstore['oqparam']
+    assert oq.collect_rlzs  # there is a single realization in avg_losses-rlzs
+    assetcol = dstore['assetcol']
+    out = {tagname: getattr(assetcol.tagcol, tagname)[1:]}
+    for lt, dset in dstore['avg_losses-rlzs'].items():
+        out[lt] = assetcol.aggregateby([tagname], dset[:, 0])
+    return pandas.DataFrame(out)
+
+
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     oq = dstore['oqparam']
@@ -1081,32 +1101,68 @@ def extract_losses_by_site(dstore, what):
     return pandas.DataFrame(dic)
 
 
+def group_assets_by_location(assetcol):
+    """
+    Group assets by rounded (lon, lat).
+
+    :param assetcol: asset collection
+    :returns: (lonlats, indices, lons, lats)
+    """
+    lonlats = assetcol[['ordinal', 'lon', 'lat']]
+    # this is fast enough, we can do millions of assets in seconds
+    tags = [
+        '%.5f,%.5f' % (row['lon'], row['lat'])
+        for row in lonlats
+    ]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    lons, lats = [], []
+    for lonlat in uniq:
+        lon, lat = lonlat.split(',')
+        lons.append(lon)
+        lats.append(lat)
+    return lonlats, indices, lons, lats
+
+
 @extract.add('losses_by_location')
 def extract_losses_by_location(dstore, what):
     """
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
-    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
+    assetcol = dstore['assetcol']
+    lonlats, indices, lons, lats = group_assets_by_location(assetcol)
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
         # there is only one realization
         grp = dstore.getitem('avg_losses-rlzs')
-    dic = {}
-    # this is fast enough, we can do millions of assets in seconds
-    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
-            for row in lonlats]
-    uniq, indices = numpy.unique(tags, return_inverse=True)
-    lons, lats = [], []
-    for lonlat in uniq:
-        lo, la = lonlat.split(',')
-        lons.append(lo)
-        lats.append(la)
-    dic['lon'] = F32(lons)
-    dic['lat'] = F32(lats)
+    dic = {'lon': F32(lons),
+           'lat': F32(lats)}
     for loss_type in grp:
         losses = grp[loss_type][:, 0][lonlats['ordinal']]
         dic[loss_type] = F32(general.fast_agg(indices, losses))
+    logging.info('There are {:_d} assets on {:_d} locations'.format(
+        len(lonlats), len(lons)))
+    return pandas.DataFrame(dic)
+
+
+@extract.add('exposure_by_location')
+def extract_exposure_by_location(dstore, what):
+    """
+    Aggregate exposure and occupants by geographic location.
+
+    :returns: a DataFrame (lon, lat, ``value-*``, ``occupants_*``)
+    """
+    assetcol = dstore['assetcol']
+    lonlats, indices, lons, lats = group_assets_by_location(assetcol)
+    dic = {'lon': F32(lons),
+           'lat': F32(lats)}
+    fields = [
+        name for name in assetcol[:].dtype.names
+        if name.startswith('value-') or name.startswith('occupants_')
+    ]
+    for field in fields:
+        values = assetcol[field][lonlats['ordinal']]
+        dic[field] = F32(general.fast_agg(indices, values))
     logging.info('There are {:_d} assets on {:_d} locations'.format(
         len(lonlats), len(lons)))
     return pandas.DataFrame(dic)
@@ -1277,7 +1333,7 @@ def extract_mfd(dstore, what):
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = dstore['oqparam']
-    R = len(dstore['weights'])
+    R = len(base.get_weights(oq, dstore))
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     rup_df = dstore.read_df('ruptures', 'id')[
         ['mag', 'n_occ', 'occurrence_rate']]
@@ -1412,7 +1468,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weights = dstore['weights'][:][rlzs]
+        weights = base.get_weights(oq, dstore)[rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1502,7 +1558,7 @@ def extract_disagg_layer(dstore, what):
         rec['lon_bins'] = edges[2][sid]
         rec['lat_bins'] = edges[3][sid]
         for m, imt in enumerate(oq.imtls):
-            ws = full_lt.wget(weights, imt)
+            ws = full_lt.gsim_lt.wget(weights, imt)
             ws /= ws.sum()  # normalize to 1
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
@@ -1597,13 +1653,12 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
-    try:
-        tss = dstore['trt_smr_start_stop']
-    except KeyError:
+    allproxies = calc.get_proxies(dstore.filename, slice(None), min_mag)
+    if not allproxies:
         # when starting from GMFs there are no ruptures
         raise getters.NotFound
-    for trt_smr, start, stop in tss:
-        proxies = calc.get_proxies(dstore.filename, slice(start, stop), min_mag)
+    for trt_smr, proxies in general.groupby(
+            allproxies, lambda p: p.rec['trt_smr']).items():
         trt = full_lt.trts[trt_smr // TWO24]
         if 'source_mags' not in dstore:  # ruptures import from CSV
             mags = numpy.unique(dstore['ruptures']['mag'])
@@ -1748,7 +1803,7 @@ def extract_risk_stats(dstore, what):
     del df['loss_id']
     kfields = [f for f in df.columns if f in {
         'agg_id', 'loss_type', 'return_period'}]
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     return calc_stats(df, kfields, stats, weights)
 
 

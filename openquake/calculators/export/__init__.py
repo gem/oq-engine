@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,8 @@ from openquake.baselib.writers import write_csv
 DISPLAY_NAME = {
     'asce07': 'ASCE 7 Parameters',
     'asce41': 'ASCE 41 Parameters',
+    'asce41_sa_final': 'ASCE 41 Response Spectra',
+    'spectra_asce41': 'ASCE 41 Calculations',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
@@ -46,6 +48,7 @@ DISPLAY_NAME = {
     'aggrisk': 'Aggregate Risk',
     'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
+    'avg_losses_by': 'Average Losses By Taxonomy',
     'aggcurves': 'Aggregate Risk Curves',
     'aggcurves-stats': 'Aggregate Risk Curves Statistics',
     'avg_gmf': 'Average Ground Motion Field',
@@ -53,7 +56,7 @@ DISPLAY_NAME = {
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
     'mce': 'MCE calculations',
-    'mce_governing': 'ASCE7: MCEr SRAs',
+    'mce_governing': 'ASCE 7 MCEr Response Spectrum',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'mmi_tags': 'Exposure grouped by Admin1 and MMI',
@@ -65,6 +68,7 @@ DISPLAY_NAME = {
     'site_model': 'Site Model',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
+    'hmaps-stats': 'Hazard Maps Statistics',
     'uhs': 'Uniform Hazard Spectra',
     'disagg-rlzs': 'Disaggregation Outputs Per Realization',
     'disagg-stats': 'Statistical Disaggregation Outputs',
@@ -88,6 +92,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
+    'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
@@ -95,6 +100,12 @@ AGGRISK_FIELD_DESCRIPTION = {
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
+    'value': 'Value',
+    'loss_type': 'Loss type',
+    'lossmea': 'Mean',
+    'q50': 'Median',
+    'q05': '5th percentile',
+    'q95': '95th percentile',
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
+from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
@@ -88,7 +89,7 @@ def main(
         make_html_report=None,
         run=None,
         delete_calculation: int = None,
-        hazard_calculation_id: int = None,
+        hazard_calculation_id: valid.calculation = None,
         list_outputs: int = None,
         show_log=None,
         export_output=None,
@@ -124,7 +125,6 @@ def main(
     if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
-            yes = True
     else:  # DbServer yes
         print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
@@ -135,9 +135,10 @@ def main(
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
+        safeprint(msg)
         if msg.startswith('Your database is already updated'):
             pass
-        elif yes or confirm('Proceed? (y/n) '):
+        else:
             logs.dbcmd('upgrade_db')
         if not run:
             sys.exit(0)
@@ -156,7 +157,7 @@ def main(
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id:
+    if isinstance(hazard_calculation_id, int):
         hc_id = get_job_id(hazard_calculation_id, user_name)
     else:
         hc_id = None
@@ -165,11 +166,15 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hc_id or hazard_calculation_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not multi)
+
+        # possibly run the jobs in parallel
+        run_jobs(jobs, nodes=nodes, sbatch=True,
+                 precalc=False if multi else not hazard_calculation_id)
 
     # hazard
     elif list_hazard_calculations:
@@ -192,6 +197,7 @@ def main(
         hc_id = get_job_id(list_outputs, user_name)
         for line in logs.dbcmd('list_outputs', hc_id):
             safeprint(line)
+
     elif show_log is not None:
         hc_id = get_job_id(show_log, user_name)
         for line in logs.dbcmd('get_log', hc_id):
@@ -235,7 +241,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.multi = 'Run multiple job.inis in parallel'
+main.multi = 'Run multiple job.inis (usually scenarios) in parallel'
 
 # options
 main.log_file = dict(

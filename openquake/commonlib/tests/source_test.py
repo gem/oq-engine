@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,8 @@ from numpy.testing import assert_allclose
 
 from openquake.baselib.general import assert_close
 from openquake.baselib.parallel import Starmap
-from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
+from openquake.hazardlib import (
+    site, geo, mfd, pmf, scalerel, valid, tests as htests)
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.logictree import FullLogicTree
@@ -708,9 +709,11 @@ Active Shallow Crust,gA0,[SadighEtAl1997],w=0.5
 Active Shallow Crust,gB0,[ChiouYoungs2008],w=0.5
 Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         [rlz] = csm.full_lt.get_realizations()
+        sa = valid.gsim('SadighEtAl1997')
+        cy = valid.gsim('ChiouYoungs2008')
         self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
-                         {'Subduction Interface': '[SadighEtAl1997]',
-                          'Active Shallow Crust': '[ChiouYoungs2008]'})
+                         {'Subduction Interface': sa,
+                          'Active Shallow Crust': cy})
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('gB0', 'gA1'))

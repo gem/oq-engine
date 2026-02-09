@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,22 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import operator
 import collections
-import pickle
-import toml
-import copy
 import logging
 from dataclasses import dataclass
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, block_splitter
+from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import split_source
-from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32
@@ -110,291 +105,6 @@ def rounded_unique(mags, idxs):
     if dupl:
         logging.error('the pair (mag=%s, idxs=%s) is duplicated' % dupl[0])
     return mags
-
-
-class SourceGroup(collections.abc.Sequence):
-    """
-    A container for the following parameters:
-
-    :param str trt:
-        the tectonic region type all the sources belong to
-    :param list sources:
-        a list of hazardlib source objects
-    :param name:
-        The name of the group
-    :param src_interdep:
-        A string specifying if the sources in this cluster are independent or
-        mutually exclusive
-    :param rup_indep:
-        A string specifying if the ruptures within each source of the cluster
-        are independent or mutually exclusive
-    :param weights:
-        A dictionary whose keys are the source IDs of the cluster and the
-        values are the weights associated with each source
-    :param min_mag:
-        the minimum magnitude among the given sources
-    :param max_mag:
-        the maximum magnitude among the given sources
-    :param id:
-        an optional numeric ID (default 0) set by the engine and used
-        when serializing SourceModels to HDF5
-    :param temporal_occurrence_model:
-        A temporal occurrence model controlling the source group occurrence
-    :param cluster:
-        A boolean indicating if the sources behaves as a cluster similarly
-        to what used by the USGS for the New Madrid in the 2008 National
-        Hazard Model.
-    """
-    changes = 0  # set in apply_uncertainty
-
-    @classmethod
-    def collect(cls, sources):
-        """
-        :param sources: dictionaries with a key 'tectonicRegion'
-        :returns: an ordered list of SourceGroup instances
-        """
-        source_stats_dict = {}
-        for src in sources:
-            trt = src['tectonicRegion']
-            if trt not in source_stats_dict:
-                source_stats_dict[trt] = SourceGroup(trt)
-            sg = source_stats_dict[trt]
-            if not sg.sources:
-                # we append just one source per SourceGroup, so that
-                # the memory occupation is insignificant
-                sg.sources.append(src)
-
-        # return SourceGroups, ordered by TRT string
-        return sorted(source_stats_dict.values())
-
-    def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', grp_probability=1.,
-                 min_mag={'default': 0}, max_mag=None,
-                 temporal_occurrence_model=None, cluster=False):
-        # checks
-        self.trt = trt
-        self.sources = []
-        self.name = name
-        self.src_interdep = src_interdep
-        self.rup_interdep = rup_interdep
-        self._check_init_variables(sources, name, src_interdep, rup_interdep)
-        self.grp_probability = grp_probability
-        self.min_mag = min_mag
-        self.max_mag = max_mag
-        if sources:
-            for src in sorted(sources, key=operator.attrgetter('source_id')):
-                self.update(src)
-        self.source_model = None  # to be set later, in FullLogicTree
-        self.temporal_occurrence_model = temporal_occurrence_model
-        self.cluster = cluster
-        # check weights in case of mutually exclusive ruptures
-        if rup_interdep == 'mutex':
-            for src in self.sources:
-                assert isinstance(src, NonParametricSeismicSource)
-                for rup, _ in src.data:
-                    assert rup.weight is not None
-
-    @property
-    def grp_id(self):
-        """
-        The grp_id of the underlying sources
-        """
-        return self.sources[0].grp_id
-
-    @property
-    def trt_smrs(self):
-        """
-        The trt_smrs of the underlying sources
-        """
-        return self.sources[0].trt_smrs
-
-    @property
-    def tom_name(self):
-        """
-        :returns: name of the associated temporal occurrence model
-        """
-        if self.temporal_occurrence_model:
-            return self.temporal_occurrence_model.__class__.__name__
-        else:
-            return 'PoissonTOM'
-
-    @property
-    def atomic(self):
-        """
-        :returns: True if the group cannot be split
-        """
-        return (self.cluster or self.src_interdep == 'mutex' or
-                self.rup_interdep == 'mutex')
-
-    @property
-    def weight(self):
-        """
-        :returns: total weight of the underlying sources
-        """
-        return sum(src.weight for src in self)
-
-    @property
-    def codes(self):
-        """
-        The codes of the underlying sources as a byte string
-        """
-        codes = set()
-        for src in self.sources:
-            codes.add(src.code)
-        return b''.join(sorted(codes))
-
-    def _check_init_variables(self, src_list, name,
-                              src_interdep, rup_interdep):
-        if src_interdep not in ('indep', 'mutex'):
-            raise ValueError('source interdependence incorrect %s ' %
-                             src_interdep)
-        if rup_interdep not in ('indep', 'mutex'):
-            raise ValueError('rupture interdependence incorrect %s ' %
-                             rup_interdep)
-        # check TRT
-        if src_list:  # can be None
-            for src in src_list:
-                assert src.tectonic_region_type == self.trt, (
-                    src.tectonic_region_type, self.trt)
-                # Mutually exclusive ruptures can only belong to non-parametric
-                # sources
-                if rup_interdep == 'mutex':
-                    if not isinstance(src, NonParametricSeismicSource):
-                        msg = "Mutually exclusive ruptures can only be "
-                        msg += "modelled using non-parametric sources"
-                        raise ValueError(msg)
-
-    def update(self, src):
-        """
-        Update the attributes sources, min_mag, max_mag
-        according to the given source.
-
-        :param src:
-            an instance of :class:
-            `openquake.hazardlib.source.base.BaseSeismicSource`
-        """
-        assert src.tectonic_region_type == self.trt, (
-            src.tectonic_region_type, self.trt)
-
-        # checking mutex ruptures
-        if (not isinstance(src, NonParametricSeismicSource) and
-                self.rup_interdep == 'mutex'):
-            msg = "Mutually exclusive ruptures can only be "
-            msg += "modelled using non-parametric sources"
-            raise ValueError(msg)
-
-        self.sources.append(src)
-        _, max_mag = src.get_min_max_mag()
-        prev_max_mag = self.max_mag
-        if prev_max_mag is None or max_mag > prev_max_mag:
-            self.max_mag = max_mag
-
-    def get_trt_smr(self):
-        """
-        :returns: the .trt_smr attribute of the underlying sources
-        """
-        return self.sources[0].trt_smr
-
-    # not used by the engine
-    def count_ruptures(self):
-        """
-        Set src.num_ruptures on each source in the group
-        """
-        for src in self:
-            src.nsites = 1
-            src.num_ruptures = src.count_ruptures()
-            print(src.weight)
-        return self
-
-    # used only in event_based, where weight = num_ruptures
-    def split(self, maxweight):
-        """
-        Split the group in subgroups with weight <= maxweight, unless it
-        it atomic.
-        """
-        if self.atomic:
-            return [self]
-
-        # split multipoint/multifault in advance
-        sources = []
-        for src in self:
-            if src.code in b'MF':
-                sources.extend(split_source(src))
-            else:
-                sources.append(src)
-        out = []
-        def weight(src):
-            if src.code == b'F':  # consider it much heavier
-                return src.num_ruptures * 25
-            return src.num_ruptures
-        for block in block_splitter(sources, maxweight, weight):
-            sg = copy.copy(self)
-            sg.sources = block
-            out.append(sg)
-        logging.info('Produced %d subgroup(s) of %s', len(out), self)
-        return out
-
-    def get_tom_toml(self, time_span):
-        """
-        :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
-        """
-        tom = self.temporal_occurrence_model
-        if tom is None:
-            return '[PoissonTOM]\ntime_span=%s' % time_span
-        dic = {tom.__class__.__name__: vars(tom)}
-        return toml.dumps(dic)
-
-    def is_poissonian(self):
-        """
-        :returns: True if all the sources in the group are poissonian
-        """
-        tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
-        return tom.__class__.__name__ == 'PoissonTOM'
-
-    def __repr__(self):
-        return '<%s %s, %d source(s), weight=%d>' % (
-            self.__class__.__name__, self.trt, len(self.sources), self.weight)
-
-    def __lt__(self, other):
-        """
-        Make sure there is a precise ordering of SourceGroup objects.
-        Objects with less sources are put first; in case the number
-        of sources is the same, use lexicographic ordering on the trts
-        """
-        num_sources = len(self.sources)
-        other_sources = len(other.sources)
-        if num_sources == other_sources:
-            return self.trt < other.trt
-        return num_sources < other_sources
-
-    def __getitem__(self, i):
-        return self.sources[i]
-
-    def __iter__(self):
-        return iter(self.sources)
-
-    def __len__(self):
-        return len(self.sources)
-
-    def __toh5__(self):
-        lst = []
-        for i, src in enumerate(self.sources):
-            buf = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
-            lst.append((src.id, src.num_ruptures,
-                        numpy.frombuffer(buf, numpy.uint8)))
-        attrs = dict(
-            trt=self.trt,
-            name=self.name or '',
-            src_interdep=self.src_interdep,
-            rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability or '1')
-        return numpy.array(lst, source_dt), attrs
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.sources = []
-        for row in array:
-            self.sources.append(pickle.loads(memoryview(row['pik'])))
 
 
 def split_coords_2d(seq):
@@ -586,6 +296,8 @@ class RuptureConverter(object):
                 ~surface_node.dip,
                 self.rupture_mesh_spacing)
         elif surface_node.tag.endswith('complexFaultGeometry'):
+            if not self.complex_fault_mesh_spacing:
+                raise ValueError('complex_fault_mesh_spacing is not set!')
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
@@ -742,8 +454,7 @@ class SourceConverter(RuptureConverter):
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.complex_fault_mesh_spacing = (
-            complex_fault_mesh_spacing or rupture_mesh_spacing)
+        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = tuple(source_id)
         self.discard_trts = discard_trts
@@ -1092,6 +803,8 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.ComplexFaultSource`
                   instance
         """
+        if not self.complex_fault_mesh_spacing:
+            raise ValueError('complex_fault_mesh_spacing is not set!')
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)

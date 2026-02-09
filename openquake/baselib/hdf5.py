@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,11 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
 import toml
-import pandas
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # hiding tz warning datetime.datetime.utcfromtimestamp() is deprecated
+    # (unfortunately also others)
+    import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
@@ -329,9 +333,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'][()]
+    >>> int(dic['a']['x'][()])
     1
-    >>> dic['b'][()]
+    >>> int(dic['b'][()])
     3
     >>> f.close()
     """
@@ -504,6 +508,7 @@ class File(h5py.File):
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
         elif isinstance(obj, numpy.ndarray) and obj.shape:
+            # called when storing _csm
             d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
             d[:] = obj
         elif (isinstance(obj, numpy.ndarray) and
@@ -994,7 +999,7 @@ def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None, usecols=None):
+             index=None, errors=None, usecols=None, dframe=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -1003,7 +1008,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
     :param usecols: columns to read
-    :returns: an ArrayWrapper, unless there is an index
+    :param dframe: pass True to return a DataFrame
+    :returns: an ArrayWrapper, unless there is an index or df is true
     """
     attrs = {}
     if fname.endswith('.csv'):
@@ -1040,7 +1046,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
-    if index:
+    if index or dframe:
         df = pandas.DataFrame.from_records(arr, index)
         vars(df).update(attrs)
         return df

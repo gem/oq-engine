@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -270,13 +270,18 @@ def oq_distribute(task=None):
 
 
 def init_workers():
-    """Used to initialize the process pool"""
+    """
+    Used to initialize the process pool. Calls setproctitle (if available)
+    and sets the flag Starmap.on, so that it is possible to determine if
+    the current code is begin run in parallel or not.
+    """
     try:
         from setproctitle import setproctitle
     except ImportError:
         pass
     else:
         setproctitle('oq-worker')
+    Starmap.on = True
 
 
 class Pickled(object):
@@ -694,6 +699,7 @@ num_cores = int(os.environ.get('OQ_NUM_CORES') or
 
 
 class Starmap(object):
+    on = False
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
@@ -1058,6 +1064,7 @@ class List(list):
     weight = 0
 
 
+# associated to submit_split and tested in SplitTaskTestCase
 def split_task(elements, func, args, duration, outs_per_task, monitor):
     """
     :param func: a task function with a monitor as last argument
@@ -1094,10 +1101,19 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
+               names=()):
     """
-    Spawn processes with the given arguments
+    Spawn functions with the given arguments as subprocesses.
+
+    :param func: function to spawn
+    :param allargs: list of arguments
+    :param nprocs: number of processes running at the same time
+    :param logfinish: if True, log a progress message
+    :param names: optionally, give names to the spawned processes
     """
+    if names:
+        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
@@ -1108,7 +1124,8 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
     n = 1
     while allargs:
         args = allargs.pop()
-        proc = mp_context.Process(target=func, args=args)
+        name = names.pop() if names else None
+        proc = mp_context.Process(target=func, args=args, name=name)
         proc.start()
         procs[proc.sentinel] = proc
         while len(procs) >= nprocs:  # wait for something to finish
@@ -1116,15 +1133,16 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
                 procs[finished].join()
                 del procs[finished]
                 if logfinish:
-                    logging.info('Finished %d of %d jobs', n, tot)
+                    logging.info('Finished job %s [%d of %d]', name, n, tot)
                 n += 1
 
     while procs:
         for finished in wait(procs):
+            name = procs[finished].name or ''
             procs[finished].join()
             del procs[finished]
             if logfinish:
-                logging.info('Finished %d of %d jobs', n, tot)
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
 
 

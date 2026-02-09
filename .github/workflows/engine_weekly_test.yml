@@ -15,40 +15,24 @@ on:
     - cron: "0 1 * * 0"
 
 jobs:
-  engine:
-    runs-on: ${{ matrix.os }}
-    needs: webUI
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-            python install.py devel --version=master
-      - name: Calculators hazard tests
-        run: |
-          set -e
-          source ~/openquake/bin/activate
-          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-          oq engine --upgrade-db
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
   webUI:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -56,11 +40,23 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
+      - name: Install Tools using master branch
         run: |
           set -x
-          BRANCH=master
-          python install.py devel --version=master
           # Standalone apps
           source ~/openquake/bin/activate
           echo "Downloading standalone apps"
@@ -80,7 +76,6 @@ jobs:
           done
       - name: Test WebUI and run https calculation
         run: |
-          BRANCH=master
           source ~/openquake/bin/activate
           set -x
           sudo mkdir /var/log/oq-engine/
@@ -92,7 +87,7 @@ jobs:
           cd /home/runner/work/oq-engine/oq-engine
           cd openquake/server
           cat > local_settings.py << EOF
-          LOCKDOWN = True
+          APPLICATION_MODE = 'RESTRICTED'
           WEBUI_USER = 'runner'
           WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
           DEBUG = True
@@ -143,6 +138,50 @@ jobs:
           fi
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+  engine:
+    runs-on: ${{ matrix.os }}
+    needs: webUI
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11", "3.12"]
+    steps:
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
+      - name: Calculators hazard tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          oq engine --upgrade-db
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
+
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -150,28 +189,47 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          python install.py devel --version=master
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
       - name: Hazardlib tests
         run: |
           set -e
           source ~/openquake/bin/activate
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
-          pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
-          cd openquake
-          ruff check --preview .
-          pytest calculators -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5
-          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep hmtk risklib commonlib baselib hazardlib
-          pytest --doctest-modules ../doc/contributing/*.rst
+          ruff check --preview openquake
+          pytest -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake/calculators
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
+          pytest --doctest-modules doc/contributing/*.rst
+        shell: bash
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
@@ -179,25 +237,44 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
       OQ_APPLICATION_MODE: PUBLIC
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          python install.py devel --version=master
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
       - name: Server 'PUBLIC' mode tests
         run: |
           source ~/openquake/bin/activate
           curl -O https://downloads.openquake.org/test_data/exposure.hdf5
-          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           # Starting the webui here is not needed by test_public_mode,
           # but here we also want to check that the webui starts without errors
@@ -216,18 +293,37 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     env:
       OQ_APPLICATION_MODE: READ_ONLY
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          python install.py devel --version=master
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
       - name: Server 'READ_ONLY' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -241,19 +337,38 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     env:
       OQ_APPLICATION_MODE: AELO
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          python install.py devel --version=master
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
       - name: Actualize 'aelo' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.aelo.tmpl; do
@@ -275,27 +390,46 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: ARISTOTLE
+      OQ_APPLICATION_MODE: IMPACT
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python  ${{ matrix.python-version }}
+      # This Checkout use git-ref keyword from dispatch
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v4
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Run Installation of oq-engine in devel mode
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          python install.py devel --version=master
+          export PIP_DEFAULT_TIMEOUT=100
+          pip3 install -U pip wheel setuptools
+          #
+          echo "branch to test: ${BRANCH}"
+          if [[ "$BRANCH" != "" ]]
+          then
+            python install.py devel --version ${BRANCH}
+          else
+            python install.py devel --version master
+          fi
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
               cp -- "$file" "${file%.impact.tmpl}"
           done
-      - name: Server 'ARISTOTLE' mode tests
+      - name: Server 'IMPACT' mode tests
         run: |
           set -x
           date

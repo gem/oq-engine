@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -268,8 +268,6 @@ class _GeographicObjects(object):
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
         for obj, distance, assets, lon, lat in zip(
                 objs, distances, assets_by_site, mesh.lons, mesh.lats):
-            if round(lon, 3) == 132.473 and round(lat, 3) == 35.143:
-                breakpoint()
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
@@ -930,9 +928,9 @@ def geohash3(lons, lats):
 
 def geolocate(lonlats, geom_df, exclude=()):
     """
-    :param lonlats: array of shape (N, 2) of (lon, lat)
+    :param lonlats: array of shape (N, 2) or (N, 3)
     :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
+    :param exclude: list of codes to exclude from the results
     :returns: codes associated to the points
 
     NB: if the "code" field is not a primary key, i.e. there are
@@ -940,8 +938,11 @@ def geolocate(lonlats, geom_df, exclude=()):
     associates the code if at least one of the geometries matches
     """
     codes = numpy.array(['???'] * len(lonlats))
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for code, df in filtered_geom_df.groupby('code'):
+    if exclude:
+        filtered_df = geom_df[~geom_df['code'].isin(exclude)]
+    else:
+        filtered_df = geom_df
+    for code, df in filtered_df.groupby('code'):
         ok = numpy.zeros(len(lonlats), bool)
         for geom in df.geom:
             ok |= contains_xy(geom, lonlats)

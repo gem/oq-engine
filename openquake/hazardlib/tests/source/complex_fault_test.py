@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -135,7 +135,7 @@ class ComplexFaultSourceIterRupturesTestCase(
             magnitudes=[7.0, 8.0],
             occurrence_rates=[0.1, 0.01]
         )
-        for r in source._iter_ruptures(
+        for r in source.iter_ruptures(
             eps_low=-2,
             eps_upp=2,
             num_bins=10,

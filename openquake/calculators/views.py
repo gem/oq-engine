@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,8 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
-    get_ebrupture, MapGetter, get_pmaps_gb)
+    get_ebrupture, MapGetter, get_rmap_gb)
+from openquake.calculators.base import get_model_lts, get_weights
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -82,7 +83,9 @@ def form(value):
     '-1.2'
     """
     if isinstance(value, FLOAT + INT):
-        if value <= 0:
+        if not numpy.isfinite(value):
+            return str(value)
+        elif value <= 0:
             return str(value)
         elif value < .001:
             return '%.3E' % value
@@ -90,8 +93,6 @@ def form(value):
             return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
-        elif numpy.isnan(value):
-            return 'NaN'
         else:  # in the range 10-1000
             return str(round(value, 1))
     elif isinstance(value, bytes):
@@ -330,9 +331,19 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    df['slow_factor'] = df.calc_time / df.weight
+    df['heavy_factor'] = df.weight / df.calc_time
     del df['grp_id'], df['trti'], df['mutex_weight']
     return df
+
+
+@view.add('sdata')
+def view_sdata(token, dstore):
+    # source_data grouped by taskno
+    df = dstore.read_df('source_data', 'src_id')
+    del df['grp_id'], df['impact']
+    sdata = df.groupby('taskno').sum()
+    sdata['grp_key'] = decode(dstore['grp_keys'][sdata.index])
+    return sdata.sort_values('ctimes')
 
 
 @view.add('short_source_info')
@@ -502,33 +513,25 @@ def view_portfolio_losses(token, dstore):
 def view_portfolio_loss(token, dstore):
     """
     The mean portfolio loss for each loss type,
-    extracted from the event loss table.
+    extracted from the average losses.
     """
     oq = dstore['oqparam']
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    weights = dstore['weights'][:]
-    rlzs = dstore['events']['rlz_id']
-    E = len(rlzs)
-    R = len(weights)
-    ws = weights[rlzs]
+    stats = 'avg_losses-stats' in dstore
     avgs = []
-    attrs = dstore['gmf_data'].attrs
-    itime = attrs['investigation_time']
-    etime = attrs['effective_time']
-    if itime:
-        freq = (oq.risk_investigation_time or itime) * E / etime
-    else:
-        freq = 1 / R
-    for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LOSSID[ln]]
-        eids = df.pop('event_id').to_numpy()
-        if (eids >= E).any():  # reduced events
-            assert len(set(ws)) == 1, 'Weights must be all equal'
-            weights = ws[:len(eids)]
+    for lt in oq.loss_types:
+        if stats:
+            idx = list(oq.hazard_stats()).index('mean')
+            tot = dstore[f'avg_losses-stats/{lt}'][:, idx].sum()
         else:
-            weights = ws[eids]
-        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
+            dset = dstore[f'avg_losses-rlzs/{lt}']
+            A, R = dset.shape
+            if R == 1:
+                # when collect_rlzs is True
+                tot = dset[:].sum()
+            else:
+                weights = dstore['weights'][:]
+                tot = dset[:].sum(axis=0) @ weights
+        avgs.append(tot)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
@@ -785,20 +788,22 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
+        grp_keys = dstore['grp_keys'][taskno].decode('ascii')
         sdata = dstore.read_df('source_data')
         sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(5))
-        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+        acc = AccumDict(accum=numpy.zeros(4))
+        for src_id, nctxs, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
-                [nsites, esites, nrupts, weight, ctimes])
+                [nctxs, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
+        msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
+            % df
         return msg
     else:
         msg = ''
@@ -834,22 +839,9 @@ def view_task_ebrisk(token, dstore):
     idx = int(token.split(':')[1])
     task_info = get_array(dstore['task_info'][()], taskname=b'ebrisk')
     task_info.sort(order='duration')
-    info = task_info[idx]
-    times = get_array(dstore['gmf_info'][()], task_no=info['task_no'])
-    extra = times[['nsites', 'gmfbytes', 'dt']]
-    ds = dstore.parent if dstore.parent else dstore
-    rups = ds['ruptures']['id', 'code', 'n_occ', 'mag'][times['rup_id']]
-    codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
-    tbl = text_table(util.compose_arrays(rups, extra))
-    codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
-             if it[0] in codeset]
-    msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
-        tbl, '\n'.join(codes), info['task_no'], extra['dt'].sum(),
-        info['duration'])
-    msg += 'gmfbytes=%s, w=%d' % (
-        humansize(extra['gmfbytes'].sum()),
-        (rups['n_occ'] * extra['nsites']).sum())
-    return msg
+    task_no = task_info[idx]['task_no']
+    info = task_info[task_info['task_no'] == task_no]
+    return info
 
 
 @view.add('global_hazard')
@@ -917,7 +909,7 @@ def binning_error(values, eids, nbins=10):
 
 class GmpeExtractor(object):
     def __init__(self, dstore):
-        full_lt = dstore['full_lt']
+        _, full_lt = get_model_lts(dstore)[-1]
         self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
@@ -973,7 +965,7 @@ def view_extreme_gmvs(token, dstore):
             if ':' in token:
                 msg = str(exdf.set_index('rup'))
         return msg
-    return msg + '\nCould not extract extreme GMVs for ' + imt0
+    return msg
 
 
 @view.add('mean_rates')
@@ -1332,11 +1324,11 @@ def view_delta_loss(token, dstore):
         return {'delta': numpy.zeros(1),
                 'loss_types': view_loss_ids(token, dstore),
                 'error': f"There are only {len(df)} events for {loss_type=}"}
+    R = len(get_weights(oq, dstore))
     if oq.calculation_mode == 'scenario_risk':
         if oq.number_of_ground_motion_fields == 1:
             return {'delta': numpy.zeros(1),
                     'error': 'number_of_ground_motion_fields=1'}
-        R = len(dstore['weights'])
         df['rlz_id'] = dstore['events']['rlz_id'][df.index]
         c0, c1 = numpy.zeros(R), numpy.zeros(R)
         for r in range(R):
@@ -1346,8 +1338,10 @@ def view_delta_loss(token, dstore):
         dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
         return pandas.DataFrame(dic)
     num_events = len(dstore['events'])
-    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
-        dstore['weights'])
+    # NB: in risk_from_ses oq.investigation_time can be None,
+    # while risk_investigation_time is mandatory
+    itime = oq.investigation_time or oq.risk_investigation_time
+    efftime = itime * oq.ses_per_logic_tree_path * R
     periods = return_periods(efftime, num_events)[1:-1]
     losses0 = df.loss[df.index % 2 == 0]
     losses1 = df.loss.loc[df.index % 2 == 1]
@@ -1457,6 +1451,26 @@ def view_branchsets(token, dstore):
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 
+@view.add('sm_rlzs')
+def view_sm_rlzs(token, dstore):
+    """
+    Show the source model realizations. Works also on a ses.hdf5 file,
+    if you specify the mosaic model:
+
+    $ oq show sm_rlzs:JPN ses.hdf5
+    """
+    if ':' in token:
+        model = token.split(':')[1]
+        sm_rlzs = dstore[f'full_lt/{model}'].sm_rlzs
+    else:
+        sm_rlzs = dstore['full_lt'].sm_rlzs
+    header = ['ordinal', 'lt_path', 'value', 'samples', 'weight']
+    def row(rlz):
+        value = ast.literal_eval(rlz.value.decode('utf8'))
+        return (rlz.ordinal, '_'.join(rlz.lt_path),
+                value, rlz.samples, rlz.weight)
+    return text_table(map(row, sm_rlzs), header, ext='org')
+
 
 @view.add('rupture')
 def view_rupture(token, dstore):
@@ -1551,7 +1565,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore)[0])
+    return humansize(get_rmap_gb(dstore)[0])
 
 
 @view.add('rup_stats')
@@ -1755,8 +1769,8 @@ def view_aggrisk(token, dstore):
         return df
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
-    gsim_lt = dstore['full_lt/gsim_lt']
-    rlzs = list(gsim_lt)
+    full_lt = dstore['full_lt'].init()
+    rlzs = list(full_lt.gsim_lt)
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):

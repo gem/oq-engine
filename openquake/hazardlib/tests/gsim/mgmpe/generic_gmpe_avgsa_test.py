@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -72,6 +72,23 @@ class GenericGMPEAvgSaTablesTestCaseBakerJayaram(BaseGSIMTestCase):
             gmpe_name="BooreAtkinson2008",
             avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
             corr_func="baker_jayaram")
+
+
+class GenericGMPEAvgSaTablesTestCaseClemettAsc(BaseGSIMTestCase):
+    """
+    Conventional GMPE test case for the Clemett active shallow crust 
+    correlation model
+    """
+    GSIM_CLASS = GenericGmpeAvgSA
+
+    def test_all(self):
+        self.check(
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_mean.csv',
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_stddev.csv',
+            max_discrep_percentage=0.01,
+            gmpe_name="KothaEtAl2020ESHM20",
+            avg_periods=[0.3, 0.4, 0.5],
+            corr_func="clemett_asc")
 
 
 class GmpeIndirectAvgSAGeneralTestCase(unittest.TestCase):

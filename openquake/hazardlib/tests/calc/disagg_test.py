@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,12 +16,11 @@
 import unittest
 import os.path
 import numpy
-import pytest
 
 from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg, filters
-from openquake.hazardlib import nrml, read_input, valid
+from openquake.hazardlib import nrml, valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, interp_table, _get_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -460,7 +461,7 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     rock condition (Vs30 = 3000 m/s)
     """
     # return Distance Tables
-    imls = self.mean_table['%.2f' % mag, imt.string]
+    imls = interp_table(self, mag, imt, 'IMLs')
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]

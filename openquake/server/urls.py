@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,9 +22,20 @@ from django.urls import re_path, include, path
 from django.views.generic.base import RedirectView
 
 from openquake.server import views
+from openquake.server.db.tag_admin import tag_admin_site
 
 urlpatterns = []
 if settings.WEBUI:
+    if settings.APPLICATION_MODE == 'TOOLS_ONLY':
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
+                permanent=True))]
+    else:
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+                permanent=True))]
     urlpatterns += [
         re_path(r'^$', RedirectView.as_view(
             url='%s/engine/' % settings.WEBUI_PATHPREFIX,
@@ -38,7 +49,6 @@ if settings.WEBUI:
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
-        re_path(r'^v1/check_callback$', views.check_callback),
     ]
     if settings.APPLICATION_MODE != 'PUBLIC':
         urlpatterns += [
@@ -54,7 +64,7 @@ if settings.WEBUI:
             re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
                     name="aelo_site_classes"),
         ]
-    elif settings.APPLICATION_MODE == 'ARISTOTLE':
+    elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
@@ -81,14 +91,7 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE == 'TOOLS_ONLY':
-    if settings.WEBUI:
-        urlpatterns += [
-            re_path(r'^$', RedirectView.as_view(
-                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
-        ]
-else:
+if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
         re_path(r'^v1/engine_latest_version$',
@@ -137,24 +140,24 @@ else:
                 'password_reset_email_content.txt.default.tmpl'
             password_reset_email_subject_fname = \
                 'password_reset_email_subject.txt.default.tmpl'
-            normal_user_creation_email_content_fname = \
-                'normal_user_creation_email_content.txt.default.tmpl'
-            normal_user_creation_email_subject_fname = \
-                'normal_user_creation_email_subject.txt.default.tmpl'
+            user_creation_email_content_fname = \
+                'user_creation_email_content.txt.default.tmpl'
+            user_creation_email_subject_fname = \
+                'user_creation_email_subject.txt.default.tmpl'
         else:
             password_reset_email_content_fname = 'password_reset_email_content.txt'
             password_reset_email_subject_fname = 'password_reset_email_subject.txt'
-            normal_user_creation_email_content_fname = \
-                'normal_user_creation_email_content.txt'
-            normal_user_creation_email_subject_fname = \
-                'normal_user_creation_email_subject.txt'
+            user_creation_email_content_fname = \
+                'user_creation_email_content.txt'
+            user_creation_email_subject_fname = \
+                'user_creation_email_subject.txt'
         # NOTE: checking here (when starting the webui with authentication enabled)
         # also the existance of actualized files used when creating a new user
         for registration_template_fname in (
                 password_reset_email_content_fname,
                 password_reset_email_subject_fname,
-                normal_user_creation_email_content_fname,
-                normal_user_creation_email_subject_fname):
+                user_creation_email_content_fname,
+                user_creation_email_subject_fname):
             registration_template_path = os.path.join(
                 registration_templates_dir, registration_template_fname)
             assert os.path.isfile(registration_template_path), (
@@ -162,6 +165,7 @@ else:
                 ' from one of the available templates.')
         urlpatterns += [
             re_path(r'^admin/', admin.site.urls),
+            re_path(r'^tagadmin/', tag_admin_site.urls),
             re_path(r'accounts/login/$',
                     LoginView.as_view(
                         template_name='account/login.html',

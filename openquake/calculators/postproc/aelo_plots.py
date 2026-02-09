@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024-2025 GEM Foundation
+# Copyright (C) 2024-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -213,30 +213,43 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     :param dstore: the datastore
     :returns: image of governing MCE
     """
-    dinfo = get_info(dstore)
-    # get imls and imts, make arrays
-    imtls = dinfo['imtls']
     plt = import_plt()
-    MCEr = dstore.read_df('mce_governing').SaM.to_numpy()
-    T = [from_string(imt).period for imt in imtls]
+    MCE_calc = dstore.read_df('mce', sel=dict(sid=site_idx))
+    imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
+    imts_idxs = numpy.where(numpy.isin(list(dstore['oqparam'].imtls), imts))[0]
+    T = [from_string(imt).period for imt in imts]
 
     limit_det = [0.5, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
     rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm.RTGM == 0).all():
         return
-    rtgm_probmce = rtgm.ProbMCE.to_numpy()
+    MCEr_det = MCE_calc['DetMCE']
+    MCEr_prob = MCE_calc['ProbMCE']
+    MCEr = MCE_calc['MCE']
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{2/50}$',
+    plt.plot(T[0], MCEr_prob[imts_idxs[0]], 'bX', markersize=12, label='$PGA_{2/50}$',
              linewidth=3)
-    plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
+    plt.plot(T[1:], MCEr_prob[imts_idxs[1:]], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
 
-    plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
+    if any([numpy.isnan(val) or val in ['n.a.', '<0.005'] for val in MCEr_det]):
+        # hazard is lower than DLLs
+        plt.ylim([0, numpy.max([MCEr_prob[imts_idxs], MCEr[imts_idxs],
+                                limit_det]) + 0.2])
+    else:
+        plt.plot(T[0], MCEr_det[imts_idxs[0]], 'c^', markersize=10, label='$PGA_{84th}$',
+                 linewidth=3)
+        plt.plot(T[1:], MCEr_det[imts_idxs[1:]], 'cd', markersize=10,
+                 label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
+        plt.ylim(
+            [0, numpy.max([MCEr_prob[imts_idxs],  MCEr[imts_idxs], MCEr_det[imts_idxs],
+                           limit_det]) + 0.2])
+    plt.scatter(T[0], MCEr[imts_idxs[0]], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
-    plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
+    plt.scatter(T[1:], MCEr[imts_idxs[1:]], s=200, marker='s',
                 label='Governing $MCE_R$', linewidth=2,
                 facecolors='none', edgecolors='r')
     plt.grid('both')
@@ -246,9 +259,17 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     plt.xlim([-0.02, 1.2])
 
     # add user guide message
-    # FIXME: the message is not being displayed
-    message = 'See WebUI User Guide for complete explanation of plot contents.'
-    # plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
+    fig = plt.gcf()
+    fig.subplots_adjust(bottom=0.22)  # add extra space at bottom
+    plt.text(
+        0.5, -0.25,
+        'See WebUI User Guide for complete explanation of plot contents.',
+        fontsize='small',
+        color='black',
+        alpha=0.85,
+        ha='center',  # center horizontally
+        transform=plt.gca().transAxes
+    )
 
     if update_dstore:
         bio = io.BytesIO()
@@ -290,6 +311,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     ax1.set_xlabel('Period (s)', fontsize=13)
     ax1.legend(loc="lower left", fontsize='11')
     ax1.set_xlim([min(T[1:]), max(T)])
+    ax1.set_title("ASCE 7 $MCE_r$ Details (logarithmic scale)", fontsize=12, pad=8)
 
     plt.rcParams.update({'font.size': 15})
     ax2.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
@@ -312,6 +334,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     ax1.set_yscale('log')
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
+    ax2.set_title("ASCE 7 $MCE_r$ Details (linear scale)", fontsize=12, pad=8)
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
@@ -339,29 +362,29 @@ def plot_governing_mce(dstore, update_dstore=False):
     mce = governing_mce_df['SaM']
 
     ax1.plot(governing_mce_period[1:], mce[1:], 'black',
-             label='Governing $MCE_r$', linewidth=2, linestyle='-')
+             linewidth=2, linestyle='-')
 
     ax1.set_xscale('log')
     ax1.set_yscale('log')
 
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=13)
     ax1.set_xlabel('Period (s)', fontsize=13)
-    ax1.legend(loc="lower left", fontsize=11)
     ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     ax1.minorticks_on()
+    ax1.set_title("ASCE 7 $MCE_r$ Spectrum (logarithmic scale)", fontsize=12, pad=8)
 
     plt.rcParams.update({'font.size': 15})
 
     ax2.plot(governing_mce_period[1:], mce[1:], 'black',
-             label='Governing $MCE_r$', linewidth=2, linestyle='-')
+             linewidth=2, linestyle='-')
     # plt.ylim([0.01, upperlim + 0.2])
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=13)
     ax2.set_xlabel('Period (s)', fontsize=13)
-    ax2.legend(loc="lower left", fontsize='11')
     ax2.set_xlim([0, 2.0])
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
+    ax2.set_title("ASCE 7 $MCE_r$ Spectrum (linear scale)", fontsize=12, pad=8)
 
     # add user guide message as a footer, centered below the x-axis
     message = 'See WebUI User Guide for complete explanation of plot contents.'

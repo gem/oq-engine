@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2025 GEM Foundation
+# Copyright (C) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,7 +56,7 @@ def main(cmd, args=()):
         sys.exit('You have no permission to run %s' % cmd)
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
-        print(text_table(res))
+        print(text_table(res, ext='org'))
     else:
         print(res)
 

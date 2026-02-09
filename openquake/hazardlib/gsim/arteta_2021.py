@@ -312,7 +312,6 @@ def _get_stddevs_slab(C, rhypo):
 
 
 class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
-
     """
     Implements the model of Arteta et al (2021) as described in "Ground-motion
     model for subduction earthquakes in northern South America" by Arteta et
@@ -326,7 +325,9 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
 
     #: Required distance measure is hypocentral for in-slab events
     REQUIRES_DISTANCES = {'rhypo'}
-    REQUIRES_SITES_PARAMETERS = {'backarc'}
+
+    # Required site parameters are vs30 and backarc
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

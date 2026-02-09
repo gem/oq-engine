@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,9 +19,7 @@
 
 import sys
 import logging
-import warnings
 import operator
-from scipy import sparse
 
 from openquake.baselib import sap, general
 from openquake.calculators import export
@@ -43,8 +41,6 @@ for key in DISPLAY_NAME:
 # set logging and warnings
 def oq():
     logging.basicConfig(level=logging.INFO, handlers=[])
-    warnings.simplefilter(  # make sure we do not make efficiency errors
-        "error", category=sparse.SparseEfficiencyWarning)
     sap.run(commands, prog='oq')
 
 

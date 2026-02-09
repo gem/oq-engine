@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -279,5 +279,5 @@ if __name__ == '__main__':  # pretty print of NRML files
     for fname in nrmlfiles:
         node = nrml.read(fname)
         shutil.copy(fname, fname + '.bak')
-        with open(fname, 'w') as out:
+        with open(fname, 'w', encoding='utf8') as out:
             nrml.write(list(node), out)

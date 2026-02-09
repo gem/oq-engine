@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,11 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.can15.western import (
     get_sigma, WesternCan15RjbMid, WesternCan15RjbLow, WesternCan15RjbUpp,
     OceanicCan15Mid, OceanicCan15Low, OceanicCan15Upp)
+
+
+# NOTE: The discrepancies for these GMMs are VERY high given
+# there were difficulties with replicating the results on the
+# seismotoolbox.ca website
 
 
 class GetSigmaTestCase(unittest.TestCase):

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="SINTER_CGMM"
+    >
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="SinterCGMM"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="MACEDOSInterBCHydroGlobal"
+            >
+                <uncertaintyModel>
+                    [ModifiableGMPE]
+                    gmpe.KuehnEtAl2020SInter = {}
+                    [ModifiableGMPE.conditional_gmpe]
+                    "IA" = {gmpe.MacedoEtAl2019SInter = {}}
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.5
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="MACEDOSInterBCHydroSouthAmerica"
+            >
+                <uncertaintyModel>
+                    [ModifiableGMPE]
+                    gmpe.KuehnEtAl2020SInter = {}
+                    [ModifiableGMPE.conditional_gmpe]
+                    "IA" = {gmpe.MacedoEtAl2019SInter = {region = "South America"}}
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.5
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

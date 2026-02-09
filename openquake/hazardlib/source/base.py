@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -205,6 +205,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     trt_smr = -1  # set by the engine
     num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    dt = 0  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):

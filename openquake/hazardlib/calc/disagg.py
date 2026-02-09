@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -404,15 +404,15 @@ class Disaggregator(object):
             if isinstance(self.srcs_or_ctxs[0], numpy.ndarray):
                 # passed contexts, see logictree_test/case_05
                 # consider only the contexts affecting the site
+                [ctxt] = self.srcs_or_ctxs
                 self.source_id = 'some_source'
-                ctxs = [ctx[ctx.sids == self.sid] for ctx in self.srcs_or_ctxs]
+                ctx = ctxt[ctxt.sids == self.sid]
             else:  # passed sources, used only in test_disaggregator
                 self.source_id = corename(self.srcs_or_ctxs[0].source_id)
-                ctxs = self.cmaker.from_srcs(self.srcs_or_ctxs, self.sitecol)
-            if sum(len(c) for c in ctxs) == 0:
+                ctx = self.cmaker.from_srcs(self.srcs_or_ctxs, self.sitecol)
+            if len(ctx) == 0:
                 raise FarAwayRupture(
                     'No ruptures affecting site #%d' % self.sid)
-            ctx = numpy.concatenate(ctxs).view(numpy.recarray)
             self.ctx_by_magi = split_by_magbin(ctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
@@ -643,7 +643,7 @@ def disaggregation(
             disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
-        ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
+        ctxs[trt].append(cm.from_srcs(srcs, sitecol))
         for ctx in ctxs[trt]:
             mags_by_trt[trt] |= set(ctx.mag)
             dists.extend(ctx.rrup)
@@ -700,7 +700,8 @@ def collect_std(disaggs, Ma, D, M, G):
             zeros = sig[:, :, m, g] == 0
             if zeros.any():
                 magi, dsti = numpy.where(~zeros)
-                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+                if len(magi) and len(dsti):
+                    sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
     return sig
 
 

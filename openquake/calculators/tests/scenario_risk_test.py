@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+from unittest import mock
 import numpy
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
@@ -27,7 +29,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_9, case_10, case_11, case_12,
+    case_6a, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
     occupants, case_master, case_shakemap, case_shapefile, reinsurance,
     conditioned)
 
@@ -195,7 +197,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(text_table(df, ext='org'))
         self.assertEqualFiles('expected/losses_by_location.org',
                               fname, delta=1E-3)
-        
+
+        # exposure_by_location
+        df = extract(self.calc.datastore, 'exposure_by_location')
+        fname = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/exposure_by_location.org',
+                              fname, delta=1E-3)
+
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       collapse_gsim_logic_tree='bs1')
@@ -260,6 +268,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_12(self):
         # testing affected, injured
         out = self.run_calc(case_12.__file__,  'job.ini', exports='csv')
+        for fname in out[('aggrisk', 'csv')]:
+            self.assertEqualFiles(
+                'expected/%s' % strip_calc_id(fname), fname)
+        [fname] = out[('avg_losses-rlzs', 'csv')]
+        self.assertEqualFiles('expected/avg_losses.csv', fname)
+
+    def test_case_13(self):
+        # testing Youd gsim, with primary IMT LSD
+        # also testing OQ_SAMPLE_ASSETS
+        with mock.patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': '.5'}):
+            out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)

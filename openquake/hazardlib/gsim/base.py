@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, simple_cmaker)
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -79,9 +78,42 @@ class AdaptedWarning(UserWarning):
     to changes in future version.
     """
 
+# cache warnings, so that they are displayed only once
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters', 'set_tables')
+@functools.lru_cache()
+def warn_superseded_by(cls):
+    if cls.superseded_by:
+        msg = '%s is deprecated - use %s instead' % (
+            cls.__name__, cls.superseded_by.__name__)
+        warnings.warn(msg, DeprecationWarning)
+
+
+@functools.lru_cache()
+def warn_non_verified(cls):
+    if cls.non_verified:
+        msg = ('%s is not independently verified - the user is liable '
+               'for their application') % cls.__name__
+        warnings.warn(msg, NotVerifiedWarning)
+
+
+@functools.lru_cache()
+def warn_experimental(cls):
+    if cls.experimental:
+        msg = ('%s is experimental and may change in future versions - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, ExperimentalWarning)
+
+
+@functools.lru_cache()
+def warn_adapted(cls):
+    if cls.adapted:
+        msg = ('%s is not intended for general use and the behaviour '
+               'may not be as expected - '
+               'the user is liable for their application') % cls.__name__
+        warnings.warn(msg, AdaptedWarning)
+
+
+OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -107,9 +139,6 @@ class MetaGSIM(abc.ABCMeta):
         if len(bases) > 1:
             raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
                 name, ', '.join(b.__name__ for b in bases)))
-        if 'get_mean_and_stddevs' in dic and 'compute' in dic:
-            raise TypeError('You cannot define both get_mean_and_stddevs '
-                            'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
             sys.exit('%s cannot contain the methods %s' % (name, bad))
@@ -137,6 +166,12 @@ class MetaGSIM(abc.ABCMeta):
             self.kwargs['gmpe_table'] = self.gmpe_table
         if mixture_model is not None:
             self.mixture_model = mixture_model
+
+        warn_superseded_by(cls)
+        warn_non_verified(cls)
+        warn_experimental(cls)
+        warn_adapted(cls)
+
         return self
 
 
@@ -153,7 +188,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     This class is not intended to be subclassed directly, instead
     the actual GSIMs should subclass :class:`GMPE`.
 
-    Subclasses of both must implement :meth:`get_mean_and_stddevs`
+    Subclasses of both must implement :meth:`compute`
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
@@ -185,8 +220,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
-    #: Those attributes are then available in the
-    #: :class:`SitesContext` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -230,9 +263,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #:     :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
     #: ``rvolc``
     #:     Source to site distance passing through surface projection of volcanic zone.
-    #:
-    #: All the distances are available from the :class:`DistancesContext`
-    #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     _toml = ''  # set by valid.gsim
@@ -240,6 +270,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
+    conditional = False
+    from_mgmpe = False
 
     @classmethod
     def __init_subclass__(cls):
@@ -265,109 +297,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                   self.REQUIRES_SITES_PARAMETERS)
         return tuple(sorted(tot))
 
-    def __init__(self, **kwargs):
-        cls = self.__class__
-        if cls.superseded_by:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.superseded_by.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        if cls.experimental:
-            msg = ('%s is experimental and may change in future versions - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, ExperimentalWarning)
-        if cls.adapted:
-            msg = ('%s is not intended for general use and the behaviour '
-                   'may not be as expected - '
-                   'the user is liable for their application') % cls.__name__
-            warnings.warn(msg, AdaptedWarning)
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Calculate and return mean value of intensity distribution and it's
-        standard deviation.
-
-        Method must be implemented by subclasses.
-
-        :param sites:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`
-            with parameters of sites
-            collection assigned to respective values as numpy arrays.
-            Only those attributes that are listed in class'
-            :attr:`REQUIRES_SITES_PARAMETERS` set are available.
-        :param rup:
-            Instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
-            with parameters of a rupture
-            assigned to respective values. Only those attributes that are
-            listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
-            available.
-        :param dists:
-            Instance of :class:`DistancesContext` with values of distance
-            measures between the rupture and each site of the collection
-            assigned to respective values as numpy arrays. Only those
-            attributes that are listed in class' :attr:`REQUIRES_DISTANCES`
-            set are available.
-        :param imt:
-            An instance (not a class) of intensity measure type.
-            See :mod:`openquake.hazardlib.imt`.
-        :param stddev_types:
-            List of standard deviation types, constants from
-            :class:`openquake.hazardlib.const.StdDev`.
-            Method result value should include
-            standard deviation values for each of types in this list.
-
-        :returns:
-            Method should return a tuple of two items. First item should be
-            a numpy array of floats -- mean values of respective component
-            of a chosen intensity measure type, and the second should be
-            a list of numpy arrays of standard deviation values for the same
-            single component of the same single intensity measure type, one
-            array for each type in ``stddev_types`` parameter, preserving
-            the order.
-
-        Combining interface to mean and standard deviation values in a single
-        method allows to avoid redoing the same intermediate calculations
-        if there are some shared between stddev and mean formulae without
-        resorting to keeping any sort of internal state (and effectively
-        making GSIM not reenterable).
-
-        However it is advised to split calculation of mean and stddev values
-        and make ``get_mean_and_stddevs()`` just combine both (and possibly
-        compute interim steps).
-        """
-        # mean and stddevs by calling the underlying .compute method
-        N = len(sites)
-        mean = numpy.zeros((1, N))
-        sig = numpy.zeros((1, N))
-        tau = numpy.zeros((1, N))
-        phi = numpy.zeros((1, N))
-        if sites is not rup or dists is not rup:
-            # convert three old-style contexts to a single new-style context
-            ctx = full_context(sites, rup, dists)
-        else:
-            ctx = rup  # rup is already a good object
-        assert self.compute.__annotations__.get("ctx") is numpy.recarray
-        if isinstance(rup.mag, float):  # in old-fashioned tests
-            mags = ['%.2f' % rup.mag]
-        else:  # array
-            mags=['%.2f' % mag for mag in rup.mag]
-        cmaker = simple_cmaker([self], [imt.string], mags=mags)
-        if not isinstance(ctx, numpy.ndarray):
-            ctx = cmaker.recarray([ctx])
-        self.compute(ctx, [imt], mean, sig, tau, phi)
-        stddevs = []
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sig[0])
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau[0])
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi[0])
-        return mean[0], stddevs
-
     def __lt__(self, other):
         """
         The GSIMs are ordered according to string representation
@@ -376,16 +305,19 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     def __eq__(self, other):
         """
-        The GSIMs are equal if their string representations are equal
+        The GSIMs are equal if their TOML representations are equal
         """
-        return str(self) == str(other)
+        if self._toml:
+            return self._toml == other._toml
+        else:
+            return str(self) == str(other)
 
     def __hash__(self):
         """
-        We use the __str__ representation as hash: it means that we can
+        We use the TOML representation as hash: it means that we can
         use equivalently GSIM instances or strings as dictionary keys.
         """
-        return hash(str(self))
+        return hash(self._toml) if self._toml else hash(str(self))
 
     def __repr__(self):
         """

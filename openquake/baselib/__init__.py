@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2025 GEM Foundation
+# Copyright (C) 2017-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,6 +19,11 @@
 import os
 import sys
 import configparser
+
+# use utf8 as default encodings on all platforms (i.e. Windows)
+# TODO: to remove in Python 3.15 when this will become the default
+os.environ['PYTHONUTF8'] = '1'
+
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -130,4 +135,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by the universal installer
-__version__ = '3.24.0'
+__version__ = '3.25.0'

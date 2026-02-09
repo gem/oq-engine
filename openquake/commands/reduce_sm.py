@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,8 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import shutil
 import logging
 from openquake.baselib import performance, general, python3compat
+from openquake.hazardlib import nrml
 from openquake.commonlib import readinput, datastore
 
 
@@ -30,11 +32,48 @@ def get_dupl(src_ids):
     return dupl
 
 
-def main(calc_id: int):
+def reduce_to_one_source(sm_dir):
+    """
+    Find all source models in the given directory, create a new directory
+    and put in it all source models reduced to a single source per source
+    model.
+    """
+    new = sm_dir + '_red'
+    assert os.path.exists(sm_dir)
+    if not os.path.exists(new):
+        os.makedirs(new)
+    for cwd, dirs, files in os.walk(sm_dir):
+        cwdnew = cwd.replace(sm_dir, new)
+        for dir in dirs:
+            newdir = os.path.join(cwdnew, dir)
+            if not os.path.exists(newdir):
+                os.makedirs(newdir)
+        for fname in files:
+            inp = os.path.join(cwd, fname)
+            out = inp.replace(sm_dir, new)
+            if fname.endswith(('_sections.xml', '.hdf5')):  # don't reduce
+                shutil.copy(inp, out)
+            elif fname.endswith('.xml'):  # assume source model file
+                root = nrml.read(inp)
+                first_grp = root[0][0]
+                if first_grp.nodes:  # has sources
+                    # (it can be empty when using extendModel)
+                    first_grp.nodes = [first_grp[0]]
+                # discard other groups
+                root[0].nodes = [first_grp]
+                with open(out, 'wb') as f:
+                    nrml.write(root, f)
+                logging.info('Reduced %s', out)
+
+def main(what):
     """
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
     """
+    try:
+        calc_id  = int(what)
+    except ValueError:
+        return reduce_to_one_source(what)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with datastore.read(calc_id) as dstore:
@@ -63,4 +102,4 @@ def main(calc_id: int):
     print(mon)
 
 
-main.calc_id = 'calculation ID'
+main.what = 'calculation ID or directory'

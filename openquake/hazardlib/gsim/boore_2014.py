@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,7 +43,7 @@ CONSTS = {
     "v2": 300.0}
 
 # CyberShake basin adjustments for BSSA14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
     IMT          f6cy        f7cy       dz1cy
