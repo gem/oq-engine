@@ -150,7 +150,7 @@ def _get_ln_y_ref(ctx, C):
     return ln_y_ref
 
 
-def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
+def _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs30):
     """
     Add site effects to an intensity. Implements eq. 13b.
     """
@@ -159,7 +159,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         # first line of eq. 12
         ln_y_ref + eta
         # second line
-        + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
+        + C['phi1'] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
@@ -484,24 +484,24 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
-def get_linear_site_term(region, C, ctx):
+def get_linear_site_term(region, C, ctx, ref_vs30):
     """
     Returns the linear site scaling term
     """
     if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
+        return C["phi1jp"] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0.0)
         
-    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
+    return C["phi1"] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0.0)
 
 
-def get_nonlinear_site_term(C, ctx, y_ref):
+def get_nonlinear_site_term(C, ctx, y_ref, ref_vs30):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, 1130.0)
+    vs = ctx.vs30.clip(-np.inf, ref_vs30)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
-                                np.exp(C["phi3"] * (1130. - 360.)))
+                                np.exp(C["phi3"] * (ref_vs30 - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
 
@@ -580,7 +580,8 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
+def get_mean_stddevs(region, C, ctx, imt, ref_vs30, conf,
+                     usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
     """
@@ -592,10 +593,10 @@ def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
     f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
     # Get linear amplification term
-    f_lin = get_linear_site_term(region, C, ctx)
+    f_lin = get_linear_site_term(region, C, ctx, ref_vs30)
 
     # Get nonlinear amplification term
-    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref, ref_vs30)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -737,11 +738,12 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
-            self.usgs_basin_scaling, self.cybershake_basin_adj)
+            self.region, self.COEFFS[PGA()], ctx, PGA(), ref_vs30,
+            self.conf, self.usgs_basin_scaling, self.cybershake_basin_adj)
         # compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
@@ -751,8 +753,9 @@ class ChiouYoungs2014(GMPE):
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
-                    self.usgs_basin_scaling, self.cybershake_basin_adj)
+                    self.region, self.COEFFS[imt], ctx, imt, ref_vs30,
+                    self.conf, self.usgs_basin_scaling,
+                    self.cybershake_basin_adj)
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
@@ -847,6 +850,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
@@ -854,6 +858,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
-            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
-            exp2 = np.exp(C['phi3'] * (1130 - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, ref_vs30) - 360))
+            exp2 = np.exp(C['phi3'] * (ref_vs30 - 360))
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs30)
