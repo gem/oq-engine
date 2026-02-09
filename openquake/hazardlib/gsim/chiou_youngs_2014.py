@@ -520,19 +520,19 @@ def get_emme_site_term(C, ctx, ref_vs30, conf):
     # EMME24 backbone GSIM class)
     rock_ctx = ctx.copy()
     rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs30)
-    gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf)
+    gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
 
     # Linear component
     linear = C["a1"] * np.log(ctx.vs30 / ref_vs30)
     
     # Part 1 of non-linear component
     non_linear_p1 = C["a2"] * (
-        np.exp((ctx.vs30 - 360) * C["a3"]) -
-        np.exp(440 * C["a3"])
+        np.exp((ctx.vs30 - 360.) * C["a3"]) -
+        np.exp(440. * C["a3"])
         ) 
     
     # Part 2 of non-linear component
-    non_linear_p2 = np.log(1 + (gm_rock / C["a4"]))
+    non_linear_p2 = np.log(1 + (np.exp(gm_rock) / C["a4"]))
 
     return linear + (non_linear_p1 * non_linear_p2)
 
