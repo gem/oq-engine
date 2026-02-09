@@ -499,7 +499,7 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
             f'({lon}, {lat}) is farther than {buffer_radius} deg '
             'from any mosaic model!'
         )
-    codes = sorted({match.code for match in matches})
+    codes = sorted(matches)
     if len(codes) > 1:
         logging.info(
             '(%s, %s) is close to the following mosaic models: %s',

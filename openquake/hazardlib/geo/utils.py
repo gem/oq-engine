@@ -962,10 +962,9 @@ def geolocate(lonlats, spatial_index, exclude=()):
         match = spatial_index.locate(lon, lat)
         if match is None:
             continue
-        code = match["code"]
-        if code in exclude:
+        if match in exclude:
             continue
-        codes[i] = code
+        codes[i] = match
     return codes
 
 

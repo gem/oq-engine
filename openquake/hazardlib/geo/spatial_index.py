@@ -32,7 +32,11 @@ class SpatialIndex:
     Generic spatial index for polygonal geometries.
     Read-only, thread-safe after construction.
     """
-    def __init__(self, geodata_path):
+    def __init__(self, geodata_path, region_code_field):
+        """
+        :param geodata_path: path to parquet / gpkg / shp
+        :param region_code_field: column containing region identifiers
+        """
         geodata_path = Path(geodata_path)
         if not geodata_path.exists():
             raise FileNotFoundError(geodata_path)
@@ -60,26 +64,38 @@ class SpatialIndex:
                 "Supported: .parquet, .gpkg, .shp"
             )
         self.gdf = gdf
+        if region_code_field not in self.gdf.columns:
+            raise ValueError(
+                f"Missing region_code_field '{region_code_field}'. "
+                f"Available columns: {list(self.gdf.columns)}"
+            )
+        self.region_code_field = region_code_field
         self.geoms = self.gdf.geometry.values
         self.tree = STRtree(self.geoms)
 
     def _candidates(self, geom):
         return self.tree.query(geom)
 
-    def locate(self, lon, lat):
+    def locate(self, lon, lat, region_code_only=True):
         p = Point(lon, lat)
         for i in self._candidates(p):
             if self.geoms[i].covers(p):
-                return self.gdf.iloc[int(i)]
+                if region_code_only:
+                    return self.gdf.iloc[int(i)][self.region_code_field]
+                else:
+                    return self.gdf.iloc[int(i)]
         return None
 
-    def nearby(self, lon, lat, threshold_deg):
+    def nearby(self, lon, lat, threshold_deg, region_code_only=True):
         p = Point(lon, lat)
         buf = p.buffer(threshold_deg)
         found = []
         for i in self._candidates(buf):
             if self.geoms[i].intersects(buf):
-                found.append(self.gdf.iloc[int(i)])
+                if region_code_only:
+                    found.append(self.gdf.iloc[int(i)][self.region_code_field])
+                else:
+                    found.append(self.gdf.iloc[int(i)])
         return found
 
 
@@ -91,15 +107,16 @@ class AdminSpatialIndex(SpatialIndex):
     """
     Spatial index for a single administrative level (0, 1, or 2).
     """
-    def __init__(self, geodata_path, admin_level):
+    def __init__(self, geodata_path, region_code_field, admin_level):
         if admin_level not in (0, 1, 2):
             raise ValueError(f"Invalid admin level: {admin_level}")
         self.admin_level = admin_level
-        super().__init__(geodata_path)
+        super().__init__(geodata_path, region_code_field)
 
 
 @lru_cache(maxsize=1)
 def get_mosaic_spatial_index():
+    region_code_field = 'code'  # FIXME: in openquake.cfg?
     try:
         geodata_path = config.directory['mosaic_geodata_path']
     except KeyError:
@@ -111,11 +128,12 @@ def get_mosaic_spatial_index():
         warnings.warn(
             f"Missing 'mosaic_geodata_path' in openquake.cfg [directory]."
             f" Using {geodata_path}.", RuntimeWarning)
-    return MosaicSpatialIndex(geodata_path)
+    return MosaicSpatialIndex(geodata_path, region_code_field)
 
 
 @lru_cache(maxsize=3)
 def get_admin_spatial_index(admin_level):
+    region_code_field = 'shapeName'  # FIXME: in openquake.cfg?
     try:
         geodata_path = config.directory[f'admin{admin_level}_geodata_path']
     except KeyError:
@@ -131,5 +149,6 @@ def get_admin_spatial_index(admin_level):
             raise RuntimeError(
                 f"Missing f'admin{admin_level}_geodata_path' in"
                 f" openquake.cfg [directory]")
-    admin_spatial_index = AdminSpatialIndex(geodata_path, admin_level)
+    admin_spatial_index = AdminSpatialIndex(
+        geodata_path, region_code_field, admin_level)
     return admin_spatial_index

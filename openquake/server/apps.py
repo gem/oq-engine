@@ -49,11 +49,19 @@ class ServerConfig(AppConfig):
         print(self.admin0_spatial_index.locate(lon=9, lat=45))
         print(self.admin1_spatial_index.locate(lon=9, lat=45))
         print(self.admin2_spatial_index.locate(lon=9, lat=45))
+        print(self.admin0_spatial_index.locate(
+            lon=9, lat=45, region_code_only=False))
+        print(self.admin1_spatial_index.locate(
+            lon=9, lat=45, region_code_only=False))
+        print(self.admin2_spatial_index.locate(
+            lon=9, lat=45, region_code_only=False))
         print(self.admin0_spatial_index.nearby(lon=9, lat=45,
                                                threshold_deg=1))
         print(self.mosaic_spatial_index.locate(lon=9, lat=45))
         print(self.mosaic_spatial_index.nearby(lon=9, lat=45,
                                                threshold_deg=0.2))
+        print(self.mosaic_spatial_index.nearby(
+            lon=9, lat=45, threshold_deg=0.2, region_code_only=False))
 
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
