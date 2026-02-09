@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import warnings
+import os
 import geopandas as gpd
 from pathlib import Path
 from functools import lru_cache
 from shapely.geometry import Point
 from shapely.strtree import STRtree
 from openquake.baselib import config
+from openquake.qa_tests_data import global_risk
 
 
 class SpatialIndex:
@@ -41,7 +43,7 @@ class SpatialIndex:
             gdf = gpd.read_parquet(geodata_path)
         elif suffix in ('.gpkg', '.shp'):
             warnings.warn(
-                f"Loading '{geodata_path.suffix}' geometry; consider"
+                f"Loading '{geodata_path}' geometry; consider"
                 f" converting to Parquet for faster startup.",
                 RuntimeWarning,
             )
@@ -99,22 +101,27 @@ class AdminSpatialIndex(SpatialIndex):
 @lru_cache(maxsize=1)
 def get_mosaic_spatial_index():
     try:
-        path = config.directory['mosaic_geodata_path']
+        geodata_path = config.directory['mosaic_geodata_path']
     except KeyError:
         raise RuntimeError(
             "Missing 'mosaic_geodata_path' in openquake.cfg [directory]"
         )
-    return MosaicSpatialIndex(path)
+    return MosaicSpatialIndex(geodata_path)
 
 
 @lru_cache(maxsize=3)
 def get_admin_spatial_index(admin_level):
     try:
-        path = config.directory[f'admin{admin_level}_geodata_path']
+        geodata_path = config.directory[f'admin{admin_level}_geodata_path']
     except KeyError:
-        raise RuntimeError(
-            f"Missing f'admin{admin_level}_geodata_path' in"
-            f" openquake.cfg [directory]"
-        )
-    admin_spatial_index = AdminSpatialIndex(path, admin_level)
+        if admin_level == 0:
+            # Fallback to the simplified gpkg in qa_tests_data
+            geodata_path = os.path.join(
+                os.path.dirname(global_risk.__file__),
+                'geoBoundariesCGAZ_ADM0.gpkg')
+        else:
+            raise RuntimeError(
+                f"Missing f'admin{admin_level}_geodata_path' in"
+                f" openquake.cfg [directory]")
+    admin_spatial_index = AdminSpatialIndex(geodata_path, admin_level)
     return admin_spatial_index
