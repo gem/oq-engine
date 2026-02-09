@@ -580,7 +580,7 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, ref_vs30, conf,
+def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_site, conf,
                      usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
@@ -590,7 +590,11 @@ def get_mean_stddevs(region, C, ctx, imt, ref_vs30, conf,
     y_ref = np.exp(ln_y_ref)
 
     # Get basin term
-    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
+    if not emme_site:
+        f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
+    else:
+        # No basin effects considered in EMME24 site model
+        f_z1pt0 = 0
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx, ref_vs30)
@@ -738,15 +742,21 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # If not using EMME24 site model set to False (i.e. regular site terms)
+        if not hasattr(self, "emme_site"):
+            setattr(self, "emme_site", False)
         # Reference velocity taken from GSIM class (in case of EMME24
         # backbone it is 800 m/s whereas in orig CY14 it is 1130 m/s)
         ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
+
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             self.region, self.COEFFS[PGA()], ctx, PGA(), ref_vs30,
-            self.conf, self.usgs_basin_scaling, self.cybershake_basin_adj)
-        # compute
+            self.emme_site, self.conf, self.usgs_basin_scaling,
+            self.cybershake_basin_adj)
+        
+        # Compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
             if repr(imt) == "PGA":
@@ -756,7 +766,7 @@ class ChiouYoungs2014(GMPE):
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     self.region, self.COEFFS[imt], ctx, imt, ref_vs30,
-                    self.conf, self.usgs_basin_scaling,
+                    self.emme_site, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
