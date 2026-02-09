@@ -135,7 +135,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         for spec of input and result values.
         """
         # First get mean from CY14
-        self.compute(ctx, imts, mean, sig, tau, phi) 
+        super().compute(ctx, imts, mean, sig, tau, phi)
 
         # Now make adjustments per IMT
         for m, imt in enumerate(imts):
