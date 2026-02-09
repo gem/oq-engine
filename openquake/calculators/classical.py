@@ -625,9 +625,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        kind = 'tiling' if oq.tiling else 'regular'
-        logging.warning('This is a %s calculation with '
-                        '%d tasks, maxtiles=%d', kind,
+        logging.warning('This is a calculation with %d tasks, maxtiles=%d',
                         len(allargs), maxtiles)
 
         # save grp_keys by task
