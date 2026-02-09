@@ -99,10 +99,10 @@ class AdminSpatialIndex(SpatialIndex):
 @lru_cache(maxsize=1)
 def get_mosaic_spatial_index():
     try:
-        path = config.directory['mosaic_geoms_path']
+        path = config.directory['mosaic_geodata_path']
     except KeyError:
         raise RuntimeError(
-            "Missing 'mosaic_geoms_path' in openquake.cfg [directory]"
+            "Missing 'mosaic_geodata_path' in openquake.cfg [directory]"
         )
     return MosaicSpatialIndex(path)
 
@@ -110,10 +110,10 @@ def get_mosaic_spatial_index():
 @lru_cache(maxsize=3)
 def get_admin_spatial_index(admin_level):
     try:
-        path = config.directory[f'admin{admin_level}_geoms_path']
+        path = config.directory[f'admin{admin_level}_geodata_path']
     except KeyError:
         raise RuntimeError(
-            f"Missing f'admin{admin_level}_geoms_path' in"
+            f"Missing f'admin{admin_level}_geodata_path' in"
             f" openquake.cfg [directory]"
         )
     admin_spatial_index = AdminSpatialIndex(path, admin_level)
