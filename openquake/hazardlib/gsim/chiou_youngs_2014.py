@@ -342,15 +342,6 @@ def get_hanging_wall_term(C, ctx):
         fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
-
-def get_linear_site_term(region, C, ctx):
-    """
-    Returns the linear site scaling term
-    """
-    if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-
     
 def get_delta_c1(rrup, imt, mag):
     """
@@ -491,6 +482,16 @@ def get_magnitude_scaling(C, mag, delta_cm):
            ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m -
            (CONSTANTS["c2"] - C["c3"]) * delta_cm)
     return f_m
+
+
+def get_linear_site_term(region, C, ctx):
+    """
+    Returns the linear site scaling term
+    """
+    if region == "JPN":
+        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
+        
+    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
 
 
 def get_nonlinear_site_term(C, ctx, y_ref):
