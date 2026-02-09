@@ -430,7 +430,7 @@ def get_ln_y_ref(region, C, ctx, conf):
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
 
-    # Get the region name from the name of the class
+    # Get z1pt0 delta
     delta_ztor = _get_centered_ztor(ctx)
 
     # If stress correction required get delta cm
@@ -504,6 +504,37 @@ def get_nonlinear_site_term(C, ctx, y_ref, ref_vs30):
                                 np.exp(C["phi3"] * (ref_vs30 - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
+
+
+def get_emme_site_term(C, ctx, ref_vs30, conf):
+    """
+    Returns the EMME24 backbone model site term (both linear
+    and non-linear components). The site term is combination
+    of CY14 and IC23 GMMs site terms.
+    
+    Implementation based on slides and excel files provided by
+    A. Sandıkkaya to GEM which describe the EMME24 site model.
+    """
+    # Get prediction on ref velocity (800 m/s - it's read in from
+    # the 'DEFINED_FOR_REFERENCE_VELOCITY' attribute specified in
+    # EMME24 backbone GSIM class)
+    rock_ctx = ctx.copy()
+    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs30)
+    gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf)
+
+    # Linear component
+    linear = C["a1"] * np.log(ctx.vs30 / ref_vs30)
+    
+    # Part 1 of non-linear component
+    non_linear_p1 = C["a2"] * (
+        np.exp((ctx.vs30 - 360) * C["a3"]) -
+        np.exp(440 * C["a3"])
+        ) 
+    
+    # Part 2 of non-linear component
+    non_linear_p2 = np.log(1 + (gm_rock / C["a4"]))
+
+    return linear + (non_linear_p1 * non_linear_p2)
 
 
 def get_phi(C, mag, ctx, nl0):
@@ -601,6 +632,10 @@ def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_site, conf,
 
         # Add on the site amplification
         mean = ln_y_ref + f_lin + f_nl + f_z1pt0
+
+    else:
+        # Compute EMME24 site term instead
+        mean = ln_y_ref + get_emme_site_term(C, ctx, ref_vs30, conf)
 
     # Get standard deviations
     sig, tau, phi = get_stddevs(
@@ -739,7 +774,8 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # If not using EMME24 site model set to False (use CY14 site model)
+        # If not using EMME24 site model set to False (and use 
+        # CY14 site model as usual)
         if not hasattr(self, "emme_site"):
             setattr(self, "emme_site", False)
             
