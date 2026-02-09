@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import warnings
 import geopandas as gpd
+from pathlib import Path
 from functools import lru_cache
 from shapely.geometry import Point
 from shapely.strtree import STRtree
@@ -28,8 +30,34 @@ class SpatialIndex:
     Generic spatial index for polygonal geometries.
     Read-only, thread-safe after construction.
     """
-    def __init__(self, parquet_path):
-        self.gdf = gpd.read_parquet(parquet_path)
+    def __init__(self, geodata_path):
+        geodata_path = Path(geodata_path)
+        if not geodata_path.exists():
+            raise FileNotFoundError(geodata_path)
+        suffix = geodata_path.suffix.lower()
+        if suffix == '.parquet':
+            # NOTE: assuming .parquet file obtained via the
+            #       geodata_to_parquet command
+            gdf = gpd.read_parquet(geodata_path)
+        elif suffix in ('.gpkg', '.shp'):
+            warnings.warn(
+                f"Loading '{geodata_path.suffix}' geometry; consider"
+                f" converting to Parquet for faster startup.",
+                RuntimeWarning,
+            )
+            gdf = gpd.read_file(geodata_path)
+            if gdf.crs is None:
+                raise ValueError(f"Missing CRS in {geodata_path}")
+            if gdf.crs.to_epsg() != 4326:
+                gdf = gdf.to_crs(4326)
+            gdf["geometry"] = gdf.geometry.make_valid()
+            gdf = gdf[gdf.geometry.notnull()]
+        else:
+            raise ValueError(
+                f"Unsupported spatial format '{suffix}'. "
+                "Supported: .parquet, .gpkg, .shp"
+            )
+        self.gdf = gdf
         self.geoms = self.gdf.geometry.values
         self.tree = STRtree(self.geoms)
 
@@ -61,31 +89,32 @@ class AdminSpatialIndex(SpatialIndex):
     """
     Spatial index for a single administrative level (0, 1, or 2).
     """
-    def __init__(self, parquet_path, admin_level):
+    def __init__(self, geodata_path, admin_level):
         if admin_level not in (0, 1, 2):
             raise ValueError(f"Invalid admin level: {admin_level}")
         self.admin_level = admin_level
-        super().__init__(parquet_path)
+        super().__init__(geodata_path)
 
 
 @lru_cache(maxsize=1)
 def get_mosaic_spatial_index():
     try:
-        path = config.directory['mosaic_parquet_path']
+        path = config.directory['mosaic_geoms_path']
     except KeyError:
         raise RuntimeError(
-            "Missing 'mosaic_parquet_path' in openquake.cfg [directory]"
+            "Missing 'mosaic_geoms_path' in openquake.cfg [directory]"
         )
     return MosaicSpatialIndex(path)
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=3)
 def get_admin_spatial_index(admin_level):
     try:
-        path = config.directory[f'admin{admin_level}_parquet_path']
+        path = config.directory[f'admin{admin_level}_geoms_path']
     except KeyError:
         raise RuntimeError(
-            f"Missing f'admin{admin_level}_parquet_path' in openquake.cfg [directory]"
+            f"Missing f'admin{admin_level}_geoms_path' in"
+            f" openquake.cfg [directory]"
         )
     admin_spatial_index = AdminSpatialIndex(path, admin_level)
     return admin_spatial_index
