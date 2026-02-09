@@ -466,19 +466,12 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(trace[:, 1], expected_lats)
 
     def test_get_surface_trace_realistic_fault(self):
-        """Test _get_surface_trace() with a realistic fault geometry.
-
-        Uses coordinates representative of a NW-SE trending normal fault
-        in the central Apennines (Italy), with a 60-degree dip and a
-        top edge at 2 km depth extending to 15 km.
+        """Test _get_surface_trace() with a fault geometry.
         """
         # Fault trace running ~NW-SE for about 30 km:
-        #   Point A: (13.30, 42.40)  –  northwest end
-        #   Point B: (13.45, 42.30)  –  midpoint
-        #   Point C: (13.60, 42.20)  –  southeast end
-        # Surface has 3 columns (along strike) and 2 rows (down dip)
-        # Top row at 2 km depth, bottom row at 15 km depth
-        # The bottom edge is offset to the SW due to the 60° NE dip
+        #   Point A: (13.30, 42.40)
+        #   Point B: (13.45, 42.30)
+        #   Point C: (13.60, 42.20)
         corners = [
             [(13.30, 42.40, 2.0), (13.45, 42.30, 2.0),
              (13.60, 42.20, 2.0)],
@@ -531,7 +524,7 @@ class GetXLRatioTestCase(unittest.TestCase):
             x/L (from NW start, OQ convention) ≈ 0.96
             x/L (from nearest end, PFDHA convention) ≈ 0.04
         """
-        # Norcia MVFS fault trace (13 vertices, NW to SE)
+        # Norcia MVFS fault trace
         trace = Line([
             Point(13.1015, 43.0131),
             Point(13.1332, 42.9931),
@@ -560,14 +553,11 @@ class GetXLRatioTestCase(unittest.TestCase):
             depths=None
         )
         x_over_L, L_km = surface.get_x_l_ratio(site_mesh)
-
-        # x/L from the NW start ≈ 0.96 (site near SE end)
-        self.assertAlmostEqual(float(x_over_L[0]), 0.96, delta=0.05)
+        self.assertAlmostEqual(float(x_over_L[0]), 0.96, delta=0.02)
 
         # PFDHA convention: x/L = min(x/L, 1 - x/L) ≈ 0.04
-        # (i.e. ~4–5% from the nearest fault endpoint)
         x_l_pfdha = min(float(x_over_L[0]), 1.0 - float(x_over_L[0]))
-        self.assertAlmostEqual(x_l_pfdha, 0.05, delta=0.05)
+        self.assertAlmostEqual(x_l_pfdha, 0.05, delta=0.02)
 
         # Total trace length ≈ 33.9 km
-        self.assertAlmostEqual(L_km, 33.9, delta=0.5)
+        self.assertAlmostEqual(L_km, 33.9, delta=0.2)

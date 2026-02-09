@@ -265,8 +265,6 @@ class BaseSurface(metaclass=abc.ABCMeta):
             trace[1:, 0], trace[1:, 1]
         )
         L_km = float(numpy.sum(seg_lengths_km))
-        if L_km <= 0.0:
-            return numpy.zeros(n_sites), 0.0
 
         # Project coordinates to 2D km space
         all_lons = numpy.concatenate([trace[:, 0], site_lons])
@@ -283,7 +281,7 @@ class BaseSurface(metaclass=abc.ABCMeta):
         cumul = numpy.concatenate([[0.0], numpy.cumsum(seg_lens)])
         L_proj = cumul[-1]
 
-        if L_proj <= 0.0:
+        if L_proj == 0.0:
             return numpy.zeros(n_sites), L_km
 
         # Vectorized point-to-polyline projection
