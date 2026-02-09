@@ -125,7 +125,7 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'])
-        [ctx] = cmaker.from_srcs([src], sitecol)
+        ctx = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         if PLOTTING:
@@ -178,7 +178,7 @@ class MultiFaultTestCase(unittest.TestCase):
         secparams = build_secparams(src.get_sections())
         nsites = sf.get_close(secparams)
         src.set_msparams(secparams, nsites > 0, ry0=True)
-        [ctxt] = cmaker.from_srcs([src], sitecol)
+        ctxt = cmaker.from_srcs([src], sitecol)
         print(cmaker.ir_mon)
         print(cmaker.ctx_mon)
 

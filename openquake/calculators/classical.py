@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
 import time
 import psutil
 import logging
@@ -104,25 +105,24 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata_list, grp_id):
+def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts in the datastore
     """
-    for rupdata in rupdata_list:
-        nr = len(rupdata)
-        known = set(rupdata.dtype.names)
-        for par in dstore['rup']:
-            if par == 'rup_id':
-                rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
-                hdf5.extend(dstore['rup/rup_id'], rup_id)
-            elif par == 'grp_id':
-                hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
-            elif par == 'probs_occur':
-                dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
-            elif par in known:
-                hdf5.extend(dstore['rup/' + par], rupdata[par])
-            else:
-                hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
+    nr = len(rupdata)
+    known = set(rupdata.dtype.names)
+    for par in dstore['rup']:
+        if par == 'rup_id':
+            rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
+            hdf5.extend(dstore['rup/rup_id'], rup_id)
+        elif par == 'grp_id':
+            hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
+        elif par == 'probs_occur':
+            dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
+        elif par in known:
+            hdf5.extend(dstore['rup/' + par], rupdata[par])
+        else:
+            hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
 #  ########################### task functions ############################ #
@@ -346,6 +346,7 @@ def make_hmap_png(hmap, lons, lats):
     :param lats: an array of latitudes
     :returns: an Image object containing the hazard map
     """
+    os.environ['MPLBACKEND'] = 'Agg'  # headless plotting
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -606,8 +607,9 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 10, 10)
-        logging.info(f'{split_time=:.0f} seconds')
+        self.split_time = split_time = max(max_gb * 30, 30)
+        if not self.few_sites:
+            logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
@@ -625,9 +627,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        kind = 'tiling' if oq.tiling else 'regular'
-        logging.warning('This is a %s calculation with '
-                        '%d tasks, maxtiles=%d', kind,
+        logging.warning('This is a calculation with %d tasks, maxtiles=%d',
                         len(allargs), maxtiles)
 
         # save grp_keys by task
