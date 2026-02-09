@@ -79,26 +79,14 @@ def iter_polygons(geom):
                 yield from iter_polygons(g)
 
 
-def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
-    """
-    Add polygon borders intersecting the current axis extent
-    using a SpatialIndex.
-
-    :param ax: matplotlib axis (lon/lat, EPSG:4326)
-    :param spatial_index: SpatialIndex instance
-    :param alpha: polygon transparency
-    :param cmap: matplotlib colormap name
-    """
-    if spatial_index is None:
-        spatial_index = get_admin_spatial_index(0)
+def _draw_borders(ax, spatial_index, alpha, cmap):
     plt = import_plt()
-    # Axis extent (lon/lat)
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     viewport = box(xmin, ymin, xmax, ymax)
     idxs = spatial_index.tree.query(viewport)
     if len(idxs) == 0:
-        return
+        return None
     gdf = spatial_index.gdf.iloc[idxs]
     patches = []
     colours = []
@@ -110,7 +98,7 @@ def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
             patches.append(PolygonPatch(poly))
             colours.append(colour)
     if not patches:
-        return
+        return None
     collection = PatchCollection(
         patches,
         facecolor=colours,
@@ -118,6 +106,37 @@ def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
         alpha=alpha
     )
     ax.add_collection(collection)
+    return collection
+
+
+def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
+    """
+    Add polygon borders intersecting the current axis extent.
+    Automatically updates on zoom/pan.
+
+    :param ax: matplotlib axis (lon/lat, EPSG:4326)
+    :param spatial_index: SpatialIndex instance
+    :param alpha: polygon transparency
+    :param cmap: matplotlib colormap name
+    """
+    if spatial_index is None:
+        spatial_index = get_admin_spatial_index(0)
+    state = {'collection': None}
+
+    def redraw(event_ax):
+        if state['collection'] is not None:
+            state['collection'].remove()
+            state['collection'] = None
+        state['collection'] = _draw_borders(
+            event_ax, spatial_index, alpha, cmap
+        )
+        event_ax.figure.canvas.draw_idle()
+
+    # Initial draw
+    redraw(ax)
+    # Redraw on zoom / pan
+    ax.callbacks.connect('xlim_changed', redraw)
+    ax.callbacks.connect('ylim_changed', redraw)
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
