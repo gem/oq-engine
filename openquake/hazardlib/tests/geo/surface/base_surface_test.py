@@ -415,3 +415,159 @@ class GetAzimuthClosestPointTestCase(unittest.TestCase):
         expected = numpy.array([180, -90, 0])
         azimuths[azimuths > 180] = azimuths[azimuths > 180] - 360
         numpy.testing.assert_almost_equal(expected, azimuths, 1)
+
+
+class GetSurfaceTraceTestCase(unittest.TestCase):
+    """Tests for _get_surface_trace()."""
+
+    def test_simple_fault_returns_top_row(self):
+        """SimpleFaultSurface: trace should be mesh row 0."""
+        trace = Line([Point(0.0, 0.0), Point(0.0, 0.1), Point(0.0, 0.2)])
+        surface = SimpleFaultSurface.from_fault_data(
+            trace, upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0, dip=90.0,
+            mesh_spacing=0.5
+        )
+        result = surface._get_surface_trace()
+        # Must be 2D with shape (N, 2)
+        self.assertEqual(result.ndim, 2)
+        self.assertEqual(result.shape[1], 2)
+        # Must have at least 2 points
+        self.assertGreaterEqual(result.shape[0], 2)
+        # Top edge depths should be ~0 (we got lons/lats from row 0)
+        top_depths = surface.mesh[0:1].depths[0, :]
+        numpy.testing.assert_allclose(top_depths, 0.0, atol=0.01)
+
+    def test_get_surface_trace(self):
+        """Test _get_surface_trace() with a given fault trace and surface plan.
+
+        Surface is a 2-column × 2-row rectangular mesh:
+            Top edge:    (0.0, 0.0, 0.0) → (0.1, 0.0, 0.0)
+            Bottom edge: (0.0, 0.0, 10.0) → (0.1, 0.0, 10.0)
+
+        The trace is the top row, so exactly 2 points:
+            point 0: lon=0.0, lat=0.0
+            point 1: lon=0.1, lat=0.0
+        """
+        corners = [[(0.0, 0.0, 0.0), (0.1, 0.0, 0.0)],
+                   [(0.0, 0.0, 10.0), (0.1, 0.0, 10.0)]]
+        surface = FakeSurface(corners)
+
+        trace = surface._get_surface_trace()
+
+        # Exact shape: 2 top-edge points, 2 columns (lon, lat)
+        self.assertEqual(trace.shape, (2, 2))
+
+        # Expected full trace
+        expected_lons = numpy.array([0.0, 0.1])
+        expected_lats = numpy.array([0.0, 0.0])
+
+        numpy.testing.assert_array_almost_equal(trace[:, 0], expected_lons)
+        numpy.testing.assert_array_almost_equal(trace[:, 1], expected_lats)
+
+    def test_get_surface_trace_realistic_fault(self):
+        """Test _get_surface_trace() with a realistic fault geometry.
+
+        Uses coordinates representative of a NW-SE trending normal fault
+        in the central Apennines (Italy), with a 60-degree dip and a
+        top edge at 2 km depth extending to 15 km.
+        """
+        # Fault trace running ~NW-SE for about 30 km:
+        #   Point A: (13.30, 42.40)  –  northwest end
+        #   Point B: (13.45, 42.30)  –  midpoint
+        #   Point C: (13.60, 42.20)  –  southeast end
+        # Surface has 3 columns (along strike) and 2 rows (down dip)
+        # Top row at 2 km depth, bottom row at 15 km depth
+        # The bottom edge is offset to the SW due to the 60° NE dip
+        corners = [
+            [(13.30, 42.40, 2.0), (13.45, 42.30, 2.0),
+             (13.60, 42.20, 2.0)],
+            [(13.293, 42.393, 15.0), (13.443, 42.293, 15.0),
+             (13.593, 42.193, 15.0)],
+        ]
+        surface = FakeSurface(corners)
+
+        trace = surface._get_surface_trace()
+
+        self.assertEqual(trace.ndim, 2)
+        self.assertEqual(trace.shape[1], 2)
+        self.assertEqual(trace.shape[0], 3)
+        self.assertTrue(numpy.all(numpy.isfinite(trace)))
+
+        # Expected top-edge longitudes and latitudes
+        expected_lons = numpy.array([13.30, 13.45, 13.60])
+        expected_lats = numpy.array([42.40, 42.30, 42.20])
+
+        numpy.testing.assert_array_almost_equal(
+            trace[:, 0], expected_lons, decimal=5)
+        numpy.testing.assert_array_almost_equal(
+            trace[:, 1], expected_lats, decimal=5)
+
+        lon_range = trace[-1, 0] - trace[0, 0]
+        lat_range = trace[0, 1] - trace[-1, 1]
+        self.assertAlmostEqual(lon_range, 0.30, places=2)
+        self.assertAlmostEqual(lat_range, 0.20, places=2)
+
+
+class GetXLRatioTestCase(unittest.TestCase):
+    """Tests for get_x_l_ratio()."""
+
+    def _make_simple_surface(self, lon_start=0.0, lon_end=0.0,
+                              lat_start=0.0, lat_end=1.0):
+        """Helper: create a simple vertical fault surface."""
+        trace = Line([Point(lon_start, lat_start),
+                      Point(lon_end, lat_end)])
+        return SimpleFaultSurface.from_fault_data(
+            trace, upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0, dip=90.0,
+            mesh_spacing=0.5
+        )
+
+    def test_norcia_fault_site_near_se_end(self):
+        """x/L for a site near the SE end of the Norcia MVFS fault.
+
+        Geodetic computation:
+            Cumulative distance to site projection ≈ 32.5 km
+            x/L (from NW start, OQ convention) ≈ 0.96
+            x/L (from nearest end, PFDHA convention) ≈ 0.04
+        """
+        # Norcia MVFS fault trace (13 vertices, NW to SE)
+        trace = Line([
+            Point(13.1015, 43.0131),
+            Point(13.1332, 42.9931),
+            Point(13.1523, 42.9766),
+            Point(13.1685, 42.9544),
+            Point(13.1627, 42.9394),
+            Point(13.1750, 42.9201),
+            Point(13.1970, 42.9097),
+            Point(13.2264, 42.8846),
+            Point(13.2476, 42.8449),
+            Point(13.2482, 42.8211),
+            Point(13.2616, 42.8094),
+            Point(13.2725, 42.7865),
+            Point(13.2813, 42.7550),
+        ])
+        surface = SimpleFaultSurface.from_fault_data(
+            trace, upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=11.0, dip=47.0,
+            mesh_spacing=1.0
+        )
+
+        # Site near the SE end of the fault
+        site_mesh = Mesh(
+            numpy.array([13.278]),
+            numpy.array([42.767]),
+            depths=None
+        )
+        x_over_L, L_km = surface.get_x_l_ratio(site_mesh)
+
+        # x/L from the NW start ≈ 0.96 (site near SE end)
+        self.assertAlmostEqual(float(x_over_L[0]), 0.96, delta=0.05)
+
+        # PFDHA convention: x/L = min(x/L, 1 - x/L) ≈ 0.04
+        # (i.e. ~4–5% from the nearest fault endpoint)
+        x_l_pfdha = min(float(x_over_L[0]), 1.0 - float(x_over_L[0]))
+        self.assertAlmostEqual(x_l_pfdha, 0.05, delta=0.05)
+
+        # Total trace length ≈ 33.9 km
+        self.assertAlmostEqual(L_km, 33.9, delta=0.5)

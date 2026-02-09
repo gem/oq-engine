@@ -240,6 +240,131 @@ class BaseSurface(metaclass=abc.ABCMeta):
 
         return dst
 
+    def get_x_l_ratio(self, mesh):
+        """
+        Compute the normalized along-strike position (x/L) for each point
+        in ``mesh`` relative to the surface trace of this rupture surface.
+
+        x is the along-trace distance (km) from the nearest trace endpoint
+        to the orthogonal projection of the point onto the trace polyline.
+        L is the total surface trace length (km).
+
+        This parameter is used in Probabilistic Fault Displacement Hazard
+        Assessment (PFDHA) for principal fault displacement models.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of target points.
+        :returns:
+            Tuple ``(x_over_L, L_km)`` where ``x_over_L`` is a
+            numpy.ndarray of shape ``(N,)`` with values in [0, 1],
+            and ``L_km`` is a float representing the total trace length
+            in kilometers.
+        """
+        # Extract surface trace
+        trace = self._get_surface_trace()
+        site_lons = mesh.lons.flatten()
+        site_lats = mesh.lats.flatten()
+        n_sites = len(site_lons)
+
+        if trace.shape[0] < 2:
+            return numpy.zeros(n_sites), 0.0
+
+        # Compute geodetic trace length (L_km)
+        # Uses Haversine formula via geodetic.geodetic_distance()
+        seg_lengths_km = geodetic.geodetic_distance(
+            trace[:-1, 0], trace[:-1, 1],
+            trace[1:, 0], trace[1:, 1]
+        )
+        L_km = float(numpy.sum(seg_lengths_km))
+        if L_km <= 0.0:
+            return numpy.zeros(n_sites), 0.0
+
+        # Project all coordinates to 2D km space
+        # OrthographicProjection
+        all_lons = numpy.concatenate([trace[:, 0], site_lons])
+        all_lats = numpy.concatenate([trace[:, 1], site_lats])
+        proj = utils.OrthographicProjection.from_(all_lons, all_lats)
+
+        # proj() returns shape (2, N), use tuple unpacking via numpy axis-0
+        tr_x, tr_y = proj(trace[:, 0], trace[:, 1])
+        si_x, si_y = proj(site_lons, site_lats)
+
+        # Precompute segment geometry in projected space ---
+        txy = numpy.column_stack([tr_x, tr_y])       # (N_trace, 2)
+        segs = txy[1:] - txy[:-1]                     # (N_seg, 2)
+        seg_lens_sq = numpy.sum(segs ** 2, axis=1)    # (N_seg,)
+        seg_lens = numpy.sqrt(seg_lens_sq)            # (N_seg,)
+        cumul = numpy.concatenate(
+            [[0.0], numpy.cumsum(seg_lens)]
+        )                                              # (N_seg + 1,)
+        L_proj = cumul[-1]
+
+        if L_proj <= 0.0:
+            return numpy.zeros(n_sites), L_km
+
+        # Vectorized point-to-polyline projection
+        # For each site, find the nearest trace segment and compute the
+        # along-trace distance from the first endpoint using NumPy broadcasting.
+        n_segs = len(segs)
+
+        # Prepare arrays for broadcasting
+        # P: Site points (N_sites, 1, 2)
+        # A: Segment start points (1, N_seg, 2)
+        # V: Segment vectors (1, N_seg, 2)
+        P = numpy.column_stack([si_x, si_y])[:, numpy.newaxis, :]
+        A = txy[:-1][numpy.newaxis, :, :]
+        V = segs[numpy.newaxis, :, :]
+
+        # Vector from segment start to point (N_sites, N_seg, 2)
+        DP = P - A
+
+        # Project DP onto V to find parametric t (N_sites, N_seg)
+        # Dot product manually: dx*vx + dy*vy
+        dot = DP[:, :, 0] * V[:, :, 0] + DP[:, :, 1] * V[:, :, 1]
+
+        # Handle zero-length segments to avoid division by zero
+        # Create a safe divisor
+        safe_lens_sq = seg_lens_sq.copy()
+        safe_lens_sq[safe_lens_sq == 0.0] = 1.0
+
+        t = dot / safe_lens_sq[numpy.newaxis, :]
+
+        # Clamp t to segment [0, 1]
+        numpy.clip(t, 0.0, 1.0, out=t)
+
+        # Nearest point on segment: Closest = A + t*V
+        # Distance squared: ||P - Closest||^2
+        # Vector from P to Closest
+        C = A + t[:, :, numpy.newaxis] * V - P
+        d_sq = C[:, :, 0]**2 + C[:, :, 1]**2
+
+        # Handle zero-length segments: use distance to segment start
+        zero_mask = seg_lens_sq == 0.0
+        if numpy.any(zero_mask):
+            # For zero-length segments, distance is just ||DP||^2
+            d_sq_zero = DP[:, :, 0]**2 + DP[:, :, 1]**2
+            d_sq[:, zero_mask] = d_sq_zero[:, zero_mask]
+            # For zero-length segments, t should be 0 (use segment start)
+            t[:, zero_mask] = 0.0
+
+        # Find index of closest segment for each site
+        min_indices = numpy.argmin(d_sq, axis=1)
+
+        # Extract the best t and best segment index
+        # shape (N_sites,)
+        rows = numpy.arange(n_sites)
+        best_t = t[rows, min_indices]
+
+        # Calculate final x distance
+        # x = distance_to_segment_start + t * segment_length
+        x_best = cumul[min_indices] + best_t * seg_lens[min_indices]
+
+        x_ratios = x_best / L_proj
+
+        # Clamp to [0, 1] and return
+        numpy.clip(x_ratios, 0.0, 1.0, out=x_ratios)
+        return x_ratios, L_km
+
     def get_rx_distance(self, mesh):
         """
         Compute distance between each point of mesh and surface's great circle
@@ -321,6 +446,26 @@ class BaseSurface(metaclass=abc.ABCMeta):
         else:
             dep = numpy.min(top_edge.depths)
             return dep
+
+    def _get_surface_trace(self):
+        """
+        Extract the surface trace (top edge) of the rupture surface as a
+        2D array of geographic coordinates.
+
+        Handles KiteSurface meshes that may contain NaN values in some
+        columns by filtering them out.
+
+        :returns:
+            numpy.ndarray of shape (N, 2) with columns [longitude, latitude]
+            representing the ordered vertices of the surface trace.
+        """
+        top_edge = self.mesh[0:1]
+        lons = top_edge.lons[0, :]
+        lats = top_edge.lats[0, :]
+        # Filter NaN values (KiteSurface compatibility, same pattern as
+        # get_ry0_distance but more robust by checking both lons and lats)
+        finite = numpy.isfinite(lons) & numpy.isfinite(lats)
+        return numpy.column_stack([lons[finite], lats[finite]])
 
     def get_top_edge_centroid(self):
         """

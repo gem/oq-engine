@@ -1,3 +1,11 @@
+  [Yen-Shin Chen]
+  * Added get_x_l_ratio() method to BaseSurface for computing normalized
+    along-strike position (x/L) for PFDHA applications
+  * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
+    for improved performance with large site meshes
+  * Added _get_surface_trace() helper method to extract surface trace
+    and also with NaN handling for KiteSurface compatibility
+  
   [Michele Simionato]
   * Removed the long time deprecated method `get_mean_and_stddevs` from the GSIMs;
     you can use the helper function `contexts.mean_stds` instead
