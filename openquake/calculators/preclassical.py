@@ -58,7 +58,7 @@ def source_data(sources):
         data['nctxs'].append(src.nsites * src.num_ruptures)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
-        data['ctimes'].append(0)
+        data['ctimes'].append(src.dt)
     return data
 
 
@@ -283,7 +283,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(f'Global RateMap of %s ({Gt=}%s)',
                             general.humansize(nbytes), extra)
 
-        if sites:
+        if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites
             lowres = sites.lower_res(res=4)[0]
             sf = SourceFilter(lowres, oq.maximum_distance)
