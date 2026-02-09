@@ -39,32 +39,32 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-def _get_inter_event_tau(C_Sigma, ctx):
+def _get_inter_event_tau(C_BB, ctx):
     """
     Returns the inter-event standard deviation (tau), which is dependent on magnitude
     """
-    tau = C_Sigma["tau1"] + (C_Sigma["tau2"] - C_Sigma["tau1"]) * (ctx.mag - 5)/1.2
+    tau = C_BB["tau1"] + (C_BB["tau2"] - C_BB["tau1"]) * (ctx.mag - 5)/1.2
 
     idx = ctx.mag < 5
-    tau[idx] = C_Sigma["tau1"]
+    tau[idx] = C_BB["tau1"]
 
     idx = ctx.mag >= 6.2
-    tau[idx] = C_Sigma["tau2"]
+    tau[idx] = C_BB["tau2"]
 
     return tau
 
 
-def _get_intra_event_phi(C_Sigma, ctx):
+def _get_intra_event_phi(C_BB, ctx):
     """
     Returns the intra-event standard deviation (phi), dependent on magnitude
     """
-    phi = C_Sigma["phi1"] + (C_Sigma["phi2"] - C_Sigma["phi1"]) * (ctx.mag - 5)/1.0
+    phi = C_BB["phi1"] + (C_BB["phi2"] - C_BB["phi1"]) * (ctx.mag - 5)/1.0
 
     idx = ctx.mag < 5
-    phi[idx] = C_Sigma["phi1"]
+    phi[idx] = C_BB["phi1"]
 
     idx = ctx.mag >= 6.0
-    phi[idx] = C_Sigma["phi2"]
+    phi[idx] = C_BB["phi2"]
 
     return phi
 
@@ -123,8 +123,6 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     is the lower range, lower sigma model branch. This backbone GMM adjusts
     the Chiou and Youngs (2014) GMPE using the corrections described within
     the journal paper "PLACEHOLDER".
-
-    This model is only applicable for sites with a Vs30 of 800 m/s.
     """
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
@@ -136,8 +134,8 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # First get pre-adjusted mean and GMM sigma from CY14
-        super().compute(ctx, imts, mean, sig, tau, phi) 
+        # First get mean from CY14
+        self.compute(ctx, imts, mean, sig, tau, phi) 
 
         # Now make adjustments per IMT
         for m, imt in enumerate(imts):
