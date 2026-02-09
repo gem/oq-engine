@@ -20,13 +20,13 @@ import logging
 import operator
 import functools
 import numpy
-from shapely.geometry import Point
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, readinput, datastore
+from openquake.hazardlib import map_array
+from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -175,7 +175,7 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
     proxies = []
     try:
         h5 = datastore.read(filename)
-    except ValueError: # cannot extract calc_id
+    except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
         rupgeoms = h5['rupgeoms']
@@ -221,7 +221,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']        
+        n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
@@ -492,16 +492,17 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     :returns: list of mosaic models intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
-    hypocenter = Point(lon, lat)
-    hypo_buffer = hypocenter.buffer(buffer_radius)
-    geoms = numpy.array([hypo_buffer])
-    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
-    if not close_mosaic_models:
+    mosaic_spatial_index = get_mosaic_spatial_index()
+    matches = mosaic_spatial_index.nearby(lon, lat, buffer_radius)
+    if not matches:
         raise ValueError(
-            f'({lon}, {lat}) is farther than {buffer_radius} deg'
-            f' from any mosaic model!')
-    elif len(close_mosaic_models) > 1:
-        logging.info('(%s, %s) is close to the following mosaic models: %s',
-                     lon, lat, close_mosaic_models)
-    return close_mosaic_models
+            f'({lon}, {lat}) is farther than {buffer_radius} deg '
+            'from any mosaic model!'
+        )
+    codes = sorted({match.code for match in matches})
+    if len(codes) > 1:
+        logging.info(
+            '(%s, %s) is close to the following mosaic models: %s',
+            lon, lat, codes
+        )
+    return codes

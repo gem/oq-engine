@@ -29,7 +29,7 @@ import numpy
 import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry, contains_xy
+from shapely import geometry
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -926,33 +926,7 @@ def geohash3(lons, lats):
     return arr[:, 0] * TWO10 + arr[:, 1] * 32 + arr[:, 2]
 
 
-def geolocate(lonlats, geom_df, exclude=(), spatial_index=None):
-    """
-    :param lonlats: array of shape (N, 2) or (N, 3)
-    :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: list of codes to exclude from the results
-    :returns: codes associated to the points
-
-    NB: if the "code" field is not a primary key, i.e. there are
-    different geometries with the same code, performs an "or", i.e.
-    associates the code if at least one of the geometries matches
-    """
-    if spatial_index is not None:
-        return geolocate_with_index(lonlats, spatial_index, exclude)
-    codes = numpy.array(['???'] * len(lonlats))
-    if exclude:
-        filtered_df = geom_df[~geom_df['code'].isin(exclude)]
-    else:
-        filtered_df = geom_df
-    for code, df in filtered_df.groupby('code'):
-        ok = numpy.zeros(len(lonlats), bool)
-        for geom in df.geom:
-            ok |= contains_xy(geom, lonlats)
-        codes[ok] = code
-    return codes
-
-
-def geolocate_with_index(lonlats, spatial_index, exclude=()):
+def geolocate(lonlats, spatial_index, exclude=()):
     """
     :param lonlats: array of shape (N, 2) or (N, 3)
     :param spatial_index: instance of SpatialIndex
@@ -961,36 +935,14 @@ def geolocate_with_index(lonlats, spatial_index, exclude=()):
     """
     codes = numpy.array(['???'] * len(lonlats), dtype=object)
     for i, (lon, lat, *_) in enumerate(lonlats):
-        row = spatial_index.locate(lon, lat)
-        if row is None:
+        match = spatial_index.locate(lon, lat)
+        if match is None:
             continue
-        code = row["code"]
+        code = match["code"]
         if code in exclude:
             continue
         codes[i] = code
     return codes
-
-
-def geolocate_geometries(geometries, geom_df, exclude=()):
-    """
-    :param geometries: NumPy array of Shapely geometries to check
-    :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
-    :returns: NumPy array where each element contains a list of codes
-        of geometries that intersect each input geometry
-    """
-    result_codes = numpy.empty(len(geometries), dtype=object)
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()
-        # to store intersecting codes for current geometry
-        for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values
-            # geometries associated with this code
-            if any(target.intersects(input_geom) for target in target_geoms):
-                intersecting_codes.add(code)
-        result_codes[i] = sorted(intersecting_codes)
-    return result_codes
 
 
 # resolution=3 means 12,386 square km (Connecticut)

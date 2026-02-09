@@ -3,7 +3,7 @@ import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.risklib.countries import REGIONS, country2code
-from openquake.commonlib.readinput import read_mosaic_df
+from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
@@ -25,6 +25,7 @@ out_file = "{}"
 {}
 '''
 
+
 def save(mosaic_dir, name, toml):
     "Helper function"
     fname = os.path.join(mosaic_dir, name)
@@ -43,8 +44,8 @@ def add_checkout(lst, models):
 def get_aelo_sites(site_file):
     sites_df = pandas.read_csv(site_file)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
-    mosaic_df = read_mosaic_df(0.0)
-    sites_df['model'] = geolocate(lonlats, mosaic_df)
+    mosaic_spatial_index = get_mosaic_spatial_index()
+    sites_df['model'] = geolocate(lonlats, mosaic_spatial_index)
     sites = {}
     siteid = {}
     for model, df in sites_df.groupby('model'):
@@ -108,7 +109,7 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
         jobs_dir = os.path.join(mosaic_dir, region, 'Jobs')
         for fname in os.listdir(jobs_dir):
             # find job_XXX.ini files
-            if fname.endswith('.ini') and not 'optimized' in fname:
+            if fname.endswith('.ini') and 'optimized' not in fname:
                 country = fname[4:-4]
                 if len(country) == 3:
                     # mosaic model
@@ -153,12 +154,12 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
     return save(mosaic_dir, 'SES.toml',
-         TOML.format(number_of_logic_tree_samples,
-                     ses_per_logic_tree_path,
-                     minimum_magnitude,
-                     out, '\n'.join(lst)))
+                TOML.format(number_of_logic_tree_samples,
+                            ses_per_logic_tree_path,
+                            minimum_magnitude,
+                            out, '\n'.join(lst)))
+
 
 main = dict(AELO=aelo, GHM=ghm, GRM=grm, SES=ses)
-    
 if __name__ == '__main__':
     sap.run(main)

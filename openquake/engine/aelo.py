@@ -23,6 +23,7 @@ import sys
 import logging
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
+from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
 
@@ -67,9 +68,9 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=0)
     lonlats = valid.coordinates(inputs['sites'])
-    models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
+    mosaic_spatial_index = get_mosaic_spatial_index()
+    models = geo.utils.geolocate(lonlats, mosaic_spatial_index, exclude)
     if len(set(models)) > 1:
         raise ValueError("The sites must all belong to the same model, got %s"
                          % set(models))

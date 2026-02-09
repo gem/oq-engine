@@ -31,6 +31,7 @@ from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
     spherical_to_cartesian, get_middle_point, geolocate)
+from openquake.hazardlib.geo.spatial_index import get_admin_spatial_index
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -890,15 +891,12 @@ class SiteCollection(object):
     def countries(self):
         """
         Return the countries for each site in the SiteCollection.
-        The boundaries of the countries are defined as in the file
-        geoBoundariesCGAZ_ADM0.gpkg
         """
-        from openquake.commonlib import readinput
-        geom_df = readinput.read_countries_df()
+        countries_spatial_index = get_admin_spatial_index(0)
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats
-        return geolocate(lonlats, geom_df)
+        return geolocate(lonlats, countries_spatial_index)
 
     def by_country(self):
         """

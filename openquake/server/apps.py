@@ -22,7 +22,7 @@ from django.conf import settings
 from sqlite3 import OperationalError
 from openquake.baselib import config
 from openquake.hazardlib.geo.spatial_index import (
-    AdminSpatialIndex, MosaicSpatialIndex)
+    get_mosaic_spatial_index, get_admin_spatial_index)
 from openquake.server import dbserver, db
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
@@ -41,22 +41,17 @@ class ServerConfig(AppConfig):
         if settings.TEST:
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
 
-        self.mosaic_spatial_index = MosaicSpatialIndex(
-            config.directory['mosaic_parquet_path']
-        )
-        self.admin_spatial_index = AdminSpatialIndex(
-            admin0=config.directory['admin0_parquet_path'],
-            admin1=config.directory['admin1_parquet_path'],
-            admin2=config.directory['admin2_parquet_path'],
-        )
-        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=0))
-        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=1))
-        print(self.admin_spatial_index.locate(lon=9, lat=45, admin_level=2))
-        print(self.admin_spatial_index.nearby(lon=9, lat=45, admin_level=0,
-                                              threshold_deg=1))
+        # FIXME: Initialize spatial indices only where needed and remove examples
+        self.mosaic_spatial_index = get_mosaic_spatial_index()
+        self.admin0_spatial_index = get_admin_spatial_index(0)
+        self.admin1_spatial_index = get_admin_spatial_index(1)
+        self.admin2_spatial_index = get_admin_spatial_index(2)
+        print(self.admin0_spatial_index.locate(lon=9, lat=45))
+        print(self.admin1_spatial_index.locate(lon=9, lat=45))
+        print(self.admin2_spatial_index.locate(lon=9, lat=45))
+        print(self.admin0_spatial_index.nearby(lon=9, lat=45, threshold_deg=1))
         print(self.mosaic_spatial_index.locate(lon=9, lat=45))
-        print(self.mosaic_spatial_index.nearby(lon=9, lat=45,
-                                               threshold_deg=0.2))
+        print(self.mosaic_spatial_index.nearby(lon=9, lat=45, threshold_deg=0.2))
 
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:

@@ -17,8 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import geopandas as gpd
+from functools import lru_cache
 from shapely.geometry import Point
 from shapely.strtree import STRtree
+from openquake.baselib import config
 
 
 class SpatialIndex:
@@ -46,37 +48,44 @@ class SpatialIndex:
         buf = p.buffer(threshold_deg)
         found = []
         for i in self._candidates(buf):
-            geom = self.geoms[i]
-            if geom.distance(p) <= threshold_deg:
+            if self.geoms[i].intersects(buf):
                 found.append(self.gdf.iloc[int(i)])
         return found
 
 
-class AdminSpatialIndex:
-    def __init__(self, admin0=None, admin1=None, admin2=None):
-        self.spatial_indices = {}
-        if admin0:
-            self.spatial_indices[0] = SpatialIndex(admin0)
-        if admin1:
-            self.spatial_indices[1] = SpatialIndex(admin1)
-        if admin2:
-            self.spatial_indices[2] = SpatialIndex(admin2)
-
-    def locate(self, lon, lat, admin_level):
-        return self.spatial_indices[admin_level].locate(lon, lat)
-
-    def nearby(self, lon, lat, admin_level, threshold_deg):
-        # threshold is in degrees
-        return self.spatial_indices[admin_level].nearby(
-            lon, lat, threshold_deg)
-
-
 class MosaicSpatialIndex(SpatialIndex):
-    def __init__(self, parquet_path):
-        self.spatial_index = SpatialIndex(parquet_path)
+    pass
 
-    def locate(self, lon, lat):
-        return self.spatial_index.locate(lon, lat)
 
-    def nearby(self, lon, lat, threshold_deg):
-        return self.spatial_index.nearby(lon, lat, threshold_deg)
+class AdminSpatialIndex(SpatialIndex):
+    """
+    Spatial index for a single administrative level (0, 1, or 2).
+    """
+    def __init__(self, parquet_path, admin_level):
+        if admin_level not in (0, 1, 2):
+            raise ValueError(f"Invalid admin level: {admin_level}")
+        self.admin_level = admin_level
+        super().__init__(parquet_path)
+
+
+@lru_cache(maxsize=1)
+def get_mosaic_spatial_index():
+    try:
+        path = config.directory['mosaic_parquet_path']
+    except KeyError:
+        raise RuntimeError(
+            "Missing 'mosaic_parquet_path' in openquake.cfg [directory]"
+        )
+    return MosaicSpatialIndex(path)
+
+
+@lru_cache(maxsize=1)
+def get_admin_spatial_index(admin_level):
+    try:
+        path = config.directory[f'admin{admin_level}_parquet_path']
+    except KeyError:
+        raise RuntimeError(
+            f"Missing f'admin{admin_level}_parquet_path' in openquake.cfg [directory]"
+        )
+    admin_spatial_index = AdminSpatialIndex(path, admin_level)
+    return admin_spatial_index
