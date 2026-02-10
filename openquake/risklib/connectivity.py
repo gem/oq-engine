@@ -39,6 +39,18 @@ import logging
 
 
 @dataclass
+class Inp:
+    """
+    Connectivity inputs
+    """
+    id: int
+    CCL: float
+    PCL: float
+    WCL: float
+    effloss: float
+
+
+@dataclass
 class Out:
     """
     Connectivity outputs
@@ -602,8 +614,9 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
         Glo_effloss_per_event = (
             Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
 
-    _update_demand(o, event_id, CCL_per_event, PCL_mean_per_event,
-                   WCL_mean_per_event, Glo_effloss_per_event, max_nodes_network)
+    event = Inp(event_id, CCL_per_event, PCL_mean_per_event,
+                WCL_mean_per_event, Glo_effloss_per_event)
+    _update_demand(o, event, max_nodes_network)
         
     if N <= max_nodes_network:
         eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
@@ -611,24 +624,23 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
             'id', as_index=False).sum()
 
 
-def _update_demand(o, event_id, CCL_per_event, PCL_mean_per_event,
-                   WCL_mean_per_event, Glo_effloss_per_event, max_nodes_network):
+def _update_demand(o, event, max_nodes_network):
     # Storing the value of performance indicators for each event
     o.event_connectivity_loss_ccl = pd.concat(
         [o.event_connectivity_loss_ccl, pd.DataFrame.from_records(
-            [{'event_id': event_id, 'CCL': CCL_per_event}])],
+            [{'event_id': event.id, 'CCL': event.CCL}])],
         ignore_index=True)
     o.event_connectivity_loss_pcl = pd.concat(
         [o.event_connectivity_loss_pcl, pd.DataFrame.from_records(
-            [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
+            [{'event_id': event.id, 'PCL': event.PCL}])],
         ignore_index=True)
     o.event_connectivity_loss_wcl = pd.concat(
         [o.event_connectivity_loss_wcl, pd.DataFrame.from_records(
-            [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
+            [{'event_id': event.id, 'WCL': event.WCL}])],
         ignore_index=True)
     o.event_connectivity_loss_eff = pd.concat(
         [o.event_connectivity_loss_eff, pd.DataFrame.from_records(
-            [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
+            [{'event_id': event.id, 'EL': event.effloss}])],
         ignore_index=True)
     # To store the sum of performance indicator at nodal level to calulate
     # the average afterwards
