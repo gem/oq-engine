@@ -28,7 +28,7 @@ from openquake.baselib import (
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.geo.utils import geolocate_with_geom_df
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -659,10 +659,10 @@ class EventBasedCalculator(base.HazardCalculator):
             with mon:
                 self.nruptures += len(rup_array)
                 if len(mosaic_df):
-                    # TODO: this is the last remaining occurrence calling
-                    #       geolocate_with_geom_df. We could adapt this function
-                    #       to use its replacement geolocate using spatial index
-                    rup_array['model'] = geolocate_with_geom_df(
+                    # NOTE: this is the last remaining occurrence in the oq-engine
+                    #       repo calling the original geolocate function. We could
+                    #       adapt this workflow to use geolocate_with_index
+                    rup_array['model'] = geolocate(
                         rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)

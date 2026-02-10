@@ -30,7 +30,7 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
-    spherical_to_cartesian, get_middle_point, geolocate)
+    spherical_to_cartesian, get_middle_point, geolocate_with_index)
 from openquake.hazardlib.geo.spatial_index import get_admin_spatial_index
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
@@ -896,7 +896,7 @@ class SiteCollection(object):
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats
-        return geolocate(lonlats, countries_spatial_index)
+        return geolocate_with_index(lonlats, countries_spatial_index)
 
     def by_country(self):
         """

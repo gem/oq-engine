@@ -926,7 +926,7 @@ def geohash3(lons, lats):
     return arr[:, 0] * TWO10 + arr[:, 1] * 32 + arr[:, 2]
 
 
-def geolocate_with_geom_df(lonlats, geom_df, exclude=()):
+def geolocate(lonlats, geom_df, exclude=()):
     """
     :param lonlats: array of shape (N, 2) or (N, 3)
     :param geom_df: DataFrame of geometries with a "code" field
@@ -950,7 +950,7 @@ def geolocate_with_geom_df(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate(lonlats, spatial_index, exclude=()):
+def geolocate_with_index(lonlats, spatial_index, exclude=()):
     """
     :param lonlats: array of shape (N, 2) or (N, 3)
     :param spatial_index: instance of SpatialIndex

@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import hdf5, sap
-from openquake.hazardlib.geo.utils import geolocate
+from openquake.hazardlib.geo.utils import geolocate_with_index
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 from openquake.calculators.postproc.plots import add_borders
 
@@ -44,7 +44,7 @@ def main(files_csv):
     markersize = 5
     mosaic_spatial_index = get_mosaic_spatial_index()
     for csvfile, df in zip(csvfiles, dfs):
-        models = geolocate(df[['lon', 'lat']], mosaic_spatial_index)
+        models = geolocate_with_index(df[['lon', 'lat']], mosaic_spatial_index)
         p.scatter(df.lon, df.lat, marker='o',
                   label=csvfile.fname, s=markersize)
         for model, lon, lat in zip(models, df.lon, df.lat):
