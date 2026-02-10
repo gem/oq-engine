@@ -39,6 +39,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
+# EMME24 site model is fed into CY14 and used instead of the CY14 site model
 COEFFS_SM = CoeffsTable(sa_damping=5, table=""" 
     IMT      a1              a2              a3       a4
     pga     -0.447368789    -0.13315737     -0.008   0.146
@@ -153,7 +154,9 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     the Chiou and Youngs (2014) GMPE using the corrections described within
     the journal paper "PLACEHOLDER".
     """
-    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+    DEFINED_FOR_REFERENCE_VELOCITY = 800. # EMME24 backbone is defined for ref
+                                          # velocity of 800 m/s (whereas CY14 is
+                                          # 1130 m/s)
 
     experimental = True
 

@@ -150,7 +150,7 @@ def _get_ln_y_ref(ctx, C):
     return ln_y_ref
 
 
-def _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs30):
+def _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs):
     """
     Add site effects to an intensity. Implements eq. 13b.
     """
@@ -159,7 +159,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs30):
         # first line of eq. 12
         ln_y_ref + eta
         # second line
-        + C['phi1'] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0)
+        + C['phi1'] * np.log(ctx.vs30 / ref_vs).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
@@ -484,29 +484,29 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
-def get_linear_site_term(region, C, ctx, ref_vs30):
+def get_linear_site_term(region, C, ctx, ref_vs):
     """
     Returns the linear site scaling term
     """
     if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0.0)
+        return C["phi1jp"] * np.log(ctx.vs30 / ref_vs).clip(-np.inf, 0.0)
         
-    return C["phi1"] * np.log(ctx.vs30 / ref_vs30).clip(-np.inf, 0.0)
+    return C["phi1"] * np.log(ctx.vs30 / ref_vs).clip(-np.inf, 0.0)
 
 
-def get_nonlinear_site_term(C, ctx, y_ref, ref_vs30):
+def get_nonlinear_site_term(C, ctx, y_ref, ref_vs):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, ref_vs30)
+    vs = ctx.vs30.clip(-np.inf, ref_vs)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
-                                np.exp(C["phi3"] * (ref_vs30 - 360.)))
+                                np.exp(C["phi3"] * (ref_vs - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
 
 
-def get_emme_site_term(C, ctx, ref_vs30, C_EMME, conf):
+def get_emme_site_term(C, ctx, ref_vs, C_EMME, conf):
     """
     Returns the EMME24 backbone model site term (both linear
     and non-linear components). The site term is combination
@@ -519,11 +519,11 @@ def get_emme_site_term(C, ctx, ref_vs30, C_EMME, conf):
     # the 'DEFINED_FOR_REFERENCE_VELOCITY' attribute specified in
     # EMME24 backbone GSIM class)
     rock_ctx = ctx.copy()
-    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs30)
+    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs)
     gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
 
     # Linear component
-    linear = C_EMME["a1"] * np.log(ctx.vs30 / ref_vs30)
+    linear = C_EMME["a1"] * np.log(ctx.vs30 / ref_vs)
     
     # Part 1 of non-linear component
     non_linear_p1 = C_EMME["a2"] * (
@@ -611,7 +611,7 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_coeffs_sm, conf,
+def get_mean_stddevs(region, C, ctx, imt, ref_vs, emme_coeffs, conf,
                      usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
@@ -620,27 +620,31 @@ def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_coeffs_sm, conf,
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
-    if not emme_coeffs_sm:
+    if not emme_coeffs:
         # Get basin term
         f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
         # Get linear amplification term
-        f_lin = get_linear_site_term(region, C, ctx, ref_vs30)
+        f_lin = get_linear_site_term(region, C, ctx, ref_vs)
 
         # Get nonlinear amplification term
-        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref, ref_vs30)
+        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref, ref_vs)
 
         # Add on the site amplification
         mean = ln_y_ref + f_lin + f_nl + f_z1pt0
 
+        # Get standard deviations
+        sig, tau, phi = get_stddevs(
+            conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
     else:
         # Compute EMME24 site term instead (no basin effects considered here)
         mean = ln_y_ref + get_emme_site_term(
-            C, ctx, ref_vs30, emme_coeffs_sm[imt], conf)
-        
-    # Get standard deviations
-    sig, tau, phi = get_stddevs(
-        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+            C, ctx, ref_vs, emme_coeffs[imt], conf)
+
+        # Sigma components are determined within EMME backbone's compute method
+        sig, tau, phi =\
+              np.empty_like(mean), np.empty_like(mean), np.empty_like(mean)
 
     return mean, sig, tau, phi
 
@@ -782,12 +786,12 @@ class ChiouYoungs2014(GMPE):
             
         # Reference velocity taken from GSIM class (in case of EMME24
         # backbone it is 800 m/s whereas in orig CY14 it is 1130 m/s)
-        ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
+        ref_vs = self.DEFINED_FOR_REFERENCE_VELOCITY
 
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), ref_vs30,
+            self.region, self.COEFFS[PGA()], ctx, PGA(), ref_vs,
             self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
             self.cybershake_basin_adj)
         
@@ -802,7 +806,7 @@ class ChiouYoungs2014(GMPE):
             
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, ref_vs30,
+                    self.region, self.COEFFS[imt], ctx, imt, ref_vs,
                     self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
                 
@@ -901,7 +905,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        ref_vs30 = self.DEFINED_FOR_REFERENCE_VELOCITY
+        ref_vs = self.DEFINED_FOR_REFERENCE_VELOCITY
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
@@ -909,6 +913,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
-            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, ref_vs30) - 360))
-            exp2 = np.exp(C['phi3'] * (ref_vs30 - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs30)
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, ref_vs) - 360))
+            exp2 = np.exp(C['phi3'] * (ref_vs - 360))
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, ref_vs)
