@@ -44,17 +44,17 @@ class ServerConfig(AppConfig):
         # FIXME: Initialize spatial indices only where needed and remove examples
         self.mosaic_spatial_index = get_mosaic_spatial_index()
         self.admin0_spatial_index = get_admin_spatial_index(0)
-        self.admin1_spatial_index = get_admin_spatial_index(1)
-        self.admin2_spatial_index = get_admin_spatial_index(2)
+        # self.admin1_spatial_index = get_admin_spatial_index(1)
+        # self.admin2_spatial_index = get_admin_spatial_index(2)
         print(self.admin0_spatial_index.locate(lon=9, lat=45))
-        print(self.admin1_spatial_index.locate(lon=9, lat=45))
-        print(self.admin2_spatial_index.locate(lon=9, lat=45))
+        # print(self.admin1_spatial_index.locate(lon=9, lat=45))
+        # print(self.admin2_spatial_index.locate(lon=9, lat=45))
         print(self.admin0_spatial_index.locate(
             lon=9, lat=45, region_code_only=False))
-        print(self.admin1_spatial_index.locate(
-            lon=9, lat=45, region_code_only=False))
-        print(self.admin2_spatial_index.locate(
-            lon=9, lat=45, region_code_only=False))
+        # print(self.admin1_spatial_index.locate(
+        #     lon=9, lat=45, region_code_only=False))
+        # print(self.admin2_spatial_index.locate(
+        #     lon=9, lat=45, region_code_only=False))
         print(self.admin0_spatial_index.nearby(lon=9, lat=45,
                                                threshold_deg=1))
         print(self.mosaic_spatial_index.locate(lon=9, lat=45))

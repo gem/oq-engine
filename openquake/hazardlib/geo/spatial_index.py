@@ -125,6 +125,10 @@ def get_mosaic_spatial_index():
         if not os.path.exists(geodata_path):
             geodata_path = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+        # FIXME: there is an inconsistency between mosaic.gpkg and
+        #        ModelBoundaries.gpkg with respect to the field containing
+        #        the model codes ('name' vs 'code')
+        region_code_field = 'name'
         warnings.warn(
             f"Missing 'mosaic_geodata_path' in openquake.cfg [directory]."
             f" Using {geodata_path}.", RuntimeWarning)
