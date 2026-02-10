@@ -1308,10 +1308,7 @@ class ContextMaker(object):
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        # NB: we are not multiplying by len(gsims) otherwise the
-        # partial_tiling test (USA-like) will break, since the group with
-        # 4 gsims (instead of 31) will appear very light when it is not
-        weight = C * src.num_ruptures / self.num_rups / N
+        weight = C * src.num_ruptures / self.num_rups / N * len(self.gsims)
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
             weight /= 5
