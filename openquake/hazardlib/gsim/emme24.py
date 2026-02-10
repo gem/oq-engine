@@ -39,6 +39,35 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
+COEFFS_SM = CoeffsTable(sa_damping=5, table=""" 
+    IMT      a1              a2              a3       a4
+    pga     -0.447368789    -0.13315737     -0.008   0.146
+    0.01    -0.44743719     -0.126690577    -0.008   0.146
+    0.02    -0.434318247    -0.116083796    -0.008   0.165
+    0.03    -0.394780349    -0.121302581    -0.008   0.175
+    0.04    -0.356454524    -0.132494796    -0.008   0.181
+    0.05    -0.326776837    -0.154234775    -0.007   0.192
+    0.075   -0.314789463    -0.19301429     -0.007   0.244
+    0.1     -0.373614022    -0.227906544    -0.007   0.271
+    0.15    -0.495087031    -0.262923495    -0.007   0.312
+    0.2     -0.613993352    -0.2597         -0.007   0.29
+    0.25    -0.707918764    -0.237291637    -0.008   0.25
+    0.3     -0.799104746    -0.201789032    -0.008   0.215
+    0.4     -0.914313516    -0.159466252    -0.008   0.163
+    0.5     -0.999461886    -0.13129788     -0.009   0.141
+    0.75    -1.052007243    -0.083229021    -0.009   0.099
+    1       -1.070640164    -0.068786754    -0.009   0.081
+    1.5     -1.072409536    -0.052352193    -0.007   0.04
+    2       -1.042152467    -0.044385674    -0.004   0.027
+    3       -0.993751431    -0.028590229    -0.002   0.015
+    4       -0.945360607    -0.012948693    -0.002   0.008
+    5       -0.885616164     0              -0.001   0.007
+    7.5     -0.77149009      0               0       0.005
+    10      -0.650337838     0               0       0.004
+    """
+    )
+
+
 def _get_inter_event_tau(C_BB, ctx):
     """
     Returns the inter-event standard deviation (tau), which is dependent on magnitude
@@ -128,22 +157,23 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
 
     experimental = True
 
-    emme_site = True # Use the EMME24 site model in underlying CY14 (also turns
-                     # of the basin term as not considered in EMME24 backbone)
-
+    COEFFS_EMME_SM = COEFFS_SM # Use the EMME24 site model in CY14 GSIM (also
+                               # turns of the basin term as not considered in
+                               # EMME24 backbone)
+    
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # First get mean from CY14
+        # First get mean from CY14 but with EMME site model
         super().compute(ctx, imts, mean, sig, tau, phi)
 
         # Now make adjustments per IMT
         for m, imt in enumerate(imts):
 
-            # Get coeffs and sigma coeffs
+            # Get coeffs
             C_BB = self.COEFFS_BB[imt]
 
             # Get scaling factor and apply
@@ -191,7 +221,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         10     0.1368 -0.0155  0.0632  0.0493  -0.0723   0.0095  6.75   30     3      9.00  0.3338  0.2286  0.5394  0.5394
         """
         )
-
+    
 
 class EMME24BB_GMM1SGM2(EMME24BB_GMM1SGM1):
     """

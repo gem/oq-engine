@@ -506,7 +506,7 @@ def get_nonlinear_site_term(C, ctx, y_ref, ref_vs30):
     return f_nl, f_nl_scaling
 
 
-def get_emme_site_term(C, ctx, ref_vs30, conf):
+def get_emme_site_term(C, ctx, ref_vs30, C_EMME, conf):
     """
     Returns the EMME24 backbone model site term (both linear
     and non-linear components). The site term is combination
@@ -523,16 +523,16 @@ def get_emme_site_term(C, ctx, ref_vs30, conf):
     gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
 
     # Linear component
-    linear = C["a1"] * np.log(ctx.vs30 / ref_vs30)
+    linear = C_EMME["a1"] * np.log(ctx.vs30 / ref_vs30)
     
     # Part 1 of non-linear component
-    non_linear_p1 = C["a2"] * (
-        np.exp((ctx.vs30 - 360.) * C["a3"]) -
-        np.exp(440. * C["a3"])
+    non_linear_p1 = C_EMME["a2"] * (
+        np.exp((ctx.vs30 - 360.) * C_EMME["a3"]) -
+        np.exp(440. * C_EMME["a3"])
         ) 
     
     # Part 2 of non-linear component
-    non_linear_p2 = np.log(1 + (np.exp(gm_rock) / C["a4"]))
+    non_linear_p2 = np.log(1 + (np.exp(gm_rock) / C_EMME["a4"]))
 
     return linear + (non_linear_p1 * non_linear_p2)
 
@@ -611,7 +611,7 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_site, conf,
+def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_coeffs_sm, conf,
                      usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
@@ -620,7 +620,7 @@ def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_site, conf,
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
-    if not emme_site:
+    if not emme_coeffs_sm:
         # Get basin term
         f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
@@ -634,9 +634,10 @@ def get_mean_stddevs(region, C, ctx, imt, ref_vs30, emme_site, conf,
         mean = ln_y_ref + f_lin + f_nl + f_z1pt0
 
     else:
-        # Compute EMME24 site term instead
-        mean = ln_y_ref + get_emme_site_term(C, ctx, ref_vs30, conf)
-
+        # Compute EMME24 site term instead (no basin effects considered here)
+        mean = ln_y_ref + get_emme_site_term(
+            C, ctx, ref_vs30, emme_coeffs_sm[imt], conf)
+        
     # Get standard deviations
     sig, tau, phi = get_stddevs(
         conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
@@ -776,8 +777,8 @@ class ChiouYoungs2014(GMPE):
         """
         # If not using EMME24 site model set to False (and use 
         # CY14 site model as usual)
-        if not hasattr(self, "emme_site"):
-            setattr(self, "emme_site", False)
+        if not hasattr(self, "COEFFS_EMME_SM"):
+            setattr(self, "COEFFS_EMME_SM", False)
             
         # Reference velocity taken from GSIM class (in case of EMME24
         # backbone it is 800 m/s whereas in orig CY14 it is 1130 m/s)
@@ -787,7 +788,7 @@ class ChiouYoungs2014(GMPE):
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             self.region, self.COEFFS[PGA()], ctx, PGA(), ref_vs30,
-            self.emme_site, self.conf, self.usgs_basin_scaling,
+            self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
             self.cybershake_basin_adj)
         
         # Compute
@@ -802,7 +803,7 @@ class ChiouYoungs2014(GMPE):
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     self.region, self.COEFFS[imt], ctx, imt, ref_vs30,
-                    self.emme_site, self.conf, self.usgs_basin_scaling,
+                    self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
                 
                 # Reference to page 1144
