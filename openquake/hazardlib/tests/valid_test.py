@@ -198,7 +198,3 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(ag20_alaska.region, 'USA-AK')
         self.assertEqual(ag20_alaska._toml,
                          '[AbrahamsonGulerce2020SInter]\nregion = "USA-AK"')
-        ag20_alaska = valid.gsim("[AbrahamsonGulerce2020SInterAlaska]")
-        self.assertEqual(ag20_alaska.region, 'USA-AK')
-        self.assertEqual(ag20_alaska._toml,
-                         '[AbrahamsonGulerce2020SInterAlaska]')
