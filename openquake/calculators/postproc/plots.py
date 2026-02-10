@@ -79,37 +79,35 @@ def iter_polygons(geom):
                 yield from iter_polygons(g)
 
 
-def _draw_borders(ax, spatial_index, alpha, cmap):
-    plt = import_plt()
+def _draw_borders(ax, spatial_index, alpha):
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     viewport = box(xmin, ymin, xmax, ymax)
+
     idxs = spatial_index.tree.query(viewport)
     if len(idxs) == 0:
         return None
-    gdf = spatial_index.gdf.iloc[idxs]
+
     patches = []
-    colours = []
-    cm = plt.get_cmap(cmap)
-    norm = Normalize(vmin=0, vmax=len(gdf))
-    for i, geom in enumerate(gdf.geometry):
-        colour = cm(norm(i))
+    for geom in spatial_index.gdf.iloc[idxs].geometry:
         for poly in iter_polygons(geom):
             patches.append(PolygonPatch(poly))
-            colours.append(colour)
+
     if not patches:
         return None
+
     collection = PatchCollection(
         patches,
-        facecolor=colours,
-        edgecolor='none',
+        facecolor='0.85',     # light gray fill
+        edgecolor='0.35',     # visible borders
+        linewidth=0.4,
         alpha=alpha
     )
     ax.add_collection(collection)
     return collection
 
 
-def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
+def add_borders(ax, spatial_index=None, alpha=0.4, cmap='RdBu'):
     """
     Add polygon borders intersecting the current axis extent.
     Automatically updates on zoom/pan.
@@ -117,7 +115,6 @@ def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
     :param ax: matplotlib axis (lon/lat, EPSG:4326)
     :param spatial_index: SpatialIndex instance
     :param alpha: polygon transparency
-    :param cmap: matplotlib colormap name
     """
     if spatial_index is None:
         spatial_index = get_admin_spatial_index(0)
@@ -127,9 +124,7 @@ def add_borders(ax, spatial_index=None, alpha=0.1, cmap='RdBu'):
         if state['collection'] is not None:
             state['collection'].remove()
             state['collection'] = None
-        state['collection'] = _draw_borders(
-            event_ax, spatial_index, alpha, cmap
-        )
+        state['collection'] = _draw_borders(event_ax, spatial_index, alpha)
         event_ax.figure.canvas.draw_idle()
 
     # Initial draw
