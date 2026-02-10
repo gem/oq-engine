@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
 import time
 import psutil
 import logging
@@ -26,7 +27,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize, split_in_blocks)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
@@ -196,10 +197,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 
 def _split_src(srcs, n):
-    for i in range(n):
-        out = srcs[i::n]
-        if out:
-            yield out
+    return split_in_blocks(srcs, n, get_weight)
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -345,6 +343,7 @@ def make_hmap_png(hmap, lons, lats):
     :param lats: an array of latitudes
     :returns: an Image object containing the hazard map
     """
+    os.environ['MPLBACKEND'] = 'Agg'  # headless plotting
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -605,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 30, 30)
+        self.split_time = split_time = max(max_gb * 30, 20)
         if not self.few_sites:
             logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:

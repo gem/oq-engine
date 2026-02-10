@@ -1,0 +1,17 @@
+Checksum of the inputs: 3683067441 (total size 702.76 MB)
+
+* v3.24
+| calc_7515, maxmem=159.6 GB | time_sec  | memory_mb | counts     |
+|----------------------------+-----------+-----------+------------|
+| total classical            | 337_649   | 272.1     | 217        |
+| get_poes                   | 146_781   | 0.0       | 13_862_524 |
+| computing mean_std         | 108_613   | 0.0       | 279_467    |
+| total postclassical        | 4_559     | 156.8555  | 96         |
+| reading rates              | 4_121     | 111.1758  | 96         |
+| ClassicalCalculator.run    | 3_461     | 9_960     | 1          |
+| iter_ruptures              | 2_867     | 0.0       | 10_437     |
+
+| operation-duration | counts | mean   | stddev | min    | max     | slowfac |
+|--------------------+--------+--------+--------+--------+---------+---------|
+| classical          | 211    | 1_598  | 42%    | 188.7  | 2_651   | 1.6592  |
+| postclassical      | 96     | 47.4917 | 25%    | 19.9237 | 64.3832 | 1.3557  |
