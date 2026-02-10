@@ -576,7 +576,7 @@ def plot_sites(dstore, update_dstore=False):
     if len(sites) == 1:
         markersize = 30
         marker = 'x'
-        padding = 20
+        padding = 10
     elif len(sites) < 50:
         markersize = 1
         marker = 'o'
