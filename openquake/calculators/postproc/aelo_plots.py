@@ -24,7 +24,7 @@ from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
 from openquake.calculators.postproc.plots import (
-    add_borders, adjust_limits, auto_limits)
+    add_borders, adjust_limits, auto_limits, add_region_labels)
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -592,6 +592,7 @@ def plot_sites(dstore, update_dstore=False):
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     xlim, ylim = auto_limits(ax)
     add_borders(ax)
+    add_region_labels(ax)
     adjust_limits(ax, xlim, ylim, padding=padding)
     if update_dstore:
         bio = io.BytesIO()

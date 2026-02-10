@@ -19,7 +19,7 @@
 from openquake.baselib import hdf5, sap
 from openquake.hazardlib.geo.utils import geolocate_with_index
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
-from openquake.calculators.postproc.plots import add_borders
+from openquake.calculators.postproc.plots import add_borders, add_region_labels
 
 
 def get_lon_lat(csvfile):
@@ -52,6 +52,7 @@ def main(files_csv):
         # for model, id, lon, lat in zip(models, df.ID, df.lon, df.lat):
         #     ax.annotate(model + str(id), (lon, lat))
     add_borders(ax, spatial_index=mosaic_spatial_index)
+    add_region_labels(ax, spatial_index=mosaic_spatial_index)
     p.show()
     return p
 

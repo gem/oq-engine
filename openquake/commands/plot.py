@@ -41,7 +41,7 @@ from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
-    adjust_limits, auto_limits)
+    adjust_limits, auto_limits, add_region_labels)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src,
     plot_governing_mce_asce_7_16, plot_mce_spectra, plot_governing_mce,
@@ -564,6 +564,7 @@ def make_figure_ebruptures(extractors, what):
     _fig, ax = plt.subplots()
     mosaic_spatial_index = get_mosaic_spatial_index()
     add_borders(ax, spatial_index=mosaic_spatial_index)
+    add_region_labels(ax, spatial_index=mosaic_spatial_index)
     ax.grid(True)
     ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
                label='sites')
@@ -1091,6 +1092,7 @@ def make_figure_sources(extractors, what):
     xlim, ylim = auto_limits(ax)
     mosaic_spatial_index = get_mosaic_spatial_index()
     add_borders(ax, spatial_index=mosaic_spatial_index)
+    add_region_labels(ax, spatial_index=mosaic_spatial_index)
     adjust_limits(ax, xlim, ylim, padding=8)
     ax.set_title('Sources')
     handles, labels = ax.get_legend_handles_labels()
@@ -1217,6 +1219,7 @@ def plot_h3(hexes):
         lat, lon = mp.geoms[0].exterior.xy
         ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
     add_borders(ax)
+    add_region_labels(ax)
     ax.set_aspect('equal')
     return plt
 

@@ -20,7 +20,6 @@ import io
 import os
 import base64
 import numpy
-from matplotlib.colors import Normalize
 from matplotlib.collections import PatchCollection
 from shapely.geometry import box, MultiPolygon, Polygon, GeometryCollection
 from openquake.commonlib import readinput, datastore
@@ -134,6 +133,95 @@ def add_borders(ax, spatial_index=None, alpha=0.4, cmap='RdBu'):
     ax.callbacks.connect('ylim_changed', redraw)
 
 
+def label_point(geom):
+    """
+    Return a point suitable for labeling a region.
+    Always lies inside the geometry.
+    """
+    try:
+        return geom.representative_point()
+    except Exception:
+        return None
+
+
+def viewport_label_point(geom, viewport):
+    """
+    Return a label point guaranteed to be inside the visible
+    portion of the geometry.
+    """
+    try:
+        rp = geom.representative_point()
+        if viewport.contains(rp):
+            return rp
+        clipped = geom.intersection(viewport)
+        if clipped.is_empty:
+            return None
+        return clipped.representative_point()
+    except Exception:
+        return None
+
+
+def _draw_labels(ax, spatial_index, fontsize):
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    # hide labels when zoomed out
+    if (xmax - xmin) > 40:   # degrees
+        return []
+    viewport = box(xmin, ymin, xmax, ymax)
+    idxs = spatial_index.tree.query(viewport)
+    if len(idxs) == 0:
+        return []
+    texts = []
+    gdf = spatial_index.gdf.iloc[idxs]
+    for _, row in gdf.iterrows():
+        geom = row.geometry
+        label = row[spatial_index.region_code_field]
+        pt = viewport_label_point(geom, viewport)
+        if pt is None:
+            continue
+        x, y = pt.x, pt.y
+        txt = ax.text(
+            x, y, str(label),
+            ha='center',
+            va='center',
+            fontsize=fontsize,
+            color='0.2',
+            zorder=10
+        )
+        texts.append(txt)
+    return texts
+
+
+def add_region_labels(ax, spatial_index=None, fontsize=8):
+    """
+    Add region labels that update on zoom/pan.
+
+    :param ax: matplotlib axis
+    :param spatial_index: SpatialIndex instance
+    :param fontsize: label font size
+    """
+    if spatial_index is None:
+        spatial_index = get_admin_spatial_index(0)
+    state = {'texts': []}
+
+    def redraw(event_ax):
+        # remove old labels
+        for txt in state['texts']:
+            txt.remove()
+        state['texts'].clear()
+
+        state['texts'] = _draw_labels(
+            event_ax, spatial_index, fontsize
+        )
+        event_ax.figure.canvas.draw_idle()
+
+    # initial draw
+    redraw(ax)
+    # redraw on zoom / pan
+    ax.callbacks.connect('xlim_changed', redraw)
+    ax.callbacks.connect('ylim_changed', redraw)
+
+
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
                lon_field='longitude', lat_field='latitude',
                label_field='name'):
@@ -200,6 +288,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                     surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
     add_borders(ax, alpha=0.2)
+    add_region_labels(ax)
     adjust_limits(ax, xlim, ylim)
     if with_cities:
         add_cities(ax, xlim, ylim)
@@ -234,6 +323,7 @@ def plot_avg_gmf(ex, imt):
 
     xlim, ylim = auto_limits(ax)
     add_borders(ax)
+    add_region_labels(ax)
     adjust_limits(ax, xlim, ylim)
     return plt
 
@@ -283,6 +373,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     xlim, ylim = auto_limits(ax)
     if with_borders:
         add_borders(ax)
+        add_region_labels(ax)
     if with_cities:
         add_cities(ax, xlim, ylim)
     adjust_limits(ax, xlim, ylim, padding=3)
