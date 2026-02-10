@@ -160,7 +160,7 @@ class MetaGSIM(abc.ABCMeta):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
-        self._toml = toml.dumps(kwargs)
+        self._toml = toml.dumps({cls.__name__: kwargs}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
