@@ -739,8 +739,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check that you can specify both a site and a site model and the
         # engine will automatically get the closest site model parameters
         self.run_calc(case_66.__file__, 'job1.ini',
-                      calculation_mode='preclassical',
-                      time_per_task='0')
+                      calculation_mode='preclassical')
         self.assertEqual(self.calc.sitecol.vs30, [810.])
 
     def test_case_67(self):
@@ -1041,8 +1040,12 @@ class ClassicalTestCase(CalculatorTestCase):
             case_92.__file__)
 
     def test_case_93(self):
-        # Tests GenericGmpeAvgSA with table-based underlying GMPEs
+        # Tests GenericGmpeAvgSA and IndirecGmpeAvgSA with
+        # table-based underlying GMPEs
         self.assert_curves_ok([
+            "hazard_curve-mean-AvgSA(0.5).csv",
+            "hazard_curve-mean-AvgSA(1.0).csv",
+            'hazard_curve-mean-AvgSA(2.0).csv',
             "hazard_curve-mean-SA(0.5).csv",
             "hazard_curve-mean-SA(1.0).csv",
             'hazard_curve-mean-SA(2.0).csv'],

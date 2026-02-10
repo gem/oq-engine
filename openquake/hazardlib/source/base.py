@@ -205,6 +205,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     trt_smr = -1  # set by the engine
     num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    dt = 0  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
