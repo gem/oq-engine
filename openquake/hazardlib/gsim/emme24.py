@@ -156,15 +156,12 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     the journal paper "PLACEHOLDER".
     """
     DEFINED_FOR_REFERENCE_VELOCITY = 800. # EMME24 backbone is defined for ref
-                                          # velocity of 800 m/s (whereas CY14 is
-                                          # 1130 m/s)
+                                          # velocity of 800 m/s
 
     experimental = True
 
-    COEFFS_EMME_SM = COEFFS_SM # Use the EMME24 site model in CY14 GSIM (also
-                               # turns of the basin term as not considered in
-                               # EMME24 backbone)
-    
+    COEFFS_EMME = COEFFS_SM # Use the EMME24 site model in CY14 GSIM
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

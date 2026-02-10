@@ -773,22 +773,22 @@ class ChiouYoungs2014(GMPE):
         # CyberShake basin adj
         self.cybershake_basin_adj = cybershake_basin_adj
 
+        # If instantiating EMME24 backbone the COEFFS_EMME attribute
+        # will be set (it contains the coeffs for EMME24 site model)
+        if not hasattr(self, "COEFFS_EMME"):
+            setattr(self, "COEFFS_EMME", False)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # If not using EMME24 site model set to False (and use 
-        # CY14 site model as usual)
-        if not hasattr(self, "COEFFS_EMME_SM"):
-            setattr(self, "COEFFS_EMME_SM", False)
-
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
             self.region, self.COEFFS[PGA()], ctx, PGA(),
-            self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
+            self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
             self.cybershake_basin_adj)
         
         # Compute
@@ -803,7 +803,7 @@ class ChiouYoungs2014(GMPE):
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     self.region, self.COEFFS[imt], ctx, imt,
-                    self.COEFFS_EMME_SM, self.conf, self.usgs_basin_scaling,
+                    self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
                 
                 # Reference to page 1144
