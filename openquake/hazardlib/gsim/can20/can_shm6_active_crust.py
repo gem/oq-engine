@@ -117,7 +117,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
 # =============================================================================
 
 
-def shm6_site_correction(C, mean, ctx, imt):
+def shm6_site_correction(C, mean, ctx, imt, vs_ref):
 
     # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
     # CanadaSHM6 hard rock site factors
@@ -129,15 +129,15 @@ def shm6_site_correction(C, mean, ctx, imt):
     # for Japan)
     fake = types.SimpleNamespace()
     fake.vs30 = np.array([760.])
-    cy14_760 = CY14.get_linear_site_term("", C, fake)
+    cy14_760 = CY14.get_linear_site_term("", C, fake, vs_ref)
 
     fake = types.SimpleNamespace()
     fake.vs30 = np.array([1100.])
-    cy14_1100 = CY14.get_linear_site_term("", C, fake)
+    cy14_1100 = CY14.get_linear_site_term("", C, fake, vs_ref)
 
     fake = types.SimpleNamespace()
     fake.vs30 = np.array([2000.])
-    cy14_2000 = CY14.get_linear_site_term("", C, fake)
+    cy14_2000 = CY14.get_linear_site_term("", C, fake, vs_ref)
 
     # CY14 amplification factors relative to Vs30=760 to be consistent
     # with CanadaSHM6 hardrock site factor
@@ -152,7 +152,7 @@ def shm6_site_correction(C, mean, ctx, imt):
     mean[vs30_ge1100] = factor + cy14_760 + mean[vs30_ge1100]
 
 
-def get_mean_stddevs_cy14(region, C, ctx, conf):
+def get_mean_stddevs_cy14(region, C, ctx, ref_vs, conf):
     """
     Return mean and standard deviation values
     """
@@ -164,10 +164,10 @@ def get_mean_stddevs_cy14(region, C, ctx, conf):
     f_z1pt0 = 0.0
 
     # Get linear amplification term
-    f_lin = CY14.get_linear_site_term(region, C, ctx)
+    f_lin = CY14.get_linear_site_term(region, C, ctx, ref_vs)
 
     # Get nonlinear amplification term
-    f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref, ref_vs)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -211,7 +211,8 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
         # Reference to page 1144, PSA might need PGA value
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs_cy14(
-            self.region, self.COEFFS[PGA()], ctx, self.conf)
+            self.region, self.COEFFS[PGA()], ctx, self.DEFINED_FOR_REFERENCE_VELOCITY,
+            self.conf)
 
         # Processing IMTs
         for m, imt in enumerate(imts):
@@ -219,12 +220,14 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
                 mean[m] = pga_mean
 
                 # Site term correction fos SHM6
-                shm6_site_correction(self.COEFFS[imt], mean[m], ctx, imt)
+                shm6_site_correction(self.COEFFS[imt], mean[m], ctx, imt,
+                                     self.DEFINED_FOR_REFERENCE_VELOCITY)
 
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs_cy14(
-                    self.region, self.COEFFS[imt], ctx, self.conf)
+                    self.region, self.COEFFS[imt], ctx, self.DEFINED_FOR_REFERENCE_VELOCITY,
+                    self.conf)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
