@@ -209,7 +209,6 @@ def gsim(value, basedir=''):
         gs = gsim_class(**kwargs)
     else:  # is an alias, i.e. a thunk
         gs = gsim_class()
-    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
 
