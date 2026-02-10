@@ -616,7 +616,7 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
 
     event = Inp(event_id, CCL_per_event, PCL_mean_per_event,
                 WCL_mean_per_event, Glo_effloss_per_event)
-    _update_demand(o, event, max_nodes_network)
+    _update_demand(o, event)
         
     if N <= max_nodes_network:
         eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
@@ -624,7 +624,7 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
             'id', as_index=False).sum()
 
 
-def _update_demand(o, event, max_nodes_network):
+def _update_demand(o, event):
     # Storing the value of performance indicators for each event
     o.event_connectivity_loss_ccl = pd.concat(
         [o.event_connectivity_loss_ccl, pd.DataFrame.from_records(
