@@ -197,7 +197,7 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 
 def _split_src(srcs, n):
-    return [list(blk) for blk in split_in_blocks(srcs, n, get_weight)]
+    return split_in_blocks(srcs, n, get_weight)
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -604,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 30, 30)
+        self.split_time = split_time = max(max_gb * 30, 20)
         if not self.few_sites:
             logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
