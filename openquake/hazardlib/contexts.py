@@ -1707,7 +1707,7 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     return out
 
 
-# mock of a rupture used in the tests and in the module of the OQ-MBTK
+# mock of a rupture used in the tests and in the SMT module of the OQ-MBTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
