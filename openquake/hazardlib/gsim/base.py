@@ -159,9 +159,7 @@ class MetaGSIM(abc.ABCMeta):
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
-        if not hasattr(self, 'kwargs'):
-            # the only case where .kwargs is set internally is MultiGMPE
-            self.kwargs = kwargs
+        self.kwargs = kwargs
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
