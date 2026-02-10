@@ -14,77 +14,6 @@
  You should have received a copy of the GNU Affero General Public License
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
-@media (min-width: 1070px) and (max-width: 1120px) {
-    .table-aelo-form {
-        width: 76%!important;
-    }
-    .table-aelo-form-2 {
-        width: 63%!important;
-    }
-    .aelo-input-siteid {
-        width: 277px!important;
-    }
-    .aelo-input {
-        width: 170px;
-    }
-    .aelo-select {
-        width: 184px!important;
-    }
-}
-
-@media (min-width: 960px) and (max-width: 1069px) {
-    .table-aelo-form {
-        width: 85%!important;
-    }
-    .table-aelo-form-2 {
-        width: 70%!important;
-    }
-    .aelo-input-siteid {
-        width: 267px!important;
-    }
-    .aelo-input {
-        width: 160px;
-    }
-    .aelo-select {
-        width: 174px!important;
-    }
-}
-
-@media (min-width: 760px) and (max-width: 959px) {
-    .table-aelo-form {
-        width: 100%!important;
-    }
-    .table-aelo-form-2 {
-        width: 80%!important;
-    }
-    .aelo-input-siteid {
-        width: 247px!important;
-    }
-    .aelo-input {
-        width: 140px;
-    }
-    .aelo-select {
-        width: 154px!important;
-    }
-}
-
-@media (min-width: 640px) and (max-width: 759px) {
-    .table-aelo-form {
-        width: 100%!important;
-    }
-    .table-aelo-form-2 {
-        width: 80%!important;
-    }
-    .aelo-input-siteid {
-        width: 90%!important;
-    }
-    .aelo-input {
-        width: 80%;
-    }
-    .aelo-select {
-        width: 140px!important;
-    }
-}
 
 tr.asce_output {
     font-weight: bold;
@@ -100,10 +29,14 @@ tr.asce_output {
 }
 
 .aelo-input {
-    width: 193px;
+    width: 90%;
     vertical-align: top!important;
     height: 11px!important;
     padding-bottom: 10px!important;
+}
+
+input.aelo-input-site_name {
+    width: 100%;
 }
 
 .aelo-input-siteid {
@@ -116,16 +49,16 @@ tr.asce_output {
 
 .aelo-select {
     height: 33px!important;
-    width: 207px;
+    width: 95%;
 }
 
 .table-aelo-form {
-    width: 70%;
+    width: 80%;
     margin-bottom: 0;
 }
 
 .table-aelo-form-2 {
-    width: 62%;
+    width: 80%;
 }
 
 .table-aelo-form tr th,
