@@ -645,7 +645,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
         if len(self.rmap) > 1 and size_gb > 1:
-            logging.info('Saving %d RateMaps, %.2f GB', len(self.rmap), size_gb)
+            logging.info('Saving %d RateMaps, %.1f GB', len(self.rmap), size_gb)
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
                 savemap.submit((rmap, self.num_chunks))
