@@ -127,16 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(g, rates_g, N, num_chunks, mon):
+def save_rates(rmap, num_chunks, mon):
     """
-    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    Store the rates on a file calc_id/task_no.hdf5
     """
-    sids = numpy.arange(N)
-    for chunk, mask in gen_chunks(sids, num_chunks):
-        rmap = MapArray(sids[mask], rates_g.shape[1], 1)
-        rmap.array = rates_g[mask, :, numpy.newaxis]
-        rats = rmap.to_array([g])
-        _store(rats, num_chunks, None, mon)
+    for g in rmap.jid:
+        _store(rmap.to_array(g), num_chunks, None, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -648,15 +644,14 @@ class ClassicalCalculator(base.HazardCalculator):
         # save the rates and performs some checks
         oq = self.oqparam
         size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
-        if size_gb > 1:
+        if len(self.rmap) > 1 and size_gb > 1:
             logging.info('Saving %d RateMaps, %.2f GB', len(self.rmap), size_gb)
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
-                for g, j in rmap.jid.items():
-                    rates_g = rmap.array[:, :, rmap.jid[g]]
-                    savemap.submit((g, rates_g, self.N, self.num_chunks))
+                savemap.submit((rmap, self.num_chunks))
             savemap.reduce()
         else:
+            # store sequentially
             for rmap in self.rmap.values():
                 for g in rmap.jid:
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
