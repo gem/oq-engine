@@ -60,7 +60,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
-        scratch = parallel.scratch_dir(mon.calc_id)
+        scratch = parallel.scratch_dir(mon.filename)
         h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
     data = AccumDict(accum=[])
     try:
@@ -127,18 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(g, N, jid, num_chunks, mon):
+def save_rates(rmap, num_chunks, mon):
     """
-    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    Store the rates on a file calc_id/task_no.hdf5
     """
-    with mon.shared['rates'] as rates:
-        rates_g = rates[:, :, jid[g]]
-        sids = numpy.arange(N)
-        for chunk, mask in gen_chunks(sids, num_chunks):
-            rmap = MapArray(sids[mask], rates.shape[1], 1)
-            rmap.array = rates_g[mask, :, None]
-            rats = rmap.to_array([g])
-            _store(rats, num_chunks, None, mon)
+    for g in rmap.jid:
+        _store(rmap.to_array(g), num_chunks, None, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -650,19 +644,17 @@ class ClassicalCalculator(base.HazardCalculator):
         # save the rates and performs some checks
         oq = self.oqparam
         size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
-        logging.info('Saving %d RateMaps, %.2f GB', len(self.rmap), size_gb)
-
-        def genargs():
-            # produce Gt arguments
+        if len(self.rmap) > 1 and size_gb > 1:
+            logging.info('Saving %d RateMaps, %.1f GB', len(self.rmap), size_gb)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
-                for g, j in rmap.jid.items():
-                    yield grp_id, g, self.N, rmap.jid, self.num_chunks
-
-        mon = self.monitor('storing rates', measuremem=True)
-        for grp_id, g, N, jid, num_chunks in genargs():
-            with mon:
-                rates = self.rmap[grp_id].to_array(g)
-                _store(rates, self.num_chunks, self.datastore)
+                savemap.submit((rmap, self.num_chunks))
+            savemap.reduce()
+        else:
+            # store sequentially
+            for rmap in self.rmap.values():
+                for g in rmap.jid:
+                    _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
