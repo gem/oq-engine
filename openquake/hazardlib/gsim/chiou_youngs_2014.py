@@ -644,7 +644,7 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
 
         # Sigma components are determined within EMME backbone's compute method
         sig, tau, phi =\
-              np.empty_like(mean), np.empty_like(mean), np.empty_like(mean)
+              np.zeros(mean.shape), np.zeros(mean.shape), np.zeros(mean.shape)
 
     return mean, sig, tau, phi
 
