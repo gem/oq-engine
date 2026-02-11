@@ -30,7 +30,6 @@ import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy
-from shapely.geometry import Point
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
