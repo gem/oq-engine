@@ -203,11 +203,8 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
         else:
             wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
-    try:
-        scratch_dir = dstore.hdf5.attrs['scratch_dir']
-    except KeyError:  # no tiling
-        pass
-    else:
+    scratch_dir = dstore.filename[:-5]
+    if os.path.exists(scratch_dir):
         for f in os.listdir(scratch_dir):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(scratch_dir, f))
