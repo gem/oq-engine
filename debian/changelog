@@ -1,6 +1,7 @@
   [Christopher Brooks]
-  * Added the EMME24 site model to the existing EMME backbone model for ASCR
-    (files describing the site model were provided by Abdullah Sandıkkaya).
+  * Added the EMME24 site model to the existing OQ implementation of the
+    EMME backbone model for ASCR (files describing the site model were
+    provided by Abdullah Sandıkkaya).
 
   [Michele Simionato]
   * Internal: instantiating a GSIM automagically generates a ._toml
