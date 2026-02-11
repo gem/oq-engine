@@ -649,7 +649,8 @@ class ClassicalCalculator(base.HazardCalculator):
     def _post_execute(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
-        logging.info('Saving RateMaps')
+        size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
+        logging.info('Saving %d RateMaps, %.2f GB', len(self.rmap), size_gb)
 
         def genargs():
             # produce Gt arguments
