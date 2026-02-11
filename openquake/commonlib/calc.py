@@ -494,10 +494,12 @@ def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):
     :returns: list of regions intersecting the circle
         centered on the given coordinates having the specified radius
     """
+    # NOTE: we don't need an additional buffer around the region geometries,
+    #       because we are already using a buffer around the site coordinates
     if region_kind == 'mosaic_model':
-        regions_df = readinput.read_mosaic_df(buffer=1)
+        regions_df = readinput.read_mosaic_df(0.)
     elif region_kind == 'country':
-        regions_df = readinput.read_countries_df(buffer=1)
+        regions_df = readinput.read_countries_df(0.)
     else:
         raise NotImplementedError(f'Unexpected {region_kind=}')
     center = Point(lon, lat)

@@ -894,7 +894,7 @@ class SiteCollection(object):
         geoBoundariesCGAZ_ADM0.gpkg
         """
         from openquake.commonlib import readinput
-        geom_df = readinput.read_countries_df()
+        geom_df = readinput.read_countries_df(0.)
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats

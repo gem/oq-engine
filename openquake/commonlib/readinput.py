@@ -1734,6 +1734,9 @@ def read_geometries(fname, name, buffer=0):
     :param fname: path of the file containing the geometries
     :param name: name of the primary key field
     :param buffer: shapely buffer in degrees
+        (NOTE: the buffer can mitigate some issues related to simplified
+        geometries, but the bigger it is, the more it slows down
+        the reshaping)
     :returns: data frame with codes and geometries
     """
     with fiona.open(fname) as f:
@@ -1780,7 +1783,7 @@ def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
-def read_countries_df(buffer=0.1):
+def read_countries_df(buffer=0.0):
     """
     :returns: a DataFrame of geometries for the world countries
     """

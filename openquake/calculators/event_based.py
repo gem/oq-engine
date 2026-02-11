@@ -617,7 +617,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 geom = geometry.shape(f[0].geometry)
             mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0)
+            mosaic_df = readinput.read_mosaic_df(buffer=0.)
         else:
             mosaic_df = ()
         logging.info('Building ruptures')
