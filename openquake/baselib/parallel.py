@@ -219,12 +219,17 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
-def scratch_dir(job_id):
+def scratch_dir(job_id_or_fname):
     """
-    :returns: scratch directory associated to the given job_id
+    :param job_id_or_fname: job ID (integer) or .hdf5 pathname (string)
+    :returns: scratch directory associated to the given job_id_or_fname
     """
-    tmp = config.directory.custom_tmp or tempfile.gettempdir()
-    dirname = os.path.join(tmp, getpass.getuser(), f'calc_{job_id}')
+    if isinstance(job_id_or_fname, str):
+        dirname = job_id_or_fname[:-5]  # strip .hdf5
+    else:  # in SLURM clusters
+        job_id = job_id_or_fname
+        tmp = config.directory.custom_tmp or tempfile.gettempdir()
+        dirname = os.path.join(tmp, getpass.getuser(), f'calc_{job_id}')
     try:
         os.makedirs(dirname)
     except FileExistsError:  # already created

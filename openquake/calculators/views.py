@@ -293,8 +293,8 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
-    scratch_dir = dstore['/'].attrs.get('scratch_dir')
-    if scratch_dir:
+    scratch_dir = dstore.filename[:-5]
+    if os.path.exists(scratch_dir):
         size = 0
         for fname in os.listdir(scratch_dir):
             size += os.path.getsize(os.path.join(scratch_dir, fname))
