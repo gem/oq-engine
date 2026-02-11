@@ -104,7 +104,7 @@ class CondSpectraTestCase(unittest.TestCase):
             'source_model': SOURCES_XML,
             'gsim_logic_tree': os.path.join(CWD, 'data', 'lt01.xml')})
 
-        [ctx] = inp.cmaker.from_srcs(inp.group, inp.sitecol)
+        ctx = inp.cmaker.from_srcs(inp.group, inp.sitecol)
         tom = inp.group.temporal_occurrence_model
         assert len(ctx) == 100
         ctx1 = ctx[:50]
@@ -137,7 +137,7 @@ class CondSpectraTestCase(unittest.TestCase):
         inp = read_input(PARAM)
         cmaker = inp.cmaker
         src_group = inp.group
-        [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        ctx = cmaker.from_srcs(src_group, inp.sitecol)
         tom = src_group.temporal_occurrence_model
 
         # The hazard for the target IMT and poe=0.002105
