@@ -27,10 +27,11 @@ from h3.api.numpy_int import geo_to_h3, h3_to_geo
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
-from openquake.baselib.general import not_equal, get_duplicates, cached_property
+from openquake.baselib.general import (
+    not_equal, get_duplicates, cached_property)
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
-    spherical_to_cartesian, get_middle_point, geolocate_with_index)
+    spherical_to_cartesian, get_middle_point)
 from openquake.hazardlib.geo.spatial_index import get_admin_spatial_index
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
@@ -141,8 +142,8 @@ class TileGetter:
         return sc
 
     def __repr__(self):
-        return  '<%s %d of %d>' % (self.__class__.__name__,
-                                   self.tileno, self.ntiles)
+        return '<%s %d of %d>' % (self.__class__.__name__,
+                                  self.tileno, self.ntiles)
 
 
 class Site(object):
@@ -892,11 +893,11 @@ class SiteCollection(object):
         """
         Return the countries for each site in the SiteCollection.
         """
-        countries_spatial_index = get_admin_spatial_index(0)
+        countries_sindex = get_admin_spatial_index(0)
         lonlats = numpy.zeros((len(self), 2), numpy.float32)
         lonlats[:, 0] = self.lons
         lonlats[:, 1] = self.lats
-        return geolocate_with_index(lonlats, countries_spatial_index)
+        return countries_sindex.locate_many(lonlats)
 
     def by_country(self):
         """

@@ -31,7 +31,6 @@ from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from
-from openquake.hazardlib.geo.utils import geolocate_with_index
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -86,8 +85,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_spatial_index = get_mosaic_spatial_index()
-    sites_df['model'] = geolocate_with_index(lonlats, mosaic_spatial_index)
+    mosaic_sindex = get_mosaic_spatial_index()
+    sites_df['model'] = mosaic_sindex.locate_many(lonlats)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
     if 'vs30' not in sites_df.keys():

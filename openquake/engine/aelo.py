@@ -22,7 +22,7 @@ import os
 import sys
 import logging
 from openquake.baselib import config, sap
-from openquake.hazardlib import valid, geo
+from openquake.hazardlib import valid
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
@@ -69,9 +69,8 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     from the mosaic files.
     """
     lonlats = valid.coordinates(inputs['sites'])
-    mosaic_spatial_index = get_mosaic_spatial_index()
-    models = geo.utils.geolocate_with_index(
-        lonlats, mosaic_spatial_index, exclude)
+    mosaic_sindex = get_mosaic_spatial_index()
+    models = mosaic_sindex.locate_many(lonlats, exclude)
     if len(set(models)) > 1:
         raise ValueError("The sites must all belong to the same model, got %s"
                          % set(models))

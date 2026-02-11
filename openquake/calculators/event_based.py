@@ -661,7 +661,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 if len(mosaic_df):
                     # NOTE: this is the last remaining occurrence in the oq-engine
                     #       repo calling the original geolocate function. We could
-                    #       adapt this workflow to use geolocate_with_index
+                    #       adapt this workflow to use the SpatialIndex class
                     rup_array['model'] = geolocate(
                         rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later

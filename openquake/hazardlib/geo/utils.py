@@ -950,49 +950,6 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate_with_index(lonlats, spatial_index, exclude=()):
-    """
-    Batch geolocation using geometry bounding boxes
-    + vectorized contains_xy.
-    Compatible with Shapely 1.x (no query_bulk).
-    Accepts:
-      - list of tuples
-      - numpy array (N, >=2), e.g. with lon,lat,depth
-    """
-    if not isinstance(lonlats, numpy.ndarray):
-        lonlats = numpy.asarray(lonlats)
-    if lonlats.ndim != 2 or lonlats.shape[1] < 2:
-        raise ValueError("lonlats must be shape (N, >=2)")
-    lonlats2d = lonlats[:, :2]
-    gdf = spatial_index.gdf
-    geoms = spatial_index.geoms
-    codes_col = gdf[spatial_index.region_code_field].values
-    if exclude:
-        exclude = set(exclude)
-    N = len(lonlats2d)
-    result = numpy.full(N, "???", dtype=object)
-    xs = lonlats2d[:, 0]
-    ys = lonlats2d[:, 1]
-    for geom, code in zip(geoms, codes_col):
-        if exclude and code in exclude:
-            continue
-        minx, miny, maxx, maxy = geom.bounds
-        bbox_mask = (
-            (xs >= minx) &
-            (xs <= maxx) &
-            (ys >= miny) &
-            (ys <= maxy)
-        )
-        if not bbox_mask.any():
-            continue
-        candidate_idx = numpy.nonzero(bbox_mask)[0]
-        pts_subset = lonlats[candidate_idx]
-        ok = contains_xy(geom, pts_subset)
-        matched = candidate_idx[ok]
-        result[matched] = code
-    return result
-
-
 # resolution=3 means 12,386 square km (Connecticut)
 def hex6(lons, lats):
     """

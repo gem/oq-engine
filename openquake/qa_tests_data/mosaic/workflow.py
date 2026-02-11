@@ -1,7 +1,6 @@
 import os
 import pandas
 from openquake.baselib import sap
-from openquake.hazardlib.geo.utils import geolocate_with_index
 from openquake.risklib.countries import REGIONS, country2code
 from openquake.hazardlib.geo.spatial_index import get_mosaic_spatial_index
 
@@ -44,8 +43,8 @@ def add_checkout(lst, models):
 def get_aelo_sites(site_file):
     sites_df = pandas.read_csv(site_file)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
-    mosaic_spatial_index = get_mosaic_spatial_index()
-    sites_df['model'] = geolocate_with_index(lonlats, mosaic_spatial_index)
+    mosaic_sindex = get_mosaic_spatial_index()
+    sites_df['model'] = mosaic_sindex.locate_many(lonlats)
     sites = {}
     siteid = {}
     for model, df in sites_df.groupby('model'):

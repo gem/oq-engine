@@ -19,8 +19,10 @@
 import warnings
 import os
 import geopandas as gpd
+import numpy
 from pathlib import Path
 from functools import lru_cache
+from shapely import contains_xy
 from shapely.geometry import Point
 from shapely.strtree import STRtree
 from openquake.baselib import config
@@ -97,6 +99,32 @@ class SpatialIndex:
                 else:
                     found.append(self.gdf.iloc[int(i)])
         return found
+
+    def locate_many(self, lonlats, exclude=()):
+        """
+        Bulk geolocation of multiple points.
+
+        :param lonlats: array-like of shape (N, 2) or (N, 3),
+            i.e. with or without depth
+        :param exclude: iterable of codes to skip
+        :return: numpy.array of codes, one per point
+        """
+        if not isinstance(lonlats, numpy.ndarray):
+            lonlats = numpy.asarray(lonlats)
+        lonlats2d = lonlats[:, :2]  # discard depth if present
+        # initialize all points with default value
+        codes_out = numpy.full(len(lonlats2d), '???', dtype=object)
+        if exclude:
+            df = self.gdf[~self.gdf[self.region_code_field].isin(exclude)]
+        else:
+            df = self.gdf
+        # group by code, perform OR across multiple geometries
+        for code, group in df.groupby(self.region_code_field):
+            mask = numpy.zeros(len(lonlats2d), dtype=bool)
+            for geom in group.geometry:
+                mask |= contains_xy(geom, lonlats2d)
+            codes_out[mask] = code
+        return codes_out
 
 
 class MosaicSpatialIndex(SpatialIndex):
