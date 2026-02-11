@@ -137,7 +137,11 @@ def get_mosaic_spatial_index():
 
 @lru_cache(maxsize=3)
 def get_admin_spatial_index(admin_level):
-    region_code_field = 'shapeName'  # FIXME: in openquake.cfg?
+    # FIXME: specify region_code_field in openquake.cfg?
+    if admin_level == 0:
+        region_code_field = 'shapeGroup'
+    else:
+        region_code_field = 'shapeName'
     try:
         geodata_path = config.directory[f'admin{admin_level}_geodata_path']
     except KeyError:
