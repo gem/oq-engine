@@ -30,6 +30,7 @@ import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy
+from shapely.geometry import Point
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -952,20 +953,37 @@ def geolocate(lonlats, geom_df, exclude=()):
 
 def geolocate_with_index(lonlats, spatial_index, exclude=()):
     """
-    :param lonlats: array of shape (N, 2) or (N, 3)
-    :param spatial_index: instance of SpatialIndex
-    :param exclude: iterable of codes to exclude
-    :returns: array of codes
+    Batch geolocation using geometry bounding boxes
+    + vectorized contains_xy.
+    Compatible with Shapely 1.x (no query_bulk).
     """
-    codes = numpy.array(['???'] * len(lonlats), dtype=object)
-    for i, (lon, lat, *_) in enumerate(lonlats):
-        match = spatial_index.locate(lon, lat)
-        if match is None:
+    gdf = spatial_index.gdf
+    geoms = spatial_index.geoms
+    codes_col = gdf[spatial_index.region_code_field].values
+    if exclude:
+        exclude = set(exclude)
+    N = len(lonlats)
+    result = numpy.full(N, "???", dtype=object)
+    xs = lonlats[:, 0]
+    ys = lonlats[:, 1]
+    for geom, code in zip(geoms, codes_col):
+        if exclude and code in exclude:
             continue
-        if match in exclude:
+        minx, miny, maxx, maxy = geom.bounds
+        bbox_mask = (
+            (xs >= minx) &
+            (xs <= maxx) &
+            (ys >= miny) &
+            (ys <= maxy)
+        )
+        if not bbox_mask.any():
             continue
-        codes[i] = match
-    return codes
+        candidate_idx = numpy.nonzero(bbox_mask)[0]
+        pts_subset = lonlats[candidate_idx]
+        ok = contains_xy(geom, pts_subset)
+        matched = candidate_idx[ok]
+        result[matched] = code
+    return result
 
 
 # resolution=3 means 12,386 square km (Connecticut)
