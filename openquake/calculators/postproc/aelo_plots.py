@@ -592,7 +592,7 @@ def plot_sites(dstore, update_dstore=False):
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     xlim, ylim = auto_limits(ax)
     add_borders(ax)
-    add_region_labels(ax)
+    # add_region_labels(ax)  # uncomment if needed
     adjust_limits(ax, xlim, ylim, padding=padding)
     if update_dstore:
         bio = io.BytesIO()

@@ -264,8 +264,8 @@ def plt_to_base64(plt):
 
 
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
-                  with_cities=False, return_base64=False,
-                  rupture=None):
+                  with_cities=False, with_region_labels=False,
+                  return_base64=False, rupture=None):
     plt = import_plt()
     if backend is not None:
         # we may need to use a non-interactive backend
@@ -280,15 +280,16 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
     markersize = 5
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
+    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'],
+                      c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll)
     if rupture is not None:
-        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-                    surf_facecolor='none', surf_linestyle='--')
+        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8,
+                    surf_alpha=0.9, surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
     add_borders(ax, alpha=0.2)
-    add_region_labels(ax)
+    if with_region_labels:
+        add_region_labels(ax)
     adjust_limits(ax, xlim, ylim)
     if with_cities:
         add_cities(ax, xlim, ylim)
@@ -323,7 +324,7 @@ def plot_avg_gmf(ex, imt):
 
     xlim, ylim = auto_limits(ax)
     add_borders(ax)
-    add_region_labels(ax)
+    # add_region_labels(ax)  # uncomment if needed
     adjust_limits(ax, xlim, ylim)
     return plt
 
@@ -354,7 +355,8 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
-                 with_cities=False, with_borders=True, return_base64=False):
+                 with_cities=False, with_borders=True,
+                 with_region_labels=False, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -373,6 +375,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     xlim, ylim = auto_limits(ax)
     if with_borders:
         add_borders(ax)
+    if with_region_labels:
         add_region_labels(ax)
     if with_cities:
         add_cities(ax, xlim, ylim)

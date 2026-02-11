@@ -1193,6 +1193,7 @@ def plot_wkt(wkt_string):
     ax.plot(coo[:, 0], coo[:, 1], 'o')
     mosaic_spatial_index = get_mosaic_spatial_index()
     add_borders(ax, spatial_index=mosaic_spatial_index)
+    add_region_labels(ax, spatial_index=mosaic_spatial_index)
     return plt
 
 
@@ -1219,7 +1220,6 @@ def plot_h3(hexes):
         lat, lon = mp.geoms[0].exterior.xy
         ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
     add_borders(ax)
-    add_region_labels(ax)
     ax.set_aspect('equal')
     return plt
 

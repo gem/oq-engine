@@ -28,8 +28,8 @@ from openquake.calculators.postproc.plots import (
     adjust_limits, auto_limits, add_region_labels)
 
 
-def main(calc_id: int = -1, site_model=False,
-         save_to=None, *, show=True, assets_only=False):
+def main(calc_id: int = -1, *, site_model=False, save_to=None,
+         show=True, assets_only=False, show_region_labels=False):
     """
     Plot the sites, the assets and also rupture and stations if available
     """
@@ -140,7 +140,8 @@ def main(calc_id: int = -1, site_model=False,
         xlim, ylim = auto_limits(ax)
 
     add_borders(ax)
-    add_region_labels(ax)
+    if show_region_labels:
+        add_region_labels(ax)
     adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
@@ -169,3 +170,4 @@ main.site_model = 'plot the site model too'
 main.save_to = 'save the plot to this filename'
 main.show = 'show the plot'
 main.assets_only = 'display assets only (without sites and discarded)'
+main.show_region_labels = 'display region names if possible'
