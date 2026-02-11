@@ -955,16 +955,24 @@ def geolocate_with_index(lonlats, spatial_index, exclude=()):
     Batch geolocation using geometry bounding boxes
     + vectorized contains_xy.
     Compatible with Shapely 1.x (no query_bulk).
+    Accepts:
+      - list of tuples
+      - numpy array (N, >=2), e.g. with lon,lat,depth
     """
+    if not isinstance(lonlats, numpy.ndarray):
+        lonlats = numpy.asarray(lonlats)
+    if lonlats.ndim != 2 or lonlats.shape[1] < 2:
+        raise ValueError("lonlats must be shape (N, >=2)")
+    lonlats2d = lonlats[:, :2]
     gdf = spatial_index.gdf
     geoms = spatial_index.geoms
     codes_col = gdf[spatial_index.region_code_field].values
     if exclude:
         exclude = set(exclude)
-    N = len(lonlats)
+    N = len(lonlats2d)
     result = numpy.full(N, "???", dtype=object)
-    xs = lonlats[:, 0]
-    ys = lonlats[:, 1]
+    xs = lonlats2d[:, 0]
+    ys = lonlats2d[:, 1]
     for geom, code in zip(geoms, codes_col):
         if exclude and code in exclude:
             continue
