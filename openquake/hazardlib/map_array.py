@@ -560,6 +560,15 @@ class RateMap:
     size_mb = MapArray.size_mb
     __repr__ = MapArray.__repr__
 
+    @classmethod
+    def new(cls, array, jid):
+        self = object.__new__(cls)
+        self.sids = numpy.arange(len(array))
+        self.shape = array.shape
+        self.array = array
+        self.jid = jid
+        return self
+        
     def __init__(self, sids, L, gids):
         self.sids = sids
         self.shape = len(sids), L, len(gids)
