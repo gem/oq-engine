@@ -89,16 +89,32 @@ class SpatialIndex:
         return None
 
     def nearby(self, lon, lat, threshold_deg, region_code_only=True):
+        """
+        Find all geometries within threshold_deg of the point (lon, lat),
+        sorted by distance to the point.
+
+        :param lon: longitude
+        :param lat: latitude
+        :param threshold_deg: distance threshold in degrees
+        :param region_code_only: if True, return only the region code
+        :returns: list of geometries or codes, sorted by distance ascending
+        """
         p = Point(lon, lat)
         buf = p.buffer(threshold_deg)
-        found = []
-        for i in self._candidates(buf):
-            if self.geoms[i].intersects(buf):
-                if region_code_only:
-                    found.append(self.gdf.iloc[int(i)][self.region_code_field])
-                else:
-                    found.append(self.gdf.iloc[int(i)])
-        return found
+        candidates = self._candidates(buf)
+        results = []
+        for i in candidates:  # NOTE: expecting a small number of candidates
+            geom = self.geoms[i]
+            dist = geom.distance(p)
+            if dist <= threshold_deg:
+                item = (self.gdf.iloc[int(i)][self.region_code_field]
+                        if region_code_only
+                        else self.gdf.iloc[int(i)])
+                results.append((dist, item))
+        # sort by distance
+        results.sort(key=lambda x: x[0])
+        # return only the item, discard distances
+        return [item for _, item in results]
 
     def locate_many(self, lonlats, exclude=()):
         """
