@@ -524,11 +524,11 @@ def get_emme_site_term(C, ctx, C_EMME, conf):
     ln_gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
 
     # Linear component
-    linear = C_EMME["a1"] * np.log(ctx.vs30 / ref_vs)
+    linear = C_EMME["a1"] * np.log(np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
     
     # Part 1 of non-linear component
     non_linear_p1 = C_EMME["a2"] * (
-        np.exp((ctx.vs30 - 360.) * C_EMME["a3"]) -
+        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
         np.exp(440. * C_EMME["a3"])
         ) 
     

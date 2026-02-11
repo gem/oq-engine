@@ -42,30 +42,31 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 # EMME24 site model is fed into CY14 and used instead of the CY14 site model
 COEFFS_SM = CoeffsTable(
     sa_damping=5, table=""" 
-    IMT     a1      a2       a3       a4
-    pga    -0.4474  -0.1332  -0.0080  0.1460
-    0.01   -0.4474  -0.1267  -0.0080  0.1460
-    0.02   -0.4343  -0.1161  -0.0080  0.1650
-    0.03   -0.3948  -0.1213  -0.0080  0.1750
-    0.04   -0.3565  -0.1325  -0.0080  0.1810
-    0.05   -0.3268  -0.1542  -0.0070  0.1920
-    0.075  -0.3148  -0.1930  -0.0070  0.2440
-    0.1    -0.3736  -0.2279  -0.0070  0.2710
-    0.15   -0.4951  -0.2629  -0.0070  0.3120
-    0.2    -0.6140  -0.2597  -0.0070  0.2900
-    0.25   -0.7079  -0.2373  -0.0080  0.2500
-    0.3    -0.7991  -0.2018  -0.0080  0.2150
-    0.4    -0.9143  -0.1595  -0.0080  0.1630
-    0.5    -0.9995  -0.1313  -0.0090  0.1410
-    0.75   -1.0520  -0.0832  -0.0090  0.0990
-    1      -1.0706  -0.0688  -0.0090  0.0810
-    1.5    -1.0724  -0.0524  -0.0070  0.0400
-    2      -1.0422  -0.0444  -0.0040  0.0270
-    3      -0.9938  -0.0286  -0.0020  0.0150
-    4      -0.9454  -0.0129  -0.0020  0.0080
-    5      -0.8856   0.0000  -0.0010  0.0070
-    7.5    -0.7715   0.0000   0.0000  0.0050
-    10     -0.6503   0.0000   0.0000  0.0040
+    IMT     a1      a2       a3       a4      Vc
+    pgv    -0.7905  -0.0660  -0.0090  5.0000  1300
+    pga    -0.4474  -0.1332  -0.0075  0.1200  1418
+    0.01   -0.4474  -0.1267  -0.0077  0.1200  1418
+    0.02   -0.4343  -0.1161  -0.0082  0.1260  1410
+    0.03   -0.3948  -0.1213  -0.0082  0.1360  1402
+    0.04   -0.3565  -0.1325  -0.0079  0.1490  1395
+    0.05   -0.3268  -0.1542  -0.0072  0.1620  1388
+    0.075  -0.3148  -0.1930  -0.0065  0.2000  1365
+    0.1    -0.3736  -0.2279  -0.0064  0.2260  1352
+    0.15   -0.4951  -0.2629  -0.0063  0.2600  1304
+    0.2    -0.6140  -0.2597  -0.0065  0.2440  1256
+    0.25   -0.7079  -0.2373  -0.0068  0.2140  1200
+    0.3    -0.7991  -0.2018  -0.0072  0.1880  1138
+    0.4    -0.9143  -0.1595  -0.0077  0.1500  1047
+    0.5    -0.9995  -0.1313  -0.0082  0.1250  1000
+    0.75   -1.0520  -0.0832  -0.0088  0.0800  1000
+    1      -1.0706  -0.0688  -0.0088  0.0640  1000
+    1.5    -1.0724  -0.0524  -0.0072  0.0330  1000
+    2      -1.0422  -0.0444  -0.0046  0.0230  1000
+    3      -0.9938  -0.0286  -0.0016  0.0130  1000
+    4      -0.9454  -0.0129  -0.0010  0.0070  1000
+    5      -0.8856   0.0000  -0.0008  0.0060  1000
+    7.5    -0.7715   0.0000  -0.0005  0.0050  1000
+    10     -0.6503   0.0000  -0.0005  0.0040  1000
     """
     )
 
@@ -150,10 +151,13 @@ def _compute_scalefactor(ctx, C_BB):
 
 class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     """
-    EMME24 backbone model for active shallow crustal earthquakes. This class
-    is the lower range, lower sigma model branch. This backbone GMM adjusts
-    the Chiou and Youngs (2014) GMPE using the corrections described within
-    the journal paper "PLACEHOLDER".
+    EMME24 backbone model for active shallow crustal earthquakes developed by
+    Baran Güryuva, Ozkan Kale, Abdullah Sandıkkaya and Laurentiu Danciu.
+    
+    This class is the lower range, lower sigma model branch
+    
+    This backbone GMM adjusts the Chiou and Youngs (2014) GMPE using the
+    corrections described within the journal paper: "PLACEHOLDER"
     """
     DEFINED_FOR_REFERENCE_VELOCITY = 800. # EMME24 backbone is defined for ref
                                           # velocity of 800 m/s
@@ -170,7 +174,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         """
         # First get mean from CY14 but with EMME site model
         super().compute(ctx, imts, mean, sig, tau, phi)
-
+        
         # Now make adjustments per IMT
         for m, imt in enumerate(imts):
 
@@ -193,7 +197,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
             tau[m] = std_inter
             phi[m] = std_intra
             sig[m] = np.sqrt(std_intra ** 2. + std_inter ** 2.)
-
+        
     COEFFS_BB = CoeffsTable(sa_damping=5, table=""" 
         IMT    c1      c2      c3      c4       c5       c6      Mref   Rref   hfict  Mh    tau1    tau2    phi1    phi2
         pgv   -0.4422  0.1433  0.0887  0.0013  -0.0536   0.0190  6.75   30     3      9.00  0.2238  0.1859  0.5401  0.4069
