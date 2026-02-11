@@ -843,27 +843,26 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
-        if not config.directory.custom_tmp:
-            oq = self.calc.oqparam
-            L = oq.imtls.size  # 25 levels x 9 IMTs
-            L1 = L // len(oq.imtls)
-            branches = self.calc.datastore['full_lt/gsim_lt'].branches
-            gsims = [br.gsim for br in branches]
-            df = self.calc.datastore.read_df('_rates')
-            del df['sid']
-            for g, gsim in enumerate(gsims):
-                curve = numpy.zeros(L1, oq.imt_dt())
-                df_for_g = df[df.gid == g]
-                poes = numpy.zeros(L)
-                poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
-                for im in oq.imtls:
-                    curve[im] = poes[oq.imtls(im)]
-                gs = gsim.__class__.__name__
-                if 'submodel' in gsim._toml:
-                    gs += '_' + gsim.kwargs['submodel']
-                got = general.gettemp(text_table(curve, ext='org'))
-                delta = .0003 if sys.platform == 'darwin' else 1E-5
-                self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
+        oq = self.calc.oqparam
+        L = oq.imtls.size  # 25 levels x 9 IMTs
+        L1 = L // len(oq.imtls)
+        branches = self.calc.datastore['full_lt/gsim_lt'].branches
+        gsims = [br.gsim for br in branches]
+        df = self.calc.datastore.read_df('_rates')
+        del df['sid']
+        for g, gsim in enumerate(gsims):
+            curve = numpy.zeros(L1, oq.imt_dt())
+            df_for_g = df[df.gid == g]
+            poes = numpy.zeros(L)
+            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
+            for im in oq.imtls:
+                curve[im] = poes[oq.imtls(im)]
+            gs = gsim.__class__.__name__
+            if 'submodel' in gsim._toml:
+                gs += '_' + gsim.kwargs['submodel']
+            got = general.gettemp(text_table(curve, ext='org'))
+            delta = .0003 if sys.platform == 'darwin' else 1E-5
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=delta)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM

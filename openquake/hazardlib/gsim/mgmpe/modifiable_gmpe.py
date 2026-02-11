@@ -299,13 +299,14 @@ IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
                      "set_fixed_total_sigma"]
 
 
+# affects the NWA model
 def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
     This function uses the sigma model of Al Atik (2015) as the standard
     deviation of a specified GMPE
     """
-    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
+    phi = get_phi_ss(imt.string, ctx.mag, phi_ss_coetab)
     if ergodic:
         phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
@@ -536,7 +537,7 @@ class ModifiableGMPE(GMPE):
                 del self.params[key]["phi_model"]
             phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
             self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
-                PHI_SETUP[phi_model], phi_ss_quantile)
+                PHI_SETUP[phi_model], phi_ss_quantile).to_dict()
 
         # Set params
         for key in self.params:
