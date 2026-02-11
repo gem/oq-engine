@@ -40,6 +40,8 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
 # EMME24 site model is fed into CY14 and used instead of the CY14 site model
+# NB: The PGV values were taken from Sandikkaya et al. (2023) as suggested by
+# EMME24 model authors.
 COEFFS_SM = CoeffsTable(
     sa_damping=5, table=""" 
     IMT     a1      a2       a3       a4      Vc

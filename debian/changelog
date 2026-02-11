@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added the EMME24 site model to the existing EMME backbone model for ASCR
+    (files describing the site model were provided by Abdullah Sandıkkaya).
+
   [Michele Simionato]
   * Internal: instantiating a GSIM automagically generates a ._toml
     attribute from the GSIM name and arguments, associated to the GSIM hash
