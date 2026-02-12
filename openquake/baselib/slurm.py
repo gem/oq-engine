@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 import time
 import subprocess
@@ -18,7 +19,6 @@ def start_workers(job_id, n):
     """
     Start n workerpools which will write on calc_dir/hostcores)
     """
-    job_id = str(job_id)
     calc_dir = parallel.calc_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     print('Using %s' % slurm_sh)
@@ -29,9 +29,13 @@ def start_workers(job_id, n):
         f.write(code)
     os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)
 
-    assert submit_cmd[0] == 'sbatch', submit_cmd
     # submit_cmd can be ['sbatch', '-A', 'gem', '-p', 'rome', 'oq', 'run']
-    subprocess.run(submit_cmd[:-2] + [slurm_sh])
+    if submit_cmd[0] == 'sbatch':
+        subprocess.run(submit_cmd[:-2] + [slurm_sh])
+    else:
+        print('Faking SLURM with a local WorkerPool')
+        subprocess.Popen([sys.executable, '-m', 'openquake.baselib.workerpool',
+                          config.distribution.num_cores, str(job_id)])
 
 
 def wait_workers(job_id, n):
