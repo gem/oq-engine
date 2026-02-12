@@ -87,6 +87,8 @@ def trt_smrs(src):
 
 
 def _sample(srcs, sample, applied):
+    if not srcs:
+        return []
     out = [src for src in srcs if src.source_id in applied]
     rand = general.random_filter(srcs, sample)
     return (out + rand) or [srcs[0]]
