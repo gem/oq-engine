@@ -203,11 +203,11 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
         else:
             wgets.append(flt.gsim_lt.wget)
     fnames = [dstore.filename]
-    scratch_dir = dstore.filename[:-5]
-    if os.path.exists(scratch_dir):
-        for f in os.listdir(scratch_dir):
+    calc_dir = dstore.filename[:-5]
+    if os.path.exists(calc_dir):
+        for f in os.listdir(calc_dir):
             if f.endswith('.hdf5'):
-                fnames.append(os.path.join(scratch_dir, f))
+                fnames.append(os.path.join(calc_dir, f))
     out = []
     sids = dstore['sitecol/sids'][:]
     for chunk in range(n):

@@ -235,11 +235,11 @@ def run_calc(log):
 
 def check_directories(calc_id):
     """
-    Make sure that the datadir and the scratch_dir (if any) are writeable
+    Make sure that the datadir and the calc_dir (if any) are writeable
     """
     datadir = logs.get_datadir()
-    scratch_dir = parallel.scratch_dir(calc_id)
-    for dir in (datadir, scratch_dir):
+    calc_dir = parallel.calc_dir(calc_id)
+    for dir in (datadir, calc_dir):
         assert os.path.exists(dir), dir
         fname = os.path.join(dir, 'check')
         open(fname, 'w').close()  # check writeable
@@ -342,8 +342,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
 
         # run the jobs sequentially or in parallel, with slurm or without
         if dist == 'slurm' and sbatch:
-            scratch_dir = parallel.scratch_dir(job_id)
-            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+            calc_dir = parallel.calc_dir(job_id)
+            with open(os.path.join(calc_dir, 'jobs.pik'), 'wb') as f:
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)

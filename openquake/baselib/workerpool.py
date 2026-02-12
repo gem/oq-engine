@@ -50,7 +50,7 @@ def get_zworkers(job_id):
     if dist == 'zmq':
         return config.zworkers
     elif dist == 'slurm':
-        calc_dir = parallel.scratch_dir(job_id)
+        calc_dir = parallel.calc_dir(job_id)
         try:
             with open(os.path.join(calc_dir, 'hostcores')) as f:
                 hostcores = f.read()
@@ -286,7 +286,7 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.scratch = parallel.scratch_dir(job_id)
+        self.scratch = parallel.calc_dir(job_id)
         self.executing = tempfile.mkdtemp(dir=self.scratch)
         try:
             os.mkdir(self.executing)

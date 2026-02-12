@@ -16,10 +16,10 @@ srun python -m openquake.baselib.workerpool {num_cores} {job_id}
 
 def start_workers(job_id, n):
     """
-    Start n workerpools which will write on scratch_dir/hostcores)
+    Start n workerpools which will write on calc_dir/hostcores)
     """
     job_id = str(job_id)
-    calc_dir = parallel.scratch_dir(job_id)
+    calc_dir = parallel.calc_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     print('Using %s' % slurm_sh)
     code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
@@ -38,7 +38,7 @@ def wait_workers(job_id, n):
     """
     Wait until the hostcores file is filled with n names
     """
-    calc_dir = parallel.scratch_dir(job_id)
+    calc_dir = parallel.calc_dir(job_id)
     fname = os.path.join(calc_dir, 'hostcores')
     while True:
         if not os.path.exists(fname):
