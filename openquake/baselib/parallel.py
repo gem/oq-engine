@@ -226,7 +226,7 @@ def calc_dir(job_id_or_fname):
     """
     if job_id_or_fname == 0:  # default WorkerPool in zmq mode
         # for the "executing" functionality
-        return tempfile.gettempdir()
+        return os.path.join(tempfile.gettempdir(), getpass.getuser())
     if isinstance(job_id_or_fname, str):
         dirname = job_id_or_fname[:-5]  # strip .hdf5
     else:  # in SLURM clusters
