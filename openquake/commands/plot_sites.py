@@ -42,7 +42,7 @@ def main(files_csv):
     ax = fig.add_subplot(111)
     ax.grid(True)
     markersize = 5
-    mosaic_df = readinput.read_mosaic_df(buffer=.9)
+    mosaic_df = readinput.read_mosaic_df()
     for csvfile, df in zip(csvfiles, dfs):
         models = geolocate(df[['lon', 'lat']], mosaic_df)
         p.scatter(df.lon, df.lat, marker='o',
@@ -51,7 +51,7 @@ def main(files_csv):
             ax.annotate(model, (lon, lat))
         # for model, id, lon, lat in zip(models, df.ID, df.lon, df.lat):
         #     ax.annotate(model + str(id), (lon, lat))
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     p.show()
     return p
 

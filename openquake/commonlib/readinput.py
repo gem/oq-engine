@@ -43,7 +43,7 @@ import itertools
 import numpy
 import pandas
 import requests
-from shapely import wkt, geometry
+from shapely import wkt
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -1727,13 +1727,12 @@ def get_custom_site_id(descr):
     return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
-# NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
+# NOTE: we expect to call this for mosaic or global_risk (adm0-1-2)
 @functools.lru_cache(maxsize=4)
-def read_geometries(fname, name, buffer=0):
+def read_geometries(fname, name):
     """
     :param fname: path of the file containing the geometries
     :param name: name of the primary key field
-    :param buffer: shapely buffer in degrees
     :returns: data frame with codes and geometries
     """
     with fiona.open(fname) as f:
@@ -1745,7 +1744,13 @@ def read_geometries(fname, name, buffer=0):
             code = props[name]
             if code and geom:
                 codes.append(code)
-                geoms.append(geometry.shape(geom).buffer(buffer))
+                # NOTE: the following commented line would expand/reduce
+                #       boundaries by the specified degrees (costly). For
+                #       geospatial queries we prefer to keep these
+                #       geometries unaltered and use a buffer around the
+                #       coordinates of of a site instead.
+                # geoms.append(geometry.shape(geom).buffer(deg))
+                geoms.append(geom)
             else:
                 logging.error(f'{code=}, {geom=} in {fname}')
     return pandas.DataFrame(dict(code=codes, geom=geoms))
@@ -1766,8 +1771,9 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
+def read_mosaic_df(mosaic_dir=config.directory.mosaic_dir):
     """
+    :param mosaic_dir: directory containing mosaic boundaries
     :returns: a DataFrame of geometries for the mosaic models
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
@@ -1777,17 +1783,17 @@ def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     print(f'Reading {mosaic_boundaries_file}')
-    return read_geometries(mosaic_boundaries_file, 'name', buffer)
+    return read_geometries(mosaic_boundaries_file, 'name')
 
 
-def read_countries_df(buffer=0.1):
+def read_countries_df():
     """
     :returns: a DataFrame of geometries for the world countries
     """
     logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.gpkg')
-    return read_geometries(fname, 'shapeGroup', buffer)
+    return read_geometries(fname, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',

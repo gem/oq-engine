@@ -492,7 +492,7 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     :returns: list of mosaic models intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
+    mosaic_df = readinput.read_mosaic_df()
     hypocenter = Point(lon, lat)
     hypo_buffer = hypocenter.buffer(buffer_radius)
     geoms = numpy.array([hypo_buffer])

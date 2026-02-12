@@ -44,7 +44,7 @@ def add_checkout(lst, models):
 def get_aelo_sites(site_file):
     sites_df = pandas.read_csv(site_file)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
-    mosaic_df = read_mosaic_df(0.0)
+    mosaic_df = read_mosaic_df()
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     sites = {}
     siteid = {}
