@@ -18,7 +18,6 @@
 import io
 import os
 import numpy
-import json
 import matplotlib as mpl
 from scipy import interpolate
 from openquake.commonlib import readinput

@@ -330,7 +330,7 @@ def get_params(job_ini, kw={}):
     try:
         update(params, items, base_path)
         update(params, kw.items(), base_path)  # override on demand
-    except:
+    except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
     if input_zip:

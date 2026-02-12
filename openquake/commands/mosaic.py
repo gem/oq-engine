@@ -89,7 +89,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
-    if not 'vs30' in sites_df.keys():
+    if 'vs30' not in sites_df.keys():
         sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
     for vs30, dvf in sites_df.groupby('vs30'):
@@ -103,7 +103,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
                 continue
             if only_models and model not in only_models.split(','):
                 continue
-            
+
             df = df.sort_values(['Longitude', 'Latitude'])
             ids[model] = df.ID.to_numpy()
             sites = ','.join('%s %s' % tuple(lonlat)
@@ -170,7 +170,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     try:
-        import rtgmpy
+        import rtgmpy  # NOQA
     except ImportError:
         sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
@@ -349,7 +349,7 @@ def impact(exposure_hdf5='', *,
 
 impact.exposure_hdf5 = 'Path to the file exposure.hdf5'
 impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
-                      'or file rupture_model.xml')
+                   'or file rupture_model.xml')
 impact.stations = 'Path to a csv file with the station data'
 impact.mosaic_model = 'Mosaic model 3-characters code'
 impact.maximum_distance = 'Maximum distance in km'
