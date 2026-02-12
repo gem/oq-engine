@@ -287,7 +287,7 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.calc_dir = parallel.calc_dir(job_id)
-        self.executing = tempfile.mkdtemp(dir=self.calc_dir)
+        self.executing = tempfile.mkdtemp(dir=self.calc_dir if job_id else None)
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
