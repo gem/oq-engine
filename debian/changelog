@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Added the EMME24 site model to the existing OQ implementation of the
+    EMME backbone model for ASCR (files describing the site model were
+    provided by Abdullah Sandıkkaya).
+
   [Michele Simionato]
   * Changed large classical calculations to store the rates in `ds_calc_dir`;
     removed the need to specify `custom_tmp` for the SLURM distribution
