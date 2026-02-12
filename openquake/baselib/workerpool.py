@@ -50,7 +50,7 @@ def get_zworkers(job_id):
     if dist == 'zmq':
         return config.zworkers
     elif dist == 'slurm':
-        calc_dir = parallel.scratch_dir(job_id)
+        calc_dir = parallel.calc_dir(job_id)
         try:
             with open(os.path.join(calc_dir, 'hostcores')) as f:
                 hostcores = f.read()
@@ -286,8 +286,8 @@ class WorkerPool(object):
                 self.num_workers = psutil.cpu_count()
         else:
             self.num_workers = num_workers
-        self.scratch = parallel.scratch_dir(job_id)
-        self.executing = tempfile.mkdtemp(dir=self.scratch)
+        self.calc_dir = parallel.calc_dir(job_id)
+        self.executing = tempfile.mkdtemp(dir=self.calc_dir)
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
@@ -302,7 +302,7 @@ class WorkerPool(object):
         if self.job_id:
             # save the hostname in calc_XXX/hostcores
             if parallel.oq_distribute() == 'slurm':
-                fname = os.path.join(self.scratch, 'hostcores')
+                fname = os.path.join(self.calc_dir, 'hostcores')
                 line = f'{self.hostname} {self.num_workers}'
                 print(f'Writing {line} on {fname}')
                 with open(fname, 'a') as f:
@@ -332,7 +332,7 @@ class WorkerPool(object):
                         executing = sorted(os.listdir(self.executing))
                         ctrlsock.send(' '.join(executing))
                     elif cmd == 'run_jobs':
-                        pik = os.path.join(self.scratch, 'jobs.pik')
+                        pik = os.path.join(self.calc_dir, 'jobs.pik')
                         lst = ['python', '-m', 'openquake.engine.engine', pik]
                         subprocess.Popen(lst)
                         ctrlsock.send("started %d" % self.job_id)
@@ -372,7 +372,7 @@ def workerpool(num_workers: int=-1, job_id: int=0):
         wpool.stop()
 
 workerpool.num_workers = dict(help='number of cores to use')
-workerpool.job_id = dict(help='associated job')
+workerpool.job_id = dict(help='associated job, if any')
 
 
 if __name__ == '__main__':
