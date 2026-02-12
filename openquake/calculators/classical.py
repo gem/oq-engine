@@ -60,8 +60,8 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
-        scratch = parallel.scratch_dir(mon.calc_id)
-        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+        calc_dir = parallel.calc_dir(mon.filename)
+        h5 = hdf5.File(f'{calc_dir}/{mon.task_no}.hdf5', 'a')
     data = AccumDict(accum=[])
     try:
         h5.create_df(
@@ -127,18 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(g, N, jid, num_chunks, mon):
+def save_rates(rmap, num_chunks, mon):
     """
-    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    Store the rates on a file calc_id/task_no.hdf5
     """
-    with mon.shared['rates'] as rates:
-        rates_g = rates[:, :, jid[g]]
-        sids = numpy.arange(N)
-        for chunk, mask in gen_chunks(sids, num_chunks):
-            rmap = MapArray(sids[mask], rates.shape[1], 1)
-            rmap.array = rates_g[mask, :, None]
-            rats = rmap.to_array([g])
-            _store(rats, num_chunks, None, mon)
+    for g in rmap.jid:
+        _store(rmap.to_array(g), num_chunks, None, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -218,7 +212,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 8)
+        b0, *blks = _split_src(list(grps[0]), 10)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
@@ -226,7 +220,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield res
         if dt > 3 * cmaker.split_time:
             # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 7):
+            for srcs in _split_src(rest, 8):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         elif dt > cmaker.split_time:
             for srcs in _split_src(rest, 2):
@@ -537,7 +531,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if 'source_data' in parent:
+            if 'source_data' in parent and not os.environ.get('OQ_TASK_NO'):
                 # execute finished correctly, repeat post-processing only
                 self.build_curves_maps()
                 return {}
@@ -605,8 +599,6 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         self.split_time = split_time = max(max_gb * 30, 20)
-        if not self.few_sites:
-            logging.info(f'{split_time=:.0f} seconds')
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
@@ -624,6 +616,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
+        if not self.few_sites and self.rmap:
+            logging.info(f'{split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d',
                         len(allargs), maxtiles)
 
@@ -638,6 +632,9 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
+        OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
+        if OQ_TASK_NO:
+            allargs = [allargs[int(OQ_TASK_NO)]]
         if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
@@ -649,19 +646,18 @@ class ClassicalCalculator(base.HazardCalculator):
     def _post_execute(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
-        logging.info('Saving RateMaps')
-
-        def genargs():
-            # produce Gt arguments
+        size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
+        if len(self.rmap) > 1 and size_gb > 1:
+            logging.info('Saving %d RateMaps, %.1f GB', len(self.rmap), size_gb)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
-                for g, j in rmap.jid.items():
-                    yield grp_id, g, self.N, rmap.jid, self.num_chunks
-
-        mon = self.monitor('storing rates', measuremem=True)
-        for grp_id, g, N, jid, num_chunks in genargs():
-            with mon:
-                rates = self.rmap[grp_id].to_array(g)
-                _store(rates, self.num_chunks, self.datastore)
+                savemap.submit((rmap, self.num_chunks))
+            savemap.reduce()
+        else:
+            # store sequentially
+            for rmap in self.rmap.values():
+                for g in rmap.jid:
+                    _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)

@@ -1,11 +1,22 @@
   [Christopher Brooks]
-  * Fix small bug in Hashash et al. (2020) site term implementation within the 
+  * Added the EMME24 site model to the existing OQ implementation of the
+    EMME backbone model for ASCR (files describing the site model were
+    provided by Abdullah Sandıkkaya).
+
+  [Michele Simionato]
+  * Changed large classical calculations to store the rates in `ds_calc_dir`;
+    removed the need to specify `custom_tmp` for the SLURM distribution
+  * Internal: instantiating a GSIM automagically generates a ._toml
+    attribute from the GSIM name and arguments, associated to the GSIM hash
+
+  [Christopher Brooks]
+  * Fix small bug in Hashash et al. (2020) site term implementation within the
     NGA East models and regenerate the test tables (very small differences are
     observed and only for SA(0.4)).
- 
+
   [Michele Simionato]
-  * Removed the long time deprecated method `get_mean_and_stddevs` from the GSIMs;
-    you can use the helper function `contexts.mean_stds` instead
+  * Removed the long time deprecated method `get_mean_and_stddevs` from the
+    GSIMs; you can use the helper function `contexts.mean_stds` instead
   * Internal: changed `cmaker.from_srcs` to return a context array and not a
     list with a single context array
   * Fixed AssertionError on len(mags) for GenericGmpeAvgSA with table-based
