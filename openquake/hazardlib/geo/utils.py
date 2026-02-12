@@ -951,16 +951,16 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate_within_dist(lon, lat, max_distance, geom_df, exclude=()):
+def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
     """
     :param lon: longitude (same CRS as geom_df)
     :param lat: latitude
-    :param max_distance: maximum distance (in CRS units, e.g. degrees)
+    :param buffer_radius: maximum distance (in CRS units, e.g. degrees)
     :param geom_df: DataFrame with columns:
                     - 'geom' (Shapely geometries)
                     - 'code'
     :param exclude: iterable of codes to exclude
-    :returns: list of codes within max_distance,
+    :returns: list of codes of geometries within buffer_radius,
               ordered by ascending minimum distance
     """
     point = Point(lon, lat)
@@ -969,7 +969,7 @@ def geolocate_within_dist(lon, lat, max_distance, geom_df, exclude=()):
     for code, df in filtered.groupby('code'):
         target_geoms = df['geom'].values
         min_dist = min(g.distance(point) for g in target_geoms)
-        if min_dist <= max_distance:
+        if min_dist <= buffer_radius:
             code_min_dist[code] = min_dist
     # Sort by ascending distance
     ordered_codes = sorted(code_min_dist, key=code_min_dist.get)

@@ -492,7 +492,7 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
         centered on the given coordinates having the specified radius
     """
     mosaic_df = readinput.read_mosaic_df()
-    close_mosaic_models = geo.utils.geolocate_within_dist(
+    close_mosaic_models = geo.utils.geolocate_within_buffer(
         lon, lat, buffer_radius, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
