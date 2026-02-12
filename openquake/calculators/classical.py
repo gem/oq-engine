@@ -531,7 +531,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if 'source_data' in parent:
+            if 'source_data' in parent and not os.environ.get('OQ_TASK_NO'):
                 # execute finished correctly, repeat post-processing only
                 self.build_curves_maps()
                 return {}
