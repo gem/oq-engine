@@ -482,6 +482,11 @@ max:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
+max_nodes_network:
+   Restrict the maximum number of nodes in a network
+   Example: *max_nodes_network = 100*
+   Default: 1000
+
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
   Example: *max_potential_gmfs = 1E9*.
@@ -1086,6 +1091,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_nodes_network = valid.Param(valid.positiveint, 1000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)

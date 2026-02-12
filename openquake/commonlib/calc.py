@@ -175,7 +175,7 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
     proxies = []
     try:
         h5 = datastore.read(filename)
-    except ValueError: # cannot extract calc_id
+    except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
         rupgeoms = h5['rupgeoms']
@@ -221,7 +221,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']        
+        n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
@@ -492,7 +492,7 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     :returns: list of mosaic models intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
+    mosaic_df = readinput.read_mosaic_df()
     hypocenter = Point(lon, lat)
     hypo_buffer = hypocenter.buffer(buffer_radius)
     geoms = numpy.array([hypo_buffer])
