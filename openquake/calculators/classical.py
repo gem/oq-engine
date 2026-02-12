@@ -212,7 +212,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 8)
+        b0, *blks = _split_src(list(grps[0]), 10)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
@@ -220,7 +220,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield res
         if dt > 3 * cmaker.split_time:
             # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 7):
+            for srcs in _split_src(rest, 8):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         elif dt > cmaker.split_time:
             for srcs in _split_src(rest, 2):
@@ -598,7 +598,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 30, 20)
+        self.split_time = split_time = max(max_gb * 30, 10)
         for cmaker, tilegetters, grp_keys, atomic in data:
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
