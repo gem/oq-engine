@@ -20,7 +20,6 @@ import logging
 import operator
 import functools
 import numpy
-from shapely.geometry import Point
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
@@ -493,10 +492,8 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
         centered on the given coordinates having the specified radius
     """
     mosaic_df = readinput.read_mosaic_df()
-    hypocenter = Point(lon, lat)
-    hypo_buffer = hypocenter.buffer(buffer_radius)
-    geoms = numpy.array([hypo_buffer])
-    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
+    close_mosaic_models = geo.utils.geolocate_within_dist(
+        lon, lat, buffer_radius, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
             f'({lon}, {lat}) is farther than {buffer_radius} deg'
