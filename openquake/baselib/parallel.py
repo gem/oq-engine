@@ -810,14 +810,14 @@ class Starmap(object):
         self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.task_args = task_args
         self.progress = progress
         self.h5 = h5
         self.task_queue = []
         try:
-            self.num_tasks = len(self.task_args)
+            self.num_tasks = len(task_args)
         except TypeError:  # generators have no len
             self.num_tasks = None
+        self.task_args = task_args
         self.argnames = getargnames(task_func)
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
@@ -875,11 +875,7 @@ class Starmap(object):
                 self.return_ip, self.socket.port)
             if self.distribute == 'slurm':
                 self.init_slurm()
-        OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
-        if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
-            self.task_no += 1
-            return
-        dist = 'no' if self.num_tasks == 1 or OQ_TASK_NO else self.distribute
+        dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             pickled = isinstance(args[0], Pickled)
             if not pickled:
@@ -969,7 +965,6 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
-            #sbatch(self.monitor)
 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]

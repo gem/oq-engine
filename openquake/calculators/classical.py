@@ -632,6 +632,9 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
+        OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
+        if OQ_TASK_NO:
+            allargs = [allargs[int(OQ_TASK_NO)]]
         if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
