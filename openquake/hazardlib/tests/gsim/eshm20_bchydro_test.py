@@ -18,7 +18,7 @@
 
 import unittest
 import numpy as np
-from openquake.hazardlib.gsim.bchydro_2016_epistemic import (
+from openquake.hazardlib.gsim.eshm20_bchydro import (
     BCHydroESHM20SInter, BCHydroESHM20SInterHigh, BCHydroESHM20SInterLow,
     BCHydroESHM20SSlab, BCHydroESHM20SSlabHigh, BCHydroESHM20SSlabLow,
     FABATaperGaussian, FABATaperStep, FABATaperLinear, FABATaperSFunc,
