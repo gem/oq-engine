@@ -60,8 +60,8 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
-        scratch = parallel.scratch_dir(mon.filename)
-        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+        calc_dir = parallel.calc_dir(mon.filename)
+        h5 = hdf5.File(f'{calc_dir}/{mon.task_no}.hdf5', 'a')
     data = AccumDict(accum=[])
     try:
         h5.create_df(

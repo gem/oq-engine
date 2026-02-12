@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed large classical calculations to store the rates in `ds_calc_dir`;
+    removed the need to specify `custom_tmp` for the SLURM distribution
   * Internal: instantiating a GSIM automagically generates a ._toml
     attribute from the GSIM name and arguments, associated to the GSIM hash
 
