@@ -125,21 +125,23 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
-        # Must not be an ESHM20 subclass
         backarc = np.bool_(ctx.backarc)
         f_faba = np.zeros_like(dists)
-        # Term only applies to backarc ctx (F_FABA = 0. for forearc)
+        # Only applies to backarc sites (f_faba is zero for forearc)
         fixed_dists = dists[backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
         f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
-    # faba_model is only accepted as an input arg within the
-    # ESHM20 subclasses (they require the xvf site parameter)
+    # Must be a faba model specified
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
-    f_faba = a + b * np.log(fixed_dists / 40.)
-    return f_faba * faba_model(-ctx.xvf)
+    f_faba = (a + b * np.log(fixed_dists / 40.)) * faba_model(-ctx.xvf)
+    
+    # Set xvfs with sentinel values to zero to turn off faba term
+    f_faba[ctx.xvf == -999] = 0
+
+    return f_faba
 
 
 def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
@@ -287,13 +289,19 @@ class AbrahamsonEtAl2015SInter(GMPE):
     FABA_ALL_MODELS = {}  # overridden in ESHM20 subclasses of BCHydro
 
     def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
-                 faba_taper_model='Step', **faba_args):
+                 faba_taper_model=None, **faba_args):
         self.ergodic = ergodic
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        faba_type = faba_taper_model
-        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # ESHM20 subclasses
-            self.faba_model = self.FABA_ALL_MODELS[faba_type](**faba_args)
+        if faba_taper_model:
+            if "xvf" not in self.REQUIRES_SITES_PARAMETERS:
+                # Currently only BCHydro subclasses considering XVF
+                # are the ESHM20 subclasses
+                raise ValueError(
+                    "A FABA model can only be used in combination with "
+                    "a GSIM which considers the XVF site parameter.")
+            self.faba_model = self.FABA_ALL_MODELS[
+                faba_taper_model](**faba_args)
         else:
             self.faba_model = None
 
