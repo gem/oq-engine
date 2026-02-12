@@ -20,7 +20,9 @@ import io
 import os
 import base64
 import numpy
-from shapely.geometry import MultiPolygon
+# import descartes
+from shapely.geometry import MultiPolygon, Polygon, box
+from shapely.prepared import prep
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -74,6 +76,59 @@ def add_borders(ax, read_df=readinput.read_countries_df, alpha=0.1):
                 ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
+
+
+def add_borders(
+        ax, read_df=readinput.read_countries_df,
+        facecolor='#E6E6E6',  # subtle land gray
+        edgecolor='#C0C0C0',  # slightly darker border
+        linewidth=0.5, alpha=1.0, zorder=0):
+    """
+    Draw filled regions (light gray) clipped to the current viewport.
+    Automatically updates on zoom/pan.
+    """
+    df = read_df()
+    geometries = df['geom'].values
+    ax.set_facecolor('#F5F8FA')  # subtle pale blue sea
+    border_patches = []
+
+    def redraw():
+        nonlocal border_patches
+        # Remove previously drawn patches
+        for p in border_patches:
+            p.remove()
+        border_patches.clear()
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        viewport = box(xmin, ymin, xmax, ymax)
+        prepared_view = prep(viewport)
+        for geom in geometries:
+            # Fast reject
+            if not prepared_view.intersects(geom):
+                continue
+            clipped = geom.intersection(viewport)
+            if clipped.is_empty:
+                continue
+            if isinstance(clipped, MultiPolygon):
+                parts = clipped.geoms
+            elif isinstance(clipped, Polygon):
+                parts = [clipped]
+            else:
+                continue
+            for part in parts:
+                patch = PolygonPatch(
+                    part, facecolor=facecolor, edgecolor=edgecolor,
+                    linewidth=linewidth, alpha=alpha, zorder=zorder)
+                ax.add_patch(patch)
+                border_patches.append(patch)
+        ax.figure.canvas.draw_idle()
+
+    # Connect viewport change callbacks
+    ax.callbacks.connect('xlim_changed', lambda ax: redraw())
+    ax.callbacks.connect('ylim_changed', lambda ax: redraw())
+
+    # Initial draw
+    redraw()
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
