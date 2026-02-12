@@ -64,20 +64,6 @@ def adjust_limits(ax, xlim, ylim, padding=1):
     ax.set_ylim(*ylim)
 
 
-def add_borders(ax, read_df=readinput.read_countries_df, alpha=0.1):
-    plt = import_plt()
-    polys = read_df()['geom']
-    cm = plt.get_cmap('RdBu')
-    num_colours = len(polys)
-    for idx, poly in enumerate(polys):
-        colour = cm(1. * idx / num_colours)
-        if isinstance(poly, MultiPolygon):
-            for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
-        else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
-
-
 def add_borders(
         ax, read_df=readinput.read_countries_df,
         facecolor='#E6E6E6',  # subtle land gray
@@ -129,6 +115,69 @@ def add_borders(
 
     # Initial draw
     redraw()
+
+
+def viewport_label_point(geom, viewport):
+    """
+    Return a label point guaranteed to be inside
+    the visible portion of the geometry.
+    """
+    try:
+        rp = geom.representative_point()
+        if viewport.contains(rp):
+            return rp
+        clipped = geom.intersection(viewport)
+        if clipped.is_empty:
+            return None
+        return clipped.representative_point()
+    except Exception:
+        return None
+
+
+def add_region_labels(
+        ax, read_df=readinput.read_countries_df, label_field='code',
+        fontsize=8, max_extent_deg=40):
+    """
+    Add region labels that update dynamically on zoom/pan.
+
+    :param ax: matplotlib axis
+    :param read_df: function returning DataFrame with 'geom' column
+    :param label_field: column name used for labeling
+    :param fontsize: label font size
+    :param max_extent_deg: hide labels if view wider than this (degrees)
+    """
+    df = read_df()
+    state = {'texts': []}
+
+    def redraw(event_ax):
+        # Remove old labels
+        for txt in state['texts']:
+            txt.remove()
+        state['texts'].clear()
+        xmin, xmax = event_ax.get_xlim()
+        ymin, ymax = event_ax.get_ylim()
+        # Hide labels when zoomed too far out
+        if (xmax - xmin) > max_extent_deg:
+            event_ax.figure.canvas.draw_idle()
+            return
+        viewport = box(xmin, ymin, xmax, ymax)
+        for _, row in df.iterrows():
+            geom = row['geom']
+            if not geom.intersects(viewport):
+                continue
+            pt = viewport_label_point(geom, viewport)
+            if pt is None:
+                continue
+            txt = event_ax.text(
+                pt.x, pt.y, str(row[label_field]), ha='center', va='center',
+                fontsize=fontsize, color='0.25', zorder=10)
+            state['texts'].append(txt)
+        event_ax.figure.canvas.draw_idle()
+    # Initial draw
+    redraw(ax)
+    # Redraw on viewport change
+    ax.callbacks.connect('xlim_changed', redraw)
+    ax.callbacks.connect('ylim_changed', redraw)
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
@@ -261,7 +310,8 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
-                 with_cities=False, with_borders=True, return_base64=False):
+                 with_cities=False, with_borders=True,
+                 with_region_labels=False, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -280,6 +330,8 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     xlim, ylim = auto_limits(ax)
     if with_borders:
         add_borders(ax)
+    if with_region_labels:
+        add_region_labels(ax)
     if with_cities:
         add_cities(ax, xlim, ylim)
     adjust_limits(ax, xlim, ylim, padding=3)
