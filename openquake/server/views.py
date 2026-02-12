@@ -969,8 +969,18 @@ def calc_run_ini(request):
 def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
-
-    return run_scenario_calc_from_ses_rupture(int(rup_id), notify_to, username)
+    exposure_filepath = request.POST.get('exposure_filepath', None)
+    fragility_curves_filepath = request.POST.get('fragility_curves', None)
+    consequence_model_filepath = request.POST.get('consequence_model', None)
+    if consequence_model_filepath:
+        consequence_model_filepath = json.loads(consequence_model_filepath)
+    mapping_filepath = request.POST.get('mapping', None)
+    return run_scenario_calc_from_ses_rupture(
+        int(rup_id), notify_to=notify_to, username=username,
+        exposure_filepath=exposure_filepath,
+        fragility_curves_filepath=fragility_curves_filepath,
+        consequence_model_filepath=consequence_model_filepath,
+        mapping_filepath=mapping_filepath)
 
 
 def aelo_callback(

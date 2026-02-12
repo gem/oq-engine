@@ -68,14 +68,14 @@ NGMFS = 250
 
 # Risk inputs
 EXPOSURE = os.path.join(BASE, "..", "Building_National_Exposure", "Exposure_ITA.xml")
-TAXONOMY = os.path.join(BASE,  "..", "Building_National_Exposure", "Vulnerability_mapping_ITA.csv")
+MAPPING = os.path.join(BASE,  "..", "Building_National_Exposure", "Vulnerability_mapping_ITA.csv")
 FRAGILITY = os.path.join(BASE, "..", "Building_Fragility_Consequences", "fragility_structural.xml")
 CONSEQUENCE = {
     'taxonomy': [
-        os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_fatalities.csv"),                            
+        os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_fatalities.csv"),
         os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_losses.csv")
-        ]
-        }
+    ]
+}
 # TOD = "day"
 
 # Fixed inputs/constants
@@ -544,7 +544,24 @@ def run_scenario_calc_from_ses_rupture_ext(
     #     return dstore, rup_geojson
 
 
-def run_scenario_calc_from_ses_rupture(rup_id, notify_to=None, username=None):
+def run_scenario_calc_from_ses_rupture(
+        rup_id, notify_to=None, username=None, exposure_filepath=None,
+        fragility_curves_filepath=None, consequence_model_filepath=None,
+        mapping_filepath=None):
+
+    if exposure_filepath is None:
+        exposure_filepath = EXPOSURE
+    if fragility_curves_filepath is None:
+        fragility_curves_filepath = FRAGILITY
+    if consequence_model_filepath is None:
+        consequence_model_filepath = CONSEQUENCE
+    else:
+        consequence_model_filepath = {
+            'taxonomy': consequence_model_filepath
+        }
+    if mapping_filepath is None:
+        mapping_filepath = MAPPING
+
     return run_scenario_calc_from_ses_rupture_ext(
         fname=FNAME,
         rup_id=rup_id,
@@ -554,12 +571,11 @@ def run_scenario_calc_from_ses_rupture(rup_id, notify_to=None, username=None):
         hdist=INTEGRATION_DISTANCE,
         eps=TRUNCATION,
         ngmfs=NGMFS,
-        exposure=EXPOSURE,
-        taxonomy=TAXONOMY,
-        fragility=FRAGILITY,
-        consequence=CONSEQUENCE,
+        exposure=exposure_filepath,
+        taxonomy=mapping_filepath,
+        fragility=fragility_curves_filepath,
+        consequence=consequence_model_filepath,
         # day_or_night=TOD,
         hazard_only=HAZARD_ONLY,
         notify_to=notify_to,
-        username=username
-        )
+        username=username)
