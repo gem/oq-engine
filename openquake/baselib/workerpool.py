@@ -372,7 +372,7 @@ def workerpool(num_workers: int=-1, job_id: int=0):
         wpool.stop()
 
 workerpool.num_workers = dict(help='number of cores to use')
-workerpool.job_id = dict(help='associated job')
+workerpool.job_id = dict(help='associated job, if any')
 
 
 if __name__ == '__main__':
