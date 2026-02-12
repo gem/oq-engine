@@ -43,7 +43,7 @@ import itertools
 import numpy
 import pandas
 import requests
-from shapely import wkt
+from shapely import wkt, geometry
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -1750,7 +1750,7 @@ def read_geometries(fname, name):
                 #       geometries unaltered and use a buffer around the
                 #       coordinates of of a site instead.
                 # geoms.append(geometry.shape(geom).buffer(deg))
-                geoms.append(geom)
+                geoms.append(geometry.shape(geom))
             else:
                 logging.error(f'{code=}, {geom=} in {fname}')
     return pandas.DataFrame(dict(code=codes, geom=geoms))
