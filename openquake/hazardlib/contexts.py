@@ -1308,11 +1308,9 @@ class ContextMaker(object):
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        # for non-point sources the calculation time is dominated by
-        # making the contexts and does not depend on the number of gsims
-        weight = C * src.num_ruptures / self.num_rups / N * len(self.gsims)
+        weight = C * src.num_ruptures / self.num_rups / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
-        if src.code in b'pP':  # much lighter, dependent on num_gsims
+        if src.code in b'pP':  # much lighter
             weight /= 5
         return weight
 
