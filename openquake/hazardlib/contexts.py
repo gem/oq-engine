@@ -1303,18 +1303,20 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
+        step = 4
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
         # for non-point sources the calculation time is dominated by
         # making the contexts and does not depend on the number of gsims
-        weight = C * src.num_ruptures / self.num_rups / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter, dependent on num_gsims
-            weight *= len(self.gsims) / 10
-        return weight
+            src.weight = C * step * len(self.gsims) / N
+        else:
+            src.weight = C * src.num_ruptures / self.num_rups / N
+        return src.weight
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1325,7 +1327,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight = self.estimate_weight(src, srcfilter)
+                self.estimate_weight(src, srcfilter)
 
 
 def by_dists(gsim):
