@@ -229,14 +229,14 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: a dictionary mag -> list of arrays of shape (U, 3)
         """
-        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        magd = magd[::step]
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
             for src in self.pointsources[::step]:
-                out += src.get_planar(shift_hypo)
+                out += src.get_planar(shift_hypo, False, step)
             return out
 
+        magd = [(r, mag) for mag, r in
+                self.get_annual_occurrence_rates()][::step]
         hdd = numpy.array(self.hypocenter_distribution.data)
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
