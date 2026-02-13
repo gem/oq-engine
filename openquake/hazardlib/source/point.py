@@ -27,7 +27,8 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
@@ -224,18 +225,17 @@ class PointSource(ParametricSeismicSource):
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
-    def get_planar(self, shift_hypo=False, iruptures=False, step=1):
+    def get_planar(self, shift_hypo=False, iruptures=False):
         """
         :returns: a dictionary mag -> list of arrays of shape (U, 3)
         """
+        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
-            for src in self.pointsources[::step]:
+            for src in self.pointsources:
                 out += src.get_planar(shift_hypo)
             return out
 
-        magd = [(r, mag) for mag, r in
-                self.get_annual_occurrence_rates()][::step]
         hdd = numpy.array(self.hypocenter_distribution.data)
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
@@ -248,9 +248,9 @@ class PointSource(ParametricSeismicSource):
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
 
-    def _gen_ruptures(self, shift_hypo=False, step=1, iruptures=False):
+    def _gen_ruptures(self, shift_hypo=False, iruptures=False):
         magrate = dict(self.get_annual_occurrence_rates())
-        planardict = self.get_planar(shift_hypo, iruptures, step)
+        planardict = self.get_planar(shift_hypo, iruptures)
         for mag, [planar] in planardict.items():
             for pla in planar.reshape(-1, 3):
                 surface = PlanarSurface.from_(pla)
@@ -266,19 +266,16 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._gen_ruptures(
-            shift_hypo=kwargs.get('shift_hypo'),
-            step=kwargs.get('step', 1))
+        return self._gen_ruptures(shift_hypo=kwargs.get('shift_hypo'))
 
     # PointSource
-    def iruptures(self, step):
+    def iruptures(self):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
-        yield from self.restrict(np, avg['dep'])._gen_ruptures(
-            iruptures=True, step=step)
+        yield from self.restrict(np, avg['dep'])._gen_ruptures(iruptures=True)
 
     def count_nphc(self):
         """
@@ -448,13 +445,13 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def iruptures(self, step):
+    def iruptures(self):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
         yield from self.restrict(np, self.location.z)._gen_ruptures(
-            iruptures=True, step=step)
+            iruptures=True)
 
     def count_ruptures(self):
         """
