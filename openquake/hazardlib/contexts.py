@@ -1308,8 +1308,8 @@ class ContextMaker(object):
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        self.nctxs = C * src.num_ruptures / self.num_rups
-        weight = self.nctxs / N
+        src.nctxs = C * src.num_ruptures / self.num_rups
+        weight = src.nctxs / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
             weight /= 5
