@@ -52,22 +52,6 @@ LOSS_TYPE_MAP = {
 
 def load_admin_boundaries(country_name, iso3, adm_level, wfp,
                           crs="EPSG:4326"):
-    # if wfp:
-    #     shp = (
-    #         Path(boundaries_dir)
-    #         / "ADMIN_boundaries_PilotCO"
-    #         / "WFP_pilotCO_admin2.shp"
-    #     )
-    #     # admin_boundaries = gpd.read_file(shp)
-    #     # admin_boundaries = admin_boundaries[admin_boundaries["iso3"] == iso3]
-    #     admin_boundaries_old = gpd.read_file(shp)
-    #     admin_boundaries_old = admin_boundaries_old[
-    #         admin_boundaries_old["iso3"] == iso3]
-    # else:
-    #     # FIXME: missing data
-    #     shp = Path(boundaries_dir) / f"Adm{adm_level}_{country_name}.shp"
-    #     # admin_boundaries = gpd.read_file(shp)
-    #     admin_boundaries_old = gpd.read_file(shp)
     if adm_level == 1:
         fname = config.directory.admin1_boundaries_file
     elif adm_level == 2:
@@ -93,44 +77,23 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
     gdf = gpd.GeoDataFrame(
         df,
         geometry=gpd.points_from_xy(df[lon_col], df[lat_col]),
-        crs=crs,
-    )
+        crs=crs)
     return gdf
 
 
 def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level, wfp):
-    joined = gpd.sjoin(
-        points_gdf,
-        admin_gdf,
-        how="inner",
-        predicate="within",
-    )
-
-    # if wfp:
-    #     group_col = "adm2_id"
-    #     merge_args = dict(on="adm2_id")
-    # else:
-    #     group_col = f"ID_{adm_level}_right"
-    #     merge_args = dict(left_on=f"ID_{adm_level}", right_index=True)
+    joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
     group_col = 'shapeID'
     merge_args = dict(on=group_col)
-
-    aggregated = (
-        joined
-        .groupby(group_col)
-        .agg({col: "sum" for col in tags_agg})
-    )
-
+    aggregated = joined.groupby(group_col).agg(
+        {col: "sum" for col in tags_agg})
     return admin_gdf.merge(aggregated, **merge_args)
 
 
 def save_most_affected_regions(df, *, adm_level, output_path, n=5):
-    # region_col = f"adm{adm_level}_name"
     region_col = 'shapeName'
-    (
-        df.nlargest(n, "Fatalities")[region_col]
-        .to_csv(output_path, index=False, header=False)
-    )
+    df.nlargest(n, "Fatalities")[region_col].to_csv(
+        output_path, index=False, header=False)
 
 
 def build_classifiers(df, *, breaks):
@@ -205,11 +168,7 @@ def _scaled_image(path, max_w, max_h):
     img = PILImage.open(path)
     w, h = img.size
     scale = min(max_w / w, max_h / h)
-    return Image(
-        str(path),
-        width=w * scale,
-        height=h * scale,
-    )
+    return Image(str(path), width=w * scale, height=h * scale)
 
 
 def _fmt_int(v):
