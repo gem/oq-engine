@@ -29,7 +29,8 @@ import numpy
 import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry, contains_xy
+import shapely
+from shapely import geometry, contains_xy, Point
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -118,7 +119,7 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
-@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+@compile(['(f8[:],f8[:])', '(f4[:],f4[:])'])
 def angular_mean_weighted(degrees, weights):
     # not using @ to avoid a NumbaPerformanceWarning:
     # '@' is faster on contiguous arrays
@@ -950,26 +951,29 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate_geometries(geometries, geom_df, exclude=()):
+def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
     """
-    :param geometries: NumPy array of Shapely geometries to check
-    :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
-    :returns: NumPy array where each element contains a list of codes
-        of geometries that intersect each input geometry
+    :param lon: longitude (same CRS as geom_df)
+    :param lat: latitude
+    :param buffer_radius: maximum distance (in CRS units, e.g. degrees)
+    :param geom_df: DataFrame with columns:
+                    - 'geom' (Shapely geometries)
+                    - 'code'
+    :param exclude: iterable of codes to exclude
+    :returns: list of codes of geometries within buffer_radius,
+              ordered by ascending minimum distance
     """
-    result_codes = numpy.empty(len(geometries), dtype=object)
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()
-        # to store intersecting codes for current geometry
-        for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values
-            # geometries associated with this code
-            if any(target.intersects(input_geom) for target in target_geoms):
-                intersecting_codes.add(code)
-        result_codes[i] = sorted(intersecting_codes)
-    return result_codes
+    point = Point(lon, lat)
+    filtered = geom_df[~geom_df['code'].isin(exclude)]
+    code_min_dist = {}
+    for code, df in filtered.groupby('code'):
+        target_geoms = df['geom'].values
+        min_dist = min(g.distance(point) for g in target_geoms)
+        if min_dist <= buffer_radius:
+            code_min_dist[code] = min_dist
+    # Sort by ascending distance
+    ordered_codes = sorted(code_min_dist, key=code_min_dist.get)
+    return ordered_codes
 
 
 # resolution=3 means 12,386 square km (Connecticut)

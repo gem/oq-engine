@@ -279,9 +279,9 @@ bayless_abrahamson_2018
     :show-inheritance:
 
 
-bchydro_2016_epistemic
+eshm20_bchydro
 ------------------------------------------------
-.. automodule:: openquake.hazardlib.gsim.bchydro_2016_epistemic
+.. automodule:: openquake.hazardlib.gsim.eshm20_bchydro
     :members:
     :undoc-members:
     :show-inheritance:

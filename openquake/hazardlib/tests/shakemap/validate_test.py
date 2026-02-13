@@ -111,7 +111,7 @@ class AristotleValidateTestCase(unittest.TestCase):
                 'lon': 84.67006,
                 'dip': 30.08335,
                 'mag': 7.0,
-                'mosaic_models': ['CHN', 'IND'],
+                'mosaic_models': ['IND', 'CHN'],
                 'rake': 90.0,
                 'rupture_file': rupture_file,
                 'rupture_was_loaded': True,
