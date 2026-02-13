@@ -231,7 +231,7 @@ class PointSource(ParametricSeismicSource):
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
             for src in self.pointsources[::step]:
-                out += src.get_planar(shift_hypo, False, step)
+                out += src.get_planar(shift_hypo)
             return out
 
         magd = [(r, mag) for mag, r in
