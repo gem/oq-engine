@@ -225,14 +225,15 @@ class PointSource(ParametricSeismicSource):
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
-    def get_planar(self, shift_hypo=False, iruptures=False):
+    def get_planar(self, shift_hypo=False, iruptures=False, step=1):
         """
         :returns: a dictionary mag -> list of arrays of shape (U, 3)
         """
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+        magd = magd[::step]
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
-            for src in self.pointsources:
+            for src in self.pointsources[::step]:
                 out += src.get_planar(shift_hypo)
             return out
 
@@ -249,37 +250,17 @@ class PointSource(ParametricSeismicSource):
         return dic
 
     def _gen_ruptures(self, shift_hypo=False, step=1, iruptures=False):
-        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        npd = self.nodal_plane_distribution.data
-        hdd = self.hypocenter_distribution.data
-        clon, clat = self.location.x, self.location.y
-        if step == 1:
-            # return full ruptures (one per magnitude)
-            magrate = dict(self.get_annual_occurrence_rates())
-            planardict = self.get_planar(shift_hypo, iruptures)
-            for mag, [planar] in planardict.items():
-                for pla in planar.reshape(-1, 3):
-                    surface = PlanarSurface.from_(pla)
-                    _strike, _dip, rake = pla.sdr
-                    rate = magrate[mag] * pla.wlr[2]
-                    yield ParametricProbabilisticRupture(
-                        mag, rake, self.tectonic_region_type,
-                        Point(*pla.hypo), surface, rate,
-                        self.temporal_occurrence_model)
-        else:
-            # in preclassical return point ruptures (fast)
-            magd_ = list(enumerate(magd))
-            npd_ = list(enumerate(npd))
-            hdd_ = list(enumerate(hdd))
-            for m, (mrate, mag) in magd_[-1:]:
-                for n, (nrate, np) in npd_:
-                    for d, (drate, cdep) in hdd_:
-                        rate = mrate * nrate * drate
-                        yield PointRupture(
-                            mag, self.tectonic_region_type,
-                            Point(clon, clat, cdep), rate,
-                            self.temporal_occurrence_model,
-                            self.lower_seismogenic_depth)
+        magrate = dict(self.get_annual_occurrence_rates())
+        planardict = self.get_planar(shift_hypo, iruptures, step)
+        for mag, [planar] in planardict.items():
+            for pla in planar.reshape(-1, 3):
+                surface = PlanarSurface.from_(pla)
+                _strike, _dip, rake = pla.sdr
+                rate = magrate[mag] * pla.wlr[2]
+                yield ParametricProbabilisticRupture(
+                    mag, rake, self.tectonic_region_type,
+                    Point(*pla.hypo), surface, rate,
+                    self.temporal_occurrence_model)
 
     def iter_ruptures(self, **kwargs):
         """
