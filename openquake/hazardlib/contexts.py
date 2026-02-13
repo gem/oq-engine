@@ -314,10 +314,10 @@ def simple_cmaker(gsims, imts, **params):
 # ############################ genctxs ################################## #
 
 # generator of quintets (rup_index, mag, planar_array, sites)
-def _quintets(cmaker, src, sitecol, step):
+def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
         # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo, step=step)
+        planardict = src.get_planar(cmaker.shift_hypo)
 
     magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
@@ -339,7 +339,7 @@ def _quintets(cmaker, src, sitecol, step):
             if minmag <= mag <= maxmag:
                 yield m, mag, magdist[mag], pla, sitecol
     else:
-        for m, rup in enumerate(src.iruptures(step)):
+        for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
             if mag > maxmag or mag < minmag:
                 continue
@@ -436,7 +436,7 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     return zeroctx.flatten()  # shape N*U
 
 
-def genctxs_Pp(src, sitecol, cmaker, step):
+def genctxs_Pp(src, sitecol, cmaker):
     """
     Context generator for point sources and collapsed point sources
     """
@@ -454,8 +454,7 @@ def genctxs_Pp(src, sitecol, cmaker, step):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for magi, mag,  magdist, planars, sites in _quintets(
-            cmaker, src, sitecol, step):
+    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
@@ -1032,7 +1031,7 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None):
-            return self.pla_mon.iter(genctxs_Pp(src, sitecol, self, step))
+            return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1288,7 +1287,7 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, phi))
 
     # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter, STEP=4):
+    def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
@@ -1304,16 +1303,15 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=STEP))
+        step = 1 if src.code in b'pP' else 4
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
+        if src.code not in b'pP':
+            C *= src.num_ruptures / self.num_rups
         src.nctxs = C * srcfilter.multiplier
-        if src.code in b'pP':
-            src.nctxs *= STEP
-        else:
-            src.nctxs *= src.num_ruptures / self.num_rups
         weight = src.nctxs / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
