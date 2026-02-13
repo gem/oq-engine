@@ -1214,11 +1214,15 @@ class HazardCalculator(BaseCalculator):
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         # called first in preclassical, then called again in classical
-        first_time = 'source_info' not in self.datastore
-        if first_time:
-            # called by populate_csm in preclassical
+        preclassical = 'source_info' not in self.datastore
+        if preclassical:
+            # called by populate_csm which creates csm.source_info
             source_reader.create_source_info(self.csm, self.datastore.hdf5)
-        self.csm.update_source_info(source_data)
+        elif not hasattr(self.csm, 'source_info'):
+            # when there is a parent calculation source_info is missing
+            self.csm.source_info = self.csm.get_source_info()
+
+        self.csm.update_source_info(source_data, preclassical)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
