@@ -70,9 +70,11 @@ class FABATaperTestCase(unittest.TestCase):
 class BCHydroESHM20SInterCentralTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
+
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SINTER_CENTRAL_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SInterLowTestCase(BaseGSIMTestCase):
@@ -80,7 +82,8 @@ class BCHydroESHM20SInterLowTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SINTER_LOWER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SInterHighTestCase(BaseGSIMTestCase):
@@ -88,7 +91,8 @@ class BCHydroESHM20SInterHighTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SINTER_UPPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SInterFastTestCase(BaseGSIMTestCase):
@@ -97,7 +101,8 @@ class BCHydroESHM20SInterFastTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SINTER_FAST_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+                   theta6_adjustment=-0.0015,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SInterHighSigmaMuTestCase(BaseGSIMTestCase):
@@ -107,7 +112,8 @@ class BCHydroESHM20SInterHighSigmaMuTestCase(BaseGSIMTestCase):
         self.check(
             "eshm20_bchydro/BCHydroESHM20_SINTER_HIGH_SIGMA_MU_MEAN.csv",
             max_discrep_percentage=MAX_DISCREP,
-            sigma_mu_epsilon=1.0)
+            sigma_mu_epsilon=1.0,
+            faba_taper_model="Step")
 
 
 class BCHydroESHM20SInterLinearFABATaperTestCase(BaseGSIMTestCase):
@@ -147,7 +153,8 @@ class BCHydroESHM20SSlabCentralTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_CENTRAL_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SSlabLowTestCase(BaseGSIMTestCase):
@@ -155,7 +162,8 @@ class BCHydroESHM20SSlabLowTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_LOWER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SSlabHighTestCase(BaseGSIMTestCase):
@@ -163,7 +171,8 @@ class BCHydroESHM20SSlabHighTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_UPPER_MEAN.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SSlabFastTestCase(BaseGSIMTestCase):
@@ -172,7 +181,8 @@ class BCHydroESHM20SSlabFastTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_FAST_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+                   theta6_adjustment=-0.0015,
+                   faba_taper_model="Step")
 
 
 class BCHydroESHM20SSlabHighSigmaMuTestCase(BaseGSIMTestCase):
@@ -182,7 +192,8 @@ class BCHydroESHM20SSlabHighSigmaMuTestCase(BaseGSIMTestCase):
         self.check(
             "eshm20_bchydro/BCHydroESHM20_SSLAB_HIGH_SIGMA_MU_MEAN.csv",
             max_discrep_percentage=MAX_DISCREP,
-            sigma_mu_epsilon=1.0)
+            sigma_mu_epsilon=1.0,
+            faba_taper_model="Step")
 
 
 class BCHydroESHM20SSlabLinearFABATaperTestCase(BaseGSIMTestCase):
