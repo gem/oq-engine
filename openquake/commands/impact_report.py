@@ -34,6 +34,7 @@ from PIL import Image as PILImage
 import pandas as pd
 import geopandas as gpd
 from openquake import baselib
+from openquake.baselib import config
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.postproc.plots import import_plt, plot_variable
@@ -49,7 +50,7 @@ LOSS_TYPE_MAP = {
 }
 
 
-def load_admin_boundaries(country_name, iso3, adm_level, boundaries_dir, wfp,
+def load_admin_boundaries(country_name, iso3, adm_level, wfp,
                           crs="EPSG:4326"):
     # if wfp:
     #     shp = (
@@ -67,10 +68,17 @@ def load_admin_boundaries(country_name, iso3, adm_level, boundaries_dir, wfp,
     #     shp = Path(boundaries_dir) / f"Adm{adm_level}_{country_name}.shp"
     #     # admin_boundaries = gpd.read_file(shp)
     #     admin_boundaries_old = gpd.read_file(shp)
-    adm2_path = '~/geoBoundaries/geoBoundariesCGAZ_ADM2.gpkg'  # FIXME
-    admin_boundaries = gpd.read_file(adm2_path)
+    if adm_level == 1:
+        fname = config.directory.admin1_boundaries_file
+    elif adm_level == 2:
+        fname = config.directory.admin2_boundaries_file
+    else:
+        raise NotImplementedError(f'Admin level {adm_level} not supported')
+    if not fname:
+        raise AttributeError(
+            f'config.directory.admin{adm_level}_boundaries_file is missing')
+    admin_boundaries = gpd.read_file(fname)
     admin_boundaries = admin_boundaries[admin_boundaries["shapeGroup"] == iso3]
-
     return admin_boundaries.to_crs(crs)
 
 
@@ -135,13 +143,13 @@ def build_classifiers(df, *, breaks):
 
 def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
-                wfp, boundaries_dir, basemap_path, outputs_basedir):
+                wfp, basemap_path, outputs_basedir):
     plt = import_plt()
     save_dir = Path(outputs_basedir) / country_name
     save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
-        country_name, iso3, adm_level, boundaries_dir, wfp)
+        country_name, iso3, adm_level, wfp)
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
@@ -270,7 +278,7 @@ def one_line_paragraph(text, base_style, max_width, min_font_size=8, step=0.5):
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        boundaries_dir, basemap_path, outputs_dir):
+        basemap_path, outputs_dir, adm_level):
 
     tags_agg_losses = ["occupants", 'number', 'residents']
 
@@ -293,12 +301,11 @@ def make_report_for_country(
 
     # FIXME
     wfp = True
-    adm_level = 2
 
     # Country-level comparison
     plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
-                wfp, boundaries_dir, basemap_path, outputs_dir)
+                wfp, basemap_path, outputs_dir)
 
     # FIXME: read/store pngs and pdf in the datastore
     # Paths
@@ -310,8 +317,10 @@ def make_report_for_country(
     # Document Setup (Reduced Margins)
     MARGIN = 20  # Reduced margin for a wider/taller layout area
 
+    output_path = str(country_pngs_dir / f"ImpactReport_{country_name}.pdf")
+
     doc = SimpleDocTemplate(
-        str(country_pngs_dir / f"ImpactReport_{country_name}.pdf"),
+        output_path,
         pagesize=A4,
         leftMargin=MARGIN,
         rightMargin=MARGIN,
@@ -481,6 +490,7 @@ def make_report_for_country(
     ]))
 
     doc.build([master_layout])
+    print(f'{output_path} was created')
 
 
 def _get_notes(oqparam):
@@ -520,12 +530,12 @@ def to_utc_string(ts: str) -> str:
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
-def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,
-         basemap_path=None, outputs_dir=None):
+def main(calc_id: int = -1, *, export_dir='.',
+         basemap_path=None, outputs_dir=None, adm_level=2):
     """
     Create a PDF impact report
     """
-    # boundaries_dir = '/home/ptormene/GIT/wfp/boundaries/'  # FIXME
+    adm_level = int(adm_level)
     # # FIXME:
     # # basemap_path = "../data/eo_base_2020_clean_geo.tif"
     # basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
@@ -561,11 +571,11 @@ def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,
     make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        boundaries_dir, basemap_path, outputs_dir)
+        basemap_path, outputs_dir, adm_level)
 
 
 main.calc_id = 'number of the calculation'
-main.boundaries_dir = 'directory containing administrative boundaries'
 main.basemap_path = 'path to the basemap'
 main.outputs_dir = 'directory where to store impact outputs'
 main.export_dir = dict(help='export directory', abbrev='-d')
+main.adm_level = 'administrative level of country geometries'
