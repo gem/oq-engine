@@ -1030,8 +1030,7 @@ class ContextMaker(object):
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
-        if getattr(src, 'location', None) and step == 1:
-            self.num_rups = src.num_ruptures
+        if getattr(src, 'location', None):
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1304,12 +1303,15 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
+        step = 1 if src.code in b'pP' else 4
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        src.nctxs = C * src.num_ruptures / self.num_rups * srcfilter.multiplier
+        if src.code not in b'pP':
+            C *= src.num_ruptures / self.num_rups
+        src.nctxs = C * srcfilter.multiplier
         weight = src.nctxs / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
