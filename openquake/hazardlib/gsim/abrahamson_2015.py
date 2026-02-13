@@ -127,7 +127,7 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     if faba_model is None:
         backarc = np.bool_(ctx.backarc)
         f_faba = np.zeros_like(dists)
-        # Only applies to backarc sites (f_faba is zero for forearc)
+        # Only applies to backarc sites (f_faba is zero for forearc sites)
         fixed_dists = dists[backarc]
         fixed_dists[fixed_dists < min_dist] = min_dist
         f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
