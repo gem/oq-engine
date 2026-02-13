@@ -138,9 +138,6 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = (a + b * np.log(fixed_dists / 40.)) * faba_model(-ctx.xvf)
     
-    # Set xvfs with sentinel values to zero to turn off faba term
-    f_faba[ctx.xvf == -999] = 0
-
     return f_faba
 
 
@@ -207,6 +204,7 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
             _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
             _compute_focal_depth_term(trt, C, ctx) +
             _compute_forearc_backarc_term(trt, faba_model, C, ctx))
+    breakpoint()
     # Apply linear site term
     site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                      np.log(1000. / C['vlin']))
