@@ -50,8 +50,8 @@ LOSS_TYPE_MAP = {
 }
 
 
-def load_admin_boundaries(country_name, iso3, adm_level, wfp,
-                          crs="EPSG:4326"):
+def load_admin_boundaries(
+        country_name, iso3, adm_level, crs="EPSG:4326"):
     if adm_level == 1:
         fname = config.directory.admin1_boundaries_file
     elif adm_level == 2:
@@ -81,7 +81,7 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
     return gdf
 
 
-def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level, wfp):
+def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level):
     joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
     group_col = 'shapeID'
     merge_args = dict(on=group_col)
@@ -106,19 +106,19 @@ def build_classifiers(df, *, breaks):
 
 def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
-                wfp, basemap_path, outputs_basedir):
+                basemap_path, outputs_basedir):
     plt = import_plt()
     save_dir = Path(outputs_basedir) / country_name
     save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
-        country_name, iso3, adm_level, wfp)
+        country_name, iso3, adm_level)
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
     df = aggregate_losses(
         points_gdf=points_gdf, admin_gdf=admin_boundaries,
-        tags_agg=tags_agg, adm_level=adm_level, wfp=wfp)
+        tags_agg=tags_agg, adm_level=adm_level)
 
     df = df.rename(columns=LOSS_TYPE_MAP)
 
@@ -258,13 +258,10 @@ def make_report_for_country(
     # if isinstance(cities, dict) and len(cities) > 3:
     #     cities = dict(list(cities.items())[:3])
 
-    # FIXME
-    wfp = True
-
     # Country-level comparison
     plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
-                wfp, basemap_path, outputs_dir)
+                basemap_path, outputs_dir)
 
     # FIXME: read/store pngs and pdf in the datastore
     # Paths
