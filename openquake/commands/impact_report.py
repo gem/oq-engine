@@ -49,20 +49,27 @@ LOSS_TYPE_MAP = {
 }
 
 
-def load_admin_boundaries(country, iso3, adm_level, boundaries_dir, wfp,
+def load_admin_boundaries(country_name, iso3, adm_level, boundaries_dir, wfp,
                           crs="EPSG:4326"):
-    if wfp:
-        shp = (
-            Path(boundaries_dir)
-            / "ADMIN_boundaries_PilotCO"
-            / "WFP_pilotCO_admin2.shp"
-        )
-        admin_boundaries = gpd.read_file(shp)
-        admin_boundaries = admin_boundaries[admin_boundaries["iso3"] == iso3]
-    else:
-        # FIXME: missing data
-        shp = Path(boundaries_dir) / f"Adm{adm_level}_{country}.shp"
-        admin_boundaries = gpd.read_file(shp)
+    # if wfp:
+    #     shp = (
+    #         Path(boundaries_dir)
+    #         / "ADMIN_boundaries_PilotCO"
+    #         / "WFP_pilotCO_admin2.shp"
+    #     )
+    #     # admin_boundaries = gpd.read_file(shp)
+    #     # admin_boundaries = admin_boundaries[admin_boundaries["iso3"] == iso3]
+    #     admin_boundaries_old = gpd.read_file(shp)
+    #     admin_boundaries_old = admin_boundaries_old[
+    #         admin_boundaries_old["iso3"] == iso3]
+    # else:
+    #     # FIXME: missing data
+    #     shp = Path(boundaries_dir) / f"Adm{adm_level}_{country_name}.shp"
+    #     # admin_boundaries = gpd.read_file(shp)
+    #     admin_boundaries_old = gpd.read_file(shp)
+    adm2_path = '~/geoBoundaries/geoBoundariesCGAZ_ADM2.gpkg'  # FIXME
+    admin_boundaries = gpd.read_file(adm2_path)
+    admin_boundaries = admin_boundaries[admin_boundaries["shapeGroup"] == iso3]
 
     return admin_boundaries.to_crs(crs)
 
@@ -91,12 +98,14 @@ def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level, wfp):
         predicate="within",
     )
 
-    if wfp:
-        group_col = "adm2_id"
-        merge_args = dict(on="adm2_id")
-    else:
-        group_col = f"ID_{adm_level}_right"
-        merge_args = dict(left_on=f"ID_{adm_level}", right_index=True)
+    # if wfp:
+    #     group_col = "adm2_id"
+    #     merge_args = dict(on="adm2_id")
+    # else:
+    #     group_col = f"ID_{adm_level}_right"
+    #     merge_args = dict(left_on=f"ID_{adm_level}", right_index=True)
+    group_col = 'shapeID'
+    merge_args = dict(on=group_col)
 
     aggregated = (
         joined
@@ -108,7 +117,8 @@ def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level, wfp):
 
 
 def save_most_affected_regions(df, *, adm_level, output_path, n=5):
-    region_col = f"adm{adm_level}_name"
+    # region_col = f"adm{adm_level}_name"
+    region_col = 'shapeName'
     (
         df.nlargest(n, "Fatalities")[region_col]
         .to_csv(output_path, index=False, header=False)
@@ -123,15 +133,15 @@ def build_classifiers(df, *, breaks):
     }
 
 
-def plot_losses(country, iso3, adm_level, losses_df, cities,
+def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
                 wfp, boundaries_dir, basemap_path, outputs_basedir):
     plt = import_plt()
-    save_dir = Path(outputs_basedir) / country
+    save_dir = Path(outputs_basedir) / country_name
     save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
-        country, iso3, adm_level, boundaries_dir, wfp)
+        country_name, iso3, adm_level, boundaries_dir, wfp)
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
@@ -166,13 +176,14 @@ def plot_losses(country, iso3, adm_level, losses_df, cities,
     for loss_type in LOSS_TYPE_MAP.values():
         fig, ax = plot_variable(
             df, admin_boundaries, loss_type, classifiers[loss_type],
-            colors[loss_type], country=country, plot_title=titles[loss_type],
+            colors[loss_type], country_name=country_name,
+            plot_title=titles[loss_type],
             legend_title=loss_type, cities=cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
             basemap_path=basemap_path,
         )
         # NOTE: we might save it into the datastore instead
-        fig.savefig(save_dir / f"{loss_type}_{country}.png", dpi=300,
+        fig.savefig(save_dir / f"{loss_type}_{country_name}.png", dpi=300,
                     bbox_inches="tight")
         plt.close(fig)
         # print(f"Total {loss_type}: {df[loss_type].sum()}")
@@ -268,8 +279,7 @@ def make_report_for_country(
     countries_info_df = pd.read_csv(countries_info_fname)
     country_info = countries_info_df.loc[
         countries_info_df["ISO3"] == iso3].iloc[0]
-    iso3 = country_info["ISO3"]
-    country = country_info["ENGLISH_COUNTRY"]
+    country_name = country_info["ENGLISH_COUNTRY"]
     # "GEM_REGION": country_info["GEM_REGION"],
     # "CRS": country_info["CRS"],
     x_limits_country = [country_info["X_MIN"], country_info["X_MAX"]]
@@ -286,21 +296,22 @@ def make_report_for_country(
     adm_level = 2
 
     # Country-level comparison
-    plot_losses(country, iso3, adm_level, losses_df, cities,
+    plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
                 wfp, boundaries_dir, basemap_path, outputs_dir)
 
+    # FIXME: read/store pngs and pdf in the datastore
     # Paths
-    country_pngs_dir = Path(outputs_dir) / country
-    png1 = country_pngs_dir / f"Buildings_{country}.png"
-    png2 = country_pngs_dir / f"Fatalities_{country}.png"
-    png3 = country_pngs_dir / f"Homeless_{country}.png"
+    country_pngs_dir = Path(outputs_dir) / country_name
+    png1 = country_pngs_dir / f"Buildings_{country_name}.png"
+    png2 = country_pngs_dir / f"Fatalities_{country_name}.png"
+    png3 = country_pngs_dir / f"Homeless_{country_name}.png"
 
     # Document Setup (Reduced Margins)
     MARGIN = 20  # Reduced margin for a wider/taller layout area
 
     doc = SimpleDocTemplate(
-        str(country_pngs_dir / f"ImpactReport_{country}.pdf"),
+        str(country_pngs_dir / f"ImpactReport_{country_name}.pdf"),
         pagesize=A4,
         leftMargin=MARGIN,
         rightMargin=MARGIN,
@@ -497,11 +508,14 @@ def to_utc_string(ts: str) -> str:
     Convert a timestamp with timezone offset (e.g. '+08:00')
     to the format: 'YYYY-MM-DD HH:MM:SS UTC'
     """
+    ret_str = 'Time of the Event: '
+    if not ts:
+        return ret_str + "Unknown"
     dt = datetime.fromisoformat(ts)
     if dt.tzinfo is None:
         raise ValueError("Timestamp has no timezone information")
     dt_utc = dt.astimezone(timezone.utc)
-    return dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
 def main(calc_id: int = -1, *, export_dir='.', boundaries_dir=None,

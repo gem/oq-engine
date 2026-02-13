@@ -360,9 +360,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     trts = {}
     expo = getattr(AristotleParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
-    with monitor('get_close_mosaic_models'):
+    with monitor('get_close_regions'):
         try:
-            mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+            mosaic_models = get_close_regions(rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
             # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
             err = {"status": "failed", "error_msg": str(exc)}

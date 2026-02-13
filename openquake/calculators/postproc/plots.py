@@ -290,7 +290,7 @@ def get_assetcol(calc_id):
 
 
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
-                  country=None, plot_title=None, legend_title=None,
+                  country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
                   basemap_path=None, font_size=18, city_font_size=14,
                   legend_font_size=10,
@@ -311,7 +311,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         Fitted classifier (e.g. NaturalBreaks).
     colors : list[str]
         One color per class (length must equal classifier.k).
-    country : str, optional
+    country_name : str, optional
         Used only for output naming or titles.
     plot_title : str, optional
         Figure title.
