@@ -1099,6 +1099,7 @@ def impact_get_rupture_data(request):
         del rupdic['shakemap_array']
     elif rup is not None:
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
+                                  with_region_labels=True,
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
     if request.user.level < 2 and 'warning_msg' in rupdic:

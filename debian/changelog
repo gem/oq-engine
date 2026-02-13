@@ -1,3 +1,11 @@
+  [Yen-Shin Chen]
+  * Added get_x_l_ratio() method to BaseSurface for computing normalized
+    along-strike position (x/L) for PFDHA applications
+  * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
+    for improved performance with large site meshes
+  * Added _get_tor() helper method to extract the top rupture
+    trace with NaN handling for KiteSurface compatibility
+
   [Christopher Brooks]
   * Added the EMME24 site model to the existing OQ implementation of the
     EMME backbone model for ASCR (files describing the site model were
