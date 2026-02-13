@@ -1216,7 +1216,7 @@ class HazardCalculator(BaseCalculator):
         # called first in preclassical, then called again in classical
         preclassical = 'source_info' not in self.datastore
         if preclassical:
-            # called by populate_csm in preclassical
+            # called by populate_csm which creates csm.source_info
             source_reader.create_source_info(self.csm, self.datastore.hdf5)
         elif not hasattr(self.csm, 'source_info'):
             # when there is a parent calculation source_info is missing
