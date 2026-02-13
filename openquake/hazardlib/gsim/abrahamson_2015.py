@@ -136,9 +136,8 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     # Must be a faba model specified
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
-    f_faba = (a + b * np.log(fixed_dists / 40.)) * faba_model(-ctx.xvf)
-    
-    return f_faba
+    f_faba = a + b * np.log(fixed_dists / 40.)
+    return f_faba * faba_model(-ctx.xvf)
 
 
 def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
