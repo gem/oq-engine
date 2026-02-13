@@ -985,4 +985,4 @@ def hex6(lons, lats):
     ['831ea6', '831f99']
     """
     import h3  # import it only when needed
-    return [h3.geo_to_h3(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]
+    return [h3.latlng_to_cell(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]

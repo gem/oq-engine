@@ -9,7 +9,7 @@ https://wheelhouse.openquake.org/v3/linux/py312/pyogrio-0.11.1-cp312-cp312-manyl
 https://wheelhouse.openquake.org/v3/linux/py312/matplotlib-3.10.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/numba-0.61.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/numpy-2.2.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py312/onnxruntime-1.21.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py312/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/shapely-2.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/contourpy-1.3.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -18,8 +18,7 @@ https://wheelhouse.openquake.org/v3/linux/py312/h5py-3.13.0-cp312-cp312-manylinu
 https://wheelhouse.openquake.org/v3/linux/py312/psutil-7.0.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/linux/py312/cffi-1.17.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py312/h3-3.7.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py312/timezonefinder-6.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py312/h3-4.4.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/charset_normalizer-3.4.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/kiwisolver-1.4.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -27,6 +26,7 @@ https://wheelhouse.openquake.org/v3/linux/py312/Pillow-10.1.0-cp312-cp312-manyli
 https://wheelhouse.openquake.org/v3/linux/py312/pyzmq-26.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/setproctitle-1.3.3-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #pp
+https://wheelhouse.openquake.org/v3/py/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/py/geopandas-1.1.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
@@ -40,13 +40,13 @@ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/django-4.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django-4.2.27-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/flatbuffers-25.12.19-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.39.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/idna-3.6-py3-none-any.whl
