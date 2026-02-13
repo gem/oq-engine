@@ -1778,12 +1778,12 @@ def read_mosaic_df(mosaic_dir=config.directory.mosaic_dir):
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
-        mosaic_boundaries_file = os.path.join(mosaic_dir, 'mosaic.gpkg')
+        mosaic_boundaries_file = os.path.join(mosaic_dir, 'ModelBoundaries.gpkg')
         if not os.path.exists(mosaic_boundaries_file):
             mosaic_boundaries_file = os.path.join(
-                os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+                os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
     print(f'Reading {mosaic_boundaries_file}')
-    return read_geometries(mosaic_boundaries_file, 'name')
+    return read_geometries(mosaic_boundaries_file, 'code')
 
 
 def read_countries_df():
