@@ -326,7 +326,7 @@ def make_report_for_country(
         oq_basedir / 'doc' / '_static' / 'OQ-Logo-Standard-RGB-72DPI-01.png')
     LOGO_W = 100
 
-    event_text = f"<b>{event_name}, {event_date}</b>"
+    event_text = f"<b>{event_name}; {event_date}</b>"
     event_paragraph = one_line_paragraph(
         event_text,
         event_style,
