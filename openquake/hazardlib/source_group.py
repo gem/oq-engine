@@ -420,14 +420,13 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, source_data):
+    def update_source_info(self, source_data, preclassical):
         """
+        :param source_data:
+            dictionary with keys src_id, nctxs, nrupts, weight, ctimes
+
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        if not hasattr(self, 'source_info'):
-            # when there is a parent calculation source_info is missing,
-            # otherwise it is set by preclassical
-            self.source_info = self.get_source_info()
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
         for src_id, nctxs, weight, ctimes in python3compat.zip(
