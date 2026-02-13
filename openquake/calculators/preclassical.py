@@ -28,7 +28,7 @@ from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
-    SourceGroup, _grp_id, store_src_groups, NUM_CTXS, NUM_RUPTURES)
+    SourceGroup, _grp_id, store_src_groups, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -55,7 +55,7 @@ def source_data(sources):
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
-        data['nctxs'].append(src.nsites * src.num_ruptures)
+        data['nctxs'].append(src.nctxs)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
         data['ctimes'].append(src.dt)
@@ -396,8 +396,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset(
             'weights',
             F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
-        totsites = sum(row[NUM_CTXS] for row in self.csm.source_info.values())
-        if totsites == 0:
+        tot = self.datastore['source_info']['est_ctxs'].sum()
+        if tot == 0:
             if self.N == 1:
                 logging.error('There are no sources close to the site!')
             else:

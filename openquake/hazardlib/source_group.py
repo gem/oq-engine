@@ -40,7 +40,7 @@ TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 weight = operator.attrgetter('weight')
-CALC_TIME, NUM_CTXS, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
+CALC_TIME, NUM_CTXS, EST_CTXS, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7, 8
 
 
 def _grp_id(blk):
@@ -242,7 +242,6 @@ class SourceGroup(collections.abc.Sequence):
         for src in self:
             src.nsites = 1
             src.num_ruptures = src.count_ruptures()
-            print(src.weight)
         return self
 
     # used only in event_based, where weight = num_ruptures
@@ -421,21 +420,26 @@ class CompositeSourceModel:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
 
-    def update_source_info(self, source_data):
+    def update_source_info(self, source_data, preclassical):
         """
+        :param source_data:
+            dictionary with keys src_id, nctxs, nrupts, weight, ctimes
+
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        if not hasattr(self, 'source_info'):
-            self.source_info = self.get_source_info()
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
-        for src_id, nctxs, weight, ctimes in python3compat.zip(
-                source_data['src_id'], source_data['nctxs'],
-                source_data['weight'], source_data['ctimes']):
+        for src_id, nctxs, ctimes in python3compat.zip(
+                source_data['src_id'],
+                source_data['nctxs'],
+                source_data['ctimes']):
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_CTXS] = nctxs
+            if preclassical:
+                row[EST_CTXS] += nctxs
+            else:
+                row[NUM_CTXS] += nctxs
 
     def count_ruptures(self):
         """
@@ -576,7 +580,8 @@ class CompositeSourceModel:
             mutex = getattr(src, 'mutex_weight', 0)
             trti = self.full_lt.trti.get(src.tectonic_region_type, 0)
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, src.code, 0, 0,
+            row = [srcid, src.grp_id, src.code,
+                   0, 0, 0,  # CALC_TIME, NUM_CTXS, EST_CTXS
                    sum(s.num_ruptures for s in srcs),
                    sum(s.weight for s in srcs),
                    mutex, trti]
