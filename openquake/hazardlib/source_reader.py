@@ -39,10 +39,11 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
     ('num_ctxs', numpy.uint64),        # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('weight', numpy.float32),         # 6
-    ('mutex_weight', numpy.float64),   # 7
-    ('trti', numpy.uint8),             # 8
+    ('est_ctxs', numpy.uint64),        # 5
+    ('num_ruptures', numpy.uint32),    # 6
+    ('weight', numpy.float32),         # 7
+    ('mutex_weight', numpy.float64),   # 8
+    ('trti', numpy.uint8),             # 9
 ])
 
 
