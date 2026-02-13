@@ -240,6 +240,84 @@ class BaseSurface(metaclass=abc.ABCMeta):
 
         return dst
 
+    def get_x_l_ratio(self, mesh):
+        """
+        Compute normalized along-strike position (x/L) for each point in
+        ``mesh`` relative to the surface trace. Used for PFDHA applications.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of target points.
+        :returns:
+            Tuple (x_over_l, l_km) where x_over_l is numpy array in [0,1]
+            and l_km is trace length in km.
+        """
+        trace = self._get_tor()
+        site_lons = mesh.lons.flatten()
+        site_lats = mesh.lats.flatten()
+        n_sites = len(site_lons)
+
+        if trace.shape[0] < 2:
+            return numpy.zeros(n_sites), 0.0
+
+        # Compute geodetic trace length
+        seg_lengths_km = geodetic.geodetic_distance(
+            trace[:-1, 0], trace[:-1, 1],
+            trace[1:, 0], trace[1:, 1]
+        )
+        l_km = float(numpy.sum(seg_lengths_km))
+
+        # Project coordinates to 2D km space
+        all_lons = numpy.concatenate([trace[:, 0], site_lons])
+        all_lats = numpy.concatenate([trace[:, 1], site_lats])
+        proj = utils.OrthographicProjection.from_(all_lons, all_lats)
+        tr_x, tr_y = proj(trace[:, 0], trace[:, 1])
+        si_x, si_y = proj(site_lons, site_lats)
+
+        # Precompute segment geometry
+        txy = numpy.column_stack([tr_x, tr_y])
+        segs = txy[1:] - txy[:-1]
+        seg_lens_sq = numpy.sum(segs ** 2, axis=1)
+        seg_lens = numpy.sqrt(seg_lens_sq)
+        cumul = numpy.concatenate([[0.0], numpy.cumsum(seg_lens)])
+        l_proj = cumul[-1]
+
+        if l_proj == 0.0:
+            return numpy.zeros(n_sites), l_km
+
+        # Vectorized point-to-polyline projection
+        site_pts = numpy.column_stack([si_x, si_y])[:, numpy.newaxis, :]
+        seg_start = txy[:-1][numpy.newaxis, :, :]
+        seg_vec = segs[numpy.newaxis, :, :]
+        vec_to_seg = site_pts - seg_start
+        dot = (vec_to_seg[:, :, 0] * seg_vec[:, :, 0] +
+               vec_to_seg[:, :, 1] * seg_vec[:, :, 1])
+
+        # Handle zero-length segments
+        safe_lens_sq = seg_lens_sq.copy()
+        safe_lens_sq[safe_lens_sq == 0.0] = 1.0
+        t = dot / safe_lens_sq[numpy.newaxis, :]
+        numpy.clip(t, 0.0, 1.0, out=t)
+
+        # Compute squared distances
+        closest_pt = seg_start + t[:, :, numpy.newaxis] * seg_vec - site_pts
+        d_sq = closest_pt[:, :, 0]**2 + closest_pt[:, :, 1]**2
+
+        # Handle zero-length segments
+        zero_mask = seg_lens_sq == 0.0
+        if numpy.any(zero_mask):
+            vec_sq = vec_to_seg[:, :, 0]**2 + vec_to_seg[:, :, 1]**2
+            d_sq[:, zero_mask] = vec_sq[:, zero_mask]
+            t[:, zero_mask] = 0.0
+
+        # Find closest segment and compute x/L
+        min_indices = numpy.argmin(d_sq, axis=1)
+        rows = numpy.arange(n_sites)
+        best_t = t[rows, min_indices]
+        x_best = cumul[min_indices] + best_t * seg_lens[min_indices]
+        x_ratios = x_best / l_proj
+        numpy.clip(x_ratios, 0.0, 1.0, out=x_ratios)
+        return x_ratios, l_km
+
     def get_rx_distance(self, mesh):
         """
         Compute distance between each point of mesh and surface's great circle
@@ -321,6 +399,26 @@ class BaseSurface(metaclass=abc.ABCMeta):
         else:
             dep = numpy.min(top_edge.depths)
             return dep
+
+    def _get_tor(self):
+        """
+        Extract the top rupture trace (top edge) of the rupture surface as a
+        2D array of geographic coordinates.
+
+        Handles KiteSurface meshes that may contain NaN values in some
+        columns by filtering them out.
+
+        :returns:
+            numpy.ndarray of shape (N, 2) with columns [longitude, latitude]
+            representing the ordered vertices of the top rupture trace.
+        """
+        top_edge = self.mesh[0:1]
+        lons = top_edge.lons[0, :]
+        lats = top_edge.lats[0, :]
+        # Filter NaN values (KiteSurface compatibility, same pattern as
+        # get_ry0_distance but more robust by checking both lons and lats)
+        finite = numpy.isfinite(lons) & numpy.isfinite(lats)
+        return numpy.column_stack([lons[finite], lats[finite]])
 
     def get_top_edge_centroid(self):
         """
