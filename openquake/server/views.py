@@ -209,7 +209,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    calc_dir = parallel.scratch_dir(calc_id)
+    calc_dir = parallel.calc_dir(calc_id)
     input_files = request_files.getlist('archive')
     zip_file = None
     for input_file in input_files:

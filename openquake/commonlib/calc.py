@@ -20,7 +20,6 @@ import logging
 import operator
 import functools
 import numpy
-from shapely.geometry import Point
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
@@ -494,18 +493,14 @@ def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):
     :returns: list of regions intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    # NOTE: we don't need an additional buffer around the region geometries,
-    #       because we are already using a buffer around the site coordinates
     if region_kind == 'mosaic_model':
-        regions_df = readinput.read_mosaic_df(0.)
+        regions_df = readinput.read_mosaic_df()
     elif region_kind == 'country':
-        regions_df = readinput.read_countries_df(0.)
+        regions_df = readinput.read_countries_df()
     else:
         raise NotImplementedError(f'Unexpected {region_kind=}')
-    center = Point(lon, lat)
-    buffer = center.buffer(buffer_radius)
-    geoms = numpy.array([buffer])
-    [close_regions] = geo.utils.geolocate_geometries(geoms, regions_df)
+    close_regions = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, regions_df)
     if not close_regions:
         raise ValueError(
             f"({lon}, {lat}) is farther than {buffer_radius} deg"

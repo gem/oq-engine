@@ -260,7 +260,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'num_ruptures']
+                                 'calc_time', 'num_ctxs', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -293,12 +293,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
-    scratch_dir = dstore.filename[:-5]
-    if os.path.exists(scratch_dir):
+    calc_dir = dstore.filename[:-5]
+    if os.path.exists(calc_dir):
         size = 0
-        for fname in os.listdir(scratch_dir):
-            size += os.path.getsize(os.path.join(scratch_dir, fname))
-        rows.append((scratch_dir, humansize(size)))
+        for fname in os.listdir(calc_dir):
+            size += os.path.getsize(os.path.join(calc_dir, fname))
+        rows.append((calc_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 

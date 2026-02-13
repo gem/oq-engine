@@ -218,7 +218,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
 
-                # Site term correction fos SHM6
+                # Site term correction for SHM6
                 shm6_site_correction(self.COEFFS[imt], mean[m], ctx, imt)
 
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi

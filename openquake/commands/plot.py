@@ -562,7 +562,7 @@ def make_figure_ebruptures(extractors, what):
     out = ebrs['model'] == b'???'
     in_ = ~out
     _fig, ax = plt.subplots()
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     ax.grid(True)
     ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
                label='sites')
@@ -1088,7 +1088,7 @@ def make_figure_sources(extractors, what):
     plot_sources(srcs, ax)
     print('Plotting mosaic borders...')
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     adjust_limits(ax, xlim, ylim, padding=8)
     ax.set_title('Sources')
     handles, labels = ax.get_legend_handles_labels()
@@ -1187,7 +1187,7 @@ def plot_wkt(wkt_string):
         coo = numpy.array(poly.coords)
     _fig, ax = plt.subplots()
     ax.plot(coo[:, 0], coo[:, 1], 'o')
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     return plt
 
 
@@ -1213,7 +1213,7 @@ def plot_h3(hexes):
         mp = shapely.MultiPolygon(h3.h3_set_to_multi_polygon([hex]))
         lat, lon = mp.geoms[0].exterior.xy
         ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
-    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    add_borders(ax, readinput.read_countries_df)
     ax.set_aspect('equal')
     return plt
 

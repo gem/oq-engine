@@ -125,6 +125,7 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     else:
         raise NotImplementedError(trt)
     if faba_model is None:
+        # Must not be an ESHM20 subclass
         backarc = np.bool_(ctx.backarc)
         f_faba = np.zeros_like(dists)
         # Term only applies to backarc ctx (F_FABA = 0. for forearc)
@@ -133,7 +134,8 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
         f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
         return f_faba
 
-    # in BCHydro subclasses
+    # faba_model is only accepted as an input arg within the
+    # ESHM20 subclasses (they require the xvf site parameter)
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
@@ -282,7 +284,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     delta_c1 = None
     kind = "base"
-    FABA_ALL_MODELS = {}  # overridden in BCHydro
+    FABA_ALL_MODELS = {}  # overridden in ESHM20 subclasses of BCHydro
 
     def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
                  faba_taper_model='Step', **faba_args):
@@ -290,7 +292,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
         faba_type = faba_taper_model
-        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
+        if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # ESHM20 subclasses
             self.faba_model = self.FABA_ALL_MODELS[faba_type](**faba_args)
         else:
             self.faba_model = None

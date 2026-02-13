@@ -63,9 +63,9 @@ def adjust_limits(ax, xlim, ylim, padding=1):
     ax.set_ylim(*ylim)
 
 
-def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
+def add_borders(ax, read_df=readinput.read_countries_df, alpha=0.1):
     plt = import_plt()
-    polys = read_df(buffer)['geom']
+    polys = read_df()['geom']
     cm = plt.get_cmap('RdBu')
     num_colours = len(polys)
     for idx, poly in enumerate(polys):
