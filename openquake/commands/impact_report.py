@@ -536,9 +536,10 @@ def main(calc_id: int = -1, *, export_dir='.',
     Create a PDF impact report
     """
     adm_level = int(adm_level)
-    # # FIXME:
-    # # basemap_path = "../data/eo_base_2020_clean_geo.tif"
-    # basemap_path = "/home/ptormene/GIT/wfp/data/eo_base_2020_clean_geo.tif"
+    if not basemap_path:
+        basemap_path = config.directory.basemap_file
+        if not basemap_path:
+            raise AttributeError('config.directory.basemap_file is missing')
     if not outputs_dir:
         oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
         outputs_dir = oq_basedir / "outputs" / "impact"
