@@ -272,13 +272,14 @@ class PointSource(ParametricSeismicSource):
             step=kwargs.get('step', 1))
 
     # PointSource
-    def iruptures(self):
+    def iruptures(self, step):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
-        yield from self.restrict(np, avg['dep'])._gen_ruptures(iruptures=True)
+        yield from self.restrict(np, avg['dep'])._gen_ruptures(
+            iruptures=True, step=step)
 
     def count_nphc(self):
         """
@@ -448,13 +449,13 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def iruptures(self):
+    def iruptures(self, step):
         """
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
         yield from self.restrict(np, self.location.z)._gen_ruptures(
-            iruptures=True)
+            iruptures=True, step=step)
 
     def count_ruptures(self):
         """
