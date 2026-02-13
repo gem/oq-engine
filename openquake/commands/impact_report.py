@@ -508,12 +508,14 @@ def to_utc_string(ts: str) -> str:
     Convert a timestamp with timezone offset (e.g. '+08:00')
     to the format: 'YYYY-MM-DD HH:MM:SS UTC'
     """
-    ret_str = 'Time of the Event: '
+    ret_str = 'Time of the event: '
     if not ts:
-        return ret_str + "Unknown"
+        return ret_str + "unknown"
     dt = datetime.fromisoformat(ts)
     if dt.tzinfo is None:
-        raise ValueError("Timestamp has no timezone information")
+        # FIXME: log properly or add a note to the pdf
+        print("Timestamp has no timezone information")
+        return ret_str + dt.strftime('%Y-%m-%d %H:%M:%S')
     dt_utc = dt.astimezone(timezone.utc)
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
