@@ -242,7 +242,6 @@ class SourceGroup(collections.abc.Sequence):
         for src in self:
             src.nsites = 1
             src.num_ruptures = src.count_ruptures()
-            print(src.weight)
         return self
 
     # used only in event_based, where weight = num_ruptures
@@ -426,6 +425,8 @@ class CompositeSourceModel:
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         if not hasattr(self, 'source_info'):
+            # when there is a parent calculation source_info is missing,
+            # otherwise it is set by preclassical
             self.source_info = self.get_source_info()
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
@@ -435,7 +436,7 @@ class CompositeSourceModel:
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_CTXS] = nctxs
+            row[NUM_CTXS] += nctxs
 
     def count_ruptures(self):
         """
