@@ -1031,6 +1031,7 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None) and step == 1:
+            self.num_rups = src.num_ruptures
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1308,7 +1309,7 @@ class ContextMaker(object):
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        src.nctxs = C * src.num_ruptures / self.num_rups
+        src.nctxs = C * src.num_ruptures / self.num_rups * srcfilter.multiplier
         weight = src.nctxs / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
         if src.code in b'pP':  # much lighter
