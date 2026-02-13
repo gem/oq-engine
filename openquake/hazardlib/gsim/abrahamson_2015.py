@@ -203,7 +203,7 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
             _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
             _compute_focal_depth_term(trt, C, ctx) +
             _compute_forearc_backarc_term(trt, faba_model, C, ctx))
-    breakpoint()
+    
     # Apply linear site term
     site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
                      np.log(1000. / C['vlin']))
