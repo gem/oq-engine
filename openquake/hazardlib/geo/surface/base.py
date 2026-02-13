@@ -251,7 +251,7 @@ class BaseSurface(metaclass=abc.ABCMeta):
             Tuple (x_over_l, l_km) where x_over_l is numpy array in [0,1]
             and l_km is trace length in km.
         """
-        trace = self._get_top_rupture_trace()
+        trace = self._get_tor()
         site_lons = mesh.lons.flatten()
         site_lats = mesh.lats.flatten()
         n_sites = len(site_lons)
@@ -400,7 +400,7 @@ class BaseSurface(metaclass=abc.ABCMeta):
             dep = numpy.min(top_edge.depths)
             return dep
 
-    def _get_top_rupture_trace(self):
+    def _get_tor(self):
         """
         Extract the top rupture trace (top edge) of the rupture surface as a
         2D array of geographic coordinates.

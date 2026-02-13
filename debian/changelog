@@ -3,7 +3,7 @@
     along-strike position (x/L) for PFDHA applications
   * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
     for improved performance with large site meshes
-  * Added _get_top_rupture_trace() helper method to extract the top rupture
+  * Added _get_tor() helper method to extract the top rupture
     trace with NaN handling for KiteSurface compatibility
 
   [Christopher Brooks]
