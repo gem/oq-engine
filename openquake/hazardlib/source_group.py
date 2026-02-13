@@ -576,7 +576,8 @@ class CompositeSourceModel:
             mutex = getattr(src, 'mutex_weight', 0)
             trti = self.full_lt.trti.get(src.tectonic_region_type, 0)
             lens.append(len(src.trt_smrs))
-            row = [srcid, src.grp_id, src.code, 0, 0,
+            row = [srcid, src.grp_id, src.code, 0,
+                   sum(s.nctxs for s in srcs),
                    sum(s.num_ruptures for s in srcs),
                    sum(s.weight for s in srcs),
                    mutex, trti]
