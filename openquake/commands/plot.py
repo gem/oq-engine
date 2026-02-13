@@ -53,9 +53,11 @@ def getparams(what):
     >>> getparams('rupture?')
     ({}, False, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
-    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True&with_region_labels=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True, True)
     """
     assert '?' in what, what
     params = {}
