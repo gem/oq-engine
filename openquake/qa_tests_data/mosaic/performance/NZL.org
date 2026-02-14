@@ -14,3 +14,19 @@ Checksum of the inputs: 3683067441 (total size 702.76 MB)
 |--------------------+--------+---------+--------+---------+---------+---------|
 | classical          | 211    | 1_598   | 42%    | 188.7   | 2_651   | 1.6592  |
 | postclassical      | 96     | 47.4917 | 25%    | 19.9237 | 64.3832 | 1.3557  |
+
+* master, worse postclassical
+
+# cps-040 dominated
+| calc_7781, maxmem=195.0 GB | time_sec  | memory_mb | counts     |
+|----------------------------+-----------+-----------+------------|
+| total classical            | 420_390   | 632.4     | 671        |
+| get_poes                   | 153_533   | 0.0       | 12_385_053 |
+| computing mean_std         | 107_619   | 0.0       | 249_257    |
+| total postclassical        | 12_357    | 108.6094  | 192        |
+| ClassicalCalculator.run    | 3_800     | 12_145    | 1          |
+
+| operation-duration | counts | mean    | stddev | min      | max     | slowfac |
+|--------------------+--------+---------+--------+----------+---------+---------|
+| classical          | 355    | 1_183   | 60%    | 123.7152 | 3_133   | 2.6475  |
+| postclassical      | 192    | 64.3608 | 01%    | 62.4154  | 65.6195 | 1.0196  |
