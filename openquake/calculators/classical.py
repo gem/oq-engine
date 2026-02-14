@@ -698,9 +698,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.N > self.oqparam.max_sites_disagg:
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
+            info = info[info['num_ctxs'] > 0]
             bad = delta(info['est_ctxs'], info['num_ctxs']) > .5
             if bad.any():
-                logging.info('The estimated number of contexts is way off\n'+
+                logging.warn('The estimated number of contexts is way off\n'+
                              views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
