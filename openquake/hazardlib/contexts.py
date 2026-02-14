@@ -1543,11 +1543,12 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
+        factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
             src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(totlen // nsrcs)
+            self.source_data['nctxs'].append(src.nctxs * factor)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(src.dt)

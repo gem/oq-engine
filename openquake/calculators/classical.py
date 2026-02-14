@@ -27,7 +27,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+    AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
@@ -693,7 +693,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
-        df = pandas.DataFrame(self.source_data)
+
+        # check est_ctxs vs num_ctxs
+        if self.N > self.oqparam.max_sites_disagg:
+            fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
+            info = self.datastore['source_info'][:][fields]
+            bad = delta(info['est_ctxs'], info['num_ctxs']) > .5
+            if bad.any():
+                logging.info('The estimated number of contexts is way off\n'+
+                             views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
@@ -701,6 +709,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # producing 20 effective ruptures for the N-n points outside;
         # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
         # it gives impact = 38, i.e. there are 38 effective ruptures
+        df = pandas.DataFrame(self.source_data)
         df['impact'] = df.nctxs / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
