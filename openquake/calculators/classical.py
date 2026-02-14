@@ -191,7 +191,10 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 
 def _split_src(srcs, n):
-    return split_in_blocks(srcs, n, get_weight)
+    for i in range(n):
+        blk = srcs[i::n]
+        if len(blk):
+            yield blk
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -212,7 +215,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 10)
+        b0, *blks = _split_src(list(grps[0]), 8)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
@@ -220,7 +223,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield res
         if dt > 3 * cmaker.split_time:
             # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 8):
+            for srcs in _split_src(rest, 7):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
         elif dt > cmaker.split_time:
             for srcs in _split_src(rest, 2):
