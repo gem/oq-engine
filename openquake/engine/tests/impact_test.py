@@ -22,7 +22,6 @@ import unittest
 import pytest
 import numpy
 from openquake.calculators.views import text_table
-from openquake.calculators.base import expose_outputs
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
 
@@ -99,6 +98,7 @@ def test_impact(n):
             expose_outputs(calc2.datastore)
             compare(calc.datastore, calc2.datastore)
         '''
+
 
 def test_impact5():
     # this is a case where there are no assets inside the MMI multipolygons

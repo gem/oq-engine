@@ -6,13 +6,14 @@ on:
         description: Git Ref
         default: master
         required: true
-  #schedule:
-  #  - cron: "10 09 * * *"
+  schedule:
+    - cron: "30 23 * * *"
 
 jobs:
   server_impact_mode:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
@@ -79,6 +80,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          name: playwright-artifacts-impact-python${{ matrix.python-version }}-{{ matrix.os }}
           path: test-results
           retention-days: 7
