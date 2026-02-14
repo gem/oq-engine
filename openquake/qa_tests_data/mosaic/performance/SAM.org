@@ -19,20 +19,20 @@ Checksum of the inputs: 2430128208 (total size 165.39 MB)
 
 * master, much better
 
-# int_-dominated
-| calc_7518, maxmem=208.5 GB | time_sec  | memory_mb | counts     |
+# cps-002-dominated
+| calc_7782, maxmem=208.0 GB | time_sec  | memory_mb | counts     |
 |----------------------------+-----------+-----------+------------|
-| total baseclassical        | 305_216   | 225.0     | 347        |
-| get_poes                   | 279_728   | 0.0       | 32_434_288 |
-| total classical            | 113_291   | 167.3193  | 669        |
-| computing mean_std         | 51_811    | 0.0       | 648_760    |
-| planar contexts            | 15_844    | 0.0       | 1_555_415  |
-| nonplanar contexts         | 7_834     | 0.0       | 644_016    |
-| total postclassical        | 7_507     | 61.5781   | 192        |
-| ClassicalCalculator.run    | 3_820     | 6_524     | 1          |
+| total classical            | 316_339   | 117.2910  | 838        |
+| get_poes                   | 255_693   | 0.0       | 32_032_811 |
+| total baseclassical        | 73_979    | 91.0273   | 57         |
+| computing mean_std         | 51_364    | 0.0       | 640_731    |
+| planar contexts            | 14_328    | 0.0       | 1_555_415  |
+| nonplanar contexts         | 8_946     | 0.0       | 644_016    |
+| total postclassical        | 7_524     | 68.3359   | 192        |
+| ClassicalCalculator.run    | 3_652     | 6_255     | 1          |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| baseclassical      | 281    | 1_079   | 53%    | 91.2219 | 2_863   | 2.6546  |
-| classical          | 202    | 558.2   | 107%   | 59.2970 | 3_362   | 6.0224  |
-| postclassical      | 192    | 39.1014 | 09%    | 34.5670 | 46.5945 | 1.1916  |
+| baseclassical      | 38     | 1_920   | 07%    | 1_392   | 2_043   | 1.0641  |
+| classical          | 382    | 824.2   | 110%   | 77.8976 | 3_301   | 4.0055  |
+| postclassical      | 192    | 39.1891 | 05%    | 37.6578 | 46.5181 | 1.1870  |
