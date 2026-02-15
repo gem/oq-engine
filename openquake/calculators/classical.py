@@ -601,7 +601,7 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 60, 10)
+        self.split_time = split_time = max(max_gb * 200, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
