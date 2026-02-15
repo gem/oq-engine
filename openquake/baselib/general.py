@@ -1741,8 +1741,8 @@ def delta(a, b):
     """
     :returns: the relative differences between a and b; zeros return zeros
     """
-    a = F64(a)
-    b = F64(b)
+    a = numpy.array(a, F32)
+    b = numpy.array(b, F32)
     c = a + b
     ok = c != 0.
     res = numpy.zeros_like(a)
