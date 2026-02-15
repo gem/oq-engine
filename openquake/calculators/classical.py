@@ -228,7 +228,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         elif dt > cmaker.split_time:
             for srcs in _split_src(rest, 2):
                 yield baseclassical, srcs, tilegetter, cmaker, True, dstore
-        elif dt > .4 * cmaker.split_time:
+        elif dt > .5 * cmaker.split_time:
             odd, even = _split_src(rest, 2)
             yield baseclassical, odd, tilegetter, cmaker, True, dstore
             yield baseclassical(even, sites, cmaker, True)
