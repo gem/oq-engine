@@ -1314,8 +1314,6 @@ class ContextMaker(object):
         src.nctxs = C * srcfilter.multiplier
         weight = src.nctxs / N
         # in the ComplexFault demo num_ruptures=743, num_rups=372
-        if src.code in b'pP':  # much lighter
-            weight /= 5
         return weight
 
     def set_weight(self, sources, srcfilter):
