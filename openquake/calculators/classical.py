@@ -699,7 +699,8 @@ class ClassicalCalculator(base.HazardCalculator):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
             info = info[info['num_ctxs'] > 0]
-            bad = delta(info['est_ctxs'], info['num_ctxs']) > .5
+            bad = (info['est_ctxs'] < info['num_ctxs']) & delta(
+                info['est_ctxs'], info['num_ctxs']) > .5
             if bad.any():
                 logging.warn('The estimated number of contexts is way off\n'+
                              views.text_table(info[bad], ext='org'))
