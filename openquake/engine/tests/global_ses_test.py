@@ -64,9 +64,9 @@ def setup_module():
         MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
         number_of_logic_tree_samples='200')
     wdf = read(worflow_id).read_df('workflow')
+    # case with a region
     dstore = base.run_calc(
         path('job.ini'), hazard_calculation_id='rups.hdf5',
-
     ).datastore
     check(dstore, list(wdf.calc_id))
     ae(dstore['source_info/EUR']['source_id'],
@@ -78,6 +78,16 @@ def setup_module():
         b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
         b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
         b'SSC-mps-4'])
+
+
+def test_one_site():
+    global last_job
+    dstore = base.run_calc(
+        path('job1.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
+    last_job = dstore.calc_id
+    shape = dstore['avg_gmf'].shape
+    assert shape == (2, 1, 1)
 
 
 def test_sites():  # 6 sites

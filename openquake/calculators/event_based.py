@@ -901,9 +901,10 @@ class EventBasedCalculator(base.HazardCalculator):
         avg_gmf = numpy.zeros((2, N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
+        sid2idx = {sid: idx for idx, sid in enumerate(gmf_df.index.unique())}
         for sid, avgstd in compute_avg_gmf(
                 gmf_df, self.weights, min_iml).items():
-            avg_gmf[:, sid] = avgstd
+            avg_gmf[:, sid2idx[sid]] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
         if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
