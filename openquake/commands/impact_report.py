@@ -188,6 +188,7 @@ def _fmt_int(v):
 
 
 def _get_impact_summary_ranges(dstore):
+    # FIXME: the totals are for ALL countries
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
         'Fatalities': 'occupants',
@@ -524,11 +525,12 @@ def main(calc_id: int = -1, *, adm_level=2, threshold_deg=3):
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
-    for iso3 in iso3_codes:
-        make_report_for_country(
-            iso3, event_name, event_date, shakemap_version, time_of_calc,
-            disclaimer_txt, notes_txt, losses_df, summary_ranges,
-            basemap_path, adm_level, dstore)
+    # TODO: handle multi-country case (hypocenter close to borders)
+    iso3 = iso3_codes[0]
+    make_report_for_country(
+        iso3, event_name, event_date, shakemap_version, time_of_calc,
+        disclaimer_txt, notes_txt, losses_df, summary_ranges,
+        basemap_path, adm_level, dstore)
     dstore.close()
 
 
