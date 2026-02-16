@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the task distribution in classical calculations and reduced the
+    slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)
   * Bug fix: using `sites=lon1 lat1, ...` with a parent calculation
     did not result in the specified sites to be used
 

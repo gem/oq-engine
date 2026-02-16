@@ -440,8 +440,7 @@ class CollapsedPointSource(PointSource):
         """
         :returns: an iterator over the underlying ruptures
         """
-        step = kwargs.get('step', 1)
-        for src in self.pointsources[::-step]:
+        for src in self.pointsources:
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource

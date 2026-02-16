@@ -350,7 +350,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         String representation of a source, displaying the source class name
         and the source id.
         """
-        return '<%s %s, weight=%.2f>' % (
+        return '<%s %s, weight=%.1f>' % (
             self.__class__.__name__, self.source_id, self.weight)
 
 
