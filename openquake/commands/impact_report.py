@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import tempfile
+from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -90,10 +92,10 @@ def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level):
     return admin_gdf.merge(aggregated, **merge_args)
 
 
-def save_most_affected_regions(df, *, adm_level, output_path, n=5):
+def save_most_affected_regions(df, dstore, iso3, *, adm_level, n=5):
     region_col = 'shapeName'
-    df.nlargest(n, "Fatalities")[region_col].to_csv(
-        output_path, index=False, header=False)
+    regions = df.nlargest(n, "Fatalities")[region_col].dropna().tolist()
+    dstore[f"impact/{iso3}/most_affected_regions"] = regions
 
 
 def build_classifiers(df, *, breaks):
@@ -106,10 +108,8 @@ def build_classifiers(df, *, breaks):
 
 def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
-                basemap_path, outputs_basedir):
+                basemap_path, dstore):
     plt = import_plt()
-    save_dir = Path(outputs_basedir) / country_name
-    save_dir.mkdir(parents=True, exist_ok=True)
 
     admin_boundaries = load_admin_boundaries(
         country_name, iso3, adm_level)
@@ -122,9 +122,7 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
 
     df = df.rename(columns=LOSS_TYPE_MAP)
 
-    save_most_affected_regions(
-        df, adm_level=adm_level,
-        output_path=save_dir / "most_affected_regions.txt")
+    save_most_affected_regions(df, dstore, iso3, adm_level=adm_level)
 
     classifiers = build_classifiers(
         df, breaks=[1, 10, 100, 1000])
@@ -153,11 +151,12 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
             basemap_path=basemap_path,
         )
-        # NOTE: we might save it into the datastore instead
-        fig.savefig(save_dir / f"{loss_type}_{country_name}.png", dpi=300,
-                    bbox_inches="tight")
-        plt.close(fig)
         # print(f"Total {loss_type}: {df[loss_type].sum()}")
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        buf.seek(0)
+        dstore[f"impact/{iso3}/png/{loss_type}"] = buf.getvalue()
 
 
 def _scaled_image(path, max_w, max_h):
@@ -168,7 +167,20 @@ def _scaled_image(path, max_w, max_h):
     img = PILImage.open(path)
     w, h = img.size
     scale = min(max_w / w, max_h / h)
-    return Image(str(path), width=w * scale, height=h * scale)
+    return Image(str(path), width=w*scale, height=h*scale)
+
+
+def _scaled_image_from_bytes(image_data, max_w, max_h):
+    # If it is an HDF5 dataset, read it
+    try:
+        image_data = image_data[()]
+    except Exception:
+        pass
+    # scale image preserving aspect ratio
+    img = PILImage.open(BytesIO(image_data))
+    w, h = img.size
+    scale = min(max_w / w, max_h / h)
+    return Image(BytesIO(image_data), width=w*scale, height=h*scale)
 
 
 def _fmt_int(v):
@@ -197,8 +209,7 @@ def _get_impact_summary_ranges(dstore):
 
 
 def _get_losses(dstore):
-    # FIXME: probably there is a more efficient way, rather than
-    # exporting and reading the exported csv
+    # TODO: check if there is a better way
     fnames = export(('avg_losses-stats', 'csv'), dstore)
     avg_losses_mean_fname = [
         fname for fname in fnames if 'avg_losses-mean' in fname][0]
@@ -237,7 +248,7 @@ def one_line_paragraph(text, base_style, max_width, min_font_size=8, step=0.5):
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, outputs_dir, adm_level):
+        basemap_path, adm_level, dstore):
 
     tags_agg_losses = ["occupants", 'number', 'residents']
 
@@ -261,22 +272,14 @@ def make_report_for_country(
     # Country-level comparison
     plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg_losses, x_limits_country, y_limits_country,
-                basemap_path, outputs_dir)
-
-    # FIXME: read/store pngs and pdf in the datastore
-    # Paths
-    country_pngs_dir = Path(outputs_dir) / country_name
-    png1 = country_pngs_dir / f"Buildings_{country_name}.png"
-    png2 = country_pngs_dir / f"Fatalities_{country_name}.png"
-    png3 = country_pngs_dir / f"Homeless_{country_name}.png"
+                basemap_path, dstore)
 
     # Document Setup (Reduced Margins)
     MARGIN = 20  # Reduced margin for a wider/taller layout area
 
-    output_path = str(country_pngs_dir / f"ImpactReport_{country_name}.pdf")
-
+    pdf_buffer = BytesIO()
     doc = SimpleDocTemplate(
-        output_path,
+        pdf_buffer,
         pagesize=A4,
         leftMargin=MARGIN,
         rightMargin=MARGIN,
@@ -373,8 +376,7 @@ def make_report_for_country(
         ("PADDING", (0, 0), (-1, -1), 4),
     ]))
 
-    with open(country_pngs_dir / 'most_affected_regions.txt') as f:
-        most_affected_regions = [line.strip() for line in f if line.strip()]
+    most_affected_regions = dstore[f"impact/{iso3}/most_affected_regions"]
 
     left_bundle = [
         Paragraph("<b>Summary of impact:</b>", styles["Normal"]),
@@ -390,10 +392,12 @@ def make_report_for_country(
     ]
 
     # Images (2x2 Grid)
-    img_top_right = _scaled_image(png1, COL_W - 10, ROW_H - 10)
-    img_bot_left = _scaled_image(png2, COL_W - 10, ROW_H - 10)
-    img_bot_right = _scaled_image(png3, COL_W - 10, ROW_H - 10)
-
+    img_top_right = _scaled_image_from_bytes(
+        dstore[f"impact/{iso3}/png/Buildings"][()], COL_W - 10, ROW_H - 10)
+    img_bot_left = _scaled_image_from_bytes(
+        dstore[f"impact/{iso3}/png/Fatalities"][()], COL_W - 10, ROW_H - 10)
+    img_bot_right = _scaled_image_from_bytes(
+        dstore[f"impact/{iso3}/png/Homeless"][()], COL_W - 10, ROW_H - 10)
     grid_tbl = Table(
         [
             [left_bundle, img_top_right],
@@ -402,7 +406,6 @@ def make_report_for_country(
         colWidths=[COL_W, COL_W],
         rowHeights=[ROW_H, ROW_H]
     )
-
     grid_tbl.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (1, 0), (1, 1), "CENTER"),
@@ -446,7 +449,8 @@ def make_report_for_country(
     ]))
 
     doc.build([master_layout])
-    print(f'{output_path} was created')
+    pdf_buffer.seek(0)
+    dstore[f"impact/{iso3}/report_pdf"] = pdf_buffer.getvalue()
 
 
 def _get_notes(oqparam):
@@ -486,21 +490,16 @@ def to_utc_string(ts: str) -> str:
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
-def main(calc_id: int = -1, *, export_dir='.',
-         basemap_path=None, outputs_dir=None, adm_level=2):
+def main(calc_id: int = -1, *, adm_level=2, threshold_deg=3):
     """
     Create a PDF impact report
     """
     adm_level = int(adm_level)
+    basemap_path = config.directory.basemap_file
     if not basemap_path:
-        basemap_path = config.directory.basemap_file
-        if not basemap_path:
-            raise AttributeError('config.directory.basemap_file is missing')
-    if not outputs_dir:
-        oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
-        outputs_dir = oq_basedir / "outputs" / "impact"
-
-    dstore = datastore.read(calc_id)
+        raise AttributeError('config.directory.basemap_file is missing')
+    export_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    dstore = datastore.read(calc_id, mode='r+')
     dstore.export_dir = export_dir
     lon = dstore['oqparam'].rupture_dict['lon']
     lat = dstore['oqparam'].rupture_dict['lat']
@@ -520,19 +519,18 @@ def main(calc_id: int = -1, *, export_dir='.',
     for accuracy by a human reviewer. Please treat all figures as provisional
     until a final validated version is issued.'''
     notes_txt = _get_notes(oqparam)
-    dstore.close()
     iso3_codes = get_close_regions(
-        lon, lat, buffer_radius=0.5, region_kind='country')
-    iso3 = iso3_codes[0]  # TODO: handle multi-country case
-
-    make_report_for_country(
-        iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, outputs_dir, adm_level)
+        lon, lat, buffer_radius=threshold_deg, region_kind='country')
+    if not iso3_codes:
+        raise RuntimeError(
+            "No country within {threshold_deg} from the hypocenter")
+    for iso3 in iso3_codes:
+        make_report_for_country(
+            iso3, event_name, event_date, shakemap_version, time_of_calc,
+            disclaimer_txt, notes_txt, losses_df, summary_ranges,
+            basemap_path, adm_level, dstore)
+    dstore.close()
 
 
 main.calc_id = 'number of the calculation'
-main.basemap_path = 'path to the basemap'
-main.outputs_dir = 'directory where to store impact outputs'
-main.export_dir = dict(help='export directory', abbrev='-d')
 main.adm_level = 'administrative level of country geometries'

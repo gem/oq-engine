@@ -405,31 +405,29 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     Plot a classified geospatial variable with optional basemap
     and annotations.
 
-    Parameters
-    ----------
-    df : geopandas.GeoDataFrame
+    :param df: geopandas.GeoDataFrame
         Input data with geometry column.
-    admin_boundaries : geopandas.GeoDataFrame
+    :param admin_boundaries: geopandas.GeoDataFrame
         Administrative boundaries to overlay.
-    column : str
+    :param column: str
         Column to classify and plot.
-    classifier : mapclassify classifier
+    :param classifier: mapclassify classifier
         Fitted classifier (e.g. NaturalBreaks).
-    colors : list[str]
+    :param colors: list[str]
         One color per class (length must equal classifier.k).
-    country_name : str, optional
+    :param country_name: str, optional
         Used only for output naming or titles.
-    plot_title : str, optional
+    :param plot_title: str, optional
         Figure title.
-    legend_title : str, optional
+    :param legend_title: str, optional
         Legend title.
-    cities : dict[str, tuple[float, float]], optional
+    :param cities: dict[str, tuple[float, float]], optional
         Mapping of city name → (lon, lat).
-    legend_digits : int
+    :param legend_digits: int
         Decimal digits for legend bin labels.
-    x_limits, y_limits : tuple, optional
+    :param x_limits, y_limits: tuple, optional
         Axis limits.
-    basemap_path : Path or str, optional
+    :param basemap_path: Path or str, optional
         Raster basemap path.
     """
     plt = import_plt()
