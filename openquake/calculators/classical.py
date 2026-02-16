@@ -215,20 +215,23 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 6)
+        b0, *blks = _split_src(list(grps[0]), 7)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
-        if dt > 2.5 * cmaker.split_time:
-            # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 5):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+        if dt > 3 * cmaker.split_time:
+            blks = _split_src(rest, 6)
+            for blk in blks[:-1]:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(blks[-1], sites, cmaker, True)
+        elif dt > 2 * cmaker.split_time:
+            blks = _split_src(rest, 4)
+            for blk in blks[:-1]:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(blks[-1], sites, cmaker, True)
         elif dt > cmaker.split_time:
-            for srcs in _split_src(rest, 2):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
-        elif dt > .5 * cmaker.split_time:
             odd, even = _split_src(rest, 2)
             yield baseclassical, odd, tilegetter, cmaker, True, dstore
             yield baseclassical(even, sites, cmaker, True)
@@ -605,8 +608,8 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        # NB: the multiplier 100 is chosen so that SAM runs well on engine192
-        self.split_time = split_time = max(max_gb * 100, 10)
+        # NB: the multiplier 60 is chosen so that SAM runs well on engine192
+        self.split_time = split_time = max(max_gb * 60, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
