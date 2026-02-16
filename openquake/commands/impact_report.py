@@ -45,11 +45,27 @@ from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data import global_risk
 
 
-LOSS_TYPE_MAP = {
-    "occupants": "Fatalities",
-    "residents": "Homeless",
-    "number": "Buildings",
+LOSS_METADATA = {
+    "occupants": {
+        "label": "Fatalities",
+        "title": "Fatalities",
+        "colors": [
+            '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d'],
+    },
+    "residents": {
+        "label": "Displaced",
+        "title": "Displaced population",
+        "colors": [
+            '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
+    },
+    "number": {
+        "label": "Buildings lost",
+        "title": "Buildings beyond repair",
+        "colors": [
+            '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
+    },
 }
+LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
 
 def load_admin_boundaries(
@@ -94,16 +110,15 @@ def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level):
 
 def save_most_affected_regions(df, dstore, iso3, *, adm_level, n=5):
     region_col = 'shapeName'
-    regions = df.nlargest(n, "Fatalities")[region_col].dropna().tolist()
+    fatalities_label = LOSS_METADATA["occupants"]["label"]
+    regions = df.nlargest(n, fatalities_label)[region_col].dropna().tolist()
     dstore[f"impact/{iso3}/most_affected_regions"] = regions
 
 
 def build_classifiers(df, *, breaks):
-    return {
-        "Fatalities": mapclassify.UserDefined(df["Fatalities"], bins=breaks),
-        "Homeless": mapclassify.UserDefined(df["Homeless"], bins=breaks),
-        "Buildings": mapclassify.UserDefined(df["Buildings"], bins=breaks),
-    }
+    return {meta["label"]: mapclassify.UserDefined(df[meta["label"]],
+                                                   bins=breaks)
+            for meta in LOSS_METADATA.values()}
 
 
 def plot_losses(country_name, iso3, adm_level, losses_df, cities,
@@ -120,43 +135,30 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
         points_gdf=points_gdf, admin_gdf=admin_boundaries,
         tags_agg=tags_agg, adm_level=adm_level)
 
-    df = df.rename(columns=LOSS_TYPE_MAP)
+    df = df.rename(columns={k: v["label"] for k, v in LOSS_METADATA.items()})
 
     save_most_affected_regions(df, dstore, iso3, adm_level=adm_level)
 
     classifiers = build_classifiers(
         df, breaks=[1, 10, 100, 1000])
 
-    colors = {
-        "Fatalities": [
-            '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d'],
-        "Homeless": [
-            '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
-        "Buildings": [
-            '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
-    }
-
-    titles = {
-        "Fatalities": "Fatalities",
-        "Homeless": "Homeless",
-        "Buildings": "Buildings beyond repair",
-    }
-
-    for loss_type in LOSS_TYPE_MAP.values():
+    for meta in LOSS_METADATA.values():
+        label = meta["label"]
+        title = meta["title"]
+        colors = meta["colors"]
         fig, ax = plot_variable(
-            df, admin_boundaries, loss_type, classifiers[loss_type],
-            colors[loss_type], country_name=country_name,
-            plot_title=titles[loss_type],
-            legend_title=loss_type, cities=cities,
+            df, admin_boundaries, label, classifiers[label],
+            colors, country_name=country_name,
+            plot_title=title,
+            legend_title=label, cities=cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
             basemap_path=basemap_path,
         )
-        # print(f"Total {loss_type}: {df[loss_type].sum()}")
         buf = BytesIO()
         fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
         plt.close(fig)
         buf.seek(0)
-        dstore[f"impact/{iso3}/png/{loss_type}"] = buf.getvalue()
+        dstore[f"impact/{iso3}/png/{label}"] = buf.getvalue()
 
 
 def _scaled_image(path, max_w, max_h):
@@ -191,9 +193,8 @@ def _get_impact_summary_ranges(dstore):
     # FIXME: the totals are for ALL countries
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
-        'Fatalities': 'occupants',
-        'Displaced': 'residents',
-        'Buildings lost': 'number',
+        meta["label"]: loss_type
+        for loss_type, meta in LOSS_METADATA.items()
     }
 
     rows = aggrisk_tags.loc[
@@ -251,7 +252,7 @@ def make_report_for_country(
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
         basemap_path, adm_level, dstore):
 
-    tags_agg_losses = ["occupants", 'number', 'residents']
+    tags_agg_losses = list(LOSS_METADATA)
 
     countries_info_fname = os.path.join(
         os.path.dirname(global_risk.__file__), 'countries_info.csv')
@@ -364,10 +365,9 @@ def make_report_for_country(
 
     # Top-Left Content
     summary_table = Table(
-        [["", "Range of losses"],
-         ["Fatalities", summary_ranges["Fatalities"]],
-         ["Buildings lost", summary_ranges["Buildings lost"]],
-         ["Displaced", summary_ranges["Displaced"]]],
+        [["", "Range of losses"]] +
+        [[meta["label"], summary_ranges[meta["label"]]]
+         for meta in LOSS_METADATA.values()],
         colWidths=[COL_W * 0.45, COL_W * 0.45], hAlign='LEFT'
     )
     summary_table.setStyle(TableStyle([
@@ -394,11 +394,14 @@ def make_report_for_country(
 
     # Images (2x2 Grid)
     img_top_right = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/Buildings"][()], COL_W - 10, ROW_H - 10)
+        dstore[f"impact/{iso3}/png/{LOSS_METADATA['number']['label']}"][()],
+        COL_W - 10, ROW_H - 10)
     img_bot_left = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/Fatalities"][()], COL_W - 10, ROW_H - 10)
+        dstore[f"impact/{iso3}/png/{LOSS_METADATA['occupants']['label']}"][()],
+        COL_W - 10, ROW_H - 10)
     img_bot_right = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/Homeless"][()], COL_W - 10, ROW_H - 10)
+        dstore[f"impact/{iso3}/png/{LOSS_METADATA['residents']['label']}"][()],
+        COL_W - 10, ROW_H - 10)
     grid_tbl = Table(
         [
             [left_bundle, img_top_right],
