@@ -21,7 +21,10 @@ Package :mod:`openquake.fdha.primary_surf_rup` contains implementations of diffe
 fault displacement prediction models
 """
 
-from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR
+from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_ExC
+from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_GB
+from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_nBR
+
 #from openquake.fdha.primary_surf_rup.wells_coppersmith1993 import WC1993PrimarySR
 #from openquake.fdha.primary_surf_rup.moss_ross2011 import MossRoss2011PrimarySR
 #from openquake.fdha.primary_surf_rup.takao2013 import Takao2013PrimarySR

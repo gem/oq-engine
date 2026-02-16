@@ -18,31 +18,69 @@
 
 """
 Module :mod:`openquake.fdha.primary_surf_rup.youngs2003` implements
-the model of Youngs et al. (2003) in :class:`Youngs2003PrimarySR`.
+regional models of Youngs et al. (2003) for primary surface rupture.
 """
-
 
 import numpy as np
 from openquake.fdha.primary_surf_rup.base import BasePrimarySurfRup
 
-class Youngs2003PrimarySR(BasePrimarySurfRup):
+
+class _Youngs2003Base(BasePrimarySurfRup):
     """
-    Model of Youngs et al. (2003) for the probability of surface rupture
-    based on rupture mechanism and earthquake magnitude.
+    Base class for Youngs et al. (2003) logistic surface rupture probability
+    models. Subclasses set :attr:`COEFF_A` and :attr:`COEFF_B` (logistic
+    regression coefficients).
     """
-    def get_prob(self, mag, style="all"):
+
+    COEFF_A = None
+    COEFF_B = None
+
+    def get_prob(self, ctx):
         """
-        :param mag: float or array-like, earthquake magnitude(s)
-        :param style: string, 'all' or 'normal'
-        :return: probability or array of probabilities
+        Compute primary surface rupture probability from magnitude using
+        the logistic model P = 1 / (1 + exp(-(a + b * mag))).
+
+        :param ctx:
+            Context object with attribute ``mag`` (magnitude, scalar or
+            array).
+        :returns:
+            Probability as float (scalar) or :class:`numpy.ndarray`,
+            same shape as ``ctx.mag``.
         """
-        m = np.asarray(mag, dtype=float)
-        if style == 'all':
-            a, b = -12.51, 2.053
-        elif style == 'normal':
-            a, b = -16.02, 2.685
-        else:
-            raise ValueError(f"Invalid style '{style}'. Use 'all' or 'normal'.")
-        fx = a + b * m
-        prob = np.exp(fx) / (1.0 + np.exp(fx))
+        m = np.asarray(ctx.mag, dtype=float)
+        fx = self.COEFF_A + self.COEFF_B * m
+        prob = 1.0 / (1.0 + np.exp(-fx))
         return prob.item() if prob.shape == () else prob
+
+
+class Youngs2003PrimarySR_ExC(_Youngs2003Base):
+    """
+    Youngs et al. (2003) primary surface rupture model for Extensional
+    Cordillera. Coefficients (a, b) = (-12.53, 1.921); 105 earthquakes,
+    Mw 4.5–7.6 (Appendix, p. 25).
+    """
+
+    COEFF_A = -12.53
+    COEFF_B = 1.921
+
+
+class Youngs2003PrimarySR_GB(_Youngs2003Base):
+    """
+    Youngs et al. (2003) primary surface rupture model for Great Basin.
+    Coefficients (a, b) = (-16.02, 2.685); 32 earthquakes, Mw 4.9–7.2
+    (Appendix, p. 25).
+    """
+
+    COEFF_A = -16.02
+    COEFF_B = 2.685
+
+
+class Youngs2003PrimarySR_nBR(_Youngs2003Base):
+    """
+    Youngs et al. (2003) primary surface rupture model for northern Basin
+    and Range. Coefficients (a, b) = (-18.71, 3.041); 47 earthquakes,
+    Mw 4.9–7.4 (Appendix, p. 25).
+    """
+
+    COEFF_A = -18.71
+    COEFF_B = 3.041
