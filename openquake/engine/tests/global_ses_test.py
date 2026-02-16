@@ -56,7 +56,6 @@ def check(dstore, calcs):
         rups = ds['ruptures'][:]
         nrup = len(rups)
         assert nrup == nrup_EUR + nrup_MIE  # no double counting
-        assert dstore['avg_gmf'].shape == (2, 4328, 1)
 
 
 def setup_module():
@@ -64,9 +63,9 @@ def setup_module():
         MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
         number_of_logic_tree_samples='200')
     wdf = read(worflow_id).read_df('workflow')
+    # case with a region
     dstore = base.run_calc(
         path('job.ini'), hazard_calculation_id='rups.hdf5',
-
     ).datastore
     check(dstore, list(wdf.calc_id))
     ae(dstore['source_info/EUR']['source_id'],
@@ -80,14 +79,24 @@ def setup_module():
         b'SSC-mps-4'])
 
 
+def test_one_site():
+    global last_job
+    dstore = base.run_calc(
+        path('job1.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
+    last_job = dstore.calc_id
+    df = dstore.read_df('gmf_data', 'sid')
+    assert len(df) == 14
+
+
 def test_sites():  # 6 sites
     global last_job
     dstore = base.run_calc(
         path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     last_job = dstore.calc_id
-    gmvs = dstore['avg_gmf'][0, :, 0]
-    assert (gmvs > 0).sum() == 6
+    df = dstore.read_df('gmf_data', 'sid')
+    assert len(df) == 70
 
 
 def test_site_model():  # 6 sites
@@ -96,8 +105,8 @@ def test_site_model():  # 6 sites
         path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     last_job = dstore.calc_id
-    gmvs = dstore['avg_gmf'][0, :, 0]
-    assert (gmvs > 0).sum() == 6
+    df = dstore.read_df('gmf_data', 'sid')
+    assert len(df) == 70
 
 
 def teardown_module():

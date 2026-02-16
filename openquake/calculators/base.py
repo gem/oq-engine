@@ -945,17 +945,23 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
-                oq, self.datastore.hdf5)):
+        if oq.hazard_calculation_id:
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
             # this is called by mosaic_for_ses/job_sites.csv
-            self.sitecol, _array, _discarded = geo.utils.assoc(
-                child, haz_sitecol, assoc_dist, 'filter')
-            self.datastore['sitecol'] = self.sitecol
+            if oq.region or 'site_model' in oq.inputs:
+                self.sitecol, _array, _discarded = geo.utils.assoc(
+                    child, haz_sitecol, assoc_dist, 'filter')
+                self.datastore['sitecol'] = self.sitecol
+            elif oq.sites:
+                child.assoc(haz_sitecol.array, assoc_dist, 'warn')
+                self.datastore['sitecol'] = self.sitecol = child
+            else:
+                raise RuntimeError('No region, no site_model no sites??')
         else:  # base case
             self.sitecol = haz_sitecol
         if self.sitecol and oq.imtls:

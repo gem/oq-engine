@@ -1321,7 +1321,6 @@ class OqParam(valid.ParamSet):
         self.check_gsim_lt()
         self.set_loss_types()
         self.check_risk()
-        self.check_ebrisk()
 
     def raise_invalid(self, msg):
         """
@@ -1416,18 +1415,13 @@ class OqParam(valid.ParamSet):
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
 
-    def check_ebrisk(self):
-        # check specific to ebrisk
-        if self.calculation_mode == 'ebrisk':
-            if self.ground_motion_fields:
-                print('ground_motion_fields overridden to false',
-                      file=sys.stderr)
-                self.ground_motion_fields = False
-            if self.hazard_curves_from_gmfs:
-                self.raise_invalid(
-                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
-
     def check_hazard(self):
+        # check for sites, site_model and hc_id
+        if (self.sites and 'site_model' in self.inputs and
+                self.hazard_calculation_id):
+            self.raise_invalid('You cannot specify both sites and site_model '
+                               'in the presence of a parent calculation')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and not self.sites):
