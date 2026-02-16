@@ -222,15 +222,15 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         dt = time.time() - t0
         yield res
         if dt > 3 * cmaker.split_time:
-            blks = _split_src(rest, 6)
-            for blk in blks[:-1]:
+            b1, *blks = _split_src(rest, 6)
+            for blk in blks:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(blks[-1], sites, cmaker, True)
+            yield baseclassical(b1, sites, cmaker, True)
         elif dt > 2 * cmaker.split_time:
-            blks = _split_src(rest, 4)
-            for blk in blks[:-1]:
+            b1, *blks = _split_src(rest, 4)
+            for blk in blks:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(blks[-1], sites, cmaker, True)
+            yield baseclassical(b1, sites, cmaker, True)
         elif dt > cmaker.split_time:
             odd, even = _split_src(rest, 2)
             yield baseclassical, odd, tilegetter, cmaker, True, dstore
