@@ -77,5 +77,6 @@ elif settings.APPLICATION_MODE != 'READ_ONLY':
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^run$', views.calc_run),
         re_path(r'^run_ini$', views.calc_run_ini),
+        re_path(r'^validate_ini$', views.validate_ini),
         re_path(r'^validate_zip$', views.validate_zip),
     ])

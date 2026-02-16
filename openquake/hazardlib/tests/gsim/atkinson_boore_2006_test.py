@@ -18,10 +18,7 @@
 
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006, AtkinsonBoore2006Modified2011)
-from openquake.hazardlib.contexts import RuptureContext
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.const import StdDev
-
+from openquake.hazardlib.contexts import RuptureContext, mean_stds
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 import numpy
@@ -46,6 +43,7 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         # the equations have a singularity). In this case the
         # method should return values equal to the ones obtained by
         # replacing 0 values with 1
+        gsim = self.GSIM_CLASS()
         ctx = RuptureContext()
         ctx.sids = [0, 1]
         ctx.vs30 = numpy.array([500.0, 2500.0])
@@ -53,11 +51,9 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         ctx.src_id = 0
         ctx.rup_id = 0
         ctx.rrup = numpy.array([0.0, 0.2])
-        mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        mean_0, stds_0 = mean_stds(ctx, gsim, 'PGA', [0, 1])
         ctx.rrup = numpy.array([1.0, 0.2])
-        mean_01, stds_01 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        mean_01, stds_01 = mean_stds(ctx, gsim, 'PGA', [0, 1])
         numpy.testing.assert_array_equal(mean_0, mean_01)
         numpy.testing.assert_array_equal(stds_0, stds_01)
 

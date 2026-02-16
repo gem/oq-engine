@@ -407,3 +407,37 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIn('station_data_file', resp)
         self.assertIn('n_stations', resp)
         self.assertIsNone(resp['station_data_issue'])
+
+    def test_impact_get_rupture_data(self):
+        initial_user_level = self.user1.profile.level
+        self.user1.profile.level = 2
+        self.user1.profile.save()
+        self.user1.save()
+
+        # Case covered by a mosaic model
+        rup_params = dict(
+            approach='provide_rup_params', rupture_file='undefined',
+            usgs_id='UserProvided', use_shakemap='false', lon='9', lat='45',
+            dep='100', mag='7.5', rake='-90', dip='30', strike='45',
+            aspect_ratio='2', msr='WC1994')
+        resp = self.c.post('/v1/calc/impact_get_rupture_data',
+                           data=rup_params)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('rupture_png', resp.json())
+
+        # Case not covered by any mosaic model
+        rup_params = dict(
+            approach='provide_rup_params', rupture_file='undefined',
+            usgs_id='UserProvided', use_shakemap='false', lon='-139', lat='35',
+            dep='100', mag='7.5', rake='-90', dip='30', strike='45',
+            aspect_ratio='2', msr='WC1994')
+        resp = self.c.post('/v1/calc/impact_get_rupture_data',
+                           data=rup_params)
+        self.assertIn('error_msg', resp.json())
+        self.assertEqual(
+            resp.json()['error_msg'],
+            '(-139.0, 35.0) is farther than 5 deg from any mosaic model!')
+
+        self.user1.profile.level = initial_user_level
+        self.user1.profile.save()
+        self.user1.save()

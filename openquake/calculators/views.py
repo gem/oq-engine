@@ -45,7 +45,7 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
-    get_ebrupture, MapGetter, get_pmaps_gb)
+    get_ebrupture, MapGetter, get_rmap_gb)
 from openquake.calculators.base import get_model_lts, get_weights
 from openquake.calculators.extract import extract
 
@@ -260,7 +260,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'num_ruptures']
+                                 'calc_time', 'num_ctxs', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -293,12 +293,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
-    scratch_dir = dstore['/'].attrs.get('scratch_dir')
-    if scratch_dir:
+    calc_dir = dstore.filename[:-5]
+    if os.path.exists(calc_dir):
         size = 0
-        for fname in os.listdir(scratch_dir):
-            size += os.path.getsize(os.path.join(scratch_dir, fname))
-        rows.append((scratch_dir, humansize(size)))
+        for fname in os.listdir(calc_dir):
+            size += os.path.getsize(os.path.join(calc_dir, fname))
+        rows.append((calc_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 
@@ -334,6 +334,16 @@ def view_eff_ruptures(token, dstore):
     df['heavy_factor'] = df.weight / df.calc_time
     del df['grp_id'], df['trti'], df['mutex_weight']
     return df
+
+
+@view.add('sdata')
+def view_sdata(token, dstore):
+    # source_data grouped by taskno
+    df = dstore.read_df('source_data', 'src_id')
+    del df['grp_id'], df['impact']
+    sdata = df.groupby('taskno').sum()
+    sdata['grp_key'] = decode(dstore['grp_keys'][sdata.index])
+    return sdata.sort_values('ctimes')
 
 
 @view.add('short_source_info')
@@ -778,22 +788,22 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
+        grp_keys = dstore['grp_keys'][taskno].decode('ascii')
         sdata = dstore.read_df('source_data')
         sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(5))
-        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.esites, sd.nrupts,
-                sd.weight, sd.ctimes):
+        acc = AccumDict(accum=numpy.zeros(4))
+        for src_id, nctxs, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
-                [nsites, esites, nrupts, weight, ctimes])
+                [nctxs, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(
-                ['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
+        msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
+            % df
         return msg
     else:
         msg = ''
@@ -1555,7 +1565,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore)[0])
+    return humansize(get_rmap_gb(dstore)[0])
 
 
 @view.add('rup_stats')

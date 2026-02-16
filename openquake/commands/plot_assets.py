@@ -25,7 +25,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
-    adjust_limits, auto_limits)
+    adjust_limits, auto_limits, add_region_labels)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -140,6 +140,7 @@ def main(calc_id: int = -1, site_model=False,
         xlim, ylim = auto_limits(ax)
 
     add_borders(ax)
+    add_region_labels(ax)
     adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)

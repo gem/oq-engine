@@ -150,7 +150,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
 
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1

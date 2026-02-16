@@ -71,9 +71,9 @@ except ImportError:
             )
 
 PYVER = sys.version_info
-if PYVER < (3, 10, 0):
+if PYVER < (3, 11, 0):
     sys.exit(
-        "Error: you need at least Python 3.10, but you have %s"
+        "Error: you need at least Python 3.11, but you have %s"
         % ".".join(map(str, sys.version_info)))
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = """Found pre-existing venv %s

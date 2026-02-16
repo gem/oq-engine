@@ -24,7 +24,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, interp_table, _get_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -391,7 +392,7 @@ def get_fnl(C_NL, pga_rock, vs30, period, us23=None):
     Returns the nonlinear mean amplification according to equation 2
     of Hashash et al. (2019)
     """
-    if period <= 0.4:
+    if period < 0.4:
         vref = 760.
     else:
         vref = 3000.
@@ -460,7 +461,7 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     rock condition (Vs30 = 3000 m/s)
     """
     # return Distance Tables
-    imls = self.mean_table['%.2f' % mag, imt.string]
+    imls = interp_table(self, mag, imt, 'IMLs')
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]

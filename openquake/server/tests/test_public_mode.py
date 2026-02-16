@@ -305,6 +305,13 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         if dic['error_msg'] is None:  # this should not happen
             raise django.test.SkipTest(dic)
 
+    def test_validate_ini(self):
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
+        resp = self.post('validate_ini', dict(job_ini=job_ini))
+        assert resp.status_code == 200, resp
+        dic = json.loads(resp.content.decode('utf8'))
+        pprint.pprint(dic)
+
     def test_can_not_run_aelo_calc(self):
         params = dict(
             lon=10, lat=45, vs30='800.0', siteid='SITE')
@@ -405,7 +412,8 @@ class CallbackTest(LiveServerTestCase):
         job_complete_callback_state['data'] = self.on_job_complete_data
 
     def test_callback_on_job_successfully_completed(self):
-        notify_to = f"{self.live_server_url}/test/check_callback?first=one&second=two"
+        notify_to = (f"{self.live_server_url}/test/check_callback?"
+                     "first=one&second=two")
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         post_args = dict(
             job_ini=job_ini,
@@ -419,7 +427,8 @@ class CallbackTest(LiveServerTestCase):
         job_id = job_info['job_id']
         self.on_job_complete_event.wait(timeout=30)
         self.assertTrue(self.on_job_complete_event.is_set(),
-                        "Expected on_job_complete_event to be set, but it was not.")
+                        "Expected on_job_complete_event to be set, "
+                        "but it was not.")
         body = self.on_job_complete_data['body']
         get_params = self.on_job_complete_data['GET']
         self.assertEqual(body['job_id'], job_id)

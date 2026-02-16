@@ -197,7 +197,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         tot = sum(src.num_ruptures for src in sources)
         for src in sources:
             source_data['src_id'].append(src.source_id)
-            source_data['nsites'].append(src.nsites)
+            source_data['nctxs'].append(src.nsites * src.num_ruptures)
             source_data['nrups'].append(src.num_ruptures)
             source_data['ctimes'].append(dt * src.num_ruptures / tot)
             source_data['weight'].append(src.weight)
@@ -228,7 +228,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                 src.sample_ruptures(samples * num_ses, param['ses_seed']))
             dt = time.time() - t0
             source_data['src_id'].append(src.source_id)
-            source_data['nsites'].append(src.nsites)
+            source_data['nctxs'].append(src.nsites * nr)
             source_data['nrups'].append(nr)
             source_data['ctimes'].append(dt)
             source_data['weight'].append(src.weight)

@@ -21,6 +21,8 @@ Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
 :class:`openquake.hazardlib.gsim.gmpe_table.GMPETable` for defining GMPEs
 in the form of binary tables
 """
+
+from functools import lru_cache
 import h5py
 from scipy.interpolate import interp1d
 import numpy as np
@@ -33,6 +35,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
 _get_mean = CallableDict()
+FLOAT = (float, np.float32, np.float64)
 
 
 @_get_mean.add("base", "nga_east")
@@ -76,31 +79,44 @@ def todict(hdfgroup):
     return {key: hdfgroup[key][:] for key in hdfgroup}
 
 
-def _return_tables(self, mag, imt, which):
+@lru_cache(maxsize=10_000)
+# NB: the cache is based on the gsim TOML representation, the magnitude,
+# the imt and the which string; there are not too many combinations;
+# for CAN the maximum cache size I have seen is ~7000
+def interp_table(gsim, mag, imt, which):
     """
-    Returns the vector of ground motions or standard deviations
-    corresponding to the specific magnitude and intensity measure type.
-
-    :param which:
-       the string "IMLs" or "Total"
+    :param gsim: table-based GSIM instance
+    :param mag: magnitude, assumed rounded to 2 digits
+    :param imt: IMT instance
+    :param which: the string "IMLs" or "Total"
+    :return:
+        the vector of ground motions or standard deviations corresponding
+        to the specific magnitude and intensity measure type.
     """
     assert which in "IMLs Total", which
-    if imt.string in 'PGA PGV':
-        # Get scalar imt
+    assert isinstance(mag, FLOAT), mag  # assume rounded to 2 digits
+    assert isinstance(imt, tuple), imt  # assume IMT object
+    if imt.string not in gsim.imls and imt.name != "SA":
+        # Scalar IMT is not supported (conditional GMPEs - we in skip
+        # setting a table which ensures an error is still raised when
+        # unsupported IMT is specified outside of conditional GMPE use)
+        return
+    elif imt.string in ("PGA", "PGV"): 
+        # Get supported scalar imt
         if which == "IMLs":
-            iml_table = self.imls[imt.string][:]
+            iml_table = gsim.imls[imt.string][:]
         else:
-            iml_table = self.stddev[imt.string][:]
-
+            iml_table = gsim.stddev[imt.string][:]
         n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
+        # Get SA
         if which == "IMLs":
-            periods = self.imls["T"][:]
-            iml_table = self.imls["SA"][:]
+            periods = gsim.imls["T"][:]
+            iml_table = gsim.imls["SA"][:]
         else:
-            periods = self.stddev["T"][:]
-            iml_table = self.stddev["SA"][:]
+            periods = gsim.stddev["T"][:]
+            iml_table = gsim.stddev["SA"][:]
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
@@ -115,15 +131,15 @@ def _return_tables(self, mag, imt, which):
         iml_table = 10. ** interpolator(np.log10(imt.period))
 
     # do not allow "mag" to exceed maximum table magnitude
-    mag = np.clip(mag, None, self.m_w[-1])
+    mag = np.clip(mag, None, gsim.m_w[-1])
 
     # Get magnitude values
-    if (mag < self.m_w[0]).any() or (mag > self.m_w[-1]).any():
+    if (mag < gsim.m_w[0]).any() or (mag > gsim.m_w[-1]).any():
         raise ValueError("Magnitude %.2f outside of supported range "
-                         "(%.2f to %.2f)" % (mag, self.m_w[0], self.m_w[-1]))
+                         "(%.2f to %.2f)" % (mag, gsim.m_w[0], gsim.m_w[-1]))
     # It is assumed that log10 of the spectral acceleration scales
     # linearly (or approximately linearly) with magnitude
-    m_interpolator = interp1d(self.m_w, np.log10(iml_table), axis=1)
+    m_interpolator = interp1d(gsim.m_w, np.log10(iml_table), axis=1)
     return 10.0 ** m_interpolator(mag)
 
 
@@ -216,32 +232,7 @@ class GMPETable(GMPE):
         table_dists = self.distances[:, 0, idx - 1]
         dists = getattr(ctx, self.distance_type)
         for m, imt in enumerate(imts):
-            key = ('%.2f' % mag, imt.string)
-            imls = self.mean_table[key]
+            imls = interp_table(self, mag, imt, 'IMLs')
+            sigs = interp_table(self, mag, imt, 'Total')
             mean[m] = np.log(_get_mean(self.kind, imls, dists, table_dists))
-            sig[m] = _get_stddev(self.sig_table[key], dists, table_dists, imt)
-
-    # called by the ContextMaker
-    def set_tables(self, mags, imts):
-        """
-        :param mags: a list of magnitudes as strings
-        :param imts: a list of IMTs as strings
-
-        Set the .mean_table and .sig_table attributes
-        """
-        self.mean_table = {}  # dictionary mag_str, imt_str -> array
-        self.sig_table = {}  # dictionary mag_str, imt_str -> array
-        if 'PGA' in self.imls and 'PGA' not in imts:
-            # add PGA since it will be needed in get_mean_amp
-            imts = sorted(set(imts) | {'PGA'})
-        if 'SA(0.2)' not in imts:
-            # add SA(0.2) since it will be needed in get_mean_amp
-            imts = sorted(set(imts) | {'SA(0.2)'})
-        for imt in imts:
-            imt_obj = imt_module.from_string(imt)
-            for mag in mags:
-                self.mean_table[mag, imt] = _return_tables(
-                    self, float(mag), imt_obj, 'IMLs')
-                if self.stddev is not None:
-                    self.sig_table[mag, imt] = _return_tables(
-                        self, float(mag), imt_obj, 'Total')
+            sig[m] = _get_stddev(sigs, dists, table_dists, imt)

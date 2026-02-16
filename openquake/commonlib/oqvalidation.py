@@ -482,6 +482,11 @@ max:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
+max_nodes_network:
+   Restrict the maximum number of nodes in a network
+   Example: *max_nodes_network = 100*
+   Default: 1000
+
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
   Example: *max_potential_gmfs = 1E9*.
@@ -807,11 +812,6 @@ split_sources:
 split_by_gsim:
   INTERNAL
 
-outs_per_task:
-  How many outputs per task to generate (honored in some calculators)
-  Example: *outs_per_task = 3*
-  Default: 4
-
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
   Example: *std = true*.
@@ -832,12 +832,6 @@ time_event:
   Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
-
-time_per_task:
-  Used in calculations with task splitting. If a task slice takes longer
-  then *time_per_task* seconds, then spawn subtasks for the other slices.
-  Example: *time_per_task=1000*
-  Default: 600
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1097,6 +1091,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_nodes_network = valid.Param(valid.positiveint, 1000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -1172,11 +1167,9 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     split_by_gsim = valid.Param(valid.positiveint, 0)
-    outs_per_task = valid.Param(valid.positiveint, 4)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -1318,8 +1311,6 @@ class OqParam(valid.ParamSet):
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
             self.pointsource_distance = dict(default=40.)
-        if self.collapse_level >= 0:
-            self.time_per_task = 1_000_000  # disable task_splitting
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
@@ -1330,7 +1321,6 @@ class OqParam(valid.ParamSet):
         self.check_gsim_lt()
         self.set_loss_types()
         self.check_risk()
-        self.check_ebrisk()
 
     def raise_invalid(self, msg):
         """
@@ -1425,18 +1415,13 @@ class OqParam(valid.ParamSet):
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
 
-    def check_ebrisk(self):
-        # check specific to ebrisk
-        if self.calculation_mode == 'ebrisk':
-            if self.ground_motion_fields:
-                print('ground_motion_fields overridden to false',
-                      file=sys.stderr)
-                self.ground_motion_fields = False
-            if self.hazard_curves_from_gmfs:
-                self.raise_invalid(
-                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
-
     def check_hazard(self):
+        # check for sites, site_model and hc_id
+        if (self.sites and 'site_model' in self.inputs and
+                self.hazard_calculation_id):
+            self.raise_invalid('You cannot specify both sites and site_model '
+                               'in the presence of a parent calculation')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and not self.sites):
@@ -2218,12 +2203,11 @@ class OqParam(valid.ParamSet):
 
     def is_valid_complex_fault_mesh_spacing(self):
         """
-        The `complex_fault_mesh_spacing` parameter can be None only if
-        `rupture_mesh_spacing` is set. In that case it is identified with it.
+        The `complex_fault_mesh_spacing` parameter must be greater
+        than `rupture_mesh_spacing` (or at most equal).
         """
-        rms = getattr(self, 'rupture_mesh_spacing', None)
-        if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
-            self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
+        if self.complex_fault_mesh_spacing:
+            return self.complex_fault_mesh_spacing >= self.rupture_mesh_spacing
         return True
 
     def is_valid_collect_rlzs(self):

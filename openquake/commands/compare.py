@@ -355,17 +355,6 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def delta(a, b):
-    """
-    :returns: the relative differences between a and b; zeros return zeros
-    """
-    c = a + b
-    ok = c != 0.
-    res = numpy.zeros_like(a)
-    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
-    return res
-
-
 def to_float(float_like):
     """
     Convert strings containing numbers to floats or raise a ValueError
@@ -517,6 +506,7 @@ def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
     compare_asce('asce', 'expected') exits with 0
     if all file are equal within the tolerance, otherwise with 1.
     """
+    err = 0
     for fname in os.listdir(dir2):
         if fname.endswith('.org'):
             fname2 = os.path.join(dir2, fname)
@@ -533,7 +523,8 @@ def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
                                            col, atol, rtol)
                 equal.append(ok)
             if not all(equal):
-                sys.exit(1)
+                err += 1
+    sys.exit(err)
 
 
 main = dict(rups=compare_rups,

@@ -59,5 +59,57 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
         </sourceGroup>
+        <sourceGroup
+        name="Nankai2"
+        rup_interdep="indep"
+        src_interdep="mutex"
+        srcs_weights="0.725 0.275"
+        tectonicRegion="Subduction Interface"
+        >
+            <nonParametricSeismicSource id="case:03" name="Nankai CASE 3"/>
+            <nonParametricSeismicSource id="case:04" name="Nankai CASE 4"/>
+        </sourceGroup>
+        <sourceGroup
+            name="point source"
+            tectonicRegion="Subduction Interface">
+            <pointSource
+            id="gs_PSE_2_100"
+            name="PSE"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            135.805 35.898
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        60.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        61.5
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        0.0017404297316440736 0.0014146743971195982 0.0011498905204148596 0.0009346661052410158 0.0007597251327641438 0.0006175277718075182 0.0005019454175039715 0.00040799655279595776 0.0003316320486023118 0.00026956064924197487 0.00021910712166088434 0.00017809695479484682 0.00014476263969314965 0.00011766749114306046 9.56437275615485e-05 7.774214044171201e-05 6.319118414293873e-05 5.136372282392555e-05 4.175000133508116e-05 3.393567513504588e-05 2.758395233639655e-05 2.242107821543914e-05 1.8224536578811047e-05 1.48134594742065e-05 1.2040831910595241e-05 9.7871556169343e-06
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="41.0" probability="1.0" rake="90" strike="132.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="61" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
     </sourceModel>
 </nrml>

@@ -1,0 +1,36 @@
+* v3.24
+
+Mean time per core=19106s, std=8901.6s, min=422s, max=54606s
+| calc_7787, maxmem=247.6 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total classical            | 3_190_734 | 144.2305  | 2_447       |
+| get_poes                   | 2_056_834 | 0.0       | 276_917_065 |
+| computing mean_std         | 623_281   | 0.0       | 5_590_482   |
+| total fast_mean            | 99_048    | 147.9648  | 122         |
+| reading rates              | 99_029    | 147.9648  | 122         |
+| nonplanar contexts         | 62_064    | 0.0       | 1_090_092   |
+| ClassicalCalculator.run    | 56_046    | 2_239     | 1           |
+# 15h34m
+
+| operation-duration | counts | mean   | stddev | min    | max     | slowfac |
+|--------------------+--------+--------+--------+--------+---------+---------|
+| classical          | 143    | 22_228 | 22%    | 2_072  | 54_606  | 2.4566  |
+
+* master
+
+Mean time per core=21431s, std=1737.0s, min=16196s, max=23105s
+cps-000-dominated
+| calc_8097, maxmem=342.6 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total baseclassical        | 3_386_527 | 548.5     | 1_317       |
+| get_poes                   | 2_450_618 | 0.0       | 244_719_987 |
+| computing mean_std         | 1_011_329 | 0.0       | 4_938_260   |
+| total classical            | 728_327   | 268.2     | 1_803       |
+| nonplanar contexts         | 89_680    | 0.0       | 1_234_873   |
+| ClassicalCalculator.run    | 23_984    | 8_938     | 1           |
+# 6h40m
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| baseclassical      | 1_315  | 2_575   | 74%    | 281.1   | 7_315   | 2.8407  |
+| classical          | 437    | 1_666   | 128%   | 369.7   | 9_958   | 5.9774  |

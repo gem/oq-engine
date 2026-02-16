@@ -365,9 +365,9 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     The WeightedSequences are of homogeneous key and they try to be
     balanced in weight. For instance
 
-     >>> items = 'ABCDE'
-     >>> list(split_in_blocks(items, 3))
-     [<WeightedSequence ['A'], weight=1>, <WeightedSequence ['B'], weight=1>, <WeightedSequence ['C'], weight=1>, <WeightedSequence ['D'], weight=1>, <WeightedSequence ['E'], weight=1>]
+    >>> items = 'ABCDE'
+    >>> split_in_blocks(items, 3)
+    [['A'], ['B'], ['C'], ['D'], ['E']]
     """
     if isinstance(sequence, pandas.DataFrame):
         num_elements = len(sequence)
@@ -387,7 +387,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, total_weight / hint, weight, key)
+    return [list(b) for b in block_splitter(
+        items, total_weight / hint, weight, key)]
 
 
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
@@ -1308,6 +1309,32 @@ def deprecated(func, msg='', *args, **kw):
     return func(*args, **kw)
 
 
+def reduce_object(obj, attr, ntimes):
+    """
+    Reduce an object containing an attribute which is a sequence by
+    returning a copy of the object with a reduced (reversed) sequence.
+    If the sequence length is less than ntimes, don't reduce it.
+    For instance
+
+    >>> class Obj:
+    ...     def __init__(self, lst):
+    ...         self.lst = lst
+    ...     def __repr__(self):
+    ...         return '<Obj %r>' % self.lst
+    >>> obj = Obj([1, 2, 3, 4, 5])
+    >>> reduce_object(obj, 'lst', 3)
+    <Obj [5, 2]>
+    >>> reduce_object(Obj([1, 2]), 'lst', 3)
+    <Obj [1, 2]>
+    """
+    seq = getattr(obj, attr)
+    if len(seq) < ntimes:
+        return obj
+    new = copy.copy(obj)
+    setattr(new, attr, seq[::-ntimes])
+    return new
+
+
 def random_filter(objects, reduction_factor, seed=42):
     """
     Given a list of objects, returns a sublist by extracting randomly
@@ -1708,6 +1735,19 @@ class RecordBuilder(object):
             except IndexError:
                 rec[name] = self.values[i]
         return rec
+
+
+def delta(a, b):
+    """
+    :returns: the relative differences between a and b; zeros return zeros
+    """
+    a = numpy.array(a, F32)
+    b = numpy.array(b, F32)
+    c = a + b
+    ok = c != 0.
+    res = numpy.zeros_like(a)
+    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
+    return res
 
 
 def rmsdiff(a, b):

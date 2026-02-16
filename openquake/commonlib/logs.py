@@ -229,7 +229,7 @@ class LogContext:
                  user_name=None, hc_id=None, host=None, workflow_id=None,
                  pdb=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
-            raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
+            raise RuntimeError('You forgot to run oq engine --upgrade-db')
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()

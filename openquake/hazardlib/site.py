@@ -23,7 +23,12 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import logging
 import numpy
 import pandas
-from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
+try:
+    from h3.api.numpy_int import (
+        geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
+except ImportError:
+    # h3 version 4
+    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general

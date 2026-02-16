@@ -6,8 +6,8 @@ on:
         description: Git Ref
         default: master
         required: true
-  schedule:
-    - cron: "10 09 * * *"
+  #schedule:
+  #  - cron: "10 09 * * *"
 
 jobs:
   server_impact_mode:

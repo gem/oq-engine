@@ -84,15 +84,14 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         ctx.rjb = ctx.rrup = np.array([100.])
         ctx.vs30 = np.array([2000.])
         ctx.sids = [0]
-        im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
-        std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
+        imt = sorted(gmpe.COEFFS.sa_coeffs)[0]
 
         # set critical value to trigger warning
         ctx.rake = np.array([-90.])
 
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
-            gmpe.get_mean_and_stddevs(ctx, ctx, ctx, im_type, std_types)
+            contexts.mean_stds(ctx, gmpe, str(imt))
             # confirm type and content of warning
             assert len(warning_stream) == 1
             assert issubclass(warning_stream[-1].category, UserWarning)

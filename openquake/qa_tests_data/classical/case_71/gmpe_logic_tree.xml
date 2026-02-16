@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Stable Crust">
+          <logicTreeBranch branchID="f-PEER_GP">
+            <uncertaintyModel>
+             	[ModifiableGMPE]
+					    gmpe.NGAEastUSGSSeedPEER_GP = {}
+					    [ModifiableGMPE.conditional_gmpe]
+					    "IA" = {gmpe.MacedoEtAl2019SInter = {}}
+              "PGV" = {gmpe.AbrahamsonBhasin2020 = {}}
+				    </uncertaintyModel>
+				   <uncertaintyWeight>1.0</uncertaintyWeight>
+          </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

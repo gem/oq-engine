@@ -30,7 +30,8 @@ from openquake.commonlib.readinput import loadnpz
 
 
 def random_string(length=10):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    letters_or_digits = string.ascii_letters + string.digits
+    return ''.join(random.choices(letters_or_digits, k=length))
 
 
 def get_or_create_user(level):

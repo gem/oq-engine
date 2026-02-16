@@ -94,7 +94,6 @@ export_dir = %s
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
-                'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},

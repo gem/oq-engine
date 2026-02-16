@@ -296,6 +296,8 @@ class RuptureConverter(object):
                 ~surface_node.dip,
                 self.rupture_mesh_spacing)
         elif surface_node.tag.endswith('complexFaultGeometry'):
+            if not self.complex_fault_mesh_spacing:
+                raise ValueError('complex_fault_mesh_spacing is not set!')
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
@@ -452,8 +454,7 @@ class SourceConverter(RuptureConverter):
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
-        self.complex_fault_mesh_spacing = (
-            complex_fault_mesh_spacing or rupture_mesh_spacing)
+        self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = tuple(source_id)
         self.discard_trts = discard_trts
@@ -802,6 +803,8 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.ComplexFaultSource`
                   instance
         """
+        if not self.complex_fault_mesh_spacing:
+            raise ValueError('complex_fault_mesh_spacing is not set!')
         geom = node.complexFaultGeometry
         edges = self.geo_lines(geom)
         mfd = self.convert_mfdist(node)

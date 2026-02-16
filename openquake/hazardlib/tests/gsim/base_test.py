@@ -24,10 +24,7 @@ from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
     GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.contexts import (
-    ContextMaker, SitesContext, RuptureContext)
-from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
-    AbrahamsonGulerce2020SInter)
+from openquake.hazardlib.contexts import ContextMaker
 aac = numpy.testing.assert_allclose
 
 
@@ -44,11 +41,6 @@ class _FakeGSIMTestCase(unittest.TestCase):
             REQUIRES_SITES_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
             REQUIRES_DISTANCES = set()
-
-            def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                                     stddev_types):
-                pass
-
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
@@ -72,66 +64,6 @@ class TGMPE(GMPE):
     REQUIRES_SITES_PARAMETERS = ()
     REQUIRES_RUPTURE_PARAMETERS = ()
     REQUIRES_DISTANCES = ()
-    get_mean_and_stddevs = None
-
-
-class ContextTestCase(unittest.TestCase):
-    def test_equality(self):
-        sctx1 = SitesContext()
-        sctx1.vs30 = numpy.array([500., 600., 700.])
-        sctx1.vs30measured = True
-        sctx1.z1pt0 = numpy.array([40., 50., 60.])
-        sctx1.z2pt5 = numpy.array([1, 2, 3])
-
-        sctx2 = SitesContext()
-        sctx2.vs30 = numpy.array([500., 600., 700.])
-        sctx2.vs30measured = True
-        sctx2.z1pt0 = numpy.array([40., 50., 60.])
-        sctx2.z2pt5 = numpy.array([1, 2, 3])
-
-        self.assertTrue(sctx1 == sctx2)
-
-        sctx2 = SitesContext()
-        sctx2.vs30 = numpy.array([500., 600.])
-        sctx2.vs30measured = True
-        sctx2.z1pt0 = numpy.array([40., 50., 60.])
-        sctx2.z2pt5 = numpy.array([1, 2, 3])
-
-        self.assertTrue(sctx1 != sctx2)
-
-        sctx2 = SitesContext()
-        sctx2.vs30 = numpy.array([500., 600., 700.])
-        sctx2.vs30measured = False
-        sctx2.z1pt0 = numpy.array([40., 50., 60.])
-        sctx2.z2pt5 = numpy.array([1, 2, 3])
-
-        self.assertTrue(sctx1 != sctx2)
-
-        sctx2 = SitesContext()
-        sctx2.vs30 = numpy.array([500., 600., 700.])
-        sctx2.vs30measured = True
-        sctx2.z1pt0 = numpy.array([40., 50., 60.])
-
-        self.assertTrue(sctx1 != sctx2)
-
-        rctx = RuptureContext()
-        rctx.mag = 5.
-        self.assertTrue(sctx1 != rctx)
-
-    def test_recarray_conversion(self):
-        # automatic recarray conversion for backward compatibility
-        imt = PGA()
-        gsim = AbrahamsonGulerce2020SInter()
-        ctx = RuptureContext()
-        ctx.src_id = 0
-        ctx.rup_id = 0
-        ctx.mag = 5.
-        ctx.sids = [0, 1]
-        ctx.vs30 = [760., 760.]
-        ctx.rrup = [100., 110.]
-        ctx.occurrence_rate = .000001
-        mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
-        numpy.testing.assert_allclose(mean, [-5.81116004, -6.00192455])
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

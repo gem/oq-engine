@@ -1,4 +1,5 @@
-#,,,"generated_by='OpenQuake engine 3.19.0-gitf68211ba6e', start_date='2024-02-14T11:12:40', checksum=4113864877, lon=135.68, lat=35.68, vs30=400.0"
+#,,,"generated_by='OpenQuake engine 3.25.0-git0a4497eb9f', start_date='2026-02-09T08:04:25', checksum=1530123549, lon=135.68, lat=35.68, vs30=400.0"
 source_id,imt,iml,afoe
-case,PGV,2.00000E+01,5.17980E-03
+case,PGV,2.00000E+01,9.39130E-03
+gs_PSE_2_100,PGV,2.00000E+01,5.00388E-05
 gs_PSE_CPCF_2_100,PGV,2.00000E+01,4.80917E-05

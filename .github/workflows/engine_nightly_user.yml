@@ -16,7 +16,7 @@ on:
 
 jobs:
   Scheduled_demos_and_WebUI:
-    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    name: Fail for 3.23 pypip - OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     env:
       # Current LTS version on PyPI (TODO: keep the LTS version updated)

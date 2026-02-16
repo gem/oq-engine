@@ -26,9 +26,9 @@ from openquake.hazardlib.valid import basename
 
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
-    ctxs = cmaker.from_srcs(src_frags, sitecol)
-    if ctxs:
-        mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
+    ctx = cmaker.from_srcs(src_frags, sitecol)
+    if len(ctx):
+        mean = cmaker.get_mean_stds([ctx])[0]  # shape (G, M, N)
         for m, imt in enumerate(cmaker.imtls):
             mean[:, m] = exp(mean[:, m], imt!='MMI')
         gsims = [str(gsim) for gsim in cmaker.gsims]
