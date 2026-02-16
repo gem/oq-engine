@@ -429,7 +429,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
         fname = os.path.join(os.path.dirname(case_35.__file__),
                              'Wcrust_med_rhypo.hdf5')
-        if os.platform != 'win32':
+        if sys.platform != 'win32':
             # on Windows we would get a fake error in the finally clause
             # "Cannot create a file when that file already exists"
             try:
