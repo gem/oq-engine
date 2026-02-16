@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Bug fix: using `sites=lon1 lat1, ...` with a parent calculation
+    did not result in the specified sites to be used
+
   [Yen-Shin Chen]
   * Added get_x_l_ratio() method to BaseSurface for computing normalized
     along-strike position (x/L) for PFDHA applications
