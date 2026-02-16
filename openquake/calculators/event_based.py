@@ -896,26 +896,27 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore['relevant_events'] = rel_events
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
-        # really compute and store the avg_gmf
-        M = len(self.oqparam.imtls)
-        avg_gmf = numpy.zeros((2, N, C), F32)
-        min_iml = numpy.ones(C) * 1E-10
-        min_iml[:M] = self.oqparam.min_iml
-        for sid, avgstd in compute_avg_gmf(
-                gmf_df, self.weights, min_iml).items():
-            avg_gmf[:, sid] = avgstd
-        self.datastore['avg_gmf'] = avg_gmf
-        # make avg_gmf plots only if running via the webui
-        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
-            imts = list(self.oqparam.imtls)
-            ex = Extractor(self.datastore.calc_id)
-            for imt in imts:
-                plt = plot_avg_gmf(ex, imt)
-                bio = io.BytesIO()
-                plt.savefig(bio, format='png', bbox_inches='tight')
-                fig_path = f'png/avg_gmf-{imt}.png'
-                logging.info(f'Saving {fig_path} into the datastore')
-                self.datastore[fig_path] = Image.open(bio)
+        # really compute and store the avg_gmf only without hc
+        if self.oqparam.hazard_calculation_id is None:
+            M = len(self.oqparam.imtls)
+            avg_gmf = numpy.zeros((2, N, C), F32)
+            min_iml = numpy.ones(C) * 1E-10
+            min_iml[:M] = self.oqparam.min_iml
+            for sid, avgstd in compute_avg_gmf(
+                    gmf_df, self.weights, min_iml).items():
+                avg_gmf[:, sid] = avgstd
+            self.datastore['avg_gmf'] = avg_gmf
+            # make avg_gmf plots only if running via the webui
+            if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
+                imts = list(self.oqparam.imtls)
+                ex = Extractor(self.datastore.calc_id)
+                for imt in imts:
+                    plt = plot_avg_gmf(ex, imt)
+                    bio = io.BytesIO()
+                    plt.savefig(bio, format='png', bbox_inches='tight')
+                    fig_path = f'png/avg_gmf-{imt}.png'
+                    logging.info(f'Saving {fig_path} into the datastore')
+                    self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam
