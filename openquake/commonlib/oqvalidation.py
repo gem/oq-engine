@@ -567,6 +567,11 @@ mosaic_model:
   Example: *mosaic_model = ZAF*
   Default: empty string
 
+notes:
+  Additional information about the job
+  Example: 'Lorem ipsum'
+  Default: None
+
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
   Example: *num_epsilon_bins = 3*.
@@ -1104,6 +1109,7 @@ class OqParam(valid.ParamSet):
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
+    notes = valid.Param(valid.utf8, None)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
@@ -1494,7 +1500,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses            
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types

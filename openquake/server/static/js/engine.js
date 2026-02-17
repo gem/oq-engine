@@ -1276,6 +1276,7 @@ site-specific hazard and site response could be warranted.`;
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
                 formData.append('description', $('#description').val());
+                formData.append('notes', $('#notes').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_run",

@@ -65,6 +65,10 @@
                 <input class="impact-input impact-input-wider" type="text" id="description" name="description" placeholder="{{ impact_form_placeholders.description }}" value="{{ impact_form_defaults.description }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
               <div class="impact_form_row">
+                <label for"notes">{{ impact_form_labels.notes }}</label>
+                <input class="impact-input impact-input-wider" type="text" id="notes" name="notes" placeholder="{{ impact_form_placeholders.notes }}" value="{{ impact_form_defaults.notes }}" {% if user_level < 1 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row">
                 <button id="submit_impact_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
                 <!-- <input type="submit"> -->
               </div>

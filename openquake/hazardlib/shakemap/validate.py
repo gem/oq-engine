@@ -51,6 +51,7 @@ class AristotleParam:
     mosaic_model: str = None
     trt: str = None
     description: str = None
+    notes: str = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -81,6 +82,7 @@ class AristotleParam:
         params = dict(
             base_path='',  # no .ini file
             description=self.description,
+            notes=self.notes,
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
             time_event=self.time_event,
@@ -153,6 +155,7 @@ IMPACT_FORM_LABELS = {
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
     'description': 'Description',
+    'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
 }
 
@@ -183,6 +186,7 @@ IMPACT_FORM_PLACEHOLDERS = {
     'nodal_plane': '',
     'msr': '',
     'description': 'Leave blank to set automatically',
+    'notes': '',
 }
 
 IMPACT_FORM_DEFAULTS = {
@@ -252,6 +256,7 @@ validators = {
     'ses_seed': valid.positiveint,
     'maximum_distance_stations': valid.positivefloat,
     'description': valid.utf8,  # if empty, it will be set automatically
+    'notes': valid.utf8,
 }
 
 
@@ -261,7 +266,7 @@ def _validate(POST):
     params = {}
     inputdic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
                     mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
-                    strike=None, description=None)
+                    strike=None, description=None, notes=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -269,7 +274,7 @@ def _validate(POST):
             value = validation_func(POST.get(field))
         except Exception as exc:
             blankable = ['dip', 'strike', 'maximum_distance_stations',
-                         'local_timestamp']
+                         'local_timestamp', 'notes']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
                     inputdic[field] = None
@@ -375,6 +380,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['rupture_was_loaded'] = rup is not None
     if 'description' in inputdic and inputdic['description']:
         params['description'] = inputdic['description']
+    if 'notes' in inputdic:
+        params['notes'] = inputdic['notes']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file

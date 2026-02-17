@@ -459,14 +459,10 @@ def make_report_for_country(
 
 def _get_notes(oqparam):
     notes = ''
-    notes += f'Mosaic model: {oqparam.mosaic_model}'
-    notes += (f'. Number of ground motion fields:'
-              f' {oqparam.number_of_ground_motion_fields}')
-    notes += f'. Truncation level: {oqparam.truncation_level}'
-    notes += f'. Time of the event: {oqparam.time_event}'
-    notes += f'. Tectonic region type: {oqparam.tectonic_region_type}'
+    if oqparam.notes:
+        notes += oqparam.notes + '<br/>'
     rupdic = oqparam.rupture_dict
-    notes += f'. Rupture identifier: {rupdic["usgs_id"]}'
+    notes += f'Rupture identifier: {rupdic["usgs_id"]}'
     notes += f'. Lon: {rupdic["lon"]}'
     notes += f'. Lat: {rupdic["lat"]}'
     notes += f'. Dep: {rupdic["dep"]}'
@@ -474,6 +470,12 @@ def _get_notes(oqparam):
     notes += f'. Rake: {rupdic["rake"]}'
     notes += f'. Dip: {rupdic["dip"]}'
     notes += f'. Strike: {rupdic["strike"]}'
+    notes += f'. <br/>Mosaic model: {oqparam.mosaic_model}'
+    notes += (f'. Number of ground motion fields:'
+              f' {oqparam.number_of_ground_motion_fields}')
+    notes += f'. Truncation level: {oqparam.truncation_level}'
+    notes += f'. Time of the event: {oqparam.time_event}'
+    notes += f'. Tectonic region type: {oqparam.tectonic_region_type}'
     return notes
 
 
