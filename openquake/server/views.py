@@ -1002,6 +1002,10 @@ def aelo_callback(
 
 
 class JobPostProcessing:
+    """
+    Context manager to execute post-processing operations on a job while
+    the job is displayed as running and its status is set to 'post_processing'
+    """
     def __init__(self, job_id):
         self.job_id = job_id
 
