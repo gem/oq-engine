@@ -245,7 +245,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
         add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
                     surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, alpha=0.2)
+    add_borders(ax)
     adjust_limits(ax, xlim, ylim)
     if with_cities:
         add_cities(ax, xlim, ylim)
