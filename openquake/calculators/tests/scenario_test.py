@@ -429,15 +429,18 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
         fname = os.path.join(os.path.dirname(case_35.__file__),
                              'Wcrust_med_rhypo.hdf5')
-        try:
-            # check that even by removing the .hdf5 table
-            # the GMPETable can be instantiated, since
-            # GsimLogicTree.__from__hdf5__ reads from the attributes
-            os.rename(fname, fname + '.bak')
-            gsim_lt = self.calc.datastore['full_lt'].gsim_lt
-            print(gsim_lt)
-        finally:
-            os.rename(fname + '.bak', fname)
+        if sys.platform != 'win32':
+            # on Windows we would get a fake error in the finally clause
+            # "Cannot create a file when that file already exists"
+            try:
+                # check that even by removing the .hdf5 table
+                # the GMPETable can be instantiated, since
+                # GsimLogicTree.__from__hdf5__ reads from the attributes
+                os.rename(fname, fname + '.bak')
+                gsim_lt = self.calc.datastore['full_lt'].gsim_lt
+                print(gsim_lt)
+            finally:
+                os.rename(fname + '.bak', fname)
 
     def test_case_36(self):
         # Conditional gmm

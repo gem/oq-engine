@@ -209,7 +209,7 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    calc_dir = parallel.scratch_dir(calc_id)
+    calc_dir = parallel.calc_dir(calc_id)
     input_files = request_files.getlist('archive')
     zip_file = None
     for input_file in input_files:
@@ -1099,6 +1099,7 @@ def impact_get_rupture_data(request):
         del rupdic['shakemap_array']
     elif rup is not None:
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
+                                  with_region_labels=True,
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
     if request.user.level < 2 and 'warning_msg' in rupdic:

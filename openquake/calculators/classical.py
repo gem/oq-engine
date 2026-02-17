@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
 import time
 import psutil
 import logging
@@ -26,7 +27,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize)
+    AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
@@ -59,8 +60,8 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
-        scratch = parallel.scratch_dir(mon.calc_id)
-        h5 = hdf5.File(f'{scratch}/{mon.task_no}.hdf5', 'a')
+        calc_dir = parallel.calc_dir(mon.filename)
+        h5 = hdf5.File(f'{calc_dir}/{mon.task_no}.hdf5', 'a')
     data = AccumDict(accum=[])
     try:
         h5.create_df(
@@ -126,18 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(g, N, jid, num_chunks, mon):
+def save_rates(rmap, num_chunks, mon):
     """
-    Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
+    Store the rates on a file calc_id/task_no.hdf5
     """
-    with mon.shared['rates'] as rates:
-        rates_g = rates[:, :, jid[g]]
-        sids = numpy.arange(N)
-        for chunk, mask in gen_chunks(sids, num_chunks):
-            rmap = MapArray(sids[mask], rates.shape[1], 1)
-            rmap.array = rates_g[mask, :, None]
-            rats = rmap.to_array([g])
-            _store(rats, num_chunks, None, mon)
+    for g in rmap.jid:
+        _store(rmap.to_array(g), num_chunks, None, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -197,9 +192,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 def _split_src(srcs, n):
     for i in range(n):
-        out = srcs[i::n]
-        if out:
-            yield out
+        blk = srcs[i::n]
+        if len(blk):
+            yield blk
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -220,19 +215,26 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 8)
+        b0, *blks = _split_src(list(grps[0]), 7)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > 3 * cmaker.split_time:
-            # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 7):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+            b1, *blks = _split_src(rest, 6)
+            for blk in blks:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(b1, sites, cmaker, True)
+        elif dt > 2 * cmaker.split_time:
+            b1, *blks = _split_src(rest, 4)
+            for blk in blks:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(b1, sites, cmaker, True)
         elif dt > cmaker.split_time:
-            for srcs in _split_src(rest, 2):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+            odd, even = _split_src(rest, 2)
+            yield baseclassical, odd, tilegetter, cmaker, True, dstore
+            yield baseclassical(even, sites, cmaker, True)
         else:
             yield baseclassical(rest, sites, cmaker, True)
     else:
@@ -345,6 +347,7 @@ def make_hmap_png(hmap, lons, lats):
     :param lats: an array of latitudes
     :returns: an Image object containing the hazard map
     """
+    os.environ['MPLBACKEND'] = 'Agg'  # headless plotting
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -538,7 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if 'source_data' in parent:
+            if 'source_data' in parent and not os.environ.get('OQ_TASK_NO'):
                 # execute finished correctly, repeat post-processing only
                 self.build_curves_maps()
                 return {}
@@ -605,10 +608,11 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 30, 30)
-        if not self.few_sites:
-            logging.info(f'{split_time=:.0f} seconds')
+        # NB: the multiplier 60 is chosen so that SAM runs well on engine192
+        self.split_time = split_time = max(max_gb * 60, 10)
+        num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
+            num_blocks += sum('-' in key for key in grp_keys)
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
@@ -625,8 +629,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        logging.warning('This is a calculation with %d tasks, maxtiles=%d',
-                        len(allargs), maxtiles)
+        if not self.few_sites and self.rmap:
+            logging.info(f'{split_time=:.0f} seconds')
+        logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
+                        'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
         # save grp_keys by task
         keys = numpy.array([' '.join(args[0]).encode('ascii')
@@ -639,6 +645,9 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         self.datastore.swmr_on()  # must come before the Starmap
+        OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
+        if OQ_TASK_NO:
+            allargs = [allargs[int(OQ_TASK_NO)]]
         if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
@@ -650,19 +659,18 @@ class ClassicalCalculator(base.HazardCalculator):
     def _post_execute(self, acc):
         # save the rates and performs some checks
         oq = self.oqparam
-        logging.info('Saving RateMaps')
-
-        def genargs():
-            # produce Gt arguments
+        size_gb = sum(rmap.size_mb for rmap in self.rmap.values()) / 1024
+        if len(self.rmap) > 1 and size_gb > 1:
+            logging.info('Saving %d RateMaps, %.1f GB', len(self.rmap), size_gb)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
-                for g, j in rmap.jid.items():
-                    yield grp_id, g, self.N, rmap.jid, self.num_chunks
-
-        mon = self.monitor('storing rates', measuremem=True)
-        for grp_id, g, N, jid, num_chunks in genargs():
-            with mon:
-                rates = self.rmap[grp_id].to_array(g)
-                _store(rates, self.num_chunks, self.datastore)
+                savemap.submit((rmap, self.num_chunks))
+            savemap.reduce()
+        else:
+            # store sequentially
+            for rmap in self.rmap.values():
+                for g in rmap.jid:
+                    _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
             mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
@@ -693,7 +701,17 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
-        df = pandas.DataFrame(self.source_data)
+
+        # check est_ctxs vs num_ctxs
+        if self.N > self.oqparam.max_sites_disagg:
+            fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
+            info = self.datastore['source_info'][:][fields]
+            info = info[info['num_ctxs'] > 0]
+            bad = (info['est_ctxs'] < info['num_ctxs']) & (
+                delta(info['est_ctxs'], info['num_ctxs']) > .5)
+            if bad.any():
+                logging.warn('The estimated number of contexts is way off\n'+
+                             views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
@@ -701,6 +719,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # producing 20 effective ruptures for the N-n points outside;
         # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
         # it gives impact = 38, i.e. there are 38 effective ruptures
+        df = pandas.DataFrame(self.source_data)
         df['impact'] = df.nctxs / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory

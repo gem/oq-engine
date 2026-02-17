@@ -161,13 +161,12 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
         # for use in the conditional GMM
         cond_imts = [imt_cond.string for imt_cond in cond.REQUIRES_IMTS]
         missing = [imt_req for imt_req in cond_imts
-                   if imt_req not in base_preds.keys()]
+                   if imt_req not in base_preds]
         if missing:
             raise ValueError(
                 f"To use {cond.__class__.__name__} for the calculation "
                 f"of {imt}, the user must provide a GMM which is defined for "
-                f"the following IMTS: {cond_imts} (Missing = {missing})"
-            )
+                f"the following IMTS: {cond_imts} (Missing = {missing})")
 
         # Compute mean and sigma for IMT conditioned
         me_c, sig_c, tau_c, phi_c = cond.compute(ctx, base_preds)
@@ -300,13 +299,14 @@ IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
                      "set_fixed_total_sigma"]
 
 
+# affects the NWA model
 def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
     This function uses the sigma model of Al Atik (2015) as the standard
     deviation of a specified GMPE
     """
-    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
+    phi = get_phi_ss(imt.string, ctx.mag, phi_ss_coetab)
     if ergodic:
         phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
@@ -537,7 +537,7 @@ class ModifiableGMPE(GMPE):
                 del self.params[key]["phi_model"]
             phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
             self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
-                PHI_SETUP[phi_model], phi_ss_quantile)
+                PHI_SETUP[phi_model], phi_ss_quantile).to_dict()
 
         # Set params
         for key in self.params:
@@ -547,10 +547,6 @@ class ModifiableGMPE(GMPE):
                     if isinstance(self.params[key][subkey], dict):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
-
-        if "conditional_gmpe" in self.params:
-            self.imts_req = init_underlying_gmpes(
-                self.params["conditional_gmpe"])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -573,6 +569,9 @@ class ModifiableGMPE(GMPE):
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
+            if not hasattr(self, 'imts_req'):
+                self.imts_req = init_underlying_gmpes(
+                    self.params["conditional_gmpe"])
             conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs

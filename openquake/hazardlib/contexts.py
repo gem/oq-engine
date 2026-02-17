@@ -1030,7 +1030,7 @@ class ContextMaker(object):
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
-        if getattr(src, 'location', None) and step == 1:
+        if getattr(src, 'location', None):
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1048,7 +1048,6 @@ class ContextMaker(object):
                 allrups = sorted([rup for rup in allrups
                                   if minmag <= rup.mag <= maxmag],
                                  key=bymag)
-                self.num_rups = len(allrups) or 1
                 if not allrups:
                     return iter([])
                 # sorted by mag by construction
@@ -1303,15 +1302,18 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=4))
+        step = 1 if src.code in b'pP' else 4
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        weight = C * src.num_ruptures / self.num_rups / N
-        # in the ComplexFault demo num_ruptures=743, num_rups=372
-        if src.code in b'pP':  # much lighter
-            weight /= 7
+        if src.code in b'SFN':
+            C *= step**2
+        elif src.code in b'CKX':
+            C *= step
+        src.nctxs = C * srcfilter.multiplier
+        weight = src.nctxs / N
         return weight
 
     def set_weight(self, sources, srcfilter):
@@ -1539,11 +1541,12 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
+        factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
             src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(totlen // nsrcs)
+            self.source_data['nctxs'].append(src.nctxs * factor)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
             self.source_data['ctimes'].append(src.dt)
@@ -1707,7 +1710,7 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     return out
 
 
-# mock of a rupture used in the tests and in the module of the OQ-MBTK
+# mock of a rupture used in the tests and in the SMT module of the OQ-MBTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.

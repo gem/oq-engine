@@ -418,7 +418,7 @@ class GetAzimuthClosestPointTestCase(unittest.TestCase):
 
 
 class GetSurfaceTraceTestCase(unittest.TestCase):
-    """Tests for _get_top_rupture_trace()."""
+    """Tests for _get_tor()."""
 
     def test_simple_fault_returns_top_row(self):
         """SimpleFaultSurface: trace should be mesh row 0."""
@@ -428,7 +428,7 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
             lower_seismogenic_depth=10.0, dip=90.0,
             mesh_spacing=0.5
         )
-        result = surface._get_top_rupture_trace()
+        result = surface._get_tor()
         # Must be 2D with shape (N, 2)
         self.assertEqual(result.ndim, 2)
         self.assertEqual(result.shape[1], 2)
@@ -438,8 +438,8 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
         top_depths = surface.mesh[0:1].depths[0, :]
         numpy.testing.assert_allclose(top_depths, 0.0, atol=0.01)
 
-    def test_get_top_rupture_trace(self):
-        """Test _get_top_rupture_trace() with a given fault trace and surface plan.
+    def test_get_tor(self):
+        """Test _get_tor() with a given fault trace and surface plan.
 
         Surface is a 2-column × 2-row rectangular mesh:
             Top edge:    (0.0, 0.0, 0.0) → (0.1, 0.0, 0.0)
@@ -453,7 +453,7 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
                    [(0.0, 0.0, 10.0), (0.1, 0.0, 10.0)]]
         surface = FakeSurface(corners)
 
-        trace = surface._get_top_rupture_trace()
+        trace = surface._get_tor()
 
         # Exact shape: 2 top-edge points, 2 columns (lon, lat)
         self.assertEqual(trace.shape, (2, 2))
@@ -465,8 +465,8 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(trace[:, 0], expected_lons)
         numpy.testing.assert_array_almost_equal(trace[:, 1], expected_lats)
 
-    def test_get_top_rupture_trace_realistic_fault(self):
-        """Test _get_top_rupture_trace() with a fault geometry.
+    def test_get_tor_realistic_fault(self):
+        """Test _get_tor() with a fault geometry.
         """
         # Fault trace running ~NW-SE for about 30 km:
         #   Point A: (13.30, 42.40)
@@ -480,7 +480,7 @@ class GetSurfaceTraceTestCase(unittest.TestCase):
         ]
         surface = FakeSurface(corners)
 
-        trace = surface._get_top_rupture_trace()
+        trace = surface._get_tor()
 
         self.assertEqual(trace.ndim, 2)
         self.assertEqual(trace.shape[1], 2)

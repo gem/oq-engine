@@ -51,27 +51,32 @@ from openquake.calculators.postproc.aelo_plots import (
 def getparams(what):
     """
     >>> getparams('rupture?')
-    ({}, False)
+    ({}, False, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
-    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True&with_region_labels=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True, True)
     """
     assert '?' in what, what
     params = {}
     with_borders = False
+    with_region_labels = False
     for namevalue in what.split('?')[1].split('&'):
         if not namevalue:
             continue
         name, value = namevalue.split('=')
         if name == 'with_borders':
             with_borders = ast.literal_eval(value)
+        elif name == 'with_region_labels':
+            with_region_labels = ast.literal_eval(value)
         else:
             try:
                 params[name] = ast.literal_eval(value)
             except ValueError:
                 params[name] = value
-    return params, with_borders
+    return params, with_borders, with_region_labels
 
 
 def make_figure_magdist(extractors, what):
@@ -562,7 +567,7 @@ def make_figure_ebruptures(extractors, what):
     out = ebrs['model'] == b'???'
     in_ = ~out
     _fig, ax = plt.subplots()
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     ax.grid(True)
     ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
                label='sites')
@@ -1088,7 +1093,7 @@ def make_figure_sources(extractors, what):
     plot_sources(srcs, ax)
     print('Plotting mosaic borders...')
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     adjust_limits(ax, xlim, ylim, padding=8)
     ax.set_title('Sources')
     handles, labels = ax.get_legend_handles_labels()
@@ -1112,13 +1117,18 @@ def make_figure_rupture(extractors, what):
     $ oq plot "rupture?with_borders=True"
 
     also plots country borders
+
+    $ oq plot "rupture?with_region_labels=True"
+
+    also plots region labels
     """
     [ex] = extractors
     dstore = ex.dstore
-    params, with_borders = getparams(what)
+    params, with_borders, with_region_labels = getparams(what)
     rup_id = params['rup_id'] if 'rup_id' in params else 0
     rup = get_ebrupture(dstore, rup_id=rup_id).rupture
-    return plot_rupture(rup, with_borders=with_borders)
+    return plot_rupture(
+        rup, with_borders=with_borders, with_region_labels=with_region_labels)
 
 
 def make_figure_build_rupture(extractors, what):
@@ -1131,9 +1141,10 @@ def make_figure_build_rupture(extractors, what):
 
     also plots country borders.
     """
-    params, with_borders = getparams(what)
+    params, with_borders, with_region_labels = getparams(what)
     rup = build_planar_rupture_from_dict(params)
-    return plot_rupture(rup, with_borders=with_borders)
+    return plot_rupture(
+        rup, with_borders=with_borders, with_region_labels=with_region_labels)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1142,7 +1153,7 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    params, _ = getparams(what)
+    params, _, _ = getparams(what)
     rup_id = params['rup_id'] if 'rup_id' in params else 0
     ebr = get_ebrupture(dstore, rup_id=rup_id)
     return plot_rupture_3d(ebr.rupture)
@@ -1187,7 +1198,7 @@ def plot_wkt(wkt_string):
         coo = numpy.array(poly.coords)
     _fig, ax = plt.subplots()
     ax.plot(coo[:, 0], coo[:, 1], 'o')
-    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df)
     return plt
 
 
@@ -1213,7 +1224,7 @@ def plot_h3(hexes):
         mp = shapely.MultiPolygon(h3.h3_set_to_multi_polygon([hex]))
         lat, lon = mp.geoms[0].exterior.xy
         ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
-    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    add_borders(ax, readinput.read_countries_df)
     ax.set_aspect('equal')
     return plt
 

@@ -390,7 +390,7 @@ class GsimLogicTree(object):
                             else:
                                 # store the data files as attributes
                                 with open(gsim.kwargs[k], 'rb') as f:
-                                    dic[f'{k}:{v}'] = f.read()
+                                    dic[f'{k}|{v}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -400,7 +400,7 @@ class GsimLogicTree(object):
         # is moved to a different machine.
         # NB: the approach may break on macOS for large files since there is
         # a limit on the attribute size (unknown at the moment)
-        data = {tuple(k.split(':')): v for k, v in dic.items() if ':' in k}
+        data = {tuple(k.split('|')): v for k, v in dic.items() if '|' in k}
         if data:
             # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
             dirname = tempfile.mkdtemp()
