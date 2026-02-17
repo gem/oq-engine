@@ -1,3 +1,11 @@
+  [Yen-Shin Chen]
+  * Added openquake.fdha.primary_surf_rup.base. 
+    Added :param/:returns to get_prob, __str__, __repr__ for 
+    BasePrimarySurfRup and BaseSecondarySurfDispl
+  * Added openquake.fdha.primary_surf_rup.youngs2003: expanded class and
+    get_prob docstrings with formula and dataset references (ExC, GB, nBR)
+  * Added openquake.fdha.tests.primary_surf_rup.test_youngs2003.
+
   [Michele Simionato]
   * Changed the task distribution in classical calculations and reduced the
     slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)
