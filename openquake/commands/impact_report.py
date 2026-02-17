@@ -247,214 +247,304 @@ def one_line_paragraph(text, base_style, max_width, min_font_size=8, step=0.5):
     return Paragraph(text, style)
 
 
+class CountryReportBuilder:
+    """
+    Builds and stores a single-country impact PDF report.
+    """
+
+    # Layout constants
+    MARGIN = 20
+    DISCLAIMER_H = 40
+    HEADER_H = 60
+    NOTES_H = 80
+    SAFETY_BUFFER = 20
+    LOGO_W = 100
+
+    def __init__(
+            self, iso3, event_name, event_date, shakemap_version, time_of_calc,
+            disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
+            adm_level, dstore):
+        self.iso3 = iso3
+        self.event_name = event_name
+        self.event_date = event_date
+        self.shakemap_version = shakemap_version
+        self.time_of_calc = time_of_calc
+        self.disclaimer_txt = disclaimer_txt
+        self.notes_txt = notes_txt
+        self.losses_df = losses_df
+        self.summary_ranges = summary_ranges
+        self.basemap_path = basemap_path
+        self.adm_level = adm_level
+        self.dstore = dstore
+
+        self.styles = getSampleStyleSheet()
+
+        self._load_country_info()
+        self._compute_layout()
+
+    def _load_country_info(self):
+        fname = os.path.join(
+            os.path.dirname(global_risk.__file__),
+            "countries_info.csv",
+        )
+        df = pd.read_csv(fname)
+
+        row = df.loc[df["ISO3"] == self.iso3].iloc[0]
+
+        self.country_name = row["ENGLISH_COUNTRY"]
+        # "GEM_REGION": country_info["GEM_REGION"],
+        # "CRS": country_info["CRS"],
+        self.x_limits = [row["X_MIN"], row["X_MAX"]]
+        self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
+        self.cities = {
+            row["CAPITAL"]: [row["CAPITAL_LON"], row["CAPITAL_LAT"]]
+        }
+        # # it might be needed if we have more than just the capital
+        # cities = config.get("cities", {})
+        # if isinstance(cities, dict) and len(cities) > 3:
+        #     cities = dict(list(cities.items())[:3])
+
+    def _compute_layout(self):
+        self.page_width = A4[0] - (2 * self.MARGIN)
+        self.page_height = A4[1] - (2 * self.MARGIN)
+
+        self.grid_total_h = (
+            self.page_height
+            - self.DISCLAIMER_H
+            - self.HEADER_H
+            - self.NOTES_H
+            - self.SAFETY_BUFFER
+        )
+
+        self.row_h = self.grid_total_h / 2
+        self.col_w = self.page_width / 2
+
+    def _generate_country_plot(self):
+        tags_agg_losses = list(LOSS_METADATA)
+
+        plot_losses(
+            self.country_name, self.iso3, self.adm_level, self.losses_df,
+            self.cities, tags_agg_losses, self.x_limits, self.y_limits,
+            self.basemap_path, self.dstore)
+
+    def _build_disclaimer(self):
+        tbl = Table(
+            [[Paragraph(f"<b>DISCLAIMER</b>: {self.disclaimer_txt}",
+                        self.styles["Normal"])]],
+            colWidths=[self.page_width],
+            rowHeights=[self.DISCLAIMER_H],
+        )
+
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",  (0, 0), (-1, -1), colors.lightcoral),
+            ("BOX",         (0, 0), (-1, -1), 1, colors.red),
+            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+        ]))
+
+        return tbl
+
+    def _build_header(self):
+        event_style = ParagraphStyle(
+            "EventTitle",
+            parent=self.styles["Normal"],
+            fontSize=11,
+        )
+
+        event_text = f"<b>{self.event_name}; {self.event_date}</b>"
+        event_paragraph = one_line_paragraph(
+            event_text,
+            event_style,
+            max_width=self.page_width,
+        )
+
+        oq_basedir = Path(baselib.__path__[0].rsplit("/", 2)[0])
+        logo_path = (
+            oq_basedir
+            / "doc"
+            / "_static"
+            / "OQ-Logo-Standard-RGB-72DPI-01.png"  # FIXME: is this the right one?
+        )
+
+        logo_img = _scaled_image(
+            logo_path,
+            self.LOGO_W,
+            self.HEADER_H - 10,
+        )
+
+        header_text = [
+            event_paragraph,
+            Paragraph(
+                f"Time of the calculation: {self.time_of_calc} "
+                f"&nbsp;&nbsp;ShakeMap version: {self.shakemap_version}",
+                self.styles["Italic"],
+            ),
+        ]
+
+        tbl = Table(
+            [[header_text, logo_img]],
+            colWidths=[self.page_width - self.LOGO_W, self.LOGO_W],
+            rowHeights=[self.HEADER_H],
+        )
+
+        tbl.setStyle(TableStyle([
+            ("VALIGN",     (0, 0), (-1, -1), "TOP"),
+            ("ALIGN",      (1, 0), (1, 0), "RIGHT"),  # logo to the right
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ]))
+
+        return tbl
+
+    def _build_grid(self):
+        summary_table = Table(
+            [["", "Range of losses"]]
+            + [
+                [meta["label"], self.summary_ranges[meta["label"]]]
+                for meta in LOSS_METADATA.values()
+            ],
+            colWidths=[self.col_w * 0.45, self.col_w * 0.45],
+            hAlign="LEFT",
+        )
+
+        summary_table.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
+            ("SIZE", (0, 0), (-1, -1), 9),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+
+        most_affected = self.dstore[
+            f"impact/{self.iso3}/most_affected_regions"
+        ]
+
+        left_bundle = [
+            Paragraph("<b>Summary of impact:</b>", self.styles["Normal"]),
+            Spacer(1, 4),
+            summary_table,
+            Spacer(1, 12),
+            Paragraph("<b>Most affected regions</b>", self.styles["Normal"]),
+            ListFlowable(
+                [ListItem(Paragraph(x, self.styles["Normal"]))
+                 for x in most_affected],
+                bulletType="bullet",
+                leftIndent=15,
+            ),
+        ]
+
+        img_top_right = _scaled_image_from_bytes(
+            self.dstore[
+                f"impact/{self.iso3}/png/{LOSS_METADATA['number']['label']}"
+            ][()],
+            self.col_w - 10,
+            self.row_h - 10,
+        )
+
+        img_bot_left = _scaled_image_from_bytes(
+            self.dstore[
+                f"impact/{self.iso3}/png/{LOSS_METADATA['occupants']['label']}"
+            ][()],
+            self.col_w - 10,
+            self.row_h - 10,
+        )
+
+        img_bot_right = _scaled_image_from_bytes(
+            self.dstore[
+                f"impact/{self.iso3}/png/{LOSS_METADATA['residents']['label']}"
+            ][()],
+            self.col_w - 10,
+            self.row_h - 10,
+        )
+
+        tbl = Table(
+            [
+                [left_bundle, img_top_right],
+                [img_bot_left, img_bot_right],
+            ],
+            colWidths=[self.col_w, self.col_w],
+            rowHeights=[self.row_h, self.row_h],
+        )
+
+        tbl.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (1, 0), (1, 1), "CENTER"),
+            ("ALIGN", (0, 1), (0, 1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+        return tbl
+
+    def _build_notes(self):
+        tbl = Table(
+            [[Paragraph(f"<b>Notes</b>: {self.notes_txt}",
+                        self.styles["Normal"])]],
+            colWidths=[self.page_width],
+            rowHeights=[self.NOTES_H],
+        )
+
+        tbl.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.whitesmoke),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ]))
+
+        return tbl
+
+    def build(self):
+        self._generate_country_plot()
+
+        buffer = BytesIO()
+
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            leftMargin=self.MARGIN,
+            rightMargin=self.MARGIN,
+            topMargin=self.MARGIN,
+            bottomMargin=self.MARGIN,
+        )
+
+        master_layout = Table(
+            [
+                [self._build_disclaimer()],
+                [self._build_header()],
+                [self._build_grid()],
+                [self._build_notes()],
+            ],
+            colWidths=[self.page_width],
+            rowHeights=[
+                self.DISCLAIMER_H,
+                self.HEADER_H,
+                self.grid_total_h,
+                self.NOTES_H,
+            ],
+        )
+
+        master_layout.setStyle(TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+
+        doc.build([master_layout])
+
+        buffer.seek(0)
+        self.dstore[f"impact/{self.iso3}/report_pdf"] = buffer.getvalue()
+
+
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
         basemap_path, adm_level, dstore):
-
-    tags_agg_losses = list(LOSS_METADATA)
-
-    countries_info_fname = os.path.join(
-        os.path.dirname(global_risk.__file__), 'countries_info.csv')
-    countries_info_df = pd.read_csv(countries_info_fname)
-    country_info = countries_info_df.loc[
-        countries_info_df["ISO3"] == iso3].iloc[0]
-    country_name = country_info["ENGLISH_COUNTRY"]
-    # "GEM_REGION": country_info["GEM_REGION"],
-    # "CRS": country_info["CRS"],
-    x_limits_country = [country_info["X_MIN"], country_info["X_MAX"]]
-    y_limits_country = [country_info["Y_MIN"], country_info["Y_MAX"]]
-    cities = {country_info["CAPITAL"]: [
-        country_info["CAPITAL_LON"], country_info["CAPITAL_LAT"]]}
-    # # it might be needed if we have more than just the capital
-    # cities = config.get("cities", {})
-    # if isinstance(cities, dict) and len(cities) > 3:
-    #     cities = dict(list(cities.items())[:3])
-
-    # Country-level comparison
-    plot_losses(country_name, iso3, adm_level, losses_df, cities,
-                tags_agg_losses, x_limits_country, y_limits_country,
-                basemap_path, dstore)
-
-    # Document Setup (Reduced Margins)
-    MARGIN = 20  # Reduced margin for a wider/taller layout area
-
-    pdf_buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        pdf_buffer,
-        pagesize=A4,
-        leftMargin=MARGIN,
-        rightMargin=MARGIN,
-        topMargin=MARGIN,    # Top margin equals bottom margin
-        bottomMargin=MARGIN,
-    )
-
-    styles = getSampleStyleSheet()
-
-    event_style = ParagraphStyle(
-        "EventTitle",
-        parent=styles["Normal"],
-        fontSize=11,
-    )
-
-    # A4 is (595.27, 841.89) points
-    page_width = A4[0] - (2 * MARGIN)
-    page_height = A4[1] - (2 * MARGIN)
-
-    # Height Allocations
-    DISCLAIMER_H = 40
-    HEADER_H = 60
-    NOTES_H = 80
-    SAFETY_BUFFER = 20  # Buffer to ensure it stays on one page
-    GRID_TOTAL_H = (
-        page_height - DISCLAIMER_H - HEADER_H - NOTES_H - SAFETY_BUFFER)
-
-    ROW_H = GRID_TOTAL_H / 2
-    COL_W = page_width / 2
-
-    # Disclaimer
-    disclaimer_tbl = Table(
-        [[Paragraph(f"<b>DISCLAIMER</b>: {disclaimer_txt}",
-                    styles["Normal"])]],
-        colWidths=[page_width], rowHeights=[DISCLAIMER_H]
-    )
-    disclaimer_tbl.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (-1, -1), colors.lightcoral),
-        ("BOX",         (0, 0), (-1, -1), 1, colors.red),
-        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-    ]))
-
-    # Path to your logo
-    oq_basedir = Path(baselib.__path__[0].rsplit('/', 2)[0])
-    LOGO_PATH = (
-        oq_basedir / 'doc' / '_static' / 'OQ-Logo-Standard-RGB-72DPI-01.png')
-    LOGO_W = 100
-
-    event_text = f"<b>{event_name}; {event_date}</b>"
-    event_paragraph = one_line_paragraph(
-        event_text,
-        event_style,
-        max_width=page_width,
-    )
-
-    # Event Header
-    header_text = [
-        event_paragraph,
-        Paragraph(
-            f"Time of the calculation: {time_of_calc} &nbsp;&nbsp;"
-            f" ShakeMap version: {shakemap_version}",
-            styles["Italic"])
-    ]
-
-    # Helper to scale the logo to fit the header height
-    logo_img = _scaled_image(LOGO_PATH, LOGO_W, HEADER_H - 10)
-
-    # Create a two-column header table
-    header_tbl = Table(
-        [[header_text, logo_img]],
-        colWidths=[page_width - LOGO_W, LOGO_W],
-        rowHeights=[HEADER_H]
-    )
-
-    header_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (1, 0), (1, 0), "RIGHT"),  # Logo pushed to the right
-        ("TOPPADDING", (0, 0), (-1, -1), 10),
-    ]))
-
-    # Top-Left Content
-    summary_table = Table(
-        [["", "Range of losses"]] +
-        [[meta["label"], summary_ranges[meta["label"]]]
-         for meta in LOSS_METADATA.values()],
-        colWidths=[COL_W * 0.45, COL_W * 0.45], hAlign='LEFT'
-    )
-    summary_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-        ("SIZE", (0, 0), (-1, -1), 9),
-        ("PADDING", (0, 0), (-1, -1), 4),
-    ]))
-
-    most_affected_regions = dstore[f"impact/{iso3}/most_affected_regions"]
-
-    left_bundle = [
-        Paragraph("<b>Summary of impact:</b>", styles["Normal"]),
-        Spacer(1, 4),
-        summary_table,
-        Spacer(1, 12),
-        Paragraph("<b>Most affected regions</b>", styles["Normal"]),
-        ListFlowable(
-            [ListItem(Paragraph(item, styles["Normal"]))
-             for item in most_affected_regions],
-            bulletType="bullet", leftIndent=15
-        )
-    ]
-
-    # Images (2x2 Grid)
-    img_top_right = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/{LOSS_METADATA['number']['label']}"][()],
-        COL_W - 10, ROW_H - 10)
-    img_bot_left = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/{LOSS_METADATA['occupants']['label']}"][()],
-        COL_W - 10, ROW_H - 10)
-    img_bot_right = _scaled_image_from_bytes(
-        dstore[f"impact/{iso3}/png/{LOSS_METADATA['residents']['label']}"][()],
-        COL_W - 10, ROW_H - 10)
-    grid_tbl = Table(
-        [
-            [left_bundle, img_top_right],
-            [img_bot_left, img_bot_right]
-        ],
-        colWidths=[COL_W, COL_W],
-        rowHeights=[ROW_H, ROW_H]
-    )
-    grid_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (1, 0), (1, 1), "CENTER"),
-        ("ALIGN", (0, 1), (0, 1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    # Notes
-    notes_tbl = Table(
-        [[Paragraph(f"<b>Notes</b>: {notes_txt}",
-                    styles["Normal"])]],
-        colWidths=[page_width], rowHeights=[NOTES_H]
-    )
-    notes_tbl.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.whitesmoke),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-    ]))
-
-    # Master Assembly
-    master_layout = Table(
-        [
-            [disclaimer_tbl],
-            [header_tbl],
-            [grid_tbl],
-            [notes_tbl]
-        ],
-        colWidths=[page_width],
-        rowHeights=[DISCLAIMER_H, HEADER_H, GRID_TOTAL_H, NOTES_H]
-    )
-
-    master_layout.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-
-    doc.build([master_layout])
-    pdf_buffer.seek(0)
-    dstore[f"impact/{iso3}/report_pdf"] = pdf_buffer.getvalue()
+    builder = CountryReportBuilder(
+        iso3, event_name, event_date, shakemap_version, time_of_calc,
+        disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
+        adm_level, dstore)
+    builder.build()
 
 
 def _get_notes(oqparam):
