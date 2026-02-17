@@ -29,7 +29,6 @@ import numpy
 import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-import shapely
 from shapely import geometry, contains_xy, Point
 from shapely.strtree import STRtree
 

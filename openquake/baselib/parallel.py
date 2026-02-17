@@ -529,8 +529,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
-    elif func is split_task:
-        name = args[1].__name__
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
@@ -782,18 +780,6 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
-    def apply_split(cls, task, allargs, concurrent_tasks=None,
-                    maxweight=None, weight=lambda item: 1,
-                    key=lambda item: 'Unspecified',
-                    distribute=None, progress=logging.info, h5=None,
-                    duration=300, outs_per_task=5):
-        """
-        Same as Starmap.apply, but possibly produces subtasks
-        """
-        args = (allargs[0], task, allargs[1:], duration, outs_per_task)
-        return cls.apply(split_task, args, concurrent_tasks or 2*num_cores,
-                         maxweight, weight, key, distribute, progress, h5)
-
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, h5=None):
         self.__class__.init(distribute=distribute)
@@ -806,10 +792,7 @@ class Starmap(object):
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
-        if task_func is split_task:
-            self.name = task_args[0][1].__name__
-        else:
-            self.name = task_func.__name__
+        self.name = task_func.__name__
         self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
@@ -894,15 +877,6 @@ class Starmap(object):
         submit[dist](self, func, args, self.monitor)
         self.tasks.append(self.task_no)
         self.task_no += 1
-
-    def submit_split(self, args,  duration, outs_per_task):
-        """
-        Submit the given arguments to the underlying task
-        """
-        self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit(
-            (args[0], self.task_func, args[1:], duration, outs_per_task),
-            split_task)
 
     def submit_all(self):
         """
@@ -1003,7 +977,6 @@ class Starmap(object):
                 del self.h5['task_sent']
                 self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
-                n = self.name + ':' + name if name == 'split_task' else name
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
                     if res.mon.task_no % 10 == 0:
@@ -1021,7 +994,7 @@ class Starmap(object):
                     mem_gb = memory_gb()
                 else:
                     mem_gb = memory_gb(Starmap.pids)
-                res.mon.save_task_info(self.h5, res, n, mem_gb)
+                res.mon.save_task_info(self.h5, res, name, mem_gb)
                 res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
@@ -1064,38 +1037,6 @@ def count(word):
 
 class List(list):
     weight = 0
-
-
-# associated to submit_split and tested in SplitTaskTestCase
-def split_task(elements, func, args, duration, outs_per_task, monitor):
-    """
-    :param func: a task function with a monitor as last argument
-    :param args: arguments of the task function, with args[0] being a sequence
-    :param duration: split the task if it exceeds the duration
-    :param outs_per_task: number of splits to try (ex. 5)
-    :yields: a partial result, 0 or more task objects
-    """
-    n = len(elements)
-    if outs_per_task > n:  # too many splits
-        outs_per_task = n
-    elements = numpy.array(elements)  # from WeightedSequence to array
-    idxs = numpy.arange(n)
-    split_elems = [elements[idxs % outs_per_task == i]
-                   for i in range(outs_per_task)]
-    # see how long it takes to run the first slice
-    t0 = time.time()
-    for i, elems in enumerate(split_elems):
-        monitor.out_no = monitor.task_no + i * 65536
-        res = func(elems, *args, monitor=monitor)
-        dt = time.time() - t0
-        yield res
-        if dt > duration:
-            # spawn subtasks for the rest and exit, used in classical/case_14
-            for els in split_elems[i + 1:]:
-                ls = List(els)
-                ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
-                yield (func, ls) + args
-            break
 
 
 def logfinish(n, tot):

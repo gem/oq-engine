@@ -1,3 +1,17 @@
+  [Michele Simionato]
+  * Changed the task distribution in classical calculations and reduced the
+    slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)
+  * Bug fix: using `sites=lon1 lat1, ...` with a parent calculation
+    did not result in the specified sites to be used
+
+  [Yen-Shin Chen]
+  * Added get_x_l_ratio() method to BaseSurface for computing normalized
+    along-strike position (x/L) for PFDHA applications
+  * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
+    for improved performance with large site meshes
+  * Added _get_tor() helper method to extract the top rupture
+    trace with NaN handling for KiteSurface compatibility
+
   [Christopher Brooks]
   * Added the EMME24 site model to the existing OQ implementation of the
     EMME backbone model for ASCR (files describing the site model were
@@ -188,6 +202,8 @@
   [Michele Simionato, Antonio Ettorre]
   * Upgraded numpy to version 2.2, including related dependencies such as
     pandas, pyproj, GDAL, fiona, etc
+
+python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene]
   * When running a job via the WebUI it is possible to specify in the POST an

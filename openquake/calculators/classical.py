@@ -27,7 +27,7 @@ import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, split_in_blocks)
+    AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
@@ -191,7 +191,10 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
 
 
 def _split_src(srcs, n):
-    return split_in_blocks(srcs, n, get_weight)
+    for i in range(n):
+        blk = srcs[i::n]
+        if len(blk):
+            yield blk
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -212,19 +215,26 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 10)
+        b0, *blks = _split_src(list(grps[0]), 7)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > 3 * cmaker.split_time:
-            # tested in the oq-risk-tests
-            for srcs in _split_src(rest, 8):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+            b1, *blks = _split_src(rest, 6)
+            for blk in blks:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(b1, sites, cmaker, True)
+        elif dt > 2 * cmaker.split_time:
+            b1, *blks = _split_src(rest, 4)
+            for blk in blks:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(b1, sites, cmaker, True)
         elif dt > cmaker.split_time:
-            for srcs in _split_src(rest, 2):
-                yield baseclassical, srcs, tilegetter, cmaker, True, dstore
+            odd, even = _split_src(rest, 2)
+            yield baseclassical, odd, tilegetter, cmaker, True, dstore
+            yield baseclassical(even, sites, cmaker, True)
         else:
             yield baseclassical(rest, sites, cmaker, True)
     else:
@@ -598,8 +608,11 @@ class ClassicalCalculator(base.HazardCalculator):
                            self.max_weight, self.num_chunks, tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
-        self.split_time = split_time = max(max_gb * 30, 20)
+        # NB: the multiplier 60 is chosen so that SAM runs well on engine192
+        self.split_time = split_time = max(max_gb * 60, 10)
+        num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
+            num_blocks += sum('-' in key for key in grp_keys)
             cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
@@ -618,8 +631,8 @@ class ClassicalCalculator(base.HazardCalculator):
             maxtiles = max(maxtiles, len(tilegetters))
         if not self.few_sites and self.rmap:
             logging.info(f'{split_time=:.0f} seconds')
-        logging.warning('This is a calculation with %d tasks, maxtiles=%d',
-                        len(allargs), maxtiles)
+        logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
+                        'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
         # save grp_keys by task
         keys = numpy.array([' '.join(args[0]).encode('ascii')
@@ -688,7 +701,17 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
-        df = pandas.DataFrame(self.source_data)
+
+        # check est_ctxs vs num_ctxs
+        if self.N > self.oqparam.max_sites_disagg:
+            fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
+            info = self.datastore['source_info'][:][fields]
+            info = info[info['num_ctxs'] > 0]
+            bad = (info['est_ctxs'] < info['num_ctxs']) & (
+                delta(info['est_ctxs'], info['num_ctxs']) > .5)
+            if bad.any():
+                logging.warn('The estimated number of contexts is way off\n'+
+                             views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
@@ -696,6 +719,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # producing 20 effective ruptures for the N-n points outside;
         # then impact = (200 * n + 20 * (N-n)) / N; for n=1 and N=10
         # it gives impact = 38, i.e. there are 38 effective ruptures
+        df = pandas.DataFrame(self.source_data)
         df['impact'] = df.nctxs / self.N
         self.datastore.create_df('source_data', df)
         self.source_data.clear()  # save a bit of memory
