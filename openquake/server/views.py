@@ -1001,6 +1001,23 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+class JobPostProcessing:
+    def __init__(self, job_id):
+        self.job_id = job_id
+
+    def __enter__(self):
+        dbapi.db("UPDATE job SET ?D WHERE id=?x",
+                 {'status': 'post-processing', 'is_running': 1}, self.job_id)
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            dbapi.db("UPDATE job SET ?D WHERE id=?x",
+                     {'status': 'complete', 'is_running': 0}, self.job_id)
+        else:
+            dbapi.db("UPDATE job SET ?D WHERE id=?x",
+                     {'status': 'failed', 'is_running': 0}, self.job_id)
+
+
 def impact_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
@@ -1068,7 +1085,8 @@ def impact_callback(
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-        make_impact_report()
+        with JobPostProcessing(job_id):
+            make_impact_report()
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
