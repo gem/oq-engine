@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -16,13 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import argparse
 import os
 import tempfile
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
 
-# FIXME: add to engine requirements? Only for impact?
 import mapclassify
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
@@ -40,7 +41,7 @@ from openquake.baselib import config
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.postproc.plots import import_plt, plot_variable
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import datastore, logs, dbapi
 from openquake.commonlib.calc import get_close_regions
 from openquake.qa_tests_data import global_risk
 
@@ -590,44 +591,86 @@ def main(calc_id: int = -1, *, adm_level=2, threshold_deg=3):
     """
     Create a PDF impact report
     """
-    adm_level = int(adm_level)
-    basemap_path = config.directory.basemap_file
-    if not basemap_path:
-        raise AttributeError('config.directory.basemap_file is missing')
-    export_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    dstore = datastore.read(calc_id, mode='r+')
-    dstore.export_dir = export_dir
-    lon = dstore['oqparam'].rupture_dict['lon']
-    lat = dstore['oqparam'].rupture_dict['lat']
-    summary_ranges = _get_impact_summary_ranges(dstore)
-    losses_df = _get_losses(dstore)
-    oqparam = dstore['oqparam']
-    rupdic = oqparam.rupture_dict
-    event_name = rupdic['title']
-    # FIXME: do we prefer to show UTC or perhaps it is more intuitive
-    #        to show the local time?
-    event_date = to_utc_string(oqparam.local_timestamp)
-    shakemap_version = rupdic['shakemap_desc']
-    job = logs.dbcmd('get_job', calc_id)
-    time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
-    disclaimer_txt = '''
-    This is an automatically generated draft. Content has not been verified
-    for accuracy by a human reviewer. Please treat all figures as provisional
-    until a final validated version is issued.'''
-    notes_txt = _get_notes(oqparam)
-    iso3_codes = get_close_regions(
-        lon, lat, buffer_radius=threshold_deg, region_kind='country')
-    if not iso3_codes:
-        raise RuntimeError(
-            "No country within {threshold_deg} from the hypocenter")
-    # TODO: handle multi-country case (hypocenter close to borders)
-    iso3 = iso3_codes[0]
-    make_report_for_country(
-        iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, adm_level, dstore)
-    dstore.close()
+    dstore = None
+    try:
+        dbapi.db("UPDATE job SET ?D WHERE id=?x",
+                 {'status': 'making PDF report', 'is_running': 1}, calc_id)
+        adm_level = int(adm_level)
+        basemap_path = config.directory.basemap_file
+        if not basemap_path:
+            raise AttributeError('config.directory.basemap_file is missing')
+        export_dir = config.directory.custom_tmp or tempfile.gettempdir()
+        dstore = datastore.read(calc_id, mode='r+')
+        dstore.export_dir = export_dir
+        lon = dstore['oqparam'].rupture_dict['lon']
+        lat = dstore['oqparam'].rupture_dict['lat']
+        summary_ranges = _get_impact_summary_ranges(dstore)
+        losses_df = _get_losses(dstore)
+        oqparam = dstore['oqparam']
+        rupdic = oqparam.rupture_dict
+        event_name = rupdic['title']
+        # FIXME: do we prefer to show UTC or perhaps it is more intuitive
+        #        to show the local time?
+        event_date = to_utc_string(oqparam.local_timestamp)
+        shakemap_version = rupdic['shakemap_desc']
+        job = logs.dbcmd('get_job', calc_id)
+        time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+        disclaimer_txt = '''
+        This is an automatically generated draft. Content has not been verified
+        for accuracy by a human reviewer. Please treat all figures as provisional
+        until a final validated version is issued.'''
+        notes_txt = _get_notes(oqparam)
+        iso3_codes = get_close_regions(
+            lon, lat, buffer_radius=threshold_deg, region_kind='country')
+        if not iso3_codes:
+            raise RuntimeError(
+                "No country within {threshold_deg} from the hypocenter")
+        # TODO: handle multi-country case (hypocenter close to borders)
+        iso3 = iso3_codes[0]
+        make_report_for_country(
+            iso3, event_name, event_date, shakemap_version, time_of_calc,
+            disclaimer_txt, notes_txt, losses_df, summary_ranges,
+            basemap_path, adm_level, dstore)
+        dstore.close()
+    except Exception:
+        logs.LOG.error("Impact report failed for calc_id=%s",
+                       calc_id, exc_info=True)
+        raise
+    finally:
+        dbapi.db("UPDATE job SET ?D WHERE id=?x",
+                 {'status': 'complete', 'is_running': 0}, calc_id)
+        if dstore is not None:
+            dstore.close()
 
 
-main.calc_id = 'number of the calculation'
-main.adm_level = 'administrative level of country geometries'
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description="Create a PDF impact report"
+    )
+    parser.add_argument(
+        "calc_id",
+        type=int,
+        help="OpenQuake calculation ID"
+    )
+    parser.add_argument(
+        "--adm-level",
+        type=int,
+        default=2,
+        help="Administrative level (default: 2)"
+    )
+    parser.add_argument(
+        "--threshold-deg",
+        type=float,
+        default=3,
+        help="Buffer radius in degrees (default: 3)"
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = _parse_args()
+    main(
+        calc_id=args.calc_id,
+        adm_level=args.adm_level,
+        threshold_deg=args.threshold_deg
+    )

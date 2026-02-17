@@ -31,6 +31,8 @@ import signal
 import zlib
 import re
 import psutil
+import sys
+from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 from collections import defaultdict
@@ -63,7 +65,6 @@ from openquake.calculators.export import (
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
-from openquake.commands.impact_report import main as make_impact_report
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
@@ -1001,27 +1002,6 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
-class JobPostProcessing:
-    """
-    Context manager to execute post-processing operations on a job while
-    the job is displayed as running and its status is set to 'post_processing'
-    """
-    def __init__(self, job_id):
-        self.job_id = job_id
-
-    def __enter__(self):
-        dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                 {'status': 'post-processing', 'is_running': 1}, self.job_id)
-
-    def __exit__(self, exc_type, exc, tb):
-        if exc_type is None:
-            dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                     {'status': 'complete', 'is_running': 0}, self.job_id)
-        else:
-            dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                     {'status': 'failed', 'is_running': 0}, self.job_id)
-
-
 def impact_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
@@ -1083,14 +1063,17 @@ def impact_callback(
         for warning in warnings:
             body += warning + '\n'
     if exc:
-        job_id = job_id
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-        with JobPostProcessing(job_id):
-            make_impact_report()
+        repo_root = Path(__file__).resolve().parents[2]
+        script = repo_root / "bin" / "impact_report.py"
+        subprocess.run(
+            [sys.executable, str(script), str(job_id)],
+            check=True
+        )
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
