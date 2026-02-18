@@ -1,3 +1,19 @@
+/*
+ Copyright (C) 2015-2026 GEM Foundation
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
+ */
 body {
     color: #555;
     padding-top: 40px;
@@ -244,19 +260,6 @@ footer.footer .pull-left span {
      margin: 0px;
 }
 
-tr.asce_output {
-    font-weight: bold;
-}
-.asce-key {
-    font-weight: normal;
-    float: left;
-    width: 100px;
-}
-.asce-value {
-    font-weight: normal;
-    float: left;
-}
-
 .announcements-box {
     padding: 10px 20px 20px;
     background-color: #ff9800;
@@ -275,74 +278,6 @@ tr.asce_output {
     color: #fff;
     text-decoration: underline;
 }
-
-.aelo-input {
-    width: 90%;
-    vertical-align: top!important;
-    height: 11px!important;
-    padding-bottom: 10px!important;
-}
-
-input.aelo-input-site_name {
-    width: 100%;
-}
-
-.aelo-input-siteid {
-    width: 300px;
-}
-
-.aelo-label {
-    font-weight: bold;
-}
-
-.aelo-select {
-    height: 33px!important;
-    width: 95%;
-}
-
-.table-aelo-form {
-    width: 80%;
-    margin-bottom: 0;
-}
-
-.table-aelo-form-2 {
-    width: 80%;
-}
-
-.table-aelo-form tr th,
-.table-aelo-form-2 tr th {
-    padding: 0;
-}
-
-.table-aelo-form td,
-.table-aelo-form-2 td {
-    width: 33.33333%;
-    padding: 0;
-    border-top: 0;
-}
-
-.impact_form_row label {
-    margin-bottom: 10px;
-}
-
-.impact_form_row label {
-    display: inline-block;
-    width: 225px;
-}
-
-.impact_form_row input {
-    /* width: calc(100% - 110px); /1* Adjust according to label width *1/ */
-    box-sizing: border-box;
-}
-
-.impact-select {
-    width: 206px;
-}
-
-.impact-input-wider {
-    width: 618px;
-}
-
 
 /* customization of bootstrap button hover, to avoid turning to black */
 .btn:hover, .btn:focus {
@@ -393,125 +328,11 @@ input.aelo-input-site_name {
     width: 56px;
 }
 
-.impact-losses-container {
-    width: 100%;
-    display: block;
-    overflow-x: scroll;
-    position: relative;
-}
-
-table#impact-losses {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-table#impact-losses th td {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-#impact-losses-download {
-  margin-top: 10px;
-}
-
-.changelog {
-    width: 80%;
-    margin: 50px auto;
-    border-collapse: collapse;
-}
-.changelog th, .changelog td {
-    border: 1px solid #000;
-    padding: 8px;
-    text-align: left;
-}
-.changelog th {
-    background-color: #f2f2f2;
-}
-
-.changelog td:nth-child(1), .changelog th:nth-child(1) {
-    width: 15%;
-}
-.changelog td:nth-child(2), .changelog th:nth-child(2) {
-    width: 15%;
-}
-.changelog td:nth-child(3), .changelog th:nth-child(3) {
-    width: 70%;
-}
-
-.shakemap-image-container {
-    float: left;
-    /* If we want to adjust the size of images instead of making them of the suitable size
-    /* width: 50%; */
-}
-
-/* If we want to adjust the size of images instead of making them of the suitable size
-/* .shakemap-image-container img{ */
-/*     width: 600px; */
-/* } */
-
-.shakemap-clear-float {
-    clear: both;
-    margin-bottom: 30px;
-}
-
-/* Hide all form elements except the submit button */
-.hidden_except_submit input:not([type="submit"]),
-.hidden_except_submit select,
-.hidden_except_submit textarea,
-.hidden_except_submit button:not([type="submit"]),
-.hidden_except_submit label {
-  display: none;
-}
-
-.hidden {
-    display: none;
-}
-
-#impact_approach {
-  display: block;  /* each label in its own row */
-  margin-bottom: 20px; /* Space between radio options */
-}
-
 input[type="radio"] {
   margin-right: 5px; /* Space between radio button and label text */
 }
 
-.station-btn {
-    margin-left: 40px;
-    margin-bottom: 8px;
-}
-
-#extracted_html_table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    margin-top: 20px;
-}
-
-#extracted_html_table th,
-#extracted_html_table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-    vertical-align: top;
-}
-
-#extracted_html_table thead {
-    background-color: #f4f4f4;
-}
-
-#extracted_html_table th {
-    background-color: #1b75a7;
-    color: white;
-    font-weight: bold;
-}
-
-#extracted_html_table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-#extracted_html_table tr:hover {
-    background-color: #f1f1f1;
+.loading-spinner {
+    width: 18px;
+    height: 18px;
 }
