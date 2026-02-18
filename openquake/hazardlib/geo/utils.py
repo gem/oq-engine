@@ -375,9 +375,18 @@ def clean_points(points):
     result = [points[0]]
     isarray = isinstance(points[0], numpy.ndarray)
     for point in points[1:]:
-        ok = isarray and (point != result[-1]).any() or point != result[-1]
+        ok = isarray and (point != result[-1]).any() or numpy.any(point != result[-1])
+        # ok = isarray and (point != result[-1]).any() or point != result[-1]
         if ok:  # different from the previous point
             result.append(point)
+        """
+        try:
+            if ok:  # different from the previous point
+                result.append(point)
+        except Exception as e:
+            print(repr(e))
+            breakpoint()
+        """
 
     if len(result) < 2:
         raise ValueError(msg)
