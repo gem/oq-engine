@@ -122,7 +122,7 @@ def fix_toml(v):
         return float(v)
     elif isinstance(v, numpy.ndarray):
         return list(v)
-    elif isinstance(v, CoeffsTable):
+    elif hasattr(v, 'to_dict'):
         return v.to_dict()
     elif hasattr(v, 'items'):
         return {k1: fix_toml(v1) for k1, v1 in v.items()}
