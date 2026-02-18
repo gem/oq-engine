@@ -114,20 +114,20 @@ def warn_adapted(cls):
 
 
 def fix_toml(v):
-    # horrible hack to remove a pickle error with
-    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
-    # using toml.loads(s, _dict=dict) would be the right way, but it does
-    # not work :-(
-    if isinstance(v, numpy.ndarray):
+    """
+    The kwargs dictionary of a GSIM can contain Python objects convertible
+    to TOML (arrays, CoeffsTables) and we implement the conversion here.
+    """
+    if isinstance(v, (numpy.float32, numpy.float64)):
+        return float(v)
+    elif isinstance(v, numpy.ndarray):
         return list(v)
+    elif isinstance(v, CoeffsTable):
+        return v.to_dict()
     elif hasattr(v, 'items'):
         return {k1: fix_toml(v1) for k1, v1 in v.items()}
     elif isinstance(v, list):
         return [fix_toml(x) for x in v]
-    elif isinstance(v, numpy.float64):
-        return float(v)
-    elif isinstance(v, CoeffsTable):
-        return v.to_dict()
     return v
 
 
