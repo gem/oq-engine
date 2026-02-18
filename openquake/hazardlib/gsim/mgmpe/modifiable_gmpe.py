@@ -306,7 +306,7 @@ def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
     This function uses the sigma model of Al Atik (2015) as the standard
     deviation of a specified GMPE
     """
-    phi = get_phi_ss(imt.string, ctx.mag, phi_ss_coetab)
+    phi = get_phi_ss(imt, ctx.mag, phi_ss_coetab)
     if ergodic:
         phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
@@ -529,7 +529,7 @@ class ModifiableGMPE(GMPE):
             self.params[key]['tau_coetab'] = get_tau_at_quantile(
                 TAU_SETUP[tau_model]["MEAN"],
                 TAU_SETUP[tau_model]["STD"],
-                tau_quantile)
+                tau_quantile)  # NB: this a dict an not a CoeffsTable :-/
 
             # Phi SS
             phi_model = self.params[key].get("phi_model", "global")
@@ -537,7 +537,7 @@ class ModifiableGMPE(GMPE):
                 del self.params[key]["phi_model"]
             phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
             self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
-                PHI_SETUP[phi_model], phi_ss_quantile).to_dict()
+                PHI_SETUP[phi_model], phi_ss_quantile)
 
         # Set params
         for key in self.params:

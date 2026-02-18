@@ -836,7 +836,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
+    dic = valid.fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)

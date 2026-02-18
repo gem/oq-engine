@@ -32,9 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_28, case_30, case_31,
-    case_36, case_39, case_45, case_46, case_52, case_56, case_58, case_59,
-    case_67, case_68, case_71, case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_28, case_30,
+    case_31, case_36, case_39, case_45, case_46, case_52, case_56, case_58,
+    case_59, case_67, case_68, case_71, case_73, case_79, case_80, case_83,
+    case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -473,6 +474,10 @@ hazard_uhs-std.csv
             'hc18.csv', 'hc19.csv', 'hc20.csv',
             'hc21.csv', 'hc22.csv', 'hc23.csv',
             'hc24.csv', 'hc25.csv', 'hc26.csv'], case_21.__file__, delta=2E-05)
+
+    def test_case_22(self):
+        # sigma_model_alatik2015
+        self.assert_curves_ok(["hazard_curve-mean-SA06.csv"], case_22.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
