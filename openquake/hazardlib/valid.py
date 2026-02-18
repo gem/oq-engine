@@ -35,7 +35,7 @@ import numpy
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
-from openquake.hazardlib.gsim.base import registry, gsim_aliases
+from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
@@ -156,22 +156,6 @@ def to_toml(uncertainty):
     return text
 
 
-def _fix_toml(v):
-    # horrible hack to remove a pickle error with
-    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
-    # using toml.loads(s, _dict=dict) would be the right way, but it does
-    # not work :-(
-    if isinstance(v, numpy.ndarray):
-        return list(v)
-    elif hasattr(v, 'items'):
-        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
-    elif isinstance(v, list):
-        return [_fix_toml(x) for x in v]
-    elif isinstance(v, numpy.float64):
-        return float(v)
-    return v
-
-
 def calculation(value):
     """
     Convert a string into an integer calculation ID
@@ -195,7 +179,7 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
-    kwargs = _fix_toml(kwargs)
+    kwargs = fix_toml(kwargs)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))

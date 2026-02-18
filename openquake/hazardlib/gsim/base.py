@@ -113,6 +113,24 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
+def fix_toml(v):
+    # horrible hack to remove a pickle error with
+    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
+    # using toml.loads(s, _dict=dict) would be the right way, but it does
+    # not work :-(
+    if isinstance(v, numpy.ndarray):
+        return list(v)
+    elif hasattr(v, 'items'):
+        return {k1: fix_toml(v1) for k1, v1 in v.items()}
+    elif isinstance(v, list):
+        return [fix_toml(x) for x in v]
+    elif isinstance(v, numpy.float64):
+        return float(v)
+    elif isinstance(v, CoeffsTable):
+        return v.to_dict()
+    return v
+
+
 OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
@@ -160,7 +178,7 @@ class MetaGSIM(abc.ABCMeta):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
-        self._toml = toml.dumps({cls.__name__: kwargs}).strip()
+        self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table

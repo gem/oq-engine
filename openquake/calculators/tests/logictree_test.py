@@ -477,7 +477,7 @@ hazard_uhs-std.csv
 
     def test_case_22(self):
         # sigma_model_alatik2015
-        self.assert_curves_ok([], case_22.__file__)
+        self.assert_curves_ok(["hazard_curve-mean-SA06.csv"], case_22.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
