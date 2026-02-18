@@ -28,12 +28,12 @@ from openquake.fdha.primary_surf_rup.base import BasePrimarySurfRup
 class _Youngs2003Base(BasePrimarySurfRup):
     """
     Base class for Youngs et al. (2003) logistic surface rupture probability
-    models. Subclasses set :attr:`COEFF_A` and :attr:`COEFF_B` (logistic
+    models. Subclasses set :attr:`coeff_a` and :attr:`coeff_b` (logistic
     regression coefficients).
     """
 
-    COEFF_A = None
-    COEFF_B = None
+    coeff_a = None
+    coeff_b = None
 
     def get_prob(self, ctx):
         """
@@ -48,7 +48,7 @@ class _Youngs2003Base(BasePrimarySurfRup):
             same shape as ``ctx.mag``.
         """
         m = np.asarray(ctx.mag, dtype=float)
-        fx = self.COEFF_A + self.COEFF_B * m
+        fx = self.coeff_a + self.coeff_b * m
         prob = 1.0 / (1.0 + np.exp(-fx))
         return prob.item() if prob.shape == () else prob
 
@@ -60,8 +60,8 @@ class Youngs2003PrimarySR_ExC(_Youngs2003Base):
     Mw 4.5–7.6 (Appendix, p. 25).
     """
 
-    COEFF_A = -12.53
-    COEFF_B = 1.921
+    coeff_a = -12.53
+    coeff_b = 1.921
 
 
 class Youngs2003PrimarySR_GB(_Youngs2003Base):
@@ -71,8 +71,8 @@ class Youngs2003PrimarySR_GB(_Youngs2003Base):
     (Appendix, p. 25).
     """
 
-    COEFF_A = -16.02
-    COEFF_B = 2.685
+    coeff_a = -16.02
+    coeff_b = 2.685
 
 
 class Youngs2003PrimarySR_nBR(_Youngs2003Base):
@@ -82,5 +82,5 @@ class Youngs2003PrimarySR_nBR(_Youngs2003Base):
     Mw 4.9–7.4 (Appendix, p. 25).
     """
 
-    COEFF_A = -18.71
-    COEFF_B = 3.041
+    coeff_a = -18.71
+    coeff_b = 3.041
