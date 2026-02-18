@@ -41,11 +41,11 @@ from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden, JsonResponse)
+    HttpResponseForbidden, JsonResponse, Http404)
 from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
@@ -1337,6 +1337,36 @@ def impact_run_with_shakemap(request):
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
+
+
+def extract_pdf_from_datastore(dstore):
+    # FIXME: handle multi-country case
+    iso3 = list(dstore['impact'])[0]
+    data = dstore['impact'][iso3]['report_pdf'][()]
+    return bytes(data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def impact_report(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            pdf_bytes = extract_pdf_from_datastore(ds)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
+            content_type='text/plain', status=400)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = "inline; filename=impact_report.pdf"
+    return response
 
 
 def aelo_validate(request):
