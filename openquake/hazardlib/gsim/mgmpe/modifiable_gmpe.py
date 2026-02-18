@@ -306,7 +306,10 @@ def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
     This function uses the sigma model of Al Atik (2015) as the standard
     deviation of a specified GMPE
     """
-    phi = get_phi_ss(imt.string, ctx.mag, phi_ss_coetab)
+    try:
+        phi = get_phi_ss(imt.string, ctx.mag, phi_ss_coetab)
+    except:
+        raise
     if ergodic:
         phi_s2s = get_stewart_2019_phis2s(imt, ctx.vs30)
         phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
@@ -569,9 +572,8 @@ class ModifiableGMPE(GMPE):
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
-            if not hasattr(self, 'imts_req'):
-                self.imts_req = init_underlying_gmpes(
-                    self.params["conditional_gmpe"])
+            self.imts_req = init_underlying_gmpes(
+                self.params["conditional_gmpe"])
             conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs
