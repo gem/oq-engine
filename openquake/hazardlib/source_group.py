@@ -567,6 +567,12 @@ class CompositeSourceModel:
                      weight=sg.weight,
                      atomic=sg.atomic)
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
+        ws = []
+        for blk in blocks:
+            if isinstance(blk, int):
+                ws.append(sg.weight)
+            else:
+                ws.append(sum(src.weight for src in blk))
         return cmaker, tilegetters, blocks, extra
 
     def get_source_info(self):
@@ -664,27 +670,6 @@ def zunpik(data):
     unzip and unpickle some data array
     """
     return pickle.loads(zlib.decompress(data.tobytes())) 
-
-
-def store_src_groups(hdf5, grp_id, group, num_blocks):
-    """
-    Store the given source group in block of sources (unless it is
-    atomic) and return a list of keys to the generated datasets.
-    """
-    keys = []
-    blocks = numpy.array_split(group, num_blocks)
-    if num_blocks == 1:
-        key = f"_csm/{grp_id}"
-        hdf5[key] = zpik(group)
-        keys.append(key)
-    else:
-        for b, block in enumerate(blocks):
-            key = f"_csm/{grp_id}-{b}"
-            grp = copy.copy(group)
-            grp.sources = block
-            hdf5[key] = zpik(grp)
-            keys.append(key)
-    return keys
             
 
 def read_src_group(hdf5, key, mon=performance.Monitor()):
