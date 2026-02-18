@@ -151,7 +151,25 @@ jobs:
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
           pytest -v openquake/server/tests/test_restricted_mode.py
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_restricted_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-restricted-python${{ matrix.python-version }}-{{ matrix.os }}
+          path: test-results
+          retention-days: 7
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -220,7 +238,25 @@ jobs:
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
           pytest -v openquake/server/tests/test_aelo_mode.py
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_aelo_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
+          path: test-results
+          retention-days: 7
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
@@ -263,3 +299,4 @@ jobs:
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py
+          # NOTE: playwright tests for IMPACT are slow, so they run nightly in a separate action

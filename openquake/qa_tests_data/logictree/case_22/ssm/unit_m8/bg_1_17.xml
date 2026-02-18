@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel name="bg_1_17">
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Craton"
+        >
+            <pointSource
+            id="bg_1_17-1171035"
+            name=""
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            75.42288 29.53962
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="0.12874579051317775" bValue="0.9828" maxMag="7.44" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="80.0" probability="0.35" rake="0.0" strike="150.0"/>
+                    <nodalPlane dip="45.0" probability="0.55" rake="90.0" strike="290.0"/>
+                    <nodalPlane dip="60.0" probability="0.1" rake="-90.0" strike="180.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.0" probability="0.42"/>
+                    <hypoDepth depth="27.5" probability="0.58"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

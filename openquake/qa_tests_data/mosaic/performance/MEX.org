@@ -1,0 +1,36 @@
+Checksum of the inputs: 3823288066 (total size 23.09 MB)
+
+* v3.24
+
+| calc_7514, maxmem=184.5 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| total classical            | 110_686   | 140.9766  | 217       |
+| get_poes                   | 59_102    | 0.0       | 1_785_552 |
+| computing mean_std         | 34_210    | 0.0       | 35_730    |
+| planar contexts            | 3_011     | 0.0       | 68_683    |
+| nonplanar contexts         | 1_182     | 0.0       | 96_556    |
+| ClassicalCalculator.run    | 1_158     | 852.4     | 1         |
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 208    | 531.1   | 48%    | 52.0098 | 1_048   | 1.9726  |
+| postclassical      | 10     | 20.3756 | 02%    | 19.3252 | 20.8129 | 1.0215  |
+
+* master, better
+
+# inter_01_uh dominated
+| calc_7780, maxmem=191.6 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| total classical            | 69_994    | 73.8574   | 1_064     |
+| get_poes                   | 66_787    | 0.0       | 1_769_830 |
+| total baseclassical        | 63_816    | 69.6562   | 358       |
+| computing mean_std         | 45_662    | 0.0       | 35_407    |
+| planar contexts            | 3_450     | 0.0       | 68_683    |
+| nonplanar contexts         | 1_106     | 0.0       | 96_556    |
+| ClassicalCalculator.run    | 1_030     | 1_175     | 1         |
+
+| operation-duration | counts | mean     | stddev | min     | max     | slowfac |
+|--------------------+--------+----------+--------+---------+---------+---------|
+| baseclassical      | 358    | 178.2568 | 39%    | 34.5595 | 458.8   | 2.5737  |
+| classical          | 333    | 208.7    | 78%    | 16.7942 | 774.8   | 3.7120  |
+| postclassical      | 192    | 2.6054   | 02%    | 2.5130  | 2.7299  | 1.0478  |

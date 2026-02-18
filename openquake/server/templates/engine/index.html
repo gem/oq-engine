@@ -165,5 +165,12 @@
   <script>
     window.application_mode = "{{ application_mode|escapejs }}";
   </script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/utils.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/calculations.js"></script>
+  {% if application_mode == 'AELO' %}
+  <script type="text/javascript" src="{{ STATIC_URL }}js/aelo.js"></script>
+  {% elif application_mode == 'IMPACT' %}
+  <script type="text/javascript" src="{{ STATIC_URL }}js/impact.js"></script>
+  {% endif %}
   <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
   {% endblock extra_script %}
