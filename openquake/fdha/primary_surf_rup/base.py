@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2024 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,8 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.fdha.primary_surf_rup.base` defines abstract base
-classes for primary surface rupture probability models.
+Module :mod:`openquake.fdha.primary_surf_rup.base` defines the abstract
+base class for primary surface rupture probability models.
 """
 
 import abc
@@ -59,39 +59,3 @@ class BasePrimarySurfRup(metaclass=abc.ABCMeta):
         """
         return "<%s>" % self.__class__.__name__
 
-
-class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
-    """
-    Abstract base class for secondary surface displacement probability models.
-    """
-
-    @abc.abstractmethod
-    def get_prob(self, ctx):
-        """
-        Return the probability that the secondary displacement will exceed
-        a certain value [m].
-
-        :param ctx:
-            Context object with the required attributes for the model.
-        :returns:
-            Probability as float (scalar) or :class:`numpy.ndarray`.
-        """
-        pass
-
-    def __str__(self):
-        """
-        Return a string representation of the instance (class name).
-
-        :returns:
-            The class name as string.
-        """
-        return self.__class__.__name__
-
-    def __repr__(self):
-        """
-        Return a developer-oriented representation of the instance.
-
-        :returns:
-            The class name in angular brackets, e.g. ``<ClassName>``.
-        """
-        return "<%s>" % self.__class__.__name__
