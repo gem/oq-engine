@@ -569,8 +569,9 @@ class ModifiableGMPE(GMPE):
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
-            self.imts_req = init_underlying_gmpes(
-                self.params["conditional_gmpe"])
+            if not hasattr(self, 'imts_req'):
+                self.imts_req = init_underlying_gmpes(
+                    self.params["conditional_gmpe"])
             conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs
