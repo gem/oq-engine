@@ -215,18 +215,13 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 3:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 7)
+        b0, *blks = _split_src(list(grps[0]), 5)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
-        if dt > 3 * cmaker.split_time:
-            b1, *blks = _split_src(rest, 6)
-            for blk in blks:
-                yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(b1, sites, cmaker, True)
-        elif dt > 2 * cmaker.split_time:
+        if dt > 2 * cmaker.split_time:
             b1, *blks = _split_src(rest, 4)
             for blk in blks:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
@@ -609,7 +604,7 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
-        self.split_time = split_time = max(max_gb * 60, 10)
+        self.split_time = split_time = max(max_gb * 120, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
