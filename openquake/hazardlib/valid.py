@@ -1551,7 +1551,7 @@ class ParamSet(metaclass=MetaParamSet):
         """
         :returns: the parameters as a JSON string
         """
-        dic = {k: _fix_toml(v)
+        dic = {k: fix_toml(v)
                for k, v in self.__dict__.items() if not k.startswith('_')}
         return json.dumps(dic)
 
