@@ -31,8 +31,8 @@ import signal
 import zlib
 import re
 import psutil
-import sys
-from pathlib import Path
+# import sys
+# from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 from collections import defaultdict
@@ -65,6 +65,7 @@ from openquake.calculators.export import (
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
+from openquake.calculators.postproc.make_impact_report import main as make_impact_report
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
@@ -1068,12 +1069,7 @@ def impact_callback(
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-        repo_root = Path(__file__).resolve().parents[2]
-        script = repo_root / "bin" / "make_impact_report.py"
-        subprocess.run(
-            [sys.executable, str(script), str(job_id)],
-            check=True
-        )
+        make_impact_report(str(job_id))
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
@@ -1276,6 +1272,7 @@ def impact_run(request):
     if station_source is not None:
         params['station_source'] = station_source
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    # params['postproc_func'] = 'make_impact_report.main'
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 

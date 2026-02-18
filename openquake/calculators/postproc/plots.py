@@ -433,8 +433,6 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     plt = import_plt()
     import matplotlib.patheffects as path_effects
     import matplotlib.patches as mpatches
-    import rasterio  # FIXME: to be added to engine requirements? Only to impact?
-    from rasterio.plot import show
     if len(colors) != classifier.k:
         # NOTE: sometimes the classifier assumes a different number of bins, and
         #       we need colors to adapt to it
@@ -474,6 +472,13 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                           facecolor="none", linewidth=0.4)
 
     if basemap_path is not None:
+        try:
+            import rasterio
+        except ImportError as exc:
+            raise RuntimeError(
+                "In order to plot raster basemaps, 'rasterio' should be installed"
+                ) from exc
+        from rasterio.plot import show
         basemap_path = Path(basemap_path)
         with rasterio.open(basemap_path) as src:
             if src.crs != df.crs:
