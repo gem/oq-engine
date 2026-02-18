@@ -662,7 +662,8 @@ def _parse_args():
         "--threshold-deg",
         type=float,
         default=3,
-        help="Buffer radius in degrees (default: 3)"
+        help=("Buffer radius in degrees between the hypocenter and"
+              " the countries included in the report (default: 3)")
     )
     return parser.parse_args()
 

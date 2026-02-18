@@ -1069,7 +1069,7 @@ def impact_callback(
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
         repo_root = Path(__file__).resolve().parents[2]
-        script = repo_root / "bin" / "impact_report.py"
+        script = repo_root / "bin" / "make_impact_report.py"
         subprocess.run(
             [sys.executable, str(script), str(job_id)],
             check=True
