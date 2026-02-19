@@ -19,7 +19,8 @@ Checksum of the inputs: 2430128208 (total size 165.39 MB)
 
 * master, much better
 
-# cps-002-dominated
+Mean time per core=2871s, std=193.9s, min=2549s, max=3465s
+cps-002-dominated
 | calc_8366, maxmem=213.8 GB | time_sec  | memory_mb | counts     |
 |----------------------------+-----------+-----------+------------|
 | total classical            | 551_401   | 101.3809  | 784        |
