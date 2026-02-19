@@ -311,14 +311,7 @@ def get_model_lts(h5):
     out = []
     full_lt = h5['full_lt']
     if hasattr(full_lt, 'gsim_lt'):
-        ini = os.path.basename(h5['oqparam'].inputs['job_ini'])
-        mosaic_df = readinput.read_mosaic_df()
-        for model in mosaic_df.code:
-            if model in ini:
-                break
-        else:
-            model = '???'
-        out.append((model, full_lt))
+        out.append(('???', full_lt))
     else:
         # full_lt is a h5py group
         for model in full_lt:
