@@ -567,12 +567,6 @@ class CompositeSourceModel:
                      weight=sg.weight,
                      atomic=sg.atomic)
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
-        ws = []
-        for blk in blocks:
-            if isinstance(blk, int):
-                ws.append(sg.weight)
-            else:
-                ws.append(sum(src.weight for src in blk))
         return cmaker, tilegetters, blocks, extra
 
     def get_source_info(self):
