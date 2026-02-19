@@ -400,6 +400,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif not dic['source_data']:
+            # all the sources were filtered out
+            return acc
 
         sdata = dic.pop('source_data')
         grp_id = sdata['grp_id'][0]
