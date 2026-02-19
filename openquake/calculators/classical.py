@@ -213,7 +213,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
-    elif len(grps) == 1 and len(grps[0]) >= 3:
+    elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 5)
         rest = sum(blks, [])
@@ -225,9 +225,10 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             for blk in _split_src(rest, 4):
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
         elif dt > cmaker.split_time:
-            odd, even = _split_src(rest, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
+            b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
+            yield baseclassical, b1, tilegetter, cmaker, True, dstore
+            for b in bs:
+                yield baseclassical(b, sites, cmaker, True)
         else:
             yield baseclassical(rest, sites, cmaker, True)
     else:
