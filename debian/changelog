@@ -1,5 +1,9 @@
   [Yen-Shin Chen]
-  * FDHA: add primary surface rupture package (base, Youngs et al. 2003
+  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
+    AD/MD, tests).
+
+  [Yen-Shin Chen]
+  * FDHA: added primary surface rupture package (base, Youngs et al. 2003
     ExC/GB/nBR, tests).
 
   [Michele Simionato]
