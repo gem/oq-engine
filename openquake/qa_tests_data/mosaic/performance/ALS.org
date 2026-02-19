@@ -1,0 +1,33 @@
+ALS master job_vs30.ini, checksum of the inputs: 1043607312
+
+* v3.24
+
+| calc_8291, maxmem=158.0 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| total classical            | 122_083   | 127.5469  | 174       |
+| computing mean_std         | 55_372    | 0.0       | 60_632    |
+| get_poes                   | 49_109    | 0.0       | 3_026_869 |
+| nonplanar contexts         | 4_593     | 0.0       | 46_273    |
+| planar contexts            | 3_455     | 0.0       | 144_438   |
+| ClassicalCalculator.run    | 2_042     | 446.1     | 1         |
+
+| operation-duration | counts | mean    | stddev | min     | max      | slowfac |
+|--------------------+--------+---------+--------+---------+----------+---------|
+| classical          | 161    | 755.3   | 75%    | 72.3359 | 1_828    | 2.4197  |
+
+* master, much better
+
+| calc_8394, maxmem=190.6 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| computing mean_std         | 202_949   | 0.0       | 56_015    |
+| total baseclassical        | 170_226   | 93.1953   | 688       |
+| total classical            | 128_214   | 124.2266  | 1_246     |
+| get_poes                   | 65_075    | 0.0       | 2_800_609 |
+| nonplanar contexts         | 5_621     | 0.0       | 46_273    |
+| planar contexts            | 5_170     | 0.0       | 144_754   |
+| ClassicalCalculator.run    | 1_721     | 766.1     | 1         |
+
+| operation-duration | counts | mean   | stddev | min     | max     | slowfac |
+|--------------------+--------+--------+--------+---------+---------+---------|
+| baseclassical      | 685    | 248.4  | 42%    | 28.1006 | 539.8   | 2.1729  |
+| classical          | 443    | 289.4  | 35%    | 54.5178 | 578.3   | 1.9980  |

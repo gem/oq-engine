@@ -213,28 +213,23 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
-    elif len(grps) == 1 and len(grps[0]) >= 3:
+    elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 7)
+        b0, *blks = _split_src(list(grps[0]), 4)
         rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
-        if dt > 3 * cmaker.split_time:
-            b1, *blks = _split_src(rest, 6)
-            for blk in blks:
-                yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(b1, sites, cmaker, True)
-        elif dt > 2 * cmaker.split_time:
-            b1, *blks = _split_src(rest, 4)
-            for blk in blks:
-                yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(b1, sites, cmaker, True)
-        elif dt > cmaker.split_time:
-            odd, even = _split_src(rest, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
+        if dt > 2 * cmaker.oq.split_time:
+            for b in _split_src(rest, 3):
+                yield baseclassical, b, tilegetter, cmaker, True, dstore
+        elif dt > cmaker.oq.split_time:
+            # tested in share_small
+            b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
+            yield baseclassical, b1, tilegetter, cmaker, True, dstore
+            for b in bs:
+                yield baseclassical(b, sites, cmaker, True)
         else:
             yield baseclassical(rest, sites, cmaker, True)
     else:
@@ -407,6 +402,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif not dic['source_data']:
+            # all the sources were filtered out
+            return acc
 
         sdata = dic.pop('source_data')
         grp_id = sdata['grp_id'][0]
@@ -609,11 +607,11 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
-        self.split_time = split_time = max(max_gb * 60, 10)
+        if oq.split_time is None:
+            oq.split_time = max(max_gb * 200, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
-            cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
@@ -630,7 +628,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         if not self.few_sites and self.rmap:
-            logging.info(f'{split_time=:.0f} seconds')
+            logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
@@ -757,7 +755,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * self.split_time)
+                          dur.max() > 5 * oq.split_time)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))

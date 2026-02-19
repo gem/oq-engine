@@ -806,11 +806,16 @@ spatial_correlation:
 specific_assets:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 split_sources:
   INTERNAL
 
-split_by_gsim:
-  INTERNAL
+split_time:
+  After how much time starts splitting classical tasks
+  Example: *split_time = 600*
+  Default: None, meaning the split_time is automatically determined
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
@@ -1166,6 +1171,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
