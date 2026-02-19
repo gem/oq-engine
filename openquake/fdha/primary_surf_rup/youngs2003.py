@@ -25,7 +25,7 @@ import numpy as np
 from openquake.fdha.primary_surf_rup.base import BasePrimarySurfRup
 
 
-class _Youngs2003Base(BasePrimarySurfRup):
+class Youngs2003Base(BasePrimarySurfRup):
     """
     Base class for Youngs et al. (2003) logistic surface rupture probability
     models. Subclasses set :attr:`coeff_a` and :attr:`coeff_b` (logistic
@@ -53,7 +53,7 @@ class _Youngs2003Base(BasePrimarySurfRup):
         return prob.item() if prob.shape == () else prob
 
 
-class Youngs2003PrimarySR_ExC(_Youngs2003Base):
+class Youngs2003PrimarySR_ExC(Youngs2003Base):
     """
     Youngs et al. (2003) primary surface rupture model for Extensional
     Cordillera. Coefficients (a, b) = (-12.53, 1.921); 105 earthquakes,
@@ -64,7 +64,7 @@ class Youngs2003PrimarySR_ExC(_Youngs2003Base):
     coeff_b = 1.921
 
 
-class Youngs2003PrimarySR_GB(_Youngs2003Base):
+class Youngs2003PrimarySR_GB(Youngs2003Base):
     """
     Youngs et al. (2003) primary surface rupture model for Great Basin.
     Coefficients (a, b) = (-16.02, 2.685); 32 earthquakes, Mw 4.9–7.2
@@ -75,7 +75,7 @@ class Youngs2003PrimarySR_GB(_Youngs2003Base):
     coeff_b = 2.685
 
 
-class Youngs2003PrimarySR_nBR(_Youngs2003Base):
+class Youngs2003PrimarySR_nBR(Youngs2003Base):
     """
     Youngs et al. (2003) primary surface rupture model for northern Basin
     and Range. Coefficients (a, b) = (-18.71, 3.041); 47 earthquakes,
