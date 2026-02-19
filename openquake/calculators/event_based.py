@@ -311,7 +311,14 @@ def get_model_lts(h5):
     out = []
     full_lt = h5['full_lt']
     if hasattr(full_lt, 'gsim_lt'):
-        out.append(('???', full_lt))
+        ini = os.path.basename(h5['oqparam'].inputs['job_ini'])
+        mosaic_df = readinput.read_mosaic_df()
+        for model in mosaic_df.code:
+            if model in ini:
+                break
+        else:
+            model = '???'
+        out.append((model, full_lt))
     else:
         # full_lt is a h5py group
         for model in full_lt:
@@ -341,7 +348,10 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
-        logging.info('Building rlzs_by_gsim for %s', model)
+        if model == '???':
+            logging.info('Building rlzs_by_gsim')
+        else:
+            logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
     allrups = dstore['ruptures'][:]
