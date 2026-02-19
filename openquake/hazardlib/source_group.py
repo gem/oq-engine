@@ -543,7 +543,7 @@ class CompositeSourceModel:
 
     def split_sg(self, cmaker, sg, sitecol, max_weight,
                  num_chunks=1, tiling=False):
-        N = len(sitecol)
+        N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
