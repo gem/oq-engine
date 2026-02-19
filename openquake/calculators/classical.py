@@ -150,8 +150,6 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
     """
     Wrapper over hazard_curve.classical
     """
-    if monitor and not hasattr(cmaker, 'ctx_mon'):
-        cmaker.init_monitoring(monitor)
     if dstore:
         with dstore:
             sites = tgetter(dstore['sitecol'], cmaker.ilabel)
