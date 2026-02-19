@@ -210,7 +210,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
         # return raw array that will be stored immediately
-        result = baseclassical(grps, sites, cmaker, remove_zeros=True)
+        result = baseclassical(grps, sites, cmaker, remove_zeros=True,
+                               monitor=monitor)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 2:
@@ -218,7 +219,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         b0, *blks = _split_src(list(grps[0]), 5)
         rest = sum(blks, [])
         t0 = time.time()
-        res = baseclassical(b0, sites, cmaker, True)
+        res = baseclassical(b0, sites, cmaker, True, monitor=monitor)
         dt = time.time() - t0
         yield res
         if dt > 2 * cmaker.split_time:
@@ -228,11 +229,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
             yield baseclassical, b1, tilegetter, cmaker, True, dstore
             for b in bs:
-                yield baseclassical(b, sites, cmaker, True)
+                yield baseclassical(b, sites, cmaker, True, monitor=monitor)
         else:
-            yield baseclassical(rest, sites, cmaker, True)
+            yield baseclassical(rest, sites, cmaker, True, monitor=monitor)
     else:
-        yield baseclassical(grps, sites, cmaker, True)
+        yield baseclassical(grps, sites, cmaker, True, monitor=monitor)
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
