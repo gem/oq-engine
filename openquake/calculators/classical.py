@@ -150,7 +150,7 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
     """
     Wrapper over hazard_curve.classical
     """
-    if monitor:
+    if monitor and not hasattr(cmaker, 'ctx_mon'):
         cmaker.init_monitoring(monitor)
     if dstore:
         with dstore:
@@ -222,10 +222,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         res = baseclassical(b0, sites, cmaker, True, monitor=monitor)
         dt = time.time() - t0
         yield res
-        if dt > 2 * cmaker.split_time:
+        if dt > 2 * cmaker.oq.split_time:
             for blk in _split_src(rest, 4):
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
-        elif dt > cmaker.split_time:
+        elif dt > cmaker.oq.split_time:
+            # tested in share_small
             b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
             yield baseclassical, b1, tilegetter, cmaker, True, dstore
             for b in bs:
@@ -607,11 +608,11 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
-        self.split_time = split_time = max(max_gb * 200, 10)
+        if oq.split_time is None:
+            oq.split_time = max(max_gb * 200, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
-            cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
@@ -628,7 +629,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         if not self.few_sites and self.rmap:
-            logging.info(f'{split_time=:.0f} seconds')
+            logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
@@ -755,7 +756,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * self.split_time)
+                          dur.max() > 5 * oq.split_time)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
