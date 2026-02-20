@@ -68,7 +68,7 @@ def test_PAC():
         lat = sites[1][1]
         lon2 = sites[0][0]
         lat2 = sites[0][1]
-        site = 'PAC-first PAC-second'
+        site = 'PAC1 PAC2'
         dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2),
                    siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR))

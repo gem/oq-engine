@@ -456,7 +456,7 @@ def utf8_not_empty(value):
 def base64names(value):
     """
     :param value: input string
-    :returns: list of strings with characters in base64
+    :returns: list of strings of <=8 characters in base64
 
     >>> base64names('XYzu- f_')
     ['XYzu-', 'f_']
@@ -467,7 +467,9 @@ def base64names(value):
     """
     names = value.split()
     for name in names:
-        if set(name) - BASE64:
+        if len(name) > 8:
+            raise ValueError(f'{name} is longer than 8 characters')
+        elif set(name) - BASE64:
             raise ValueError('List of names containing an invalid name:'
                              f' {name!r}')
     return names
