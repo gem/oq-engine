@@ -700,8 +700,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
 
-        # check est_ctxs vs num_ctxs
-        if self.N > self.oqparam.max_sites_disagg:
+        # check est_ctxs vs num_ctxs only for many sites
+        if self.oqparam.hazard_calculation_id is None and (
+                self.N > self.oqparam.max_sites_disagg):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
             info = info[info['num_ctxs'] > 0]

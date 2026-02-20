@@ -18,17 +18,39 @@ Checksum of the inputs: 3823288066 (total size 23.09 MB)
 * master, better
 
 # srcmexuh dominated
-| calc_8385, maxmem=193.9 GB | time_sec  | memory_mb | counts    |
+| calc_8431, maxmem=193.7 GB | time_sec  | memory_mb | counts    |
 |----------------------------+-----------+-----------+-----------|
-| total classical            | 120_917   | 103.5977  | 829       |
-| get_poes                   | 70_238    | 0.0       | 1_784_454 |
-| computing mean_std         | 48_935    | 0.0       | 35_693    |
-| total baseclassical        | 21_027    | 100.8242  | 159       |
-| planar contexts            | 3_735     | 0.0       | 68_683    |
-| ClassicalCalculator.run    | 1_094     | 1_360     | 1         |
+| total classical            | 122_625   | 96.0898   | 808       |
+| get_poes                   | 66_728    | 0.0       | 1_779_287 |
+| computing mean_std         | 46_046    | 0.0       | 35_590    |
+| total baseclassical        | 11_441    | 70.5078   | 71        |
+| planar contexts            | 3_513     | 0.0       | 68_683    |
+| ClassicalCalculator.run    | 1_081     | 1_279     | 1         |
 
-# after
+| operation-duration | counts | mean     | stddev | min     | max     | slowfac |
+|--------------------+--------+----------+--------+---------+---------+---------|
+| baseclassical      | 71     | 161.1357 | 27%    | 89.8735 | 244.5   | 1.5171  |
+| classical          | 537    | 228.4    | 28%    | 81.0655 | 444.3   | 1.9456  |
+
+------------------------------------------- c192 slightly worse
+
+| calc_8432, maxmem=187.2 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| total classical            | 82_901    | 70.3926   | 611       |
+| get_poes                   | 66_111    | 0.0       | 1_786_683 |
+| total baseclassical        | 47_837    | 94.9570   | 220       |
+| computing mean_std         | 44_005    | 0.0       | 35_738    |
+| planar contexts            | 3_440     | 0.0       | 68_683    |
+| ClassicalCalculator.run    | 1_097     | 1_256     | 1         |
+
+| operation-duration | counts | mean   | stddev | min     | max     | slowfac |
+|--------------------+--------+--------+--------+---------+---------+---------|
+| baseclassical      | 220    | 217.4  | 24%    | 80.8691 | 310.6   | 1.4286  |
+| classical          | 219    | 378.5  | 22%    | 48.1671 | 650.5   | 1.7185  |
+
+-------------------- /7 much worse
+/home/michele/oqdata/calc_8462.hdf5 in 1129 seconds
 | operation-duration | counts | mean     | stddev | min      | max     | slowfac |
 |--------------------+--------+----------+--------+----------+---------+---------|
-| baseclassical      | 159    | 132.2425 | 41%    | 22.7229  | 247.0   | 1.8680  |
-| classical          | 537    | 225.2    | 32%    | 102.1925 | 428.8   | 1.9044  |
+| baseclassical      | 34     | 117.5367 | 25%    | 76.9566  | 239.0   | 2.0331  |
+| classical          | 537    | 239.4    | 41%    | 100.7777 | 611.5   | 2.5546  |
