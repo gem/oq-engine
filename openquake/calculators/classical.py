@@ -215,7 +215,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
-        b0, *blks = _split_src(list(grps[0]), 4)
+        b0, *blks = _split_src(list(grps[0]), 5)
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
@@ -226,9 +226,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
             yield baseclassical(blks[0], sites, cmaker, True)
         elif dt > cmaker.oq.split_time:
             # tested in share_small
-            yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+            yield (baseclassical, sum(blks[:3], []), tilegetter, cmaker,
                    True, dstore)
-            rest = sum(blks[2:], [])
+            rest = sum(blks[3:], [])
             if rest:
                 yield baseclassical(rest, sites, cmaker, True)
         else:
@@ -609,7 +609,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
-            oq.split_time = max(max_gb * 300, 10)
+            oq.split_time = max(max_gb * 200, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
