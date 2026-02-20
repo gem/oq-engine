@@ -31,7 +31,7 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def get_prob(self, d, x_l, mag, style="all"):
+    def get_prob(self, d, x_l, mag, rake=0.0):
         """
         Return the conditional probability that primary fault displacement
         exceeds *d* metres, given magnitude and position along the rupture.
@@ -43,9 +43,9 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
             scalar or array-like.
         :param mag:
             Earthquake moment magnitude (scalar).
-        :param style:
-            Faulting style for magnitude-displacement scaling
-            (e.g. ``"all"`` or ``"normal"``).
+        :param rake:
+            Rake angle in degrees (scalar), in [-180, 180]. See
+            :mod:`openquake.hazardlib.valid` for ``rake_range``.
         :returns:
             Exceedance probability array, shape
             ``(n_displacements, n_sites)``.

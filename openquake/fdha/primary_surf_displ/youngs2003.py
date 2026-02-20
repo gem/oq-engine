@@ -41,14 +41,22 @@ to produce the conditional probability of exceedance:
 The convolution is performed via numerical integration over the
 log-normal uncertainty in AD or MD (epsilon-based weighted sum).
 
-The ``style`` parameter in :meth:`get_prob` selects which Wells &
-Coppersmith (1994) regression subset to use:
+The :meth:`get_prob` method takes a **rake** angle (degrees, -180 to 180).
+Rake is mapped to Wells & Coppersmith (1994) style via
+:func:`~openquake.fdha.utils.rake_to_style`: normal faulting
+(-150 < rake < -30) uses WC94 normal coefficients; all other rake
+values (including ``"undefined"``) use WC94 "all styles" coefficients.
+See :mod:`openquake.hazardlib.valid` for ``rake_range``.
 
-- ``"all"``: WC94 coefficients for all faulting styles
-- ``"normal"``: WC94 coefficients for normal faulting only
-
-This choice represents **epistemic uncertainty** in the magnitude–
-displacement scaling and can be assigned logic-tree weights.
+**Important:** The Youngs et al. (2003) displacement profile model was
+developed for and validated against **normal faulting only** (McCalpin
+and Slemmons, 1998, 11 normal-faulting earthquakes).  The use of WC94
+"all styles" coefficients for non-normal rake is a pragmatic extension
+not present in the original paper -- it changes only the
+magnitude-to-displacement scaling while reusing the normal-faulting
+profile shape.  For rigorous application to strike-slip or reverse
+faulting, dedicated models (e.g. Lavrentiadis et al. 2023, Kuehn et al.
+2024) should be preferred.
 
 PEP8-friendly aliases :meth:`Youngs2003PrimaryFD_AD.get_prob_d_ad` and
 :meth:`Youngs2003PrimaryFD_MD.get_prob_d_md` call :meth:`get_prob` when
@@ -95,6 +103,7 @@ Wells, D.L. and Coppersmith, K.J. (1994). New empirical relationships
 import numpy as np
 from scipy.stats import gamma, norm, beta
 from openquake.fdha.primary_surf_displ.base import BasePrimarySurfDispl
+from openquake.fdha.utils import rake_to_style
 
 
 # -----------------------------------------------------------------------
@@ -123,8 +132,6 @@ class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
     _n_eps = 6
     _dz = 0.1
 
-    _accepted_styles = frozenset(["all", "normal"])
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -145,14 +152,16 @@ class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
         Return WC94 coefficient dict for the given faulting style.
 
         :param style:
-            ``"all"`` or ``"normal"``
+            One of ``"normal"``, ``"reverse"``, ``"strike_slip"``,
+            ``"all"``.  Only ``"normal"`` uses the normal-specific
+            WC94 coefficients; all other styles fall back to the
+            ``"all"`` regression.
         :returns:
             dict with keys ``"intercept"``, ``"slope"``, ``"sigma"``
         """
-        if style == "all":
-            return self._wc94_all
-        else:
+        if style == "normal":
             return self._wc94_normal
+        return self._wc94_all
 
     def _get_profile_params(self, x_l):
         """
@@ -181,7 +190,7 @@ class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def get_prob(self, d, x_l, mag, style="all"):
+    def get_prob(self, d, x_l, mag, rake=0.0):
         """
         Conditional probability that principal fault displacement exceeds
         *d* metres, given magnitude *mag* and relative position *x/L*
@@ -204,21 +213,15 @@ class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
             Scalar or array-like, shape ``(n_sites,)``.
         :param mag:
             Earthquake moment magnitude (scalar).
-        :param style:
-            Wells & Coppersmith (1994) faulting style for magnitude–
-            displacement scaling.  ``"all"`` (default) or ``"normal"``.
+        :param rake:
+            Rake angle in degrees (scalar), in [-180, 180]. Mapped to
+            WC94 style via :func:`~openquake.fdha.utils.rake_to_style`
+            (normal if -150 < rake < -30, else all styles).
         :returns:
             Exceedance probability, shape ``(n_displacements, n_sites)``.
         """
         # --- Validate ---
-        style_lower = (
-            style.lower() if isinstance(style, str) else str(style).lower()
-        )
-        if style_lower not in self._accepted_styles:
-            raise ValueError(
-                "Invalid style '%s'. Accepted: %s"
-                % (style, ", ".join(sorted(self._accepted_styles)))
-            )
+        style_lower = rake_to_style(rake)
         if not np.isscalar(mag):
             raise ValueError("mag must be a scalar value")
 
@@ -384,12 +387,12 @@ class Youngs2003PrimaryFD_AD(_Youngs2003PrimaryFDBase):
         """
         return gamma.sf(d_norm, alpha, loc=0, scale=beta_param)
 
-    def get_prob_d_ad(self, d, x_l, mag, style="all"):
+    def get_prob_d_ad(self, d, x_l, mag, rake=0.0):
         """
         Alias for :meth:`get_prob` for D/AD (average displacement).
         PEP8-friendly name when the normalization type should be explicit.
         """
-        return self.get_prob(d, x_l, mag, style)
+        return self.get_prob(d, x_l, mag, rake)
 
 
 # -----------------------------------------------------------------------
@@ -419,8 +422,7 @@ class Youngs2003PrimaryFD_MD(_Youngs2003PrimaryFDBase):
         Normal:        intercept = −5.90, slope = 0.89, σ = 0.38
 
     Note: D/MD is bounded on [0, 1]. Values of D/MD > 1 are mapped to
-    a CDF of 1.0 (probability of exceedance = 0). The CDF is also
-    renormalized by CDF(1) to account for the truncation at D/MD = 1.
+    a CDF of 1.0 (probability of exceedance = 0).
     """
 
     norm_disp_type = "MD"
@@ -488,9 +490,9 @@ class Youngs2003PrimaryFD_MD(_Youngs2003PrimaryFDBase):
         sf = beta.sf(d_norm, alpha, beta_param)
         return np.where(d_norm >= 1.0, 0.0, sf)
 
-    def get_prob_d_md(self, d, x_l, mag, style="all"):
+    def get_prob_d_md(self, d, x_l, mag, rake=0.0):
         """
         Alias for :meth:`get_prob` for D/MD (maximum displacement).
         PEP8-friendly name when the normalization type should be explicit.
         """
-        return self.get_prob(d, x_l, mag, style)
+        return self.get_prob(d, x_l, mag, rake)
