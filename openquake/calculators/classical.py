@@ -216,22 +216,22 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 4)
-        rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > 2 * cmaker.oq.split_time:
-            for b in _split_src(rest, 3):
-                yield baseclassical, b, tilegetter, cmaker, True, dstore
+            for blk in blks[1:]:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(blks[0], tilegetter, cmaker, True)
         elif dt > cmaker.oq.split_time:
             # tested in share_small
-            b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
-            yield baseclassical, b1, tilegetter, cmaker, True, dstore
-            for b in bs:
-                yield baseclassical(b, sites, cmaker, True)
+            yield baseclassical, sum(blks[:2], []), tilegetter, cmaker, True, dstore
+            rest = sum(blks[2:], [])
+            if rest:
+                yield baseclassical(rest, sites, cmaker, True)
         else:
-            yield baseclassical(rest, sites, cmaker, True)
+            yield baseclassical(sum(blks, []), sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
