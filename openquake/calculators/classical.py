@@ -216,22 +216,23 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 4)
-        rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
         if dt > 2 * cmaker.oq.split_time:
-            for b in _split_src(rest, 3):
-                yield baseclassical, b, tilegetter, cmaker, True, dstore
+            for blk in blks[1:]:
+                yield baseclassical, blk, tilegetter, cmaker, True, dstore
+            yield baseclassical(blks[0], sites, cmaker, True)
         elif dt > cmaker.oq.split_time:
             # tested in share_small
-            b1, *bs = _split_src(rest, 2)  # bs has 0 or 1 elements
-            yield baseclassical, b1, tilegetter, cmaker, True, dstore
-            for b in bs:
-                yield baseclassical(b, sites, cmaker, True)
+            yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+                   True, dstore)
+            rest = sum(blks[2:], [])
+            if rest:
+                yield baseclassical(rest, sites, cmaker, True)
         else:
-            yield baseclassical(rest, sites, cmaker, True)
+            yield baseclassical(sum(blks, []), sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
@@ -608,7 +609,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
-            oq.split_time = max(max_gb * 200, 10)
+            oq.split_time = max(max_gb * 120, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
@@ -700,8 +701,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
 
-        # check est_ctxs vs num_ctxs
-        if self.N > self.oqparam.max_sites_disagg:
+        # check est_ctxs vs num_ctxs only for many sites
+        if self.oqparam.hazard_calculation_id is None and (
+                self.N > self.oqparam.max_sites_disagg):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
             info = info[info['num_ctxs'] > 0]
