@@ -223,10 +223,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         if dt > 2 * cmaker.oq.split_time:
             for blk in blks[1:]:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(blks[0], tilegetter, cmaker, True)
+            yield baseclassical(blks[0], sites, cmaker, True)
         elif dt > cmaker.oq.split_time:
             # tested in share_small
-            yield baseclassical, sum(blks[:2], []), tilegetter, cmaker, True, dstore
+            yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+                   True, dstore)
             rest = sum(blks[2:], [])
             if rest:
                 yield baseclassical(rest, sites, cmaker, True)
