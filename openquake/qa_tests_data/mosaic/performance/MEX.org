@@ -18,17 +18,16 @@ Checksum of the inputs: 3823288066 (total size 23.09 MB)
 * master, better
 
 # srcmexuh dominated
-| calc_8385, maxmem=193.9 GB | time_sec  | memory_mb | counts    |
+| calc_8468, maxmem=193.4 GB | time_sec  | memory_mb | counts    |
 |----------------------------+-----------+-----------+-----------|
-| total classical            | 120_917   | 103.5977  | 829       |
-| get_poes                   | 70_238    | 0.0       | 1_784_454 |
-| computing mean_std         | 48_935    | 0.0       | 35_693    |
-| total baseclassical        | 21_027    | 100.8242  | 159       |
-| planar contexts            | 3_735     | 0.0       | 68_683    |
-| ClassicalCalculator.run    | 1_094     | 1_360     | 1         |
+| total classical            | 119_404   | 95.1055   | 808       |
+| get_poes                   | 66_424    | 0.0       | 1_779_587 |
+| computing mean_std         | 45_274    | 0.0       | 35_596    |
+| total baseclassical        | 13_283    | 77.6953   | 70        |
+| planar contexts            | 3_489     | 0.0       | 68_683    |
+| ClassicalCalculator.run    | 1_064     | 1_277     | 1         |
 
-# after
-| operation-duration | counts | mean     | stddev | min      | max     | slowfac |
-|--------------------+--------+----------+--------+----------+---------+---------|
-| baseclassical      | 159    | 132.2425 | 41%    | 22.7229  | 247.0   | 1.8680  |
-| classical          | 537    | 225.2    | 32%    | 102.1925 | 428.8   | 1.9044  |
+| operation-duration | counts | mean   | stddev | min     | max     | slowfac |
+|--------------------+--------+--------+--------+---------+---------+---------|
+| baseclassical      | 70     | 189.8  | 40%    | 76.3988 | 296.9   | 1.5649  |
+| classical          | 537    | 222.4  | 24%    | 97.9585 | 430.7   | 1.9369  |
