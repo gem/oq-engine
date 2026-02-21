@@ -1000,9 +1000,7 @@ def get_composite_source_model(oqparam, dstore=None):
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
-    h5 = dstore.hdf5 if dstore else None
-    with Monitor('building full_lt', measuremem=True, h5=h5):
-        full_lt = get_full_lt(oqparam)  # builds the weights
+    full_lt = get_full_lt(oqparam)  # builds the weights
     csm = source_reader.get_csm(oqparam, full_lt, dstore)
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)

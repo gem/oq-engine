@@ -245,17 +245,13 @@ def fast_mean(pgetter, monitor):
     :param gweights: an array of Gt weights
     :returns: a dictionary kind -> MapArray
     """
-    with monitor('reading rates', measuremem=True):
-        pgetter.init()
-
-    with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean()
-
+    pgetter.init()  # 99% of the time is spent reading the rates
+    hcurves = pgetter.get_fast_mean()
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
-        with monitor('make_hmaps', measuremem=False):
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+        # computing the hmaps is very fast too
+        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
     return pmap_by_kind
 
 
@@ -295,20 +291,16 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
             MapArray(sids, M, L1).fill(0) for r in range(S)]
-    combine_mon = monitor('combine pmaps', measuremem=False)
-    compute_mon = monitor('compute stats', measuremem=False)
-    hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0).sidx
-    for sid in sids:
-        idx = sidx[sid]
-        with combine_mon:
+    with monitor('compute stats', measuremem=False):
+        sidx = MapArray(sids, 1, 1).fill(0).sidx
+        for sid in sids:
+            idx = sidx[sid]
             pc = pgetter.get_hcurve(sid)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
                 # NB: the hcurve have soil levels != IMT levels
-        if pc.sum() == 0:  # no data
-            continue
-        with compute_mon:
+            if pc.sum() == 0:  # no data
+                continue
             if R == 1 or individual_rlzs:
                 for r in range(R):
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
@@ -325,13 +317,11 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
     if poes and (R == 1 or individual_rlzs):
-        with hmaps_mon:
-            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-rlzs'], imtls, poes)
+        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-rlzs'], imtls, poes)
     if poes and hstats:
-        with hmaps_mon:
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], imtls, poes)
+        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
