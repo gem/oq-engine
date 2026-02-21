@@ -1376,7 +1376,7 @@ def extract_relevant_events(dstore, dummy=None):
     if 'relevant_events' not in dstore:
         all_events.sort(order='id')
         return all_events
-    rel_events = dstore['relevant_events'][:]
+    rel_events = dstore['relevant_events']['id']
     events = all_events[rel_events]
     events.sort(order='id')
     return events
