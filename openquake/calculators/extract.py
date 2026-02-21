@@ -1620,7 +1620,10 @@ def extract_ebruptures(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/ebruptures?min_mag=6
     """
     qdict = parse(what)
-    rups = dstore['ruptures'][:]
+    try:
+        rups = dstore['relevant_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
         rups = rups[rups['mag'] >= min_mag]
