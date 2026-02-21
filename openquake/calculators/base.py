@@ -953,12 +953,13 @@ class HazardCalculator(BaseCalculator):
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
             # this is called by mosaic_for_ses/job_sites.csv
-            if oq.region or 'site_model' in oq.inputs:
+            if oq.region:
                 self.sitecol, _array, _discarded = geo.utils.assoc(
                     child, haz_sitecol, assoc_dist, 'filter')
                 self.datastore['sitecol'] = self.sitecol
-            elif oq.sites:
-                child.assoc(haz_sitecol.array, assoc_dist, 'warn')
+            elif oq.sites or 'site_model' in oq.inputs:
+                if 'site_model' not in oq.inputs:
+                    child.assoc(haz_sitecol.array, assoc_dist, 'warn')
                 self.datastore['sitecol'] = self.sitecol = child
             else:
                 raise RuntimeError('No region, no site_model no sites??')
