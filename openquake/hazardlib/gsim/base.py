@@ -21,8 +21,10 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import os
 import sys
 import abc
+import pathlib
 import inspect
 import warnings
 import functools
@@ -118,6 +120,8 @@ def fix_toml(v):
     The kwargs dictionary of a GSIM can contain Python objects convertible
     to TOML (arrays, CoeffsTables) and we implement the conversion here.
     """
+    if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
+        return os.path.basename(v)
     if isinstance(v, (numpy.float32, numpy.float64)):
         return float(v)
     elif isinstance(v, numpy.ndarray):
