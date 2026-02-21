@@ -1258,10 +1258,7 @@ def extract_avg_gmf(dstore, what):
     try:
         complete = dstore['complete']
     except KeyError:
-        if dstore.parent:
-            complete = dstore.parent['sitecol'].complete
-        else:
-            complete = dstore['sitecol'].complete
+        complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
