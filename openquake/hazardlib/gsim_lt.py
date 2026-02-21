@@ -382,7 +382,7 @@ class GsimLogicTree(object):
             for gsims in self.values.values():
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
-                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
+                    # i.e. kw = {'gmpe_table': '/path/to/Wcrust_low_rhypo.hdf5'}
                     for k, v in kw.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None
@@ -390,7 +390,7 @@ class GsimLogicTree(object):
                             else:
                                 # store the data files as attributes
                                 with open(gsim.kwargs[k], 'rb') as f:
-                                    dic[f'{k}|{v}'] = f.read()
+                                    dic[f'{k}:{os.path.basename(v)}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -400,7 +400,7 @@ class GsimLogicTree(object):
         # is moved to a different machine.
         # NB: the approach may break on macOS for large files since there is
         # a limit on the attribute size (unknown at the moment)
-        data = {tuple(k.split('|')): v for k, v in dic.items() if '|' in k}
+        data = {tuple(k.split(':')): v for k, v in dic.items() if ':' in k}
         if data:
             # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
             dirname = tempfile.mkdtemp()
