@@ -377,6 +377,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
 
+    # store the filtered ruptures for debugging purposes
+    dstore['relevant_ruptures'] = filrups
+
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
     allargs = []
@@ -891,12 +894,13 @@ class EventBasedCalculator(base.HazardCalculator):
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
+        all_events = self.datastore['events']
         if e == 0:
             raise RuntimeError(
                 'No GMFs were generated, perhaps they were '
                 'all below the minimum_intensity threshold')
-        elif e < len(self.datastore['events']):
-            self.datastore['relevant_events'] = rel_events
+        elif e < len(all_events):
+            self.datastore['relevant_events'] = all_events[:][rel_events]
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
         # really compute and store the avg_gmf only without hc

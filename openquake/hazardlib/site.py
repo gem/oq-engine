@@ -713,8 +713,17 @@ class SiteCollection(object):
         self.complete = self
 
     @property
+    def names(self):
+        """
+        :returns: .array.dtype.names
+        """
+        return self.array.dtype.names
+
+    @property
     def mesh(self):
-        """Return a mesh with the given lons, lats, and depths"""
+        """
+        :return: a mesh with the given lons, lats, and depths
+        """
         return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
@@ -830,7 +839,7 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id', 'sids'}
         for name in ok:
             self._set(name, site_model[name])
 
