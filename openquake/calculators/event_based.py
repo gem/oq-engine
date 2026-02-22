@@ -44,7 +44,7 @@ from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import sig_eps_dt
@@ -302,21 +302,6 @@ def filter_stations(station_df, complete, rup, maxdist):
             logging.info('Discarded %d/%d stations more distant than %d km',
                          ns - len(station_data), ns, maxdist)
     return station_data, station_sites
-
-
-def get_model_lts(h5):
-    """
-    :returns: (model, full_lt) pairs
-    """
-    out = []
-    full_lt = h5['full_lt']
-    if hasattr(full_lt, 'gsim_lt'):
-        out.append(('???', full_lt))
-    else:
-        # full_lt is a h5py group
-        for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
-    return out
 
 
 def get_args(dstore):
