@@ -1618,7 +1618,7 @@ def extract_ebruptures(dstore, what):
     """
     qdict = parse(what)
     try:
-        rups = dstore['relevant_ruptures'][:]
+        rups = dstore['filtered_ruptures'][:]
     except KeyError:
         rups = dstore['ruptures'][:]
     if 'min_mag' in qdict:

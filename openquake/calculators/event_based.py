@@ -378,7 +378,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    dstore['relevant_ruptures'] = filrups
+    dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
