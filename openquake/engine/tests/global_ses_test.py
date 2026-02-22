@@ -112,6 +112,12 @@ def test_site_model():  # 5 sites
     df = calc.datastore.read_df('gmf_data', 'sid')
     assert len(df) == 65
     assert df.index.max() < 5
+    rdf = calc.datastore.read_df('filtered_ruptures', 'id')
+    assert len(rdf) == 15875
+    edf = calc.datastore.read_df('relevant_events', 'id')
+    assert len(edf) == 24
+    rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
+    assert len(rel_rups) == 24  # only 24 ruptures contribute to gmf_data
 
 
 def teardown_module():

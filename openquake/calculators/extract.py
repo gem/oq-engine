@@ -1621,10 +1621,15 @@ def extract_ebruptures(dstore, what):
         rups = dstore['filtered_ruptures'][:]
     except KeyError:
         rups = dstore['ruptures'][:]
+    if 'relevant_events' in dstore:
+        rupids = numpy.unique(dstore['relevant_events']['rup_id'])
+        ok = numpy.isin(rups['id'], rupids)
+    else:
+        ok = numpy.full(len(rups), True)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
         rups = rups[rups['mag'] >= min_mag]
-    return rups
+    return rups[ok], rups[~ok]
 
 
 # used in the rupture exporter and in the plugin
