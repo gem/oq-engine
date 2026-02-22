@@ -599,7 +599,7 @@ class ClassicalCalculator(base.HazardCalculator):
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
-            oq.split_time = max(max_gb * 120, 10)
+            oq.split_time = max(max_gb * 100, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
