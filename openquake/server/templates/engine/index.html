@@ -33,7 +33,7 @@
           {% endwith %}
           {% endif %}
           <div class="span12">
-            <h2>List of calculations{% if server_name %} from {{ server_name }}{% endif %}</h2>
+            <h2>List of calculations{% if application_mode != 'AELO' %}{% if server_name %} from {{ server_name }}{% endif %}{% endif %}</h2>
             <div id="tag-filters">
                 <label for="list_preferred_only">
                     <input type="checkbox" id="list_preferred_only" name="list_preferred_only">
