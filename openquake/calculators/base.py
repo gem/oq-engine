@@ -41,7 +41,7 @@ from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
-    InvalidFile, geo, site, stats, logictree, source_reader)
+    InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -1827,6 +1827,7 @@ class DstoreCache:
 
     def clear(self):
         os.remove(self.ini_hdf5_csv)
+
 
 dcache = DstoreCache(config.directory.custom_tmp)
 
