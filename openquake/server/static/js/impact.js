@@ -125,6 +125,8 @@ window.initImpactForm = function() {
     }
 
     function set_shakemap_version_selector() {
+        let shakemap_selector = $("#shakemap_version");
+        shakemap_selector.empty();
         const usgs_id = $.trim($("#usgs_id").val());
         if (usgs_id == '') return;
         $('#submit_impact_get_rupture').prop('disabled', true);
