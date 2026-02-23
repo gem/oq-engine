@@ -17,19 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Package :mod:`openquake.fdha.primary_surf_rup` contains implementations of different
-fault displacement prediction models
+Package :mod:`openquake.fdha.primary_surf_rup` contains implementations
+of fault displacement prediction models.
 """
 
 from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_ExC
 from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_GB
 from openquake.fdha.primary_surf_rup.youngs2003 import Youngs2003PrimarySR_nBR
 
-#from openquake.fdha.primary_surf_rup.wells_coppersmith1993 import WC1993PrimarySR
-#from openquake.fdha.primary_surf_rup.moss_ross2011 import MossRoss2011PrimarySR
-#from openquake.fdha.primary_surf_rup.takao2013 import Takao2013PrimarySR
-#from openquake.fdha.primary_surf_rup.moss2013 import Moss2013PrimarySR
-#from openquake.fdha.primary_surf_rup.yang2021 import Yang2021PrimarySR
-#from openquake.fdha.primary_surf_rup.pizza2023 import Pizza2023PrimarySR
-#from openquake.fdha.primary_surf_rup.mammarella2024 import Mammarella2024PrimarySR
+# from openquake.fdha.primary_surf_rup.wells_coppersmith1993 import ...
+# from openquake.fdha.primary_surf_rup.moss_ross2011 import ...
+# from openquake.fdha.primary_surf_rup.takao2013 import ...
+# from openquake.fdha.primary_surf_rup.moss2013 import ...
+# from openquake.fdha.primary_surf_rup.yang2021 import ...
+# from openquake.fdha.primary_surf_rup.pizza2023 import ...
+# from openquake.fdha.primary_surf_rup.mammarella2024 import ...
 #from openquake.fdha.primary_surf_rup.fixed import FixedPrimarySR
