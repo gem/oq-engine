@@ -355,17 +355,6 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def delta(a, b):
-    """
-    :returns: the relative differences between a and b; zeros return zeros
-    """
-    c = a + b
-    ok = c != 0.
-    res = numpy.zeros_like(a)
-    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
-    return res
-
-
 def to_float(float_like):
     """
     Convert strings containing numbers to floats or raise a ValueError

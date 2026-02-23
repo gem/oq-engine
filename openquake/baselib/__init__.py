@@ -18,6 +18,7 @@
 
 import os
 import sys
+import readline
 import configparser
 
 # use utf8 as default encodings on all platforms (i.e. Windows)
@@ -122,6 +123,9 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+if sys.platform == 'win32':  # fix pdb issue
+    readline.backend = "pyreadline"
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':

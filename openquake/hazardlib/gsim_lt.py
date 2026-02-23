@@ -382,7 +382,8 @@ class GsimLogicTree(object):
             for gsims in self.values.values():
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
-                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
+                    # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
+                    # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None

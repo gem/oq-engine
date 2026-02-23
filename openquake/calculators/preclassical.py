@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import copy
 import logging
 import operator
 import psutil
@@ -28,7 +29,7 @@ from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
-    SourceGroup, _grp_id, store_src_groups, NUM_CTXS, NUM_RUPTURES)
+    SourceGroup, _grp_id, zpik, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -55,10 +56,10 @@ def source_data(sources):
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
-        data['nctxs'].append(src.nsites * src.num_ruptures)
+        data['nctxs'].append(src.nctxs)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
-        data['ctimes'].append(0)
+        data['ctimes'].append(src.dt)
     return data
 
 
@@ -201,10 +202,23 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     fac = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight(oq)
 
-    # build source_groups
-    quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-                for g, cmaker in enumerate(cmakers.to_array())
-                for sg in csm.src_groups if sg.grp_id == g]
+    # build source_groups and store _csm
+    quartets = []
+    for g, cmaker in enumerate(cmakers.to_array()):
+        for sg in csm.src_groups:
+            if sg.grp_id == g:
+                quartet = csm.split_sg(
+                    cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+                blocks = quartet[2]
+                if len(blocks) == 1:  # single group
+                    dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
+                else:
+                    for b, block in enumerate(blocks):
+                        grp = copy.copy(sg)
+                        grp.sources = block
+                        dstore[f"_csm/{sg.grp_id}-{b}"] = zpik(grp)
+                quartets.append(quartet)
+
     data = numpy.array(
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
@@ -226,8 +240,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
-    for grp_id, num_gsims, num_tiles, num_blocks, _, _, _, _ in data:
-        store_src_groups(dstore, grp_id, csm.src_groups[grp_id], num_blocks)
     dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
@@ -283,7 +295,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(f'Global RateMap of %s ({Gt=}%s)',
                             general.humansize(nbytes), extra)
 
-        if sites:
+        if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites
             lowres = sites.lower_res(res=4)[0]
             sf = SourceFilter(lowres, oq.maximum_distance)
@@ -396,8 +408,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset(
             'weights',
             F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
-        totsites = sum(row[NUM_CTXS] for row in self.csm.source_info.values())
-        if totsites == 0:
+        tot = self.datastore['source_info']['est_ctxs'].sum()
+        if tot == 0:
             if self.N == 1:
                 logging.error('There are no sources close to the site!')
             else:

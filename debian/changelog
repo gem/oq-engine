@@ -1,4 +1,44 @@
+  [Yen-Shin Chen]
+  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
+    AD/MD, tests).
+
+  [Yen-Shin Chen]
+  * FDHA: added primary surface rupture package (base, Youngs et al. 2003
+    ExC/GB/nBR, tests).
+
   [Michele Simionato]
+  * Changed the task distribution in classical calculations and reduced the
+    slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)
+  * Bug fix: using `sites=lon1 lat1, ...` with a parent calculation
+    did not result in the specified sites to be used
+
+  [Yen-Shin Chen]
+  * Added get_x_l_ratio() method to BaseSurface for computing normalized
+    along-strike position (x/L) for PFDHA applications
+  * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
+    for improved performance with large site meshes
+  * Added _get_tor() helper method to extract the top rupture
+    trace with NaN handling for KiteSurface compatibility
+
+  [Christopher Brooks]
+  * Added the EMME24 site model to the existing OQ implementation of the
+    EMME backbone model for ASCR (files describing the site model were
+    provided by Abdullah Sandıkkaya).
+
+  [Michele Simionato]
+  * Changed large classical calculations to store the rates in `ds_calc_dir`;
+    removed the need to specify `custom_tmp` for the SLURM distribution
+  * Internal: instantiating a GSIM automagically generates a ._toml
+    attribute from the GSIM name and arguments, associated to the GSIM hash
+
+  [Christopher Brooks]
+  * Fix small bug in Hashash et al. (2020) site term implementation within the
+    NGA East models and regenerate the test tables (very small differences are
+    observed and only for SA(0.4)).
+
+  [Michele Simionato]
+  * Removed the long time deprecated method `get_mean_and_stddevs` from the
+    GSIMs; you can use the helper function `contexts.mean_stds` instead
   * Internal: changed `cmaker.from_srcs` to return a context array and not a
     list with a single context array
   * Fixed AssertionError on len(mags) for GenericGmpeAvgSA with table-based
@@ -24,6 +64,9 @@
     GSIMs within conditional GMPEs.
 
   [Paolo Tormene]
+  * Refactored the WebUI, separating its logic into multiple files
+  * Added Playwright tests to test the WebUI frontend in different
+    application modes
   * Added an extractor `exposure_by_location`
 
   [Michele Simionato]
@@ -167,6 +210,8 @@
   [Michele Simionato, Antonio Ettorre]
   * Upgraded numpy to version 2.2, including related dependencies such as
     pandas, pyproj, GDAL, fiona, etc
+
+python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene]
   * When running a job via the WebUI it is possible to specify in the POST an

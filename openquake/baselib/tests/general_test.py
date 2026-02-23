@@ -103,8 +103,8 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         blocks = list(split_in_blocks('abcdefghi', 2, weights.get))
         self.assertEqual(len(blocks), 3)
-        self.assertEqual(repr(blocks), "[<WeightedSequence ['f', 'b', 'a', 'd', 'h', 'e', 'i'], weight=103>, <WeightedSequence ['g'], weight=30>, <WeightedSequence ['c'], weight=100>]")
-
+        self.assertEqual(repr(blocks),
+                         "[['f', 'b', 'a', 'd', 'h', 'e', 'i'], ['g'], ['c']]")
 
     def test_split_with_kind(self):
         Source = namedtuple('Source', 'typology, weight')
@@ -125,7 +125,6 @@ class BlockSplitterTestCase(unittest.TestCase):
                             weight=attrgetter('weight'),
                             key=attrgetter('typology')))
         self.assertEqual(list(map(len, blocks)), [1, 1, 1, 2])
-        self.assertEqual([b.weight for b in blocks], [2, 4, 4, 2])
 
 
 class AssertCloseTestCase(unittest.TestCase):

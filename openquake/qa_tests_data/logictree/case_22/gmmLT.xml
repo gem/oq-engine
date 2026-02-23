@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+  <logicTree logicTreeID="">
+    <logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="Craton">
+      <logicTreeBranch branchID="b_02_03">
+	<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_02_04">
+	<uncertaintyModel>
+	  [ModifiableGMPE]
+	  gmpe.YenierAtkinson2015BSSA = {}
+	  sigma_model_alatik2015 = {}
+	</uncertaintyModel>
+	<uncertaintyWeight>0.33000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_02_05">
+	<uncertaintyModel gmpe_name="PezeshkEtAl2011NEHRPBC">
+        NRCan15SiteTerm</uncertaintyModel>
+	<uncertaintyWeight>0.34000</uncertaintyWeight>
+      </logicTreeBranch>
+  </logicTreeBranchSet>	</logicTree>
+</nrml>
+

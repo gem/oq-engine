@@ -51,16 +51,11 @@ then relaunch the calculation, this time asking for fewer nodes.
 
 ## Running out of quota
 
-The engine will store the calculation files in `shared_dir`
-and some auxiliary files in `custom_dir`; both directories are
-mandatory and must be specified in the configuration file. The
-`shared_dir` should be locateded in the work area of the cluster
-and the `custom_tmp` in the scratch area of the cluster.
-
-Classical calculations will generate an .hdf5 file for each
-task spawned, so each calculation can spawn thousands of files.
-We suggest to periodically purge the scratch directories for
-old calculations, which will have the form `scratch_dir/calc_XXX`.
+The engine will store the calculation files in `shared_dir`,
+which must be specified in the configuration file and
+must be located on a filesystem accessible to all machines of the cluster.
+We suggest to periodically purge old calculations, once the results have
+been exported.
 
 ## Installing on HPC
 
@@ -118,7 +113,6 @@ submit_cmd = sbatch --account=myaccount oq run
 
 [directory]
 shared_dir = /home
-custom_tmp = /scratch
 ```
 With `serialize_jobs = 2` at most two jobs per user can be run concurrently. You may want to
 increase or reduce this number. Each user will have its own database located in

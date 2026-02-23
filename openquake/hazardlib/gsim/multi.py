@@ -68,12 +68,12 @@ class MultiGMPE(GMPE):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
-        self.kwargs = {}
+        self.gsim_by_imt = {}
         for name in uppernames:
             setattr(self, name, set(getattr(self, name)))
         for imt, gsim_dic in kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
-            self.kwargs[imt] = gsim = registry[gsim_name](**kw)
+            self.gsim_by_imt[imt] = gsim = registry[gsim_name](**kw)
             name = "SA" if imt.startswith("SA") else imt
             imt_factory = getattr(imt_module, name)
             if imt_factory not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
@@ -82,23 +82,23 @@ class MultiGMPE(GMPE):
                 getattr(self, name).update(getattr(gsim, name))
 
     def __iter__(self):
-        yield from self.kwargs
+        yield from self.gsim_by_imt
 
     def __getitem__(self, imt):
-        return self.kwargs[imt]
+        return self.gsim_by_imt[imt]
 
     def __len__(self):
-        return len(self.kwargs)
+        return len(self.gsim_by_imt)
 
     def __hash__(self):
         items = tuple((imt, str(gsim)) for imt, gsim in
-                      sorted(self.kwargs.items()))
+                      sorted(self.gsim_by_imt.items()))
         return hash(items)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Call the get mean and stddevs of the GMPE for the respective IMT
         """
-        gsims = [self.kwargs[imt.string] for imt in imts]
+        gsims = [self.gsim_by_imt[imt.string] for imt in imts]
         mean[:], sig[:], tau[:], phi[:] = contexts.get_mean_stds(
             gsims, ctx, imts)

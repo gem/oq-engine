@@ -19,8 +19,9 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
-sigma_mu_epsilon = -1.732051
+                            theta6_adjustment = -0.0015
+                            faba_taper_model = "Step"
+                            sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.02778889
@@ -31,7 +32,8 @@ sigma_mu_epsilon = -1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
+                        faba_taper_model = "Step"
+                        theta6_adjustment = -0.0015
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -42,8 +44,9 @@ theta6_adjustment = -0.0015
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
-sigma_mu_epsilon = 1.732051
+                        theta6_adjustment = -0.0015
+                        faba_taper_model = "Step"
+                        sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.02778889
@@ -54,7 +57,8 @@ sigma_mu_epsilon = 1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-sigma_mu_epsilon = -1.732051
+                        faba_taper_model = "Step"
+                        sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -64,7 +68,8 @@ sigma_mu_epsilon = -1.732051
                 branchID="BCHSI"
                 >
                     <uncertaintyModel>
-                        BCHydroESHM20SInter
+                        [BCHydroESHM20SInter]
+                        faba_taper_model = "Step"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.44435556
@@ -75,7 +80,8 @@ sigma_mu_epsilon = -1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-sigma_mu_epsilon = 1.732051
+                        faba_taper_model = "Step"
+                        sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -86,8 +92,9 @@ sigma_mu_epsilon = 1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
-sigma_mu_epsilon = -1.732051
+                        theta6_adjustment = 0.0015
+                        faba_taper_model = "Step"
+                        sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.02778889
@@ -98,7 +105,8 @@ sigma_mu_epsilon = -1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
+                        theta6_adjustment = 0.0015
+                        faba_taper_model = "Step"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -109,8 +117,9 @@ theta6_adjustment = 0.0015
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
-sigma_mu_epsilon = 1.732051
+                        theta6_adjustment = 0.0015
+                        sigma_mu_epsilon = 1.732051
+                        faba_taper_model = "Step"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.02778889

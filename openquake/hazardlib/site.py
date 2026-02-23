@@ -23,7 +23,12 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import logging
 import numpy
 import pandas
-from h3.api.numpy_int import geo_to_h3, h3_to_geo
+try:
+    from h3.api.numpy_int import (
+        geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
+except ImportError:
+    # h3 version 4
+    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
@@ -708,8 +713,17 @@ class SiteCollection(object):
         self.complete = self
 
     @property
+    def names(self):
+        """
+        :returns: .array.dtype.names
+        """
+        return self.array.dtype.names
+
+    @property
     def mesh(self):
-        """Return a mesh with the given lons, lats, and depths"""
+        """
+        :return: a mesh with the given lons, lats, and depths
+        """
         return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
@@ -825,7 +839,7 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id', 'sids'}
         for name in ok:
             self._set(name, site_model[name])
 
@@ -921,10 +935,10 @@ class SiteCollection(object):
         """
         sids_by_hex = general.AccumDict(accum=[])
         for sid, lon, lat in zip(self.sids, self.lons, self.lats):
-            h = geo_to_h3(lat, lon, res)
+            h = latlng_to_cell(lat, lon, res)
             sids_by_hex[h].append(sid)
         # build an array of shape (N, 2)
-        latlons = F32([h3_to_geo(h) for h in sids_by_hex])
+        latlons = F32([cell_to_latlng(h) for h in sids_by_hex])
         orig_sids = [U32(sids) for sids in sids_by_hex.values()]
         return self.from_points(latlons[:, 1], latlons[:, 0]), orig_sids
 

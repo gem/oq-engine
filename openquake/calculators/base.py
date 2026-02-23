@@ -41,7 +41,7 @@ from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
-    InvalidFile, geo, site, stats, logictree, source_reader)
+    InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -945,17 +945,17 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
-                oq, self.datastore.hdf5)):
+        if oq.hazard_calculation_id:
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
             # this is called by mosaic_for_ses/job_sites.csv
-            self.sitecol, _array, _discarded = geo.utils.assoc(
-                child, haz_sitecol, assoc_dist, 'filter')
-            self.datastore['sitecol'] = self.sitecol
+            if 'site_model' not in oq.inputs:
+                child.assoc(haz_sitecol.array, assoc_dist, 'warn')
+            self.datastore['sitecol'] = self.sitecol = child
         else:  # base case
             self.sitecol = haz_sitecol
         if self.sitecol and oq.imtls:
@@ -1214,10 +1214,15 @@ class HazardCalculator(BaseCalculator):
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
         # called first in preclassical, then called again in classical
-        first_time = 'source_info' not in self.datastore
-        if first_time:
+        preclassical = 'source_info' not in self.datastore
+        if preclassical:
+            # called by populate_csm which creates csm.source_info
             source_reader.create_source_info(self.csm, self.datastore.hdf5)
-        self.csm.update_source_info(source_data)
+        elif not hasattr(self.csm, 'source_info'):
+            # when there is a parent calculation source_info is missing
+            self.csm.source_info = self.csm.get_source_info()
+
+        self.csm.update_source_info(source_data, preclassical)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
@@ -1822,6 +1827,7 @@ class DstoreCache:
 
     def clear(self):
         os.remove(self.ini_hdf5_csv)
+
 
 dcache = DstoreCache(config.directory.custom_tmp)
 

@@ -1,0 +1,33 @@
+Checksum of the inputs: 3823288066 (total size 23.09 MB)
+
+* v3.24
+
+| calc_7514, maxmem=184.5 GB | time_sec  | memory_mb | counts    |
+|----------------------------+-----------+-----------+-----------|
+| total classical            | 110_686   | 140.9766  | 217       |
+| get_poes                   | 59_102    | 0.0       | 1_785_552 |
+| computing mean_std         | 34_210    | 0.0       | 35_730    |
+| planar contexts            | 3_011     | 0.0       | 68_683    |
+| nonplanar contexts         | 1_182     | 0.0       | 96_556    |
+| ClassicalCalculator.run    | 1_158     | 852.4     | 1         |
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| classical          | 208    | 531.1   | 48%    | 52.0098 | 1_048   | 1.9726  |
+
+* master, better
+
+# srcmexuh dominated
+| calc_8604, maxmem=195.5 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| total classical            | 113_469  | 102.8438  | 910       |
+| get_poes                   | 67_019   | 0.0       | 1_783_503 |
+| computing mean_std         | 45_773   | 0.0       | 35_674    |
+| total baseclassical        | 20_111   | 94.5547   | 183       |
+| planar contexts            | 3_490    | 0.0       | 68_683    |
+| ClassicalCalculator.run    | 1_065    | 1_228     | 1         |
+
+| operation-duration | counts | mean     | stddev | min     | max      | slowfac |
+|--------------------+--------+----------+--------+---------+----------+---------|
+| baseclassical      | 183    | 109.8969 | 19%    | 46.4996 | 159.8057 | 1.4541  |
+| classical          | 537    | 211.3    | 34%    | 50.0729 | 524.8    | 2.4838  |

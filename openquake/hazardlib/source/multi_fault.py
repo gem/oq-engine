@@ -216,7 +216,8 @@ class MultiFaultSource(BaseSeismicSource):
             yield '%s.%d' % (self.source_id, i), slc
 
     def __iter__(self):
-        if len(self.mags) <= BLOCKSIZE:  # already split
+        if len(self.mags) <= BLOCKSIZE or hasattr(self, 'rupids_by_tag'):
+            # do not split
             yield self
             return
         # split in blocks of BLOCKSIZE ruptures each

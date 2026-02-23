@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import abc
 import copy
 import time
@@ -67,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
+EPS = 1E-3
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -429,8 +428,9 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
-                          n_max=zeroctx['probs_occur'].shape[2])
+        # NB: in case_79 zeroctx['probs_occur'] has shape (2, 1, 10)
+        # where (2, 1) = (len(planar), len(sites))
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate)
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
     return zeroctx.flatten()  # shape N*U
@@ -444,13 +444,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     tom = getattr(src, 'temporal_occurrence_model', None)
 
     if tom and isinstance(tom, NegativeBinomialTOM):
-        if hasattr(src, 'pointsources'):  # CollapsedPointSource
-            maxrate = max(max(ps.mfd.occurrence_rates)
-                          for ps in src.pointsources)
-        else:  # regular source
-            maxrate = max(src.mfd.occurrence_rates)
-        p_size = tom.get_pmf(maxrate).shape[1]
-        dd['probs_occur'] = numpy.zeros(p_size)
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
@@ -678,7 +672,6 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.clu_mon = monitor('cluster loop', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1036,7 +1029,7 @@ class ContextMaker(object):
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
-        if getattr(src, 'location', None) and step == 1:
+        if getattr(src, 'location', None):
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
@@ -1054,7 +1047,6 @@ class ContextMaker(object):
                 allrups = sorted([rup for rup in allrups
                                   if minmag <= rup.mag <= maxmag],
                                  key=bymag)
-                self.num_rups = len(allrups) or 1
                 if not allrups:
                     return iter([])
                 # sorted by mag by construction
@@ -1299,29 +1291,29 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
-        src.dt = 0
+        t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
-            return 0 if src.code in b'pP' else eps
+            return EPS
         # sanity check, preclassical must has set .num_ruptures
         assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return eps
+            return EPS
         src.nsites = len(sites)
-        t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        step = 1 if src.code in b'pP' else 4
+        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
         src.dt = time.time() - t0
-        if not ctxs:
-            return eps
-        # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
-        if src.code in b'NSX':  # increase weight
-            weight *= 12.
-        # raise the weight according to the gsims (needed for USA 2023)
-        weight *= (1 + len(self.gsims) / 5)
-        return max(weight, eps)
+        if not C:
+            return EPS
+        N = len(srcfilter.sitecol.complete)
+        if src.code in b'SFN':
+            C *= step**2
+        elif src.code in b'CKX':
+            C *= step
+        src.nctxs = C * srcfilter.multiplier
+        weight = src.nctxs / N
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1548,20 +1540,21 @@ class RmapMaker(object):
 
         dt = time.time() - t0
         nsrcs = len(self.sources)
+        factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
+            src.dt = dt / nsrcs
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(totlen // nsrcs)
+            self.source_data['nctxs'].append(src.nctxs * factor)
             self.source_data['nrupts'].append(src.num_ruptures)
             self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt / nsrcs)
+            self.source_data['ctimes'].append(src.dt)
             self.source_data['taskno'].append(cm.task_no)
         return pnemap
 
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
-        t0 = time.time()
         G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
         pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
@@ -1601,20 +1594,19 @@ class RmapMaker(object):
             pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
-        if self.cluster:
-            with self.cmaker.clu_mon:
-                MINFLOAT = 1.4E-45  # minimum 32 bit float
-                probs = F32(self.tom.get_probability_n_occurrences(
-                    self.tom.occurrence_rate, numpy.arange(20)))
-                # the probs are usually very small, like
-                # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
-                # they rapidly go below the minimum 32 bit float, so
-                # the length of the loop can be reduced (i.e. from 20 to 7)
-                probs = probs[probs > MINFLOAT]
-                array = numpy.full(pnemap.shape, probs[0], dtype=F32)
-                for nocc, probn in enumerate(probs[1:], 1):
-                    array += pnemap.array ** nocc * probn
-                pnemap.array = array
+        if self.cluster:  # very fast
+            MINFLOAT = 1.4E-45  # minimum 32 bit float
+            probs = F32(self.tom.get_probability_n_occurrences(
+                self.tom.occurrence_rate, numpy.arange(20)))
+            # the probs are usually very small, like
+            # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
+            # they rapidly go below the minimum 32 bit float, so
+            # the length of the loop can be reduced (i.e. from 20 to 7)
+            probs = probs[probs > MINFLOAT]
+            array = numpy.full(pnemap.shape, probs[0], dtype=F32)
+            for nocc, probn in enumerate(probs[1:], 1):
+                array += pnemap.array ** nocc * probn
+            pnemap.array = array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
@@ -1669,53 +1661,6 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock site collection used in the tests and in the SMT module of the OQ-MBTK
-class SitesContext(BaseContext):
-    """
-    Sites calculation context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of the sites collection.
-    Every GSIM class is required to declare what :attr:`sites parameters
-    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
-    Only those required parameters are made available in a result context
-    object.
-    """
-    # _slots_ is used in hazardlib check_gsim and in the SMT
-    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
-                 sitecol=None):
-        self._slots_ = slots
-        if sitecol is not None:
-            self.sids = sitecol.sids
-            for slot in slots:
-                setattr(self, slot, getattr(sitecol, slot))
-
-    # used in the SMT
-    def __len__(self):
-        return len(self.sids)
-
-
-class DistancesContext(BaseContext):
-    """
-    Distances context for ground shaking intensity models.
-
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant distances between sites from the collection
-    and the rupture. Every GSIM class is required to declare what
-    :attr:`distance measures <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
-    does it need. Only those required values are calculated and made available
-    in a result context object.
-    """
-    _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall', 'rvolc')
-
-    def __init__(self, param_dist_pairs=()):
-        for param, dist in param_dist_pairs:
-            setattr(self, param, dist)
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1727,46 +1672,17 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
-# used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
-def full_context(sites, rup, dctx=None):
-    """
-    :returns: a full RuptureContext with all the relevant attributes
-    """
-    self = RuptureContext()
-    self.src_id = 0
-    for par, val in vars(rup).items():
-        setattr(self, par, val)
-    if not hasattr(self, 'occurrence_rate'):
-        self.occurrence_rate = numpy.nan
-    if hasattr(sites, 'array'):  # is a SiteCollection
-        for par in sites.array.dtype.names:
-            setattr(self, par, sites[par])
-    else:  # sites is a SitesContext
-        for par, val in vars(sites).items():
-            setattr(self, par, val)
-    if dctx:
-        for par, val in vars(dctx).items():
-            setattr(self, par, val)
-    return self
-
-
-# used in openquake.smt
-def get_mean_stds_slow(rup_ctx, gsim, imt, **params):
-    """
-    Slow function not used by the engine, but still useful for
-    pedagogical applications (i.e. jupyter notebooks). For performance,
-    one should instantiate a ContextMaker and work on gsims, imts
-    and sources.
-
-    :param rup: a RuptureContext with site information
-    :param gsim: a GSIM instance
-    :param imt_str: a string representing an IMT or an IMT
-    :return: 4 arrays (mean, sig, tau, phi) of N elements each.
-    """
-    cmaker = simple_cmaker([gsim], [str(imt)], **params)
-    ctx = cmaker.recarray([rup_ctx])
-    return cmaker.get_mean_stds([ctx])[:, 0, 0, :]  # (4, N)
+# used in a few hazardlib tests
+def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
+    # rctx: a RuptureContext with site information
+    # gsim: a GSIM instance
+    # imt: an IMT string
+    # idx: an index in the range 0..3 (default [0,1,2,3])
+    # returns two arrays (mean, stddevs)
+    cmaker = simple_cmaker([gsim], [imt])
+    ctx = cmaker.recarray([rctx])
+    out = cmaker.get_mean_stds([ctx])
+    return out[idx, 0, 0]
 
 
 def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
@@ -1792,15 +1708,13 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     return out
 
 
-# mock of a rupture used in the tests and in the module of the OQ-MBTK
+# mock of a rupture used in the tests and in the SMT module of the OQ-MBTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
-    Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
-    intended to represent relevant features of a single rupture. Every
-    GSIM class is required to declare what :attr:`rupture parameters
+    Instances of this class represent relevant features of a single rupture.
+    Every GSIM class is required to declare what :attr:`rupture parameters
     <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>` does it need.
     Only those required parameters are made available in a result context
     object.

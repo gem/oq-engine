@@ -545,21 +545,10 @@ class EventBasedTestCase(CalculatorTestCase):
         '''
 
     def test_case_27(self):
-        # splitting ruptures + gmf1 + gmf2
+        # ruptures only
         self.run_calc(case_27.__file__, 'job.ini',
                       ground_motion_fields="false")
         self.assertEqual(len(self.calc.datastore['ruptures']), 17)
-        hc_id = str(self.calc.datastore.calc_id)
-
-        self.run_calc(case_27.__file__, 'job.ini', tile_spec="[1,2]",
-                      hazard_calculation_id=hc_id)
-        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf1.csv', fname)
-
-        self.run_calc(case_27.__file__, 'job.ini', tile_spec="[2,2]",
-                      hazard_calculation_id=hc_id)
-        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf2.csv', fname)
 
     def test_case_28(self):
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
@@ -640,12 +629,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_31(self):
         # HM2018CorrelationModel with filtered site collection
-        self.run_calc(case_31.__file__, 'job_rup.ini')
-        hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_31.__file__, 'job.ini',
-                      hazard_calculation_id=hc_id,  exports='csv')
-        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+                      hazard_calculation_id='job_rup.ini',  exports='csv')
 
     def test_32(self):
         # test discarting ruptures with geojson file

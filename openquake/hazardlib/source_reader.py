@@ -38,11 +38,12 @@ source_info_dt = numpy.dtype([
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
-    ('num_sites', numpy.uint64),       # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('weight', numpy.float32),         # 6
-    ('mutex_weight', numpy.float64),   # 7
-    ('trti', numpy.uint8),             # 8
+    ('num_ctxs', numpy.uint64),        # 4
+    ('est_ctxs', numpy.uint64),        # 5
+    ('num_ruptures', numpy.uint32),    # 6
+    ('weight', numpy.float32),         # 7
+    ('mutex_weight', numpy.float64),   # 8
+    ('trti', numpy.uint8),             # 9
 ])
 
 
@@ -87,6 +88,8 @@ def trt_smrs(src):
 
 
 def _sample(srcs, sample, applied):
+    if not srcs:
+        return []
     out = [src for src in srcs if src.source_id in applied]
     rand = general.random_filter(srcs, sample)
     return (out + rand) or [srcs[0]]

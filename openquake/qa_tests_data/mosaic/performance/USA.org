@@ -1,0 +1,38 @@
+Checksum of the inputs: 2097437443
+
+* v3.24
+
+Mean time per core=19106s, std=8901.6s, min=422s, max=54606s
+| calc_7787, maxmem=247.6 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total classical            | 3_190_734 | 144.2305  | 2_447       |
+| get_poes                   | 2_056_834 | 0.0       | 276_917_065 |
+| computing mean_std         | 623_281   | 0.0       | 5_590_482   |
+| total fast_mean            | 99_048    | 147.9648  | 122         |
+| reading rates              | 99_029    | 147.9648  | 122         |
+| nonplanar contexts         | 62_064    | 0.0       | 1_090_092   |
+| ClassicalCalculator.run    | 56_046    | 2_239     | 1           |
+# 15h34m
+
+| operation-duration | counts | mean   | stddev | min    | max     | slowfac |
+|--------------------+--------+--------+--------+--------+---------+---------|
+| classical          | 143    | 22_228 | 22%    | 2_072  | 54_606  | 2.4566  |
+
+* master
+
+Mean time per core=21913s, std=856.7s, min=20506s, max=23340s
+ufc3mean dominated
+| calc_8338, maxmem=305.6 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total baseclassical        | 2_652_677 | 470.5     | 879         |
+| get_poes                   | 2_584_412 | 0.0       | 239_471_329 |
+| total classical            | 1_554_714 | 202.9     | 1_534       |
+| computing mean_std         | 972_412   | 0.0       | 4_808_685   |
+| nonplanar contexts         | 70_859    | 0.0       | 1_234_873   |
+| ClassicalCalculator.run    | 24_284    | 12_199    | 1           |
+# 6h45m
+
+| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
+|--------------------+--------+---------+--------+---------+---------+---------|
+| baseclassical      | 879    | 3_018   | 16%    | 1_266   | 4_839   | 1.6035  |
+| classical          | 428    | 3_632   | 32%    | 395.5   | 6_553   | 1.8043  |

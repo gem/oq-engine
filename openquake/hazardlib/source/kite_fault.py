@@ -167,7 +167,7 @@ class KiteFaultSource(ParametricSeismicSource):
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
         step = kwargs.get('step', 1)
-        for mag, occ_rate, meshes in self._gen_meshes(step):
+        for mag, occ_rate, meshes in self._gen_meshes():
             for msh in meshes[::step]:
                 surf = KiteSurface(msh)
                 hypocenter = surf.get_center()
@@ -176,9 +176,9 @@ class KiteFaultSource(ParametricSeismicSource):
                           hypocenter, surf, occ_rate,
                           self.temporal_occurrence_model)
 
-    def _gen_meshes(self, step=1):
+    def _gen_meshes(self):
         surface = self.surface
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
 
             # Compute the area, length and width of the ruptures
             area = self.magnitude_scaling_relationship.get_median_area(

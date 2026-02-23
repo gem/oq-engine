@@ -35,6 +35,8 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
+REF_VS = 1130.
+
 
 # CyberShake basin adjustments for CY14 (only applied above 
 # 1.9 seconds so we don't provide values listed below 2.0 s)
@@ -159,7 +161,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         # first line of eq. 12
         ln_y_ref + eta
         # second line
-        + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
+        + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
@@ -342,15 +344,6 @@ def get_hanging_wall_term(C, ctx):
         fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
-
-def get_linear_site_term(region, C, ctx):
-    """
-    Returns the linear site scaling term
-    """
-    if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-
     
 def get_delta_c1(rrup, imt, mag):
     """
@@ -439,7 +432,7 @@ def get_ln_y_ref(region, C, ctx, conf):
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
 
-    # Get the region name from the name of the class
+    # Get z1pt0 delta
     delta_ztor = _get_centered_ztor(ctx)
 
     # If stress correction required get delta cm
@@ -493,16 +486,56 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
+def get_linear_site_term(region, C, ctx):
+    """
+    Returns the linear site scaling term
+    """
+    if region == "JPN":
+        return C["phi1jp"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+        
+    return C["phi1"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+
+
 def get_nonlinear_site_term(C, ctx, y_ref):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, 1130.0)
+    vs = ctx.vs30.clip(-np.inf, REF_VS)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
-                                np.exp(C["phi3"] * (1130. - 360.)))
+                                np.exp(C["phi3"] * (REF_VS - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
+
+
+def get_emme_site_term(C, ctx, C_EMME, conf):
+    """
+    Returns the EMME24 backbone model site term (both linear
+    and non-linear components). The site term is combination
+    of CY14 and IC23 GMMs site terms.
+    
+    Implementation based on slides and excel files provided by
+    A. Sandıkkaya to GEM which describe the EMME24 site model.
+    """
+    # Get prediction on ref velocity (800 m/s)
+    ref_vs = 800.
+    rock_ctx = ctx.copy()
+    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs)
+    ln_gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
+
+    # Linear component
+    linear = C_EMME["a1"] * np.log(np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
+    
+    # Part 1 of non-linear component
+    non_linear_p1 = C_EMME["a2"] * (
+        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
+        np.exp(440. * C_EMME["a3"])
+        ) 
+    
+    # Part 2 of non-linear component
+    non_linear_p2 = np.log(1 + (np.exp(ln_gm_rock) / C_EMME["a4"]))
+
+    return linear + (non_linear_p1 * non_linear_p2)
 
 
 def get_phi(C, mag, ctx, nl0):
@@ -579,7 +612,8 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
+def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
+                     cy=False):
     """
     Return mean and standard deviation values
     """
@@ -587,21 +621,30 @@ def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
-    # Get basin term
-    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
+    if not emme_coeffs:
+        # Get basin term
+        f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
-    # Get linear amplification term
-    f_lin = get_linear_site_term(region, C, ctx)
+        # Get linear amplification term
+        f_lin = get_linear_site_term(region, C, ctx)
 
-    # Get nonlinear amplification term
-    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+        # Get nonlinear amplification term
+        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
-    # Add on the site amplification
-    mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+        # Add on the site amplification
+        mean = ln_y_ref + f_lin + f_nl + f_z1pt0
 
-    # Get standard deviations
-    sig, tau, phi = get_stddevs(
-        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+        # Get standard deviations
+        sig, tau, phi = get_stddevs(
+            conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
+    else:
+        # Compute EMME24 site term instead (no basin effects considered here)
+        mean = ln_y_ref + get_emme_site_term(C, ctx, emme_coeffs[imt], conf)
+
+        # Sigma components are determined within EMME backbone's compute method
+        sig, tau, phi =\
+              np.zeros(mean.shape), np.zeros(mean.shape), np.zeros(mean.shape)
 
     return mean, sig, tau, phi
 
@@ -730,6 +773,11 @@ class ChiouYoungs2014(GMPE):
         # CyberShake basin adj
         self.cybershake_basin_adj = cybershake_basin_adj
 
+        # If instantiating EMME24 backbone the COEFFS_EMME attribute
+        # will be set (it contains the coeffs for EMME24 site model)
+        if not hasattr(self, "COEFFS_EMME"):
+            setattr(self, "COEFFS_EMME", False)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -739,25 +787,32 @@ class ChiouYoungs2014(GMPE):
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
-            self.usgs_basin_scaling, self.cybershake_basin_adj)
-        # compute
+            self.region, self.COEFFS[PGA()], ctx, PGA(),
+            self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
+            self.cybershake_basin_adj)
+        
+        # Compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
+
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
-                    self.usgs_basin_scaling, self.cybershake_basin_adj)
+                    self.region, self.COEFFS[imt], ctx, imt,
+                    self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
+                    self.cybershake_basin_adj)
+                
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
+                
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
@@ -853,6 +908,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
-            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
-            exp2 = np.exp(C['phi3'] * (1130 - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, REF_VS) - 360))
+            exp2 = np.exp(C['phi3'] * (REF_VS - 360))
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, REF_VS)

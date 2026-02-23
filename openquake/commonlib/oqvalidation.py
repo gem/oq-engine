@@ -482,6 +482,11 @@ max:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
+max_nodes_network:
+   Restrict the maximum number of nodes in a network
+   Example: *max_nodes_network = 100*
+   Default: 1000
+
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
   Example: *max_potential_gmfs = 1E9*.
@@ -610,7 +615,7 @@ pointsource_distance:
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
   Example: *postproc_func = compute_mrd.main*
-  Default: 'dummy.main' (no postprocessing)
+  Default: '' (no postprocessing)
 
 postproc_args:
   Specify the arguments to be passed to the postprocessing function
@@ -801,11 +806,16 @@ spatial_correlation:
 specific_assets:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 split_sources:
   INTERNAL
 
-split_by_gsim:
-  INTERNAL
+split_time:
+  After how much time starts splitting classical tasks
+  Example: *split_time = 600*
+  Default: None, meaning the split_time is automatically determined
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
@@ -1086,6 +1096,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_nodes_network = valid.Param(valid.positiveint, 1000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -1107,7 +1118,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
+    postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
@@ -1160,6 +1171,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
@@ -1315,7 +1327,6 @@ class OqParam(valid.ParamSet):
         self.check_gsim_lt()
         self.set_loss_types()
         self.check_risk()
-        self.check_ebrisk()
 
     def raise_invalid(self, msg):
         """
@@ -1410,18 +1421,13 @@ class OqParam(valid.ParamSet):
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
 
-    def check_ebrisk(self):
-        # check specific to ebrisk
-        if self.calculation_mode == 'ebrisk':
-            if self.ground_motion_fields:
-                print('ground_motion_fields overridden to false',
-                      file=sys.stderr)
-                self.ground_motion_fields = False
-            if self.hazard_curves_from_gmfs:
-                self.raise_invalid(
-                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
-
     def check_hazard(self):
+        # check for sites, site_model and hc_id
+        if (self.sites and 'site_model' in self.inputs and
+                self.hazard_calculation_id):
+            self.raise_invalid('You cannot specify both sites and site_model '
+                               'in the presence of a parent calculation')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and not self.sites):
