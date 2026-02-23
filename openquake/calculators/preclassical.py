@@ -189,15 +189,19 @@ def get_req_gb(data, N, oq):
 
 
 # executed at the end of preclassical
-def store_tiles(dstore, csm, sitecol, cmakers):
+def store_csm(dstore, csm, sitecol, cmakers):
     """
-    Store a `tiles` array if the calculation is large enough.
+    Store the _csm datagroup.
+
     :returns: max_weight
     """
     if sitecol is None:
-        N = 0
-    else:
-        N = len(sitecol)
+        # when called from hamlet
+        for sg in csm.src_groups:
+            dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
+        dstore['_csm'].attrs['num_src_groups'] = len(csm.src_groups)
+        return 1
+    N = len(sitecol)
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight(oq)
@@ -425,9 +429,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        if self.sitecol is not None:
-            self.max_weight = store_tiles(
-                self.datastore, self.csm, self.sitecol, self.cmakers)
+        self.max_weight = store_csm(
+            self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

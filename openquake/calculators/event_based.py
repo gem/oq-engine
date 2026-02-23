@@ -334,6 +334,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
             rlzs_by_gsim[model, trt_smr] = rbg
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    rup_id = os.environ.get('OQ_RUPTURE')
+    if rup_id is not None:
+        allrups = allrups[allrups['id'] == int(rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
@@ -363,7 +366,8 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    dstore['filtered_ruptures'] = filrups
+    if dstore.hdf5.mode != 'r':
+        dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker

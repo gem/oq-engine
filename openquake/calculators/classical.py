@@ -475,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.max_weight = preclassical.store_tiles(
+            self.max_weight = preclassical.store_csm(
                 self.datastore, self.csm, self.sitecol,
                 self.cmdict['Default'])
 
