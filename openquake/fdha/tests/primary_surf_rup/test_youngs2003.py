@@ -9,18 +9,12 @@ import unittest
 
 import numpy as np
 
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.fdha.primary_surf_rup.youngs2003 import (
     Youngs2003PrimarySR_ExC,
     Youngs2003PrimarySR_GB,
     Youngs2003PrimarySR_nBR,
 )
-
-
-class _Ctx:
-    """Minimal context with magnitude only, for testing get_prob(ctx)."""
-
-    def __init__(self, mag):
-        self.mag = mag
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +40,7 @@ class Youngs2003ExCTestCase(unittest.TestCase):
             2.6815570087449986e-01, 4.8912671452713180e-01,
             7.1443044088033858e-01, 8.6732370731218145e-01,
         ])
-        got = self.model.get_prob(_Ctx(mags))
+        got = self.model.get_prob(RuptureContext([('mag', mags)]))
         np.testing.assert_allclose(got, expected, rtol=1e-10)
 
 
@@ -73,7 +67,7 @@ class Youngs2003GBTestCase(unittest.TestCase):
             5.2248482479180003e-01, 8.0729054588192506e-01,
             9.4130982500790894e-01, 9.8397578070554537e-01,
         ])
-        got = self.model.get_prob(_Ctx(mags))
+        got = self.model.get_prob(RuptureContext([('mag', mags)]))
         np.testing.assert_allclose(got, expected, rtol=1e-10)
 
 
@@ -100,5 +94,5 @@ class Youngs2003nBRTestCase(unittest.TestCase):
             3.8603734270860302e-01, 7.4202112282000621e-01,
             9.2936658960231722e-01, 9.8365736029029804e-01,
         ])
-        got = self.model.get_prob(_Ctx(mags))
+        got = self.model.get_prob(RuptureContext([('mag', mags)]))
         np.testing.assert_allclose(got, expected, rtol=1e-10)
