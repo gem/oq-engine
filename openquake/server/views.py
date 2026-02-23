@@ -586,7 +586,7 @@ def calc_list(request, id=None):
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
-        if host:
+        if settings.DISPLAY_USER_HOST and host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
