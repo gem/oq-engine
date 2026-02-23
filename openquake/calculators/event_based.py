@@ -44,7 +44,7 @@ from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies)
+    SLICE_BY_EVENT_NSITES, get_close_mosaic_models, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import sig_eps_dt
@@ -304,21 +304,6 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_model_lts(h5):
-    """
-    :returns: (model, full_lt) pairs
-    """
-    out = []
-    full_lt = h5['full_lt']
-    if hasattr(full_lt, 'gsim_lt'):
-        out.append(('???', full_lt))
-    else:
-        # full_lt is a h5py group
-        for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
-    return out
-
-
 def get_args(dstore):
     """
     Get the arguments (rups, cmaker, sids, stations, hdf5path);
@@ -378,7 +363,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    dstore['relevant_ruptures'] = filrups
+    dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
@@ -903,27 +888,26 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore['relevant_events'] = all_events[:][rel_events]
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
-        # really compute and store the avg_gmf only without hc
-        if self.oqparam.hazard_calculation_id is None:
-            M = len(self.oqparam.imtls)
-            avg_gmf = numpy.zeros((2, N, C), F32)
-            min_iml = numpy.ones(C) * 1E-10
-            min_iml[:M] = self.oqparam.min_iml
-            for sid, avgstd in compute_avg_gmf(
-                    gmf_df, self.weights, min_iml).items():
-                avg_gmf[:, sid] = avgstd
-            self.datastore['avg_gmf'] = avg_gmf
-            # make avg_gmf plots only if running via the webui
-            if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
-                imts = list(self.oqparam.imtls)
-                ex = Extractor(self.datastore.calc_id)
-                for imt in imts:
-                    plt = plot_avg_gmf(ex, imt)
-                    bio = io.BytesIO()
-                    plt.savefig(bio, format='png', bbox_inches='tight')
-                    fig_path = f'png/avg_gmf-{imt}.png'
-                    logging.info(f'Saving {fig_path} into the datastore')
-                    self.datastore[fig_path] = Image.open(bio)
+        # compute and store the avg_gmf
+        M = len(self.oqparam.imtls)
+        avg_gmf = numpy.zeros((2, N, C), F32)
+        min_iml = numpy.ones(C) * 1E-10
+        min_iml[:M] = self.oqparam.min_iml
+        for sid, avgstd in compute_avg_gmf(
+                gmf_df, self.weights, min_iml).items():
+            avg_gmf[:, sid] = avgstd
+        self.datastore['avg_gmf'] = avg_gmf
+        # make avg_gmf plots only if running via the webui
+        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
+            imts = list(self.oqparam.imtls)
+            ex = Extractor(self.datastore.calc_id)
+            for imt in imts:
+                plt = plot_avg_gmf(ex, imt)
+                bio = io.BytesIO()
+                plt.savefig(bio, format='png', bbox_inches='tight')
+                fig_path = f'png/avg_gmf-{imt}.png'
+                logging.info(f'Saving {fig_path} into the datastore')
+                self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam

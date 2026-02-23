@@ -563,19 +563,18 @@ def make_figure_ebruptures(extractors, what):
     plt = import_plt()
     [ex] = extractors
     sitecol = ex.get('sitecol')
-    ebrs = ex.get(what)
-    out = ebrs['model'] == b'???'
-    in_ = ~out
+    in_, out = ex.get(what)
     _fig, ax = plt.subplots()
     add_borders(ax, readinput.read_mosaic_df)
     ax.grid(True)
     ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
                label='sites')
-    hypo_in = ebrs[in_]['hypo']
-    ax.scatter(hypo_in[:, 0], hypo_in[:, 1], marker='*', label='ruptures in')
-    hypo_out = ebrs[out]['hypo']
-    ax.scatter(hypo_out[:, 0], hypo_out[:, 1], marker='x', label='ruptures out',
-               alpha=0.5)
+    hypo_in = in_['hypo']
+    ax.scatter(hypo_in[:, 0], hypo_in[:, 1], marker='*',
+               label='relevant ruptures')
+    hypo_out = out['hypo']
+    ax.scatter(hypo_out[:, 0], hypo_out[:, 1], marker='x',
+               label='other ruptures', alpha=0.5)
     ax.set_title('%d+%d ruptures' % (len(hypo_in), len(hypo_out)))
     ax.legend()
     return plt

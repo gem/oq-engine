@@ -1258,10 +1258,7 @@ def extract_avg_gmf(dstore, what):
     try:
         complete = dstore['complete']
     except KeyError:
-        if dstore.parent:
-            complete = dstore.parent['sitecol'].complete
-        else:
-            complete = dstore['sitecol'].complete
+        complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
@@ -1621,13 +1618,18 @@ def extract_ebruptures(dstore, what):
     """
     qdict = parse(what)
     try:
-        rups = dstore['relevant_ruptures'][:]
+        rups = dstore['filtered_ruptures'][:]
     except KeyError:
         rups = dstore['ruptures'][:]
+    if 'relevant_events' in dstore:
+        rupids = numpy.unique(dstore['relevant_events']['rup_id'])
+        ok = numpy.isin(rups['id'], rupids)
+    else:
+        ok = numpy.full(len(rups), True)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
         rups = rups[rups['mag'] >= min_mag]
-    return rups
+    return rups[ok], rups[~ok]
 
 
 # used in the rupture exporter and in the plugin
