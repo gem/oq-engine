@@ -974,8 +974,9 @@ class Starmap(object):
                               shortlist(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
+                if self.h5.mode != 'r':
+                    del self.h5['task_sent']
+                    self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
@@ -994,8 +995,9 @@ class Starmap(object):
                     mem_gb = memory_gb()
                 else:
                     mem_gb = memory_gb(Starmap.pids)
-                res.mon.save_task_info(self.h5, res, name, mem_gb)
-                res.mon.flush(self.h5)
+                if self.h5.mode != 'r':
+                    res.mon.save_task_info(self.h5, res, name, mem_gb)
+                    res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
