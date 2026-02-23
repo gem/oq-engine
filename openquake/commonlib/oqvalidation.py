@@ -874,7 +874,8 @@ with_betw_ratio:
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
+GROUND_MOTION_SPATIAL_CORRELATION_MODELS = ['JB2009', 'S2010', 'EI2011', 'EI2012', 'SW2013', 'DW013', 'HM2018', 'AHP2022', 'S2022']
+GROUND_MOTION_CROSS_SPATIAL_CORRELATION_MODELS = ['LothBaker2013', 'MarkhvidaEtAl2018', 'DuNing2021', 'MonteiroEtAlGlobal', 'MonteiroEtAlPairWise']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
 U16 = numpy.uint16
@@ -1057,8 +1058,10 @@ class OqParam(valid.ParamSet):
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
-    ground_motion_correlation_model = valid.Param(
-        valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
+    ground_motion_spatial_correlation_model = valid.Param(
+        valid.NoneOr(valid.Choice(*GROUND_MOTION_SPATIAL_CORRELATION_MODELS)), None)
+    ground_motion_cross_spatial_correlation_model = valid.Param(
+        valid.NoneOr(valid.Choice(*GROUND_MOTION_CROSS_SPATIAL_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')

@@ -19,11 +19,13 @@ spatially-distributed ground-shaking intensities.
 """
 import abc
 import numpy
+from scipy.interpolate import interp1d
+import logging
 
 
 class BaseCorrelationModel(metaclass=abc.ABCMeta):
     """
-    Base class for correlation models for spatially-distributed ground-shaking
+    Base class for spatial correlation models for spatially-distributed ground-shaking
     intensities.
     """
     def apply_correlation(self, sites, imt, residuals, stddev_intra=0):
@@ -58,8 +60,10 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         try:
             corma = self.cache[imt]
         except KeyError:
+            logging.info("--- Building lower triangle correlation matrix")
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
+            logging.info("--- --- done!")
             self.cache[imt] = corma
         # if N is the length of the complete site collection, then the
         # correlation matrix has shape (N, N) and the residuals (N, s),
@@ -72,6 +76,7 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             return (corma @ res)[sites.sids, :]  # shape (n, s)
         else:  # complete site collection
             return corma @ residuals  # shape (N, s)
+
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
@@ -114,7 +119,6 @@ class JB2009CorrelationModel(BaseCorrelationModel):
             Intensity measure type object, see :mod:`openquake.hazardlib.imt`.
         """
         return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
-
 
 def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
     """
@@ -214,7 +218,6 @@ class HM2018CorrelationModel(BaseCorrelationModel):
 
             return residuals_correlated
 
-
 def hmcorrelation(sites_or_distances, imt, uncertainty_multiplier=0):
     """
     Returns the Heresi-Miranda correlation model.
@@ -254,3 +257,79 @@ def hmcorrelation(sites_or_distances, imt, uncertainty_multiplier=0):
     # Eq. (8)
     res = numpy.exp(-numpy.power((distances / beta), 0.55))
     return res
+
+
+class EI2012CorrelationModel(BaseCorrelationModel):
+    """
+    "Spatial Correlation of Spectral Acceleration in European Data"
+    by Simon Esposito and Iunio Iervolino. Published in Bulletin of the Seismological
+    Society of America, Vol. 102, No. 6, pp. 2781–2788, December 2012,
+    doi: 10.1785/0120120068
+
+    :param database:
+        Boolean value to indicate whether "1" or "2" from which database should be 
+        applied. ``True`` value means that the values showed are expected to be
+        from ESM database, and ``False`` means otherwise.
+    """
+    def __init__(self, database):
+        self.database = database
+        self.cache = {}  # imt -> correlation model
+
+    def _get_correlation_matrix(self, sites, imt):
+        return ei2012correlation(sites, imt, self.database)
+
+    def get_lower_triangle_correlation_matrix(self, sites, imt):
+        """
+        Get lower-triangle matrix as a result of Cholesky-decomposition
+        of correlation matrix.
+
+        The resulting matrix should have zeros on values above
+        the main diagonal.
+
+        The actual implementations of :class:`BaseCorrelationModel` interface
+        might calculate the matrix considering site collection and IMT (like
+        :class:`EI2012CorrelationModel` does) or might have it pre-constructed
+        for a specific site collection and IMT, in which case they will need
+        to make sure that parameters to this function match parameters that
+        were used to pre-calculate decomposed correlation matrix.
+
+        :param sites:
+            :class:`~openquake.hazardlib.site.SiteCollection` to create
+            correlation matrix for.
+        :param imt:
+            Intensity measure type object, see :mod:`openquake.hazardlib.imt`.
+        """
+        return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
+
+def ei2012correlation(sites_or_distances, imt, database=1):
+    """
+    Returns the Esposito and Iervolino 2012 correlation model.
+
+    :param sites_or_distances:
+        SiteCollection instance o distance matrix
+    :param imt:
+        Intensity Measure Type (PGA or SA)
+    :param database:
+        if 1 calculates for ESM database
+        otherwise calculates for ITACA database
+    """
+    if hasattr(sites_or_distances, 'mesh'):
+        distances = sites_or_distances.mesh.get_distance_matrix()
+    else:
+        distances = sites_or_distances
+
+    period = imt.period
+
+    if not (0.1 <= period <= 2.0):
+        raise ValueError(f"T = {period} is outside the valid range [0.1, 2.0].")
+    
+    if database == 1:  # ESD database
+        b = 11.7 + 12.7 * period
+        rho = numpy.exp(-(3*distances)/b)
+        return rho
+    else: # ITACA database
+        b = 8.6 + 11.6 * period
+        rho = numpy.exp(-(3*distances)/b)
+        return rho
+    
+ 

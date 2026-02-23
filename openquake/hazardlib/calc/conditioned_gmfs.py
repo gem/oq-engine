@@ -112,7 +112,7 @@ from dataclasses import dataclass
 import psutil
 import numpy
 from openquake.baselib import parallel
-from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.correlation import spatial_correlation, cross_correlation, cross_spatial_correlation
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
@@ -161,15 +161,15 @@ class ConditionedGmfComputer(GmfComputer):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param correlation_model:
+    :param spatial_correlation_model:
         Instance of a spatial correlation model object. See
-        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation.spatial_correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
     :param cross_correl:
         Instance of a cross correlation model object. See
-        :mod:`openquake.hazardlib.cross_correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation.cross_correlation`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
     :param amplifier:
@@ -195,7 +195,7 @@ class ConditionedGmfComputer(GmfComputer):
 
         clust = ground_motion_correlation_params.get("vs30_clustering", True)
         self.spatial_correl = (spatial_correl or
-                               correlation.JB2009CorrelationModel(clust))
+                               spatial_correlation.JB2009CorrelationModel(clust))
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()

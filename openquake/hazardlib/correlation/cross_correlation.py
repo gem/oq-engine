@@ -94,6 +94,8 @@ class BakerJayaram2008(CrossCorrelation):
         return corr  # a scalar
 
 
+
+
 # ######################## CrossCorrelationBetween ########################## #
 
 class CrossCorrelationBetween(ABC):

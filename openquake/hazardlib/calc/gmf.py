@@ -27,7 +27,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
-from openquake.hazardlib.cross_correlation import NoCrossCorrelation
+from openquake.hazardlib.correlation.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -175,15 +175,15 @@ class GmfComputer(object):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param correlation_model:
+    :param spatial_correlation_model:
         Instance of a spatial correlation model object. See
-        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation.spatial_correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
     :param cross_correl:
         Instance of a cross correlation model object. See
-        :mod:`openquake.hazardlib.cross_correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation.cross_correlation`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
     :param amplifier:
@@ -205,7 +205,7 @@ class GmfComputer(object):
     # a matrix of size (M, N, E) is returned, where M is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
+    def __init__(self, rupture, sitecol, cmaker, spatial_correlation_model=None,
                  cross_correl=None, amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
@@ -217,7 +217,7 @@ class GmfComputer(object):
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.cmaker = cmaker
         self.gsims = sorted(cmaker.gsims)
-        self.correlation_model = correlation_model
+        self.spatial_correlation_model = spatial_correlation_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
         self.ebrupture = rupture
@@ -229,7 +229,7 @@ class GmfComputer(object):
             raise FarAwayRupture
         [self.ctx] = ctxs
         self.N = len(self.ctx)
-        if correlation_model:  # store the filtered sitecol
+        if spatial_correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
@@ -415,7 +415,7 @@ class GmfComputer(object):
 
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
-            if self.correlation_model:
+            if self.spatial_correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
@@ -424,9 +424,9 @@ class GmfComputer(object):
             # to compute mean and total standard deviation at the sites
             # of interest.
             # In this case, we also assume no correlation model is used.
-            if self.correlation_model:
+            if self.spatial_correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
-                    self.correlation_model, gsim)
+                    self.spatial_correlation_model, gsim)
             gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im != 'MMI')
             self.sig[idxs, m] = numpy.nan
         else:
@@ -435,8 +435,8 @@ class GmfComputer(object):
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             intra_res = phi[:, None] * intra_eps  # shape (N, E)
-            if self.correlation_model is not None:
-                intra_res = self.correlation_model.apply_correlation(
+            if self.spatial_correlation_model is not None:
+                intra_res = self.spatial_correlation_model.apply_correlation(
                     self.sites, imt, intra_res, phi)
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
@@ -451,7 +451,7 @@ class GmfComputer(object):
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, correlation_model=None, seed=0):
+                         realizations, spatial_correlation_model=None, seed=0):
     """
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
@@ -480,9 +480,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         distribution
     :param realizations:
         Integer number of GMF simulations to compute.
-    :param correlation_model:
+    :param spatial_correlation_model:
         Instance of correlation model object. See
-        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
+        :mod:`openquake.hazardlib.correlation.spatial_correlation`. Can be ``None``, in which case
         non-correlated ground motion fields are calculated. Correlation model
         is not used if ``truncation_level`` is zero.
     :param int seed:
@@ -503,7 +503,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
     ebr.seed = seed
     N, E = len(sites), realizations
-    gc = GmfComputer(ebr, sites, cmaker, correlation_model)
+    gc = GmfComputer(ebr, sites, cmaker, spatial_correlation_model)
     df = gc.compute_all()
     res = {}
     for m, imt in enumerate(gc.imts):
