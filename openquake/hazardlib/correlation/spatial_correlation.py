@@ -18,16 +18,16 @@ Module :mod:`openquake.hazardlib.correlation` defines correlation models for
 spatially-distributed ground-shaking intensities.
 """
 import abc
-import numpy
-from scipy.interpolate import interp1d
 import logging
+import numpy
 
 
 class BaseCorrelationModel(metaclass=abc.ABCMeta):
     """
-    Base class for spatial correlation models for spatially-distributed ground-shaking
-    intensities.
+    Base class for spatial correlation models for spatially-distributed
+    ground-shaking intensities.
     """
+
     def apply_correlation(self, sites, imt, residuals, stddev_intra=0):
         """
         Apply correlation to randomly sampled residuals.
@@ -78,7 +78,6 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             return corma @ residuals  # shape (N, s)
 
 
-
 class JB2009CorrelationModel(BaseCorrelationModel):
     """
     "Correlation model for spatially distributed ground-motion intensities"
@@ -90,6 +89,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         should be applied. ``True`` value means that Vs 30 values show or are
         expected to show clustering ("Case 2"), ``False`` means otherwise.
     """
+
     def __init__(self, vs30_clustering):
         self.vs30_clustering = vs30_clustering
         self.cache = {}  # imt -> correlation model
@@ -119,6 +119,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
             Intensity measure type object, see :mod:`openquake.hazardlib.imt`.
         """
         return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
+
 
 def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
     """
@@ -165,6 +166,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         beta. If uncertainty_multiplier = 0 (default), the median value is
         used as a constant value.
     """
+
     def __init__(self, uncertainty_multiplier=0):
         self.uncertainty_multiplier = uncertainty_multiplier
         self.distance_matrix = {}
@@ -211,12 +213,14 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             for isim in range(0, nsim):
                 # FIXME: the seed is not set!
                 corma = self._get_correlation_matrix(sites, imt)
-                # NB: corma is different at each loop since contains randomicity
+                # NB: corma is different at each loop since contains
+                # randomicity
                 residuals_correlated[0:, isim] = (
                     numpy.random.multivariate_normal(
                         numpy.zeros(nsites), D @ corma @ D, 1))
 
             return residuals_correlated
+
 
 def hmcorrelation(sites_or_distances, imt, uncertainty_multiplier=0):
     """
@@ -262,15 +266,16 @@ def hmcorrelation(sites_or_distances, imt, uncertainty_multiplier=0):
 class EI2012CorrelationModel(BaseCorrelationModel):
     """
     "Spatial Correlation of Spectral Acceleration in European Data"
-    by Simon Esposito and Iunio Iervolino. Published in Bulletin of the Seismological
-    Society of America, Vol. 102, No. 6, pp. 2781–2788, December 2012,
-    doi: 10.1785/0120120068
+    by Simon Esposito and Iunio Iervolino. Published in Bulletin of the
+    Seismological Society of America, Vol. 102, No. 6, pp. 2781–2788,
+    December 2012, doi: 10.1785/0120120068
 
     :param database:
-        Binary input to indicate whether "1" or "2" from which database should be 
-        applied. ``1`` value means that the values showed are expected to be
+        Binary input to indicate whether "1" or "2" from which database should
+        be applied. ``1`` value means that the values showed are expected to be
         from ESM database, and ``2`` means otherwise.
     """
+
     def __init__(self, database):
         self.database = database
         self.cache = {}  # imt -> correlation model
@@ -301,6 +306,7 @@ class EI2012CorrelationModel(BaseCorrelationModel):
         """
         return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
 
+
 def ei2012correlation(sites_or_distances, imt, database=1):
     """
     Returns the Esposito and Iervolino 2012 correlation model.
@@ -321,15 +327,14 @@ def ei2012correlation(sites_or_distances, imt, database=1):
     period = imt.period
 
     if not (0.1 <= period <= 2.0):
-        raise ValueError(f"T = {period} is outside the valid range [0.1, 2.0].")
-    
+        raise ValueError(
+            f"T = {period} is outside the valid range [0.1, 2.0].")
+
     if database == 1:  # ESD database
         b = 11.7 + 12.7 * period
         rho = numpy.exp(-(3*distances)/b)
         return rho
-    else: # ITACA database
+    else:  # ITACA database
         b = 8.6 + 11.6 * period
         rho = numpy.exp(-(3*distances)/b)
         return rho
-    
- 

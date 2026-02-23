@@ -17,29 +17,29 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from scipy import constants, stats
+import logging
 from copy import deepcopy
 from scipy.interpolate import RectBivariateSpline
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from typing import Dict, List, Optional
+
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import CoeffsTable
-import logging
-from typing import Dict, List, Union, Optional
-from spatial_correlation import BaseCorrelationModel
+from openquake.hazardlib.correlation.spatial_correlation import \
+        BaseCorrelationModel
 
 
 class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
     """
-    Base class for cross-IM spatial correlation models for spatially-distributed ground-shaking
-    intensities.
+    Base class for cross-IM spatial correlation models for
+    spatially-distributed ground-shaking intensities.
     """
 
     def __init__(self, **kwargs):
         super().__init__()
         self.cache = {"corma": None}
 
-    
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
         """
@@ -49,7 +49,7 @@ class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
             An intensity measure type
         :return: a scalar
         """
-        
+
     def _get_correlation_matrix(self, sites: SiteCollection, imts: List):
         """
         Setup the correlation matrix given the sites and IMTs
@@ -57,19 +57,21 @@ class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
         distances = sites.mesh.get_distance_matrix()
         return self.get_correlation_model(distances, imts)
 
-        
     @abstractmethod
     def get_correlation_model(self, distances: np.ndarray, imts: List):
         """
         Builds the correlation model - specific to the actual model itself
         """
-        
-    def get_lower_triangle_correlation_matrix(self, sites: SiteCollection, imts: List):
+
+    def get_lower_triangle_correlation_matrix(
+            self, sites: SiteCollection, imts: List):
         # Apply Cholesky factorisation and retreive the
         # lower triangular correlation matrix
-        self.cache["corma"] = np.linalg.cholesky(self._get_correlation_matrix(sites, imts))
+        self.cache["corma"] = np.linalg.cholesky(
+            self._get_correlation_matrix(sites, imts))
 
-    def apply_correlation(self, sites: SiteCollection, imts: List, residuals: np.ndarray):
+    def apply_correlation(
+            self, sites: SiteCollection, imts: List, residuals: np.ndarray):
         """
         Applies the correlation model to the sites
         """
@@ -95,7 +97,8 @@ class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
                 idx[lb:ub] += i * norig_sites
                 lb += nsites
                 ub += nsites
-            corr_residuals = np.matmul(self.cache["corma"][np.ix_(idx, idx)], residuals)
+            corr_residuals = np.matmul(
+                self.cache["corma"][np.ix_(idx, idx)], residuals)
 
         # corr_residuals is 2-D array [Nimts * Nsites, Nevents]
         # need to re-arrange back to 3-D shape
@@ -113,17 +116,20 @@ class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
                imts: List,
                rng: Optional[np.random.Generator] = None,
                ) -> np.ndarray:
-        
         """Generate random fields from the distribution
 
-        Args:
-            num_realizations: Number of ground motion fields to generate
-            sites: Site model as instance of `class`::shakyground2.site_model.SiteModel
-            imts: List of intensity measure types (as string)
-            rng: Seeded numpy random number generator (or None - uses random seed)
+        :param num_realizations:
+            Number of ground motion fields to generate
+        :param sites:
+            Site model as instance of
+            `class`::shakyground2.site_model.SiteModel
+        :param imts:
+            List of intensity measure types (as string)
+        :param rng:
+            Seeded numpy random number generator (or None - uses random seed)
 
-        Returns:
-            Sample fields of dimension [No. Intensiy Measures, No. Sites, No. Realizations]
+        :Returns: Sample fields of dimension
+            [No. Intensiy Measures, No. Sites, No. Realizations]
         """
         if not rng:
             rng = np.random.default_rng()
@@ -134,13 +140,12 @@ class BaseSpatialCrossCorrelationModel(BaseCorrelationModel):
         return self.apply_correlation(sites, imts, uncorrelated_residuals)
 
 
-
 class LothBaker2013CorrelationModel(BaseSpatialCrossCorrelationModel):
     """Implements the spatial cross-correlation model of Loth & Baker (2013)
 
-    Loth, C., and Baker, J. W. (2013) A spatial cross-correlation model of spectral
-    accelerations at multiple periods. Earthquake Engineering & Structural Dynamics, 42: 397 -
-    417
+    Loth, C., and Baker, J. W. (2013) A spatial cross-correlation model of
+    spectral accelerations at multiple periods. Earthquake Engineering &
+    Structural Dynamics, 42: 397 - 417
 
     Valid for periods 0.01 to 10.0 s
     """
@@ -207,12 +212,14 @@ class LothBaker2013CorrelationModel(BaseSpatialCrossCorrelationModel):
             elif "SA" in str(imt):
                 if (imt.period > 10.0) or (imt.period < 0.01):
                     raise ValueError(
-                        "Period %s out of range for Loth & Baker LMCR" % str(imt.period)
+                        "Period %s out of range for Loth & Baker LMCR" % str(
+                            imt.period)
                     )
                 periods.append(imt.period)
             else:
-                raise ValueError("Loth & Baker LMCR not supported for %s" % str(imt))
-            
+                raise ValueError(
+                    "Loth & Baker LMCR not supported for %s" % str(imt))
+
         periods = np.array(periods)
         b1mat = self.interp_matrix(periods, self.T, self.B1)
         b2mat = self.interp_matrix(periods, self.T, self.B2)
@@ -233,7 +240,8 @@ class LothBaker2013CorrelationModel(BaseSpatialCrossCorrelationModel):
             for i in range(nimts):
                 idx_y = np.arange(0, y)
                 for j in range(nimts):
-                    dummy = b1mat[i, j] * np.exp(dh / 20.0) + b2mat[i, j] * np.exp(dh / 70.0)
+                    dummy = b1mat[i, j] * \
+                        np.exp(dh / 20.0) + b2mat[i, j] * np.exp(dh / 70.0)
                     dummy[mask] += b3mat[i, j]
                     rho[np.ix_(idx_x, idx_y)] += dummy
                     idx_y += y
@@ -242,15 +250,16 @@ class LothBaker2013CorrelationModel(BaseSpatialCrossCorrelationModel):
 
     @staticmethod
     def interp_matrix(targets, periods, matrix):
-        """Apply 2D interpolation to retrieve the values of the coefficient matrices at the
-        required periods
+        """Apply 2D interpolation to retrieve the values of the coefficient
+        matrices at the required periods
         """
         f = RectBivariateSpline(periods, periods, matrix.T, kx=1, ky=1)
         return f(targets, targets).T
 
 
 def get_isotropic_nested_cov(var_model: Dict, dist: np.ndarray) -> np.ndarray:
-    """Returns the covariance matrix for the isotropic, nested, exponential semivariogram
+    """Returns the covariance matrix for the isotropic, nested, exponential
+    semivariogram
 
     Args:
         var_model: Coefficients of the semivariogram model
@@ -284,16 +293,14 @@ def get_nugget_cov(var_model: Dict, dist: np.ndarray) -> np.ndarray:
 
 class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
     """
-    Implements the spatial cross-correlation model of Markhvida et al. (2018) based on
-    principal component analysis and geostatistics.
+    Implements the spatial cross-correlation model of Markhvida et al. (2018)
+    based on principal component analysis and geostatistics.
 
-    Markhvida, M., Ceferino, L., & Baker, J. W. (2018). 
-    Modeling spatially correlated spectral accelerations at multiple periods using principal
-    component analysis and geostatistics. Earthquake Engineering & Structural Dynamics, 47(5), 1107–1123.
+    Markhvida, M., Ceferino, L., & Baker, J. W. (2018).
+    Modeling spatially correlated spectral accelerations at multiple periods
+    using principal component analysis and geostatistics. Earthquake
+    Engineering & Structural Dynamics, 47(5), 1107-1123.
     https://doi.org/10.1002/eqe.3007
-
-    Attributes:
-        npcs: Number of principal components to be used (must be between 5 and 19)
     """
 
     T = np.array(
@@ -345,7 +352,7 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         4.000     1.59580892e-01  3.47927160e-01  3.48346295e-01  2.39394141e-01 -1.57211928e-01  9.28779109e-02 -5.01602104e-03  1.69759688e-02  1.09978222e-01 -1.82603154e-01 -1.21233490e-01  7.11306931e-02  6.20582734e-02  7.50450107e-01  7.85420661e-02 -5.21102089e-02  7.51936647e-03 -1.88268150e-03 -1.85190445e-03
         5.000     1.48832921e-01  3.32847695e-01  3.65098052e-01  3.31227695e-01 -2.81334582e-01  2.83334016e-01 -1.82848345e-01 -3.25817997e-01 -3.10946154e-01  1.28556114e-01  8.37173663e-02 -7.03828761e-02 -4.61924126e-02 -4.41499964e-01 -4.05906261e-02  3.37161618e-02  1.16291918e-03  4.01605033e-03  5.05570345e-04
     """,
-    )  # noqa: E501
+    )
 
     VARIANCE_SCALE_FACTOR = np.array(
         [
@@ -395,14 +402,15 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
 
     def __init__(self, **kwargs):
         """
-        Args:
-            num_pcs = Number of principal components to be used
+        :param npcs: Number of principal components to be used
+            (must be between 5 and 19)
         """
 
         super().__init__(**kwargs)
         self.npcs = int(kwargs.get("num_pcs", 5))
         assert (self.npcs >= 5) and (self.npcs <= 19), (
-            "Number of principal components must be between 5 and 19 (%g given)" % self.npcs
+           "Number of principal components must be between 5 and 19 "
+           f"({self.npcs} given)"
         )
 
     def __repr__(self):
@@ -412,7 +420,8 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         """Correlation model is not relevant in this context"""
         pass
 
-    def get_lower_triangle_correlation_matrix(self, sites: SiteCollection, imts: List):
+    def get_lower_triangle_correlation_matrix(
+            self, sites: SiteCollection, imts: List):
         """In this case the lower triangle correlation matrix has a different
         interpretation as here it has the dimension
         [num_sites, num_sites, num principal components]
@@ -421,7 +430,8 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         distance_matrix = sites.mesh.get_distance_matrix()
         model_vario = deepcopy(self.MODEL_VARIO)
         if self.npcs < 19:
-            # If less than 19 principal components are used then scale down the variance
+            # If less than 19 principal components are used then scale down
+            # the variance
             scale_factor = self.VARIANCE_SCALE_FACTOR[self.npcs - 1]
             for i in range(1, 20):
                 model_vario[i]["Cn"] /= scale_factor
@@ -440,13 +450,15 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
             self.cache["corma"][:, :, i] = np.linalg.cholesky(cov)
         return
 
-    def apply_correlation(self, sites: SiteCollection, imts: List, residuals: np.ndarray):
+    def apply_correlation(
+            self, sites: SiteCollection, imts: List, residuals: np.ndarray):
         """Apply the correlation models to the arrays on simulated residuals"""
         # Get the required PCA coefficients for the corresponding period
         pca_coeffs = {}
         for imt in imts:
             if str(imt) == "PGV":
-                raise ValueError(f"Correlation model {str(self)} not supported for PGV")
+                raise ValueError(
+                    f"Correlation model {str(self)} not supported for PGV")
             pca_coeff = self.PCA_COEFFS[imt]
             pca_coeffs[imt] = np.array(
                 [[pca_coeff["{:g}".format(i + 1)] for i in range(self.npcs)]]
@@ -454,15 +466,16 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         nimts = len(imts)
         if not self.cache["corma"]:
             # Get the lower covariance matrices
-            logging.info("--- Building lower triangle correlation matrices")
+            logging.info("Building lower triangle correlation matrices")
             self.get_lower_triangle_correlation_matrix(sites, imts)
-            logging.info("--- done!")
+            logging.info("Lower triangle correlation matrices built.")
         nlocs, nsims, _ = residuals.shape
         # Get simulated PCA matrices for each realisation of residuals
-        logging.info("--- Generating spatially cross-correlated residuals")
+        logging.info("Generating spatially cross-correlated residuals")
         sim_pcas = np.empty([nlocs, nsims, self.npcs])
         for i in range(self.npcs):
-            logging.info("--- --- Processing principal component %g of %g" % (i + 1, self.npcs))
+            logging.info(
+                "Processing principal component %g of %g" % (i + 1, self.npcs))
             for j in range(nsims):
                 res = residuals[:, [j], [i]]
                 sim_pcas[:, j, i] = (self.cache["corma"][:, :, i] @ res)[:, 0]
@@ -470,8 +483,9 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         sim_results = np.zeros([nimts, nlocs, nsims])
         for i, imt in enumerate(imts):
             for j in range(nsims):
-                sim_results[i, :, j] = (sim_pcas[:, j, :] @ pca_coeffs[imt])[:, 0]
-        logging.info("--- --- done!")
+                sim_results[i, :, j] = (
+                    sim_pcas[:, j, :] @ pca_coeffs[imt])[:, 0]
+        logging.info("Principal component processing completed.")
         return sim_results
 
     def sample(
@@ -481,8 +495,8 @@ class MarkhvidaEtAl2018CorrelationModel(BaseSpatialCrossCorrelationModel):
         imts: List,
         rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
-        """ """
         if not rng:
             rng = np.random.default_rng()
-        uncorrelated_residuals = rng.normal(0.0, 1.0, [len(sites), num_realizations, self.npcs])
+        uncorrelated_residuals = rng.normal(
+            0.0, 1.0, [len(sites), num_realizations, self.npcs])
         return self.apply_correlation(sites, imts, uncorrelated_residuals)

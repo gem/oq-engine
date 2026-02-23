@@ -19,6 +19,7 @@
 import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
+
 from openquake.hazardlib.imt import IMT
 
 
@@ -60,6 +61,7 @@ class BakerJayaram2008(CrossCorrelation):
     Implements the correlation model of Baker and Jayaram published in 2008
     on Earthquake Spectra. This model works for GMRotI50.
     """
+
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
 
         from_per = from_imt.period
@@ -92,8 +94,6 @@ class BakerJayaram2008(CrossCorrelation):
         else:
             corr = c4
         return corr  # a scalar
-
-
 
 
 # ######################## CrossCorrelationBetween ########################## #
@@ -146,8 +146,8 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         theta2 = 5.586
         theta3 = 0.728
 
-        angle = np.pi/2.0 - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3 *
-                            np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
+        angle = np.pi/2.0 - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3
+                             * np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
         delta = 1.0 + np.cos(-1.5 * np.log10(Tmax / Tmin))
         corr = (1.0 - np.cos(angle) + delta) / 3.0
         return min(corr, 1.0)
@@ -260,6 +260,7 @@ class NoCrossCorrelation(CrossCorrelationBetween):
     """
     Used when there is no cross correlation
     """
+
     def get_correlation(self, from_imt, to_imt):
         return from_imt == to_imt
 
@@ -280,6 +281,7 @@ class FullCrossCorrelation(CrossCorrelationBetween):
     """
     Used when there is full cross correlation, i.e. same epsilons for all IMTs
     """
+
     def get_correlation(self, from_imt, to_imt):
         return 1.
 
