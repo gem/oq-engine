@@ -267,9 +267,9 @@ class EI2012CorrelationModel(BaseCorrelationModel):
     doi: 10.1785/0120120068
 
     :param database:
-        Boolean value to indicate whether "1" or "2" from which database should be 
-        applied. ``True`` value means that the values showed are expected to be
-        from ESM database, and ``False`` means otherwise.
+        Binary input to indicate whether "1" or "2" from which database should be 
+        applied. ``1`` value means that the values showed are expected to be
+        from ESM database, and ``2`` means otherwise.
     """
     def __init__(self, database):
         self.database = database
@@ -308,7 +308,7 @@ def ei2012correlation(sites_or_distances, imt, database=1):
     :param sites_or_distances:
         SiteCollection instance o distance matrix
     :param imt:
-        Intensity Measure Type (PGA or SA)
+        Intensity Measure Type (SA)
     :param database:
         if 1 calculates for ESM database
         otherwise calculates for ITACA database
