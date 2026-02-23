@@ -501,9 +501,7 @@ class ModifiableGMPE(GMPE):
 
         # -------------------------------------------------------------------
         if 'add_rupture_params' in self.params:
-            tset = set(self.params['add_rupture_params'])
             self.REQUIRES_RUPTURE_PARAMETERS |= {"hypo_lon", "hypo_lat"}
-            # self.REQUIRES_SITES_PARAMETERS |= {"lon", "lat", "depth"}
         # -------------------------------------------------------------------
 
         if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
