@@ -216,7 +216,7 @@ SERVER_NAME = socket.gethostname()
 
 # In the list of calculations, the name of the owner of the job can be
 # displayed with or without the host name
-# (either 'username' or 'username@hostname')
+# (either 'username@hostname' or just 'username')
 DISPLAY_USER_HOST = False
 
 APPLICATION_MODES = [
