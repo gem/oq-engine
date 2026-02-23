@@ -19,20 +19,19 @@ Checksum of the inputs: 2430128208 (total size 165.39 MB)
 
 * master, much better
 
-Mean time per core=2871s, std=193.9s, min=2549s, max=3465s
-cps-002-dominated
-| calc_8366, maxmem=213.8 GB | time_sec  | memory_mb | counts     |
-|----------------------------+-----------+-----------+------------|
-| total classical            | 551_401   | 101.3809  | 784        |
-| get_poes                   | 365_123   | 0.0       | 33_471_127 |
-| computing mean_std         | 67_724    | 0.0       | 669_704    |
-| planar contexts            | 20_454    | 0.0       | 1_555_415  |
-| nonplanar contexts         | 10_997    | 0.0       | 644_016    |
-| total postclassical        | 8_670     | 56.0508   | 192        |
-| combine pmaps              | 5_158     | 0.0       | 539_831    |
-| ClassicalCalculator.run    | 3_846     | 6_272     | 1          |
+Mean time per core=2212s, std=109.2s, min=1881s, max=2497s
+| calc_8603, maxmem=214.3 GB | time_sec | memory_mb | counts     |
+|----------------------------+----------+-----------+------------|
+| total classical            | 424_820  | 111.5781  | 784        |
+| get_poes                   | 284_939  | 0.0       | 33_471_127 |
+| computing mean_std         | 51_897   | 0.0       | 669_704    |
+| planar contexts            | 16_172   | 0.0       | 1_555_415  |
+| nonplanar contexts         | 8_552    | 0.0       | 644_016    |
+| total postclassical        | 7_427    | 56.2148   | 192        |
+| compute stats              | 4_081    | 0.0       | 192        |
+| reading rates              | 3_308    | 55.9844   | 192        |
+| ClassicalCalculator.run    | 2_837    | 6_061     | 1          |
 
-| operation-duration | counts | mean    | stddev | min     | max     | slowfac |
-|--------------------+--------+---------+--------+---------+---------+---------|
-| classical          | 400    | 1_379   | 19%    | 191.4   | 1_954   | 1.4177  |
-| postclassical      | 192    | 45.1573 | 09%    | 39.2612 | 50.7657 | 1.1242  |
+| operation-duration | counts | mean    | stddev | min      | max     | slowfac |
+|--------------------+--------+---------+--------+----------+---------+---------|
+| classical          | 400    | 1_062   | 16%    | 177.4099 | 1_326   | 1.2484  |
