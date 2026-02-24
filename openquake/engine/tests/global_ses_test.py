@@ -62,6 +62,13 @@ def setup_module():
     worflow_id = global_ses.main(
         MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
         number_of_logic_tree_samples='200')
+
+    with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
+        evs = parent['events'][:]
+        ae(evs['id'], numpy.arange(33967))  # sequential indices
+        e0s = parent['ruptures']['e0']
+        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
+
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
     dstore = base.run_calc(
@@ -81,32 +88,43 @@ def setup_module():
 
 def test_one_site():
     global last_job
-    dstore = base.run_calc(
-        path('job1.ini'), hazard_calculation_id='rups.hdf5'
-    ).datastore
-    last_job = dstore.calc_id
-    df = dstore.read_df('gmf_data', 'sid')
+    calc = base.run_calc(
+        path('job1.ini'), hazard_calculation_id='rups.hdf5')
+    last_job = calc.datastore.calc_id
+    df = calc.datastore.read_df('gmf_data', 'sid')
     assert len(df) == 14
+    assert df.index.max() < 1
 
 
-def test_sites():  # 6 sites
+def test_sites():  # 5 sites
     global last_job
-    dstore = base.run_calc(
-        path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
-    ).datastore
-    last_job = dstore.calc_id
-    df = dstore.read_df('gmf_data', 'sid')
-    assert len(df) == 70
+    calc = base.run_calc(
+        path('job_sites.ini'), hazard_calculation_id='rups.hdf5')
+    ae(calc.sitecol.sids, [0, 1, 2, 3, 4])
+    # FIXME: the custom_site_id is not working yet
+    # ae(calc.sitecol.custom_site_id,
+    #    numpy.array([b'A', b'B', b'C', b'D', b'E']))
+    last_job = calc.datastore.calc_id
+    df = calc.datastore.read_df('gmf_data', 'sid')
+    assert len(df) == 65
+    assert df.index.max() < 5
 
 
-def test_site_model():  # 6 sites
+def test_site_model():  # 5 sites
     global last_job
-    dstore = base.run_calc(
-        path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
-    ).datastore
-    last_job = dstore.calc_id
-    df = dstore.read_df('gmf_data', 'sid')
-    assert len(df) == 70
+    calc = base.run_calc(
+        path('job_sm.ini'), hazard_calculation_id='rups.hdf5')
+    ae(calc.sitecol.sids, [0, 1, 2, 3, 4])
+    last_job = calc.datastore.calc_id
+    df = calc.datastore.read_df('gmf_data', 'sid')
+    assert len(df) == 65
+    assert df.index.max() < 5
+    rdf = calc.datastore.read_df('filtered_ruptures', 'id')
+    assert len(rdf) == 15875
+    edf = calc.datastore.read_df('relevant_events', 'id')
+    assert len(edf) == 24
+    rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
+    assert len(rel_rups) == 24  # only 24 ruptures contribute to gmf_data
 
 
 def teardown_module():

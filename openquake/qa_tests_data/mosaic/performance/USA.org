@@ -1,3 +1,5 @@
+Checksum of the inputs: 2097437443
+
 * v3.24
 
 Mean time per core=19106s, std=8901.6s, min=422s, max=54606s
@@ -18,19 +20,17 @@ Mean time per core=19106s, std=8901.6s, min=422s, max=54606s
 
 * master
 
-Mean time per core=21431s, std=1737.0s, min=16196s, max=23105s
-cps-000-dominated
-| calc_8097, maxmem=342.6 GB | time_sec  | memory_mb | counts      |
+Mean time per core=19610s, std=310.4s, min=19029s, max=20124s
+| calc_8789, maxmem=324.7 GB | time_sec  | memory_mb | counts      |
 |----------------------------+-----------+-----------+-------------|
-| total baseclassical        | 3_386_527 | 548.5     | 1_317       |
-| get_poes                   | 2_450_618 | 0.0       | 244_719_987 |
-| computing mean_std         | 1_011_329 | 0.0       | 4_938_260   |
-| total classical            | 728_327   | 268.2     | 1_803       |
-| nonplanar contexts         | 89_680    | 0.0       | 1_234_873   |
-| ClassicalCalculator.run    | 23_984    | 8_938     | 1           |
-# 6h40m
+| get_poes                   | 2_342_205 | 0.0       | 239_336_555 |
+| total baseclassical        | 2_153_181 | 513.3     | 1_050       |
+| total classical            | 1_612_089 | 107.8211  | 1_885       |
+| computing mean_std         | 865_352   | 0.0       | 4_805_677   |
+| nonplanar contexts         | 66_416    | 0.0       | 1_234_873   |
+| ClassicalCalculator.run    | 21_052    | 12_355    | 1           |
 
 | operation-duration | counts | mean    | stddev | min     | max     | slowfac |
 |--------------------+--------+---------+--------+---------+---------+---------|
-| baseclassical      | 1_315  | 2_575   | 74%    | 281.1   | 7_315   | 2.8407  |
-| classical          | 437    | 1_666   | 128%   | 369.7   | 9_958   | 5.9774  |
+| baseclassical      | 1_050  | 2_051   | 36%    | 587.9   | 3_027   | 1.4763  |
+| classical          | 428    | 3_766   | 41%    | 391.4   | 6_034   | 1.6022  |

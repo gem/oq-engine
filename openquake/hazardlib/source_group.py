@@ -543,7 +543,7 @@ class CompositeSourceModel:
 
     def split_sg(self, cmaker, sg, sitecol, max_weight,
                  num_chunks=1, tiling=False):
-        N = len(sitecol)
+        N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
@@ -664,27 +664,6 @@ def zunpik(data):
     unzip and unpickle some data array
     """
     return pickle.loads(zlib.decompress(data.tobytes())) 
-
-
-def store_src_groups(hdf5, grp_id, group, num_blocks):
-    """
-    Store the given source group in block of sources (unless it is
-    atomic) and return a list of keys to the generated datasets.
-    """
-    keys = []
-    blocks = numpy.array_split(group, num_blocks)
-    if num_blocks == 1:
-        key = f"_csm/{grp_id}"
-        hdf5[key] = zpik(group)
-        keys.append(key)
-    else:
-        for b, block in enumerate(blocks):
-            key = f"_csm/{grp_id}-{b}"
-            grp = copy.copy(group)
-            grp.sources = block
-            hdf5[key] = zpik(grp)
-            keys.append(key)
-    return keys
             
 
 def read_src_group(hdf5, key, mon=performance.Monitor()):

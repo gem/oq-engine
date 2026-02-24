@@ -1,3 +1,11 @@
+  [Yen-Shin Chen]
+  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
+    AD/MD, tests).
+
+  [Yen-Shin Chen]
+  * FDHA: added primary surface rupture package (base, Youngs et al. 2003
+    ExC/GB/nBR, tests).
+
   [Michele Simionato]
   * Changed the task distribution in classical calculations and reduced the
     slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)

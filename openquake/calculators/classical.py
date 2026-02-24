@@ -213,25 +213,26 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
-    elif len(grps) == 1 and len(grps[0]) >= 3:
+    elif len(grps) == 1 and len(grps[0]) >= 2:
         # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 5)
-        rest = sum(blks, [])
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
-        if dt > 2 * cmaker.split_time:
-            b1, *blks = _split_src(rest, 4)
-            for blk in blks:
+        if dt > 2 * cmaker.oq.split_time:
+            for blk in blks[1:]:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(b1, sites, cmaker, True)
-        elif dt > cmaker.split_time:
-            odd, even = _split_src(rest, 2)
-            yield baseclassical, odd, tilegetter, cmaker, True, dstore
-            yield baseclassical(even, sites, cmaker, True)
+            yield baseclassical(blks[0], sites, cmaker, True)
+        elif dt > cmaker.oq.split_time:
+            # tested in share_small
+            yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+                   True, dstore)
+            rest = sum(blks[2:], [])
+            if rest:
+                yield baseclassical(rest, sites, cmaker, True)
         else:
-            yield baseclassical(rest, sites, cmaker, True)
+            yield baseclassical(sum(blks, []), sites, cmaker, True)
     else:
         yield baseclassical(grps, sites, cmaker, True)
 
@@ -244,17 +245,13 @@ def fast_mean(pgetter, monitor):
     :param gweights: an array of Gt weights
     :returns: a dictionary kind -> MapArray
     """
-    with monitor('reading rates', measuremem=True):
-        pgetter.init()
-
-    with monitor('compute stats', measuremem=True):
-        hcurves = pgetter.get_fast_mean()
-
+    pgetter.init()  # 99% of the time is spent reading the rates
+    hcurves = pgetter.get_fast_mean()
     pmap_by_kind = {'hcurves-stats': [hcurves]}
     if pgetter.poes:
-        with monitor('make_hmaps', measuremem=False):
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+        # computing the hmaps is very fast too
+        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
     return pmap_by_kind
 
 
@@ -294,20 +291,16 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     if hstats:
         pmap_by_kind['hcurves-stats'] = [
             MapArray(sids, M, L1).fill(0) for r in range(S)]
-    combine_mon = monitor('combine pmaps', measuremem=False)
-    compute_mon = monitor('compute stats', measuremem=False)
-    hmaps_mon = monitor('make_hmaps', measuremem=False)
-    sidx = MapArray(sids, 1, 1).fill(0).sidx
-    for sid in sids:
-        idx = sidx[sid]
-        with combine_mon:
+    with monitor('compute stats', measuremem=False):
+        sidx = MapArray(sids, 1, 1).fill(0).sidx
+        for sid in sids:
+            idx = sidx[sid]
             pc = pgetter.get_hcurve(sid)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
                 # NB: the hcurve have soil levels != IMT levels
-        if pc.sum() == 0:  # no data
-            continue
-        with compute_mon:
+            if pc.sum() == 0:  # no data
+                continue
             if R == 1 or individual_rlzs:
                 for r in range(R):
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
@@ -324,13 +317,11 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
     if poes and (R == 1 or individual_rlzs):
-        with hmaps_mon:
-            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-rlzs'], imtls, poes)
+        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-rlzs'], imtls, poes)
     if poes and hstats:
-        with hmaps_mon:
-            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-                pmap_by_kind['hcurves-stats'], imtls, poes)
+        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+            pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
@@ -402,6 +393,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif not dic['source_data']:
+            # all the sources were filtered out
+            return acc
 
         sdata = dic.pop('source_data')
         grp_id = sdata['grp_id'][0]
@@ -481,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.max_weight = preclassical.store_tiles(
+            self.max_weight = preclassical.store_csm(
                 self.datastore, self.csm, self.sitecol,
                 self.cmdict['Default'])
 
@@ -604,11 +598,11 @@ class ClassicalCalculator(base.HazardCalculator):
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
-        self.split_time = split_time = max(max_gb * 120, 10)
+        if oq.split_time is None:
+            oq.split_time = max(max_gb * 100, 10)
         num_blocks = 0
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
-            cmaker.split_time = split_time
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
@@ -625,7 +619,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
         if not self.few_sites and self.rmap:
-            logging.info(f'{split_time=:.0f} seconds')
+            logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
@@ -697,8 +691,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_rlz_info(self.rel_ruptures)
         self.store_source_info(self.source_data)
 
-        # check est_ctxs vs num_ctxs
-        if self.N > self.oqparam.max_sites_disagg:
+        # check est_ctxs vs num_ctxs only for many sites
+        if self.oqparam.hazard_calculation_id is None and (
+                self.N > self.oqparam.max_sites_disagg):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
             info = info[info['num_ctxs'] > 0]
@@ -752,7 +747,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pass
         else:
             slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * self.split_time)
+                          dur.max() > 5 * oq.split_time)
             msg = 'There were %d slow task(s)' % slow_tasks
             if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))

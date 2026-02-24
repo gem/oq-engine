@@ -214,6 +214,11 @@ FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
+# In the list of calculations, the name of the owner of the job can be
+# displayed with or without the host name
+# (either 'username@hostname' or just 'username')
+DISPLAY_USER_HOST = False
+
 APPLICATION_MODES = [
     'PUBLIC',      # The default behavior without authentication
     'RESTRICTED',  # Enabling authentication

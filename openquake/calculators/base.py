@@ -41,7 +41,7 @@ from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
-    InvalidFile, geo, site, stats, logictree, source_reader)
+    InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -953,15 +953,9 @@ class HazardCalculator(BaseCalculator):
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
             # this is called by mosaic_for_ses/job_sites.csv
-            if oq.region or 'site_model' in oq.inputs:
-                self.sitecol, _array, _discarded = geo.utils.assoc(
-                    child, haz_sitecol, assoc_dist, 'filter')
-                self.datastore['sitecol'] = self.sitecol
-            elif oq.sites:
+            if 'site_model' not in oq.inputs:
                 child.assoc(haz_sitecol.array, assoc_dist, 'warn')
-                self.datastore['sitecol'] = self.sitecol = child
-            else:
-                raise RuntimeError('No region, no site_model no sites??')
+            self.datastore['sitecol'] = self.sitecol = child
         else:  # base case
             self.sitecol = haz_sitecol
         if self.sitecol and oq.imtls:
@@ -1473,13 +1467,14 @@ def import_ruptures_hdf5(h5, fnames):
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
-            E += len(events)
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
             rup['id'] += offset
             rup['geom_id'] += offset
+            rup['e0'] += E
+            E += len(events)
             offset += len(rup)
             if oq.mosaic_model:
                 # keep only the ruptures in the model
@@ -1492,8 +1487,14 @@ def import_ruptures_hdf5(h5, fnames):
                 h5[f'source_info/{oq.mosaic_model}'] = f['source_info'][:]
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
-    ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')
+
+    # sanity check
+    logging.info('Checking rupture IDs vs event IDs')
+    evs = h5['events'][:]
+    for rup in ruptures:
+        rup_id = evs[rup['e0']]['rup_id']
+        assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
 def import_gmfs_hdf5(dstore, oq):
@@ -1833,6 +1834,7 @@ class DstoreCache:
 
     def clear(self):
         os.remove(self.ini_hdf5_csv)
+
 
 dcache = DstoreCache(config.directory.custom_tmp)
 

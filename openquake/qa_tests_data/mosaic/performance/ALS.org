@@ -1,4 +1,4 @@
-Checksum of the inputs: 1043607312
+ALS master job_vs30.ini, checksum of the inputs: 1043607312
 
 * v3.24
 
@@ -15,19 +15,19 @@ Checksum of the inputs: 1043607312
 |--------------------+--------+---------+--------+---------+----------+---------|
 | classical          | 161    | 755.3   | 75%    | 72.3359 | 1_828    | 2.4197  |
 
-* master, worse due to "computing mean_std" :-(
+* master, much better
 
-| calc_8290, maxmem=192.4 GB | time_sec  | memory_mb | counts    |
-|----------------------------+-----------+-----------+-----------|
-| computing mean_std         | 254_307   | 0.0       | 70_132    |
-| total baseclassical        | 204_002   | 136.2969  | 1_055     |
-| total classical            | 165_992   | 44.9141   | 1_941     |
-| get_poes                   | 77_958    | 0.0       | 3_419_391 |
-| planar contexts            | 6_415     | 0.0       | 144_754   |
-| nonplanar contexts         | 6_377     | 0.0       | 46_273    |
-| ClassicalCalculator.run    | 2_194     | 660.7     | 1         |
+| calc_8605, maxmem=191.5 GB | time_sec | memory_mb | counts    |
+|----------------------------+----------+-----------+-----------|
+| computing mean_std         | 199_702  | 0.0       | 56_147    |
+| total classical            | 194_863  | 118.8945  | 1_411     |
+| total baseclassical        | 98_643   | 97.0273   | 600       |
+| get_poes                   | 64_550   | 0.0       | 2_806_988 |
+| nonplanar contexts         | 5_649    | 0.0       | 46_273    |
+| planar contexts            | 5_056    | 0.0       | 144_754   |
+| ClassicalCalculator.run    | 1_690    | 687.7     | 1         |
 
-| operation-duration | counts | mean   | stddev | min     | max     | slowfac |
-|--------------------+--------+--------+--------+---------+---------+---------|
-| baseclassical      | 794    | 255.3  | 70%    | 19.4530 | 897.1   | 3.5143  |
-| classical          | 272    | 605.1  | 94%    | 39.6861 | 2_103   | 3.4754  |
+| operation-duration | counts | mean     | stddev | min     | max     | slowfac |
+|--------------------+--------+----------+--------+---------+---------+---------|
+| baseclassical      | 599    | 164.6573 | 61%    | 20.1348 | 398.4   | 2.4193  |
+| classical          | 443    | 439.9    | 55%    | 48.4594 | 1_014   | 2.3042  |

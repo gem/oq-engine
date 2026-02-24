@@ -59,6 +59,7 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
         parameters (i.e. xvf will be zero for most models).
 
 """
+import os
 from openquake.baselib import sap
 from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
@@ -72,7 +73,9 @@ def main(mosaic_dir, out, models='ALL', *,
     ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
                             number_of_logic_tree_samples,
                             ses_per_logic_tree_path, minimum_magnitude)
-    return engine.run_workflow(ses_toml, {})
+    calc_id = engine.run_workflow(ses_toml, {})
+    os.remove(ses_toml)
+    return calc_id
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'

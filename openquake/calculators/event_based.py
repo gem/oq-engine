@@ -44,7 +44,7 @@ from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
-    SLICE_BY_EVENT_NSITES, get_close_regions, get_proxies)
+    SLICE_BY_EVENT_NSITES, get_close_regions, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
 from openquake.calculators.getters import sig_eps_dt
@@ -304,21 +304,6 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_model_lts(h5):
-    """
-    :returns: (model, full_lt) pairs
-    """
-    out = []
-    full_lt = h5['full_lt']
-    if hasattr(full_lt, 'gsim_lt'):
-        out.append(('???', full_lt))
-    else:
-        # full_lt is a h5py group
-        for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
-    return out
-
-
 def get_args(dstore):
     """
     Get the arguments (rups, cmaker, sids, stations, hdf5path);
@@ -341,11 +326,17 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
-        logging.info('Building rlzs_by_gsim for %s', model)
+        if model == '???':
+            logging.info('Building rlzs_by_gsim')
+        else:
+            logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    rup_id = os.environ.get('OQ_RUPTURE')
+    if rup_id is not None:
+        allrups = allrups[allrups['id'] == int(rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
@@ -373,6 +364,10 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
+
+    # store the filtered ruptures for debugging purposes
+    if dstore.hdf5.mode != 'r':
+        dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
@@ -404,7 +399,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
 
 
 # NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
+def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
                       dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -417,8 +412,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
         if numpy.isnan(vs30).any():
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
-    proxy = RuptureProxy(dstore['ruptures'][0])
-
+    proxy = RuptureProxy(rup0)
+    model = rup0['model'].decode('ascii')
+    _model, full_lt = base.get_model_lts(dstore, model)[0]
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
@@ -816,7 +812,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            _, self.full_lt = base.get_model_lts(dstore.parent)[0]
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)
             self.build_events_from_sources()
@@ -853,8 +848,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
+        rup0 = dstore['ruptures'][0]
         smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol,
+            event_based, oq, rup0, self.sitecol,
             getattr(self, 'assetcol', None), dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
@@ -888,35 +884,35 @@ class EventBasedCalculator(base.HazardCalculator):
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
+        all_events = self.datastore['events']
         if e == 0:
             raise RuntimeError(
                 'No GMFs were generated, perhaps they were '
                 'all below the minimum_intensity threshold')
-        elif e < len(self.datastore['events']):
-            self.datastore['relevant_events'] = rel_events
+        elif e < len(all_events):
+            self.datastore['relevant_events'] = all_events[:][rel_events]
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
-        # really compute and store the avg_gmf only without hc
-        if self.oqparam.hazard_calculation_id is None:
-            M = len(self.oqparam.imtls)
-            avg_gmf = numpy.zeros((2, N, C), F32)
-            min_iml = numpy.ones(C) * 1E-10
-            min_iml[:M] = self.oqparam.min_iml
-            for sid, avgstd in compute_avg_gmf(
-                    gmf_df, self.weights, min_iml).items():
-                avg_gmf[:, sid] = avgstd
-            self.datastore['avg_gmf'] = avg_gmf
-            # make avg_gmf plots only if running via the webui
-            if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
-                imts = list(self.oqparam.imtls)
-                ex = Extractor(self.datastore.calc_id)
-                for imt in imts:
-                    plt = plot_avg_gmf(ex, imt)
-                    bio = io.BytesIO()
-                    plt.savefig(bio, format='png', bbox_inches='tight')
-                    fig_path = f'png/avg_gmf-{imt}.png'
-                    logging.info(f'Saving {fig_path} into the datastore')
-                    self.datastore[fig_path] = Image.open(bio)
+        # compute and store the avg_gmf
+        M = len(self.oqparam.imtls)
+        avg_gmf = numpy.zeros((2, N, C), F32)
+        min_iml = numpy.ones(C) * 1E-10
+        min_iml[:M] = self.oqparam.min_iml
+        for sid, avgstd in compute_avg_gmf(
+                gmf_df, self.weights, min_iml).items():
+            avg_gmf[:, sid] = avgstd
+        self.datastore['avg_gmf'] = avg_gmf
+        # make avg_gmf plots only if running via the webui
+        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
+            imts = list(self.oqparam.imtls)
+            ex = Extractor(self.datastore.calc_id)
+            for imt in imts:
+                plt = plot_avg_gmf(ex, imt)
+                bio = io.BytesIO()
+                plt.savefig(bio, format='png', bbox_inches='tight')
+                fig_path = f'png/avg_gmf-{imt}.png'
+                logging.info(f'Saving {fig_path} into the datastore')
+                self.datastore[fig_path] = Image.open(bio)
 
     def post_execute(self, dummy):
         oq = self.oqparam

@@ -620,7 +620,7 @@ pointsource_distance:
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
   Example: *postproc_func = compute_mrd.main*
-  Default: 'dummy.main' (no postprocessing)
+  Default: '' (no postprocessing)
 
 postproc_args:
   Specify the arguments to be passed to the postprocessing function
@@ -811,11 +811,16 @@ spatial_correlation:
 specific_assets:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 split_sources:
   INTERNAL
 
-split_by_gsim:
-  INTERNAL
+split_time:
+  After how much time starts splitting classical tasks
+  Example: *split_time = 600*
+  Default: None, meaning the split_time is automatically determined
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
@@ -971,7 +976,9 @@ def check_increasing(dframe, *columns):
 
 
 class OqParam(valid.ParamSet):
+    _amplifier = None
     _input_files = ()  # set in get_oqparam
+    _sec_perils = ()
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
@@ -1119,7 +1126,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
+    postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
@@ -1172,6 +1179,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
