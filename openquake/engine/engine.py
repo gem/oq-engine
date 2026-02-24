@@ -424,6 +424,8 @@ OVERRIDABLE_PARAMS = (
     'minimum_magnitude',
     'mosaic_model',
     'ps_grid_spacing',
+    'postproc_func',
+    'postproc_args',
     'return_periods',
     'ses_seed',
     'sites',
