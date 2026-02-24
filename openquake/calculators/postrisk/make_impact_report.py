@@ -598,8 +598,7 @@ def to_utc_string(ts: str) -> str:
         return ret_str + "unknown"
     dt = datetime.fromisoformat(ts)
     if dt.tzinfo is None:
-        # FIXME: log properly or add a note to the pdf
-        print("Timestamp has no timezone information")
+        logging.warning("Timestamp has no timezone information")
         return ret_str + dt.strftime('%Y-%m-%d %H:%M:%S')
     dt_utc = dt.astimezone(timezone.utc)
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
