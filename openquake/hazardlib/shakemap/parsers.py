@@ -1516,7 +1516,7 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
     return rup, rupdic, err
 
 
-# tested in the nightly tests aristotle_run
+# tested in the nightly tests impact_run
 # the default argument is needed to avoid an
 # error in is_valid_shakemap
 def get_array_usgs_id(kind, id, contents={}):

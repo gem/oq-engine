@@ -531,7 +531,7 @@ def read_gsim_lt(oq):
                 oq.rupture_dict)
         if oq.gsim != '[FromFile]':
             raise ValueError(
-                'In Aristotle mode the gsim can not be specified in'
+                'In IMPACT mode the gsim can not be specified in'
                 ' the job.ini: %s' % oq.gsim)
         if oq.tectonic_region_type == '*':
             raise ValueError(

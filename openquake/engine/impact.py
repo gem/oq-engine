@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    AristotleParam, impact_validate)
+    ImpactParam, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -77,10 +77,10 @@ def main_cmd(usgs_id, rupture_file=None,
         assert config.directory.mosaic_dir
         exposure_hdf5 = os.path.join(config.directory.mosaic_dir,
                                      'exposure.hdf5')
-    AristotleParam.exposure_hdf5 = exposure_hdf5
+    ImpactParam.exposure_hdf5 = exposure_hdf5
 
     loc = locals().copy()
-    fields = set(AristotleParam.__dataclass_fields__) - {
+    fields = set(ImpactParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id

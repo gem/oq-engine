@@ -56,7 +56,7 @@ USE_REVERSE_PROXY = <True|False>
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
-# system time zone. Aelo or Aristotle services are expected to run on linux only.
+# system time zone. Aelo or Impact services are expected to run on linux only.
 # NOTE: the default value in settings.py is 'UTC'
 # TIME_ZONE =
 

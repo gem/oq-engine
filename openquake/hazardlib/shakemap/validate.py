@@ -35,7 +35,7 @@ MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
 
 @dataclass
-class AristotleParam:
+class ImpactParam:
     rupture_dict: dict
     time_event: str
     maximum_distance: float
@@ -363,7 +363,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
             rupdic[k] = round(v, 5)
 
     trts = {}
-    expo = getattr(AristotleParam, 'exposure_hdf5',
+    expo = getattr(ImpactParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_regions'):
         try:
@@ -387,7 +387,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['station_data_file'] = station_data_file
         params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
-            ap = AristotleParam(**params)
+            ap = ImpactParam(**params)
             try:
                 oqparams = ap.get_oqparams(
                     inputdic['usgs_id'], mosaic_models, trts, use_shakemap)

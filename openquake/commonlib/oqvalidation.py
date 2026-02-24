@@ -212,7 +212,7 @@ coordinate_bin_width:
   Default: 100 degrees, meaning don't disaggregate by lon, lat
 
 countries:
-  Used to restrict the exposure to a single country in Aristotle mode.
+  Used to restrict the exposure to a single country in IMPACT mode.
   Example: *countries = ITA*.
   Default: ()
 

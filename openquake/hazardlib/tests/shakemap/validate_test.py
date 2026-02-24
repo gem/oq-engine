@@ -36,7 +36,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
-class AristotleValidateTestCase(unittest.TestCase):
+class ImpactValidateTestCase(unittest.TestCase):
     @classmethod
     def setUp(cls):
         try:

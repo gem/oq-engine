@@ -1224,7 +1224,7 @@ def create_impact_job(request, params):
     #     # is meant to work with a subprocess
     #     impact.main_web(*args)
     # else:
-    #  spawn the Aristotle main process
+    #  spawn the Impact main process
     mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
@@ -1992,7 +1992,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
     elif application_mode == 'IMPACT':
-        kwargs['warnings'] = get_aristotle_warnings(ds)
+        kwargs['warnings'] = get_impact_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 
 
@@ -2191,7 +2191,7 @@ def determine_precision(weights):
     return max_decimal_places
 
 
-def get_aristotle_warnings(ds):
+def get_impact_warnings(ds):
     warnings = None
     if 'warnings' in ds:
         warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
@@ -2237,7 +2237,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    warnings = get_aristotle_warnings(ds)
+    warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
