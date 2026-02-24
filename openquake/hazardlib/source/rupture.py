@@ -728,6 +728,7 @@ class EBRupture(object):
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
                  e0=0, seed=42):
+        assert id < TWO30, id
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr

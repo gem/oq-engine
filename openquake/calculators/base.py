@@ -1467,13 +1467,14 @@ def import_ruptures_hdf5(h5, fnames):
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
-            E += len(events)
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
             rup['id'] += offset
             rup['geom_id'] += offset
+            rup['e0'] += E
+            E += len(events)
             offset += len(rup)
             if oq.mosaic_model:
                 # keep only the ruptures in the model
@@ -1486,8 +1487,14 @@ def import_ruptures_hdf5(h5, fnames):
                 h5[f'source_info/{oq.mosaic_model}'] = f['source_info'][:]
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
-    ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')
+
+    # sanity check
+    logging.info('Checking rupture IDs vs event IDs')
+    evs = h5['events'][:]
+    for rup in ruptures:
+        rup_id = evs[rup['e0']]['rup_id']
+        assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
 def import_gmfs_hdf5(dstore, oq):
