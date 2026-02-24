@@ -1490,6 +1490,12 @@ def import_ruptures_hdf5(h5, fnames):
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')
 
+    # sanity check
+    evs = h5['events'][:]
+    for rup in ruptures:
+        rup_id = evs[rup['e0']]['rup_id']
+        assert rup_id == rup['id'], (rup_id, rup['id'])
+
 
 def import_gmfs_hdf5(dstore, oq):
     """
