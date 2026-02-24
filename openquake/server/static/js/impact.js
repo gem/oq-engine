@@ -129,6 +129,7 @@ window.initImpactForm = function() {
         shakemap_selector.empty();
         const usgs_id = $.trim($("#usgs_id").val());
         if (usgs_id == '') return;
+        $('input#usgs_id').prop('disabled', true);
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('#getStationDataFromUsgs').prop('disabled', true);
         $('#submit_impact_calc').prop('disabled', true);
@@ -168,6 +169,7 @@ window.initImpactForm = function() {
             var err_msg = resp.error_msg;
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
+            $('input#usgs_id').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
             $('#getStationDataFromUsgs').prop('disabled', false);
             toggleRunCalcBtnState();

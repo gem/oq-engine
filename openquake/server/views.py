@@ -41,11 +41,11 @@ from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden, JsonResponse, Http404)
+    HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
@@ -65,7 +65,7 @@ from openquake.calculators.export import (
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
-from openquake.calculators.postproc.make_impact_report import main as make_impact_report
+# from openquake.calculators.postproc.make_impact_report import main as make_impact_report
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
@@ -1003,23 +1003,6 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
-class JobPostProcessing:
-    def __init__(self, job_id):
-        self.job_id = job_id
-
-    def __enter__(self):
-        dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                 {'status': 'post-processing', 'is_running': 1}, self.job_id)
-
-    def __exit__(self, exc_type, exc, tb):
-        if exc_type is None:
-            dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                     {'status': 'complete', 'is_running': 0}, self.job_id)
-        else:
-            dbapi.db("UPDATE job SET ?D WHERE id=?x",
-                     {'status': 'failed', 'is_running': 0}, self.job_id)
-
-
 def impact_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
@@ -1086,8 +1069,6 @@ def impact_callback(
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-        with JobPostProcessing(job_id):
-            make_impact_report(job_id)
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
@@ -1290,7 +1271,7 @@ def impact_run(request):
     if station_source is not None:
         params['station_source'] = station_source
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    # params['postproc_func'] = 'make_impact_report.main'
+    params['postrisk_func'] = 'make_impact_report.main'
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
