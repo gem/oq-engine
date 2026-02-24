@@ -67,7 +67,7 @@ def setup_module():
         evs = parent['events'][:]
         ae(evs['id'], numpy.arange(33967))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [16589, 16590, 16591])  # large enough e0
+        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
