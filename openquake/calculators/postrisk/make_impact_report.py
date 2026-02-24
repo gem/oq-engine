@@ -19,11 +19,10 @@
 
 import os
 import tempfile
-# import logging
+import logging
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
-# from contextlib import contextmanager
 
 from PIL import Image as PILImage
 import pandas as pd
@@ -92,7 +91,7 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
     return gdf
 
 
-def aggregate_losses(*, points_gdf, admin_gdf, tags_agg, adm_level):
+def aggregate_losses(points_gdf, admin_gdf, tags_agg, adm_level):
     joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
     group_col = 'shapeID'
     merge_args = dict(on=group_col)
@@ -130,9 +129,7 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
-    df = aggregate_losses(
-        points_gdf=points_gdf, admin_gdf=admin_boundaries,
-        tags_agg=tags_agg, adm_level=adm_level)
+    df = aggregate_losses(points_gdf, admin_boundaries, tags_agg, adm_level)
 
     df = df.rename(columns={k: v["label"] for k, v in LOSS_METADATA.items()})
 

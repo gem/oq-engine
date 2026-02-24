@@ -531,7 +531,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     :returns:
         list of tuples (id, user_name, status, calculation_mode, is_running,
                         description, pid, hazard_calculation_id, size_mb,
-                        host, start_time, relevant)
+                        host, start_time, relevant, tags)
     """
     # helper to get job+calculation data from the oq-engine database
     query_params = []

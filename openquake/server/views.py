@@ -65,7 +65,6 @@ from openquake.calculators.export import (
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
-# from openquake.calculators.postproc.make_impact_report import main as make_impact_report
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
