@@ -58,14 +58,12 @@
               </div>
               {% endif %}
               {% endif %}
+              {% for iso3 in impact_iso3_list %}
               <div class="my-pngs">
-                <a href="#" class="btn btn-sm" onclick="
-                  {% for iso3 in impact_iso3_list %}
-                  window.open('/v1/calc/{{ calc_id }}/impact_report?iso3={{ iso3 }}');
-                  {% endfor %}
-                  return false;">
-                  Open impact report(s)</a>
+                <a href="/v1/calc/{{ calc_id }}/impact_report?&iso3={{ iso3 }}" class="btn btn-sm" target="_blank">
+                    Open impact report ({{ iso3 }})</a>
               </div>
+              {% endfor %}
             </div>
             <div class="outputs-general-btns-center"></div>
             <div class="outputs-general-btns-right">
