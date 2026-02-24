@@ -510,9 +510,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            full_lt = self.datastore['full_lt']
+            rup0 = self.datastore['ruptures'][0]
             smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.assetcol,
+                ebrisk, oq, rup0, self.sitecol, self.assetcol,
                 self.datastore, self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
