@@ -426,6 +426,8 @@ OVERRIDABLE_PARAMS = (
     'ps_grid_spacing',
     'postproc_func',
     'postproc_args',
+    'postrisk_func',
+    'postrisk_args',
     'return_periods',
     'ses_seed',
     'sites',
