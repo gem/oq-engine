@@ -83,9 +83,8 @@ def test_impact(n):
         # test export_aggexp
         fnames = export(('aggexp_tags', 'csv'), calc.datastore)
         assert [strip(f) for f in fnames] == [
-            'aggexp_tags-NAME_1-OCCUPANCY.csv',
-            'aggexp_tags-NAME_1.csv',
-            'aggexp_tags-OCCUPANCY.csv']
+            'aggexp_tags-ID_0.csv',
+            'aggexp_tags-ID_2.csv']
 
         fnames = check_export_job(calc.datastore)
 
