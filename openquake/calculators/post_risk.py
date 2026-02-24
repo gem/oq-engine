@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.hazardlib.stats import weighted_quantiles
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
-from openquake.calculators import base, views
+from openquake.calculators import base, views, postrisk
 from openquake.calculators.base import expose_outputs
 from openquake.calculators.extract import extract
 
@@ -690,6 +690,14 @@ class PostRiskCalculator(base.RiskCalculator):
         # save agg_curves-stats
         if self.R > 1 and 'aggcurves' in self.datastore:
             save_curve_stats(self.datastore)
+
+        if oq.postrisk_func:
+            modname, funcname = oq.postrisk_func.rsplit('.', 1)
+            mod = getattr(postrisk, modname)
+            func = getattr(mod, funcname)
+            with self._monitor(oq.postrisk_func, measuremem=True):
+                func(self.datastore, **oq.postrisk_args)
+
 
 
 def post_aggregate(calc_id: int, aggregate_by):
