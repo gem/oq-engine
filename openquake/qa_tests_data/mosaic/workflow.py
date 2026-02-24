@@ -149,6 +149,7 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job_vs30.ini"')
+            lst.append('postproc_func = "dummy.main"')
             if model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50

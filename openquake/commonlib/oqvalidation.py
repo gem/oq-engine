@@ -627,6 +627,16 @@ postproc_args:
   Example: *postproc_args = {'imt': 'PGA'}*
   Default: {} (no arguments)
 
+postrisk_func:
+  Specify a postrisk function in calculators/postrisk.
+  Example: *postrisk_func = pdf_report.main*
+  Default: '' (no postprocessing)
+
+postrisk_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postrisk_args = {}*
+  Default: {} (no arguments)
+
 prefer_global_site_params:
   INTERNAL. Automatically set by the engine.
 
@@ -1128,6 +1138,8 @@ class OqParam(valid.ParamSet):
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    postrisk_func = valid.Param(valid.mod_func, '')
+    postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
