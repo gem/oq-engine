@@ -1319,10 +1319,11 @@ def impact_run_with_shakemap(request):
     return JsonResponse(response_data, status=200)
 
 
-def extract_pdf_from_datastore(dstore):
-    # FIXME: handle multi-country case
-    iso3 = list(dstore['impact'])[0]
-    data = dstore['impact'][iso3]['report_pdf'][()]
+def extract_pdf_from_datastore(dstore, iso3):
+    impact_group = dstore['impact']
+    if iso3 not in impact_group:
+        raise ValueError(f"ISO3 '{iso3}' not found")
+    data = impact_group[iso3]['report_pdf'][()]
     return bytes(data)
 
 
@@ -1335,17 +1336,21 @@ def impact_report(request, calc_id):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
+    iso3 = request.GET.get("iso3")
+    if not iso3:
+        return HttpResponse("Missing iso3 parameter", status=400)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            pdf_bytes = extract_pdf_from_datastore(ds)
+            pdf_bytes = extract_pdf_from_datastore(ds, iso3)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
-            content_type='text/plain', status=400)
+            content=f'{exc.__class__.__name__}: {exc}\n{tb}',
+            content_type='text/plain',
+            status=400
+        )
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = "inline; filename=impact_report.pdf"
+    response["Content-Disposition"] = f"inline; filename=impact_report_{iso3}.pdf"
     return response
 
 
@@ -2235,6 +2240,7 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
+        impact_iso3_list = list(ds['impact'].keys())
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
@@ -2262,7 +2268,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
-                       aggrisk_tags=aggrisk_tags)
+                       aggrisk_tags=aggrisk_tags,
+                       impact_iso3_list=impact_iso3_list)
                   )
 
 

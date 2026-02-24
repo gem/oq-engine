@@ -521,9 +521,4 @@ def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):
         raise ValueError(
             f"({lon}, {lat}) is farther than {buffer_radius} deg"
             f" from any {region_kind.replace('_', ' ')}!")
-    elif len(close_regions) > 1:
-        logging.info(
-            f"({lon}, {lat}) is close to the following"
-            f" {region_kind.replace('_', ' ')}(s): %s",
-            lon, lat, close_regions)
     return close_regions

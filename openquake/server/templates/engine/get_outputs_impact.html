@@ -59,8 +59,12 @@
               {% endif %}
               {% endif %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/impact_report" class="btn btn-sm">
-                  Show impact report</a>
+                <a href="#" class="btn btn-sm" onclick="
+                  {% for iso3 in impact_iso3_list %}
+                  window.open('/v1/calc/{{ calc_id }}/impact_report?iso3={{ iso3 }}');
+                  {% endfor %}
+                  return false;">
+                  Open impact report(s)</a>
               </div>
             </div>
             <div class="outputs-general-btns-center"></div>

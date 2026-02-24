@@ -161,19 +161,16 @@ def _fmt_int(v):
     return "" if v is None else f"{int(round(v))}"
 
 
-def _get_impact_summary_ranges(dstore):
-    # FIXME: the totals are for ALL countries
+def _get_impact_summary_ranges(dstore, iso3):
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
         meta["label"]: loss_type
         for loss_type, meta in LOSS_METADATA.items()
     }
-
     rows = aggrisk_tags.loc[
-        (aggrisk_tags['ID'] == '*total*') &
+        (aggrisk_tags['ID_0'] == iso3) &
         (aggrisk_tags['loss_type'].isin(mapping.values()))
     ]
-
     summary_ranges = {
         label: f"{_fmt_int(r.q05)} - {_fmt_int(r.q95)}"
         for label, lt in mapping.items()
@@ -607,7 +604,7 @@ def to_utc_string(ts: str) -> str:
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
-def main(dstore, adm_level=2, threshold_deg=3):
+def main(dstore, adm_level=1, threshold_deg=3):
     """
     Create a PDF impact report
     """
@@ -628,7 +625,6 @@ def main(dstore, adm_level=2, threshold_deg=3):
     oqparam = dstore['oqparam']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
-    summary_ranges = _get_impact_summary_ranges(dstore)
     losses_df = _get_losses(dstore)
     rupdic = oqparam.rupture_dict
     event_name = rupdic['title']
@@ -648,12 +644,14 @@ def main(dstore, adm_level=2, threshold_deg=3):
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
-    # TODO: handle multi-country case (hypocenter close to borders)
-    iso3 = iso3_codes[0]
-    make_report_for_country(
-        iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, adm_level, dstore)
+    for iso3 in iso3_codes:
+        logging.info(f'Making impact PDF report for {iso3}...')
+        summary_ranges = _get_impact_summary_ranges(dstore, iso3)
+        make_report_for_country(
+            iso3, event_name, event_date, shakemap_version, time_of_calc,
+            disclaimer_txt, notes_txt, losses_df, summary_ranges,
+            basemap_path, adm_level, dstore)
+        logging.info('Done.')
 
 
 if __name__ == '__main__':
