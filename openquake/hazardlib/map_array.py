@@ -583,16 +583,16 @@ class RateMap:
         rates_g = self.array[:, :, self.jid[g]]
         return from_rates_g(rates_g, g, self.sids, self.level0)
 
-    def split(self):
+    def split(self, L1):
         """
-        Split in L RateMaps, one for each level
+        Split in M = L / L1 RateMaps, one for each IMT
         """
         out = []
-        for lvl in range(self.shape[1]):
+        for lvl in range(0, self.shape[1], L1):
             new = object.__new__(self.__class__)
             new.sids = self.sids
-            new.shape = len(self.sids), 1, len(self.jid)
-            new.array = self.array[:, [lvl], :]
+            new.shape = len(self.sids), L1, len(self.jid)
+            new.array = self.array[:, lvl:lvl+L1, :]
             new.jid = self.jid
             new.level0 = lvl
             out.append(new)
