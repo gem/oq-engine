@@ -157,10 +157,6 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
         dstore[f"impact/{iso3}/png/{label}"] = buf.getvalue()
 
 
-def _fmt_int(v):
-    return "" if v is None else f"{int(round(v))}"
-
-
 def _get_impact_summary_ranges(dstore, iso3):
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
@@ -171,8 +167,10 @@ def _get_impact_summary_ranges(dstore, iso3):
         (aggrisk_tags['ID_0'] == iso3) &
         (aggrisk_tags['loss_type'].isin(mapping.values()))
     ]
+    if rows.empty:
+        return None
     summary_ranges = {
-        label: f"{_fmt_int(r.q05)} - {_fmt_int(r.q95)}"
+        label: f"{int(round(r.q05))} - {int(round(r.q95))}"
         for label, lt in mapping.items()
         for r in [rows.loc[rows['loss_type'] == lt].iloc[0]]
     }
@@ -512,6 +510,7 @@ class CountryReportBuilder:
         return tbl
 
     def build(self):
+        logging.info(f'Making impact PDF report for {self.iso3}...')
         self._generate_country_plot()
 
         buffer = BytesIO()
@@ -552,7 +551,10 @@ class CountryReportBuilder:
         doc.build([master_layout])
 
         buffer.seek(0)
-        self.dstore[f"impact/{self.iso3}/report_pdf"] = buffer.getvalue()
+        report_path = f'impact/{self.iso3}/report_pdf'
+        self.dstore[report_path] = buffer.getvalue()
+        logging.info(
+            f'The report was saved into the datastore as {report_path}')
 
 
 def make_report_for_country(
@@ -645,13 +647,12 @@ def main(dstore, adm_level=1, threshold_deg=3):
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
     for iso3 in iso3_codes:
-        logging.info(f'Making impact PDF report for {iso3}...')
         summary_ranges = _get_impact_summary_ranges(dstore, iso3)
-        make_report_for_country(
-            iso3, event_name, event_date, shakemap_version, time_of_calc,
-            disclaimer_txt, notes_txt, losses_df, summary_ranges,
-            basemap_path, adm_level, dstore)
-        logging.info('Done.')
+        if summary_ranges is not None:
+            make_report_for_country(
+                iso3, event_name, event_date, shakemap_version, time_of_calc,
+                disclaimer_txt, notes_txt, losses_df, summary_ranges,
+                basemap_path, adm_level, dstore)
 
 
 if __name__ == '__main__':

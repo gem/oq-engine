@@ -2240,7 +2240,10 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
-        impact_iso3_list = list(ds['impact'].keys())
+        if 'impact' in ds:
+            impact_iso3_list = list(ds['impact'])
+        else:
+            impact_iso3_list = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
