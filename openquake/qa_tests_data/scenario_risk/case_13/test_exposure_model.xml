@@ -19,10 +19,12 @@
     <field oq="structural" input="COST_STRUCTURAL_USD" />
   </exposureFields>
 
-    <tagNames>ID_0 NAME_0 ID_1 NAME_1 ID_2 NAME_2 ID_3 NAME_3 CITY_NAME</tagNames>
-    <assets>
-      test_exposure.csv 
-    </assets>
+  <tagNames>
+    ID_0 NAME_0 ID_1 NAME_1 ID_2 NAME_2 ID_3 NAME_3 CITY_NAME MACRO_TAXONOMY
+  </tagNames>
+  <assets>
+    test_exposure.csv 
+  </assets>
   </exposureModel>
-
+  
 </nrml>

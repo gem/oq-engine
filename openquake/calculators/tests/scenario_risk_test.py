@@ -285,6 +285,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles('expected/avg_losses.csv', fname)
 
+        # check aggregation by MACRO_TAXONOMY, avg_losses_by
+        df = extract(self.calc.datastore, 'avg_losses_by/MACRO_TAXONOMY')
+        assert list(df.MACRO_TAXONOMY) == ['CR+CIP/NONRES']
+
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
         self.run_calc(case_shakemap.__file__, 'job.ini',
