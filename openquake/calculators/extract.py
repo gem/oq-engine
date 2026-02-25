@@ -1044,7 +1044,8 @@ def extract_avg_losses_by(dstore, tagname):
     :returns: an aggregate DataFrame with fields (tagname, loss_type, ...)
     """
     oq = dstore['oqparam']
-    assert oq.collect_rlzs  # there is a single realization in avg_losses-rlzs
+    R = len(base.get_weights(oq, dstore))
+    assert R == 1 or oq.collect_rlzs  # single realization in avg_losses-rlzs
     assetcol = dstore['assetcol']
     out = {tagname: getattr(assetcol.tagcol, tagname)[1:]}
     for lt, dset in dstore['avg_losses-rlzs'].items():

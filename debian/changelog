@@ -1,10 +1,13 @@
-  [Yen-Shin Chen]
-  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
-    AD/MD, tests).
+  [Michele Simionato]
+  * Fixed `avg_losses_by` in case of a single realization
+  * Optimized the saving of the rates in large classical calculations
+  * Fixed the rup_id <-> event_id associations in openquake.engine.global_ses
 
   [Yen-Shin Chen]
+  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
+    AD/MD, tests)
   * FDHA: added primary surface rupture package (base, Youngs et al. 2003
-    ExC/GB/nBR, tests).
+    ExC/GB/nBR, tests)
 
   [Michele Simionato]
   * Changed the task distribution in classical calculations and reduced the
