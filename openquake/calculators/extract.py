@@ -38,7 +38,7 @@ from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
-from openquake.hazardlib.stats import calc_stats
+from openquake.hazardlib.stats import calc_stats, compute_stats2
 from openquake.hazardlib.source import rupture
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
@@ -1830,6 +1830,52 @@ def extract_high_sites(dstore, what):
     """
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
     return (max_hazard > .2).all(axis=1)  # shape N
+
+
+def _get_data(dstore, dskey, loss_types, stats):
+    name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
+    if kind == 'stats':
+        try:
+            weights = dstore['weights'][()]
+        except KeyError:
+            # there is single realization, like in classical_risk/case_2
+            weights = [1.]
+        if dskey in set(dstore):  # precomputed
+            rlzs_or_stats = list(stats)
+            statfuncs = [stats[ros] for ros in stats]
+            value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
+        elif dstore['oqparam'].collect_rlzs:
+            rlzs_or_stats = list(stats)
+            value = avglosses(dstore, loss_types, 'rlzs')
+        else:  # compute on the fly
+            rlzs_or_stats, statfuncs = zip(*stats.items())
+            value = compute_stats2(
+                avglosses(dstore, loss_types, 'rlzs'), statfuncs, weights)
+    else:  # rlzs
+        value = avglosses(dstore, loss_types, kind)  # shape (A, R, L)
+        R = value.shape[1]
+        rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
+    return name, value, rlzs_or_stats
+
+
+@extract.add('avg_losses')
+def extract_avg_losses(dstore, what):
+    """
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/avg_losses?kind=stats
+    """
+    oq = dstore['oqparam']
+    qdict = parse(what)
+    dskey = f"avg_losses-{qdict['kind'][0]}"
+    name, value, rlzs_or_stats = _get_data(
+        dstore, dskey, oq.ext_loss_types, oq.hazard_stats())
+    assets = util.get_assets(dstore)
+    dt = [(lt, F32) for lt in oq.ext_loss_types]
+    for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
+        array = numpy.zeros(len(values), dt)
+        for lt, ln in enumerate(oq.ext_loss_types):
+            array[ln] = values[:, lt]
+        yield ros, util.compose_arrays(assets, array)
 
 
 # #####################  extraction from the WebAPI ###################### #

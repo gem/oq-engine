@@ -29,7 +29,6 @@ import pandas as pd
 import geopandas as gpd
 from openquake import baselib
 from openquake.baselib import config, sap
-from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.postproc.plots import plot_variable
 from openquake.commonlib import logs
@@ -175,15 +174,6 @@ def _get_impact_summary_ranges(dstore, iso3):
         for r in [rows.loc[rows['loss_type'] == lt].iloc[0]]
     }
     return summary_ranges
-
-
-def _get_losses(dstore):
-    # TODO: check if there is a better way
-    fnames = export(('avg_losses-stats', 'csv'), dstore)
-    avg_losses_mean_fname = [
-        fname for fname in fnames if 'avg_losses-mean' in fname][0]
-    losses_df = load_losses_csv(avg_losses_mean_fname)
-    return losses_df
 
 
 class CountryReportBuilder:
@@ -627,7 +617,8 @@ def main(dstore, adm_level=1, threshold_deg=3):
     oqparam = dstore['oqparam']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
-    losses_df = _get_losses(dstore)
+    avg_losses = extract(dstore, 'avg_losses?kind=stats')
+    losses_df = pd.DataFrame(avg_losses.mean)
     rupdic = oqparam.rupture_dict
     event_name = rupdic['title']
     # FIXME: do we prefer to show UTC or perhaps it is more intuitive

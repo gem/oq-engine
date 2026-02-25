@@ -26,10 +26,9 @@ import pandas
 from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
-from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, sanitize, avglosses, aggexp_tags)
+    extract, sanitize, _get_data, aggexp_tags)
 from openquake.calculators import base, post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
@@ -181,32 +180,6 @@ def export_mmi_tags(ekey, dstore):
     df = extract(dstore, 'mmi_tags')
     writer.save(df, dest, df.columns, comment=dstore.metadata)
     return [dest]
-
-
-def _get_data(dstore, dskey, loss_types, stats):
-    name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
-    if kind == 'stats':
-        try:
-            weights = dstore['weights'][()]
-        except KeyError:
-            # there is single realization, like in classical_risk/case_2
-            weights = [1.]
-        if dskey in set(dstore):  # precomputed
-            rlzs_or_stats = list(stats)
-            statfuncs = [stats[ros] for ros in stats]
-            value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
-        elif dstore['oqparam'].collect_rlzs:
-            rlzs_or_stats = list(stats)
-            value = avglosses(dstore, loss_types, 'rlzs')
-        else:  # compute on the fly
-            rlzs_or_stats, statfuncs = zip(*stats.items())
-            value = compute_stats2(
-                avglosses(dstore, loss_types, 'rlzs'), statfuncs, weights)
-    else:  # rlzs
-        value = avglosses(dstore, loss_types, kind)  # shape (A, R, L)
-        R = value.shape[1]
-        rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
-    return name, value, rlzs_or_stats
 
 
 # this is used by event_based_risk, classical_risk and scenario_risk
