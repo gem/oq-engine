@@ -527,11 +527,12 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-def from_rates_g(rates_g, g, sids):
+def from_rates_g(rates_g, g, sids, level0=0):
     """
     :param rates_g: an array of shape (N, L)
     :param g: an integer representing a GSIM index
     :param sids: an array of site IDs
+    :param level0: level offset
     """
     # sanity check
     assert len(rates_g) == len(sids), (len(rates_g), len(sids))
@@ -541,7 +542,7 @@ def from_rates_g(rates_g, g, sids):
         if len(idxs):
             out = numpy.zeros(len(idxs), rates_dt)
             out['sid'] = sids[idxs]
-            out['lid'] = lid
+            out['lid'] = level0 + lid
             out['gid'] = g
             out['rate'] = rates[idxs]
             outs.append(out)
@@ -559,6 +560,7 @@ class RateMap:
     sidx = MapArray.sidx
     size_mb = MapArray.size_mb
     __repr__ = MapArray.__repr__
+    level0 = 0
 
     def __init__(self, sids, L, gids):
         self.sids = sids
@@ -579,4 +581,19 @@ class RateMap:
         returns a composite array with fields sid, lid, gid, rate
         """
         rates_g = self.array[:, :, self.jid[g]]
-        return from_rates_g(rates_g, g, self.sids)
+        return from_rates_g(rates_g, g, self.sids, self.level0)
+
+    def split(self):
+        """
+        Split in L RateMaps, one for each level
+        """
+        out = []
+        for lvl in range(self.shape[1]):
+            new = object.__new__(self.__class__)
+            new.sids = self.sids
+            new.shape = len(self.sids), 1, len(self.jid)
+            new.array = self.array[:, [lvl], :]
+            new.jid = self.jid
+            new.level0 = lvl
+            out.append(new)
+        return out

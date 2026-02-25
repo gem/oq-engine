@@ -653,7 +653,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Saving %d RateMaps, %.1f GB', len(self.rmap), size_gb)
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
-                savemap.submit((rmap, self.num_chunks))
+                for rm in rmap.split():
+                    savemap.submit((rm, self.num_chunks))
             savemap.reduce()
         else:
             # store sequentially
