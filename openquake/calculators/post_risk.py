@@ -640,7 +640,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
-        if 'avg_losses-rlzs' in self.datastore and oq.collect_rlzs:
+        if 'avg_losses-rlzs' in self.datastore and (
+                oq.collect_rlzs or self.R == 1):
             # in case of the global risk model create additional datasets
             tagnames = ['taxonomy']
             if 'MACRO_TAXONOMY' in self.assetcol.tagcol.tagnames:
