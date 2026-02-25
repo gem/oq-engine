@@ -587,6 +587,7 @@ class RateMap:
         """
         Split in M = L / L1 RateMaps, one for each IMT
         """
+        assert self.shape[1] % L1 == 0, "L != L1 * M"
         out = []
         for lvl in range(0, self.shape[1], L1):
             new = object.__new__(self.__class__)
