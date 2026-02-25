@@ -1672,13 +1672,16 @@ def get_dists(ctx):
             if par in KNOWN_DISTANCES}
 
 
-# used in a few hazardlib tests
+# used in a few hazardlib tests, more or less replaces
+# gsim.get_mean_and_stddevs(rctx, rctx, rctx, imt, stddev_types)
 def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
-    # rctx: a RuptureContext with site information
-    # gsim: a GSIM instance
-    # imt: an IMT string
-    # idx: an index in the range 0..3 (default [0,1,2,3])
-    # returns two arrays (mean, stddevs)
+    """
+    :param rctx: a RuptureContext with site and distance information
+    :param gsim: a GSIM instance
+    :param imt: an IMT string
+    :param idx: index (or list of indices) in the range 0..3 (default [0,1,2,3])
+    :returns: array of shape N or (len(idx), N)
+    """
     cmaker = simple_cmaker([gsim], [imt])
     ctx = cmaker.recarray([rctx])
     out = cmaker.get_mean_stds([ctx])

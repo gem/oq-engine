@@ -29,19 +29,19 @@ This output may change depending on the engine version. There are several comman
 *purge, show_attrs, export, restore,* … You can get 
 information about each command with *oq <command> –help*; for instance, here is the help for *purge*::
 
-	$ oq purge --help
-	usage: oq purge [-h] [-f] calc_id
-	
-	Remove the given calculation. If you want to remove all calculations, use oq
-	reset.
-	
-	positional arguments:
-	  calc_id      calculation ID
-	
-	optional arguments:
-	  -h, --help   show this help message and exit
-	  -f, --force  ignore dependent calculations
-
+  $ oq purge --help
+  usage: oq purge [-h] [-f] [-d 30] what
+  
+  Remove calculations from the database and the file system. If you want
+  to remove everything, use oq reset.
+  
+  positional arguments:
+    what              a calculation ID or the string "failed", "old" or "orphan"
+  
+  options:
+    -h, --help        show this help message and exit
+    -f, --force       really remove, otherwise just print a message
+    -d 30, --days 30  purge calculations older than days, if given
 
 oq info
 -------
