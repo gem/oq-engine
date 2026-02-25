@@ -21,7 +21,7 @@ import sys
 import gzip
 import numpy
 from unittest import mock
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
@@ -143,7 +143,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_06(self):
         # test with site-dependent logic trees
-        self.run_calc(case_06.__file__, 'job.ini')
+        with mock.patch.dict(config.memory, {'pmap_max_mb': .0006}):
+            self.run_calc(case_06.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
 
