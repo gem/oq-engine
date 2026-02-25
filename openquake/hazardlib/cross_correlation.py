@@ -20,7 +20,7 @@ import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
-
+from openquake.hazardlib.truncated_MVN import TruncatedMVN
 
 # ############ CrossCorrelation for the conditional spectrum ############ #
 
@@ -159,8 +159,7 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return rng.multivariate_normal(
-            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return TruncatedMVN(np.zeros(len(imts)), corma, np.zeros(len(imts) - self.truncation_level, np.zeros(len(imts) + self.truncation_level).sample(num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
