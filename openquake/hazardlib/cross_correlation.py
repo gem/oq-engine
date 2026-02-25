@@ -101,8 +101,7 @@ class CrossCorrelationBetween(ABC):
         if truncation_level < 1E-9:
             truncation_level = 1E-9
         self.truncation_level = truncation_level
-        self.distribution = stats.truncnorm(-truncation_level,
-                                            truncation_level)
+        self.distribution = stats.truncnorm(-1, 1)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
