@@ -1182,16 +1182,17 @@ class ContextMaker(object):
         self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def get_rmap(self, srcgroup, sitecol):
+    def get_rmap(self, ctx):
         """
-        Used for debugging simple sources
+        Used for debugging
 
-        :param srcgroup: a group of sources
-        :param sitecol: a SiteCollection instance
-        :returns: an array of annual rates of shape (N, L, G)
+        :param ctx: a context array
+        :returns: a MapArray of annual rates of shape (N, L, G)
         """
-        pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
-        return (~pmap).to_rates()
+        rmap = (~self.get_pmap(ctx)).to_rates()
+        rmap.gid = self.gid
+        rmap.wei = self.wei
+        return rmap
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
