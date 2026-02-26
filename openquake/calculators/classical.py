@@ -127,12 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(rmap, num_chunks, mon):
+def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
     for g in rmap.jid:
-        _store(rmap.to_array(g), num_chunks, None, mon)
+        _store(rmap.to_array(g), num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -239,7 +239,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
 # NB: fast_mean is used only if there are no site_labels
-def fast_mean(pgetter, monitor):
+def fast_mean(pgetter, monitor=parallel.Monitor()):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param gweights: an array of Gt weights
@@ -656,7 +656,7 @@ class ClassicalCalculator(base.HazardCalculator):
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
-                    savemap.submit((rm, self.num_chunks))
+                    savemap.submit((rm, self.num_chunks, None))
             savemap.reduce()
         else:
             # store sequentially
