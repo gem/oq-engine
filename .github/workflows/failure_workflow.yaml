@@ -17,6 +17,7 @@ on:
       - "Weekly Engine tests"
       - "Cluster ZMQ"
       - "WebUI frontend UI tests" 
+      - "Publish Python distribution to PyPI and TestPyPI"
     types:
       - completed
 
