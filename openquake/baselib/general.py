@@ -526,7 +526,7 @@ def extract_dependencies(lines):
             pkg, version, _other = longname.split('-', 2)
         except ValueError:  # for instance a comment
             continue
-        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
+        if pkg in ('fonttools', 'protobuf', 'python_dateutil',
                    'python_pam', 'django_cors_headers',
                    'django_cookie_consent'):
             # not importable
