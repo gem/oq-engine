@@ -31,7 +31,10 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy, Point
 from shapely.strtree import STRtree
-
+try:
+    from h3.api.numpy_int import geo_to_h3 as latlng_to_cell
+except ImportError:  # h3 version 4
+    from h3.api.numpy_int import latlng_to_cell
 from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile, split_array
 from openquake.hazardlib import geo
@@ -983,5 +986,4 @@ def hex6(lons, lats):
     >>> hex6(F64([10., 10.]), F64([45., 46.]))
     ['831ea6', '831f99']
     """
-    import h3  # import it only when needed
-    return [h3.geo_to_h3(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]
+    return [latlng_to_cell(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]
