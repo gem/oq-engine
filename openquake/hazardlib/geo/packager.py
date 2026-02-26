@@ -245,7 +245,12 @@ class GeoPackager(object):
         for layer in fiona.listlayers(self.fname):
             with fiona.open(self.fname, 'r', 'GPKG',
                             encoding='utf8', layer=layer) as col:
-                data.extend(col)
+                for feat in col:
+                    data.append({
+                        "geometry": (dict(feat["geometry"])
+                                     if feat["geometry"] else None),
+                        "properties": dict(feat["properties"]),
+                    })
         return data
 
     def to_nrml(self, out=None):
