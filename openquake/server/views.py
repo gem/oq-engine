@@ -1315,6 +1315,7 @@ def impact_run_with_shakemap(request):
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    params['postrisk_func'] = 'make_impact_report.main'
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
