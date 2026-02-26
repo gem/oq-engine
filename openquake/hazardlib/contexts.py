@@ -1114,8 +1114,8 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        ctxs = self.from_srcs(srcs, sitecol)
-        return self.get_pmap(ctxs, tom, rup_mutex).array
+        ctx = self.from_srcs(srcs, sitecol)
+        return self.get_pmap(ctx, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         # NB: by construction ctx.mag contains a single magnitude
@@ -1831,11 +1831,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
-    def get_gids(self):
+    @property
+    def gids(self):
         """
-        :returns: list of gid arrays, one for each underlying cmaker
+        :returns: concatenation of gid arrays, one for each underlying cmaker
         """
-        return [cm.gid for cm in self.cmakers]
+        return numpy.concatenate([cm.gid for cm in self.cmakers])
 
     def __getitem__(self, idx):
         return self.cmakers[idx]

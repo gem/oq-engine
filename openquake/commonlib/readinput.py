@@ -703,8 +703,6 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.sites and 'site_model' in oqparam.inputs and oqparam.hazard_calculation_id:
-        1/0
     if h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
