@@ -21,7 +21,7 @@ import logging
 import time
 try:
     import fiona
-    from fiona import crs
+    from fiona.crs import CRS
 except ImportError:
     raise ImportError('The geospatial libraries must be installed using our '
                       'requirements.txt files (see https://github.com/gem/oq-engine). '
@@ -202,7 +202,7 @@ class GeoPackager(object):
         if not fiona:
             raise ImportError('fiona')
         self.fname = fname
-        self.crs = crs.from_string('+proj=longlat +ellps=WGS84 '
+        self.crs = CRS.from_string('+proj=longlat +ellps=WGS84 '
                                    '+datum=WGS84 +no_defs')
 
     def save_layer(self, name, rows):
