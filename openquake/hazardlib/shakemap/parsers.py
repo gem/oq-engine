@@ -35,7 +35,7 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from shapely.geometry import shape, Point, Polygon
@@ -1317,8 +1317,8 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
 
 
 def ms_to_utc_date_time(ms):
-    # convert from milliseconds to utc date time
-    dt = datetime.utcfromtimestamp(ms / 1000)  # convert to seconds
+    # convert from milliseconds to timezone-aware UTC date time
+    dt = datetime.fromtimestamp(ms / 1000, timezone.utc)  # convert to seconds
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
