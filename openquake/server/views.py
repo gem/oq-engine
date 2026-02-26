@@ -1228,6 +1228,17 @@ def create_impact_job(request, params):
     return response_data
 
 
+def _run_impact_job(request, post_data, rupture_path=None, station_data_file=None):
+    _rup, _rupdic, params, err = impact_validate(
+        post_data, request.user, rupture_path, station_data_file)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    params['postrisk_func'] = 'make_impact_report.main'
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1263,16 +1274,11 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, _rupdic, params, err = impact_validate(
-        request.POST, request.user, rupture_path, station_data_file)
-    if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    post = request.POST.copy()
     if station_source is not None:
-        params['station_source'] = station_source
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    params['postrisk_func'] = 'make_impact_report.main'
-    response_data = create_impact_job(request, params)
-    return JsonResponse(response_data, status=200)
+        post['station_source'] = station_source
+    return _run_impact_job(request, post, rupture_path=rupture_path,
+                           station_data_file=station_data_file)
 
 
 @csrf_exempt
@@ -1294,30 +1300,20 @@ def impact_run_with_shakemap(request):
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
     if 'shakemap_version' in request.POST:
-        shakemap_version = request.POST['shakemap_version']
-        post['shakemap_version'] = shakemap_version
+        post['shakemap_version'] = request.POST['shakemap_version']
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
     if 'time_event' in request.POST:
         post['time_event'] = request.POST['time_event']
-    post['approach'] = 'use_shakemap_from_usgs'
-    post['use_shakemap'] = 'true'
-    if 'shakemap_version' in request.POST:
-        post['shakemap_version'] = shakemap_version
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(
-        post, request.user, post['rupture_file'])
-    if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    params['postrisk_func'] = 'make_impact_report.main'
-    response_data = create_impact_job(request, params)
-    return JsonResponse(response_data, status=200)
+    return _run_impact_job(request, post,
+                           rupture_path=post.get('rupture_file'))
 
 
 def extract_pdf_from_datastore(dstore, iso3):
