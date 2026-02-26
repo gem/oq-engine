@@ -289,18 +289,6 @@ class SourceGroup(collections.abc.Sequence):
         tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
         return tom.__class__.__name__ == 'PoissonTOM'
 
-    def save(self, dstore, blocks=()):
-        """
-        Save the source group on the datastore, whole or in blocks
-        """
-        if len(blocks) in (0, 1):
-            dstore[f'_csm/{self.grp_id}'] = zpik(self)
-        else:
-            for b, block in enumerate(blocks):
-                grp = copy.copy(self)
-                grp.sources = block
-                dstore[f'_csm/{self.grp_id}-{b}'] = zpik(grp)
-
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
             self.__class__.__name__, self.trt, len(self.sources), self.weight)
@@ -602,6 +590,22 @@ class CompositeSourceModel:
                      'len(trt_smrs)=%.2f', len(self.src_groups), len(data),
                      numpy.mean(lens))
         return data
+
+    def save(self, dstore, blocks=()):
+        """
+        :param dstore: a DataStore open for writing
+        :param blocks: if non-empty, a list of lists, one for each group
+
+        Save the source groups in the datastore, whole or in blocks
+        """
+        for i, sg in enumerate(self.src_groups):
+            if blocks and blocks[i] and len(blocks[i]) > 1:
+                for b, block in enumerate(blocks[i]):
+                    grp = copy.copy(sg)
+                    grp.sources = block
+                    dstore[f'_csm/{sg.grp_id}-{b}'] = zpik(grp)
+            else:
+                dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
 
     def __repr__(self):
         """

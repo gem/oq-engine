@@ -196,8 +196,7 @@ def store_csm(dstore, csm, sitecol, cmakers):
     """
     if sitecol is None:
         # when called from hamlet
-        for sg in csm.src_groups:
-            sg.save(dstore)
+        csm.save(dstore)
         return 1
     N = len(sitecol)
     oq = cmakers[0].oq
@@ -209,8 +208,8 @@ def store_csm(dstore, csm, sitecol, cmakers):
     for sg, cmaker in zip(csm.src_groups, cmakers.to_array()):
         quartet = csm.split_sg(
             cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-        sg.save(dstore, blocks=quartet[2])
         quartets.append(quartet)
+    csm.save(dstore, [q[2] for q in quartets])
 
     data = numpy.array(
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
