@@ -117,8 +117,7 @@ class CollapseTestCase(unittest.TestCase):
         self.clt = lt.CompositeLogicTree([bs0, bs1])
 
         # setup sitecol, srcfilter, gsims, imtls
-        self.sitecol = site.SiteCollection(
-            [site.Site(Point(0, 0), numpy.array([760.]))])
+        self.sitecol = site.SiteCollection([site.Site(Point(0, 0), 760.)])
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
