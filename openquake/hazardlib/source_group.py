@@ -263,6 +263,7 @@ class SourceGroup(collections.abc.Sequence):
         out = []
         def weight(src):
             if src.code == b'F':  # consider it much heavier
+                1/0
                 return src.num_ruptures * 25
             return src.num_ruptures
         for block in block_splitter(sources, maxweight, weight):
@@ -288,6 +289,18 @@ class SourceGroup(collections.abc.Sequence):
         """
         tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
         return tom.__class__.__name__ == 'PoissonTOM'
+
+    def save(self, dstore, blocks=()):
+        """
+        Save the source group on the datastore, whole or in blocks
+        """
+        if len(blocks) in (0, 1):
+            dstore[f'_csm/{self.grp_id}'] = zpik(self)
+        else:
+            for b, block in enumerate(blocks):
+                grp = copy.copy(self)
+                grp.sources = block
+                dstore[f'_csm/{self.grp_id}-{b}'] = zpik(grp)
 
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
@@ -675,28 +688,20 @@ def read_src_group(hdf5, key, mon=performance.Monitor()):
     return grp
 
 
-def read_src_groups(hdf5, grp_id, mon=performance.Monitor()):
-    """
-    :yield: the list of subgroups associated to grp_id
-
-    NB: this is a generator to save memory (crucial!)
-    """
-    grp_str = str(grp_id)
-    keys = [key for key in hdf5['_csm'] if key.split('-')[0] == grp_str]
-    for key in keys:
-        yield read_src_group(hdf5, key, mon)
-
-
 def read_csm(hdf5, full_lt=None):
     """
     :returns: a CompositeSourceModel instance
     """
-    src_groups = []
-    for grp_id in range(hdf5['_csm'].attrs['num_src_groups']):
-        groups = list(read_src_groups(hdf5, grp_id))
-        group = groups[0]
-        group.sources = list(group.sources)
-        for grp in groups[1:]:
-            group.sources.extend(grp.sources)
-        src_groups.append(group)
+    grp_by_key = {key: read_src_group(hdf5, key) for key in hdf5['_csm']}
+    dic = {}  # grp_id -> grp
+    for key, grp in grp_by_key.items():
+        if '-' in key:
+            grp_id, block = map(int, key.split('-'))
+            if grp_id in dic:
+                dic[grp_id].sources.extend(grp)
+            else:
+                dic[grp_id] = grp
+        else:  # atomic
+            dic[grp.grp_id] = grp
+    src_groups = [dic[grp_id] for grp_id in sorted(dic)]
     return CompositeSourceModel(full_lt or hdf5['full_lt'].init(), src_groups)

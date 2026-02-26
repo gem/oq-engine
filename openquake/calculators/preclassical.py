@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import copy
 import logging
 import operator
 import psutil
@@ -29,7 +28,7 @@ from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
-    SourceGroup, _grp_id, zpik, NUM_RUPTURES)
+    SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -198,8 +197,7 @@ def store_csm(dstore, csm, sitecol, cmakers):
     if sitecol is None:
         # when called from hamlet
         for sg in csm.src_groups:
-            dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
-        dstore['_csm'].attrs['num_src_groups'] = len(csm.src_groups)
+            sg.save(dstore)
         return 1
     N = len(sitecol)
     oq = cmakers[0].oq
@@ -208,20 +206,11 @@ def store_csm(dstore, csm, sitecol, cmakers):
 
     # build source_groups and store _csm
     quartets = []
-    for g, cmaker in enumerate(cmakers.to_array()):
-        for sg in csm.src_groups:
-            if sg.grp_id == g:
-                quartet = csm.split_sg(
-                    cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-                blocks = quartet[2]
-                if len(blocks) == 1:  # single group
-                    dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
-                else:
-                    for b, block in enumerate(blocks):
-                        grp = copy.copy(sg)
-                        grp.sources = block
-                        dstore[f"_csm/{sg.grp_id}-{b}"] = zpik(grp)
-                quartets.append(quartet)
+    for sg, cmaker in zip(csm.src_groups, cmakers.to_array()):
+        quartet = csm.split_sg(
+            cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+        sg.save(dstore, blocks=quartet[2])
+        quartets.append(quartet)
 
     data = numpy.array(
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
@@ -244,7 +233,6 @@ def store_csm(dstore, csm, sitecol, cmakers):
         logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
-    dstore['_csm'].attrs['num_src_groups'] = len(data)
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
                                   tiling=oq.tiling))
