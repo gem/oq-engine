@@ -1167,7 +1167,7 @@ class ContextMaker(object):
                 # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
-    # called by get_rmap
+    # called by get_rmap, also documented in the manual
     def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
         :param ctx: a context array

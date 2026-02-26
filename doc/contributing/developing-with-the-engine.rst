@@ -329,11 +329,10 @@ probabilities of exceedence. The ``ContextMaker`` provides a method to
 compute directly the rates (annual frequencies), from which the hazard
 curves can be extracted::
 
-	>>> rmap = cmaker.get_rmap([src], sitecol)
-        >>> 1. - numpy.exp(- rmap.array)  # rates -> poes, shape (N, L, G)
-	array([[[0.00508004]]], dtype=float32)
+	>>> cmaker.get_pmap(ctx).array  # shape (N, L, G)
+	array([[[0.00507998]]], dtype=float32)
 
-If you want to know exactly how ``get_rmap`` works you are invited to
+If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
 
 Reading the hazard sources programmatically
