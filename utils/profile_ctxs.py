@@ -19,7 +19,6 @@ import os
 import logging
 import cProfile
 from openquake.baselib import general, performance, sap
-from openquake.hazardlib.contexts import get_cmakers
 from openquake.commonlib import readinput, datastore
 from openquake.calculators.views import text_table
 
@@ -45,16 +44,15 @@ def main(job_ini):
     This is  meant to be used on single site models. If you have many sites set
     something like OQ_SAMPLE_SITES=.0001 too.
     """
-    logging.basicConfig(level=logging.INFO)
-    log, dstore = datastore.create_job_dstore()
-    with dstore, log:
+    job, dstore = datastore.create_job_dstore()
+    with job, dstore:
         prof = cProfile.Profile()
         pstat = dstore.filename + '.pstat'
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq, dstore)
         sitecol = readinput.get_site_collection(oq)
         logging.info(sitecol)
-        cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
+        cmakers = csm.get_cmakers(oq)
         logging.info('Storing performance info in %s', pstat)
         prof.runctx('build_ctxs(cmakers, csm.src_groups, sitecol)',
                     globals(), locals())
