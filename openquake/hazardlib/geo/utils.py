@@ -31,10 +31,7 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy, Point
 from shapely.strtree import STRtree
-try:
-    from h3.api.numpy_int import geo_to_h3 as latlng_to_cell
-except ImportError:  # h3 version 4
-    from h3.api.numpy_int import latlng_to_cell
+from h3.api.numpy_int import latlng_to_cell
 from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile, split_array
 from openquake.hazardlib import geo
