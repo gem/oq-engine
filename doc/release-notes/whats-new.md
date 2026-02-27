@@ -14,8 +14,8 @@ https://github.com/gem/oq-engine/blob/engine-3.25/debian/changelog
 
 A summary is given below.
 
-Global SES
-----------
+Global Stochastic Event Set
+---------------------------
 
 We improved the script generating the global SES file and now 
 store information about the sources, so that it is possible
@@ -312,7 +312,7 @@ by [Lana Todorovic](https://github.com/LanaTodorovic93).
 The EMME24 site model [was added](https://github.com/gem/oq-engine/pull/11200) 
 to the existing EMME backbone model for the Middle East by 
 [Christopher Brooks](https://github.com/CB-quakemodel),
-using files shared by Abdullah Sandıkkaya.
+using files shared by Abdullah Sandıkkaya, Özkan Kale and Baran Güryuva.
 
 [Christopher Brooks](https://github.com/CB-quakemodel) 
 [added the option](https://github.com/gem/oq-engine/pull/11116) 
@@ -415,7 +415,7 @@ but it is expected to become official in the near future.
 have already been performed are not repeated. To determine whether a
 calculation has already been performed, the engine looks at the checksum of
 the input files stored in the database. The feature is NOT enabled by default
-since it is potentially dangerous: for instance, a bug fix to a GMPE is a
+since it is potentially dangerous: for instance, a bugfix to a GMPE is a
 change in the code, not in the input files, so using `--cache=true` would
 retrieve old (incorrect) results. Therefore, the cache must be enabled
 manually only when the user knows that there have been no significant changes
