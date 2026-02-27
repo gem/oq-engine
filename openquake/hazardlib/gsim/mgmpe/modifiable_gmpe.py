@@ -75,7 +75,7 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
     # Compute the original mean and std devs for required IMTs
     shp = (len(imts_comp), len(ctx_copy))
     mean_t, sig_t, tau_t, phi_t = (
-        np.empty(shp), np.empty(shp), np.empty(shp), np.empty(shp))
+        np.zeros(shp), np.zeros(shp), np.zeros(shp), np.zeros(shp))
     gmpe.compute(
         ctx_copy, imts_comp, mean_t, sig_t, tau_t, phi_t)
     
@@ -102,7 +102,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     imts_req = self.imts_req
     sh = (len(imts_req), len(ctx_copy))
     mean_b, sig_b, tau_b, phi_b = (
-        np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh))
+        np.zeros(sh), np.zeros(sh), np.zeros(sh), np.zeros(sh))
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
@@ -114,9 +114,8 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
         preds[imt.string]["tau"] = tau_b[i]
         preds[imt.string]["phi"] = phi_b[i]
         
-    # Sometimes need underlying GSIM within conditional GMPEs compute method
-    # if has ctx-dependent conditioning periods like possible within
-    # AbrahamsonBhasin2020
+    # Might need underlying GSIM within conditional GMPEs compute method
+    # if has ctx-dependent conditioning periods
     preds["base"] = self.gmpe
 
     # Now get the IMTs we wish to compute using the underlying GSIM
