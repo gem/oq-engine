@@ -703,8 +703,9 @@ class ClassicalCalculator(base.HazardCalculator):
             bad = (info['est_ctxs'] < info['num_ctxs']) & (
                 delta(info['est_ctxs'], info['num_ctxs']) > .5)
             if bad.any():
-                logging.warn('The estimated number of contexts is way off\n'+
-                             views.text_table(info[bad], ext='org'))
+                logging.warning(
+                    'The estimated number of contexts is way off\n' +
+                    views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
