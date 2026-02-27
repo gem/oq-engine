@@ -327,7 +327,7 @@ If the key / is requested, the root attributes are retrieved. For instance::
 If the calculation id is not specified, the value of the requested key is retrieved for the latest calculation.
 
 oq shell
--------
+--------
 
 `oq shell` can be used to start an interactive interpreter or to run
 a Python module::
