@@ -3,6 +3,7 @@
 #
 https://wheelhouse.openquake.org/v3/linux/py313/cffi-1.17.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/charset_normalizer-3.4.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py313/contourpy-1.3.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/fiona-1.10.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/gdal-3.10.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/h3-4.4.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
