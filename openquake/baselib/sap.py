@@ -42,11 +42,20 @@ Here is a minimal example of usage:
 """
 
 import os
+import re
+import sys
 import inspect
 import argparse
 import importlib
 
 NODEFAULT = object()
+
+
+def is_dotname(name):
+    """
+    :returns: True if the name is not a dotname, else False
+    """
+    return all(re.match(r'\w+', n) for n in name.split('.'))
 
 
 def _choices(choices):
@@ -193,7 +202,7 @@ def parser(obj, **kw):
     return parser
 
 
-def _run(parser, argv=None):
+def _run(parser, argv):
     namespace = parser.parse_args(argv)
     try:
         func = namespace.__dict__.pop('_func')
@@ -211,10 +220,16 @@ def _run(parser, argv=None):
 
 def run(obj, argv=None, **parserkw):
     """
-    :param obj: a function or a (nested) dictionary of functions
+    :param obj: a module, a function or a (nested) dictionary of functions
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
+    argv = argv or sys.argv[1:]
+    n = len(argv)
+    if n > 1 and sys.argv[1] == 'shell' and is_dotname(argv[1]):
+        # hack to support oq shell openquake.engine.global_ses -h
+        obj = importlib.import_module(argv[1])
+        return _run(parser(obj, **parserkw), argv[1:])
     return _run(parser(obj, **parserkw), argv)
 
 
