@@ -37,20 +37,20 @@ ruptures/events and comparisons will become possible.
 
 We made it is possible to run multiple calculations starting from the
 same SES with a single command, as in the following example:
-
+```bash
 $ oq engine --run job_Laos.ini job_Brunei.ini job_Malaysia.ini \
                   job_Cambodia.ini job_Myanmar.ini job_Singapore.ini \
                   job_Philippines.ini job_Thailand.ini \
                   job_Timor_Leste.ini job_Indonesia.ini \
                   job_Vietnam.ini --hc SES.hdf5
-
+```
 The risk calculations will be run in parallel if the --multi flag
 is passed, sequentially otherwise.
 
 We note that the provisional syntax recognized in the job.ini file
-
+```
 rupture_model_file = SES.hdf5
-
+```
 has been removed in favor of using `--hc`, since it avoids a special
 case and makes calculations starting from a SES regular calculations.
 
@@ -151,9 +151,9 @@ gsim logic trees in version 3.24. The feature is called internally "ilabel",
 since you can enable it by adding an `ilabel` column in the
 site model file, with an integer which is referenced in the
 `site_labels` dictionary in the `job.ini` file, an example being:
-
+```
   site_labels = {"Cascadia": 1, "LosAngeles": 2}
-
+```
 The feature is documented in the section "Site-dependent logic trees"
 of the manual. It was experimental in version 3.24 and had a
 restricted range of validity while now it should work in all cases,
@@ -422,23 +422,23 @@ workflow without having to repeat successful calculations.
 
 We extended `oq shell` to accept dotted names, so that it is easy
 to call Python modules as scripts. An example is
-
+```bash
 $ oq shell openquake.engine.global_ses --help
-
+```
 to generate the global Stochastic Event Set.
 
 It is now valid to pass a "prejob.ini" file to `--hazard-calculation-id`,
 rather then simply an integer ID. So a command like
-
+```bash
 $ oq engine --run job.ini --hc prejob.ini
-
+```
 will perform two calculations: first, the one corresponding to `prejob.ini`
 and then the one corresponding to `job.ini`, starting from the previous one.
 
 NB: the old syntax
-
+```bash
 $ oq engine --run prejob.ini job.ini  # first prejob.ini and then job.ini
-
+```
 still works, but it is deprecated and in the future only the explicit
 syntax with `--hc` might be accepted.
 
@@ -515,6 +515,6 @@ command `docker run -e LOCKDOWN=True openquake/engine`) was not
 honored. This is fixed.
 
 Some important .txt files in the GSIMs were not distributed in the
-packaged version of the engine. Now they are. Same forthe .onnx and
-.onnx.gz files required by some model.  Moreover now the Python
+packaged version of the engine. Now they are. Same for the `.onnx` and
+`.onnx.gz` files required by some model.  Moreover now the Python
 package for the engine includes the demos.
