@@ -366,7 +366,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    if dstore.hdf5.mode != 'r':
+    if dstore.hdf5.mode != 'r' and 'ruptures' not in dstore.hdf5:
         dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
