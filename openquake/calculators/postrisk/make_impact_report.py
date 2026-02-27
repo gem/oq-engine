@@ -70,9 +70,30 @@ def load_admin_boundaries(
     if not fname:
         raise AttributeError(
             f'config.directory.admin{adm_level}_boundaries_file is missing')
-    admin_boundaries = gpd.read_file(fname)
-    admin_boundaries = admin_boundaries[admin_boundaries["shapeGroup"] == iso3]
-    return admin_boundaries.to_crs(crs)
+    gdf = gpd.read_file(fname)
+    if "shapeID" in gdf.columns:  # geoBoundaries
+        iso3_col = "shapeGroup"
+        id_col = "shapeID"
+        name_col = "shapeName"
+    elif f"ID_{adm_level}" in gdf.columns:
+        iso3_col = "ID_0"
+        id_col = f"ID_{adm_level}"
+        name_col = f"NAME_{adm_level}"
+    else:
+        raise RuntimeError(
+            f"Unsupported admin schema. Columns: {list(gdf.columns)}"
+        )
+    gdf = gdf[gdf[iso3_col] == iso3]
+    # normalize column names
+    gdf = gdf.rename(columns={
+        iso3_col: "country_iso3",
+        id_col: "region_id",
+        name_col: "region_name",
+    })
+    gdf["region_id"] = gdf["region_id"].astype(str)
+    gdf["region_name"] = gdf["region_name"].astype(str)
+    gdf["country_iso3"] = gdf["country_iso3"].astype(str)
+    return gdf.to_crs(crs)
 
 
 def load_losses_csv(csv_path):
@@ -90,19 +111,15 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
     return gdf
 
 
-def aggregate_losses(points_gdf, admin_gdf, tags_agg, adm_level):
+def aggregate_losses(points_gdf, admin_gdf, tags_agg):
     joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
-    group_col = 'shapeID'
-    merge_args = dict(on=group_col)
-    aggregated = joined.groupby(group_col).agg(
-        {col: "sum" for col in tags_agg})
-    return admin_gdf.merge(aggregated, **merge_args)
+    aggregated = joined.groupby("region_id")[tags_agg].sum().reset_index()
+    return admin_gdf.merge(aggregated, on="region_id", how="left")
 
 
 def save_most_affected_regions(df, dstore, iso3, *, adm_level, n=5):
-    region_col = 'shapeName'
     fatalities_label = LOSS_METADATA["occupants"]["label"]
-    regions = df.nlargest(n, fatalities_label)[region_col].dropna().tolist()
+    regions = df.nlargest(n, fatalities_label)['region_name'].dropna().tolist()
     dstore[f"impact/{iso3}/most_affected_regions"] = regions
 
 
@@ -128,7 +145,7 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
 
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
 
-    df = aggregate_losses(points_gdf, admin_boundaries, tags_agg, adm_level)
+    df = aggregate_losses(points_gdf, admin_boundaries, tags_agg)
 
     df = df.rename(columns={k: v["label"] for k, v in LOSS_METADATA.items()})
 
