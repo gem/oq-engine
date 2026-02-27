@@ -50,7 +50,7 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-
+        
         if not depth < geodetic.EARTH_RADIUS:
             raise ValueError("The depth must be less than "
                              "the Earth's radius (6371.0 km)")
@@ -65,9 +65,9 @@ class Point(object):
         if not -90.0 <= latitude <= 90.0:
             raise ValueError("latitude %.6f outside range" % latitude)
 
-        self.depth = float(numpy.asarray(depth).item())
-        self.latitude = float(numpy.asarray(latitude).item())
-        self.longitude = float(numpy.asarray(longitude).item())
+        self.depth = float(depth)
+        self.latitude = float(latitude)
+        self.longitude = float(longitude)
 
     @property
     def x(self):

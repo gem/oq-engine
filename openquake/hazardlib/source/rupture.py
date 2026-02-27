@@ -470,9 +470,14 @@ class ParametricProbabilisticRupture(BaseRupture):
             pp = projection_pp(site, normal, dist_to_plane, origin)
             pd, e, idx_nxtp = directp(
                 p0, p1, p2, p3, hypocenter, origin, pp)
+            pd0 = numpy.asarray(pd[0]).item()
+            pd1 = numpy.asarray(pd[1]).item()
+            pd2 = numpy.asarray(pd[2]).item()
+
             pd_geo = origin.point_at(
-                (pd[0] ** 2 + pd[1] ** 2) ** 0.5, -pd[2],
-                numpy.degrees(numpy.arctan2(pd[0], pd[1])))
+                (pd0 * pd0 + pd1 * pd1) ** 0.5,
+                -pd2,
+                numpy.degrees(numpy.arctan2(pd0, pd1)))
 
             # determine the lower bound of E path value
             f1 = geodetic_distance(p0.longitude,
