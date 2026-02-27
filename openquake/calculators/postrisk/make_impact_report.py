@@ -113,8 +113,11 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
 
 def aggregate_losses(points_gdf, admin_gdf, tags_agg):
     joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
-    aggregated = joined.groupby("region_id")[tags_agg].sum().reset_index()
-    return admin_gdf.merge(aggregated, on="region_id", how="left")
+    group_col = 'region_id'
+    merge_args = dict(on=group_col)
+    aggregated = joined.groupby(group_col).agg(
+        {col: "sum" for col in tags_agg})
+    return admin_gdf.merge(aggregated, **merge_args)
 
 
 def save_most_affected_regions(df, dstore, iso3, *, n=5):
