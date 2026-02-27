@@ -117,7 +117,7 @@ def aggregate_losses(points_gdf, admin_gdf, tags_agg):
     return admin_gdf.merge(aggregated, on="region_id", how="left")
 
 
-def save_most_affected_regions(df, dstore, iso3, *, adm_level, n=5):
+def save_most_affected_regions(df, dstore, iso3, *, n=5):
     fatalities_label = LOSS_METADATA["occupants"]["label"]
     regions = df.nlargest(n, fatalities_label)['region_name'].dropna().tolist()
     dstore[f"impact/{iso3}/most_affected_regions"] = regions
@@ -139,21 +139,14 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
                 basemap_path, dstore):
     import matplotlib.pyplot as plt
-
     admin_boundaries = load_admin_boundaries(
         country_name, iso3, adm_level)
-
     points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
-
     df = aggregate_losses(points_gdf, admin_boundaries, tags_agg)
-
     df = df.rename(columns={k: v["label"] for k, v in LOSS_METADATA.items()})
-
-    save_most_affected_regions(df, dstore, iso3, adm_level=adm_level)
-
     classifiers = build_classifiers(
         df, breaks=[1, 10, 100, 1000])
-
+    images = {}
     for meta in LOSS_METADATA.values():
         label = meta["label"]
         title = meta["title"]
@@ -170,7 +163,8 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
         fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
         plt.close(fig)
         buf.seek(0)
-        dstore[f"impact/{iso3}/png/{label}"] = buf.getvalue()
+        images[label] = buf.getvalue()
+    return df, images
 
 
 def _get_impact_summary_ranges(dstore, iso3):
@@ -338,11 +332,12 @@ class CountryReportBuilder:
 
     def _generate_country_plot(self):
         tags_agg_losses = list(LOSS_METADATA)
-
-        plot_losses(
+        df, images = plot_losses(
             self.country_name, self.iso3, self.adm_level, self.losses_df,
             self.cities, tags_agg_losses, self.x_limits, self.y_limits,
             self.basemap_path, self.dstore)
+        save_most_affected_regions(df, self.dstore, self.iso3)
+        return df, images
 
     def _build_disclaimer(self):
         tbl = self.Table(
@@ -456,25 +451,19 @@ class CountryReportBuilder:
         ]
 
         img_top_right = self._scaled_image_from_bytes(
-            self.dstore[
-                f"impact/{self.iso3}/png/{LOSS_METADATA['number']['label']}"
-            ][()],
+            self.images[LOSS_METADATA['number']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
 
         img_bot_left = self._scaled_image_from_bytes(
-            self.dstore[
-                f"impact/{self.iso3}/png/{LOSS_METADATA['occupants']['label']}"
-            ][()],
+            self.images[LOSS_METADATA['occupants']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
 
         img_bot_right = self._scaled_image_from_bytes(
-            self.dstore[
-                f"impact/{self.iso3}/png/{LOSS_METADATA['residents']['label']}"
-            ][()],
+            self.images[LOSS_METADATA['residents']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
@@ -518,7 +507,7 @@ class CountryReportBuilder:
 
     def build(self):
         logging.info(f'Making impact PDF report for {self.iso3}...')
-        self._generate_country_plot()
+        self.df, self.images = self._generate_country_plot()
 
         buffer = BytesIO()
 
