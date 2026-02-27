@@ -50,10 +50,6 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        
-        longitude, latitude, depth = (
-            numpy.asarray(v).item() if numpy.asarray(v).size == 1 else v
-            for v in (longitude, latitude, depth))
 
         if not depth < geodetic.EARTH_RADIUS:
             raise ValueError("The depth must be less than "
