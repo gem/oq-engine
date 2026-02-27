@@ -473,7 +473,6 @@ class ParametricProbabilisticRupture(BaseRupture):
             pd_geo = origin.point_at(
                 (pd[0] ** 2 + pd[1] ** 2) ** 0.5, -pd[2],
                 numpy.degrees(numpy.arctan2(pd[0], pd[1])))
-            
 
             # determine the lower bound of E path value
             f1 = geodetic_distance(p0.longitude,
