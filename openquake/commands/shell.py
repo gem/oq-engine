@@ -102,6 +102,9 @@ def main(dotname=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
     run a Python module with a main function in the engine environment.
+    For instance you can try
+
+    $ oq shell openquake.engine.global_ses --help
     """
     if dotname:  # assume a dotted name was given
         args = " ".join(sys.argv[2:])  # strip ['oq', 'shell']

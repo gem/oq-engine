@@ -326,6 +326,30 @@ If the key / is requested, the root attributes are retrieved. For instance::
 
 If the calculation id is not specified, the value of the requested key is retrieved for the latest calculation.
 
+oq shell
+-------
+
+`oq shell` can be used to start an interactive interpreter or to run
+a Python module::
+
+  $ oq shell --help
+  usage: oq shell [-h] [dotname] [args ...]
+  
+  Start an embedded (i)python instance with a global object "o" or run a
+  Python module with a main function in the engine environment.
+  For instance you can try
+  
+  $ oq shell openquake.engine.global_ses --help
+  
+  positional arguments:
+    dotname     python module to run (if any)
+    args        arguments to pass [default: ()]
+  
+  options:
+    -h, --help  show this help message and exit
+
+If IPython is installed it will be used as interactive interpreter,
+otherwise the standard interpreter will be used.
 
 Plotting commands
 -----------------
