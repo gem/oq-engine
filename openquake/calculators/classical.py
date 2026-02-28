@@ -609,7 +609,10 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                if atomic:
+                if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
+                    # can happen for some ilabel
+                    pass
+                elif atomic:
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, ds))
