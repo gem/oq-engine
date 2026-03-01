@@ -98,7 +98,7 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0.
     """
-    if dparam is None:
+    if not dparam:
         # no multifault
         dists = get_distances(rup, r_sites, param)
         if '_' in param:
@@ -470,21 +470,6 @@ def genctxs_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
-def _build_dparam(src, sitecol, cmaker):
-    dparams = {'rjb', 'tuw'}
-    if cmaker.fewsites:
-        dparams |= {'clon_clat'}
-    sections = src.get_sections(src.get_unique_idxs())
-    out = {}
-    for sec in sections:
-        out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
-        for param in dparams:
-            out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / TWO20)
-    cmaker.source_mb += getsizeof(src) / TWO20
-    return out
-
-
 # this is the critical function for the performance of the classical calculator
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
@@ -538,7 +523,6 @@ class ContextMaker(object):
     ilabel = None
     tom = None
     cluster = None  # set in RmapMaker
-    dparam_mb = 0  # set in build_dparam
     source_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
@@ -583,6 +567,7 @@ class ContextMaker(object):
         self.init_monitoring(self.monitor)
 
     def _init1(self, param):
+        self.dparam = {}  # multifault cache
         if 'poes' in param:
             self.poes = param['poes']
         if 'imtls' in param:
@@ -860,7 +845,7 @@ class ContextMaker(object):
         :returns: a dictionary with the rupture parameters
         """
         dic = {}
-        if hasattr(self, 'dparam') and self.dparam:
+        if self.dparam:
             msparam = rup.surface.msparam
         else:
             msparam = None
@@ -939,7 +924,7 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        dparam = getattr(self, 'dparam', None)
+        dparam = self.dparam
         for rup in same_mag_rups:
             if dparam:
                 rrups = _get(rup.surface.surfaces, 'rrup', dparam)
@@ -1011,6 +996,18 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             yield from self.genctxs(rups, sites, src_id)
 
+    def _build_dparam(self, src, sitecol):
+        dparams = {'rjb', 'tuw'}
+        if self.fewsites:
+            dparams |= {'clon_clat'}
+        for sec in src.get_sections(src.get_unique_idxs()):
+            if (sec.idx, 'rrup') in self.dparam:  # section already encountered
+                continue
+            self.dparam[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
+            for param in dparams:
+                self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
+        self.source_mb += getsizeof(src) / TWO20
+
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -1034,9 +1031,7 @@ class ContextMaker(object):
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
-                    self.dparam = _build_dparam(src, sitecol, self)
-            else:
-                self.dparam = None
+                    self._build_dparam(src, sitecol)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -1615,7 +1610,7 @@ class RmapMaker(object):
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['dparam_mb'] = self.cmaker.dparam_mb
+        dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20
         dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because

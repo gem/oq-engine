@@ -134,6 +134,13 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def multifault(self):
+        """
+        True if the underlying sources are multifault sources
+        """
+        return self.sources[0].code == b'F'
+
+    @property
     def grp_id(self):
         """
         The grp_id of the underlying sources
