@@ -70,7 +70,6 @@ https://wheelhouse.openquake.org/v3/py/setuptools-69.0.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/six-1.16.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
