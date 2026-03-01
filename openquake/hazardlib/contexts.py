@@ -1001,8 +1001,6 @@ class ContextMaker(object):
         if self.fewsites:
             dparams |= {'clon_clat'}
         for sec in src.get_sections(src.get_unique_idxs()):
-            if (sec.idx, 'rrup') in self.dparam:  # section already encountered
-                continue
             self.dparam[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
             for param in dparams:
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
