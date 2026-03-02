@@ -557,6 +557,7 @@ class CompositeSourceModel:
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
         if sg.multifault and N / splits > 10_000:
+            # crucial to avoid OOM in CEA or USA due to the dparam cache
             splits *= N / 10_000
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
