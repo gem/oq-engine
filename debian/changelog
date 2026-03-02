@@ -1,3 +1,5 @@
+python3-oq-engine (3.25.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Reduced the memory consumption with multifault sources by splitting
     in more tiles
@@ -60,8 +62,8 @@
     the model contains complex fault sources
 
   [Nicholas Clemett]
-   * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional
-     argument
+  * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional
+    argument
   * Added EmpiricalAvgSACorrelationModel
   * Added classes for the Clemett correlation models for active shallow crust,
     subduction interface, subduction slab and vrancea regions in europe based
@@ -223,6 +225,8 @@
   [Michele Simionato, Antonio Ettorre]
   * Upgraded numpy to version 2.2, including related dependencies such as
     pandas, pyproj, GDAL, fiona, etc
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 02 Mar 2026 13:48:36 +0000
 
 python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
 
