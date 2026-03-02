@@ -213,8 +213,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
-    elif len(grps) == 1 and len(grps[0]) >= 2:
-        # tested in case_25
+    elif len(grps) == 1 and len(grps[0]) >= 2 and not grps[0].multifault:
+        # NB: multifaults are not split to avoid transferring the dparam cache
         b0, *blks = _split_src(list(grps[0]), 5)
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
@@ -621,7 +621,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        if not self.few_sites and self.rmap:
+        if num_blocks and not self.few_sites:
             logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
