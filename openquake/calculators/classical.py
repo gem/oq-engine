@@ -215,7 +215,6 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 2 and not grps[0].multifault:
         # NB: multifaults are not split to avoid transferring the dparam cache
-        # tested in case_25
         b0, *blks = _split_src(list(grps[0]), 5)
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
