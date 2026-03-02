@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced the memory consumption with multifault sources by splitting
+    in more tiles
+
   [Christopher Brooks]
   * Make source/path adjustment coeff files used in modifications of CY14
     as described in Boore et al. (2022) more flexible to avoid need for
