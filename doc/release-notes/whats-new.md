@@ -144,13 +144,17 @@ slower than necessary.
 ## Hazard: classical
 
 There was a major change in the task distribution strategy also in the
-classical phase of the computation. In most cases, the engine generates more
-tasks than before, since it uses an advanced subtask strategy: if a task is
-taking too long to complete, it is automatically split into subtasks. The
-splitting is fully automatic, but the user can tune it by using the
-`split_time` parameter in the job.ini. It should never be necessary to change
-it, and currently it should be considered an internal parameter: it could
-change or disappear in the future.
+classical phase of the computation. In most cases, the engine
+generates more tasks than before, since it uses an advanced subtask
+strategy: if a task is taking too long to complete, it is
+automatically split into subtasks. There is an exception for
+multifault sources: they are collected in tasks without subtasks, in
+order to reduce the memory consumption in the distance (dparam) cache.
+
+The task splitting is generally fully automatic, but the user can tune
+it by using the `split_time` parameter in the job.ini. It should never
+be necessary to change it, and currently it should be considered an
+internal parameter: it could change or disappear in the future.
 
 In order to support the USA model, we started supporting region-dependent GSIM
 logic trees in version 3.24. The feature is called internally "ilabel", since
