@@ -621,7 +621,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        if not self.few_sites and self.rmap:
+        if num_blocks and not self.few_sites:
             logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
