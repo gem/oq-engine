@@ -1001,6 +1001,8 @@ class ContextMaker(object):
         if self.fewsites:
             dparams |= {'clon_clat'}
         for sec in src.get_sections(src.get_unique_idxs()):
+            if (sec.idx, 'rrup') in self.dparam:
+                continue
             self.dparam[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
             for param in dparams:
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
@@ -1481,9 +1483,12 @@ class RmapMaker(object):
         return nbytes
 
     def gen_ctxs(self, src):
-        sites = self.srcfilter.get_close_sites(src)
-        if sites is None:
-            return
+        if src.code == b'F':
+            sites = self.srcfilter.sitecol
+        else:
+            sites = self.srcfilter.get_close_sites(src)
+            if sites is None:
+                return
         for ctx in self.cmaker.get_ctx_iter(src, sites):
             if self.cmaker.deltagetter:
                 # adjust occurrence rates in case of aftershocks
