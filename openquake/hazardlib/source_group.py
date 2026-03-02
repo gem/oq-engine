@@ -556,6 +556,8 @@ class CompositeSourceModel:
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
+        if sg.multifault and N / splits > 5000:
+            splits *= N / 5000
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
