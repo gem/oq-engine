@@ -46,7 +46,7 @@ You just need to download the installation script as:
 
 **on Windows:**
 ```
-C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/master/install.py
+C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/engine-3.25/install.py
 C:\>py.exe install.py user
 ```
 
@@ -55,13 +55,13 @@ C:\>py.exe install.py user
 Before running the universal installer Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.25/install.py
 $ python3.11 install.py user
 ```
 
 **on Linux:**
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.25/install.py
 $ python3.11 install.py user
 ```
 
@@ -179,7 +179,7 @@ automatically installed and started: `openquake-dbserver` and
 `openquake-webui`.
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.25/install.py
 $ sudo -H python3.11 install.py server
 ```
 
