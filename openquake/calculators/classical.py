@@ -654,7 +654,6 @@ class ClassicalCalculator(base.HazardCalculator):
         size_mb = sum(rmap.size_mb for rmap in self.rmap.values())
         if len(self.rmap) > 1 and size_mb > int(config.memory.pmap_max_mb):
             # tested in classical/case_06 and in oq-risk-tests ptiling
-            logging.info('Saving %d RateMaps', len(self.rmap))
             L1 = oq.imtls.size // len(oq.imtls)
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
@@ -663,6 +662,7 @@ class ClassicalCalculator(base.HazardCalculator):
             savemap.reduce()
         else:
             # store sequentially
+            logging.info('Saving %d RateMap', len(self.rmap))
             for rmap in self.rmap.values():
                 for g in rmap.jid:
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
