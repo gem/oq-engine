@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1.0"
+    name="nb"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+            alpha="2.0"
+            id="00000"
+            mu="0.1"
+            name="point00000"
+            tom="NegativeBinomialTOM"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            0.05 0.05
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.0"
+                >
+                    <occurRates>
+                        0.1
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
