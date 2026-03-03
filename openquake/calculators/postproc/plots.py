@@ -399,8 +399,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
                   basemap_path=None, font_size=18, city_font_size=14,
-                  legend_font_size=10,
-                  title_font_size=20, figsize=(10, 10)):
+                  legend_font_size=10, title_font_size=20, figsize=(10, 10),
+                  hypocenter=None):
     """
     Plot a classified geospatial variable with optional basemap
     and annotations.
@@ -429,6 +429,19 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         Axis limits.
     :param basemap_path: Path or str, optional
         Raster basemap path.
+    :param font_size: int or float
+        Base font size for axis labels.
+    :param city_font_size: int or float
+        Font size for city name annotations.
+    :param legend_font_size: int or float
+        Font size for legend entries.
+    :param title_font_size: int or float
+        Font size for the main plot title.
+    :param figsize: tuple(float, float)
+        Width and height of the figure in inches.
+    :param hypocenter: tuple(float, float), optional
+        Coordinates (lon, lat) of the earthquake hypocenter to be
+        plotted as a yellow star.
     """
     plt = import_plt()
     import matplotlib.patheffects as path_effects
@@ -461,9 +474,18 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         if not subset.empty:  # skip classes with no geometries
             subset.plot(ax=ax, color=color, edgecolor="none")
 
+    hypo_handle = None
+    if hypocenter is not None:
+        lon, lat = hypocenter
+        hypo_handle = ax.scatter(lon, lat, marker='*', s=300, color='yellow',
+                                 edgecolor='black', linewidth=1, zorder=10,
+                                 label='Hypocenter')
+
     # Create legend handles based on color and label
     handles = [mpatches.Patch(color=c, label=l)
                for c, l in zip(colors, labels)]
+    if hypo_handle:
+        handles.append(hypo_handle)
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
               title_fontsize=font_size, fontsize=legend_font_size,
               loc="upper left")

@@ -143,7 +143,7 @@ def build_classifiers(df, *, breaks):
 
 def plot_losses(country_name, iso3, adm_level, losses_df, cities,
                 tags_agg, x_limits_country, y_limits_country,
-                basemap_path, dstore):
+                basemap_path, dstore, hypocenter):
     import matplotlib.pyplot as plt
     admin_boundaries = load_admin_boundaries(
         country_name, iso3, adm_level)
@@ -163,7 +163,7 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
             plot_title=title,
             legend_title=label, cities=cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
-            basemap_path=basemap_path,
+            basemap_path=basemap_path, hypocenter=hypocenter,
         )
         buf = BytesIO()
         fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
@@ -208,7 +208,7 @@ class CountryReportBuilder:
     def __init__(
             self, iso3, event_name, event_date, shakemap_version, time_of_calc,
             disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-            adm_level, dstore):
+            adm_level, dstore, hypocenter):
         try:
             import reportlab
             from reportlab import platypus
@@ -243,6 +243,7 @@ class CountryReportBuilder:
         self.basemap_path = basemap_path
         self.adm_level = adm_level
         self.dstore = dstore
+        self.hypocenter = hypocenter
 
         self.styles = self.getSampleStyleSheet()
 
@@ -341,7 +342,7 @@ class CountryReportBuilder:
         df, images = plot_losses(
             self.country_name, self.iso3, self.adm_level, self.losses_df,
             self.cities, tags_agg_losses, self.x_limits, self.y_limits,
-            self.basemap_path, self.dstore)
+            self.basemap_path, self.dstore, self.hypocenter)
         save_most_affected_regions(df, self.dstore, self.iso3)
         return df, images
 
@@ -562,11 +563,11 @@ class CountryReportBuilder:
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, adm_level, dstore):
+        basemap_path, adm_level, dstore, hypocenter):
     builder = CountryReportBuilder(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-        adm_level, dstore)
+        adm_level, dstore, hypocenter)
     builder.build()
 
 
@@ -629,6 +630,7 @@ def main(dstore, adm_level=1, threshold_deg=3):
     oqparam = dstore['oqparam']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
+    hypocenter = (lon, lat)
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
     losses_df = pd.DataFrame(avg_losses.mean)
     rupdic = oqparam.rupture_dict
@@ -655,7 +657,7 @@ def main(dstore, adm_level=1, threshold_deg=3):
             make_report_for_country(
                 iso3, event_name, event_date, shakemap_version, time_of_calc,
                 disclaimer_txt, notes_txt, losses_df, summary_ranges,
-                basemap_path, adm_level, dstore)
+                basemap_path, adm_level, dstore, hypocenter)
 
 
 if __name__ == '__main__':
