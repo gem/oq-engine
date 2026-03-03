@@ -477,7 +477,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     hypo_handle = None
     if hypocenter is not None:
         lon, lat = hypocenter
-        hypo_handle = ax.scatter(lon, lat, marker='*', s=300, color='yellow',
+        hypo_handle = ax.scatter(lon, lat, marker='*', s=200, color='yellow',
                                  edgecolor='black', linewidth=1, zorder=10,
                                  label='Hypocenter')
 
