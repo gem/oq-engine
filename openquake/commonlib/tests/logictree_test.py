@@ -1243,8 +1243,8 @@ class SampleTestCase(unittest.TestCase):
         def count(samples, value):
             return sum(s.value == value for s in samples)
 
-        self.assertEqual(count(samples, value='A'), 225)
-        self.assertEqual(count(samples, value='B'), 278)
+        self.assertEqual(count(samples, value='A'), 218)
+        self.assertEqual(count(samples, value='B'), 285)
         self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
@@ -1859,7 +1859,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         for rlz in rlzs:
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
+        self.assertEqual(counter, {('gA0',): 402, ('gB0',): 598})
 
     def test_multiple(self):
         xml = _make_nrml("""\
@@ -1909,8 +1909,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
-        self.assertEqual(rlz.value, ['example-source-model.xml', -0.2, 0.0])
-        self.assertEqual(('b1', 'b5', 'b7'), rlz.lt_path)
+        self.assertEqual(rlz.value, ['example-source-model.xml', 0.0, 0.1])
+        self.assertEqual(('b1', 'b4', 'b6'), rlz.lt_path)
 
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
@@ -1995,15 +1995,15 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         oqparam.sampling_method = 'early_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2_.', 'b2_.', 'b2_.']
+        paths = ['b1_b22', 'b1_b22', 'b1_b23', 'b1_b23', 'b1_b23', 'b1_b24',
+                 'b1_b24', 'b1_b24', 'b1_b25', 'b2_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.102)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
@@ -2013,16 +2013,14 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         oqparam.sampling_method = 'late_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.', 'b3_.']
+        paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b23',
+                 'b2_.', 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.04438889044, 0.05861275966, 0.031712341,
-                   0.01389718817, 0.18919751558, 0.189197515,
-                   0.18919751558, 0.09459875780, 0.094598757,
-                   0.09459875779]
+        weights = [0.01428537, 0.03094343, 0.08171773, 0.08171773, 0.17585239,
+                   0.17585239, 0.17585239, 0.17585239, 0.0439631, 0.0439631]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.116706)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
