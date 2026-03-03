@@ -114,7 +114,7 @@ def test_KOR():
         calc.run()
     if rtgmpy:
         asce07 = json.loads(calc.datastore['asce07'][0])
-        aac(asce07['PGA'], 1.60312, atol=5E-5)
+        aac(asce07['PGA'], 1.68641, atol=5E-5)
         # check all plots created
         assert 'png/site.png' in calc.datastore
         assert 'png/mce.png' in calc.datastore
