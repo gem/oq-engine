@@ -73,9 +73,8 @@ class Comparator(object):
                 sids = [int(sid) for sid in open(samplesites).read().split()]
             else:
                 if len(self.sitecol) > numsamples:
-                    numpy.random.seed(numsamples)
-                    sids = numpy.random.choice(
-                        len(self.sitecol), numsamples, replace=False)
+                    rng = numpy.random.default_rng(numsamples)
+                    sids = rng.choice(len(self.sitecol), numsamples, replace=0)
         return numpy.sort(sids)
 
     def getdata(self, what, imt, sids, rtol, atol):
