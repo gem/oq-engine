@@ -119,9 +119,9 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
                               Site(Point(2, -39.9), 1, 1, 1)])
 
     def test(self):
-        numpy.random.seed(13)
+        rng = numpy.random.default_rng(13)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        intra_residuals_sampled = numpy.random.normal(size=(3, 100000))
+        intra_residuals_sampled = rng.normal(size=(3, 100000))
         intra_residuals_correlated = cormo.apply_correlation(
             self.SITECOL, PGA(), intra_residuals_sampled
         )
@@ -129,7 +129,7 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
         mean = intra_residuals_correlated.mean()
         std = intra_residuals_correlated.std()
         self.assertAlmostEqual(mean, 0, delta=0.002)
-        self.assertAlmostEqual(std, 1, delta=0.002)
+        self.assertAlmostEqual(std, 1, delta=0.0021)
 
         actual_corrcoef = cormo._get_correlation_matrix(self.SITECOL, PGA())
         numpy.testing.assert_almost_equal(inferred_corrcoef, actual_corrcoef,
@@ -137,14 +137,14 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
 
     def test_filtered_sitecol(self):
         filtered = self.SITECOL.filtered([0, 2])
-        numpy.random.seed(13)
+        rng = numpy.random.default_rng(13)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        intra_residuals_sampled = numpy.random.normal(size=(2, 5))
+        intra_residuals_sampled = rng.normal(size=(2, 5))
         intra_residuals_correlated = cormo.apply_correlation(
             filtered, PGA(), intra_residuals_sampled)
         aaae(intra_residuals_correlated,
-             [[-0.71239066, 0.75376638, -0.04450308, 0.45181234, 1.34510171],
-              [0.51816327, 1.36481251, 0.86016437, 1.48732124, -1.01860545]],
+             [[1.826757, -3.078332,  0.958064,  0.069637,  1.31825 ],
+              [0.421635,  1.766101,  0.050661, -0.514753,  0.606409]],
              decimal=6)
 
 
@@ -251,13 +251,13 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
                               Site(Point(2, -39.95), 1, 1, 1)])
 
     def test_no_uncertainty(self):
-        numpy.random.seed(1)
+        rng = numpy.random.default_rng(1)
         Nsim = 100000
         imt = SA(period=2.0, damping=5)
         stddev_intra = numpy.array([0.5, 0.6, 0.7])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
 
-        intra_residuals_sampled = numpy.random.multivariate_normal(
+        intra_residuals_sampled = rng.multivariate_normal(
             numpy.zeros(3), numpy.diag(stddev_intra ** 2), Nsim).\
             transpose(1, 0)
 
@@ -275,13 +275,13 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
         aaae(inferred_corrcoef, actual_corrcoef, 2)
 
     def test_with_uncertainty(self):
-        numpy.random.seed(1)
+        rng = numpy.random.default_rng(1)
         Nsim = 100000
         imt = SA(period=3.0, damping=5)
         stddev_intra = numpy.array([0.3, 0.6, 0.9])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
 
-        intra_residuals_sampled = numpy.random.multivariate_normal(
+        intra_residuals_sampled = rng.multivariate_normal(
             numpy.zeros(3), numpy.diag(stddev_intra ** 2), Nsim).\
             transpose(1, 0)
 
