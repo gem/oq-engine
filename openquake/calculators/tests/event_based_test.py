@@ -95,20 +95,18 @@ class EventBasedTestCase(CalculatorTestCase):
         aac(avg_gmf[:, 0], avgstd)
 
     def test_compute_avg_gmf(self):
-        numpy.random.seed(42)
+        rng = numpy.random.default_rng(42)
         E = 1000
         eids = numpy.arange(E)
         min_iml = numpy.array([.05])
-        gmvs = numpy.random.lognormal(mean=-2.0, sigma=.5, size=E)
+        gmvs = rng.lognormal(mean=-2.0, sigma=.5, size=E)
         ok = gmvs >= min_iml
-        self.assertEqual(ok.sum(), 983)
+        self.assertEqual(ok.sum(), 975)
         gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
                                   numpy.zeros(E, int)[ok])
         weights = numpy.ones(E)
         [(_sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
-        # aac(avgstd, [[0.13664978], [1.63127694]]) without cutting min_iml
-        # aac(avgstd, [[0.14734], [1.475266]], atol=1E-6)  # cutting at .10
-        aac(avgstd, [[0.137023], [1.620616]], atol=1E-6)
+        aac(avgstd, [[0.134056], [1.620217]], atol=1E-6)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
