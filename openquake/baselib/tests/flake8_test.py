@@ -41,6 +41,7 @@ CR = ord('\r')
 def _long_funcs(module, maxlen):
     out = []
     code = open(module.__file__, encoding='utf-8').read()
+    assert 'numpy.''random.''seed' not in code, module.__file__
     tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
@@ -124,8 +125,8 @@ def test_serious_violations():
     assert out.getvalue().decode('utf8') == ''
 
 
-# cut & paste from github cause the following character to creep inside
-# the codebase
+# cut & paste from github may cause the following invisible
+# characters to creep inside the codebase
 def test_annoying_character():
     object_replacement_character = b'\xef\xbf\xbc'
     for cwd, dirs, files in os.walk(REPO):
