@@ -84,6 +84,9 @@ def load_admin_boundaries(
             f"Unsupported admin schema. Columns: {list(gdf.columns)}"
         )
     gdf = gdf[gdf[iso3_col] == iso3]
+    if gdf.empty:
+        raise ValueError(
+            f"No boundaries found for country '{country_name}'")
     # normalize column names
     gdf = gdf.rename(columns={
         iso3_col: "country_iso3",
