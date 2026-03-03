@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    investigation_time="1"
+    investigation_time="1.0"
     name="nb"
     >
         <sourceGroup
@@ -13,11 +13,11 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <pointSource
+            alpha="2.0"
             id="00000"
+            mu="0.1"
             name="point00000"
             tom="NegativeBinomialTOM"
-            mu="0.1"
-            alpha="2.0"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -26,10 +26,10 @@ xmlns:gml="http://www.opengis.net/gml"
                         </gml:pos>
                     </gml:Point>
                     <upperSeismoDepth>
-                        0
+                        0.0
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        30
+                        30.0
                     </lowerSeismoDepth>
                 </pointGeometry>
                 <magScaleRel>
@@ -42,60 +42,51 @@ xmlns:gml="http://www.opengis.net/gml"
                 binWidth="0.1"
                 minMag="5.0"
                 >
-                    <!--Simple MFD of only one 0.1-bin -->
                     <occurRates>
                         0.1
                     </occurRates>
                 </incrementalMFD>
                 <nodalPlaneDist>
-                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0"/>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="15" probability="1.0"/>
+                    <hypoDepth depth="15.0" probability="1.0"/>
                 </hypoDepthDist>
             </pointSource>
-            <pointSource
+            <simpleFaultSource
+            alpha="2.1"
             id="00001"
-            name="point00001"
-            tom="NegativeBinomialTOM"
             mu="0.11"
-            alpha="2.0"
+            name="simplefault"
+            tom="NegativeBinomialTOM"
             >
-                <pointGeometry>
-                    <gml:Point>
-                        <gml:pos>
-                            0.06 0.10
-                        </gml:pos>
-                    </gml:Point>
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0 -0.2 1.4 0.0 1.7 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        30.0
+                    </dip>
                     <upperSeismoDepth>
-                        0
+                        5.0
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        30
+                        15.0
                     </lowerSeismoDepth>
-                </pointGeometry>
+                </simpleFaultGeometry>
                 <magScaleRel>
-                    PointMSR
+                    WC1994
                 </magScaleRel>
                 <ruptAspectRatio>
-                    1.0
+                    2.0
                 </ruptAspectRatio>
-                <incrementalMFD
-                binWidth="0.1"
-                minMag="5.0"
-                >
-                    <!--Simple MFD of only one 0.1-bin -->
-                    <occurRates>
-                        0.1
-                    </occurRates>
-                </incrementalMFD>
-                <nodalPlaneDist>
-                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0"/>
-                </nodalPlaneDist>
-                <hypoDepthDist>
-                    <hypoDepth depth="15" probability="1.0"/>
-                </hypoDepthDist>
-            </pointSource>
+                <truncGutenbergRichterMFD aValue="4.2" bValue="0.9" maxMag="7.0" minMag="6.5"/>
+                <rake>
+                    90.0
+                </rake>
+            </simpleFaultSource>
         </sourceGroup>
     </sourceModel>
 </nrml>
