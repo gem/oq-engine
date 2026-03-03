@@ -255,8 +255,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 8764)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 1038)  # SadighEtAl1997 assocs
+        self.assertEqual(A, 8765)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 1037)  # SadighEtAl1997 assocs
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -312,12 +312,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'A~A': 308,  # w = .6 * .5 = .30
-                          b'A~B': 173,  # w = .6 * .3 = .18
-                          b'A~C': 119,  # w = .6 * .2 = .12
-                          b'B~A': 192,  # w = .4 * .5 = .20
-                          b'B~B': 127,  # w = .4 * .3 = .12
-                          b'B~C': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'A~A': 313,  # w = .6 * .5 = .30
+                          b'A~B': 172,  # w = .6 * .3 = .18
+                          b'A~C': 115,  # w = .6 * .2 = .12
+                          b'B~A': 187,  # w = .4 * .5 = .20
+                          b'B~B': 128,  # w = .4 * .3 = .12
+                          b'B~C': 85},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
