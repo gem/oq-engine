@@ -451,7 +451,7 @@ def get_source_attributes(source):
         elif rup.weight is not None:
             weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
-    elif isinstance(source, PointSource):
+    elif hasattr(source, 'temporal_occurrence_model'):
         tom = source.temporal_occurrence_model
         if isinstance(tom, NegativeBinomialTOM):
             attrs['tom'] = 'NegativeBinomialTOM'
