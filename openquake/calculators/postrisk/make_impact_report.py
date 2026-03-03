@@ -609,7 +609,21 @@ def to_utc_string(ts: str) -> str:
     return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
-def main(dstore, adm_level=1, threshold_deg=3):
+def get_dynamic_threshold(mag):
+    """
+    Returns a search threshold in degrees based on earthquake magnitude.
+    """
+    if mag < 5.0:
+        return 1.0  # ~111 km
+    elif mag < 6.5:
+        return 2.0  # ~222 km
+    elif mag < 7.5:
+        return 3.0  # ~333 km
+    else:
+        return 5.0  # ~555 km
+
+
+def main(dstore, adm_level=1, threshold_deg=None):
     """
     Create a PDF impact report
     """
@@ -628,6 +642,7 @@ def main(dstore, adm_level=1, threshold_deg=3):
     dstore.open('r+')
     dstore.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
     oqparam = dstore['oqparam']
+    mag = oqparam.rupture_dict['mag']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
     hypocenter = (lon, lat)
@@ -646,6 +661,12 @@ def main(dstore, adm_level=1, threshold_deg=3):
     for accuracy by a human reviewer. Please treat all figures as provisional
     until a final validated version is issued.'''
     notes_txt = _get_notes(oqparam)
+    if threshold_deg is None:
+        threshold_deg = get_dynamic_threshold(mag)
+        logging.info(f"Magnitude {mag} detected. Using dynamic"
+                     f" threshold: {threshold_deg} degrees.")
+    else:
+        threshold_deg = float(threshold_deg)
     iso3_codes = get_close_regions(
         lon, lat, buffer_radius=threshold_deg, region_kind='country')
     if not iso3_codes:

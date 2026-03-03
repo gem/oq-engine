@@ -398,7 +398,7 @@ def get_assetcol(calc_id):
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=18, city_font_size=14,
+                  basemap_path=None, font_size=18, city_font_size=10,
                   legend_font_size=10, title_font_size=20, figsize=(10, 10),
                   hypocenter=None):
     """
@@ -514,8 +514,13 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     if cities:
         for city, (x, y) in cities.items():
-            txt = ax.text(x, y, city, fontsize=city_font_size,
-                          color="black", fontweight="bold")
+            # Plot the city marker (a small black circle)
+            ax.scatter(x, y, color='black', marker='o', s=10, zorder=6)
+            # Plot the label with a small offset, so it doesn't overlap the dot
+            txt = ax.text(x + 0.05, y + 0.05, city,
+                          fontsize=city_font_size, color="black",
+                          fontweight="normal", zorder=7)
+            # Keep the halo (path effects) for readability against the basemap
             txt.set_path_effects([
                 path_effects.Stroke(linewidth=1.5, foreground="white"),
                 path_effects.Normal()])
