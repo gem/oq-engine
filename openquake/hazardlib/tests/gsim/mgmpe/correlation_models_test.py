@@ -332,7 +332,7 @@ class ClemettCorrelationModelSSlabTestCase(unittest.TestCase):
 class ClemettCorrelationModelVranceaTestCase(unittest.TestCase):
     def setUp(self):
         self.corr_model = ClemettCorrelationModelVrancea(np.array([1, 1.1, 2.0]))
-    # TODO
+    
     def test_total_correlations(self):
         # testing the creation of the total correlation matrix
         np.testing.assert_almost_equal(self.corr_model(0, 0), 1.0)
