@@ -314,7 +314,7 @@ class CountryReportBuilder:
         self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
         self.cities = self._get_cities_from_csv()
 
-    def _get_cities_from_csv(self, min_pop=100000, top_n=12):
+    def _get_cities_from_csv(self, min_pop=100000, top_n=50):
         """
         Load cities for a specific country with a minimum population.
         """

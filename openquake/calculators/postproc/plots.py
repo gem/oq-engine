@@ -531,24 +531,12 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             texts.append(t)
         # Automatically resolve all collisions
         if adjust_text and texts:
-            adjust_text(texts,
-                        ax=ax,
+            adjust_text(texts, ax=ax,
                         add_objects=[ax.collections[-1]],
-                        # Only draw a line if the label moved more than 15 pixels
-                        limpara={'min_arrow_len': 15},
-                        arrowprops=dict(
-                            arrowstyle='-',
-                            color='gray',
-                            lw=0.5,
-                            alpha=0.5,
-                            shrinkA=6,
-                            shrinkB=4,
-                            connectionstyle="arc3,rad=0"
-                        ),
-                        # Increase 'force' to push labels further if they still overlap
+                        arrowprops=None,   # disable arrows completely
                         force_text=(0.1, 0.2),
                         expand_points=(1.2, 1.2),
-                        save_steps=False)  # Speeds up processing
+                        save_steps=False)
 
     if plot_title:
         ax.set_title(plot_title, fontsize=title_font_size)
