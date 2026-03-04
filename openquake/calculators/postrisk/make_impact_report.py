@@ -312,7 +312,25 @@ class CountryReportBuilder:
         # "CRS": country_info["CRS"],
         self.x_limits = [row["X_MIN"], row["X_MAX"]]
         self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
-        self.cities = self._get_cities_from_csv()
+        self.cities = self._get_top_n_cities()
+
+    def _get_top_n_cities(self, n=15):
+        """
+        Retrieves the Top N most populous cities for the current country
+        """
+        world_cities_file = config.directory.world_cities_file
+        if not world_cities_file:
+            raise AttributeError(
+                'config.directory.world_cities_file is missing')
+        df = pd.read_csv(world_cities_file)
+        # Filter by country first
+        country_df = df[df['iso3'] == self.iso3].copy()
+        # Sort by population (descending) and take the top N
+        top_cities = country_df.sort_values(
+            'population', ascending=False).head(n)
+        # We use 'city_ascii' to avoid encoding issues with special characters
+        return {row['city_ascii']: [row['lng'], row['lat']]
+                for _, row in top_cities.iterrows()}
 
     def _get_cities_from_csv(self, min_pop=100000, top_n=50):
         """
