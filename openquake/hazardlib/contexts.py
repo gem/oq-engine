@@ -29,10 +29,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
-from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, getsizeof, humansize)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module, InvalidFile
@@ -1520,8 +1519,8 @@ class RmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    # allctxs is at most a few dozens of MB
-                    cm.update(pnemap, concat(allctxs))
+                    ctxt = concat(allctxs)  # at most a few dozens of MB
+                    cm.update(pnemap, ctxt)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
@@ -1536,20 +1535,18 @@ class RmapMaker(object):
         return pnemap
 
     def _make_src_indep_slow(self):
-        cm = self.cmaker
-        t0 = time.time()
         sids = self.srcfilter.sitecol.sids
-        # using memory here, limited by tiling and pmap_max_mb
         pnemap = MapArray(
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster)
+            not self.cluster).fill(self.cluster)  # size < pmap_max_mb
         for src in self.sources:
+            t0 = time.time()
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             for ctx in ctxs:
-                cm.update(pnemap, ctx, self.rup_mutex)
+                self.cmaker.update(pnemap, ctx, self.rup_mutex)
             dt = time.time() - t0
-            self.update_source_data(src, cm.task_no, dt, n)
+            self.update_source_data(src, self.cmaker.task_no, dt, n)
         return pnemap
 
     def _make_src_mutex(self):
