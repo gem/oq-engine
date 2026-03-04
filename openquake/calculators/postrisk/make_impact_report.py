@@ -206,7 +206,7 @@ class CountryReportBuilder:
     def __init__(
             self, iso3, event_name, event_date, shakemap_version, time_of_calc,
             disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-            adm_level, dstore, hypocenter):
+            adm_level, dstore, hypocenter, threshold_deg):
         try:
             import reportlab
             from reportlab import platypus
@@ -242,6 +242,7 @@ class CountryReportBuilder:
         self.adm_level = adm_level
         self.dstore = dstore
         self.hypocenter = hypocenter
+        self.threshold_deg = threshold_deg
 
         self.styles = self.getSampleStyleSheet()
 
@@ -304,53 +305,51 @@ class CountryReportBuilder:
             raise AttributeError(
                 'config.directory.countries_info_file is missing')
         df = pd.read_csv(countries_info_file)
-
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
-
         self.country_name = row["ENGLISH_COUNTRY"]
         # "GEM_REGION": country_info["GEM_REGION"],
         # "CRS": country_info["CRS"],
-        self.x_limits = [row["X_MIN"], row["X_MAX"]]
-        self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
-        self.cities = self._get_top_n_cities()
+        lon_h, lat_h = self.hypocenter
+        # self.x_limits = [row["X_MIN"], row["X_MAX"]]
+        # self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
 
-    def _get_top_n_cities(self, n=15):
+        # Define viewport based on the affected area threshold
+        # Extend the viewport to K times the threshold used to
+        # determine if a country is affected by the event
+        K = 5
+        self.x_limits = [lon_h - K*self.threshold_deg,
+                         lon_h + K*self.threshold_deg]
+        self.y_limits = [lat_h - K*self.threshold_deg,
+                         lat_h + K*self.threshold_deg]
+
+        self.cities = self._get_cities_in_viewport()
+
+    def _get_cities_in_viewport(self, n=15):
         """
-        Retrieves the Top N most populous cities for the current country
+        Finds Top N cities within the map viewport belonging
+        to the current country
         """
         world_cities_file = config.directory.world_cities_file
         if not world_cities_file:
             raise AttributeError(
                 'config.directory.world_cities_file is missing')
         df = pd.read_csv(world_cities_file)
-        # Filter by country first
-        country_df = df[df['iso3'] == self.iso3].copy()
-        # Sort by population (descending) and take the top N
-        top_cities = country_df.sort_values(
+        # NOTE: assuming that the CSV uses 'lng' for longitude
+        if 'lng' not in df:
+            ValueError(f'Missing "lng" column in {world_cities_file}')
+        # Pull the pre-calculated limits
+        min_lon, max_lon = self.x_limits
+        min_lat, max_lat = self.y_limits
+        # Spatial query + Country filter
+        mask = (df['iso3'] == self.iso3) & \
+               (df['lng'] >= min_lon) & (df['lng'] <= max_lon) & \
+               (df['lat'] >= min_lat) & (df['lat'] <= max_lat)
+        viewport_cities = df[mask].copy()
+        # Take the biggest ones
+        top_cities = viewport_cities.sort_values(
             'population', ascending=False).head(n)
-        # We use 'city_ascii' to avoid encoding issues with special characters
         return {row['city_ascii']: [row['lng'], row['lat']]
                 for _, row in top_cities.iterrows()}
-
-    def _get_cities_from_csv(self, min_pop=100000, top_n=50):
-        """
-        Load cities for a specific country with a minimum population.
-        """
-        world_cities_file = config.directory.world_cities_file
-        if not world_cities_file:
-            raise AttributeError(
-                'config.directory.world_cities_file is missing')
-        df = pd.read_csv(world_cities_file)
-        # Filter by country and population
-        mask = (df['iso3'] == self.iso3) & (df['population'] >= min_pop)
-        country_cities = df[mask].copy()
-        # Sort by population and take the top N to keep the map clean
-        country_cities = country_cities.sort_values(
-            'population', ascending=False).head(top_n)
-        # Convert to the dictionary format: {name: [lon, lat]}
-        # NOTE: assuming that the CSV uses 'lng' for longitude
-        return {row['city']: [row['lng'], row['lat']]
-                for _, row in country_cities.iterrows()}
 
     def _compute_layout(self):
         self.page_width = self.A4[0] - (2 * self.MARGIN)
@@ -593,11 +592,11 @@ class CountryReportBuilder:
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, adm_level, dstore, hypocenter):
+        basemap_path, adm_level, dstore, hypocenter, threshold_deg):
     builder = CountryReportBuilder(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-        adm_level, dstore, hypocenter)
+        adm_level, dstore, hypocenter, threshold_deg)
     builder.build()
 
 
@@ -708,7 +707,8 @@ def main(dstore, adm_level=1, threshold_deg=None):
             make_report_for_country(
                 iso3, event_name, event_date, shakemap_version, time_of_calc,
                 disclaimer_txt, notes_txt, losses_df, summary_ranges,
-                basemap_path, adm_level, dstore, hypocenter)
+                basemap_path, adm_level, dstore, hypocenter,
+                threshold_deg)
 
 
 if __name__ == '__main__':
