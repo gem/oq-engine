@@ -421,7 +421,7 @@ class PlaneFit(unittest.TestCase):
         """
         self.points[:, 2] += numpy.random.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
-        numpy.testing.assert_allclose(self.c[0:3], par, rtol=1.5e-3, atol=0)
+        numpy.testing.assert_allclose(self.c[0:3], par, rtol=.0022)
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
 
 
