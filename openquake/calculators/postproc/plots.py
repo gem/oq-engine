@@ -398,7 +398,7 @@ def get_assetcol(calc_id):
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=18, city_font_size=8,
+                  basemap_path=None, font_size=18, city_font_size=10,
                   legend_font_size=10, title_font_size=20, figsize=(10, 10),
                   hypocenter=None):
     """
