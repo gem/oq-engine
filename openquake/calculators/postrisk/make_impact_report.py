@@ -312,13 +312,27 @@ class CountryReportBuilder:
         # "CRS": country_info["CRS"],
         self.x_limits = [row["X_MIN"], row["X_MAX"]]
         self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
-        self.cities = {
-            row["CAPITAL"]: [row["CAPITAL_LON"], row["CAPITAL_LAT"]]
-        }
-        # # it might be needed if we have more than just the capital
-        # cities = config.get("cities", {})
-        # if isinstance(cities, dict) and len(cities) > 3:
-        #     cities = dict(list(cities.items())[:3])
+        self.cities = self._get_cities_from_csv()
+
+    def _get_cities_from_csv(self, min_pop=100000, top_n=12):
+        """
+        Load cities for a specific country with a minimum population.
+        """
+        world_cities_file = config.directory.world_cities_file
+        if not world_cities_file:
+            raise AttributeError(
+                'config.directory.world_cities_file is missing')
+        df = pd.read_csv(world_cities_file)
+        # Filter by country and population
+        mask = (df['iso3'] == self.iso3) & (df['population'] >= min_pop)
+        country_cities = df[mask].copy()
+        # Sort by population and take the top N to keep the map clean
+        country_cities = country_cities.sort_values(
+            'population', ascending=False).head(top_n)
+        # Convert to the dictionary format: {name: [lon, lat]}
+        # NOTE: assuming that the CSV uses 'lng' for longitude
+        return {row['city']: [row['lng'], row['lat']]
+                for _, row in country_cities.iterrows()}
 
     def _compute_layout(self):
         self.page_width = self.A4[0] - (2 * self.MARGIN)

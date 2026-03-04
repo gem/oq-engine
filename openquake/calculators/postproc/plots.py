@@ -398,7 +398,7 @@ def get_assetcol(calc_id):
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=18, city_font_size=10,
+                  basemap_path=None, font_size=18, city_font_size=8,
                   legend_font_size=10, title_font_size=20, figsize=(10, 10),
                   hypocenter=None):
     """
@@ -477,7 +477,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     hypo_handle = None
     if hypocenter is not None:
         lon, lat = hypocenter
-        hypo_handle = ax.scatter(lon, lat, marker='*', s=200, color='yellow',
+        hypo_handle = ax.scatter(lon, lat, marker='*', s=150, color='yellow',
                                  edgecolor='black', linewidth=1, zorder=10,
                                  label='Hypocenter')
 
@@ -513,17 +513,42 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         ax.set_ylim(y_limits)
 
     if cities:
+        try:
+            from adjustText import adjust_text
+        except ImportError:
+            adjust_text = None
+        texts = []
         for city, (x, y) in cities.items():
-            # Plot the city marker (a small black circle)
-            ax.scatter(x, y, color='black', marker='o', s=10, zorder=6)
-            # Plot the label with a small offset, so it doesn't overlap the dot
-            txt = ax.text(x + 0.05, y + 0.05, city,
-                          fontsize=city_font_size, color="black",
-                          fontweight="normal", zorder=7)
-            # Keep the halo (path effects) for readability against the basemap
-            txt.set_path_effects([
+            # Plot the city dot
+            ax.scatter(x, y, color='black', marker='o', s=8, zorder=6)
+            # Create the text object (don't offset it yet)
+            t = ax.text(x, y, city, fontsize=city_font_size,
+                        color="black", fontweight="normal",
+                        zorder=7)
+            t.set_path_effects([
                 path_effects.Stroke(linewidth=1.5, foreground="white"),
                 path_effects.Normal()])
+            texts.append(t)
+        # Automatically resolve all collisions
+        if adjust_text and texts:
+            adjust_text(texts,
+                        ax=ax,
+                        add_objects=[ax.collections[-1]],
+                        # Only draw a line if the label moved more than 15 pixels
+                        limpara={'min_arrow_len': 15},
+                        arrowprops=dict(
+                            arrowstyle='-',
+                            color='gray',
+                            lw=0.5,
+                            alpha=0.5,
+                            shrinkA=6,
+                            shrinkB=4,
+                            connectionstyle="arc3,rad=0"
+                        ),
+                        # Increase 'force' to push labels further if they still overlap
+                        force_text=(0.1, 0.2),
+                        expand_points=(1.2, 1.2),
+                        save_steps=False)  # Speeds up processing
 
     if plot_title:
         ax.set_title(plot_title, fontsize=title_font_size)
