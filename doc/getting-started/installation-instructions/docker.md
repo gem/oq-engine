@@ -96,7 +96,7 @@ $ docker start <containername>
 This modality provides the same features as the headless mode plus the ability to drive the OpenQuake Engine via the `oq` command on a terminal.
 
 ```bash
-$ docker run --name <containername> -t -i -p 127.0.0.1:8800:8800 openquake/engine:nightly 
+$ docker run --name <containername> -t -i -p 127.0.0.1:8800:8800 openquake/engine:nightly
 ```
 
 The container prompt will appear, and you will have the possibility to run `oq` via the [command line interface](../running-calculations/unix.rst).

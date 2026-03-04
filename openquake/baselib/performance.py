@@ -51,7 +51,9 @@ task_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
-
+starmap_info_dt = numpy.dtype(
+    [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
+     ('min', numpy.float32), ('max', numpy.float32)])
 F16= numpy.float16
 F64= numpy.float64
 I64 = numpy.int64
@@ -116,6 +118,8 @@ def init_performance(hdf5file, swmr=False):
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
+    if 'starmap_info' not in h5:
+        hdf5.create(h5, 'starmap_info', starmap_info_dt)
     if 'task_sent' not in h5:
         h5['task_sent'] = '{}'
     if swmr:
@@ -325,6 +329,16 @@ class Monitor(object):
         data = numpy.array([t], task_info_dt)
         hdf5.extend(h5['task_info'], data)
         h5['task_info'].flush()  # notify the reader
+
+    def save_starmap_info(self, h5, name, times):
+        """
+        Called at the end of a Starmap. Store stats about the times per core.
+        """
+        t = (name, times.mean(), times.std(), times.min(), times.max())
+        data = numpy.array([t], starmap_info_dt)
+        hdf5.extend(h5['starmap_info'], data)
+        logging.info('Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
+                     t[1], t[2], t[3], t[4])
 
     def reset(self):
         """

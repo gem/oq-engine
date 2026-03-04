@@ -465,11 +465,11 @@ def reduce_sources(sources_with_same_id, full_lt):
 
 def split_by_tom(sources):
     """
-    Groups together sources with the same TOM
+    Groups together sources with the same TOM and collect multifault sources
     """
     def key(src):
         tom = getattr(src, 'temporal_occurrence_model', None)
-        return tom.__class__.__name__
+        return (tom.__class__.__name__, src.code == b'F')
     return general.groupby(sources, key).values()
 
 

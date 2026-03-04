@@ -461,8 +461,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     .. note::
 
      This calculator is using random numbers. In order to reproduce the
-     same results numpy random numbers generator needs to be seeded, see
-     http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+     same results numpy random numbers generator needs to be seeded.
 
     :param openquake.hazardlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.

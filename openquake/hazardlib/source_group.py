@@ -134,6 +134,13 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def multifault(self):
+        """
+        True if the underlying sources are multifault sources
+        """
+        return self.sources[0].code == b'F'
+
+    @property
     def grp_id(self):
         """
         The grp_id of the underlying sources
@@ -549,6 +556,9 @@ class CompositeSourceModel:
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
+        if sg.multifault and N / splits > 2_500:
+            # crucial to avoid OOM in CEA or USA due to the dparam cache
+            splits = N / 2_500  # use tiles with at max 2500 sites
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]

@@ -388,22 +388,29 @@ def _get_delta_cm(conf, imt):
     """
     # Get source function table
     source_function_table = conf.get('source_function_table')
-    
-    # Get stress params
-    stress_par_host = conf.get('stress_par_host')
-    stress_par_targ = conf.get('stress_par_target')
-    C = source_function_table[imt]
 
-    # Compute chi
-    if stress_par_targ > stress_par_host:
-        chi = C['chi_delta_pos']
+    if imt in source_function_table: # Only apply if IMT in user-defined source
+                                     # function table
+        # Get coeffs  
+        C = source_function_table[imt]
+        
+        # Get stress params
+        stress_par_host = conf.get('stress_par_host')
+        stress_par_targ = conf.get('stress_par_target')
+
+        # Compute chi
+        if stress_par_targ > stress_par_host:
+            chi = C['chi_delta_pos']
+        else:
+            chi = C['chi_delta_neg']
+
+        # Compute delta_cm
+        delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
+
+        return delta_cm
+
     else:
-        chi = C['chi_delta_neg']
-
-    # Compute delta_cm
-    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
-
-    return delta_cm
+        return 0. # No adjustment for given IMT
 
 
 def _get_delta_g(delta_gamma_tab, ctx, imt):
@@ -411,14 +418,19 @@ def _get_delta_g(delta_gamma_tab, ctx, imt):
     Returns the delta_g parameter as defined by equation 13 in Boore et al.
     (2022) for the host-to-target region path adjustment
     """
-    # Get coefficients for imt
-    C = delta_gamma_tab[imt]
+    if imt in delta_gamma_tab: # Only apply if IMT has coeffs in the table
+
+        # Get coefficients for imt
+        C = delta_gamma_tab[imt]
+        
+        # Compute delta_g (magnitude-dependent)
+        delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
+            ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
     
-    # Compute delta_g (magnitude-dependent)
-    delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
-        ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
+        return delta_g
     
-    return delta_g
+    else:
+        return 0. # No adjustment for given IMT
     
 
 def get_ln_y_ref(region, C, ctx, conf):

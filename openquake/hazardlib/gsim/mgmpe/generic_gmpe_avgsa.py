@@ -27,7 +27,7 @@ from scipy.interpolate import interp1d, RegularGridInterpolator
 
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import AvgSA, SA
+from openquake.hazardlib.imt import AvgSA, SA, PGA
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
 CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
@@ -104,7 +104,7 @@ class GenericGmpeAvgSA(GMPE):
         in classical/case34).
         """
         # Get mean and std devs for averaging periods
-        averaging_periods = [SA(period) for period in self.avg_periods]
+        averaging_periods = [SA(period) if period != 0 else PGA() for period in self.avg_periods]
         out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods)
 
         # Compute average SA

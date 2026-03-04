@@ -48,12 +48,12 @@ class PoissonTOMTestCase(unittest.TestCase):
     def test_sample_number_of_occurrences(self):
         time_span = 40
         rate = 0.05
-        num_samples = 8000
+        num_samples = 80000
         tom = PoissonTOM(time_span)
-        numpy.random.seed(31)
-        mean = sum(tom.sample_number_of_occurrences(rate)
+        rng = numpy.random.default_rng(31)
+        mean = sum(tom.sample_number_of_occurrences(rng, rate)
                    for i in range(num_samples)) / float(num_samples)
-        self.assertAlmostEqual(mean, rate * time_span, delta=1e-3)
+        self.assertAlmostEqual(mean, rate * time_span, delta=1e-2)
 
     def test_get_probability_no_exceedance(self):
         time_span = 50.
@@ -98,8 +98,8 @@ class NegativeBinomialTOMTestCase(unittest.TestCase):
         mu = 1
         alpha = 0.01
         tom = NegativeBinomialTOM(time_span, mu, alpha)
-        numpy.random.seed(31)
-        self.assertEqual(tom.sample_number_of_occurrences(), 27)
+        rng = numpy.random.default_rng(31)
+        self.assertEqual(tom.sample_number_of_occurrences(rng), 41)
 
     def test_get_probability_no_exceedance(self):
         time_span = 1.
@@ -108,6 +108,7 @@ class NegativeBinomialTOMTestCase(unittest.TestCase):
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
         tom = NegativeBinomialTOM(time_span, mu, alpha)
         pne = tom.get_probability_no_exceedance(mu, poes)
-        numpy.testing.assert_allclose(pne,
-                                      numpy.array([[0.99104439, 0.99203509, 0.99302687],
-                                                   [0.99401975, 0.99501372, 0.99600879]]))
+        numpy.testing.assert_allclose(
+            pne,
+            numpy.array([[0.99104439, 0.99203509, 0.99302687],
+                         [0.99401975, 0.99501372, 0.99600879]]))
