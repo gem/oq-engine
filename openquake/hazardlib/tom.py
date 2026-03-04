@@ -62,14 +62,10 @@ class BaseTOM(object):
         """
         raise NotImplementedError
 
-    def sample_number_of_occurrences(self, seeds=None):
+    def sample_number_of_occurrences(self, rng):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
-
-        The method uses the numpy random generator, which needs a seed
-        in order to get reproducible results. If the seed is None, it
-        should be set outside of this method.
         """
 
     def get_probability_no_exceedance(self):
@@ -101,7 +97,7 @@ class FatedTOM(BaseTOM):
         else:
             return 1
 
-    def sample_number_of_occurrences(self, seeds=None):
+    def sample_number_of_occurrences(self, rng):
         return 1
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
@@ -138,7 +134,7 @@ class PoissonTOM(BaseTOM):
         """
         return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(num)
 
-    def sample_number_of_occurrences(self, occurrence_rate, seeds=None):
+    def sample_number_of_occurrences(self, rng, occurrence_rate):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
@@ -147,26 +143,15 @@ class PoissonTOM(BaseTOM):
         in order to get reproducible results. If the seed is None, it
         should be set outside of this method.
 
+        :param rng:
+            Random number generator
         :param occurrence_rate:
             The average number of events per year.
-        :param seeds:
-            Random number generator seeds, one per each occurrence_rate
         :return:
             Sampled integer number of events to occur within model's
             time span.
         """
-        if isinstance(seeds, numpy.ndarray):  # array of seeds
-            assert len(seeds) == len(occurrence_rate), (
-                len(seeds), len(occurrence_rate))
-            rates = occurrence_rate * self.time_span
-            occ = []
-            for rate, seed in zip(rates, seeds):
-                numpy.random.seed(seed)
-                occ.append(numpy.random.poisson(rate))
-            return numpy.array(occ)
-        elif isinstance(seeds, int):
-            numpy.random.seed(seeds)
-        return numpy.random.poisson(occurrence_rate * self.time_span)
+        return rng.poisson(occurrence_rate * self.time_span)
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
         """
@@ -292,7 +277,7 @@ class NegativeBinomialTOM(BaseTOM):
 
         return scipy.stats.nbinom.pmf(num, tau, theta)
 
-    def sample_number_of_occurrences(self, mean_rate=None, seed=None):
+    def sample_number_of_occurrences(self, rng, mean_rate=None):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
@@ -301,10 +286,10 @@ class NegativeBinomialTOM(BaseTOM):
         in order to get reproducible results. If the seed is None, it
         should be set outside of this method.
 
+        :param rng:
+            Random number generator
         :param mean_rate:
             The mean rate, or mean number of events per year
-        :param seed:
-            Random number generator seed
         :return:
             Sampled integer number of events to occur within model's
             time span.
@@ -315,11 +300,7 @@ class NegativeBinomialTOM(BaseTOM):
         tau = 1 / self.alpha
         theta = tau / (tau + (mean_rate * self.time_span))
 
-        if isinstance(seed, int):
-            # FIXME: this is bad, we should pass the rng
-            numpy.random.seed(seed)
-
-        return scipy.stats.nbinom.rvs(tau, theta)
+        return scipy.stats.nbinom.rvs(tau, theta, random_state=rng)
 
     def get_pmf(self, mean_rate):
         """

@@ -192,9 +192,9 @@ class ClassicalTestCase(CalculatorTestCase):
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
-        ae(flt0.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~AA', 'A~BA', 'A~AA'])
+        ae(flt0.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
         ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
-        ae(flt2.rlzs['branch_path'], ['A~CA', 'A~CA', 'A~AA', 'A~CA', 'A~AA'])
+        ae(flt2.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~CA', 'A~BA'])
 
         sitecol = self.calc.sitecol
         sites0 = sitecol.filter(sitecol.ilabel == 0)
@@ -205,13 +205,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # check the mean hazard curves manually
         hcurve0, wei0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)
-        aac(wei0, [0.4, 0.6, 0., 1.], atol=1e-12)
+        aac(wei0, [0.2, 0.8, 0., 1.], atol=1e-12)
         hcurve1, wei1 = calc.mean_rates.calc_mcurves(
             src_groups, sites1, flt1, oq)
         aac(wei1, [0., 1., 0., 1.], atol=1e-12)
         hcurve2, wei2 = calc.mean_rates.calc_mcurves(
             src_groups, sites2, flt2, oq)
-        aac(wei2, [0.4, 0., 0.6, 1.], atol=1e-12)
+        aac(wei2, [0.2, 0.6, 0.2, 1.], atol=1e-12)
         pga0 = self.calc.datastore['hcurves-stats'][0]
         pga1 = self.calc.datastore['hcurves-stats'][1]
         pga2 = self.calc.datastore['hcurves-stats'][2]
@@ -327,7 +327,6 @@ class ClassicalTestCase(CalculatorTestCase):
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [1560, 5])
         # NB: rjb is depth-independent, the hypocenters could be collapsed
 
     def test_case_25(self):  # negative depths

@@ -29,10 +29,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
-from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, getsizeof, humansize)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module, InvalidFile
@@ -98,7 +97,7 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0.
     """
-    if dparam is None:
+    if not dparam:
         # no multifault
         dists = get_distances(rup, r_sites, param)
         if '_' in param:
@@ -470,21 +469,6 @@ def genctxs_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
-def _build_dparam(src, sitecol, cmaker):
-    dparams = {'rjb', 'tuw'}
-    if cmaker.fewsites:
-        dparams |= {'clon_clat'}
-    sections = src.get_sections(src.get_unique_idxs())
-    out = {}
-    for sec in sections:
-        out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
-        for param in dparams:
-            out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / TWO20)
-    cmaker.source_mb += getsizeof(src) / TWO20
-    return out
-
-
 # this is the critical function for the performance of the classical calculator
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
@@ -538,7 +522,6 @@ class ContextMaker(object):
     ilabel = None
     tom = None
     cluster = None  # set in RmapMaker
-    dparam_mb = 0  # set in build_dparam
     source_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
@@ -583,6 +566,7 @@ class ContextMaker(object):
         self.init_monitoring(self.monitor)
 
     def _init1(self, param):
+        self.dparam = {}  # multifault cache
         if 'poes' in param:
             self.poes = param['poes']
         if 'imtls' in param:
@@ -860,7 +844,7 @@ class ContextMaker(object):
         :returns: a dictionary with the rupture parameters
         """
         dic = {}
-        if hasattr(self, 'dparam') and self.dparam:
+        if self.dparam:
             msparam = rup.surface.msparam
         else:
             msparam = None
@@ -939,7 +923,7 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        dparam = getattr(self, 'dparam', None)
+        dparam = self.dparam
         for rup in same_mag_rups:
             if dparam:
                 rrups = _get(rup.surface.surfaces, 'rrup', dparam)
@@ -1011,6 +995,18 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             yield from self.genctxs(rups, sites, src_id)
 
+    def _build_dparam(self, src, sitecol):
+        dparams = {'rjb', 'tuw'}
+        if self.fewsites:
+            dparams |= {'clon_clat'}
+        for sec in src.get_sections(src.get_unique_idxs()):
+            if (sec.idx, 'rrup') in self.dparam:
+                continue
+            self.dparam[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
+            for param in dparams:
+                self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
+        self.source_mb += getsizeof(src) / TWO20
+
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -1034,9 +1030,7 @@ class ContextMaker(object):
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
-                    self.dparam = _build_dparam(src, sitecol, self)
-            else:
-                self.dparam = None
+                    self._build_dparam(src, sitecol)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -1114,8 +1108,8 @@ class ContextMaker(object):
         :param sitecol: a SiteCollection instance with N sites
         :returns: an array of PoEs of shape (N, L, G)
         """
-        ctxs = self.from_srcs(srcs, sitecol)
-        return self.get_pmap(ctxs, tom, rup_mutex).array
+        ctx = self.from_srcs(srcs, sitecol)
+        return self.get_pmap(ctx, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
         # NB: by construction ctx.mag contains a single magnitude
@@ -1167,7 +1161,7 @@ class ContextMaker(object):
                 # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
-    # called by get_rmap
+    # called by get_rmap, also documented in the manual
     def get_pmap(self, ctx, tom=None, rup_mutex={}):
         """
         :param ctx: a context array
@@ -1182,16 +1176,17 @@ class ContextMaker(object):
         self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def get_rmap(self, srcgroup, sitecol):
+    def get_rmap(self, ctx):
         """
-        Used for debugging simple sources
+        Used for debugging
 
-        :param srcgroup: a group of sources
-        :param sitecol: a SiteCollection instance
-        :returns: an array of annual rates of shape (N, L, G)
+        :param ctx: a context array
+        :returns: a MapArray of annual rates of shape (N, L, G)
         """
-        pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
-        return (~pmap).to_rates()
+        rmap = (~self.get_pmap(ctx)).to_rates()
+        rmap.gid = self.gid
+        rmap.wei = self.wei
+        return rmap
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
@@ -1487,29 +1482,24 @@ class RmapMaker(object):
         return nbytes
 
     def gen_ctxs(self, src):
-        sites = self.srcfilter.get_close_sites(src)
-        if sites is None:
-            return
-        tiles = [sites]
         if src.code == b'F':
-            # to avoid running OOM in multifault sources when building
-            # the dparam cache, we split the sites in tiles;
-            # this is ESSENTIAL for the USA 2023 model
-            # tested in oq-risk-tests/test/classical/usa_ucerf
-            tiles = sites.split_in_tiles(len(sites) // 5000)
-        for tile in tiles:
-            for ctx in self.cmaker.get_ctx_iter(src, tile):
-                if self.cmaker.deltagetter:
-                    # adjust occurrence rates in case of aftershocks
-                    with self.cmaker.delta_mon:
-                        delta = self.cmaker.deltagetter(src.id)
-                        ctx.occurrence_rate += delta[ctx.rup_id]
-                if self.fewsites:  # keep rupdata in memory
-                    if self.src_mutex:
-                        # needed for Disaggregator.init
-                        ctx.src_id = valid.fragmentno(src)
-                    self.rupdata.append(ctx)
-                yield ctx
+            sites = self.srcfilter.sitecol
+        else:
+            sites = self.srcfilter.get_close_sites(src)
+            if sites is None:
+                return
+        for ctx in self.cmaker.get_ctx_iter(src, sites):
+            if self.cmaker.deltagetter:
+                # adjust occurrence rates in case of aftershocks
+                with self.cmaker.delta_mon:
+                    delta = self.cmaker.deltagetter(src.id)
+                    ctx.occurrence_rate += delta[ctx.rup_id]
+            if self.fewsites:  # keep rupdata in memory
+                if self.src_mutex:
+                    # needed for Disaggregator.init
+                    ctx.src_id = valid.fragmentno(src)
+                self.rupdata.append(ctx)
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
@@ -1529,8 +1519,8 @@ class RmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    # allctxs is at most a few dozens of MB
-                    cm.update(pnemap, concat(allctxs))
+                    ctxt = concat(allctxs)  # at most a few dozens of MB
+                    cm.update(pnemap, ctxt)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
@@ -1538,18 +1528,25 @@ class RmapMaker(object):
             cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
-        dt = time.time() - t0
-        nsrcs = len(self.sources)
+        dt = (time.time() - t0) / len(self.sources)
         factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
-            src.dt = dt / nsrcs
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(src.nctxs * factor)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
+        return pnemap
+
+    def _make_src_indep_slow(self):
+        sids = self.srcfilter.sitecol.sids
+        pnemap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
+            not self.cluster).fill(self.cluster)  # size < pmap_max_mb
+        for src in self.sources:
+            t0 = time.time()
+            ctxs = list(self.gen_ctxs(src))
+            n = sum(len(ctx) for ctx in ctxs)
+            for ctx in ctxs:
+                self.cmaker.update(pnemap, ctx, self.rup_mutex)
+            dt = time.time() - t0
+            self.update_source_data(src, self.cmaker.task_no, dt, n)
         return pnemap
 
     def _make_src_mutex(self):
@@ -1575,23 +1572,30 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            src.dt = time.time() - t0
-            self.source_data['src_id'].append(valid.basename(src))
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(n)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, time.time() - t0, n)
         pmap.array *= self.grp_probability
         return ~pmap
+
+    def update_source_data(self, src, task_no, dt, nctxs):
+        src.dt = dt
+        self.source_data['src_id'].append(valid.basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nctxs'].append(nctxs)
+        self.source_data['nrupts'].append(src.num_ruptures)
+        self.source_data['weight'].append(src.weight)
+        self.source_data['ctimes'].append(src.dt)
+        self.source_data['taskno'].append(task_no)
 
     def make(self):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
-            pnemap = self._make_src_indep()
+            import os
+            if os.environ.get('OQ_SLOW_MODE'):
+                pnemap = self._make_src_indep_slow()
+            else:
+                pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:  # very fast
@@ -1614,7 +1618,7 @@ class RmapMaker(object):
         dic['rup_data'] = concat(self.rupdata)
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
-        dic['dparam_mb'] = self.cmaker.dparam_mb
+        dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20
         dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
@@ -1831,11 +1835,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
-    def get_gids(self):
+    @property
+    def gids(self):
         """
-        :returns: list of gid arrays, one for each underlying cmaker
+        :returns: concatenation of gid arrays, one for each underlying cmaker
         """
-        return [cm.gid for cm in self.cmakers]
+        return numpy.concatenate([cm.gid for cm in self.cmakers])
 
     def __getitem__(self, idx):
         return self.cmakers[idx]

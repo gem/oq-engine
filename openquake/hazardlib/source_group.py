@@ -134,6 +134,13 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def multifault(self):
+        """
+        True if the underlying sources are multifault sources
+        """
+        return self.sources[0].code == b'F'
+
+    @property
     def grp_id(self):
         """
         The grp_id of the underlying sources
@@ -549,6 +556,9 @@ class CompositeSourceModel:
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
+        if sg.multifault and N / splits > 2_500:
+            # crucial to avoid OOM in CEA or USA due to the dparam cache
+            splits = N / 2_500  # use tiles with at max 2500 sites
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
@@ -590,6 +600,22 @@ class CompositeSourceModel:
                      'len(trt_smrs)=%.2f', len(self.src_groups), len(data),
                      numpy.mean(lens))
         return data
+
+    def save(self, dstore, blocks=()):
+        """
+        :param dstore: a DataStore open for writing
+        :param blocks: if non-empty, a list of lists, one for each group
+
+        Save the source groups in the datastore, whole or in blocks
+        """
+        for i, sg in enumerate(self.src_groups):
+            if blocks and blocks[i] and len(blocks[i]) > 1:
+                for b, block in enumerate(blocks[i]):
+                    grp = copy.copy(sg)
+                    grp.sources = block
+                    dstore[f'_csm/{sg.grp_id}-{b}'] = zpik(grp)
+            else:
+                dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
 
     def __repr__(self):
         """
@@ -675,28 +701,20 @@ def read_src_group(hdf5, key, mon=performance.Monitor()):
     return grp
 
 
-def read_src_groups(hdf5, grp_id, mon=performance.Monitor()):
-    """
-    :yield: the list of subgroups associated to grp_id
-
-    NB: this is a generator to save memory (crucial!)
-    """
-    grp_str = str(grp_id)
-    keys = [key for key in hdf5['_csm'] if key.split('-')[0] == grp_str]
-    for key in keys:
-        yield read_src_group(hdf5, key, mon)
-
-
 def read_csm(hdf5, full_lt=None):
     """
     :returns: a CompositeSourceModel instance
     """
-    src_groups = []
-    for grp_id in range(hdf5['_csm'].attrs['num_src_groups']):
-        groups = list(read_src_groups(hdf5, grp_id))
-        group = groups[0]
-        group.sources = list(group.sources)
-        for grp in groups[1:]:
-            group.sources.extend(grp.sources)
-        src_groups.append(group)
+    grp_by_key = {key: read_src_group(hdf5, key) for key in hdf5['_csm']}
+    dic = {}  # grp_id -> grp
+    for key, grp in grp_by_key.items():
+        if '-' in key:
+            grp_id, block = map(int, key.split('-'))
+            if grp_id in dic:
+                dic[grp_id].sources.extend(grp)
+            else:
+                dic[grp_id] = grp
+        else:  # atomic
+            dic[grp.grp_id] = grp
+    src_groups = [dic[grp_id] for grp_id in sorted(dic)]
     return CompositeSourceModel(full_lt or hdf5['full_lt'].init(), src_groups)

@@ -127,12 +127,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def save_rates(rmap, num_chunks, mon):
+def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
     for g in rmap.jid:
-        _store(rmap.to_array(g), num_chunks, None, mon)
+        _store(rmap.to_array(g), num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -213,8 +213,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)
         yield result
-    elif len(grps) == 1 and len(grps[0]) >= 2:
-        # tested in case_25
+    elif len(grps) == 1 and len(grps[0]) >= 2 and not grps[0].multifault:
+        # NB: multifaults are not split to avoid transferring the dparam cache
         b0, *blks = _split_src(list(grps[0]), 5)
         t0 = time.time()
         res = baseclassical(b0, sites, cmaker, True)
@@ -239,7 +239,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
 # NB: fast_mean is used only if there are no site_labels
-def fast_mean(pgetter, monitor):
+def fast_mean(pgetter, monitor=parallel.Monitor()):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param gweights: an array of Gt weights
@@ -609,7 +609,10 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 assert len(tilegetters) == 1, "disagg_by_src has no tiles"
             for tgetter in tilegetters:
-                if atomic:
+                if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
+                    # can happen for some ilabel
+                    pass
+                elif atomic:
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, ds))
@@ -618,7 +621,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
-        if not self.few_sites and self.rmap:
+        if num_blocks and not self.few_sites:
             logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
@@ -651,15 +654,15 @@ class ClassicalCalculator(base.HazardCalculator):
         size_mb = sum(rmap.size_mb for rmap in self.rmap.values())
         if len(self.rmap) > 1 and size_mb > int(config.memory.pmap_max_mb):
             # tested in classical/case_06 and in oq-risk-tests ptiling
-            logging.info('Saving %d RateMaps', len(self.rmap))
             L1 = oq.imtls.size // len(oq.imtls)
             savemap = parallel.Starmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
-                    savemap.submit((rm, self.num_chunks))
+                    savemap.submit((rm, self.num_chunks, None))
             savemap.reduce()
         else:
             # store sequentially
+            logging.info('Saving %d RateMap', len(self.rmap))
             for rmap in self.rmap.values():
                 for g in rmap.jid:
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
@@ -703,8 +706,9 @@ class ClassicalCalculator(base.HazardCalculator):
             bad = (info['est_ctxs'] < info['num_ctxs']) & (
                 delta(info['est_ctxs'], info['num_ctxs']) > .5)
             if bad.any():
-                logging.warn('The estimated number of contexts is way off\n'+
-                             views.text_table(info[bad], ext='org'))
+                logging.warning(
+                    'The estimated number of contexts is way off\n' +
+                    views.text_table(info[bad], ext='org'))
 
         # NB: the impact factor is the number of effective ruptures;
         # consider for instance a point source producing 200 ruptures
@@ -742,20 +746,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks
         """
-        oq = self.oqparam
-        task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = views.discard_small(task_info.loc[b'classical'].duration)
-        except KeyError:  # no data
-            pass
-        else:
-            slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * oq.split_time)
-            msg = 'There were %d slow task(s)' % slow_tasks
-            if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
-                raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
-            elif slow_tasks:
-                logging.warning(msg)
+            info = self.datastore.read_df('starmap_info', 'taskname')
+        except hdf5.File.EmptyDataset:
+            return
+        try:
+            ser = info.loc[b'classical']
+        except KeyError:  # classical_disagg
+            return
+        slow_tasks = ser['mean'] > 60. and ser['std'] / ser['mean'] > .2
+        if slow_tasks and self.SLOW_TASK_ERROR:
+            raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
+        elif slow_tasks:
+            logging.warning('There were slow tasks')
 
     def _create_hcurves_maps(self):
         oq = self.oqparam

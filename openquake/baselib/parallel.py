@@ -1013,9 +1013,8 @@ class Starmap(object):
                 self.expected_outputs, self.n_out)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
-            logging.info(
-                'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                times.mean(), times.std(), times.min(), times.max())
+            if self.h5.mode != 'r':
+                self.monitor.save_starmap_info(self.h5, self.name, times)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
