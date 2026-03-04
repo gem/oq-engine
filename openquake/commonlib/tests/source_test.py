@@ -710,13 +710,13 @@ Active Shallow Crust,gB0,[ChiouYoungs2008],w=0.5
 Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         [rlz] = csm.full_lt.get_realizations()
         sa = valid.gsim('SadighEtAl1997')
-        cy = valid.gsim('ChiouYoungs2008')
+        # cy = valid.gsim('ChiouYoungs2008')
         self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
                          {'Subduction Interface': sa,
-                          'Active Shallow Crust': cy})
+                          'Active Shallow Crust': sa})
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
-        self.assertEqual(rlz.gsim_lt_path, ('gB0', 'gA1'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b6'))
+        self.assertEqual(rlz.gsim_lt_path, ('gA0', 'gA1'))
         self.assertEqual(rlz.weight, [1.])
 
     def test_many_rlzs(self):

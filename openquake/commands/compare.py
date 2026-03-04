@@ -500,7 +500,7 @@ def read_org_df(fname):
     return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
 
 
-def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
+def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     """
     compare_asce('asce', 'expected') exits with 0
     if all file are equal within the tolerance, otherwise with 1.
