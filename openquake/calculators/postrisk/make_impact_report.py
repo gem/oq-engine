@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import tempfile
 import logging
 from io import BytesIO
@@ -33,7 +32,6 @@ from openquake.calculators.extract import extract
 from openquake.calculators.postproc.plots import plot_variable
 from openquake.commonlib import logs
 from openquake.commonlib.calc import get_close_regions
-from openquake.qa_tests_data import global_risk
 
 
 LOSS_METADATA = {
@@ -301,11 +299,11 @@ class CountryReportBuilder:
         return self.Image(BytesIO(image_data), width=w*scale, height=h*scale)
 
     def _load_country_info(self):
-        fname = os.path.join(
-            os.path.dirname(global_risk.__file__),
-            "countries_info.csv",
-        )
-        df = pd.read_csv(fname)
+        countries_info_file = config.directory.countries_info_file
+        if not countries_info_file:
+            raise AttributeError(
+                'config.directory.countries_info_file is missing')
+        df = pd.read_csv(countries_info_file)
 
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
 
