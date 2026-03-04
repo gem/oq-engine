@@ -29,10 +29,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
-from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, getsizeof, humansize)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module, InvalidFile
@@ -1520,8 +1519,8 @@ class RmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    # allctxs is at most a few dozens of MB
-                    cm.update(pnemap, concat(allctxs))
+                    ctxt = concat(allctxs)  # at most a few dozens of MB
+                    cm.update(pnemap, ctxt)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
@@ -1529,18 +1528,25 @@ class RmapMaker(object):
             cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
-        dt = time.time() - t0
-        nsrcs = len(self.sources)
+        dt = (time.time() - t0) / len(self.sources)
         factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
-            src.dt = dt / nsrcs
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(src.nctxs * factor)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
+        return pnemap
+
+    def _make_src_indep_slow(self):
+        sids = self.srcfilter.sitecol.sids
+        pnemap = MapArray(
+            sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
+            not self.cluster).fill(self.cluster)  # size < pmap_max_mb
+        for src in self.sources:
+            t0 = time.time()
+            ctxs = list(self.gen_ctxs(src))
+            n = sum(len(ctx) for ctx in ctxs)
+            for ctx in ctxs:
+                self.cmaker.update(pnemap, ctx, self.rup_mutex)
+            dt = time.time() - t0
+            self.update_source_data(src, self.cmaker.task_no, dt, n)
         return pnemap
 
     def _make_src_mutex(self):
@@ -1566,23 +1572,30 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            src.dt = time.time() - t0
-            self.source_data['src_id'].append(valid.basename(src))
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(n)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, time.time() - t0, n)
         pmap.array *= self.grp_probability
         return ~pmap
+
+    def update_source_data(self, src, task_no, dt, nctxs):
+        src.dt = dt
+        self.source_data['src_id'].append(valid.basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nctxs'].append(nctxs)
+        self.source_data['nrupts'].append(src.num_ruptures)
+        self.source_data['weight'].append(src.weight)
+        self.source_data['ctimes'].append(src.dt)
+        self.source_data['taskno'].append(task_no)
 
     def make(self):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
-            pnemap = self._make_src_indep()
+            import os
+            if os.environ.get('OQ_SLOW_MODE'):
+                pnemap = self._make_src_indep_slow()
+            else:
+                pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:  # very fast
