@@ -746,20 +746,19 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks
         """
-        oq = self.oqparam
-        task_info = self.datastore.read_df('task_info', 'taskname')
         try:
-            dur = views.discard_small(task_info.loc[b'classical'].duration)
-        except KeyError:  # no data
-            pass
-        else:
-            slow_tasks = (len(dur[dur > 4 * dur.mean()]) and
-                          dur.max() > 5 * oq.split_time)
-            msg = 'There were %d slow task(s)' % slow_tasks
-            if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
-                raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
-            elif slow_tasks:
-                logging.warning(msg)
+            info = self.datastore.read_df('starmap_info', 'taskname')
+        except hdf5.File.EmptyDataset:
+            return
+        try:
+            ser = info.loc[b'classical']
+        except KeyError:  # classical_disagg
+            return
+        slow_tasks = ser['mean'] > 60. and ser['std'] / ser['mean'] > .2
+        if slow_tasks and self.SLOW_TASK_ERROR:
+            raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
+        elif slow_tasks:
+            logging.warning('There were slow tasks')
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
