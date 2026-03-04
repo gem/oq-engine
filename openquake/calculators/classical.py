@@ -746,11 +746,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks
         """
-        oq = self.oqparam
         info = self.datastore.read_df('starmap_info', 'taskname')
-        ser = info.loc[b'classical']
+        try:
+            ser = info.loc[b'classical']
+        except KeyError:  # classical_disagg
+            return
         slow_tasks = ser['mean'] > 60. and ser['std'] / ser['mean'] > .1
-        if slow_tasks and self.SLOW_TASK_ERROR and not oq.disagg_by_src:
+        if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:
             logging.warning('There were slow tasks')
