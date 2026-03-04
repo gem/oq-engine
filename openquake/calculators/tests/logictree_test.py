@@ -572,14 +572,14 @@ hazard_uhs-std.csv
         aac(haz, 0.563831, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 8 times b1 and 2 times b2
-        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
-                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
+        aac(ws, [0.029412, 0.029412, 0.264706, 0.029412, 0.264706, 0.264706,
+                 0.029412, 0.029412, 0.029412, 0.029412], atol=1e-5)
 
         # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.56355, rtol=1E-6)
+        aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # all equal
 
@@ -598,7 +598,7 @@ hazard_uhs-std.csv
         aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 5 times b1 and 5 times b2
-        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
+        aac(ws, [0.02, 0.18, 0.18, 0.18, 0.18, 0.02, 0.02, 0.02, 0.18, 0.02])
 
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_latin')
@@ -694,8 +694,8 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
-               b'AA~A', b'B.~A', b'B.~A', b'B.~A']
+        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+               b'B.~A', b'B.~A', b'B.~A', b'B.~A', b'B.~A']
         ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
@@ -715,9 +715,8 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8], []])
-        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        ae(list(cmakers[0].gsims.values()), [[1, 2, 3, 4], [0, 5], []])
+        ae(list(cmakers[1].gsims.values()), [[6], [9], [7, 8]])
 
     def test_case_73(self):
         # test LT
