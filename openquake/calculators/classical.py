@@ -746,7 +746,10 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks
         """
-        info = self.datastore.read_df('starmap_info', 'taskname')
+        try:
+            info = self.datastore.read_df('starmap_info', 'taskname')
+        except hdf5.File.EmptyDataset:
+            return
         try:
             ser = info.loc[b'classical']
         except KeyError:  # classical_disagg
