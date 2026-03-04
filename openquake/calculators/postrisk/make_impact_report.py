@@ -121,9 +121,10 @@ def aggregate_losses(points_gdf, admin_gdf, tags_agg):
     return admin_gdf.merge(aggregated, **merge_args)
 
 
-def save_most_affected_regions(df, dstore, iso3, *, n=5):
+def save_most_affected_regions(df, dstore, iso3, *, num_regions=5):
     fatalities_label = LOSS_METADATA["occupants"]["label"]
-    regions = df.nlargest(n, fatalities_label)['region_name'].dropna().tolist()
+    regions = df.nlargest(
+        num_regions, fatalities_label)['region_name'].dropna().tolist()
     dstore[f"impact/{iso3}/most_affected_regions"] = regions
 
 
@@ -324,9 +325,9 @@ class CountryReportBuilder:
 
         self.cities = self._get_cities_in_viewport()
 
-    def _get_cities_in_viewport(self, n=15):
+    def _get_cities_in_viewport(self, num_cities=15):
         """
-        Finds Top N cities within the map viewport belonging
+        Finds Top num_cities cities within the map viewport belonging
         to the current country
         """
         world_cities_file = config.directory.world_cities_file
@@ -347,7 +348,7 @@ class CountryReportBuilder:
         viewport_cities = df[mask].copy()
         # Take the biggest ones
         top_cities = viewport_cities.sort_values(
-            'population', ascending=False).head(n)
+            'population', ascending=False).head(num_cities)
         return {row['city_ascii']: [row['lng'], row['lat']]
                 for _, row in top_cities.iterrows()}
 
