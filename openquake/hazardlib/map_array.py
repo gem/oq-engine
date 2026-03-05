@@ -529,8 +529,8 @@ def to_rates(ratesNLG, sids, g, i, level0):
     assert N == len(sids), (N, len(sids))
     out = numpy.zeros(N * L, rates_dt)
     n = 0
-    for lid in range(L):
-        for s, sid in enumerate(sids):
+    for s, sid in enumerate(sids):
+        for lid in range(L):
             rate = ratesNLG[s, lid, i]
             out[n]['sid'] = sid
             out[n]['lid'] = level0 + lid
