@@ -862,7 +862,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist != 'no':
+        if dist not in ('no', 'threadpool'):
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
