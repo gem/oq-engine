@@ -1017,6 +1017,9 @@ class Starmap(object):
                 self.monitor.save_starmap_info(self.h5, self.name, times)
 
 
+# as of Python 3.13 this is terribly inefficient compared to a processpool,
+# even for numba functions releasing the GIL(!), so don't use it for the
+# moment; it may become useful with the noGIL built of Python 3.14 or not
 class Threadmap(Starmap):
     """
     A Starmap subclass spawing only threadpools
