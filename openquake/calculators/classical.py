@@ -558,7 +558,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
-        if self.dparam_mb:
+        if self.dparam_mb > 1:
             logging.info('maximum size of the dparam cache=%.1f MB',
                          self.dparam_mb)
             logging.info('maximum size of the multifaults=%.1f MB',
