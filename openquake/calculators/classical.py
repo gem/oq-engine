@@ -131,7 +131,7 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g, i in rmap.jid.items():
+    for g in rmap.gdic:
         _store(rmap.to_array(g), num_chunks, h5, mon)
 
 
@@ -665,7 +665,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # store sequentially
             logging.info('Saving %d RateMap(s)', len(self.rmap))
             for rmap in self.rmap.values():
-                for g in rmap.jid:
+                for g in rmap.gdic:
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
