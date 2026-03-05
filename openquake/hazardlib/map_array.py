@@ -400,7 +400,7 @@ class MapArray(object):
         """
         outs = []
         for i, g in enumerate(gid):
-            rates = to_rates(self.array, self.sids, g, i)
+            rates = to_rates(self.array, self.sids, g, i, 0)
             outs.append(rates)
         return numpy.concatenate(outs, dtype=rates_dt)
 
@@ -516,7 +516,10 @@ def iadd(arr, array, sidx):
 
 # @numba.njit(nogil=True)
 # NB: numba and nogil are useless here in terms of performance
-def to_rates(ratesNLG, sids, g, i, level0=0):
+
+
+@compile("(float32[:,:,:], uint32[:], int64, int64, int64)")
+def to_rates(ratesNLG, sids, g, i, level0):
     """
     :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
