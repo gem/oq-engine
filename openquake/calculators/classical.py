@@ -35,7 +35,7 @@ from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks, to_rates)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -132,8 +132,7 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     Store the rates on a file calc_id/task_no.hdf5
     """
     for g, i in rmap.jid.items():
-        rates = to_rates(rmap.array, rmap.sids, g, i)
-        _store(rates, num_chunks, h5, mon)
+        _store(rmap.to_array(g), num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -656,7 +655,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Threadmap(save_rates, h5=self.datastore)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore,
+                                       distribute='processpool')
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
                     savemap.submit((rm, self.num_chunks, None))
