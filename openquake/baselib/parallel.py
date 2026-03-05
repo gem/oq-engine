@@ -1017,6 +1017,16 @@ class Starmap(object):
                 self.monitor.save_starmap_info(self.h5, self.name, times)
 
 
+class Threadmap(Starmap):
+    """
+    A Starmap subclass spawing only threadpools
+    """
+    def __init__(self, task_func, task_args=(),
+                 progress=logging.info, h5=None):
+        super().__init__(task_func, task_args, 'threadpool',
+                         logging.info, h5)
+
+
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
                      maxweight=None, weight=lambda item: 1,
                      key=lambda item: 'Unspecified',

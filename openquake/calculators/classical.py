@@ -655,8 +655,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(save_rates, h5=self.datastore,
-                                       distribute='threadpool')
+            savemap = parallel.Threadmap(save_rates, h5=self.datastore)
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
                     savemap.submit((rm, self.num_chunks, None))
