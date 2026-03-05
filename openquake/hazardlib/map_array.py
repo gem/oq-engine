@@ -525,13 +525,13 @@ def to_rates(ratesNLG, sids, g, i, level0):
     :param i: an index in the range 0..G-1
     :param level0: level offset
     """
-    N, L, G = ratesNLG.shape
+    ratesNL = ratesNLG[:, :, i].copy()
+    N, L = ratesNL.shape
     assert N == len(sids), (N, len(sids))
     out = numpy.zeros(N * L, rates_dt)
     n = 0
     for s, sid in enumerate(sids):
-        for lid in range(L):
-            rate = ratesNLG[s, lid, i]
+        for lid, rate in enumerate(ratesNL[s]):
             out[n]['sid'] = sid
             out[n]['lid'] = level0 + lid
             out[n]['gid'] = g
