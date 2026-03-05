@@ -527,6 +527,7 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
+@numba.njit(nogil=True)
 def from_rates_g(rates_g, g, sids, level0=0):
     """
     :param rates_g: an array of shape (N, L)
@@ -537,20 +538,27 @@ def from_rates_g(rates_g, g, sids, level0=0):
     # sanity check
     assert len(rates_g) == len(sids), (len(rates_g), len(sids))
     outs = []
+    n = 0
     for lid, rates in enumerate(rates_g.T):
         idxs, = rates.nonzero()
         if len(idxs):
             out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = sids[idxs]
-            out['lid'] = level0 + lid
-            out['gid'] = g
-            out['rate'] = rates[idxs]
+            for o, idx in zip(out, idxs):
+                o['sid'] = sids[idx]
+                o['lid'] = level0 + lid
+                o['gid'] = g
+                o['rate'] = rates[idx]
             outs.append(out)
-    if not outs:
-        return numpy.array([], rates_dt)
-    elif len(outs) == 1:
+            n += len(out)
+    if len(outs) == 1:
         return outs[0]
-    return numpy.concatenate(outs, dtype=rates_dt)
+    out = numpy.zeros(n, rates_dt)
+    start = 0
+    for o in outs:
+        stop = start + len(o)
+        out[start:stop] = o
+        start = stop
+    return out
 
 
 class RateMap:
