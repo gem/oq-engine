@@ -531,7 +531,8 @@ def to_rates(ratesNLG, sids, g, i, level0):
     out = numpy.zeros(N * L, rates_dt)
     n = 0
     for lid in range(L):
-        for sid, rate in zip(sids, ratesNLG[:, lid, i]):
+        for sid in range(N):
+            rate = ratesNLG[sid, lid, i]
             out[n]['sid'] = sid
             out[n]['lid'] = level0 + lid
             out[n]['gid'] = g
