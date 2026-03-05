@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug when prefiltering sources around the poles
   * Made it possible to run risk calculations depending on AvgSA
   * Internal: inferring the slow tasks information from starmap_info
   * Removed numpy.random.seed in the engine code base
