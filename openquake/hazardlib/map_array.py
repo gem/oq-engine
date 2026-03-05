@@ -398,24 +398,11 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        [(_no, rates)] = self.gen_rates(gid, 1)
-        return rates
-
-    def gen_rates(self, gid, num_chunks):
-        """
-        :yields: pairs (chunkno, rates for that chunck of sites)
-        """
-        for no, mask in gen_chunks(self.sids, num_chunks):
-            sids = self.sids[mask]
-            outs = []
-            for i, g in enumerate(gid):
-                rates = from_rates_g(self.array[mask, :, i], g, sids)
-                outs.append(rates)
-            if len(outs) == 1:
-                yield no, outs[0]
-            else:
-                out = numpy.concatenate(outs, dtype=rates_dt)
-                yield no, out
+        outs = []
+        for i, g in enumerate(gid):
+            rates = from_rates_g(self.array, self.sids, g, i)
+            outs.append(rates)
+        return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
@@ -528,18 +515,19 @@ def iadd(arr, array, sidx):
 
 
 @numba.njit(nogil=True)
-def from_rates_g(rates_g, g, sids, level0=0):
+def from_rates_g(ratesNLG, sids, g, i, level0=0):
     """
-    :param rates_g: an array of shape (N, L)
-    :param g: an integer representing a GSIM index
+    :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
+    :param g: an integer representing a GSIM index
+    :param i: an index in the range 0..G-1
     :param level0: level offset
     """
     # sanity check
-    assert len(rates_g) == len(sids), (len(rates_g), len(sids))
+    assert len(ratesNLG) == len(sids), (len(ratesNLG), len(sids))
     outs = []
     n = 0
-    for lid, rates in enumerate(rates_g.T):
+    for lid, rates in enumerate(ratesNLG[:, :, i].T):
         idxs, = rates.nonzero()
         if len(idxs):
             out = numpy.zeros(len(idxs), rates_dt)
@@ -588,8 +576,7 @@ class RateMap:
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        rates_g = self.array[:, :, self.jid[g]]
-        return from_rates_g(rates_g, g, self.sids, self.level0)
+        return from_rates_g(self.array, self.sids, g, self.jid[g], self.level0)
 
     def split(self, L1):
         """
