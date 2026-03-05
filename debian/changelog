@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Making sure `save_rates` uses the processpool distribution
+  * Listed AvgSA as primary IMT
+
 python3-oq-engine (3.25.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

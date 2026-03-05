@@ -652,10 +652,11 @@ class ClassicalCalculator(base.HazardCalculator):
         # save the rates and performs some checks
         oq = self.oqparam
         size_mb = sum(rmap.size_mb for rmap in self.rmap.values())
-        if len(self.rmap) > 1 and size_mb > int(config.memory.pmap_max_mb):
-            # tested in classical/case_06 and in oq-risk-tests ptiling
+        if size_mb > 100:
+            # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(save_rates, h5=self.datastore)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore,
+                                       distribute='processpool')
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
                     savemap.submit((rm, self.num_chunks, None))

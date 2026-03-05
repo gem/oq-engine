@@ -143,8 +143,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_06(self):
         # test with site-dependent logic trees
-        with mock.patch.dict(config.memory, {'pmap_max_mb': .0006}):
-            self.run_calc(case_06.__file__, 'job.ini')
+        self.run_calc(case_06.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
 
