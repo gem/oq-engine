@@ -1023,6 +1023,7 @@ class Threadmap(Starmap):
     """
     def __init__(self, task_func, task_args=(),
                  progress=logging.info, h5=None):
+        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
         super().__init__(task_func, task_args, 'threadpool',
                          logging.info, h5)
 
