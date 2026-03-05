@@ -340,7 +340,8 @@ def make_hmap_png(hmap, lons, lats):
     ax.grid(True)
     ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
                  'inv_time=%(inv_time)dy' % hmap)
-    ax.set_ylabel('Longitude')
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
     coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
     plt.colorbar(coll)
     bio = io.BytesIO()
