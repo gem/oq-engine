@@ -1139,6 +1139,10 @@ def make_figure_build_rupture(extractors, what):
     $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
 
     also plots country borders.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True&with_region_labels=True"
+
+    also plots region labels.
     """
     params, with_borders, with_region_labels = getparams(what)
     rup = build_planar_rupture_from_dict(params)
