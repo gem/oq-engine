@@ -480,7 +480,7 @@ def compile(sigstr):
     """
     Compile a function Ahead-Of-Time using the given signature string
     """
-    return numba.njit(sigstr, error_model='numpy', cache=True)
+    return numba.njit(sigstr, error_model='numpy', cache=True, nogil=True)
 
 
 # used when reading _rates/sid

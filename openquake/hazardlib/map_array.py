@@ -400,7 +400,7 @@ class MapArray(object):
         """
         outs = []
         for i, g in enumerate(gid):
-            rates = to_rates(self.array, self.sids, g, i)
+            rates = to_rates(self.array, self.sids, g, i, 0)
             outs.append(rates)
         return numpy.concatenate(outs, dtype=rates_dt)
 
@@ -514,9 +514,10 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-# @numba.njit(nogil=True)
-# NB: numba and nogil are useless here in terms of performance
-def to_rates(ratesNLG, sids, g, i, level0=0):
+
+# NB: numba-compiling here is nearly useless in terms of performance
+@compile("(float32[:,:,:], uint32[:], int64, int64, int64)")
+def to_rates(ratesNLG, sids, g, i, level0):
     """
     :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
@@ -524,30 +525,19 @@ def to_rates(ratesNLG, sids, g, i, level0=0):
     :param i: an index in the range 0..G-1
     :param level0: level offset
     """
-    # sanity check
-    assert len(ratesNLG) == len(sids), (len(ratesNLG), len(sids))
-    outs = []
+    ratesNL = ratesNLG[:, :, i].copy()
+    N, L = ratesNL.shape
+    assert N == len(sids), (N, len(sids))
+    out = numpy.zeros(N * L, rates_dt)
     n = 0
-    for lid, rates in enumerate(ratesNLG[:, :, i].T):
-        idxs, = rates.nonzero()
-        if len(idxs):
-            out = numpy.zeros(len(idxs), rates_dt)
-            for o, idx in zip(out, idxs):
-                o['sid'] = sids[idx]
-                o['lid'] = level0 + lid
-                o['gid'] = g
-                o['rate'] = rates[idx]
-            outs.append(out)
-            n += len(out)
-    if len(outs) == 1:
-        return outs[0]
-    out = numpy.zeros(n, rates_dt)
-    start = 0
-    for o in outs:
-        stop = start + len(o)
-        out[start:stop] = o
-        start = stop
-    return out
+    for s, sid in enumerate(sids):
+        for lid, rate in enumerate(ratesNL[s]):
+            out[n]['sid'] = sid
+            out[n]['lid'] = level0 + lid
+            out[n]['gid'] = g
+            out[n]['rate'] = rate
+            n += 1
+    return out[out['rate'] > 0]
 
 
 class RateMap:
