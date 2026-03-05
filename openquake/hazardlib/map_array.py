@@ -514,10 +514,8 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-# @numba.njit(nogil=True)
-# NB: numba and nogil are useless here in terms of performance
 
-
+# NB: numba-compiling here is nearly useless in terms of performance
 @compile("(float32[:,:,:], uint32[:], int64, int64, int64)")
 def to_rates(ratesNLG, sids, g, i, level0):
     """
@@ -529,8 +527,7 @@ def to_rates(ratesNLG, sids, g, i, level0):
     """
     # sanity check
     assert len(ratesNLG) == len(sids), (len(ratesNLG), len(sids))
-    outs = []
-    n = 0
+    n, outs = 0, []
     for lid, rates in enumerate(ratesNLG[:, :, i].T):
         idxs, = rates.nonzero()
         if len(idxs):
@@ -542,8 +539,6 @@ def to_rates(ratesNLG, sids, g, i, level0):
                 o['rate'] = rates[idx]
             outs.append(out)
             n += len(out)
-    if len(outs) == 1:
-        return outs[0]
     out = numpy.zeros(n, rates_dt)
     start = 0
     for o in outs:
