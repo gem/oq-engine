@@ -525,7 +525,6 @@ def to_rates(ratesNLG, sids, g, i, level0):
     :param i: an index in the range 0..G-1
     :param level0: level offset
     """
-    # sanity check
     N, L, G = ratesNLG.shape
     assert N == len(sids), (N, len(sids))
     out = numpy.zeros(N * L, rates_dt)
