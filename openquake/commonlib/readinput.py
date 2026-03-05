@@ -1429,7 +1429,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: F32})
     imtls = {}
     dic = {}
     for fname in fnames:
@@ -1443,7 +1443,7 @@ def get_pmap_from_csv(oqparam, fnames):
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)
     L = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((N, L))
+    data = numpy.zeros((N, L), F32)
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
