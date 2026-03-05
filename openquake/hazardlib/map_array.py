@@ -526,26 +526,18 @@ def to_rates(ratesNLG, sids, g, i, level0):
     :param level0: level offset
     """
     # sanity check
-    assert len(ratesNLG) == len(sids), (len(ratesNLG), len(sids))
-    n, outs = 0, []
+    N, L, G = ratesNLG.shape
+    assert N == len(sids), (N, len(sids))
+    out = numpy.zeros(N*L, rates_dt)
+    n = 0
     for lid, rates in enumerate(ratesNLG[:, :, i].T):
-        idxs, = rates.nonzero()
-        if len(idxs):
-            out = numpy.zeros(len(idxs), rates_dt)
-            for o, idx in zip(out, idxs):
-                o['sid'] = sids[idx]
-                o['lid'] = level0 + lid
-                o['gid'] = g
-                o['rate'] = rates[idx]
-            outs.append(out)
-            n += len(out)
-    out = numpy.zeros(n, rates_dt)
-    start = 0
-    for o in outs:
-        stop = start + len(o)
-        out[start:stop] = o
-        start = stop
-    return out
+        for sid, rate in zip(sids, rates):
+            out[n]['sid'] = sid
+            out[n]['lid'] = level0 + lid
+            out[n]['gid'] = g
+            out[n]['rate'] = rate
+            n += 1
+    return out[out['rate'] > 0]
 
 
 class RateMap:
