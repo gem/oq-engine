@@ -1540,21 +1540,6 @@ class RmapMaker(object):
             self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
         return pnemap
 
-    def _make_src_indep_slow(self):
-        sids = self.srcfilter.sitecol.sids
-        pnemap = MapArray(
-            sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster)  # size < pmap_max_mb
-        for src in self.sources:
-            t0 = time.time()
-            ctxs = list(self.gen_ctxs(src))
-            n = sum(len(ctx) for ctx in ctxs)
-            for ctx in ctxs:
-                self.cmaker.update(pnemap, ctx, self.rup_mutex)
-            dt = time.time() - t0
-            self.update_source_data(src, self.cmaker.task_no, dt, n)
-        return pnemap
-
     def _make_src_mutex(self):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
@@ -1597,11 +1582,7 @@ class RmapMaker(object):
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
-            import os
-            if os.environ.get('OQ_SLOW_MODE'):
-                pnemap = self._make_src_indep_slow()
-            else:
-                pnemap = self._make_src_indep()
+            pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:  # very fast
