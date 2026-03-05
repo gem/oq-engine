@@ -988,7 +988,9 @@ def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
             prev = code_min_dist.get(code)
             if prev is None or dist < prev:
                 code_min_dist[code] = dist
-    return sorted(code_min_dist, key=code_min_dist.get)
+    # Sort by ascending distance
+    ordered_codes = sorted(code_min_dist, key=code_min_dist.get)
+    return ordered_codes
 
 
 # resolution=3 means 12,386 square km (Connecticut)
