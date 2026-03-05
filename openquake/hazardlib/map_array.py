@@ -400,7 +400,7 @@ class MapArray(object):
         """
         outs = []
         for i, g in enumerate(gid):
-            rates = from_rates_g(self.array, self.sids, g, i)
+            rates = to_rates(self.array, self.sids, g, i)
             outs.append(rates)
         return numpy.concatenate(outs, dtype=rates_dt)
 
@@ -515,7 +515,7 @@ def iadd(arr, array, sidx):
 
 
 @numba.njit(nogil=True)
-def from_rates_g(ratesNLG, sids, g, i, level0=0):
+def to_rates(ratesNLG, sids, g, i, level0=0):
     """
     :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
@@ -576,7 +576,7 @@ class RateMap:
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        return from_rates_g(self.array, self.sids, g, self.jid[g], self.level0)
+        return to_rates(self.array, self.sids, g, self.jid[g], self.level0)
 
     def split(self, L1):
         """

@@ -35,7 +35,7 @@ from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks, to_rates)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -131,8 +131,9 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g in rmap.jid:
-        _store(rmap.to_array(g), num_chunks, h5, mon)
+    for g, i in rmap.jid.items():
+        rates = to_rates(rmap.array, rmap.sids, g, i)
+        _store(rates, num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
