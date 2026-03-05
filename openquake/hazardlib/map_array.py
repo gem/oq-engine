@@ -514,7 +514,8 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-@numba.njit(nogil=True)
+# @numba.njit(nogil=True)
+# NB: numba and nogil are useless here in terms of performance
 def to_rates(ratesNLG, sids, g, i, level0=0):
     """
     :param ratesNLG: an array of shape (N, L, G)
