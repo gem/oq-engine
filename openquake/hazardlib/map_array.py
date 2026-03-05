@@ -563,13 +563,13 @@ class RateMap:
         self.sids = sids
         self.shape = len(sids), L, len(gids)
         self.array = numpy.zeros(self.shape, F32)
-        self.jid = {g: j for j, g in enumerate(gids)}
+        self.gdic = {g: j for j, g in enumerate(gids)}
 
     def __iadd__(self, other):
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
             oarray = other.array[:, :, i]
-            self.array[sidx, :, self.jid[g]] += oarray
+            self.array[sidx, :, self.gdic[g]] += oarray
         return self
 
     def to_array(self, g):
@@ -577,7 +577,7 @@ class RateMap:
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        return to_rates(self.array, self.sids, g, self.jid[g], self.level0)
+        return to_rates(self.array, self.sids, g, self.gdic[g], self.level0)
 
     def split(self, L1):
         """
@@ -588,9 +588,9 @@ class RateMap:
         for lvl in range(0, self.shape[1], L1):
             new = object.__new__(self.__class__)
             new.sids = self.sids
-            new.shape = len(self.sids), L1, len(self.jid)
+            new.shape = len(self.sids), L1, len(self.gdic)
             new.array = self.array[:, lvl:lvl+L1, :]
-            new.jid = self.jid
+            new.gdic = self.gdic
             new.level0 = lvl
             out.append(new)
         return out
