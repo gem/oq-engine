@@ -305,7 +305,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites
-            lowres = sites.lower_res(res=4)[0]
+            lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
             logging.info('Reducing %d->%d sites', len(sites), len(lowres))

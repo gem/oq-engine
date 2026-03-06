@@ -327,8 +327,6 @@ def _quintets(cmaker, src, sitecol):
     # NB: having a decent max_radius is essential for performance!
     mask = cdist <= maxdist + src.max_radius(maxdist)
     sites = sitecol.filter(mask)
-    #if src.source_id == 'ocn_1033':
-    #    breakpoint()
     if sites is None:
         return
 
