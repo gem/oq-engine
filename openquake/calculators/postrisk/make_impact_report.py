@@ -174,14 +174,14 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
         label = meta["label"]
         title = meta["title"]
         colors = meta["colors"]
+        # NOTE: epicenter and hypocenter have the same lon and lat (!= depth)
         fig, ax = plot_variable(
             df, admin_boundaries, label, classifiers[label],
             colors, country_name=country_name,
             plot_title=title,
             legend_title=label, cities=cities,
             x_limits=x_limits_country, y_limits=y_limits_country,
-            basemap_path=basemap_path, hypocenter=hypocenter,
-        )
+            basemap_path=basemap_path, epicenter=hypocenter)
         buf = BytesIO()
         fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
         plt.close(fig)
@@ -190,7 +190,7 @@ def plot_losses(country_name, iso3, adm_level, losses_df, cities,
     return df, images
 
 
-def _get_impact_summary_ranges(dstore, iso3):
+def _get_impact_summary_data(dstore, iso3, no_uncertainty):
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
         meta["label"]: loss_type
@@ -202,12 +202,16 @@ def _get_impact_summary_ranges(dstore, iso3):
     ]
     if rows.empty:
         return None
-    summary_ranges = {
-        label: f"{int(round(r.q05))} - {int(round(r.q95))}"
-        for label, lt in mapping.items()
-        for r in [rows.loc[rows['loss_type'] == lt].iloc[0]]
-    }
-    return summary_ranges
+    summary_data = {}
+    for label, lt in mapping.items():
+        r = rows.loc[rows['loss_type'] == lt].iloc[0]
+        if no_uncertainty:
+            # Display only the central value
+            summary_data[label] = f"{int(round(r.q50))}"
+        else:
+            # Display the range
+            summary_data[label] = f"{int(round(r.q05))} - {int(round(r.q95))}"
+    return summary_data
 
 
 class CountryReportBuilder:
@@ -224,8 +228,8 @@ class CountryReportBuilder:
 
     def __init__(
             self, iso3, event_name, event_date, shakemap_version, time_of_calc,
-            disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-            adm_level, dstore, hypocenter, threshold_deg):
+            disclaimer_txt, notes_txt, losses_df, summary_data, basemap_path,
+            adm_level, dstore, hypocenter, threshold_deg, no_uncertainty):
         try:
             import reportlab
             from reportlab import platypus
@@ -256,12 +260,13 @@ class CountryReportBuilder:
         self.disclaimer_txt = disclaimer_txt
         self.notes_txt = notes_txt
         self.losses_df = losses_df
-        self.summary_ranges = summary_ranges
+        self.summary_data = summary_data
         self.basemap_path = basemap_path
         self.adm_level = adm_level
         self.dstore = dstore
         self.hypocenter = hypocenter
         self.threshold_deg = threshold_deg
+        self.no_uncertainty = no_uncertainty
 
         self.styles = self.getSampleStyleSheet()
 
@@ -468,22 +473,37 @@ class CountryReportBuilder:
         return tbl
 
     def _build_grid(self):
+        # Determine column header based on uncertainty
+        col_header = "Estimated losses" if self.no_uncertainty else "Range of losses"
+        table_data = [["", col_header]] + [
+            [meta["label"], self.summary_data[meta["label"]]]
+            for meta in LOSS_METADATA.values()
+        ]
+
+        if self.no_uncertainty:
+            table_data.append(["No uncertainty was included", ""])
+
         summary_table = self.Table(
-            [["", "Range of losses"]]
-            + [
-                [meta["label"], self.summary_ranges[meta["label"]]]
-                for meta in LOSS_METADATA.values()
-            ],
+            table_data,
             colWidths=[self.col_w * 0.45, self.col_w * 0.45],
             hAlign="LEFT",
         )
 
-        summary_table.setStyle(self.TableStyle([
+        style_cmds = [
             ("GRID", (0, 0), (-1, -1), 0.5, self.colors.grey),
             ("BACKGROUND", (0, 0), (-1, 0), self.colors.whitesmoke),
             ("SIZE", (0, 0), (-1, -1), 9),
             ("PADDING", (0, 0), (-1, -1), 4),
-        ]))
+        ]
+
+        if self.no_uncertainty:
+            # Span the last row across both columns and italicize
+            last_row_idx = len(table_data) - 1
+            style_cmds.append(("SPAN", (0, last_row_idx), (1, last_row_idx)))
+            style_cmds.append(("FONTNAME", (0, last_row_idx), (0, last_row_idx),
+                               "Helvetica-Oblique"))
+
+        summary_table.setStyle(self.TableStyle(style_cmds))
 
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
@@ -610,12 +630,12 @@ class CountryReportBuilder:
 
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges,
-        basemap_path, adm_level, dstore, hypocenter, threshold_deg):
+        disclaimer_txt, notes_txt, losses_df, summary_data,
+        basemap_path, adm_level, dstore, hypocenter, threshold_deg, no_uncertainty):
     builder = CountryReportBuilder(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_ranges, basemap_path,
-        adm_level, dstore, hypocenter, threshold_deg)
+        disclaimer_txt, notes_txt, losses_df, summary_data, basemap_path,
+        adm_level, dstore, hypocenter, threshold_deg, no_uncertainty)
     builder.build()
 
 
@@ -693,6 +713,11 @@ def main(dstore, adm_level=1, threshold_deg=None):
     mag = oqparam.rupture_dict['mag']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
+    if (oqparam.number_of_ground_motion_fields == 1
+            and abs(oqparam.truncation_level) < 1e-8):
+        no_uncertainty = True
+    else:
+        no_uncertainty = False
     hypocenter = (lon, lat)
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
     losses_df = pd.DataFrame(avg_losses.mean)
@@ -721,13 +746,13 @@ def main(dstore, adm_level=1, threshold_deg=None):
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
     for iso3 in iso3_codes:
-        summary_ranges = _get_impact_summary_ranges(dstore, iso3)
-        if summary_ranges is not None:
+        summary_data = _get_impact_summary_data(dstore, iso3, no_uncertainty)
+        if summary_data is not None:
             make_report_for_country(
                 iso3, event_name, event_date, shakemap_version, time_of_calc,
-                disclaimer_txt, notes_txt, losses_df, summary_ranges,
+                disclaimer_txt, notes_txt, losses_df, summary_data,
                 basemap_path, adm_level, dstore, hypocenter,
-                threshold_deg)
+                threshold_deg, no_uncertainty)
 
 
 if __name__ == '__main__':

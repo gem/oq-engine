@@ -412,7 +412,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
                   basemap_path=None, font_size=18, city_font_size=10,
                   legend_font_size=10, title_font_size=20, figsize=(10, 10),
-                  hypocenter=None):
+                  epicenter=None):
     """
     Plot a classified geospatial variable with optional basemap
     and annotations.
@@ -451,8 +451,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         Font size for the main plot title.
     :param figsize: tuple(float, float)
         Width and height of the figure in inches.
-    :param hypocenter: tuple(float, float), optional
-        Coordinates (lon, lat) of the earthquake hypocenter to be
+    :param epicenter: tuple(float, float), optional
+        Coordinates (lon, lat) of the earthquake epicenter to be
         plotted as a yellow star.
     """
     plt = import_plt()
@@ -486,18 +486,19 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         if not subset.empty:  # skip classes with no geometries
             subset.plot(ax=ax, color=color, edgecolor="none")
 
-    hypo_handle = None
-    if hypocenter is not None:
-        lon, lat = hypocenter
-        hypo_handle = ax.scatter(lon, lat, marker='*', s=150, color='yellow',
-                                 edgecolor='black', linewidth=1, zorder=10,
-                                 label='Hypocenter')
+    epicenter_handle = None
+    if epicenter is not None:
+        lon, lat = epicenter
+        epicenter_handle = ax.scatter(
+            lon, lat, marker='*', s=150, color='yellow',
+            edgecolor='black', linewidth=1, zorder=10,
+            label='Epicenter')
 
     # Create legend handles based on color and label
     handles = [mpatches.Patch(color=c, label=l)
                for c, l in zip(colors, labels)]
-    if hypo_handle:
-        handles.append(hypo_handle)
+    if epicenter_handle:
+        handles.append(epicenter_handle)
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
               title_fontsize=font_size, fontsize=legend_font_size,
               loc="upper left")
