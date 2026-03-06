@@ -19,9 +19,11 @@
 
 import tempfile
 import logging
+import functools
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
+from shapely.validation import make_valid, explain_validity
 
 from PIL import Image as PILImage
 import pandas as pd
@@ -57,6 +59,19 @@ LOSS_METADATA = {
 LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
 
+@functools.lru_cache(maxsize=2)
+def _read_admin_layer(fname):
+    gdf = gpd.read_file(fname)
+    invalid = ~gdf.is_valid
+    if invalid.any():
+        for idx in gdf[invalid].index:
+            reason = explain_validity(gdf.at[idx, "geometry"])
+            logging.warning("Invalid geometry at index %s: %s", idx, reason)
+        # fix invalid geometries
+        gdf["geometry"] = gdf["geometry"].apply(make_valid)
+    return gdf
+
+
 def load_admin_boundaries(
         country_name, iso3, adm_level, crs="EPSG:4326"):
     if adm_level == 1:
@@ -68,7 +83,9 @@ def load_admin_boundaries(
     if not fname:
         raise AttributeError(
             f'config.directory.admin{adm_level}_boundaries_file is missing')
-    gdf = gpd.read_file(fname)
+    # NOTE: be careful not mutating the cached object
+    #       (in case we need to mutate it, we should make a copy right after reading)
+    gdf = _read_admin_layer(fname)
     if "shapeID" in gdf.columns:  # geoBoundaries
         iso3_col = "shapeGroup"
         id_col = "shapeID"
@@ -81,6 +98,7 @@ def load_admin_boundaries(
         raise RuntimeError(
             f"Unsupported admin schema. Columns: {list(gdf.columns)}"
         )
+    # NOTE: here we make a copy, so we don't alter the cached object
     gdf = gdf[gdf[iso3_col] == iso3]
     if gdf.empty:
         raise ValueError(
