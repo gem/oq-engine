@@ -481,7 +481,8 @@ hazard_uhs-std.csv
 
     def test_case_23(self):
         # arctic region (and IDL)
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_23.__file__)
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_23.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
