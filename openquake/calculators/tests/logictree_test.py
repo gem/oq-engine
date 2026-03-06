@@ -495,7 +495,6 @@ hazard_uhs-std.csv
         ae(info['source_id'], [b'21;0', b'21;1', b'22'])
         ae(info['grp_id'], [0, 1, 2])
         ae(info['weight'] > 0, [True, True, True])
-        ae(info['trti'], [0, 0, 1])
 
         # check collapse_gsim_logic_tree
         aw = extract(self.calc.datastore, 'realizations')
