@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib import sap, hdf5, datastore
+from openquake.baselib import sap, hdf5
+from openquake.commonlib import datastore
 from openquake.calculators.getters import MapGetter
 
 
