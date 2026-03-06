@@ -567,7 +567,9 @@ class SourceFilter(object):
                 else:
                     maxdist = getdefault(self.integration_distance, trt)[-1][1]
             loc = getattr(src_or_rec, 'location', None)
-            if loc:  # special case for pointlike sources
+            if loc:
+                # special case for pointlike sources
+                maxdist += src_or_rec.max_radius(maxdist)
                 return self._close_sids(loc.x, loc.y, loc.z, maxdist)
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
