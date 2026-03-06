@@ -131,7 +131,7 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g in rmap.jid:
+    for g in rmap.gdic:
         _store(rmap.to_array(g), num_chunks, h5, mon)
 
 
@@ -340,7 +340,8 @@ def make_hmap_png(hmap, lons, lats):
     ax.grid(True)
     ax.set_title('hmap for IMT=%(imt)s, poe=%(poe)s\ncalculation %(calc_id)d,'
                  'inv_time=%(inv_time)dy' % hmap)
-    ax.set_ylabel('Longitude')
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
     coll = ax.scatter(lons, lats, c=hmap['array'], cmap='jet')
     plt.colorbar(coll)
     bio = io.BytesIO()
@@ -557,7 +558,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
-        if self.dparam_mb:
+        if self.dparam_mb > 1:
             logging.info('maximum size of the dparam cache=%.1f MB',
                          self.dparam_mb)
             logging.info('maximum size of the multifaults=%.1f MB',
@@ -652,19 +653,20 @@ class ClassicalCalculator(base.HazardCalculator):
         # save the rates and performs some checks
         oq = self.oqparam
         size_mb = sum(rmap.size_mb for rmap in self.rmap.values())
-        if len(self.rmap) > 1 and size_mb > int(config.memory.pmap_max_mb):
-            # tested in classical/case_06 and in oq-risk-tests ptiling
+        if size_mb > 100:
+            # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(save_rates, h5=self.datastore)
+            savemap = parallel.Starmap(save_rates, h5=self.datastore,
+                                       distribute='processpool')
             for grp_id, rmap in self.rmap.items():
                 for rm in rmap.split(L1):
                     savemap.submit((rm, self.num_chunks, None))
             savemap.reduce()
         else:
             # store sequentially
-            logging.info('Saving %d RateMap', len(self.rmap))
+            logging.info('Saving %d RateMap(s)', len(self.rmap))
             for rmap in self.rmap.values():
-                for g in rmap.jid:
+                for g in rmap.gdic:
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:

@@ -73,26 +73,26 @@ def add_borders(
     Draw filled regions (light gray) clipped to the current viewport.
     Automatically updates on zoom/pan.
     """
+    from matplotlib.collections import LineCollection
     df = read_df()
-    geometries = df['geom'].values
+    geometries = df.geometry.values
+    sindex = df.sindex
     ax.set_facecolor('#F5F8FA')  # subtle pale blue sea
-    border_patches = []
+    border_collection = None
 
     def redraw():
-        nonlocal border_patches
-        # Remove previously drawn patches
-        for p in border_patches:
-            p.remove()
-        border_patches.clear()
+        nonlocal border_collection
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
         viewport = box(xmin, ymin, xmax, ymax)
-        prepared_view = prep(viewport)
-        for geom in geometries:
-            # Fast reject
-            if not prepared_view.intersects(geom):
+        # spatial index query
+        idx = list(sindex.intersection((xmin, ymin, xmax, ymax)))
+        segments = []
+        for geom in geometries[idx]:
+            try:
+                clipped = geom.intersection(viewport)
+            except Exception:
                 continue
-            clipped = geom.intersection(viewport)
             if clipped.is_empty:
                 continue
             if isinstance(clipped, MultiPolygon):
@@ -102,11 +102,15 @@ def add_borders(
             else:
                 continue
             for part in parts:
-                patch = PolygonPatch(
-                    part, facecolor=facecolor, edgecolor=edgecolor,
-                    linewidth=linewidth, alpha=alpha, zorder=zorder)
-                ax.add_patch(patch)
-                border_patches.append(patch)
+                coords = part.exterior.coords
+                segments.append(coords)
+        # remove old collection
+        if border_collection is not None:
+            border_collection.remove()
+        border_collection = LineCollection(
+            segments, colors=edgecolor, linewidths=linewidth,
+            alpha=alpha, zorder=zorder)
+        ax.add_collection(border_collection)
         ax.figure.canvas.draw_idle()
 
     # Connect viewport change callbacks
@@ -146,7 +150,12 @@ def add_region_labels(
     :param fontsize: label font size
     :param max_extent_deg: hide labels if view wider than this (degrees)
     """
+
     df = read_df()
+    geometries = df.geometry.values
+    labels = df[label_field].values
+    sindex = df.sindex
+
     state = {'texts': []}
 
     def redraw(event_ax):
@@ -161,18 +170,21 @@ def add_region_labels(
             event_ax.figure.canvas.draw_idle()
             return
         viewport = box(xmin, ymin, xmax, ymax)
-        for _, row in df.iterrows():
-            geom = row['geom']
+        # spatial index query
+        idx = list(sindex.intersection((xmin, ymin, xmax, ymax)))
+        for i in idx:
+            geom = geometries[i]
             if not geom.intersects(viewport):
                 continue
             pt = viewport_label_point(geom, viewport)
             if pt is None:
                 continue
             txt = event_ax.text(
-                pt.x, pt.y, str(row[label_field]), ha='center', va='center',
+                pt.x, pt.y, str(labels[i]), ha='center', va='center',
                 fontsize=fontsize, color='0.25', zorder=10)
             state['texts'].append(txt)
         event_ax.figure.canvas.draw_idle()
+
     # Initial draw
     redraw(ax)
     # Redraw on viewport change

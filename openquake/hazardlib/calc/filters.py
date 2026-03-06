@@ -494,20 +494,14 @@ class SourceFilter(object):
         new.multiplier = multiplier
         return new
 
-    def get_enlarged_box(self, src, maxdist=None):
+    def get_enlarged_box(self, src, maxdist):
         """
         Get the enlarged bounding box of a source.
 
         :param src: a source object
-        :param maxdist: a scalar maximum distance (or None)
+        :param maxdist: a scalar maximum distance
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        if maxdist is None:
-            if hasattr(self.integration_distance, 'y'):  # interp1d
-                maxdist = self.integration_distance.y[-1]
-            else:
-                maxdist = getdefault(self.integration_distance,
-                                     src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
         except (FilteredAway, BBoxError):
@@ -517,14 +511,6 @@ class SourceFilter(object):
             logging.error(f'Error in source {src.source_id}', exc_info=True)
             raise
         return bbox
-
-    def get_rectangle(self, src):
-        """
-        :param src: a source object
-        :returns: ((min_lon, min_lat), width, height), useful for plotting
-        """
-        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
-        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
         """
@@ -575,9 +561,20 @@ class SourceFilter(object):
             return self._close_sids(lon, lat, dep, dist)
         else:  # source
             trt = src_or_rec.tectonic_region_type
+            if maxdist is None:
+                if hasattr(self.integration_distance, 'y'):  # interp1d
+                    maxdist = self.integration_distance.y[-1]
+                else:
+                    maxdist = getdefault(self.integration_distance, trt)[-1][1]
+            loc = getattr(src_or_rec, 'location', None)
+            if loc:
+                # special case for pointlike sources
+                maxdist += src_or_rec.max_radius(maxdist)
+                return self._close_sids(loc.x, loc.y, loc.z, maxdist)
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
             except FilteredAway:
+                # can be raised by multiFaultSources
                 return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids

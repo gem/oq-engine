@@ -43,7 +43,10 @@ import itertools
 import numpy
 import pandas
 import requests
-from shapely import wkt, geometry
+import geopandas as gpd
+from shapely import wkt
+from shapely.geometry import shape
+from shapely.validation import make_valid, explain_validity
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -1429,7 +1432,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: F32})
     imtls = {}
     dic = {}
     for fname in fnames:
@@ -1443,7 +1446,7 @@ def get_pmap_from_csv(oqparam, fnames):
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)
     L = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((N, L))
+    data = numpy.zeros((N, L), F32)
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1731,27 +1734,30 @@ def read_geometries(fname, name):
     """
     :param fname: path of the file containing the geometries
     :param name: name of the primary key field
-    :returns: data frame with codes and geometries
+    :returns: GeoDataFrame frame with codes and geometries
     """
+    codes = []
+    geoms = []
     with fiona.open(fname) as f:
-        codes = []
-        geoms = []
+        crs = f.crs
         for feature in f:
-            props = feature['properties']
-            geom = feature['geometry']
+            props = feature["properties"]
+            geom = feature["geometry"]
             code = props[name]
             if code and geom:
+                g = shape(geom)
+                if not g.is_valid:
+                    logging.warning("Invalid geometry for %s: %s",
+                                    code, explain_validity(g))
+                    g = make_valid(g)
                 codes.append(code)
-                # NOTE: the following commented line would expand/reduce
-                #       boundaries by the specified degrees (costly). For
-                #       geospatial queries we prefer to keep these
-                #       geometries unaltered and use a buffer around the
-                #       coordinates of of a site instead.
-                # geoms.append(geometry.shape(geom).buffer(deg))
-                geoms.append(geometry.shape(geom))
+                geoms.append(g)
             else:
-                logging.error(f'{code=}, {geom=} in {fname}')
-    return pandas.DataFrame(dict(code=codes, geom=geoms))
+                logging.error(f"{code=}, {geom=} in {fname}")
+    # NOTE: "geometry" instead of "geom" would be the standard in GeoPandas,
+    #       but using "geom" we avoid changing other code using this object
+    return gpd.GeoDataFrame(
+        dict(code=codes, geom=geoms), geometry="geom", crs=crs)
 
 
 @functools.lru_cache()

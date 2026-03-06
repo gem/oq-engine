@@ -29,10 +29,9 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
-from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale)
+    sqrscale, getsizeof, humansize)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module, InvalidFile
@@ -314,6 +313,7 @@ def simple_cmaker(gsims, imts, **params):
 # ############################ genctxs ################################## #
 
 # generator of quintets (rup_index, mag, planar_array, sites)
+# called first in preclassical with a reduced sitecol and then in classical
 def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
         # building planar geometries
@@ -326,8 +326,8 @@ def _quintets(cmaker, src, sitecol):
     cdist = sitecol.get_cdist(src.location)
     # NB: having a decent max_radius is essential for performance!
     mask = cdist <= maxdist + src.max_radius(maxdist)
-    sitecol = sitecol.filter(mask)
-    if sitecol is None:
+    sites = sitecol.filter(mask)
+    if sites is None:
         return
 
     minmag = cmaker.maximum_distance.x[0]
@@ -337,7 +337,7 @@ def _quintets(cmaker, src, sitecol):
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, magdist[mag], pla, sitecol
+                yield m, mag, magdist[mag], pla, sites
     else:
         for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
@@ -349,13 +349,13 @@ def _quintets(cmaker, src, sitecol):
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
                                     magdist)
-            close = sitecol.filter(cdist[mask] <= psdist)
-            far = sitecol.filter(cdist[mask] > psdist)
+            close = sites.filter(cdist[mask] <= psdist)
+            far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sitecol
+                    yield m, mag, mdist, arr, sites
                 else:  # something is close
-                    yield m, mag, mdist, pla, sitecol
+                    yield m, mag, mdist, pla, sites
             else:  # many sites
                 if close is None:  # all is far
                     yield m, mag, mdist, arr, far
@@ -1520,8 +1520,8 @@ class RmapMaker(object):
                 totlen += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
-                    # allctxs is at most a few dozens of MB
-                    cm.update(pnemap, concat(allctxs))
+                    ctxt = concat(allctxs)  # at most a few dozens of MB
+                    cm.update(pnemap, ctxt)
                     allctxs.clear()
                     ctxlen = 0
         if allctxs:
@@ -1529,18 +1529,10 @@ class RmapMaker(object):
             cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
-        dt = time.time() - t0
-        nsrcs = len(self.sources)
+        dt = (time.time() - t0) / len(self.sources)
         factor = totlen / sum(src.nctxs for src in self.sources)
         for src in self.sources:
-            src.dt = dt / nsrcs
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(src.nctxs * factor)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
         return pnemap
 
     def _make_src_mutex(self):
@@ -1566,16 +1558,19 @@ class RmapMaker(object):
             else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            src.dt = time.time() - t0
-            self.source_data['src_id'].append(valid.basename(src))
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nctxs'].append(n)
-            self.source_data['nrupts'].append(src.num_ruptures)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(src.dt)
-            self.source_data['taskno'].append(cm.task_no)
+            self.update_source_data(src, cm.task_no, time.time() - t0, n)
         pmap.array *= self.grp_probability
         return ~pmap
+
+    def update_source_data(self, src, task_no, dt, nctxs):
+        src.dt = dt
+        self.source_data['src_id'].append(valid.basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nctxs'].append(nctxs)
+        self.source_data['nrupts'].append(src.num_ruptures)
+        self.source_data['weight'].append(src.weight)
+        self.source_data['ctimes'].append(src.dt)
+        self.source_data['taskno'].append(task_no)
 
     def make(self):
         dic = {}

@@ -439,9 +439,11 @@ class SiteCollection(object):
             # duplicates (there could be millions)
             n = len(dupl)
             dots = ' ...' if n > 9 else ''
-            items = list(dupl.items())[:9]
+            items = []
+            for (x, y), _ in list(dupl.items())[:9]:
+                items.append('%.5f %.5f' % (x, y))
             raise ValueError('There are %d duplicate sites %s%s' %
-                             (n, items, dots))
+                             (n, ', '.join(items), dots))
         return self
 
     @classmethod
@@ -874,6 +876,8 @@ class SiteCollection(object):
         if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
+            if min_lon > max_lon:  # swap min_lon, max_lon
+                min_lon, max_lon = max_lon, min_lon
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]

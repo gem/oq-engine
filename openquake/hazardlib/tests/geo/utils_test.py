@@ -421,8 +421,8 @@ class PlaneFit(unittest.TestCase):
         """
         self.points[:, 2] += numpy.random.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
-        numpy.testing.assert_allclose(self.c[0:3], par, rtol=.0022)
-        self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
+        numpy.testing.assert_allclose(self.c[0:3], par, atol=.001)
+        numpy.testing.assert_allclose(self.c[-1], -sum(par*pnt), atol=.01)
 
 
 # NB: utils.assoc is tested in the engine

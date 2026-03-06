@@ -398,24 +398,11 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        [(_no, rates)] = self.gen_rates(gid, 1)
-        return rates
-
-    def gen_rates(self, gid, num_chunks):
-        """
-        :yields: pairs (chunkno, rates for that chunck of sites)
-        """
-        for no, mask in gen_chunks(self.sids, num_chunks):
-            sids = self.sids[mask]
-            outs = []
-            for i, g in enumerate(gid):
-                rates = from_rates_g(self.array[mask, :, i], g, sids)
-                outs.append(rates)
-            if len(outs) == 1:
-                yield no, outs[0]
-            else:
-                out = numpy.concatenate(outs, dtype=rates_dt)
-                yield no, out
+        outs = []
+        for i, g in enumerate(gid):
+            rates = to_rates(self.array, self.sids, g, i, 0)
+            outs.append(rates)
+        return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
         """
@@ -527,30 +514,30 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-def from_rates_g(rates_g, g, sids, level0=0):
+
+# NB: numba-compiling here is nearly useless in terms of performance
+@compile("(float32[:,:,:], uint32[:], int64, int64, int64)")
+def to_rates(ratesNLG, sids, g, i, level0):
     """
-    :param rates_g: an array of shape (N, L)
-    :param g: an integer representing a GSIM index
+    :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
+    :param g: an integer representing a GSIM index
+    :param i: an index in the range 0..G-1
     :param level0: level offset
     """
-    # sanity check
-    assert len(rates_g) == len(sids), (len(rates_g), len(sids))
-    outs = []
-    for lid, rates in enumerate(rates_g.T):
-        idxs, = rates.nonzero()
-        if len(idxs):
-            out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = sids[idxs]
-            out['lid'] = level0 + lid
-            out['gid'] = g
-            out['rate'] = rates[idxs]
-            outs.append(out)
-    if not outs:
-        return numpy.array([], rates_dt)
-    elif len(outs) == 1:
-        return outs[0]
-    return numpy.concatenate(outs, dtype=rates_dt)
+    ratesNL = ratesNLG[:, :, i].copy()
+    N, L = ratesNL.shape
+    assert N == len(sids), (N, len(sids))
+    out = numpy.zeros(N * L, rates_dt)
+    n = 0
+    for s, sid in enumerate(sids):
+        for lid, rate in enumerate(ratesNL[s]):
+            out[n]['sid'] = sid
+            out[n]['lid'] = level0 + lid
+            out[n]['gid'] = g
+            out[n]['rate'] = rate
+            n += 1
+    return out[out['rate'] > 0]
 
 
 class RateMap:
@@ -566,13 +553,13 @@ class RateMap:
         self.sids = sids
         self.shape = len(sids), L, len(gids)
         self.array = numpy.zeros(self.shape, F32)
-        self.jid = {g: j for j, g in enumerate(gids)}
+        self.gdic = {g: j for j, g in enumerate(gids)}
 
     def __iadd__(self, other):
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
             oarray = other.array[:, :, i]
-            self.array[sidx, :, self.jid[g]] += oarray
+            self.array[sidx, :, self.gdic[g]] += oarray
         return self
 
     def to_array(self, g):
@@ -580,8 +567,7 @@ class RateMap:
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        rates_g = self.array[:, :, self.jid[g]]
-        return from_rates_g(rates_g, g, self.sids, self.level0)
+        return to_rates(self.array, self.sids, g, self.gdic[g], self.level0)
 
     def split(self, L1):
         """
@@ -592,9 +578,9 @@ class RateMap:
         for lvl in range(0, self.shape[1], L1):
             new = object.__new__(self.__class__)
             new.sids = self.sids
-            new.shape = len(self.sids), L1, len(self.jid)
+            new.shape = len(self.sids), L1, len(self.gdic)
             new.array = self.array[:, lvl:lvl+L1, :]
-            new.jid = self.jid
+            new.gdic = self.gdic
             new.level0 = lvl
             out.append(new)
         return out

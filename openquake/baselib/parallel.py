@@ -862,7 +862,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist != 'no':
+        if dist not in ('no', 'threadpool'):
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
@@ -1015,6 +1015,20 @@ class Starmap(object):
             times = numpy.array(list(self.busytime.values()))
             if self.h5.mode != 'r':
                 self.monitor.save_starmap_info(self.h5, self.name, times)
+
+
+# as of Python 3.13 this is terribly inefficient compared to a processpool,
+# even for numba functions releasing the GIL(!), so don't use it for the
+# moment; it may become useful with the noGIL built of Python 3.14 or not
+class Threadmap(Starmap):
+    """
+    A Starmap subclass spawing only threadpools
+    """
+    def __init__(self, task_func, task_args=(),
+                 progress=logging.info, h5=None):
+        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
+        super().__init__(task_func, task_args, 'threadpool',
+                         logging.info, h5)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

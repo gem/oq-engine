@@ -510,7 +510,11 @@ def get_bounding_box(obj, maxdist):
         min_lon, max_lon = lons.min(), lons.max()
         if cross_idl(min_lon, max_lon):
             lons %= 360
-        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+        min_lon, max_lon = lons.min(), lons.max()
+        if min_lon >= max_lon:  # swap
+            min_lon, max_lon = max_lon, min_lon
+        bbox = min_lon, lats.min(), max_lon, lats.max()
+
     a1 = min(maxdist * KM_TO_DEGREES, 90)
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     delta = bbox[2] - bbox[0] + 2 * a2
@@ -959,7 +963,7 @@ def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
     :param lon: longitude (same CRS as geom_df)
     :param lat: latitude
     :param buffer_radius: maximum distance (in CRS units, e.g. degrees)
-    :param geom_df: DataFrame with columns:
+    :param geom_df: GeoDataFrame with columns:
                     - 'geom' (Shapely geometries)
                     - 'code'
     :param exclude: iterable of codes to exclude
@@ -967,13 +971,23 @@ def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
               ordered by ascending minimum distance
     """
     point = Point(lon, lat)
-    filtered = geom_df[~geom_df['code'].isin(exclude)]
+    # Exclude codes first
+    if exclude:
+        df = geom_df[~geom_df["code"].isin(exclude)]
+    else:
+        df = geom_df
+    # Spatial index query using buffer bounding box
+    minx, miny, maxx, maxy = point.buffer(buffer_radius).bounds
+    idx = list(df.sindex.intersection((minx, miny, maxx, maxy)))
+    candidates = df.iloc[idx]
     code_min_dist = {}
-    for code, df in filtered.groupby('code'):
-        target_geoms = df['geom'].values
-        min_dist = min(g.distance(point) for g in target_geoms)
-        if min_dist <= buffer_radius:
-            code_min_dist[code] = min_dist
+    for geom, code in zip(candidates.geometry.values,
+                          candidates["code"].values):
+        dist = geom.distance(point)
+        if dist <= buffer_radius:
+            prev = code_min_dist.get(code)
+            if prev is None or dist < prev:
+                code_min_dist[code] = dist
     # Sort by ascending distance
     ordered_codes = sorted(code_min_dist, key=code_min_dist.get)
     return ordered_codes
