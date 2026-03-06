@@ -313,6 +313,7 @@ def simple_cmaker(gsims, imts, **params):
 # ############################ genctxs ################################## #
 
 # generator of quintets (rup_index, mag, planar_array, sites)
+# called first in preclassical with a reduced sitecol and then in classical
 def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
         # building planar geometries
@@ -325,8 +326,8 @@ def _quintets(cmaker, src, sitecol):
     cdist = sitecol.get_cdist(src.location)
     # NB: having a decent max_radius is essential for performance!
     mask = cdist <= maxdist + src.max_radius(maxdist)
-    sitecol = sitecol.filter(mask)
-    if sitecol is None:
+    sites = sitecol.filter(mask)
+    if sites is None:
         return
 
     minmag = cmaker.maximum_distance.x[0]
@@ -336,7 +337,7 @@ def _quintets(cmaker, src, sitecol):
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, magdist[mag], pla, sitecol
+                yield m, mag, magdist[mag], pla, sites
     else:
         for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
@@ -348,13 +349,13 @@ def _quintets(cmaker, src, sitecol):
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
                                     magdist)
-            close = sitecol.filter(cdist[mask] <= psdist)
-            far = sitecol.filter(cdist[mask] > psdist)
+            close = sites.filter(cdist[mask] <= psdist)
+            far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sitecol
+                    yield m, mag, mdist, arr, sites
                 else:  # something is close
-                    yield m, mag, mdist, pla, sitecol
+                    yield m, mag, mdist, pla, sites
             else:  # many sites
                 if close is None:  # all is far
                     yield m, mag, mdist, arr, far

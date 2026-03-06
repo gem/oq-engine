@@ -481,7 +481,15 @@ hazard_uhs-std.csv
 
     def test_case_23(self):
         # arctic region (and IDL)
-        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_23.__file__)
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",  # slim.csv
+                               "hazard_map-mean-PGA.csv"], case_23.__file__)
+        nc = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
+
+        # running a calculation with more sites must give more contexts
+        self.run_calc(case_23.__file__, 'job.ini',
+                      site_model_file='fat.csv slim.csv')
+        nc2 = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
+        assert nc2 >= nc
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree

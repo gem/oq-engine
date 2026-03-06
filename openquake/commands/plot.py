@@ -1090,6 +1090,10 @@ def make_figure_sources(extractors, what):
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
     plot_sources(srcs, ax)
+    sitecol = ex.get('sitecol')
+    if sitecol:
+        ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
+                   label='sites')
     print('Plotting mosaic borders...')
     xlim, ylim = auto_limits(ax)
     add_borders(ax, readinput.read_mosaic_df)

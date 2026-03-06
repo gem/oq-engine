@@ -12,8 +12,8 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Spreading and Transforms"
         >
             <pointSource
-            id="ocn_2:7"
-            name="ocn_2:7"
+            id="ocn_7"
+            name="ocn_7"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -47,8 +47,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:41"
-            name="ocn_2:41"
+            id="ocn_41"
+            name="ocn_41"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -82,8 +82,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:67"
-            name="ocn_2:67"
+            id="ocn_67"
+            name="ocn_67"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -117,8 +117,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:94"
-            name="ocn_2:94"
+            id="ocn_94"
+            name="ocn_94"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -152,8 +152,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:160"
-            name="ocn_2:160"
+            id="ocn_160"
+            name="ocn_160"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -187,8 +187,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:230"
-            name="ocn_2:230"
+            id="ocn_230"
+            name="ocn_230"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -222,8 +222,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:252"
-            name="ocn_2:252"
+            id="ocn_252"
+            name="ocn_252"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -257,8 +257,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:419"
-            name="ocn_2:419"
+            id="ocn_419"
+            name="ocn_419"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -292,8 +292,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:460"
-            name="ocn_2:460"
+            id="ocn_460"
+            name="ocn_460"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -327,8 +327,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:703"
-            name="ocn_2:703"
+            id="ocn_703"
+            name="ocn_703"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -362,8 +362,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:991"
-            name="ocn_2:991"
+            id="ocn_991"
+            name="ocn_991"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -397,8 +397,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:995"
-            name="ocn_2:995"
+            id="ocn_995"
+            name="ocn_995"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -432,8 +432,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1033"
-            name="ocn_2:1033"
+            id="ocn_1033"
+            name="ocn_1033"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -467,8 +467,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1062"
-            name="ocn_2:1062"
+            id="ocn_1062"
+            name="ocn_1062"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -502,8 +502,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1261"
-            name="ocn_2:1261"
+            id="ocn_1261"
+            name="ocn_1261"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -537,8 +537,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1281"
-            name="ocn_2:1281"
+            id="ocn_1281"
+            name="ocn_1281"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -572,8 +572,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1379"
-            name="ocn_2:1379"
+            id="ocn_1379"
+            name="ocn_1379"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -607,8 +607,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1401"
-            name="ocn_2:1401"
+            id="ocn_1401"
+            name="ocn_1401"
             >
                 <pointGeometry>
                     <gml:Point>
@@ -642,8 +642,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
             <pointSource
-            id="ocn_2:1417"
-            name="ocn_2:1417"
+            id="ocn_1417"
+            name="ocn_1417"
             >
                 <pointGeometry>
                     <gml:Point>
