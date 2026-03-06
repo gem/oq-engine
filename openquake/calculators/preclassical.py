@@ -238,6 +238,21 @@ def store_csm(dstore, csm, sitecol, cmakers):
     return max_weight
 
 
+def warn_use_rates(oq, num_rlzs):
+    """
+    Recommend setting use_rates and full enumeration when only the means
+    are to be computed
+    """
+    if oq.use_rates:
+        ns = oq.number_of_logic_tree_samples
+        if ns and ns <= 1_000_000:
+            logging.warning('You should set number_of_logic_tree_samples=0')
+        elif num_rlzs > 1_000_000:
+            logging.warning('You should set number_of_logic_tree_samples')
+    else:
+        logging.warning('You should set use_rates=true')
+    
+
 @base.calculators.add('preclassical')
 class PreClassicalCalculator(base.HazardCalculator):
     """
@@ -252,6 +267,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             super().init()
             self.full_lt = self.csm.full_lt
+        if self.oqparam.hazard_stats() == ['mean']:
+            warn_use_rates(self.oqparam, self.full_lt.get_num_paths())
 
     def store(self):
         # store full_lt, toms
