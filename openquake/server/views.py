@@ -31,6 +31,8 @@ import signal
 import zlib
 import re
 import psutil
+import time
+
 from threading import Event
 from unittest.mock import patch
 from collections import defaultdict
@@ -202,6 +204,20 @@ def get_bool_param(request, name, default=False):
     return str(val).lower() in ('1', 'true', 'yes', '')
 
 
+def safe_move(src, dst, retries=10, delay=0.2):
+    # On Windows, files may be locked for 10-200ms by Windows Defender,
+    # file indexer or temporary filesystem operations. The retry loop
+    # waits until the handle is released (adding a <2 seconds worst-case delay)
+    for i in range(retries):
+        try:
+            shutil.move(src, dst)
+            return
+        except PermissionError:
+            if i == retries - 1:
+                raise
+            time.sleep(delay)
+
+
 def store(request_files, ini, calc_id):
     """
     Store the uploaded files in calc_dir and select the job file by looking
@@ -221,7 +237,7 @@ def store(request_files, ini, calc_id):
         # NB: TemporaryUploadedFile Django objects are not sortable
         for input_file in input_files:
             new_path = os.path.join(calc_dir, input_file.name)
-            shutil.move(input_file.temporary_file_path(), new_path)
+            safe_move(input_file.temporary_file_path(), new_path)
             if input_file.name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
