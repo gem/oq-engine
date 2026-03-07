@@ -295,12 +295,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # crossing date line calculation for Alaska testing full tiling
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             self.assert_curves_ok([
-                '/hazard_curve-mean-PGA.csv',
-                'hazard_curve-mean-SA(0.1)',
-                'hazard_curve-mean-SA(0.2).csv',
-                'hazard_curve-mean-SA(0.5).csv',
-                'hazard_curve-mean-SA(1.0).csv',
-                'hazard_curve-mean-SA(2.0).csv',
+                '/hazard_curve-mean.csv',
+                'hazard_map-mean.csv',
             ], case_22.__file__, delta=1E-6, tiling=True)
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
