@@ -142,16 +142,16 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     rlzs = numpy.concatenate(list(cmaker.gsims.values()))
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
     rng = numpy.random.default_rng(ebrupture.seed)
-    cross_correl = NoCrossCorrelation(cmaker.truncation_level)
-    ccdist = cross_correl.distribution
+    between_correl = NoCrossCorrelation(cmaker.truncation_level_between)
+    within_dist = NoCrossCorrelation(cmaker.truncation_level_within).distribution
     gmfs = []
     for g, (gs, rlzs) in enumerate(cmaker.gsims.items()):
         idxs, = numpy.where(numpy.isin(rlz, rlzs))
         E = len(idxs)
         # build arrays of random numbers of shape (M, N, E) and (M, E)
-        intra_eps = [ccdist.rvs((N, E), rng) for _ in range(M)]
+        intra_eps = [within_dist.rvs((N, E), rng) for _ in range(M)]
         eps = numpy.zeros((E, M), F32)
-        eps[idxs] = cross_correl.get_inter_eps(cmaker.imtls, E, rng).T
+        eps[idxs] = between_correl.get_inter_eps(cmaker.imtls, E, rng).T
         gmf = numpy.zeros((M, N, E))
         for m, imt in enumerate(cmaker.imtls):
             intra_res = phi[g, m, :, None] * intra_eps  # shape (N, E)
@@ -233,7 +233,9 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
-            cmaker.truncation_level)
+            cmaker.truncation_level_between)
+        self.within_dist = NoCrossCorrelation(
+            cmaker.truncation_level_within).distribution
         self.mea_tau_phi = []
         self.gmv_fields = [str(imt) for imt in cmaker.imts]
         self.mmi_index = -1
@@ -355,15 +357,23 @@ class GmfComputer(object):
                 E = len(idxs)
                 result = numpy.zeros(
                     (len(self.imts), len(self.ctx.sids), E), F32)
-                ccdist = self.cross_correl.distribution
+                tlw = self.cmaker.truncation_level_within
+                tlb = self.cmaker.truncation_level_between
                 if conditioned:
                     intra_eps = [None] * self.M
                 else:
                     # arrays of random numbers of shape (M, N, E) and (M, E)
-                    intra_eps = [ccdist.rvs((self.N, E), rng)
-                                 for _ in range(self.M)]
-                    self.eps[idxs] = self.cross_correl.get_inter_eps(
-                        self.imts, E, rng).T
+                    if tlw <= 1E-9:
+                        intra_eps = [numpy.zeros((self.N, E), F32)
+                                     for _ in range(self.M)]
+                    else:
+                        intra_eps = [self.within_dist.rvs((self.N, E), rng)
+                                     for _ in range(self.M)]
+                    if tlb <= 1E-9:
+                        self.eps[idxs] = 0.
+                    else:
+                        self.eps[idxs] = self.cross_correl.get_inter_eps(
+                            self.imts, E, rng).T
                 for m, imt in enumerate(self.imts):
                     try:
                         result[m] = self._compute(
@@ -389,7 +399,9 @@ class GmfComputer(object):
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
             eps = self.cmaker.oq.correlation_cutoff
-            if self.cmaker.truncation_level <= 1E-9:
+            tlw = self.cmaker.truncation_level_within
+            tlb = self.cmaker.truncation_level_between
+            if max(tlw, tlb) <= 1E-9:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
@@ -400,7 +412,7 @@ class GmfComputer(object):
                 corr = cov_Y_Y / std[:, None] / std[None, :]
                 corr = (corr + corr.T) / 2.0
                 numpy.fill_diagonal(corr, 1.0)
-                tl = self.cmaker.truncation_level
+                tl = max(tlw, tlb)
                 bounds = numpy.full(len(corr), tl)
                 seed = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
                 eps_y = TruncatedMVN(
@@ -422,10 +434,11 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        if self.cmaker.truncation_level <= 1E-9:
-            # for truncation_level = 0 there is only mean, no stds
+        if (self.cmaker.truncation_level_within <= 1E-9 and
+                self.cmaker.truncation_level_between <= 1E-9):
+            # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
-                raise ValueError('truncation_level=0 requires '
+                raise ValueError('truncation_level_within=0 requires '
                                  'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
