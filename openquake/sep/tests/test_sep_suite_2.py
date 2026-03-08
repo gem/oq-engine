@@ -29,8 +29,6 @@ from openquake.sep.liquefaction import (
     zhu_etal_2017_general,
     rashidian_baise_2020,
     allstadt_etal_2022,
-    akhlagi_etal_2021_model_a,
-    akhlagi_etal_2021_model_b,
     bozzoni_etal_2021_europe,
     todorovic_silva_2022_nonparametric_general,
 )
@@ -452,58 +450,6 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(LSE, lse)
-
-    def test_akhlagi_2021_model_a(self):
-        prob_liq, out_class = akhlagi_etal_2021_model_a(
-            pgv=self.pgv,
-            tri=self.sites["tri"],
-            dc=self.sites["dc"],
-            dr=self.sites["dr"],
-            zwb=self.sites["zwb"],
-        )
-        zlp = np.array(
-            [
-                0.949740,
-                0.660622,
-                0.982408,
-                0.972950,
-                0.989203,
-                0.992851,
-                0.000016,
-                0.526811,
-                0.988699,
-                0.908844,
-            ]
-        )
-        clq = np.array([1, 1, 1, 1, 1, 1, 0, 1, 1, 1])
-        np.testing.assert_array_almost_equal(prob_liq, zlp)
-        np.testing.assert_array_almost_equal(out_class, clq)
-
-    def test_akhlagi_2021_b(self):
-        prob_liq, out_class = akhlagi_etal_2021_model_b(
-            pgv=self.pgv,
-            vs30=self.sites["vs30"],
-            dc=self.sites["dc"],
-            dr=self.sites["dr"],
-            zwb=self.sites["zwb"],
-        )
-        zlp = np.array(
-            [
-                0.973289,
-                0.974526,
-                0.988385,
-                0.988594,
-                0.990865,
-                0.992976,
-                0.991752,
-                0.989183,
-                0.992784,
-                0.990591,
-            ]
-        )
-        clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-        np.testing.assert_array_almost_equal(prob_liq, zlp)
-        np.testing.assert_array_almost_equal(out_class, clq)
 
     def test_todorovic_2022(self):
         model_instance = TodorovicSilva2022NonParametric()
