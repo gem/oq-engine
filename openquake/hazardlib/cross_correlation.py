@@ -121,7 +121,9 @@ class CrossCorrelationBetween(ABC):
         mu = np.zeros(num_imts)
         bounds = np.full(num_imts, self.truncation_level)
         seed = int(rng.integers(0, np.iinfo(np.int32).max))
-        corr = corma
+        # TruncatedMVN mutates the covariance matrix in-place during factorization:
+        # always work on a copy to avoid corrupting cached correlation matrices.
+        corr = np.array(corma, dtype=float, copy=True)
         mineig = np.linalg.eigvalsh(corr).min()
         if not np.isfinite(mineig) or mineig < 1e-8:
             # TruncatedMVN is numerically unstable for nearly-singular matrices.
