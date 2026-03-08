@@ -44,7 +44,7 @@ ae = numpy.testing.assert_equal
 OCC_FIELDS = ('day', 'night', 'transit')
 ANR_FIELDS = {'area', 'number', 'residents'}
 VAL_FIELDS = {'structural', 'nonstructural', 'contents',
-              'business_interruption'}
+              'business_interruption', 'embodied_carbon'}
 
 
 def to_mmi(value):
@@ -162,7 +162,7 @@ class CostCalculator(object):
         :param: a list of loss types
         :returns: a string of space-separated units
         """
-        lst = []
+        lst = []    
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]  # rstrip _ins
@@ -170,6 +170,8 @@ class CostCalculator(object):
                 unit = 'units'
             elif lt in ('affectedpop', 'injured', 'occupants', 'residents'):
                 unit = 'people'
+            elif lt == 'embodied_carbon':
+                unit = 'CO2eqv'
             elif lt == 'area':
                 # tested in event_based_risk/case_8
                 # NB: SI units used as default

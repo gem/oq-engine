@@ -48,6 +48,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
 PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
+embodied_carbon
 occupants occupants_day occupants_night occupants_transit
 structural+nonstructural structural+contents nonstructural+contents
 structural+nonstructural+contents
