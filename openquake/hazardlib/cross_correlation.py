@@ -121,17 +121,26 @@ class CrossCorrelationBetween(ABC):
         mu = np.zeros(num_imts)
         bounds = np.full(num_imts, self.truncation_level)
         seed = int(rng.integers(0, np.iinfo(np.int32).max))
+        corr = corma
+        mineig = np.linalg.eigvalsh(corr).min()
+        if not np.isfinite(mineig) or mineig < 1e-8:
+            # TruncatedMVN is numerically unstable for nearly-singular matrices.
+            from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
+            corr = corr_clipped(corr, threshold=1e-8)
         try:
-            return TruncatedMVN(mu, corma, -bounds, bounds, seed=seed).sample(
+            samp = TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
                 num_events)
+            if np.isfinite(samp).all():
+                return samp
         except RuntimeError as err:
             if 'not positive semi-definite' not in str(err):
                 raise
-            # Use the existing PSD regularization available in conditioned_gmfs.py
-            from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
-            corr = corr_clipped(corma, threshold=1e-12)
-            return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
-                num_events)
+        # Use the existing PSD regularization available in conditioned_gmfs.py
+        # also in case TruncatedMVN returns non-finite samples.
+        from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
+        corr = corr_clipped(corr, threshold=1e-6)
+        return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
+            num_events)
 
 
 class GodaAtkinson2009(CrossCorrelationBetween):
