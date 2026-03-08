@@ -30,6 +30,7 @@ from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -395,9 +396,17 @@ class GmfComputer(object):
                 # add a cutoff to remove negative eigenvalues
                 cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(
                     len(cov_WY_WY)) * eps
-                arr = rng.multivariate_normal(
-                    mu_Y.flatten(), cov_Y_Y, size=E,
-                    check_valid="raise", tol=1e-5, method="cholesky")
+                std = numpy.sqrt(numpy.maximum(numpy.diag(cov_Y_Y), eps))
+                corr = cov_Y_Y / std[:, None] / std[None, :]
+                corr = (corr + corr.T) / 2.0
+                numpy.fill_diagonal(corr, 1.0)
+                tl = self.cmaker.truncation_level
+                bounds = numpy.full(len(corr), tl)
+                seed = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
+                eps_y = TruncatedMVN(
+                    numpy.zeros(len(corr)), corr, -bounds, bounds, seed=seed
+                ).sample(E)
+                arr = mu_Y.flatten()[:, None] + std[:, None] * eps_y
                 gmf = exp(arr, imt != "MMI").T
             return gmf  # shapes (N, E)
 

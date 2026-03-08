@@ -20,7 +20,7 @@ import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
-from openquake.hazardlib.truncated_MVN import TruncatedMVN
+from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 # ############ CrossCorrelation for the conditional spectrum ############ #
 
@@ -101,7 +101,7 @@ class CrossCorrelationBetween(ABC):
         if truncation_level < 1E-9:
             truncation_level = 1E-9
         self.truncation_level = truncation_level
-        self.distribution = stats.truncnorm(-1, 1)
+        self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -115,6 +115,14 @@ class CrossCorrelationBetween(ABC):
     @abstractmethod
     def get_inter_eps(self, imts, num_events, rng):
         pass
+
+    def _get_inter_eps_trunc_mvn(self, corma, num_events, rng):
+        num_imts = len(corma)
+        mu = np.zeros(num_imts)
+        bounds = np.full(num_imts, self.truncation_level)
+        seed = int(rng.integers(0, np.iinfo(np.int32).max))
+        return TruncatedMVN(mu, corma, -bounds, bounds, seed=seed).sample(
+            num_events)
 
 
 class GodaAtkinson2009(CrossCorrelationBetween):
@@ -159,7 +167,7 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return TruncatedMVN(np.zeros(len(imts)), corma, np.zeros(len(imts) - self.truncation_level, np.zeros(len(imts) + self.truncation_level).sample(num_events).T  # E, M -> M, E
+        return self._get_inter_eps_trunc_mvn(corma, num_events, rng)
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
@@ -236,8 +244,7 @@ class Bradley2012(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return rng.multivariate_normal(
-            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return self._get_inter_eps_trunc_mvn(corma, num_events, rng)
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
