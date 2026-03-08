@@ -1978,11 +1978,13 @@ class OqParam(valid.ParamSet):
             cls = getattr(cross_correlation, self.cross_correlation)
         except AttributeError:
             return None
-        tlb = self.truncation_level_between
-        if tlb is None:
-            tlb = (self.truncation_level
-                   if self.truncation_level is not None else 99.)
-        return cls(tlb)
+        if issubclass(cls, cross_correlation.CrossCorrelationBetween):
+            tlb = self.truncation_level_between
+            if tlb is None:
+                tlb = (self.truncation_level
+                       if self.truncation_level is not None else 99.)
+            return cls(tlb)
+        return cls()
 
     @property
     def rupture_xml(self):
