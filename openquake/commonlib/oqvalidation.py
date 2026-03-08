@@ -861,6 +861,16 @@ truncation_level:
   Example: *truncation_level = 0* to compute median GMFs.
   Default: no default
 
+truncation_level_between:
+  Truncation level used for between-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
+
+truncation_level_within:
+  Truncation level used for within-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
+
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
   Example: *uniform_hazard_spectra = true*.
@@ -1192,6 +1202,10 @@ class OqParam(valid.ParamSet):
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
+    truncation_level_between = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
+    truncation_level_within = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
@@ -1272,6 +1286,27 @@ class OqParam(valid.ParamSet):
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
+        # Backward-compatible truncation levels:
+        # - legacy: truncation_level applies to both components
+        # - new: truncation_level_between/within can be set independently
+        tl = getattr(self, 'truncation_level', None)
+        tlb = self.truncation_level_between
+        tlw = self.truncation_level_within
+        if tl is not None:
+            if tlb is None:
+                tlb = tl
+            if tlw is None:
+                tlw = tl
+        elif tlb is not None or tlw is not None:
+            if tlb is None:
+                tlb = tlw
+            if tlw is None:
+                tlw = tlb
+            tl = tlw
+        if tl is not None:
+            self.truncation_level = tl
+        self.truncation_level_between = tlb
+        self.truncation_level_within = tlw
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
                names_vals['hazard_calculation_id'] == 0)
@@ -1401,9 +1436,13 @@ class OqParam(valid.ParamSet):
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if 'multi_peril' not in self.inputs and not hasattr(
-                    self, 'truncation_level'):
-                self.raise_invalid("Missing truncation_level")
+            if ('multi_peril' not in self.inputs and
+                    getattr(self, 'truncation_level', None) is None and
+                    self.truncation_level_between is None and
+                    self.truncation_level_within is None):
+                self.raise_invalid(
+                    "Missing truncation_level or "
+                    "truncation_level_between/truncation_level_within")
 
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
@@ -1939,7 +1978,11 @@ class OqParam(valid.ParamSet):
             cls = getattr(cross_correlation, self.cross_correlation)
         except AttributeError:
             return None
-        return cls()
+        tlb = self.truncation_level_between
+        if tlb is None:
+            tlb = (self.truncation_level
+                   if self.truncation_level is not None else 99.)
+        return cls(tlb)
 
     @property
     def rupture_xml(self):
@@ -2075,7 +2118,7 @@ class OqParam(valid.ParamSet):
         In presence of a correlation model the truncation level must be nonzero
         """
         if self.ground_motion_correlation_model:
-            return self.truncation_level != 0
+            return self.truncation_level_within != 0
         else:
             return True
 

@@ -241,6 +241,43 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn('`intensity_measure_types_and_levels`',
                       str(ctx.exception))
 
+    def test_truncation_levels_backward_compatibility(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=GST,
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            sites='0.1 0.2',
+            reference_vs30_value='200',
+            maximum_distance='400',
+            truncation_level='3')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_between, oq.truncation_level)
+        self.assertEqual(oq.truncation_level_within, oq.truncation_level)
+
+    def test_truncation_levels_split(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=GST,
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            sites='0.1 0.2',
+            reference_vs30_value='200',
+            maximum_distance='400',
+            truncation_level_between='2',
+            truncation_level_within='4')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_between, 2.0)
+        self.assertEqual(oq.truncation_level_within, 4.0)
+
+    def test_truncation_levels_single_new_param(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=GST,
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            sites='0.1 0.2',
+            reference_vs30_value='200',
+            maximum_distance='400',
+            truncation_level_between='2')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_between, 2.0)
+        self.assertEqual(oq.truncation_level_within, 2.0)
+
     def test_ambiguous_gsim(self):
         with self.assertRaises(InvalidFile) as ctx:
             OqParam(
