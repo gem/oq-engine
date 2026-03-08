@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-# Equation constants that are IMT-independent
+# Equation constants
 CONSTS = {
     "Mref": 4.5,
     "Rref": 1.0,
