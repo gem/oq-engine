@@ -419,7 +419,7 @@ class GmfComputer(object):
                     numpy.zeros(len(corr)), corr, -bounds, bounds, seed=seed
                 ).sample(E)
                 arr = mu_Y.flatten()[:, None] + std[:, None] * eps_y
-                gmf = exp(arr, imt != "MMI").T
+                gmf = exp(arr, imt != "MMI")
             return gmf  # shapes (N, E)
 
         # regular case, sets self.sig, returns gmf
