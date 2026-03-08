@@ -19,7 +19,6 @@
 import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
-from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
@@ -129,6 +128,7 @@ class CrossCorrelationBetween(ABC):
             if 'not positive semi-definite' not in str(err):
                 raise
             # Use the existing PSD regularization available in conditioned_gmfs.py
+            from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
             corr = corr_clipped(corma, threshold=1e-12)
             return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
                 num_events)
