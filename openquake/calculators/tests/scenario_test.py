@@ -237,9 +237,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
-        # Values can differ slightly across platforms (macOS/Linux) for
-        # conditioned GMFs due to numerical differences in linear algebra.
-        self.assertEqualFiles('gmf-data.csv', fname, delta=2e-4)
+        self.assertEqualFiles('gmf-data.csv', fname)
 
         # check that stations are discarded when extracting avg_gmf
         aw = extract(self.calc.datastore, 'avg_gmf?imt=SA(0.1)')
