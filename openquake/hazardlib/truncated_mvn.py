@@ -31,7 +31,7 @@ EPS = 10e-15
 
 
 class TruncatedMVN:
-    """
+    r"""
     Create a normal distribution :math:`X  \sim N ({\mu}, {\Sigma})` subject to linear inequality constraints
     :math:`lb < X < ub` and sample from it using minimax tilting. Based on the MATLAB implemention by the authors
     (reference below).
@@ -213,7 +213,7 @@ class TruncatedMVN:
         return logpr, Z
 
     def trandn(self, lb, ub):
-        """
+        r"""
         Sample generator for the truncated standard multivariate normal distribution :math:`X \sim N(0,I)` s.t.
         :math:`lb<X<ub`.
 
