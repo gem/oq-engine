@@ -19,6 +19,7 @@
 import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
+from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
@@ -121,8 +122,16 @@ class CrossCorrelationBetween(ABC):
         mu = np.zeros(num_imts)
         bounds = np.full(num_imts, self.truncation_level)
         seed = int(rng.integers(0, np.iinfo(np.int32).max))
-        return TruncatedMVN(mu, corma, -bounds, bounds, seed=seed).sample(
-            num_events)
+        try:
+            return TruncatedMVN(mu, corma, -bounds, bounds, seed=seed).sample(
+                num_events)
+        except RuntimeError as err:
+            if 'not positive semi-definite' not in str(err):
+                raise
+            # Use the existing PSD regularization available in conditioned_gmfs.py
+            corr = corr_clipped(corma, threshold=1e-12)
+            return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
+                num_events)
 
 
 class GodaAtkinson2009(CrossCorrelationBetween):
