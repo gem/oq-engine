@@ -30,6 +30,7 @@ from openquake.baselib import hdf5, general, config, performance
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.geo.utils import SiteAssociationError
 
 U8 = numpy.uint8
@@ -1095,6 +1096,8 @@ class Exposure(object):
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         assets_df = pandas.concat(dfs)
+        if rupfilter and len(assets_df) == 0:
+            raise FilteredAway('No assets within %r' % rupfilter)
         del dfs  # save memory
         exp.build_mesh(assets_df)
         return exp
