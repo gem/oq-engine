@@ -501,7 +501,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         handles.append(epicenter_handle)
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
               title_fontsize=font_size, fontsize=legend_font_size,
-              loc="upper left")
+              loc="best")
 
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
@@ -544,8 +544,9 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             texts.append(t)
         # Automatically resolve all collisions
         if adjust_text and texts:
+            legend = ax.get_legend()
             adjust_text(texts, ax=ax,
-                        add_objects=[ax.collections[-1]],
+                        add_objects=[ax.collections[-1], legend],
                         arrowprops=None,   # disable arrows completely
                         force_text=(0.1, 0.2),
                         expand_points=(1.2, 1.2),
