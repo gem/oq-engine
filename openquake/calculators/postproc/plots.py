@@ -412,7 +412,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
                   basemap_path=None, font_size=18, city_font_size=10,
                   legend_font_size=10, title_font_size=20, figsize=(10, 10),
-                  epicenter=None):
+                  region_alpha=0.7, epicenter=None):
     """
     Plot a classified geospatial variable with optional basemap
     and annotations.
@@ -451,6 +451,9 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         Font size for the main plot title.
     :param figsize: tuple(float, float)
         Width and height of the figure in inches.
+    :param region_alpha: float
+        Transparency of the classified region fill, between 0 (fully
+        transparent) and 1 (fully opaque)
     :param epicenter: tuple(float, float), optional
         Coordinates (lon, lat) of the earthquake epicenter to be
         plotted as a yellow star.
@@ -484,7 +487,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     for i, color in enumerate(colors):
         subset = df[df["class"] == i]
         if not subset.empty:  # skip classes with no geometries
-            subset.plot(ax=ax, color=color, edgecolor="none")
+            subset.plot(ax=ax, color=color, edgecolor="none",
+                        alpha=region_alpha)
 
     epicenter_handle = None
     if epicenter is not None:
