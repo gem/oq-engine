@@ -293,7 +293,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska
-        '''
         self.assert_curves_ok([
             '/hazard_curve-mean.csv',
             'hazard_map-mean.csv',
@@ -303,7 +302,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertFalse(data.attrs['tiling'])
         self.assertEqual(data['tiles'], [1])
         self.assertEqual(data['blocks'], [2])
-        '''
         self.assert_curves_ok([
             '/hazard_curve-mean.csv',
             'hazard_map-mean.csv',

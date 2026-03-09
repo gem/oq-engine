@@ -31,7 +31,7 @@ from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, get_bounding_box, cross_idl,
+    KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 F32 = numpy.float32
