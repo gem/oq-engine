@@ -21,6 +21,7 @@ from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
+from openquake.hazardlib.correlation_utils import corr_clipped
 
 # ############ CrossCorrelation for the conditional spectrum ############ #
 
@@ -127,7 +128,6 @@ class CrossCorrelationBetween(ABC):
         mineig = np.linalg.eigvalsh(corr).min()
         if not np.isfinite(mineig) or mineig < 1e-8:
             # TruncatedMVN is numerically unstable for nearly-singular matrices.
-            from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
             corr = corr_clipped(corr, threshold=1e-8)
         try:
             samp = TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
@@ -137,9 +137,8 @@ class CrossCorrelationBetween(ABC):
         except RuntimeError as err:
             if 'not positive semi-definite' not in str(err):
                 raise
-        # Use the existing PSD regularization available in conditioned_gmfs.py
+        # Use the existing PSD regularization available in correlation_utils.py
         # also in case TruncatedMVN returns non-finite samples.
-        from openquake.hazardlib.calc.conditioned_gmfs import corr_clipped
         corr = corr_clipped(corr, threshold=1e-6)
         return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
             num_events)
