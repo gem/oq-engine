@@ -67,6 +67,7 @@ PY_MODULES = ['openquake.commands.__main__']
 install_requires = [
     'setuptools',
     'h5py >=2.10',
+    'h3 >=3.7',
     'numpy >=1.20',
     'numba >=0.58',
     'scipy >=1.3',
