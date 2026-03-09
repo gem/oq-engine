@@ -870,19 +870,15 @@ class SiteCollection(object):
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
             site IDs within the bounding box
+
+        NB: if the bounding box crosses the IDL, do not filter
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        assert min_lon < max_lon
-        idl = cross_idl(min_lon, max_lon)
+        if cross_idl(min_lon, max_lon):
+            return self.sids
         lons, lats = self.lons, self.lats
-        if idl:
-            assert min_lon < 0
-            mask1 = (-180 < lons) & (lons < min_lon)
-            mask2 = (max_lon <= lons) & (lons < 180)
-            mask = (mask1 | mask2) & (min_lat < lats) & (lats < max_lat)
-        else:
-            mask = (min_lon < lons) & (lons < max_lon) & \
-                (min_lat < lats) & (lats < max_lat)
+        mask = ((min_lon < lons) & (lons < max_lon) &
+                (min_lat < lats) & (lats < max_lat))
         ok, = mask.nonzero()
         return self.sids[ok]
 
