@@ -508,7 +508,8 @@ class CountryReportBuilder:
 
         left_bundle = [
             self.Paragraph(
-                f"<b>Summary of impact for {self.iso3}:</b>", self.styles["Normal"]),
+                f"<b>Summary of impact for {self.country_name}:</b>",
+                self.styles["Normal"]),
             self.Spacer(1, 4),
             summary_table,
             self.Spacer(1, 12),
