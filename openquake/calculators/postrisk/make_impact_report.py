@@ -381,7 +381,7 @@ class CountryReportBuilder:
         df = aggregate_losses(points_gdf, admin_boundaries, tags_agg_losses)
         df = df.rename(columns={k: v["label"]
                                 for k, v in LOSS_METADATA.items()})
-
+        save_most_affected_regions(df, self.dstore, self.iso3)
         self.x_limits, self.y_limits = self._compute_viewport_from_boundaries(df)
         self.cities = self._get_cities_in_viewport()
 
@@ -401,7 +401,6 @@ class CountryReportBuilder:
             plt.close(fig)
             buf.seek(0)
             images[label] = buf.getvalue()
-        save_most_affected_regions(df, self.dstore, self.iso3)
         return df, images
 
     def _build_disclaimer(self):
