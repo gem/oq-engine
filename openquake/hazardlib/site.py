@@ -870,17 +870,22 @@ class SiteCollection(object):
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
             site IDs within the bounding box
+
+        NB: if the bounding box crosses the IDL, do not filter.       
         """
+        # This is the only sane approach across the IDL, since sometimes
+        # we want to take the greater arc (for the Oceans) and sometimes
+        # the smaller arc (for Alaska). Disabling the prefiltering means a
+        # slight performance penalty but not errors, since the real filtering
+        # will kick off next and do the right thing in the engine.
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self['lon'], self['lat']
-        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
-            if min_lon > max_lon:  # swap min_lon, max_lon
-                min_lon, max_lon = max_lon, min_lon
-        mask = (min_lon < lons) * (lons < max_lon) * \
-               (min_lat < lats) * (lats < max_lat)
-        return mask.nonzero()[0]
+        if cross_idl(min_lon, max_lon):
+            return self.sids
+        lons, lats = self.lons, self.lats
+        mask = ((min_lon < lons) & (lons < max_lon) &
+                (min_lat < lats) & (lats < max_lat))
+        ok, = mask.nonzero()
+        return self.sids[ok]
 
     def extend(self, lons, lats):
         """
