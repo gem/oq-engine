@@ -22,7 +22,6 @@ import base64
 import numpy
 # import descartes
 from shapely.geometry import MultiPolygon, Polygon, box
-from shapely.prepared import prep
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -66,28 +65,54 @@ def adjust_limits(ax, xlim, ylim, padding=1):
 
 def add_borders(
         ax, read_df=readinput.read_countries_df,
-        facecolor='#E6E6E6',  # subtle land gray
-        edgecolor='#C0C0C0',  # slightly darker border
-        linewidth=0.5, alpha=1.0, zorder=0):
+        facecolor='#D6D6C2',   # warm muted land color
+        edgecolor='#A0A0A0',   # slightly darker border
+        linewidth=0.5, alpha=1.0, zorder=0,
+        sea_color='#AED6F1'):  # soft blue sea
     """
-    Draw filled regions (light gray) clipped to the current viewport.
+    Draw filled land regions clipped to the current viewport,
+    with seas colored via the axes background.
     Automatically updates on zoom/pan.
     """
-    from matplotlib.collections import LineCollection
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+    from matplotlib.collections import PatchCollection
+
     df = read_df()
     geometries = df.geometry.values
     sindex = df.sindex
-    ax.set_facecolor('#F5F8FA')  # subtle pale blue sea
-    border_collection = None
+    ax.set_facecolor(sea_color)
+    patch_collection = None
+
+    def _polygon_to_path(polygon):
+        """Convert a Shapely Polygon to a matplotlib Path (with holes)."""
+        vertices = []
+        codes = []
+        # Exterior ring
+        coords = numpy.array(polygon.exterior.coords)
+        vertices.append(coords)
+        codes.append(
+            [Path.MOVETO] + [Path.LINETO] * (len(coords) - 2) + [Path.CLOSEPOLY]
+        )
+        # Interior rings (holes)
+        for interior in polygon.interiors:
+            coords = numpy.array(interior.coords)
+            vertices.append(coords)
+            codes.append(
+                [Path.MOVETO] + [Path.LINETO] * (len(coords) - 2) + [Path.CLOSEPOLY]
+            )
+        return Path(
+            numpy.concatenate(vertices),
+            numpy.concatenate(codes)
+        )
 
     def redraw():
-        nonlocal border_collection
+        nonlocal patch_collection
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
         viewport = box(xmin, ymin, xmax, ymax)
-        # spatial index query
         idx = list(sindex.intersection((xmin, ymin, xmax, ymax)))
-        segments = []
+        patches = []
         for geom in geometries[idx]:
             try:
                 clipped = geom.intersection(viewport)
@@ -102,22 +127,24 @@ def add_borders(
             else:
                 continue
             for part in parts:
-                coords = part.exterior.coords
-                segments.append(coords)
-        # remove old collection
-        if border_collection is not None:
-            border_collection.remove()
-        border_collection = LineCollection(
-            segments, colors=edgecolor, linewidths=linewidth,
-            alpha=alpha, zorder=zorder)
-        ax.add_collection(border_collection)
+                path = _polygon_to_path(part)
+                patches.append(PathPatch(path))
+
+        if patch_collection is not None:
+            patch_collection.remove()
+        patch_collection = PatchCollection(
+            patches,
+            facecolor=facecolor,
+            edgecolor=edgecolor,
+            linewidth=linewidth,
+            alpha=alpha,
+            zorder=zorder
+        )
+        ax.add_collection(patch_collection)
         ax.figure.canvas.draw_idle()
 
-    # Connect viewport change callbacks
     ax.callbacks.connect('xlim_changed', lambda ax: redraw())
     ax.callbacks.connect('ylim_changed', lambda ax: redraw())
-
-    # Initial draw
     redraw()
 
 
