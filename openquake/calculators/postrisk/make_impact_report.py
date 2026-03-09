@@ -455,7 +455,7 @@ class CountryReportBuilder:
         # subtracting also the padding
         title_width = self.page_width - self.LOGO_W - 12
 
-        event_text = f"<b>{self.event_name}; {self.event_date}</b>"
+        event_text = f"<b>{self.event_name}. {self.event_date}</b>"
         event_paragraph = self._one_line_paragraph(
             event_text,
             event_style,
