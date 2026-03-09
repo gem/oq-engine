@@ -53,8 +53,6 @@ from openquake.sep.liquefaction.liquefaction import (
     zhu_etal_2017_general,
     rashidian_baise_2020,
     allstadt_etal_2022,
-    akhlagi_etal_2021_model_a,
-    akhlagi_etal_2021_model_b,
     bozzoni_etal_2021_europe,
     todorovic_silva_2022_nonparametric_general,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
@@ -435,92 +433,6 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         out.append(prob_liq)
         out.append(out_class)
         out.append(lse)
-        return out
-
-
-class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
-    """
-    Computes the liquefaction probability from PGV and transforms it
-    to binary output via the predefined probability threshold.
-    """
-    experimental = True
-    peril = 'liquefaction'
-    outputs = ["LiqProb", "LiqOccur"]
-
-    def __init__(
-        self,
-        intercept=4.925,
-        pgv_coeff=0.694,
-        tri_coeff=-0.459,
-        dc_coeff=-0.403,
-        dr_coeff=-0.309,
-        zwb_coeff=-0.164,
-    ):
-        self.intercept = intercept
-        self.pgv_coeff = pgv_coeff
-        self.tri_coeff = tri_coeff
-        self.dc_coeff = dc_coeff
-        self.dr_coeff = dr_coeff
-        self.zwb_coeff = zwb_coeff
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGV":
-                prob_liq, out_class = akhlagi_etal_2021_model_a(
-                    pgv=gmf,
-                    tri=sites.tri,
-                    dc=sites.dc,
-                    dr=sites.dr,
-                    zwb=sites.zwb)
-                out.append(prob_liq)
-                out.append(out_class)
-        return out
-
-
-class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
-    """
-    Computes the liquefaction probability from PGV and transforms it
-    to binary output via the predefined probability threshold.
-    """
-    experimental = True
-    peril = 'liquefaction'
-    outputs = ["LiqProb", "LiqOccur"]
-
-    def __init__(
-        self,
-        intercept=9.504,
-        pgv_coeff=0.706,
-        vs30_coeff=-0.994,
-        dc_coeff=-0.389,
-        dr_coeff=-0.291,
-        zwb_coeff=-0.205,
-    ):
-        self.intercept = intercept
-        self.pgv_coeff = pgv_coeff
-        self.vs30_coeff = vs30_coeff
-        self.dc_coeff = dc_coeff
-        self.dr_coeff = dr_coeff
-        self.zwb_coeff = zwb_coeff
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGV":
-                prob_liq, out_class = akhlagi_etal_2021_model_b(
-                    pgv=gmf,
-                    vs30=sites.vs30,
-                    dc=sites.dc,
-                    dr=sites.dr,
-                    zwb=sites.zwb)
-                out.append(prob_liq)
-                out.append(out_class)
         return out
 
 

@@ -511,8 +511,6 @@ def get_bounding_box(obj, maxdist):
         if cross_idl(min_lon, max_lon):
             lons %= 360
         min_lon, max_lon = lons.min(), lons.max()
-        if min_lon >= max_lon:  # swap
-            min_lon, max_lon = max_lon, min_lon
         bbox = min_lon, lats.min(), max_lon, lats.max()
 
     a1 = min(maxdist * KM_TO_DEGREES, 90)
@@ -522,7 +520,10 @@ def get_bounding_box(obj, maxdist):
         raise BBoxError('The buffer of %d km is too large, the bounding '
                         'box is larger than half the globe: %d degrees' %
                         (maxdist, delta))
-    return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+    min_, max_ = fix_lon(bbox[0] - a2), fix_lon(bbox[2] + a2)
+    if min_ > max_:  # swap
+        min_, max_ = max_, min_
+    return min_, bbox[1] - a1, max_, bbox[3] + a1
 
 
 # NB: returns (west, east, north, south) which is DIFFERENT from

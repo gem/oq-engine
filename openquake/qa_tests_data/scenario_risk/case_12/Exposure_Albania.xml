@@ -9,6 +9,7 @@
         <costType name="structural" type="aggregated" unit="USD"/>
         <costType name="nonstructural" type="aggregated" unit="USD"/>
         <costType name="contents" type="aggregated" unit="USD"/>
+        <costType name="embodied_carbon" type="aggregated" unit="CO2eqv"/>
       </costTypes>
     </conversions>
 
@@ -22,6 +23,7 @@
     <field oq="structural" input="COST_STRUCTURAL_USD" />
     <field oq="nonstructural" input="COST_NONSTRUCTURAL_USD" />
     <field oq="contents" input="COST_CONTENTS_USD" />
+    <field oq="embodied_carbon" input="EMBODIED_CARBON" />
     <field oq="day" input="OCCUPANTS_PER_ASSET_DAY" />
     <field oq="night" input="OCCUPANTS_PER_ASSET_NIGHT" />
     <field oq="transit" input="OCCUPANTS_PER_ASSET_TRANSIT" />
