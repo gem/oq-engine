@@ -158,38 +158,6 @@ def build_classifiers(df, *, breaks):
             for meta in LOSS_METADATA.values()}
 
 
-def plot_losses(country_name, iso3, adm_level, losses_df, cities,
-                tags_agg, x_limits_country, y_limits_country,
-                basemap_path, dstore, hypocenter):
-    import matplotlib.pyplot as plt
-    admin_boundaries = load_admin_boundaries(
-        country_name, iso3, adm_level)
-    points_gdf = points_to_gdf(losses_df, crs=admin_boundaries.crs)
-    df = aggregate_losses(points_gdf, admin_boundaries, tags_agg)
-    df = df.rename(columns={k: v["label"] for k, v in LOSS_METADATA.items()})
-    classifiers = build_classifiers(
-        df, breaks=[1, 10, 100, 1000])
-    images = {}
-    for meta in LOSS_METADATA.values():
-        label = meta["label"]
-        title = meta["title"]
-        colors = meta["colors"]
-        # NOTE: epicenter and hypocenter have the same lon and lat (!= depth)
-        fig, ax = plot_variable(
-            df, admin_boundaries, label, classifiers[label],
-            colors, country_name=country_name,
-            plot_title=title,
-            legend_title=label, cities=cities,
-            x_limits=x_limits_country, y_limits=y_limits_country,
-            basemap_path=basemap_path, epicenter=hypocenter)
-        buf = BytesIO()
-        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        buf.seek(0)
-        images[label] = buf.getvalue()
-    return df, images
-
-
 def _get_impact_summary_data(dstore, iso3, no_uncertainty):
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
@@ -274,6 +242,10 @@ class CountryReportBuilder:
 
         self.styles = self.getSampleStyleSheet()
 
+        self.x_limits = None
+        self.y_limits = None
+        self.cities = {}
+
         self._load_country_info()
         self._compute_layout()
 
@@ -327,6 +299,28 @@ class CountryReportBuilder:
         scale = min(max_w / w, max_h / h)
         return self.Image(BytesIO(image_data), width=w*scale, height=h*scale)
 
+    def _compute_viewport_from_boundaries(
+            self, aggregated_gdf, padding_deg=0.5):
+        """
+        Derive the map viewport from the bounding box of admin boundaries
+        of all regions with at least one non-zero loss
+        """
+        loss_labels = [meta["label"] for meta in LOSS_METADATA.values()]
+        existing_labels = [c for c in loss_labels
+                           if c in aggregated_gdf.columns]
+
+        if existing_labels:
+            mask = aggregated_gdf[existing_labels].gt(0).any(axis=1)
+            affected = aggregated_gdf[mask]
+        else:
+            affected = gpd.GeoDataFrame()
+
+        bounds = affected.geometry.total_bounds  # (minx, miny, maxx, maxy)
+        return (
+            [bounds[0] - padding_deg, bounds[2] + padding_deg],
+            [bounds[1] - padding_deg, bounds[3] + padding_deg],
+        )
+
     def _load_country_info(self):
         countries_info_file = config.directory.countries_info_file
         if not countries_info_file:
@@ -335,22 +329,6 @@ class CountryReportBuilder:
         df = pd.read_csv(countries_info_file)
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
-        # "GEM_REGION": country_info["GEM_REGION"],
-        # "CRS": country_info["CRS"],
-        lon_h, lat_h = self.hypocenter
-        # self.x_limits = [row["X_MIN"], row["X_MAX"]]
-        # self.y_limits = [row["Y_MIN"], row["Y_MAX"]]
-
-        # Define viewport based on the affected area threshold
-        # Extend the viewport to K times the threshold used to
-        # determine if a country is affected by the event
-        K = 5
-        self.x_limits = [lon_h - K*self.threshold_deg,
-                         lon_h + K*self.threshold_deg]
-        self.y_limits = [lat_h - K*self.threshold_deg,
-                         lat_h + K*self.threshold_deg]
-
-        self.cities = self._get_cities_in_viewport()
 
     def _get_cities_in_viewport(self, num_cities=15):
         """
@@ -395,11 +373,34 @@ class CountryReportBuilder:
         self.col_w = self.page_width / 2
 
     def _generate_country_plot(self):
+        import matplotlib.pyplot as plt
         tags_agg_losses = list(LOSS_METADATA)
-        df, images = plot_losses(
-            self.country_name, self.iso3, self.adm_level, self.losses_df,
-            self.cities, tags_agg_losses, self.x_limits, self.y_limits,
-            self.basemap_path, self.dstore, self.hypocenter)
+        admin_boundaries = load_admin_boundaries(
+            self.country_name, self.iso3, self.adm_level)
+        points_gdf = points_to_gdf(self.losses_df, crs=admin_boundaries.crs)
+        df = aggregate_losses(points_gdf, admin_boundaries, tags_agg_losses)
+        df = df.rename(columns={k: v["label"]
+                                for k, v in LOSS_METADATA.items()})
+
+        self.x_limits, self.y_limits = self._compute_viewport_from_boundaries(df)
+        self.cities = self._get_cities_in_viewport()
+
+        classifiers = build_classifiers(df, breaks=[1, 10, 100, 1000])
+        images = {}
+        for meta in LOSS_METADATA.values():
+            label = meta["label"]
+            fig, ax = plot_variable(
+                df, admin_boundaries, label, classifiers[label],
+                meta["colors"], country_name=self.country_name,
+                plot_title=meta["title"],
+                legend_title=label, cities=self.cities,
+                x_limits=self.x_limits, y_limits=self.y_limits,
+                basemap_path=self.basemap_path, epicenter=self.hypocenter)
+            buf = BytesIO()
+            fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+            plt.close(fig)
+            buf.seek(0)
+            images[label] = buf.getvalue()
         save_most_affected_regions(df, self.dstore, self.iso3)
         return df, images
 
