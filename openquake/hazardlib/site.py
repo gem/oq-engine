@@ -872,8 +872,7 @@ class SiteCollection(object):
         min_lon, min_lat, max_lon, max_lat = bbox
         lons, lats = self['lon'], self['lat']
         if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
+            return self.sids  # do not filter
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
