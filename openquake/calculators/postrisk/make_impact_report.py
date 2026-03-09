@@ -211,6 +211,10 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
         else:
             # Display the range
             summary_data[label] = f"{int(round(r.q05))} - {int(round(r.q95))}"
+    # Return None if all mean losses are approximately zero
+    if all(r.lossmea < 1e-5 for _, r in
+           rows.loc[rows['loss_type'].isin(mapping.values())].iterrows()):
+        return None
     return summary_data
 
 
