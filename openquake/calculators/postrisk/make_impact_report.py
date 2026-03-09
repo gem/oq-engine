@@ -306,15 +306,8 @@ class CountryReportBuilder:
         of all regions with at least one non-zero loss
         """
         loss_labels = [meta["label"] for meta in LOSS_METADATA.values()]
-        existing_labels = [c for c in loss_labels
-                           if c in aggregated_gdf.columns]
-
-        if existing_labels:
-            mask = aggregated_gdf[existing_labels].gt(0).any(axis=1)
-            affected = aggregated_gdf[mask]
-        else:
-            affected = gpd.GeoDataFrame()
-
+        mask = aggregated_gdf[loss_labels].gt(0).any(axis=1)
+        affected = aggregated_gdf[mask]
         bounds = affected.geometry.total_bounds  # (minx, miny, maxx, maxy)
         return (
             [bounds[0] - padding_deg, bounds[2] + padding_deg],
