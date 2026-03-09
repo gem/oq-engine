@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Disabled prefiltering across the International Date Line
+  * Listed h3 as a dependency in setup.py
   * Making sure `save_rates` uses the processpool distribution
   * Listed AvgSA as primary IMT
 
