@@ -478,10 +478,11 @@ class CountryReportBuilder:
 
         header_text = [
             event_paragraph,
-            self.Paragraph(
+            self._one_line_paragraph(
                 f"Time of the calculation: {self.time_of_calc} "
                 f"&nbsp;&nbsp;ShakeMap version: {self.shakemap_version}",
                 self.styles["Italic"],
+                max_width=title_width,
             ),
         ]
 
