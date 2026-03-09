@@ -871,8 +871,13 @@ class SiteCollection(object):
         :returns:
             site IDs within the bounding box
 
-        NB: if the bounding box crosses the IDL, do not filter
+        NB: if the bounding box crosses the IDL, do not filter.       
         """
+        # This is the only sane approach across the IDL, since sometimes
+        # we want to take the greater arc (for the Oceans) and sometimes
+        # the smaller arc (for Alaska). Disabling the prefiltering means a
+        # slight performance penalty but not errors, since the real filtering
+        # will kick off next and do the right thing in the engine.
         min_lon, min_lat, max_lon, max_lat = bbox
         if cross_idl(min_lon, max_lon):
             return self.sids
