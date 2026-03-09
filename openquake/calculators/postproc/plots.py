@@ -133,18 +133,16 @@ def add_borders(
         if patch_collection is not None:
             patch_collection.remove()
         patch_collection = PatchCollection(
-            patches,
-            facecolor=facecolor,
-            edgecolor=edgecolor,
-            linewidth=linewidth,
-            alpha=alpha,
-            zorder=zorder
-        )
+            patches, facecolor=facecolor, edgecolor=edgecolor,
+            linewidth=linewidth, alpha=alpha, zorder=zorder)
         ax.add_collection(patch_collection)
         ax.figure.canvas.draw_idle()
 
+    # Connect viewport change callbacks
     ax.callbacks.connect('xlim_changed', lambda ax: redraw())
     ax.callbacks.connect('ylim_changed', lambda ax: redraw())
+
+    # Initial draw
     redraw()
 
 
