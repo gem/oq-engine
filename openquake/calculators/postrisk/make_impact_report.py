@@ -476,11 +476,13 @@ class CountryReportBuilder:
             self.HEADER_H - 10,
         )
 
+        txt = f"Time of the calculation: {self.time_of_calc}"
+        if self.shakemap_version is not None:
+            txt += f" &nbsp;&nbsp;ShakeMap version: {self.shakemap_version}"
         header_text = [
             event_paragraph,
             self._one_line_paragraph(
-                f"Time of the calculation: {self.time_of_calc} "
-                f"&nbsp;&nbsp;ShakeMap version: {self.shakemap_version}",
+                txt,
                 self.styles["Italic"],
                 max_width=title_width,
             ),
@@ -753,11 +755,17 @@ def main(dstore, adm_level=1, threshold_deg=None):
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
     losses_df = pd.DataFrame(avg_losses.mean)
     rupdic = oqparam.rupture_dict
-    event_name = rupdic['title']
+    try:
+        event_name = rupdic['title']
+    except KeyError:
+        event_name = rupdic['description']
     # FIXME: do we prefer to show UTC or perhaps it is more intuitive
     #        to show the local time?
     event_date = to_utc_string(oqparam.local_timestamp)
-    shakemap_version = rupdic['shakemap_desc']
+    try:
+        shakemap_version = rupdic['shakemap_desc']
+    except KeyError:
+        shakemap_version = None
     job = logs.dbcmd('get_job', calc_id)
     time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
     disclaimer_txt = '''
