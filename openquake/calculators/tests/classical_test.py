@@ -293,18 +293,27 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # crossing date line calculation for Alaska
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-            self.assert_curves_ok([
-                '/hazard_curve-mean.csv',
-                'hazard_map-mean.csv',
-            ], case_22.__file__, delta=1E-6, tiling=False)
+        '''
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=False)
 
-        # TODO: check full tiling
-        # data = self.calc.datastore['source_groups']
-        # self.assertTrue(data.attrs['tiling'])
-        # self.assertEqual(data['gsims'], [4])
-        # self.assertGreater(data['tiles'][0], 1)
-        # self.assertEqual(data['blocks'], [1])
+        data = self.calc.datastore['source_groups']
+        self.assertFalse(data.attrs['tiling'])
+        self.assertEqual(data['tiles'], [1])
+        self.assertEqual(data['blocks'], [2])
+        '''
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=True)
+
+        data = self.calc.datastore['source_groups']
+        self.assertTrue(data.attrs['tiling'])
+        self.assertEqual(data['gsims'], [4])
+        self.assertGreater(data['tiles'][0], 1)
+        self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

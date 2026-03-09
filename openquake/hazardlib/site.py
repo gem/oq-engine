@@ -872,15 +872,19 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self['lon'], self['lat']
-        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
-            if min_lon > max_lon:  # swap min_lon, max_lon
-                min_lon, max_lon = max_lon, min_lon
-        mask = (min_lon < lons) * (lons < max_lon) * \
-               (min_lat < lats) * (lats < max_lat)
-        return mask.nonzero()[0]
+        assert min_lon < max_lon
+        idl = cross_idl(min_lon, max_lon)
+        lons, lats = self.lons, self.lats
+        if idl:
+            assert min_lon < 0
+            mask1 = (-180 < lons) & (lons < min_lon)
+            mask2 = (max_lon <= lons) & (lons < 180)
+            mask = (mask1 | mask2) & (min_lat < lats) & (lats < max_lat)
+        else:
+            mask = (min_lon < lons) & (lons < max_lon) & \
+                (min_lat < lats) & (lats < max_lat)
+        ok, = mask.nonzero()
+        return self.sids[ok]
 
     def extend(self, lons, lats):
         """

@@ -183,11 +183,14 @@ class Comparator(object):
 
 def compare_rates(calc_1: int, calc_2: int):
     """
-    Compare the ruptures affecting the given site ID as pandas DataFrames
+    Compare the rates as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
         df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    if len(df1) != len(df2):
+        print(f'{len(df1)=}, {len(df2)=}')
+        return
     delta = numpy.abs(df1 - df2).to_numpy().max()
     print('Maximum difference in the rates =%s' % delta)
 
