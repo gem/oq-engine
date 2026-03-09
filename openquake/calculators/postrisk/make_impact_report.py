@@ -249,6 +249,38 @@ class CountryReportBuilder:
         self._load_country_info()
         self._compute_layout()
 
+        self._register_unicode_font()
+        self.styles["Normal"].fontName = "DejaVu"
+        self.styles["Italic"].fontName = "DejaVu-Italic"
+        self.styles["Heading1"].fontName = "DejaVu-Bold"
+
+    def _register_unicode_font(self):
+        import matplotlib
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.pdfbase.pdfmetrics import registerFontFamily
+
+        dejavu_dir = Path(matplotlib.get_data_path()) / "fonts" / "ttf"
+        pdfmetrics.registerFont(
+            TTFont("DejaVu",
+                   str(dejavu_dir / "DejaVuSans.ttf")))
+        pdfmetrics.registerFont(
+            TTFont("DejaVu-Bold",
+                   str(dejavu_dir / "DejaVuSans-Bold.ttf")))
+        pdfmetrics.registerFont(
+            TTFont("DejaVu-Italic",
+                   str(dejavu_dir / "DejaVuSans-Oblique.ttf")))
+        pdfmetrics.registerFont(
+            TTFont("DejaVu-BoldItalic",
+                   str(dejavu_dir / "DejaVuSans-BoldOblique.ttf")))
+        registerFontFamily(
+            "DejaVu",
+            normal="DejaVu",
+            bold="DejaVu-Bold",
+            italic="DejaVu-Italic",
+            boldItalic="DejaVu-BoldItalic",
+        )
+
     def _one_line_paragraph(
             self, text, base_style, max_width, min_font_size=8, step=0.5):
         """
