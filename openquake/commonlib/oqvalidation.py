@@ -2398,6 +2398,8 @@ class OqParam(valid.ParamSet):
 
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'limit_states' in dic:
+            dic['limit_states'] = ' '.join(dic['limit_states'])
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])

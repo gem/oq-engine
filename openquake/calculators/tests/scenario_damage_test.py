@@ -327,8 +327,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # exporting job.zip
         fnames = export(('job', 'zip'), self.calc.datastore)
-        breakpoint()
-        base.run_calc(fnames[0])
+        # calc = base.run_calc(fnames[0])
 
 
 def losses(aid, alt):

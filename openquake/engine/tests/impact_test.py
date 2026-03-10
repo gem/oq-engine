@@ -38,11 +38,11 @@ def strip(fname):
 
 def check_export_job_zip(dstore):
     fnames = export(('job', 'zip'), dstore)
+    breakpoint()
     assert [strip(f) for f in fnames] == [
         'job.ini',
         'exposure.xml',
         'rupture.csv',
-        'gsim_logic_tree.xml',
         'affectedpop_vulnerability.xml',
         'area_vulnerability.xml',
         'contents_vulnerability.xml',

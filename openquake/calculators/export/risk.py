@@ -27,7 +27,7 @@ from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskmodels
+from openquake.risklib import scientific
 from openquake.commonlib import readinput
 from openquake.calculators.extract import (
     extract, sanitize, avglosses, aggexp_tags)
@@ -786,8 +786,8 @@ def convert_df_to_fragility(peril, loss_type, limit_states, df):
     root = N('fragilityModel', {'id': "fragility_model",
                                 'assetCategory': "buildings",
                                 "lossCategory": loss_type})
-    descr = N('description', {}, f"{loss_type} fragility model")
-    root.append(descr)
+    root.append(N('description', {}, f"{loss_type} fragility model"))
+    root.append(N('limitStates', {}, text=limit_states))
     for riskfunc in df.riskfunc:
         rfunc = json.loads(riskfunc)[
             'openquake.risklib.scientific.FragilityFunctionList']
@@ -924,7 +924,7 @@ def export_job_zip(ekey, dstore):
     with open(dest, 'w', encoding='utf8') as out:
         out.write(csv)
     inputs['rupture_model'] = dest
-    if gsim_lt:
+    if 'gsim_logic_tree' in oq.inputs:
         dest = dstore.export_path('gsim_logic_tree.xml')
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
@@ -935,26 +935,28 @@ def export_job_zip(ekey, dstore):
         ddic = export_fragility_xml(dstore)
         for peril, dic in ddic.items():
             inputs[f'{peril}_fragility'] = dic
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     if 'taxonomy_mapping' in oq.inputs:
         dest = dstore.export_path('taxonomy_mapping.csv')
         taxmap = dstore.read_df('taxmap')
-        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
         taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
         del taxmap['taxi']
         writer.save(taxmap, dest)
         inputs['taxonomy_mapping'] = dest
     if 'consequence' in oq.inputs:
-        dest = dstore.export_path('consequence.csv')
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
-        breakpoint()
-        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-        writer.save(taxmap, dest)
-        inputs['consequence'] = dest
+        dic = {}
+        for name_by_key, df in consdict.items():
+            name, key = name_by_key.split('_by_')
+            df['consequence'] = name
+            dest = dstore.export_path(f'consequence_by_{key}.csv')
+            writer.save(df, dest)
+            dic[key] = dest
+        inputs['consequence'] = dic
     inputs['sites'] = dstore.export_path('sites.csv')
-    sitecol = dstore['sitecol']
-    sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['sites'])
+    sites_df = dstore.read_df('sitecol', 'sids')
+    writer.save(sites_df, inputs['sites'])
     with open(job_ini, 'w', encoding='utf8') as out:
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
