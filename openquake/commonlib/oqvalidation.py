@@ -2451,6 +2451,8 @@ class OqParam(valid.ParamSet):
 
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'limit_states' in dic:
+            dic['limit_states'] = ' '.join(dic['limit_states'])
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])
@@ -2504,25 +2506,28 @@ def _rel_fnames(obj, base):
         return str(dic)
 
 
+# called by get_checksum32
 def to_ini(key, val):
     """
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, _name = pathlib.Path(val['job_ini']).parts
+        dic = val.copy()
+        job_ini = dic.pop('job_ini')
+        *base, _name = pathlib.Path(job_ini).parts
         fnames = []
-        for k, v in val.items():
-            if k == 'job_ini':
-                continue
-            elif isinstance(v, str):
+        for k, v in dic.items():
+            if isinstance(v, str):
                 fnames.append(v)
             elif isinstance(v, list):
                 fnames.extend(v)
             elif isinstance(v, dict):
                 fnames.extend(v.values())
-        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
-                         for k, v in val.items()
-                         if not k.startswith('_'))
+        out = []
+        for k, v in dic.items():
+            if not k.startswith('_'):
+                out.append(f'{k}_file = {_rel_fnames(v, base)}')
+        return '\n'.join(out)
     elif key == 'sites':
         sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
         return f"sites = {sites}"
