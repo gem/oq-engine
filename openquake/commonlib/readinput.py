@@ -290,7 +290,7 @@ def get_params(job_ini, kw={}):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
         resp = requests.get(job_ini)
-        logging.warning('Remote ini [%s] status: %d content length: %d' %
+        logging.info('Remote ini [%s] status: %d content length: %d' %
                         (job_ini, resp.status_code, len(resp.content)))
 
         job_ini = gettemp(suffix='.zip')
