@@ -21,8 +21,7 @@ import os
 import base64
 import numpy
 # import descartes
-from shapely.geometry import MultiPolygon, Polygon, box
-from shapely.prepared import prep
+from shapely.geometry import Polygon, box
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -66,57 +65,90 @@ def adjust_limits(ax, xlim, ylim, padding=1):
 
 def add_borders(
         ax, read_df=readinput.read_countries_df,
-        facecolor='#E6E6E6',  # subtle land gray
-        edgecolor='#C0C0C0',  # slightly darker border
-        linewidth=0.5, alpha=1.0, zorder=0):
+        facecolor='#F5F5F2',   # Very light off-white/grey
+        edgecolor='#D0D0D0',   # Faint grey for borders
+        linewidth=0.4, alpha=1.0, zorder=0,
+        sea_color='#E0F2F7'):  # Pale blue
     """
-    Draw filled regions (light gray) clipped to the current viewport.
+    Draw filled land regions clipped to the current viewport,
+    with seas colored via the axes background.
     Automatically updates on zoom/pan.
     """
-    from matplotlib.collections import LineCollection
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+    from matplotlib.collections import PatchCollection
+
     df = read_df()
     geometries = df.geometry.values
     sindex = df.sindex
-    ax.set_facecolor('#F5F8FA')  # subtle pale blue sea
-    border_collection = None
+    ax.set_facecolor(sea_color)
+    # We store the collection in a list to make it mutable inside the closure
+    container = {'coll': None}
 
-    def redraw():
-        nonlocal border_collection
+    def _polygon_to_path(polygon):
+        """Convert a Shapely Polygon to a matplotlib Path (with holes)."""
+        if polygon.is_empty:
+            return None
+        vertices = []
+        codes = []
+        # Exterior
+        ext_coords = numpy.array(polygon.exterior.coords)
+        vertices.append(ext_coords)
+        codes.append(
+            [Path.MOVETO] + [Path.LINETO] * (len(ext_coords) - 2)
+            + [Path.CLOSEPOLY])
+        # Interiors
+        for interior in polygon.interiors:
+            int_coords = numpy.array(interior.coords)
+            vertices.append(int_coords)
+            codes.append(
+                [Path.MOVETO] + [Path.LINETO] * (len(int_coords) - 2)
+                + [Path.CLOSEPOLY])
+        return Path(numpy.concatenate(vertices), numpy.concatenate(codes))
+
+    def redraw(event_ax=None):
+        if container['coll'] is not None:
+            container['coll'].remove()
+            container['coll'] = None
+
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
         viewport = box(xmin, ymin, xmax, ymax)
-        # spatial index query
+        # Spatial index filter for speed
         idx = list(sindex.intersection((xmin, ymin, xmax, ymax)))
-        segments = []
+        paths = []
+
         for geom in geometries[idx]:
             try:
                 clipped = geom.intersection(viewport)
+                if clipped.is_empty:
+                    continue
+                # Normalize to iterable parts
+                parts = clipped.geoms if hasattr(clipped, 'geoms') else [clipped]
+                for part in parts:
+                    if isinstance(part, Polygon):
+                        path = _polygon_to_path(part)
+                        if path:
+                            paths.append(path)
             except Exception:
                 continue
-            if clipped.is_empty:
-                continue
-            if isinstance(clipped, MultiPolygon):
-                parts = clipped.geoms
-            elif isinstance(clipped, Polygon):
-                parts = [clipped]
-            else:
-                continue
-            for part in parts:
-                coords = part.exterior.coords
-                segments.append(coords)
-        # remove old collection
-        if border_collection is not None:
-            border_collection.remove()
-        border_collection = LineCollection(
-            segments, colors=edgecolor, linewidths=linewidth,
-            alpha=alpha, zorder=zorder)
-        ax.add_collection(border_collection)
+
+        new_coll = PatchCollection(
+            [PathPatch(p) for p in paths],
+            facecolor=facecolor,
+            edgecolor=edgecolor,
+            linewidth=linewidth,
+            alpha=alpha,
+            zorder=zorder
+        )
+
+        ax.add_collection(new_coll)
+        container['coll'] = new_coll
         ax.figure.canvas.draw_idle()
 
     # Connect viewport change callbacks
-    ax.callbacks.connect('xlim_changed', lambda ax: redraw())
-    ax.callbacks.connect('ylim_changed', lambda ax: redraw())
-
+    ax.callbacks.connect('xlim_changed', redraw)
+    ax.callbacks.connect('ylim_changed', redraw)
     # Initial draw
     redraw()
 
