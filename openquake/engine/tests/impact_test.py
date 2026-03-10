@@ -53,8 +53,7 @@ def check_export_job_zip(dstore):
         'residents_vulnerability.xml',
         'structural_vulnerability.xml',
         'taxonomy_mapping.csv',
-        'sites.csv',
-        'assetcol.csv']
+        'sites.csv', 'assetcol.csv']
     # there is no gmfs_file, since this is a test without shakemap
     return fnames
 
