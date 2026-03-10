@@ -243,7 +243,8 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types, monitor):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types,
+                    monitor):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance

@@ -1054,43 +1054,55 @@ def get_crmodel(oqparam):
         oqparam.limit_states = limit_states
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
-    consdict = {}
+
     if 'consequence' in oqparam.inputs:
-        if not limit_states:
-            raise InvalidFile('Missing fragility functions in %s' %
-                              oqparam.inputs['job_ini'])
-        # build consdict of the form consequence_by_tagname -> tag -> array
-        loss_dt = oqparam.loss_dt()
-        for by, fnames in oqparam.inputs['consequence'].items():
-            if by == 'taxonomy':  # obsolete name
-                by = 'risk_id'
-            if isinstance(fnames, str):  # single file
-                fnames = [fnames]
-            # i.e. files collapsed.csv, fatalities.csv, ... with headers like
-            # taxonomy,consequence,slight,moderate,extensive
-            df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
-            # NB: consequence files depend on loss_type, unlike fragility files
-            if 'taxonomy' in df.columns:  # obsolete name
-                df['risk_id'] = df['taxonomy']
-                del df['taxonomy']
-            if 'loss_type' not in df.columns:
-                df['loss_type'] = 'structural'
-            if 'peril' not in df.columns:
-                df['peril'] = 'groundshaking'
-            for consequence, group in df.groupby('consequence'):
-                if consequence not in scientific.KNOWN_CONSEQUENCES:
-                    raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fnames))
-                bytag = {
-                    tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
-                    for tag, grp in group.groupby(by)}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
-    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
-    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
+        consdict = read_consdict(oqparam, limit_states, perils)
+    else:
+        consdict = {}
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
 
+def read_consdict(oqparam, limit_states, perils):
+    """
+    :returns: consequence dictionary csq_by_losses -> by_tag
+
+    For instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
+    is [(0.05,), (0.2,), (0.6,), (1.,)] for damage state and structural
+    """
+    if not limit_states:
+        raise InvalidFile('Missing fragility functions in %s' %
+                          oqparam.inputs['job_ini'])
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    loss_dt = oqparam.loss_dt()
+    for by, fnames in oqparam.inputs['consequence'].items():
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
+        if isinstance(fnames, str):  # single file
+            fnames = [fnames]
+        # i.e. files collapsed.csv, fatalities.csv, ... with headers like
+        # taxonomy,consequence,slight,moderate,extensive
+        df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+        # NB: consequence files depend on loss_type, unlike fragility files
+        if 'taxonomy' in df.columns:  # obsolete name
+            df['risk_id'] = df['taxonomy']
+            del df['taxonomy']
+        if 'loss_type' not in df.columns:
+            df['loss_type'] = 'structural'
+        if 'peril' not in df.columns:
+            df['peril'] = 'groundshaking'
+        for consequence, group in df.groupby('consequence'):
+            if consequence not in scientific.KNOWN_CONSEQUENCES:
+                raise InvalidFile('Unknown consequence %s in %s' %
+                                  (consequence, fnames))
+            bytag = {
+                tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
+                for tag, grp in group.groupby(by)}
+            consdict['%s_by_%s' % (consequence, by)] = bytag
+    return consdict
+
+    
 def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of

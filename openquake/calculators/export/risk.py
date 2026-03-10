@@ -27,7 +27,8 @@ from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
+from openquake.commonlib import readinput
 from openquake.calculators.extract import (
     extract, sanitize, avglosses, aggexp_tags)
 from openquake.calculators import base, post_risk
@@ -780,6 +781,49 @@ def export_vuln_xml(ekey, dstore):
     return export_vulnerability_xml(dstore).values()
 
 
+def convert_df_to_fragility(peril, loss_type, limit_states, df):
+    N = node.Node
+    root = N('fragilityModel', {'id': "fragility_model",
+                                'assetCategory': "buildings",
+                                "lossCategory": loss_type})
+    descr = N('description', {}, f"{loss_type} fragility model")
+    root.append(descr)
+    for riskfunc in df.riskfunc:
+        rfunc = json.loads(riskfunc)[
+            'openquake.risklib.scientific.FragilityFunctionList']
+        ffunc = N('FragilityFunction',
+                  {'id': rfunc['id'], 'format': rfunc['format']})
+        attr = {'imt': rfunc['imt'], 'noDamageLimit': rfunc['nodamage']}
+        imls = N('imls', attr, rfunc['imls'])
+        ffunc.append(imls)
+        for row, ls in zip(rfunc['array'], limit_states):
+            ffunc.append(N('poes', {"ls": ls}, row))
+        root.append(ffunc)
+    return root
+
+
+def export_fragility_xml(dstore):
+    oq = dstore['oqparam']
+    crm = dstore.read_df('crm')
+    ddic = {peril: {} for peril in crm.peril.unique()}
+    for (peril, loss_type), df in crm.groupby(['peril', 'loss_type']):
+        nodeobj = convert_df_to_fragility(peril, loss_type, oq.limit_states, df)
+        dest = dstore.export_path('%s_%s_fragility.xml' % (peril, loss_type))
+        with open(dest, 'wb') as out:
+            nrml.write([nodeobj], out)
+        ddic[peril][loss_type] = dest
+    return ddic  # peril -> loss_type -> fname
+
+
+@export.add(('fragility', 'xml'))
+def export_frag_xml(ekey, dstore):
+    fnames = []
+    ddic = export_fragility_xml(dstore).values()
+    for dic in ddic.values():
+        fnames.extend(dic.values())
+    return fnames
+
+
 def export_assetcol_csv(ekey, dstore):
     assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -846,6 +890,7 @@ def export_job_zip(ekey, dstore):
     - exposure.xml and assetcol.csv
     - vulnerability functions.xml
     - taxonomy_mapping.csv
+    - consequences.csv
     """
     inputs = {}
     oq = dstore['oqparam']
@@ -884,15 +929,28 @@ def export_job_zip(ekey, dstore):
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
         inputs['gsim_logic_tree'] = dest
-    inputs.update(export_vulnerability_xml(dstore))
-    dest = dstore.export_path('taxonomy_mapping.csv')
-    taxmap = dstore.read_df('taxmap')
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
-    taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
-    del taxmap['taxi']
-    writer.save(taxmap, dest)
-    inputs['taxonomy_mapping'] = dest
+    if oq.calculation_mode.endswith('risk'):
+        inputs.update(export_vulnerability_xml(dstore))
+    elif oq.calculation_mode.endswith('damage'):
+        ddic = export_fragility_xml(dstore)
+        for peril, dic in ddic.items():
+            inputs[f'{peril}_fragility'] = dic
+    if 'taxonomy_mapping' in oq.inputs:
+        dest = dstore.export_path('taxonomy_mapping.csv')
+        taxmap = dstore.read_df('taxmap')
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
+        del taxmap['taxi']
+        writer.save(taxmap, dest)
+        inputs['taxonomy_mapping'] = dest
+    if 'consequence' in oq.inputs:
+        dest = dstore.export_path('consequence.csv')
+        consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
+        breakpoint()
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        writer.save(taxmap, dest)
+        inputs['consequence'] = dest
     inputs['sites'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]

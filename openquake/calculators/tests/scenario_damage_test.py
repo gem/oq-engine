@@ -26,6 +26,7 @@ from openquake.qa_tests_data.scenario_damage import (
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
     case_14, case_16, case_17, case_18, case_19, case_20, case_22)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators import base
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view, text_table
@@ -62,7 +63,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         aac([[1482., 489., 29.]], dmg, atol=1E-4)
 
         # test no intersection
-        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=RM&CRESTA=01.1')
+        dmg = extract(self.calc.datastore,
+                      'agg_damages/structural?taxonomy=RM&CRESTA=01.1')
         self.assertEqual(dmg.shape, ())
 
         # missing fragility functions
@@ -120,15 +122,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                               delta=5E-4)
 
         aw = extract(self.calc.datastore, 'damages-stats')
-        self.assertEqual(aw.mean.dtype.names,
-                         ('id', 'taxonomy', 'lon', 'lat', 'contents-no_damage',
-                          'contents-ds1', 'contents-ds2', 'contents-ds3',
-                          'contents-ds4', 'contents-losses',
-                          'nonstructural-no_damage', 'nonstructural-ds1',
-                          'nonstructural-ds2', 'nonstructural-ds3',
-                          'nonstructural-ds4', 'nonstructural-losses',
-                          'structural-no_damage', 'structural-ds1', 'structural-ds2',
-                          'structural-ds3', 'structural-ds4', 'structural-losses'))
+        self.assertEqual(
+            aw.mean.dtype.names,
+            ('id', 'taxonomy', 'lon', 'lat', 'contents-no_damage',
+             'contents-ds1', 'contents-ds2', 'contents-ds3',
+             'contents-ds4', 'contents-losses',
+             'nonstructural-no_damage', 'nonstructural-ds1',
+             'nonstructural-ds2', 'nonstructural-ds3',
+             'nonstructural-ds4', 'nonstructural-losses',
+             'structural-no_damage', 'structural-ds1', 'structural-ds2',
+             'structural-ds3', 'structural-ds4', 'structural-losses'))
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -321,6 +324,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                               delta=4E-5)
         [agg_csv] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
+
+        # exporting job.zip
+        fnames = export(('job', 'zip'), self.calc.datastore)
+        breakpoint()
+        base.run_calc(fnames[0])
 
 
 def losses(aid, alt):
