@@ -308,7 +308,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
 
     if rupture is not None:
         add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-                    surf_facecolor='none', surf_linestyle='--', zorder=4)
+                    surf_facecolor='none', surf_linestyle='-', zorder=4)
 
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
@@ -357,11 +357,11 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-',
                 zorder=4):
     fill_params = {
         'alpha': alpha,
-        'edgecolor': 'black',    # Stronger contrast than 'grey'
+        'edgecolor': 'grey',
         'linewidth': 1.2,
         'linestyle': linestyle,
         'label': label,
-        'zorder': zorder,        # Crucial for layering
+        'zorder': zorder,
     }
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
