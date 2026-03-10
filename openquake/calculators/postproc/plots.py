@@ -65,7 +65,7 @@ def adjust_limits(ax, xlim, ylim, padding=1):
 
 def add_borders(
         ax, read_df=readinput.read_countries_df,
-        facecolor='#F5F5F2',   # Very light off-white/grey
+        facecolor='#F5F5F2',   # Very light grey
         edgecolor='#D0D0D0',   # Faint grey for borders
         linewidth=0.4, alpha=1.0, zorder=0,
         sea_color='#E0F2F7'):  # Pale blue
@@ -74,6 +74,7 @@ def add_borders(
     with seas colored via the axes background.
     Automatically updates on zoom/pan.
     """
+
     from matplotlib.patches import PathPatch
     from matplotlib.path import Path
     from matplotlib.collections import PatchCollection
@@ -82,11 +83,11 @@ def add_borders(
     geometries = df.geometry.values
     sindex = df.sindex
     ax.set_facecolor(sea_color)
-    # We store the collection in a list to make it mutable inside the closure
-    container = {'coll': None}
+
+    # Persistent storage for the collection
+    state = {'coll': None}
 
     def _polygon_to_path(polygon):
-        """Convert a Shapely Polygon to a matplotlib Path (with holes)."""
         if polygon.is_empty:
             return None
         vertices = []
@@ -97,7 +98,7 @@ def add_borders(
         codes.append(
             [Path.MOVETO] + [Path.LINETO] * (len(ext_coords) - 2)
             + [Path.CLOSEPOLY])
-        # Interiors
+        # Interiors, holes
         for interior in polygon.interiors:
             int_coords = numpy.array(interior.coords)
             vertices.append(int_coords)
@@ -107,46 +108,43 @@ def add_borders(
         return Path(numpy.concatenate(vertices), numpy.concatenate(codes))
 
     def redraw(event_ax=None):
-        if container['coll'] is not None:
-            container['coll'].remove()
-            container['coll'] = None
+        if state['coll'] is not None:
+            state['coll'].remove()
+            state['coll'] = None
 
+        # Get current viewport
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
         viewport = box(xmin, ymin, xmax, ymax)
-        # Spatial index filter for speed
+        # Spatial query to only process what is visible
         idx = list(sindex.intersection((xmin, ymin, xmax, ymax)))
-        paths = []
+        patches = []
 
         for geom in geometries[idx]:
             try:
                 clipped = geom.intersection(viewport)
                 if clipped.is_empty:
                     continue
-                # Normalize to iterable parts
                 parts = clipped.geoms if hasattr(clipped, 'geoms') else [clipped]
                 for part in parts:
                     if isinstance(part, Polygon):
                         path = _polygon_to_path(part)
                         if path:
-                            paths.append(path)
+                            patches.append(PathPatch(path))
             except Exception:
                 continue
 
-        new_coll = PatchCollection(
-            [PathPatch(p) for p in paths],
-            facecolor=facecolor,
-            edgecolor=edgecolor,
-            linewidth=linewidth,
-            alpha=alpha,
-            zorder=zorder
-        )
+        if patches:
+            pc = PatchCollection(
+                patches, facecolor=facecolor, edgecolor=edgecolor,
+                linewidth=linewidth, alpha=alpha, zorder=zorder)
+            ax.add_collection(pc)
+            state['coll'] = pc
 
-        ax.add_collection(new_coll)
-        container['coll'] = new_coll
+        # Draw without full GUI refresh for speed
         ax.figure.canvas.draw_idle()
 
-    # Connect viewport change callbacks
+    # Re-calculate borders only when the user stops zooming/panning
     ax.callbacks.connect('xlim_changed', redraw)
     ax.callbacks.connect('ylim_changed', redraw)
     # Initial draw
@@ -267,36 +265,66 @@ def plt_to_base64(plt):
 
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                   with_cities=False, return_base64=False,
-                  rupture=None):
+                  rupture=None, data_alpha=0.8):
     plt = import_plt()
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
         matplotlib.use(backend)
-    _fig, ax = plt.subplots(figsize=figsize)
-    ax.set_aspect('equal')
-    ax.grid(True)
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
-    title = 'Avg GMF for %s' % imt
-    ax.set_title(title)
+
+    # Constrained layout prevents labels from being cut off
+    fig, ax = plt.subplots(figsize=figsize, layout='constrained')
+    lons = shakemap_array['lon']
+    lats = shakemap_array['lat']
     gmf = shakemap_array['val'][imt]
-    markersize = 5
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
-    plt.colorbar(coll)
+
+    # Fix projection and viewport
+    mean_lat = numpy.nanmean(lats)
+    ax.set_aspect(1 / numpy.cos(numpy.radians(mean_lat)))
+    # This forces the axes to shrink to the map's shape instead of staying square
+    ax.set_adjustable('box')
+
+    # Calculate data extent and add padding
+    lon_min, lon_max = numpy.min(lons), numpy.max(lons)
+    lat_min, lat_max = numpy.min(lats), numpy.max(lats)
+    # Add 10% padding around the data
+    lon_pad = (lon_max - lon_min) * 0.1
+    lat_pad = (lat_max - lat_min) * 0.1
+
+    view_limits = [
+        lon_min - lon_pad, lon_max + lon_pad,
+        lat_min - lat_pad, lat_max + lat_pad
+    ]
+
+    # Draw basemap
+    # add_borders uses ax.get_xlim/ylim, so we set them now
+    ax.set_xlim(view_limits[0], view_limits[1])
+    ax.set_ylim(view_limits[2], view_limits[3])
+    add_borders(ax, alpha=1.0, zorder=0)
+
+    # Smooth data layer
+    coll = ax.tripcolor(lons, lats, gmf, cmap='jet',
+                        shading='gouraud', alpha=1.0, zorder=2)
+
+    cb = fig.colorbar(coll, ax=ax, shrink=0.6)
+    cb.set_label(f'{imt} Intensity')
+
     if rupture is not None:
         add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-                    surf_facecolor='none', surf_linestyle='--')
-    xlim, ylim = auto_limits(ax)
-    add_borders(ax, alpha=0.2)
-    adjust_limits(ax, xlim, ylim)
+                    surf_facecolor='none', surf_linestyle='--', zorder=4)
+
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
+    ax.set_title(f'Avg GMF for {imt}')
+
     if with_cities:
-        add_cities(ax, xlim, ylim)
+        # Pass the padded limits to add_cities
+        add_cities(ax, (view_limits[0], view_limits[1]),
+                   (view_limits[2], view_limits[3]))
+
     if return_base64:
         return plt_to_base64(plt)
-    else:
-        return plt
+    return plt
 
 
 def plot_avg_gmf(ex, imt):
@@ -328,11 +356,15 @@ def plot_avg_gmf(ex, imt):
     return plt
 
 
-def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
+def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-',
+                zorder=4):
     fill_params = {
         'alpha': alpha,
-        'edgecolor': 'grey',
-        'label': label
+        'edgecolor': 'black',    # Stronger contrast than 'grey'
+        'linewidth': 1.2,
+        'linestyle': linestyle,
+        'label': label,
+        'zorder': zorder,        # Crucial for layering
     }
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
@@ -340,17 +372,34 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
 
 
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
-                surf_facecolor=None, surf_linestyle='-'):
+                surf_facecolor=None, surf_linestyle='-', zorder=5):
+    """
+    Plots the rupture surface and hypocenter.
+    """
+    from matplotlib import patheffects
+
+    # Plot the Surface Traces/Projections
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            add_surface(ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
-                        facecolor=surf_facecolor, linestyle=surf_linestyle)
+            add_surface(ax, surface, label=f'Surface {surf_idx}',
+                        alpha=surf_alpha, facecolor=surf_facecolor,
+                        linestyle=surf_linestyle, zorder=zorder)
     else:
-        add_surface(ax, rup.surface, 'Surface', alpha=surf_alpha,
-                    facecolor=surf_facecolor, linestyle=surf_linestyle)
-    ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
-            color='orange', label='Hypocenter', alpha=hypo_alpha,
-            linestyle='', markersize=8)
+        add_surface(ax, rup.surface, label='Surface',
+                    alpha=surf_alpha, facecolor=surf_facecolor,
+                    linestyle=surf_linestyle, zorder=zorder)
+
+    # Plot the Hypocenter
+    # Using a white outline (path_effects) ensures the orange star is visible
+    # against both light sea and dark intensity colors.
+    ax.plot(rup.hypocenter.x, rup.hypocenter.y,
+            marker='*', color='#FFD700',  # Bright Gold/Orange
+            markeredgecolor='black', markeredgewidth=0.7,
+            label='Hypocenter', alpha=hypo_alpha,
+            linestyle='', markersize=hypo_markersize,
+            zorder=zorder + 1,
+            path_effects=[patheffects.withStroke(
+                linewidth=2, foreground="white")])
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
