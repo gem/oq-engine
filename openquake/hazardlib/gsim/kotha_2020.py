@@ -163,7 +163,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     # Default c3 and tau values to the original GMPE c3 and tau
     c3_ = C["c3"] + np.zeros(sctx.region.shape)
     tau_c3 = C["tau_c3"] + np.zeros(sctx.region.shape)
-    if not np.any(sctx.region) or ("PGV" in str(imt)):
+    if not np.any(sctx.region) or (imt.string == "PGV"):
         # No regionalisation - take the default C3 and multiply tau_c3
         # by the original epsilon
         return (c3_ + c3_epsilon * tau_c3) + np.zeros(sctx.region.shape)
@@ -193,8 +193,8 @@ def get_distance_coefficients_3(att, delta_c3_epsilon, C, imt, sctx):
             ll = np.concatenate([
                 np.where((sctx['lon'] == p.x) &
                          (sctx['lat'] == p.y))[0] for p in contained])
-            delta_c3[ll, 0] = feature[str(imt)]
-            delta_c3[ll, 1] = feature[str(imt)+'_se']
+            delta_c3[ll, 0] = feature[f"{imt}"]
+            delta_c3[ll, 1] = feature[f"{imt}_se"]
 
     return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
@@ -240,8 +240,8 @@ def get_dl2l(tec, ctx, imt, delta_l2l_epsilon):
             ll = np.concatenate([
                 np.where((ctx['hypo_lon'] == p.x) &
                          (ctx['hypo_lat'] == p.y))[0] for p in contained])
-            dl2l[ll, 0] = feature[str(imt)]
-            dl2l[ll, 1] = feature[str(imt)+'_se']
+            dl2l[ll, 0] = feature[f"{imt}"]
+            dl2l[ll, 1] = feature[f"{imt}_se"]
 
     return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
 
