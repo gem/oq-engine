@@ -42,6 +42,7 @@ def check_export_job_zip(dstore):
         'job.ini',
         'exposure.xml',
         'rupture.csv',
+        'gsim_logic_tree.xml',
         'affectedpop_vulnerability.xml',
         'area_vulnerability.xml',
         'contents_vulnerability.xml',

@@ -924,7 +924,7 @@ def export_job_zip(ekey, dstore):
     with open(dest, 'w', encoding='utf8') as out:
         out.write(csv)
     inputs['rupture_model'] = dest
-    if 'gsim_logic_tree' in oq.inputs:
+    if 'gsim_logic_tree' in oq.inputs or oq.gsim == '[FromFile]':
         dest = dstore.export_path('gsim_logic_tree.xml')
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
