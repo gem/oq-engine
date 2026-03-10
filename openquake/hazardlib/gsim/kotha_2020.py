@@ -27,10 +27,10 @@ Module exports :class:`KothaEtAl2020`,
 import os
 import numpy as np
 from scipy.constants import g
-from shapely.geometry import Point, shape
+import geopandas as gpd
+from shapely.geometry import Point
 from shapely.prepared import prep
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -185,15 +185,15 @@ def get_distance_coefficients_3(att, delta_c3_epsilon, C, imt, sctx):
     """
     s = [(Point(lon, lat)) for lon, lat in zip(sctx.lon, sctx.lat)]
     delta_c3 = np.zeros((len(sctx.lat), 2), dtype=float)
-    for i, feature in enumerate(att):
-        prepared_polygon = prep(shape(feature['geometry']))
+    for i, feature in att.iterrows():
+        prepared_polygon = prep(feature.geometry)
         contained = list(filter(prepared_polygon.contains, s))
         if contained:
             ll = np.concatenate([
                 np.where((sctx['lon'] == p.x) &
                          (sctx['lat'] == p.y))[0] for p in contained])
-            delta_c3[ll, 0] = feature['properties'][str(imt)]
-            delta_c3[ll, 1] = feature['properties'][str(imt)+'_se']
+            delta_c3[ll, 0] = feature[str(imt)]
+            delta_c3[ll, 1] = feature[str(imt)+'_se']
 
     return C["c3"] + delta_c3[:, 0] + delta_c3_epsilon * delta_c3[:, 1]
 
@@ -232,15 +232,15 @@ def get_dl2l(tec, ctx, imt, delta_l2l_epsilon):
     """
     f = [(Point(lon, lat)) for lon, lat in zip(ctx.hypo_lon, ctx.hypo_lat)]
     dl2l = np.zeros((len(ctx.hypo_lon), 2), dtype=float)
-    for i, feature in enumerate(tec):
-        prepared_polygon = prep(shape(feature['geometry']))
+    for i, feature in tec.iterrows():
+        prepared_polygon = prep(feature.geometry)
         contained = list(filter(prepared_polygon.contains, f))
         if contained:
             ll = np.concatenate([
                 np.where((ctx['hypo_lon'] == p.x) &
                          (ctx['hypo_lat'] == p.y))[0] for p in contained])
-            dl2l[ll, 0] = feature['properties'][str(imt)]
-            dl2l[ll, 1] = feature['properties'][str(imt)+'_se']
+            dl2l[ll, 0] = feature[str(imt)]
+            dl2l[ll, 1] = feature[str(imt)+'_se']
 
     return dl2l[:, 0] + delta_l2l_epsilon * dl2l[:, 1]
 
@@ -584,10 +584,10 @@ class KothaEtAl2020regional(KothaEtAl2020):
         self.ergodic = ergodic
         attenuation_file = os.path.join(
             DATA_FOLDER, 'kotha_attenuation_regions.geojson')
-        self.att = list(fiona.open(attenuation_file))
+        self.att = gpd.read_file(attenuation_file)
         tectonic_file = os.path.join(
             DATA_FOLDER, 'kotha_tectonic_regions.geojson')
-        self.tec = list(fiona.open(tectonic_file))
+        self.tec = gpd.read_file(tectonic_file)
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
