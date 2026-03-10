@@ -595,8 +595,12 @@ class ContextMaker(object):
         self.ses_seed = param.get('ses_seed', 42)
         self.ses_per_logic_tree_path = param.get('ses_per_logic_tree_path', 1)
         self.truncation_level = param.get('truncation_level', 99.)
-        self.truncation_level_between = param.get('truncation_level_between', self.truncation_level)
-        self.truncation_level_within = param.get('truncation_level_within', self.truncation_level)
+        self.truncation_level_between = param.get('truncation_level_between')
+        if self.truncation_level_between is None:
+            self.truncation_level_between = self.truncation_level
+        self.truncation_level_within = param.get('truncation_level_within')
+        if self.truncation_level_within is None:
+            self.truncation_level_within = self.truncation_level
         self.phi_b = ndtr(self.truncation_level)
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
