@@ -509,40 +509,18 @@ def get_volc_zones(gdf_volc_zones):
     Construct polygons from the vertex coordinates provided for each volcanic
     zone and assign the associated zone id
     """
-    # Get the volc zone polygons
-    zone_id, zone_lons, zone_lats = {}, {}, {}
-    for i, zone in gdf_volc_zones.iterrows():
-
-        # Get zone_id
-        zone_id[i] = zone.iloc[0]
-
-        # Per zone get lat and lon of each polygon vertices
-        coords = list(zone.geometry.exterior.coords)
+    zone_id, zone_lons, zone_lats, zone_pgn = {}, {}, {}, {}
+    for i, row in gdf_volc_zones.iterrows():
+        zid = row.iloc[0]
+        zone_id[i] = zid
+        coords = list(row.geometry.exterior.coords)
         for c, coo in enumerate(coords):
-            zone_lons[zone_id[i], c] = coo[0]
-            zone_lats[zone_id[i], c] = coo[1]
+            zone_lons[zid, c] = coo[0]
+            zone_lats[zid, c] = coo[1]
+        zone_pgn[zid] = Polygon([Point(lon, lat) for lon, lat in coords])
 
-    # Store all required info in dict
-    pgn_store = {'zone': zone_id,
-                 'zone_lons': zone_lons,
-                 'zone_lats': zone_lats}
-
-    # Set dict for volcanic zones
-    zone_dict = {pgn_store['zone'][z]: {} for z in pgn_store['zone']}
-
-    # Get polygon per zone
-    pnts_zone, zone_pgn = zone_dict, zone_dict
-    for zone in pgn_store['zone']:
-        zid = pgn_store['zone'][zone]
-        for c, coo in enumerate(pgn_store['zone_lons']):
-            if pgn_store['zone'][zone] in coo:
-                pnts_zone[zid][c] = Point(pgn_store['zone_lons'][zid, coo[1]],
-                                          pgn_store['zone_lats'][zid, coo[1]])
-        zone_pnts = []
-        for coo in pnts_zone[zid]:
-            zone_pnts.append(pnts_zone[zid][coo])
-        zone_pgn[zid] = Polygon(zone_pnts)
-        
+    pgn_store = {'zone': zone_id, 'zone_lons': zone_lons, 'zone_lats': zone_lats}
+    
     return pgn_store, zone_pgn
 
 
