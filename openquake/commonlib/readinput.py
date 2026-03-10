@@ -1077,16 +1077,13 @@ def get_crmodel(oqparam):
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
                 df['peril'] = 'groundshaking'
-            for consequence, group in df.groupby('consequence'):
+            for consequence in df.consequence.unique():
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
-                bytag = {
-                    tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
-                    for tag, grp in group.groupby(by)}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
-    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
-    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
+                consdict['%s_by_%s' % (consequence, by)] = df[
+                    df.consequence==consequence]
+    # for instance consdict['collapsed_by_taxonomy'] => dframe
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
