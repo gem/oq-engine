@@ -278,10 +278,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     lats = shakemap_array['lat']
     gmf = shakemap_array['val'][imt]
 
-    # Fix projection and viewport
-    mean_lat = numpy.nanmean(lats)
-    ax.set_aspect(1 / numpy.cos(numpy.radians(mean_lat)))
-    # This forces the axes to shrink to the map's shape instead of staying square
+    # Force the axes to shrink to the map's shape instead of staying square
     ax.set_adjustable('box')
 
     # Calculate data extent and add padding
