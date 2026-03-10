@@ -299,11 +299,11 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     ax.set_ylim(view_limits[2], view_limits[3])
     add_borders(ax, alpha=1.0, zorder=0)
 
-    # Smooth data layer
-    coll = ax.tripcolor(lons, lats, gmf, cmap='jet',
-                        shading='gouraud', alpha=1.0, zorder=2)
+    marker_size = 5
+    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
+                      cmap='jet', s=marker_size)
 
-    cb = fig.colorbar(coll, ax=ax, shrink=0.6)
+    cb = fig.colorbar(coll, ax=ax, shrink=0.8)
     cb.set_label(f'{imt} Intensity')
 
     if rupture is not None:
