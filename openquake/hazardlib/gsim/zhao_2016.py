@@ -28,11 +28,10 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import copy
 import numpy as np
-import pandas as pd
+import geopandas as gpd
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-import geopandas as gpd
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
@@ -520,7 +519,7 @@ def get_volc_zones(gdf_volc_zones):
         zone_pgn[zid] = Polygon([Point(lon, lat) for lon, lat in coords])
 
     pgn_store = {'zone': zone_id, 'zone_lons': zone_lons, 'zone_lats': zone_lats}
-    
+
     return pgn_store, zone_pgn
 
 

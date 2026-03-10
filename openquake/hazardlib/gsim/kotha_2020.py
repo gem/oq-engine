@@ -26,10 +26,11 @@ Module exports :class:`KothaEtAl2020`,
 """
 import os
 import numpy as np
-from scipy.constants import g
 import geopandas as gpd
+from scipy.constants import g
 from shapely.geometry import Point
 from shapely.prepared import prep
+
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
