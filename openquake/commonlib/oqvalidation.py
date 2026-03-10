@@ -916,7 +916,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'workflow']
 
 COST_TYPES = [
-    'structural', 'nonstructural', 'contents', 'business_interruption']
+    'structural', 'nonstructural', 'contents',
+    'business_interruption', 'embodied_carbon']
 ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]

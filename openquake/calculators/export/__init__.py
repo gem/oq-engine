@@ -100,6 +100,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
+    'embodied_carbon': 'Embodied carbon loss',
     'value': 'Value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',

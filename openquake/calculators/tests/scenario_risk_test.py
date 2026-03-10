@@ -270,7 +270,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_12.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
-                'expected/%s' % strip_calc_id(fname), fname)
+                'expected/%s' % strip_calc_id(fname), fname,
+                make_comparable=lambda _header, lines:
+                [lines[0]] + sorted(lines[1:]))
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles('expected/avg_losses.csv', fname)
 
