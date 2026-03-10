@@ -1329,8 +1329,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
-        #if h5:
-        #    h5['complete'] = sitecol.complete
         assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded, exp
 
