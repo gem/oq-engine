@@ -1,8 +1,12 @@
+python3-oq-engine (3.25.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Disabled prefiltering across the International Date Line
   * Listed h3 as a dependency in setup.py
   * Making sure `save_rates` uses the processpool distribution
   * Listed AvgSA as primary IMT
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 10 Mar 2026 08:28:58 +0000
 
 python3-oq-engine (3.25.0-1~xenial01) xenial; urgency=low
 
