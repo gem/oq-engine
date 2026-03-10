@@ -1,3 +1,9 @@
+  [Anirudh Rao]
+  * Add the Holmgren et al. (2024) GMM for Southeastern Africa
+  * Remove experimental liquefaction models and refactor 
+    the secondary perils test suite
+  * Support embodied carbon as a new loss category
+
   [Michele Simionato]
   * Improved error message when all assets are filtered out
   * Fixed a bug when prefiltering sources around the poles
