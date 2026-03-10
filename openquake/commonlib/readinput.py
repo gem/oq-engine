@@ -1067,15 +1067,13 @@ def read_consdict(oqparam, limit_states, perils):
     """
     :returns: consequence dictionary csq_by_losses -> by_tag
 
-    For instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
-    is [(0.05,), (0.2,), (0.6,), (1.,)] for damage state and structural
+    For instance consdict['collapsed_by_taxonomy'] => dframe
     """
     if not limit_states:
         raise InvalidFile('Missing fragility functions in %s' %
                           oqparam.inputs['job_ini'])
     # build consdict of the form consequence_by_tagname -> tag -> array
     consdict = {}
-    loss_dt = oqparam.loss_dt()
     for by, fnames in oqparam.inputs['consequence'].items():
         if by == 'taxonomy':  # obsolete name
             by = 'risk_id'
@@ -1092,14 +1090,12 @@ def read_consdict(oqparam, limit_states, perils):
             df['loss_type'] = 'structural'
         if 'peril' not in df.columns:
             df['peril'] = 'groundshaking'
-        for consequence, group in df.groupby('consequence'):
+        for consequence in df.consequence.unique():
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
-            bytag = {
-                tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
-                for tag, grp in group.groupby(by)}
-            consdict['%s_by_%s' % (consequence, by)] = bytag
+            consdict['%s_by_%s' % (consequence, by)] = df[
+                    df.consequence==consequence]
     return consdict
 
     
