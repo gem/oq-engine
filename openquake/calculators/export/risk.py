@@ -936,14 +936,13 @@ def export_job_zip(ekey, dstore):
         for peril, dic in ddic.items():
             inputs[f'{peril}_fragility'] = dic
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    if 'taxonomy_mapping' in oq.inputs:
-        dest = dstore.export_path('taxonomy_mapping.csv')
-        taxmap = dstore.read_df('taxmap')
-        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
-        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
-        del taxmap['taxi']
-        writer.save(taxmap, dest)
-        inputs['taxonomy_mapping'] = dest
+    dest = dstore.export_path('taxonomy_mapping.csv')
+    taxmap = dstore.read_df('taxmap')
+    taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+    taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
+    del taxmap['taxi']
+    writer.save(taxmap, dest)
+    inputs['taxonomy_mapping'] = dest
     if 'consequence' in oq.inputs:
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
         dic = {}
