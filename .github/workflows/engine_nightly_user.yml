@@ -16,7 +16,7 @@ on:
 
 jobs:
   Scheduled_demos_and_WebUI:
-    name: Fail for 3.23 pypip - OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     env:
       # Current LTS version on PyPI (TODO: keep the LTS version updated)
@@ -46,10 +46,14 @@ jobs:
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
           # demos are taken from the matching engine-* branch.
-          if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
-              RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
-          else
-              RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
+          #if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
+          #    RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
+          #else
+          #    RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
+          #fi
+          if [[ "${{ matrix.python-version }}" == "3.13" && "${matrix.engine-ref}" == "engine-3.23" ]]; then
+              echo "Python3.13 is not supported on LTS Release"
+              exit 0
           fi
           curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
           # Resolve engine-ref to an installable version
@@ -58,7 +62,7 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 60
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: (Scheduled) Run demos 
+      - name: (Scheduled) Run demos
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x
