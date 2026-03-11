@@ -48,7 +48,7 @@ from django.conf import settings
 BASE = os.path.abspath(
     os.path.join(
         getattr(settings, 'PAPERS_BASEPATH', '/opt/openquake'),
-        'Earthquake_Scenarios/Hypothetical_Events'))
+        'Earthquake_Scenarios'))
 
 # oqdata path
 OQDATA = get_datadir()
@@ -60,26 +60,26 @@ OQDATA = get_datadir()
 # Hazard inputs
 HAZARD_ONLY = False # Median hazard only if True
 GMM_LT = os.path.join(BASE, "inputs", "PAPERS_gmc.xml")
-SITE_MODEL = os.path.join(BASE, "..", "Vs30", "site_model_ITA_025.csv")
+SITE_MODEL = os.path.join(BASE, "Vs30", "site_model_ITA_025.csv")
 IMTS_RISK = 'PGA, SA(0.3), SA(0.6), SA(1.0)'
 INTEGRATION_DISTANCE = getattr(settings, 'PAPERS_HYPO_RUPT_INTEGRATION_DISTANCE', 150)
 TRUNCATION = 3
 NGMFS = 250
 
 # Risk inputs
-EXPOSURE = os.path.join(BASE, "..", "Building_National_Exposure", "Exposure_ITA.xml")
-MAPPING = os.path.join(BASE,  "..", "Building_National_Exposure", "Vulnerability_mapping_ITA.csv")
-FRAGILITY = os.path.join(BASE, "..", "Building_Fragility_Consequences", "fragility_structural.xml")
+EXPOSURE = os.path.join(BASE, "Building_National_Exposure", "Exposure_ITA.xml")
+MAPPING = os.path.join(BASE,  "Building_National_Exposure", "Vulnerability_mapping_ITA.csv")
+FRAGILITY = os.path.join(BASE, "Building_Fragility_Consequences", "fragility_structural.xml")
 CONSEQUENCE = {
     'taxonomy': [
-        os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_fatalities.csv"),
-        os.path.join(BASE, "..", "Building_Fragility_Consequences", "consequence_losses.csv")
+        os.path.join(BASE, "Building_Fragility_Consequences", "consequence_fatalities.csv"),
+        os.path.join(BASE, "Building_Fragility_Consequences", "consequence_losses.csv")
     ]
 }
 # TOD = "day"
 
 # Fixed inputs/constants
-FNAME = os.path.join(BASE,"inputs", "rups_eur_branch_faults.hdf5") # Datastore (the hdf5 containing the SES ruptures)
+FNAME = os.path.join(BASE, "Hypothetical_Events", "inputs", "rups_eur_branch_faults.hdf5") # Datastore (the hdf5 containing the SES ruptures)
 TWO24 = 2 ** 24
 
 
@@ -168,7 +168,7 @@ def get_hdist(trt):
     around the rupture.
     """
     # Path to EUR Vs30 job which contains TRT-dependent hdist
-    job_file = os.path.join(BASE, "inputs", "job_vs30.ini")
+    job_file = os.path.join(BASE, "Hypothetical_Events", "inputs", "job_vs30.ini")
 
     # Get into oqparam
     oq = get_oqparam(job_file)
@@ -297,7 +297,7 @@ def get_job_ctx(rup_id,
 
     # Create dict equivalent to parsed .ini file
     job_dict = {
-        'base_path': BASE,
+        'base_path': os.path.join(BASE, 'Hypothetical_Events'),
         'inputs':{
             'rupture_model': rup_csv,
             'gsim_logic_tree': gsim_lt_xml,
@@ -390,7 +390,7 @@ def export_rup_to_geojson(rup, rup_id):
     }
 
     # Make a directory to store the ruptures in
-    out = os.path.join(BASE, "rupture_geojsons")
+    out = os.path.join(BASE, "Hypothetical_Events", "rupture_geojsons")
     if not os.path.exists(out):
         os.makedirs(out)
 
