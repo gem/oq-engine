@@ -12,7 +12,7 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "00 3,11 * * *"
+    - cron: "00 3,15 * * *"
 
 jobs:
   Scheduled_demos_and_WebUI:
@@ -31,7 +31,9 @@ jobs:
         # - current LTS released on PyPI (TODO: keep the LTS version updated)
         # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed
         # after the maxtrix
-        engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
+        #engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
+        #AE: disable 3.23 after talk at scrum: 11032026
+        engine-ref: ["master", "engine-3.23", "engine-3.25"]
     if: github.event.inputs.git-ref == ''
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
