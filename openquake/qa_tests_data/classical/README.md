@@ -61,3 +61,5 @@
 |case\_90|Tests execution of multiple conditional GMPEs specified within a single ModifiableGMPE|
 |case\_91|Check SA and AvgSA with the same ordinal within indirect approach AvgSA are not overwritting each other in dstore|
 |case\_92|Tests use of correlation models using EmpiricalAvgSACorrelationModel|
+|case\_93|Tests use of GMPE Tables with indirect AvgSA correlation models|
+|case\_94|Tests application of delta values to total, tau and phi using modifiable gmpe

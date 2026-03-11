@@ -150,14 +150,29 @@ class ModifiableGMPETest(unittest.TestCase):
             aae(sig[MODI, m], s)
 
         # Check adding/removing a delta std to the total std
-        mea, sig, _tau, phi = self.get_mean_stds(
+        mea, sig, tau, phi = self.get_mean_stds(
             add_delta_std_to_total_std={"delta": -0.20})
 
         aae(sig[ORIG, 0], 0.712105)
         aae(sig[MODI, 0], 0.68344277)
 
+        # Check adding/removing a delta std to tau
+        mea, sig, tau, phi = self.get_mean_stds(
+            add_delta_std_to_total_std={"delta": -0.10})
+
+        # Check adding/removing a delta std to phi
+        breakpoint()
+        aae(tau[ORIG, 0], 0)
+        aae(tau[MODI, 0], 0)
+
+
+
+
+
+
+
         # Check set total std as between plus phi SS
-        mea, sig, _tau, phi = self.get_mean_stds(
+        mea, sig, tau, phi = self.get_mean_stds(
             set_total_std_as_tau_plus_delta={"delta": 0.45})
 
         aae(phi[ORIG, 0], 0.6201)
