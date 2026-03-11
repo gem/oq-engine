@@ -466,8 +466,9 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]
     dst = getattr(ctx, self.distance_type)
-    # get log(mean)
-    return np.log(_get_mean(self.kind, imls, dst, dists))
+    print(self.kind, imls, dst, dists)
+    mean = _get_mean(self.kind, imls, dst, dists)
+    return np.log(mean)
 
 
 def get_site_amplification(self, imt, pga_r, vs30s, us23=False):

@@ -264,8 +264,6 @@ def _get_mean(kind, data, dists, table_dists):
     :param table_dists:
         The distance table for the given magnitude and IMT
     """
-    if len(data) == 0:
-        breakpoint()
     # For extremely short distance (rrup = 0) use an arbitrarily small
     # distance measure (1.0E-5 used by US NSHMP code)
     table_dists[table_dists < 1.0E-5] = 1.0E-5
