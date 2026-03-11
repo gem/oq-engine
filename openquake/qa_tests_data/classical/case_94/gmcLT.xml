@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+
+    <logicTreeBranch branchID="total_sig">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_std_to_total_std.delta = 0.15
+      </uncertaintyModel>
+      <uncertaintyWeight>0.34</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="tau">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_std_to_tau_std.delta = 0.1
+      </uncertaintyModel>
+      <uncertaintyWeight>0.33</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="phi">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_std_to_phi_std.delta = -0.2
+      </uncertaintyModel>
+      <uncertaintyWeight>0.33</uncertaintyWeight>
+    </logicTreeBranch>
+
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>

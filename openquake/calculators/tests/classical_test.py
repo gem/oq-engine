@@ -40,7 +40,8 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
     case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
     case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93)
+    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93,
+    case_94)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1059,3 +1060,12 @@ class ClassicalTestCase(CalculatorTestCase):
         from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)
+
+
+    def test_case_94(self):
+        # Tests applying a delta to sigma, tau and phi using mgmpe
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(0.5).csv'],
+            case_94.__file__)
+        
