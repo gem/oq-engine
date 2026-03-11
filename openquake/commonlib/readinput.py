@@ -511,17 +511,12 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             valid.longitude(lon)
         except ValueError:  # has a header
-            sm = hdf5.read_csv(fname, site.site_param_dt).array
+            sm = hdf5.read_csv(fname, site.site_param_dt,
+                               ignorecol='site_id').array
         else:
             sm = get_poor_site_model(fname)
 
     sm_fieldsets[fname] = set(sm.dtype.names)
-
-    # make sure site_id starts from 0, if given
-    if 'site_id' in sm.dtype.names:
-        if (sm['site_id'] != numpy.arange(len(sm))).any():
-            raise InvalidFile('%s: site_id not sequential from zero'
-                              % fname)
 
     # round coordinates and check for duplicate points
     sm['lon'] = numpy.round(sm['lon'], 5)
