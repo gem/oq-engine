@@ -23,7 +23,7 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, SA
 
 
 def get_fault_term(rake):
@@ -63,7 +63,7 @@ class Campbell1997(GMPE):
 
     #: Supported intensity measure types are PGA, PGV, PSA, but we only define
     #: PGA because this is the only IMT used by an implemented model (09/18)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the horizontal component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN

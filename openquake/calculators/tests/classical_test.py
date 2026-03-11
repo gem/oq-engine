@@ -119,9 +119,10 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
 
         # check missing vs30
-        with self.assertRaises(InvalidFile) as ctx:
+        with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_03.__file__, 'job_wrong.ini')
-        self.assertIn('reference_vs30_value not specified', str(ctx.exception))
+        self.assertIn("Please set a value for 'reference_vs30_value'",
+                      str(ctx.exception))
 
     def test_case_04(self):
         # make sure the UHS are sorted correctly
