@@ -223,6 +223,11 @@ def store(request_files, ini, calc_id):
         # NB: TemporaryUploadedFile Django objects are not sortable
         for input_file in input_files:
             new_path = os.path.join(calc_dir, input_file.name)
+            # Using shutil.copy2, Django deletes the temporary file
+            # when the request ends. With shutil.move it would
+            # attempt to delete it immediately when it is still in
+            # use by the Django process, which would raise an
+            # exception on Windows.
             shutil.copy2(input_file.temporary_file_path(), new_path)
             if input_file.name.endswith(ini):
                 inifiles.append(new_path)
