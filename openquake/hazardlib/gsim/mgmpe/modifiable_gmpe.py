@@ -433,7 +433,7 @@ def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
     # Adjust phi
     ph[:] = new_phi
 
-    # Need to adjust total sig too based after adjusting phi
+    # Need to adjust total sig too after adjusting phi
     si[:] = np.sqrt(ta**2 + ph**2)
 
 
