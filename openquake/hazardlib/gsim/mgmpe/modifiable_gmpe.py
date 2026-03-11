@@ -397,6 +397,46 @@ def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
     si[:] = (si**2 + np.sign(delta) * delta**2)**0.5
 
 
+def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A delta std to be applied to tau
+    """
+    # First check if adjusted tau would be negative
+    new_tau = ta + delta
+    if np.any(new_tau < 0):
+        raise ValueError(
+            f"delta={delta} produces a negative tau - "
+            f"minimum tau would be {new_tau.min():.3f}"
+        )
+
+    # Adjust tau
+    ta[:] = new_tau
+
+    # Need to adjust total sig too after adjusting tau
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
+def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A delta std to be applied to phi
+    """
+    # First check if adjusted phi would be negative
+    new_phi = ph + delta
+    if np.any(new_phi < 0):
+        raise ValueError(
+            f"delta={delta} produces a negative phi - "
+            f"minimum phi would be {new_phi.min():.3f}"
+        )
+
+    # Adjust phi
+    ph[:] = new_phi
+
+    # Need to adjust total sig too after adjusting phi
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
 def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
