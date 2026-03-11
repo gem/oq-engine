@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Extended the cross checking between IMTs and GSIMs to ConditionalGMPEs
+  * Extended export_job_zip to scenario calculations
+
   [Anirudh Rao]
   * Added the Holmgren et al. (2024) GMM for Southeastern Africa
   * Removed experimental liquefaction models and refactored
