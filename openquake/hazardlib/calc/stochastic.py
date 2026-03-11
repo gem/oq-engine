@@ -22,7 +22,6 @@
 """
 import time
 import numpy
-import shapely
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor

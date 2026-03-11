@@ -1,4 +1,11 @@
+  [Anirudh Rao]
+  * Added the Holmgren et al. (2024) GMM for Southeastern Africa
+  * Removed experimental liquefaction models and refactored
+    the secondary perils test suite
+  * Supported embodied carbon as a new loss category
+
   [Michele Simionato]
+  * Improved error message when all assets are filtered out
   * Fixed a bug when prefiltering sources around the poles
   * Made it possible to run risk calculations depending on AvgSA
   * Internal: inferring the slow tasks information from starmap_info

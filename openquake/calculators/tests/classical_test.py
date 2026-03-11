@@ -292,16 +292,21 @@ class ClassicalTestCase(CalculatorTestCase):
         return self.calc.datastore['hcurves-stats'][3, 0]
 
     def test_case_22(self):
-        # crossing date line calculation for Alaska testing full tiling
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-            self.assert_curves_ok([
-                '/hazard_curve-mean-PGA.csv',
-                'hazard_curve-mean-SA(0.1)',
-                'hazard_curve-mean-SA(0.2).csv',
-                'hazard_curve-mean-SA(0.5).csv',
-                'hazard_curve-mean-SA(1.0).csv',
-                'hazard_curve-mean-SA(2.0).csv',
-            ], case_22.__file__, delta=1E-6, tiling=True)
+        # crossing date line calculation for Alaska
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=False)
+
+        data = self.calc.datastore['source_groups']
+        self.assertFalse(data.attrs['tiling'])
+        self.assertEqual(data['tiles'], [1])
+        self.assertEqual(data['blocks'], [2])
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=True)
+
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])

@@ -543,7 +543,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     :param vulndict:
         a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
-        a dictionary riskid -> loss_type -> consequence functions
+        a dictionary key -> consequence dataframe
     """
     tmap_df = ()  # to be set
 
@@ -614,15 +614,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         cfs = '\n'.join(csq_files)
         df = self.tmap_df
         for peril in self.perils:
-            for byname, coeffs in self.consdict.items():
+            for byname, cdf in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
-                if len(coeffs):
+                if len(cdf):
                     for per, risk_id, weight in zip(
                             df.peril, df.risk_id, df.weight):
                         if (per == '*' or per == peril) and risk_id != '?':
-                            try:
-                                coeffs[risk_id][peril]
-                            except KeyError:
+                            ok = cdf[cdf.risk_id == risk_id]
+                            if len(ok) == 0:
                                 raise InvalidFile(
                                     f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
@@ -686,20 +685,27 @@ class CompositeRiskModel(collections.abc.Mapping):
         # by construction all assets have the same taxonomy
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
-        for byname, coeffs in self.consdict.items():
+        limit_states = self.damage_states[1:]
+            
+        for byname, cdf in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
-            if len(coeffs):
+            if len(cdf):
                 consequence, _tagname = byname.split('_by_')
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
                         # dict loss_type -> coeffs for the given loss type
                         for pi, peril in enumerate(self.perils):
+                            row_df = cdf[(cdf.risk_id == risk_id) &
+                                         (cdf.peril == peril) &
+                                         (cdf.loss_type == lt)]
+                            if len(row_df) == 0:
+                                continue
+                            [row] = row_df[limit_states].to_numpy()
                             if len(df) == 1:
                                 [w] = df.weight
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
-                            coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[risk_id][peril][lt] * w)
+                            coeff = dd5[pi, :, :, li, 1:] @ row * w
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE

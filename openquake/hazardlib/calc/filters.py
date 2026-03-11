@@ -467,6 +467,9 @@ class RuptureFilter(object):
         dists = get_distances(self.rup, mesh, 'rrup')
         return dists < self.dist, dists
 
+    def __repr__(self):
+        return '<%s mag=%.1f dist=%.0f>' % (self.__class__.__name__,
+                                            self.rup.mag, self.dist)
 
 class SourceFilter(object):
     """
@@ -519,7 +522,7 @@ class SourceFilter(object):
         """
         sids = self.close_sids(source)
         if len(sids):
-            return self.sitecol.filtered(sids)
+            return self.sitecol.complete.filtered(sids)
 
     def split(self, sources):
         """
