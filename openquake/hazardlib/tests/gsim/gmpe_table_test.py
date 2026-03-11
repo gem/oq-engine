@@ -111,7 +111,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         # Verify correctly parsed IMLs and standard deviations
         for iml in ["PGA", "PGV", "SA", "T"]:
             np.testing.assert_array_almost_equal(
-                gsim.imls[iml], self.hdf5["IMLs/" + iml][:])
+                gsim.imtls[iml], self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
                 gsim.stddev[iml], self.hdf5["Total/" + iml][:])
 
