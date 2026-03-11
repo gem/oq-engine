@@ -999,7 +999,7 @@ def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None, usecols=None, ignorecol=None,
+             index=None, errors=None, usecols=None, ignorecols=(),
              dframe=None):
     """
     :param fname: a CSV file with an header and float fields
@@ -1009,7 +1009,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
     :param usecols: columns to read
-    :param ignorecol: column to ignore
+    :param ignorecols: columns to ignore
     :param dframe: pass True to return a DataFrame
     :returns: an ArrayWrapper, unless there is an index or df is true
     """
@@ -1025,7 +1025,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                     continue
                 break
             header = first.strip().split(sep)
-            if ignorecol and ignorecol in header:
+            for ignorecol in set(ignorecols) & set(header):
                 header.remove(ignorecol)
             dt = build_dt(dtypedict, header, fname)
         try:

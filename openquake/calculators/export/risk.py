@@ -957,8 +957,6 @@ def export_job_zip(ekey, dstore):
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]
     writer.save(sitecol.array, inputs['sites'])
-    #sites_df = dstore.read_df('sitecol', 'sids')
-    #writer.save(sites_df, inputs['sites'])
     with open(job_ini, 'w', encoding='utf8') as out:
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]

@@ -512,7 +512,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
             valid.longitude(lon)
         except ValueError:  # has a header
             sm = hdf5.read_csv(fname, site.site_param_dt,
-                               ignorecol='site_id').array
+                               ignorecols=['site_id']).array
         else:
             sm = get_poor_site_model(fname)
 
