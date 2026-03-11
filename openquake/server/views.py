@@ -1043,7 +1043,9 @@ def impact_callback(
                         if rupkey == 'approach':
                             rupval = IMPACT_APPROACHES[rupval]
                         if rupval is not None and str(rupval).strip() != '':
-                            params_to_print += f'{rupkey}: {rupval}\n'
+                            if rupkey not in params:
+                                # e.g. avoid writing the description twice
+                                params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 if val is not None and str(val).strip() != '':
                     params_to_print += f'{key}: {val}\n'
