@@ -463,7 +463,7 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     # return Distance Tables
     imls = interp_table(self, mag, imt, 'IMLs')
     if imls is None:
-        raise KeyError(imt)  # unsupported IMT
+        raise RuntimeError(f'Unsupported {imt} for {self}')
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]
