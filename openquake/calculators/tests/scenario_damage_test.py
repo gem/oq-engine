@@ -320,14 +320,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         out = self.run_calc(case_22.__file__, 'job_r.ini',
                             hazard_calculation_id=hc_id, exports='csv')
         [dmg_csv] = out[('damages-rlzs', 'csv')]
-        self.assertEqualFiles('expected/dmg.csv', dmg_csv,
-                              delta=4E-5)
+        self.assertEqualFiles('expected/dmg.csv', dmg_csv, delta=4E-5)
         [agg_csv] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
 
         # exporting job.zip
         fnames = export(('job', 'zip'), self.calc.datastore)
-        # calc = base.run_calc(fnames[0])
+        dstore = base.run_calc(fnames[0]).datastore
+        [fname] = export(('damages-rlzs', 'csv'), dstore)
+        self.assertEqualFiles('expected/dmg.csv', dmg_csv, delta=4E-5)
+        [agg_csv] = export(('aggrisk', 'csv'), dstore)
+        self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
 
 
 def losses(aid, alt):
