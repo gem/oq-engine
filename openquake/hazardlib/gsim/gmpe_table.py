@@ -96,7 +96,7 @@ def interp_table(gsim, mag, imt, which):
     assert which in "IMLs Total", which
     assert isinstance(mag, FLOAT), mag  # assume rounded to 2 digits
     assert isinstance(imt, tuple), imt  # assume IMT object
-    if imt.string not in gsim.imls and imt.name != "SA":
+    if imt.string not in gsim.imtls and imt.name != "SA":
         # Scalar IMT is not supported (conditional GMPEs - we in skip
         # setting a table which ensures an error is still raised when
         # unsupported IMT is specified outside of conditional GMPE use)
@@ -104,7 +104,7 @@ def interp_table(gsim, mag, imt, which):
     elif imt.string in ("PGA", "PGV"): 
         # Get supported scalar imt
         if which == "IMLs":
-            iml_table = gsim.imls[imt.string][:]
+            iml_table = gsim.imtls[imt.string][:]
         else:
             iml_table = gsim.stddev[imt.string][:]
         n_d, _n_s, n_m = iml_table.shape
@@ -112,8 +112,8 @@ def interp_table(gsim, mag, imt, which):
     else:
         # Get SA
         if which == "IMLs":
-            periods = gsim.imls["T"][:]
-            iml_table = gsim.imls["SA"][:]
+            periods = gsim.imtls["T"][:]
+            iml_table = gsim.imtls["SA"][:]
         else:
             periods = gsim.stddev["T"][:]
             iml_table = gsim.stddev["SA"][:]
@@ -210,12 +210,12 @@ class GMPETable(GMPE):
             # Load in distances
             self.distances = fle["Distances"][:]
             # Load intensity measure types and levels
-            self.imls = todict(fle["IMLs"])
+            self.imtls = todict(fle["IMLs"])
             # Update the list of supported IMTs from the tables
             self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
                 getattr(imt_module, key)
-                for key in self.imls if key in imt_module.__dict__}
-            if "SA" in self.imls and "T" not in self.imls:
+                for key in self.imtls if key in imt_module.__dict__}
+            if "SA" in self.imtls and "T" not in self.imtls:
                 raise ValueError("Spectral Acceleration must be accompanied by"
                                  " periods")
 
