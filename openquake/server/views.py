@@ -1023,7 +1023,7 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
-    exclude_from_print = ['rupture_from_usgs']
+    exclude_from_print = ['rupture_from_usgs', 'postrisk_func', 'export_dir']
     if 'shakemap_uri' in params:
         exclude_from_print.extend([
             'station_data_file', 'station_data_issue',
@@ -1042,9 +1042,11 @@ def impact_callback(
                     if rupkey not in exclude_from_print:
                         if rupkey == 'approach':
                             rupval = IMPACT_APPROACHES[rupval]
-                        params_to_print += f'{rupkey}: {rupval}\n'
+                        if rupval is not None and str(rupval).strip() != '':
+                            params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
-                params_to_print += f'{key}: {val}\n'
+                if val is not None and str(val).strip() != '':
+                    params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
         with open(params['inputs']['station_data'], 'r',
                   encoding='utf-8') as file:
