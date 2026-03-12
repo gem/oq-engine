@@ -331,7 +331,7 @@ class GmfComputer(object):
         return df
 
     def compute_all(self, mean_stds=None, max_iml=None,
-                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -346,7 +346,7 @@ class GmfComputer(object):
             if E == 0:  # crucial for performance
                 continue
             if mean_stds is None:
-                with mmon:
+                with self.cmaker.gmf_mon:
                     ms = self.cmaker.get_4MN([self.ctx], gs)
             else:  # conditioned
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])

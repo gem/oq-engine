@@ -198,8 +198,7 @@ def get_computer(cmaker, proxy, sites, station_data, station_sids):
         oq._amplifier, oq._sec_perils)
 
 
-def _event_based(proxies, cmaker, stations, srcfilter, shr,
-                 fmon, cmon, umon, mmon):
+def _event_based(proxies, cmaker, stations, srcfilter, shr, cmon, umon):
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -214,20 +213,18 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         sids = srcfilter.close_sids(proxy, cmaker.trt)
         if len(sids) == 0:  # filtered away
             continue
-        with fmon:
-            try:
-                computer = get_computer(
-                    cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
-                    *stations)
-            except FarAwayRupture:
-                continue
+        try:
+            computer = get_computer(
+                cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
+                *stations)
+        except FarAwayRupture:
+            continue
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all(
-                    [mea, tau, phi], max_iml, mmon, cmon, umon)
+                df = computer.compute_all([mea, tau, phi], max_iml, cmon, umon)
         else:  # regular GMFs
-            df = computer.compute_all(None, max_iml, mmon, cmon, umon)
+            df = computer.compute_all(None, max_iml, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
                 mea_tau_phi.append(mtp)
@@ -236,7 +233,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         times.append((proxy['id'], computer.ctx.rrup.min(), dt,
                       rup_weight(proxy)))
         alldata.append(df)
-    times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
+    times = numpy.array([tup + (cmon.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
     if sum(len(df) for df in alldata) == 0:
         return dict(gmfdata={}, times=times, sig_eps=())
@@ -256,8 +253,6 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     """
     oq = cmaker.oq
     rmon = monitor('reading sites and ruptures', measuremem=True)
-    fmon = monitor('instantiating GmfComputer', measuremem=False)
-    mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
@@ -274,7 +269,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
-                           monitor.shared, fmon, cmon, umon, mmon)
+                           monitor.shared, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
