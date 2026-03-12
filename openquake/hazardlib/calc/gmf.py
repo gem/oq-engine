@@ -136,7 +136,7 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     """
     N = len(sitecol)
     M = len(cmaker.imtls)
-    [ctx] = cmaker.get_ctx_list([ebrupture.rupture], sitecol)
+    [ctx] = cmaker.get_ctxs([ebrupture.rupture], sitecol)
     mean, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
     rlzs = numpy.concatenate(list(cmaker.gsims.values()))
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
@@ -224,7 +224,7 @@ class GmfComputer(object):
         self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
-        ctxs = cmaker.get_ctx_list([rupture], sitecol)
+        ctxs = cmaker.get_ctxs([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
