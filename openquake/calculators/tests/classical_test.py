@@ -81,7 +81,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
-            slow = view('task:classical:-1', self.calc.datastore)
+            slow = view('task_cl:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('time', slow)
 
@@ -1068,4 +1068,3 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
             case_94.__file__)
-        

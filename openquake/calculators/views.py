@@ -788,55 +788,51 @@ def view_task_eb(token, dstore):
     rdata = dstore.read_df('gmf_data/rup_info')
     rd = rdata[rdata.task_no == taskno]
     acc = AccumDict(accum=numpy.zeros(2))
-    for rup_id, ctime, weight in zip(rd['rup_id'], rd['time'], rd['weight']):
-        acc[rup_id] += numpy.array([weight, ctime])
+    for rup_id, time, weight in zip(rd.rup_id, rd.time, rd.weight):
+        acc[rup_id] += numpy.array([weight, time])
     df = pandas.DataFrame(dict(rup_id=list(acc)))
-    for i, name in enumerate(['weight', 'ctime']):
+    for i, name in enumerate(['weight', 'time']):
         df[name] = [arr[i] for arr in acc.values()]
-    df = df.sort_values('ctime').set_index('rup_id')
-    time = df.ctime.sum()
+    df = df.sort_values('time').set_index('rup_id')
+    time = df.time.sum()
     weight = df.weight.sum()
     msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
     return msg
 
 
-@view.add('task')
-def view_task_hazard(token, dstore):
+@view.add('task_cl')
+def view_task_cl(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task:classical:0  # the fastest task
-     $ oq show task:classical:-1  # the slowest task
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
     """
-    _, name, index = token.split(':')
+    _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=encode(name))
+    data = get_array(dstore['task_info'][()], taskname=b'classical')
     if len(data) == 0:
-        raise RuntimeError('No task_info for %s' % name)
+        raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    if len(dstore['source_data/src_id']):
-        grp_keys = dstore['grp_keys'][taskno].decode('ascii')
-        sdata = dstore.read_df('source_data')
-        sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(4))
-        for src_id, nctxs, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
-            acc[basename(src_id, ';:.')] += numpy.array(
-                [nctxs, nrupts, weight, ctimes])
-        df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
-            df[name] = [arr[i] for arr in acc.values()]
-        df = df.sort_values('ctimes').set_index('src_id')
-        time = df.ctimes.sum()
-        weight = df.weight.sum()
-        msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
-            % df
-        return msg
-    else:
-        msg = ''
+    grp_keys = dstore['grp_keys'][taskno].decode('ascii')
+    sdata = dstore.read_df('source_data')
+    sd = sdata[sdata.taskno == taskno]
+    acc = AccumDict(accum=numpy.zeros(4))
+    for src_id, nctxs, nrupts, weight, ctimes in zip(
+            sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
+        acc[basename(src_id, ';:.')] += numpy.array(
+            [nctxs, nrupts, weight, ctimes])
+    df = pandas.DataFrame(dict(src_id=list(acc)))
+    for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
+        df[name] = [arr[i] for arr in acc.values()]
+    df = df.sort_values('ctimes').set_index('src_id')
+    time = df.ctimes.sum()
+    weight = df.weight.sum()
+    msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
+        % df
     return msg
 
 
