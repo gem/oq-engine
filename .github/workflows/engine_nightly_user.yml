@@ -46,6 +46,7 @@ jobs:
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
           # demos are taken from the matching engine-* branch.
+          # AE: 20260312 change due remove test LTS pypi package
           #if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
           #    RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
           #else
@@ -55,7 +56,9 @@ jobs:
               echo "Python3.13 is not supported on LTS Release"
               exit 0
           fi
-          curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
+          # AE: 20260312 change due remove test LTS pypi package
+          #curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
