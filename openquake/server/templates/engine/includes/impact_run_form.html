@@ -9,42 +9,42 @@
                 <select name="trt" id="trt" class="impact-select" {% if user_level < 2 %}disabled{% endif %}>
                 </select>
               </div>
-              <div class="impact_form_row impact_time_grp">
-                <label class="impact_time_grp" for="local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
-                <input class="impact-input impact_time_grp" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
+                <label class="after_get_rupture_btn" for="local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
+                <input class="impact-input after_get_rupture_btn" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
               </div>
-              <div class="impact_form_row impact_time_grp">
-                <label class="impact_time_grp" for="time_event">{{ impact_form_labels.time_event }}</label>
-                <select id="time_event" name="time_event" class="impact-select impact_time_grp">
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
+                <label class="after_get_rupture_btn" for="time_event">{{ impact_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="impact-select after_get_rupture_btn">
                     <option value="day">Day</option>
                     <option value="night">Night</option>
                     <option value="transit">Transit</option>
                 </select>
               </div>
-              <div class="impact_form_row impact_time_grp">
-                <label class="impact_time_grp" for="no_uncertainty"><input type="checkbox" id="no_uncertainty" value="no" class="impact_time_grp"> {{ impact_form_labels.no_uncertainty }}</label>
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
+                <label class="after_get_rupture_btn" for="no_uncertainty"><input type="checkbox" id="no_uncertainty" value="no" class="after_get_rupture_btn"> {{ impact_form_labels.no_uncertainty }}</label>
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="maximum_distance">{{ impact_form_labels.maximum_distance }}</label>
                 <input class="impact-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ impact_form_placeholders.maximum_distance }}" value="{{ impact_form_defaults.maximum_distance }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row hidden-for-shakemap hidden">
+              <div class="impact_form_row hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="truncation_level">{{ impact_form_labels.truncation_level }}</label>
                 <input class="impact-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ impact_form_placeholders.truncation_level }}" value="{{ impact_form_defaults.truncation_level }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="number_of_ground_motion_fields">{{ impact_form_labels.number_of_ground_motion_fields }}</label>
                 <input class="impact-input" type="text" id="number_of_ground_motion_fields" name="number_of_ground_motion_fields" placeholder="{{ impact_form_placeholders.number_of_ground_motion_fields }}" value="{{ impact_form_defaults.number_of_ground_motion_fields }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="asset_hazard_distance">{{ impact_form_labels.asset_hazard_distance }}</label>
                 <input class="impact-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ impact_form_placeholders.asset_hazard_distance }}" value="{{ impact_form_defaults.asset_hazard_distance }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="ses_seed">{{ impact_form_labels.ses_seed }}</label>
                 <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="{{ impact_form_defaults.ses_seed }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row usgs_id_grp hidden-for-shakemap hidden">
+              <div class="impact_form_row usgs_id_grp hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ impact_form_placeholders.station_data_file_from_usgs }}" disabled />
                 <input class="impact-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
@@ -52,20 +52,20 @@
                 <button type="button" class="station-btn" id="getStationDataFromUsgs">Retrieve from the USGS</button>
                 <span id="get_stations_from_usgs_waiting"></span>
               </div>
-              <div class="impact_form_row hidden-for-shakemap hidden">
+              <div class="impact_form_row hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="station_data_file">{{ impact_form_labels.station_data_file }}</label>
                 <input class="impact-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ impact_form_placeholders.station_data_file }}" {% if user_level < 2 %}disabled{% endif %}>
                 <button type="button" id="clearStationDataFile">Clear File</button>
               </div>
-              <div class="impact_form_row hidden-for-shakemap hidden">
+              <div class="impact_form_row hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="maximum_distance_stations">{{ impact_form_labels.maximum_distance_stations }}</label>
                 <input class="impact-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ impact_form_placeholders.maximum_distance_stations }}" value="{{ impact_form_defaults.maximum_distance_stations }}" />
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="description">{{ impact_form_labels.description }}</label>
-                <input class="impact-input impact-input-wider" type="text" id="description" name="description" placeholder="{{ impact_form_placeholders.description }}" value="{{ impact_form_defaults.description }}" {% if user_level < 2 %}disabled{% endif %}/>
+                <input class="impact-input impact-input-wider" type="text" id="description" name="description" placeholder="{{ impact_form_placeholders.description }}" value="{{ impact_form_defaults.description }}"/>
               </div>
-              <div class="impact_form_row">
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
                 <label for"notes">{{ impact_form_labels.notes }}</label>
                 <input class="impact-input impact-input-wider" type="text" id="notes" name="notes" placeholder="{{ impact_form_placeholders.notes }}" value="{{ impact_form_defaults.notes }}" {% if user_level < 1 %}disabled{% endif %}/>
               </div>

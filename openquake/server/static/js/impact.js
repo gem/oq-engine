@@ -402,8 +402,8 @@ window.initImpactForm = function() {
             encode: true,
         }).done(function (data) {
             // console.log(data);
-            $('.impact_time_grp').css('display', 'inline-block');
-            $('div.impact_time_grp').css('display', 'block');
+            $('.after_get_rupture_btn').css('display', 'inline-block');
+            $('div.after_get_rupture_btn').css('display', 'block');
             $('#lon').val(data.lon);
             toggleRunCalcBtnState();
             $('#lat').val(data.lat);
