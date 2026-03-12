@@ -64,7 +64,8 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
-    [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+    [('rup_id', I64), ('rrup', F32), ('time', F32), ('weight', F32),
+     ('task_no', U16)])
 
 
 def rup_weight(rup):
@@ -169,15 +170,10 @@ def count_ruptures(srcs, monitor):
     return {src.source_id: src.count_ruptures() for src in srcs}
 
 
-def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
+def get_computer(cmaker, proxy, filtered, sids, station_data, station_sitecol):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
-    sids = srcfilter.close_sids(proxy, cmaker.trt)
-    if len(sids) == 0:  # filtered away
-        raise FarAwayRupture
-
-    filtered = srcfilter.sitecol.complete.filtered
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
@@ -217,10 +213,14 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         with fmon:
             if proxy['mag'] < cmaker.min_mag:
                 continue
+            sids = srcfilter.close_sids(proxy, cmaker.trt)
+            if len(sids) == 0:  # filtered away
+                continue
             try:
-                computer = get_computer(cmaker, proxy, srcfilter, *stations)
+                computer = get_computer(
+                    cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
+                    *stations)
             except FarAwayRupture:
-                # skip this rupture
                 continue
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
@@ -234,7 +234,8 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
                 mea_tau_phi.append(mtp)
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
-        times.append((proxy['id'], computer.ctx.rrup.min(), dt))
+        times.append((proxy['id'], computer.ctx.rrup.min(), dt,
+                      rup_weight(proxy)))
         alldata.append(df)
     times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
@@ -435,8 +436,12 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
+        sids = srcfilter.close_sids(proxy, cmaker.trt)
+        if len(sids) == 0:  # filtered away
+            raise FarAwayRupture
         computer = get_computer(
-            cmaker, proxy, srcfilter, station_data, station_sites)
+            cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
+            station_data, station_sites)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
