@@ -1134,12 +1134,17 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 
     properties = usgs_event_data['properties']
 
-    # NB: currently we cannot find a case with missing shakemap
-    shakemaps = properties['products']['shakemap']
+    try:
+        shakemaps = properties['products']['shakemap']
+    except KeyError:
+        err = {'status': 'failed',
+               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        return None, None, None, None, err
     if shakemap_version == 'usgs_preferred':
         shakemap = _get_usgs_preferred_item(shakemaps)
     else:
-        [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
+        [shakemap] = [shm for shm in shakemaps
+                      if shm['id'] == shakemap_version]
     contents = shakemap['contents']
 
     if get_grid and 'download/grid.xml' in contents:
@@ -1347,7 +1352,12 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
 
     js = json.loads(text)
     properties = js['properties']
-    shakemaps = properties['products']['shakemap']
+    try:
+        shakemaps = properties['products']['shakemap']
+    except KeyError:
+        err = {'status': 'failed',
+               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        return None, None, err
     usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
     usgs_preferred_version = usgs_preferred_shakemap['id']
     sorted_shakemaps = sorted(
