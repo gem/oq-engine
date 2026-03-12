@@ -1059,8 +1059,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
-        print(info)
-
+        print(info)  # debug
 
     def test_case_94(self):
         # Tests applying a delta to sigma, tau and phi using mgmpe
