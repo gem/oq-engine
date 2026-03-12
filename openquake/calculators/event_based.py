@@ -170,15 +170,15 @@ def count_ruptures(srcs, monitor):
     return {src.source_id: src.count_ruptures() for src in srcs}
 
 
-def get_computer(cmaker, proxy, filtered, sids, station_data, station_sitecol):
+def get_computer(cmaker, proxy, filtered, sids, station_data, station_sids):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
-    if station_sitecol:
-        stations = numpy.isin(sids, station_sitecol.sids)
+    if len(station_sids):
+        stations = numpy.isin(sids, station_sids)
         if stations.any():
             station_sids = sids[stations]
             return ConditionedGmfComputer(
@@ -441,7 +441,7 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
             raise FarAwayRupture
         computer = get_computer(
             cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
-            station_data, station_sites)
+            station_data, station_sites.sids)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
@@ -457,8 +457,9 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
 
     with performance.Monitor(
             'building arguments', measuremem=True, h5=dstore.hdf5):
+        station_sids = () if station_sites is None else station_sites.sids
         allargs = get_allargs(
-            oq, sitecol, assetcol, (station_data, station_sites), dstore)
+            oq, sitecol, assetcol, (station_data, station_sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
