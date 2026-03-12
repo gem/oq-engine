@@ -770,6 +770,36 @@ def view_task_durations(token, dstore):
     return arr
 
 
+@view.add('task_eb')
+def view_task_eb(token, dstore):
+    """
+    Display info about event based tasks. Here are a few examples of usage::
+
+     $ oq show task_eb:0  # the fastest task
+     $ oq show task_eb:-1  # the slowest task
+    """
+    _, index = token.split(':')
+    data = get_array(dstore['task_info'][()], taskname=b'event_based')
+    if len(data) == 0:
+        raise RuntimeError('No task_info for event_based')
+    data.sort(order='duration')
+    rec = data[int(index)]
+    taskno = rec['task_no']
+    rdata = dstore.read_df('gmf_data/rup_info')
+    rd = rdata[rdata.task_no == taskno]
+    acc = AccumDict(accum=numpy.zeros(2))
+    for rup_id, ctime, weight in zip(rd['rup_id'], rd['time'], rd['weight']):
+        acc[rup_id] += numpy.array([weight, ctime])
+    df = pandas.DataFrame(dict(rup_id=list(acc)))
+    for i, name in enumerate(['weight', 'ctime']):
+        df[name] = [arr[i] for arr in acc.values()]
+    df = df.sort_values('ctime').set_index('rup_id')
+    time = df.ctime.sum()
+    weight = df.weight.sum()
+    msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
+    return msg
+
+
 @view.add('task')
 def view_task_hazard(token, dstore):
     """
