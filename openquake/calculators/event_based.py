@@ -210,12 +210,12 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     mea_tau_phi = []
     for proxy in proxies:
         t0 = time.time()
+        if proxy['mag'] < cmaker.min_mag:
+            continue
+        sids = srcfilter.close_sids(proxy, cmaker.trt)
+        if len(sids) == 0:  # filtered away
+            continue
         with fmon:
-            if proxy['mag'] < cmaker.min_mag:
-                continue
-            sids = srcfilter.close_sids(proxy, cmaker.trt)
-            if len(sids) == 0:  # filtered away
-                continue
             try:
                 computer = get_computer(
                     cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
