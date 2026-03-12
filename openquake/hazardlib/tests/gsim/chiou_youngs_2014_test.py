@@ -223,14 +223,12 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
 
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
-        ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
-                                                      SiteCollection([site1])))
+        ctxs_adj_src = ctxm_adj_src.get_ctxs(rups, SiteCollection([site1]))
         ctxs_adj_src = ctxs_adj_src[0]
 
         # ContextMaker for the SOURCE AND PATH ADJUSTED version of CY14
         ctxm_adj_all = ContextMaker('fake', [gmm_adj_all], oqp)
-        ctxs_adj_all = list(ctxm_adj_all.get_ctx_iter(rups,
-                                                      SiteCollection([site1])))
+        ctxs_adj_all = ctxm_adj_all.get_ctxs(rups, SiteCollection([site1]))
         ctxs_adj_all = ctxs_adj_all[0]
 
         # Compute mean values of ground motion
@@ -264,7 +262,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
                                 ctxs_adj_all, imt)
         # Value is obtained from central branch (branch 3) of table 2 for
         # SA(0.1) when using eq 13
-        expected_path_adj = np.array([-0.0065052, -0.0065052])
+        expected_path_adj = np.array([-0.0065052])
         msg = f"The value of the path adjustment {path_adj} is different \n"
         msg += f"than the expected one {expected_path_adj}"
         np.testing.assert_almost_equal(

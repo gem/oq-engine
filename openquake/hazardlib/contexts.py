@@ -838,7 +838,7 @@ class ContextMaker(object):
                 src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
-                ctxs.extend(self.get_ctx_iter(src, sites))
+                ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
 
     def get_rparams(self, rup):
@@ -1009,7 +1009,7 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
-    def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
+    def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -1020,7 +1020,7 @@ class ContextMaker(object):
         :param step:
             > 1 only in preclassical
         :returns:
-            iterator over recarrays
+            list of recarrays
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
@@ -1028,7 +1028,8 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None):
-            return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
+            with self.pla_mon:
+                return genctxs_Pp(src, sitecol, self)
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1055,9 +1056,10 @@ class ContextMaker(object):
             self.dparam = None
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
-        blocks = block_splitter(ctxs, 10_000, weight=len)
-        # the weight of 10_000 ensure less than 1MB per recarray
-        return self.ctx_mon.iter(map(self.recarray, blocks))
+        with self.ctx_mon:
+            if len(rups_sites) == 1 and not self.minimum_distance:
+                return list(ctxs)
+            return [self.recarray([c]) for c in ctxs]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1299,7 +1301,7 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         step = 1 if src.code in b'pP' else 4
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
+        C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
@@ -1490,7 +1492,7 @@ class RmapMaker(object):
             sites = self.srcfilter.get_close_sites(src)
             if sites is None:
                 return
-        for ctx in self.cmaker.get_ctx_iter(src, sites):
+        for ctx in self.cmaker.get_ctxs(src, sites):
             if self.cmaker.deltagetter:
                 # adjust occurrence rates in case of aftershocks
                 with self.cmaker.delta_mon:
