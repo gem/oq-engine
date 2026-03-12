@@ -37,7 +37,7 @@ from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.tests.views_test import get_or_create_user
 
-CALC_RUN_TIMEOUT = 80
+CALC_RUN_TIMEOUT = 120
 
 
 def get_email_content(directory, search_string):

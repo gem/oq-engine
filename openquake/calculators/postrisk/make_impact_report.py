@@ -755,7 +755,10 @@ def main(dstore, adm_level=1, threshold_deg=None):
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
     losses_df = pd.DataFrame(avg_losses.mean)
     rupdic = oqparam.rupture_dict
-    event_name = rupdic['description']
+    try:
+        event_name = rupdic['description']
+    except KeyError:
+        event_name = rupdic['title']
     # FIXME: do we prefer to show UTC or perhaps it is more intuitive
     #        to show the local time?
     event_date = to_utc_string(oqparam.local_timestamp)
