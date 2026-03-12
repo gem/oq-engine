@@ -838,7 +838,7 @@ class ContextMaker(object):
                 src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
-                ctxs.extend(self.get_ctx_iter(src, sites))
+                ctxs.extend(self.get_ctx_list(src, sites))
         return concat(ctxs)
 
     def get_rparams(self, rup):
@@ -1009,7 +1009,7 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
-    def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
+    def get_ctx_list(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
             a source object (already split) or a list of ruptures
@@ -1299,7 +1299,7 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         step = 1 if src.code in b'pP' else 4
-        C = sum(len(ctx) for ctx in self.get_ctx_iter(src, sites, step=step))
+        C = sum(len(ctx) for ctx in self.get_ctx_list(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
             return EPS
@@ -1490,7 +1490,7 @@ class RmapMaker(object):
             sites = self.srcfilter.get_close_sites(src)
             if sites is None:
                 return
-        for ctx in self.cmaker.get_ctx_iter(src, sites):
+        for ctx in self.cmaker.get_ctx_list(src, sites):
             if self.cmaker.deltagetter:
                 # adjust occurrence rates in case of aftershocks
                 with self.cmaker.delta_mon:

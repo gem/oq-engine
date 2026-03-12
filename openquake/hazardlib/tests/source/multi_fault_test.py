@@ -214,7 +214,7 @@ def main100sites():
     src.set_msparams(secparams, ry0=True)
     sites = srcfilter.get_close_sites(src)
     with cProfile.Profile() as prof:
-        list(cmaker.get_ctx_iter(src, sites))
+        cmaker.get_ctx_list(src, sites)
     prof.print_stats('cumulative')
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)

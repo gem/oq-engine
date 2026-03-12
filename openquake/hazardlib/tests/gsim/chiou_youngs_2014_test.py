@@ -223,14 +223,12 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
 
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
-        ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
-                                                      SiteCollection([site1])))
+        ctxs_adj_src = ctxm_adj_src.get_ctx_list(rups, SiteCollection([site1]))
         ctxs_adj_src = ctxs_adj_src[0]
 
         # ContextMaker for the SOURCE AND PATH ADJUSTED version of CY14
         ctxm_adj_all = ContextMaker('fake', [gmm_adj_all], oqp)
-        ctxs_adj_all = list(ctxm_adj_all.get_ctx_iter(rups,
-                                                      SiteCollection([site1])))
+        ctxs_adj_all = ctxm_adj_all.get_ctx_list(rups, SiteCollection([site1]))
         ctxs_adj_all = ctxs_adj_all[0]
 
         # Compute mean values of ground motion
