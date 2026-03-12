@@ -262,6 +262,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
+    cmaker.init_monitoring(monitor)
     with rmon:
         with hdf5.File(hdf5path) as f:
             try:
