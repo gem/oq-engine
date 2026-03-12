@@ -1055,13 +1055,9 @@ class ContextMaker(object):
             self.dparam = None
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
-        if len(rups_sites) == 1:  # event based or scenario
-            with self.ctx_mon:
-                return list(ctxs)
-        else:  # classical, disaggregation
-            blocks = block_splitter(ctxs, 10_000, weight=len)
-            # the weight of 10_000 ensure less than 1MB per recarray
-            return self.ctx_mon.iter(map(self.recarray, blocks))
+        blocks = block_splitter(ctxs, 10_000, weight=len)
+        # the weight of 10_000 ensure less than 1MB per recarray
+        return self.ctx_mon.iter(map(self.recarray, blocks))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
