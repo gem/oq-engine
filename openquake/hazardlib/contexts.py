@@ -524,6 +524,7 @@ class ContextMaker(object):
     tom = None
     cluster = None  # set in RmapMaker
     source_mb = 0  # set in build_dparam
+    dt = 0
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1055,7 +1056,7 @@ class ContextMaker(object):
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(ctxs, 10_000, weight=len)
-        # the weight of 10_000 ensure less than 1MB per block (recarray)
+        # the weight of 10_000 ensure less than 1MB per recarray
         return self.ctx_mon.iter(map(self.recarray, blocks))
 
     def max_intensity(self, sitecol1, mags, dists):
