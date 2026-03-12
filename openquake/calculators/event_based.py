@@ -170,7 +170,7 @@ def count_ruptures(srcs, monitor):
     return {src.source_id: src.count_ruptures() for src in srcs}
 
 
-def get_computer(cmaker, proxy, filtered, sids, station_data, station_sids):
+def get_computer(cmaker, proxy, sites, station_data, station_sids):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -178,12 +178,11 @@ def get_computer(cmaker, proxy, filtered, sids, station_data, station_sids):
     oq = cmaker.oq
 
     if len(station_sids):
-        stations = numpy.isin(sids, station_sids)
+        stations = numpy.isin(sites.sids, station_sids)
         if stations.any():
-            station_sids = sids[stations]
+            station_sids = sites.sids[stations]
             return ConditionedGmfComputer(
-                ebr, filtered(sids),
-                filtered(station_sids),
+                ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],
                 oq.observed_imts,
                 cmaker, oq.correl_model, oq.cross_correl,
@@ -194,7 +193,7 @@ def get_computer(cmaker, proxy, filtered, sids, station_data, station_sids):
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, filtered(sids), cmaker,
+        ebr, sites, cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
@@ -218,7 +217,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
         with fmon:
             try:
                 computer = get_computer(
-                    cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
+                    cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
                     *stations)
             except FarAwayRupture:
                 continue
@@ -441,7 +440,7 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
         if len(sids) == 0:  # filtered away
             raise FarAwayRupture
         computer = get_computer(
-            cmaker, proxy, srcfilter.sitecol.complete.filtered, sids,
+            cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)

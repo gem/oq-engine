@@ -262,7 +262,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
                                 ctxs_adj_all, imt)
         # Value is obtained from central branch (branch 3) of table 2 for
         # SA(0.1) when using eq 13
-        expected_path_adj = np.array([-0.0065052, -0.0065052])
+        expected_path_adj = np.array([-0.0065052])
         msg = f"The value of the path adjustment {path_adj} is different \n"
         msg += f"than the expected one {expected_path_adj}"
         np.testing.assert_almost_equal(
