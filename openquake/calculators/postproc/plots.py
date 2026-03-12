@@ -303,7 +303,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
                       cmap='jet', s=marker_size)
 
-    fig.colorbar(coll, ax=ax, shrink=0.8)
+    fig.colorbar(coll, ax=ax, shrink=0.6)
 
     if rupture is not None:
         add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
