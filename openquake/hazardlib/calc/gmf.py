@@ -224,7 +224,7 @@ class GmfComputer(object):
         self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
-        ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
+        ctxs = cmaker.get_ctx_iter([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs

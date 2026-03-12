@@ -1028,7 +1028,8 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None):
-            return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
+            with self.pla_mon:
+                return genctxs_Pp(src, sitecol, self)
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1055,9 +1056,8 @@ class ContextMaker(object):
             self.dparam = None
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
-        blocks = block_splitter(ctxs, 10_000, weight=len)
-        # the weight of 10_000 ensure less than 1MB per recarray
-        return self.ctx_mon.iter(map(self.recarray, blocks))
+        with self.ctx_mon:
+            return [self.recarray([c]) for c in ctxs]
 
     def max_intensity(self, sitecol1, mags, dists):
         """
