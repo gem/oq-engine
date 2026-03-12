@@ -1096,7 +1096,7 @@ def impact_get_rupture_data(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (6.3, 6.3)
+        figsize = (5.4, 5.4)
         # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
