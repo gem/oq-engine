@@ -354,8 +354,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_pgns=None):
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
-        r_volc = get_rvolcs(ctx, volc_pgns)     
-        cctx.rvolc = r_volc
+        cctx.rvolc= get_rvolcs(ctx, volc_pgns)
         
     x_ij = cctx.rrup
     # Get anelastic scaling term in equation 5
@@ -525,11 +524,13 @@ def get_volc_zones(volc_polygons):
     return zone_pgn
 
 
-def get_dist_traversed_per_zone(volc_pgns, ctx):
+def get_rvolcs(ctx, volc_pgns):
     """
-    Find the intercepts of the line from each rupture surface to each site
-    within each volcanic zone polygon (if present) and returns the distance
-    traversed per polygon.
+    Get total distance per travel path through anelastically attenuating
+    volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
+    
+    The total rvolc per path is capped at a minimum of 12 km (if any zone
+    is traversed) and a maximum of 80 km.
     """
     r_zone_path = {}
 
@@ -558,16 +559,6 @@ def get_dist_traversed_per_zone(volc_pgns, ctx):
             for zone_id, polygon in volc_pgns.items()
         }
 
-    return r_zone_path
-
-
-def get_total_rvolc_per_path(r_zone_path):
-    """
-    Get total rvolc per travel path. Note that total distance traversed through
-    volcanic zones for each travel path in the Zhao et al. (2016) papers is
-    capped at minimum of 12 km (assuming the zone is actually traversed) and
-    maximum of 80 km.
-    """
     # Stack dist per zone per path
     r_values = np.stack([list(r_zone_path[path].values())
                          for path in r_zone_path])
@@ -579,23 +570,6 @@ def get_total_rvolc_per_path(r_zone_path):
     rvolc_per_path[np.logical_and(rvolc_per_path > 0.0,
                                   rvolc_per_path <= 12.0)] = 12.0
     rvolc_per_path[rvolc_per_path >= 80.0] = 80.0
-
-    return rvolc_per_path
-
-
-def get_rvolcs(ctx, pgn_store):
-    """
-    Get total distance per travel path through anelastically attenuating
-    volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
-    The rvolc value is computed for each rupture to each site stored within
-    each ground-motion computation context.
-    """
-    # Get the distances traversed across each volcanic zone
-    r_zone_path = get_dist_traversed_per_zone(pgn_store, ctx)
-
-    # Get the total distance traversed across each zone, with limits placed on
-    # the min and max of rvolc as described within the Zhao et al. 2016 GMMs
-    rvolc_per_path = get_total_rvolc_per_path(r_zone_path)
 
     return rvolc_per_path
 
