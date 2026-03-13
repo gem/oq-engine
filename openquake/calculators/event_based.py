@@ -252,7 +252,8 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = cmaker.oq
-    rmon = monitor('reading sites and ruptures', measuremem=True)
+    rmon = monitor('ruptures', measuremem=True)
+    smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
@@ -263,9 +264,10 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']  # the parent dstore
-        sites = complete.filtered(sids) if stations[0] is None else complete
-        srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
+    with smon:
         proxies = get_proxies(hdf5path, rups)
+    sites = complete.filtered(sids) if stations[0] is None else complete
+    srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
