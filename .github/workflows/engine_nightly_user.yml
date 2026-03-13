@@ -52,7 +52,7 @@ jobs:
           #else
           #    RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
           #fi
-          if [[ "${{ matrix.python-version }}" == "3.13" && "${matrix.engine-ref}" == "engine-3.23" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ matrix.engine-ref }}" == "engine-3.23" ]]; then
               echo "Python3.13 is not supported on LTS Release"
               exit 0
           fi
