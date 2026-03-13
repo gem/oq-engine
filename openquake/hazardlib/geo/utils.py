@@ -251,10 +251,8 @@ class _GeographicObjects(object):
         mesh = exp.mesh
         assets_by_site = split_array(exp.assets, exp.assets['site_id'])
         if region:
-            out = []
-            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-                if not geometry.Point(lon, lat).within(region):
-                    out.append(i)
+            ps = points(mesh.lons, mesh.lats)
+            out = [i for i, p in enumerate(ps) if not p.within(region)]
             if out:
                 ok = ~numpy.isin(numpy.arange(len(mesh)), out)
                 if ok.sum() == 0:
@@ -335,8 +333,8 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     tree = STRtree(polygons)
     index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
 
-    for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-        point = geometry.Point(lon, lat)
+    for sid, point in zip(sitecol.sids, points(sitecol.lons, sitecol.lats)):
+        lon, lat = point.x, point.y
         result = next((index_by_id[id(o)]
                        for o in tree.geometries[tree.query(point)]
                        if o.contains(point)), None)
