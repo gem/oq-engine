@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,8 +26,8 @@ from openquake.hazardlib.gsim import utils_chapman_guo_2021 as utils
 
 aae = np.testing.assert_almost_equal
 
-PSAS = os.path.join(os.path.dirname(__file__), '..', '..',
-                  'gsim', 'chapman_guo_2021_psa_ratios.csv')
+PSAS = os.path.join(os.path.dirname(__file__), '..', '..', 'gsim',
+                    'chapman_guo_2021', 'chapman_guo_2021_psa_ratios.csv')
 
 # PSA ratios to be retrieved from Chapman and Guo (2021) tables
 exp = [np.array([-0.34285433, -0.53569485, -1.75992894]), # SA(0.2)

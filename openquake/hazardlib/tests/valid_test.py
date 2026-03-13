@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,6 +99,23 @@ class ValidationTestCase(unittest.TestCase):
             valid.positivefloat('-1')
         self.assertEqual(valid.positivefloat('1.1'), 1.1)
 
+    def test_positivefloats(self):
+        self.assertEqual(valid.positivefloats('1 2'), [1, 2])
+        with self.assertRaises(ValueError):
+            valid.positivefloat('-1 -2.5')
+
+    def test_positivefloatorsentinel(self):
+        self.assertEqual(valid.positivefloatorsentinel('-999'), -999)
+        self.assertEqual(valid.positivefloatorsentinel('2.5'), 2.5)
+        with self.assertRaises(ValueError):
+            valid.positivefloatorsentinel('-1')
+            valid.positivefloatorsentinel('0.0')
+
+    def test_positivefloatsorsentinels(self):
+        self.assertEqual(valid.positivefloatsorsentinels('-999 2.5'), [-999, 2.5])
+        with self.assertRaises(ValueError):
+            valid.positivefloatsorsentinels('-1 0.')
+
     def test_probability(self):
         self.assertEqual(valid.probability('1'), 1.0)
         self.assertEqual(valid.probability('.5'), 0.5)
@@ -181,7 +198,3 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(ag20_alaska.region, 'USA-AK')
         self.assertEqual(ag20_alaska._toml,
                          '[AbrahamsonGulerce2020SInter]\nregion = "USA-AK"')
-        ag20_alaska = valid.gsim("[AbrahamsonGulerce2020SInterAlaska]")
-        self.assertEqual(ag20_alaska.region, 'USA-AK')
-        self.assertEqual(ag20_alaska._toml,
-                         '[AbrahamsonGulerce2020SInterAlaska]')

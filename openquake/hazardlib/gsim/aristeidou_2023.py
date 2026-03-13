@@ -25,9 +25,12 @@ Module exports :class:`AristeidouEtAl2023`
 """
 
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SDi
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
+
 
 CONSTS = {
     "available_strength_ratios": np.array([1.5, 2, 3, 4, 6]),
@@ -61,20 +64,21 @@ def _get_style_of_faulting(rake):
     Note that the 'Unspecified' case is not considered here as
     rake is always given.
     """
-    sof = np.full_like(rake, 0)
+    sof = np.zeros_like(rake)
 
-    sof[((rake >= -180) & (rake <= -150)) | ((rake > -30) &
-        (rake <= 30)) | ((rake > 150) & (rake <= 180))] = 0
+    sof[((rake >= -180) & (rake <= -150)) |
+        ((rake > -30) & (rake <= 30)) |
+        ((rake > 150) & (rake <= 180))] = 0
 
     sof[(rake > -120) & (rake <= -60)] = 1
 
     sof[(rake > 60) & (rake <= 120)] = 2
 
-    sof[((rake > 30) & (rake <= 60)) | ((rake > 120) &
-        (rake <= 150))] = 3
+    sof[((rake > 30) & (rake <= 60)) |
+        ((rake > 120) & (rake <= 150))] = 3
 
-    sof[((rake > -150) & (rake <= -120)) | ((rake > -60) &
-                                            (rake <= -30))] = 4
+    sof[((rake > -150) & (rake <= -120)) |
+        ((rake > -60) & (rake <= -30))] = 4
 
     return sof
 
@@ -146,11 +150,15 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term defined in equation (9), p. 1611
     """
+    z2pt5 = ctx.z2pt5.copy()
+    # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
     f_basin = np.zeros(ctx.sids.shape)
-    f_basin[(ctx.z2pt5 <= 1)] = (C["d1"] * (ctx.z2pt5 - 1))[ctx.z2pt5 <= 1]
-    f_basin[(ctx.z2pt5 > 1) & (ctx.z2pt5 <= 3)] = 0
-    f_basin[ctx.z2pt5 > 3] = (
-        C["d2"] * (1 - np.exp(-0.25*(ctx.z2pt5 - 3))))[ctx.z2pt5 > 3]
+    f_basin[(z2pt5 <= 1)] = (C["d1"] * (z2pt5 - 1))[z2pt5 <= 1]
+    f_basin[(z2pt5 > 1) & (z2pt5 <= 3)] = 0
+    f_basin[z2pt5 > 3] = (
+        C["d2"] * (1 - np.exp(-0.25*(z2pt5 - 3))))[z2pt5 > 3]
     return f_basin
 
 

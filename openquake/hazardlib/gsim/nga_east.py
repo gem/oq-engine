@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, _get_mean
+from openquake.hazardlib.gsim.gmpe_table import (
+    GMPETable, interp_table, _get_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -391,7 +392,7 @@ def get_fnl(C_NL, pga_rock, vs30, period, us23=None):
     Returns the nonlinear mean amplification according to equation 2
     of Hashash et al. (2019)
     """
-    if period <= 0.4:
+    if period < 0.4:
         vref = 760.
     else:
         vref = 3000.
@@ -460,13 +461,15 @@ def get_hard_rock_mean(self, mag, ctx, imt):
     rock condition (Vs30 = 3000 m/s)
     """
     # return Distance Tables
-    imls = self.mean_table['%.2f' % mag, imt.string]
+    imls = interp_table(self, mag, imt, 'IMLs')
+    if imls is None:
+        raise RuntimeError(f'Unsupported {imt} for {self}')
     # Get distance vector for the given magnitude
     idx = np.searchsorted(self.m_w, mag)
     dists = self.distances[:, 0, idx - 1]
     dst = getattr(ctx, self.distance_type)
-    # get log(mean)
-    return np.log(_get_mean(self.kind, imls, dst, dists))
+    mean = _get_mean(self.kind, imls, dst, dists)
+    return np.log(mean)
 
 
 def get_site_amplification(self, imt, pga_r, vs30s, us23=False):

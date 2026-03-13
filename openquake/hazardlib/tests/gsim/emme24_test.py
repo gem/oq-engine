@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,9 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 #
-#
-# Test data provided by Baran Guryuva (model author)
-#
+# Initial test data for sites with a Vs30 of 800 m/s (the reference
+# velocity of the GMM) were provided by Baran Guryuva (model author)
+# and then updated by GEM once the EMME24 site model was added to
+# also consider sites with Vs30s of 300 m/s and 900 m/s.
 #
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

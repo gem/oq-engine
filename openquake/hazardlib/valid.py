@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import os
 import re
 import ast
 import json
+import string
 import toml
 import socket
 import logging
@@ -34,11 +35,14 @@ import numpy
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
-from openquake.hazardlib.gsim.base import registry, gsim_aliases
+from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
 from openquake.sep import classes
+
+BASE64 = set(
+    string.ascii_uppercase + string.ascii_lowercase + string.digits + "-_")
 
 RENAMED_SEPS = {
     'NewmarkDisplacement': "Jibson2007BLandslides",
@@ -152,20 +156,17 @@ def to_toml(uncertainty):
     return text
 
 
-def _fix_toml(v):
-    # horrible hack to remove a pickle error with
-    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
-    # using toml.loads(s, _dict=dict) would be the right way, but it does
-    # not work :-(
-    if isinstance(v, numpy.ndarray):
-        return list(v)
-    elif hasattr(v, 'items'):
-        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
-    elif isinstance(v, list):
-        return [_fix_toml(x) for x in v]
-    elif isinstance(v, numpy.float64):
-        return float(v)
-    return v
+def calculation(value):
+    """
+    Convert a string into an integer calculation ID
+    or return it as it is if it ends with .ini or .hdf5
+    """
+    try:
+        return int(value)
+    except ValueError:
+        if not value.endswith(('.ini', '.hdf5')):
+            raise ValueError(value)
+        return value
 
 
 # more tests are in tests/valid_test.py
@@ -178,7 +179,7 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
-    kwargs = _fix_toml(kwargs)
+    kwargs = fix_toml(kwargs)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
@@ -192,7 +193,6 @@ def gsim(value, basedir=''):
         gs = gsim_class(**kwargs)
     else:  # is an alias, i.e. a thunk
         gs = gsim_class()
-    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
 
@@ -453,6 +453,28 @@ def utf8_not_empty(value):
     return utf8(not_empty(value))
 
 
+def base64names(value):
+    """
+    :param value: input string
+    :returns: list of strings of <=8 characters in base64
+
+    >>> base64names('XYzu- f_')
+    ['XYzu-', 'f_']
+    >>> base64names('XYzu+')
+    Traceback (most recent call last):
+    ...
+    ValueError: List of names containing an invalid name: 'XYzu+'
+    """
+    names = value.split()
+    for name in names:
+        if len(name) > 8:
+            raise ValueError(f'{name} is longer than 8 characters')
+        elif set(name) - BASE64:
+            raise ValueError('List of names containing an invalid name:'
+                             f' {name!r}')
+    return names
+
+
 def namelist(value):
     """
     :param value: input string
@@ -694,6 +716,30 @@ def positivefloats(value):
     """
     values = value.strip('[]').split()
     floats = list(map(positivefloat, values))
+    return floats
+
+
+def positivefloatorsentinel(value):
+    """
+    :param value: input string
+    :returns: positive float or -999 (sentinel)
+    """
+    f = float(not_empty(value))
+    if f < 0 and f!= -999:
+        msg = 'float %s < 0 or not equal to -999' % f
+        raise ValueError(msg)
+    return f
+
+
+def positivefloatsorsentinels(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats or -999 (sentinel) values
+    """
+    values = value.strip('[]').split()
+    floats = list(map(positivefloatorsentinel, values))
     return floats
 
 
@@ -974,8 +1020,8 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
+    >>> numpy.array(dictionary('{"ls": logscale(0.01, 2, 5)}')['ls'])
+    array([0.01      , 0.03760603, 0.14142136, 0.53182959, 2.        ])
     """
     if not value:
         return {}
@@ -996,6 +1042,37 @@ def dictionary(value):
                 dic[key] = list(logscale(*val[1:]))
             elif val[0] == 'linscale':
                 dic[key] = list(linscale(*val[1:]))
+    return dic
+
+
+def uint8dict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python dictionary
+    :returns:
+        dictionary string -> uint8 number
+
+    >>> uint8dict('')
+    {}
+    >>> uint8dict('{}')
+    {}
+    >>> uint8dict('{"a": 1}')
+    {'a': 1}
+    >>> uint8dict('{"a": 0}')
+    Traceback (most recent call last):
+       ...
+    AssertionError: a must be in the range 1-255, got 0
+    """
+    if not value:
+        return {}
+    try:
+        dic = dict(ast.literal_eval(value))
+    except Exception:
+        raise ValueError('%r is not a valid Python dictionary' % value)
+
+    for key, val in dic.items():
+        assert isinstance(val, int), f'{key} must be integer, got {val}'
+        assert 0 < val < 256, f'{key} must be in the range 1-255, got {val}'
     return dic
 
 
@@ -1476,7 +1553,7 @@ class ParamSet(metaclass=MetaParamSet):
         """
         :returns: the parameters as a JSON string
         """
-        dic = {k: _fix_toml(v)
+        dic = {k: fix_toml(v)
                for k, v in self.__dict__.items() if not k.startswith('_')}
         return json.dumps(dic)
 

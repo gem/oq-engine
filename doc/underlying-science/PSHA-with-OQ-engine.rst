@@ -140,7 +140,7 @@ sources, we can write :math:`P_{rup_{ij}}(k|T)` for every rupture as:
 
  P_{rup_{ij}}(k|T) = e^{-\nu_{ij}T}\frac{(\nu_{ij}T)^k}{k!}
 
-where :math:`nu_{ij}` is the average annual occurrence rate for the *j*-th
+where :math:`\nu_{ij}` is the average annual occurrence rate for the *j*-th
 rupture in the *i*-th source. We can then place equation
 above and thus write:
 
@@ -229,7 +229,7 @@ can write the rate of occurrence of the *j*-th rupture as:
 
  \nu_{ij} = \nu_{i} \times f_{i}(m,r)
 
-where :math:`nu_{i}` is the total occurrence rate for the *i*-th source, and
+where :math:`\nu_{i}` is the total occurrence rate for the *i*-th source, and
 :math:`f_i(m,r)` is the probability, for the *i*-th source, of
 generating a rupture of magnitude :math:`m` and distance :math:`r`. By placing
 2.17 in 2.16 and by replacing

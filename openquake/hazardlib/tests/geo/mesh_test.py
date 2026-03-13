@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -127,6 +127,11 @@ class MeshSlicingTestCase(unittest.TestCase):
         self.assertTrue((submesh.lons == [3, 4, 5, 6]).all())
         self.assertTrue((submesh.lats == [0.3, 0.4, 0.5, 0.6]).all())
         self.assertTrue((submesh.depths == [7.3, 7.4, 7.5, 7.6]).all())
+
+        # test get_around
+        submesh = mesh.get_around(1, .1)
+        assert submesh.lons == [1.]
+        assert submesh.lats == [.1]
 
         with self.assertRaises(AssertionError):
             submesh = mesh[0:0]
@@ -852,8 +857,8 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
         lons = numpy.array([[-0.2, -0.1, 0., 0.1, 0.2]] * 5)
         depths = numpy.array([[9] * 5, [11] * 5, [12] * 5, [13] * 5, [14] * 5])
         lats = numpy.zeros_like(lons)
-        expected_coords = [(-0.2, 0), (0.2, 0), (0.2, 0), (-0.2, 0),
-                           (-0.2, 0)]
+        expected_coords = [(0.2, 0), (0.2, 0), (-0.2, 0), (-0.2, 0),
+                           (0.2, 0)]
         self._test(lons, lats, depths, expected_coords)
 
     def test_halfvertical_mesh(self):

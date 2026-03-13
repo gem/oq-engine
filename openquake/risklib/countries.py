@@ -1,5 +1,20 @@
 import re
 
+REGIONS = """\
+Africa
+Caribbean_Central_America
+Central_Asia
+East_Asia
+Europe
+Middle_East
+North_America
+North_Asia
+Oceania
+South_America
+South_Asia
+Southeast_Asia
+""".split()
+
 # nearly lexicographic order, but with longest names first, to avoid fake
 # matches in the regular expression below; Guinea_Bissau must go before
 # Guinea, Dominican_Republic before Dominica and Nigeria before Niger
@@ -41,7 +56,7 @@ Burundi,BDI
 Cambodia,KHM
 Cameroon,CMR
 Canada,CAN
-Cape_Verde,CPV
+Cabo_Verde,CPV
 Cayman_Islands,CYM
 Central_African_Republic,CAF
 Chad,TCD
@@ -69,6 +84,7 @@ El_Salvador,SLV
 Equatorial_Guinea,GNQ
 Eritrea,ERI
 Estonia,EST
+Eswatini,SWZ
 Ethiopia,ETH
 Falkland_Islands_(Malvinas),FLK
 Faroe_Islands,FRO
@@ -158,6 +174,7 @@ Nigeria,NGA
 Niger,NER
 Niue,NIU
 North_Korea,PRK
+North_Macedonia,MKD
 Northern_Mariana_Islands,MNP
 Norway,NOR
 Oman,OMN
@@ -203,10 +220,10 @@ Spain,ESP
 Sri_Lanka,LKA
 Sudan,SDN
 Suriname,SUR
-Swaziland,SWZ
 Sweden,SWE
 Switzerland,CHE
 Syria,SYR
+Taiwan,TWN
 Tajikistan,TJK
 Tanzania,TZA
 Thailand,THA
@@ -216,7 +233,7 @@ Tokelau,TKL
 Tonga,TON
 Trinidad_and_Tobago,TTO
 Tunisia,TUN
-Turkey,TUR
+Turkiye,TUR
 Turkmenistan,TKM
 Turks_and_Caicos_Islands,TCA
 Tuvalu,TUV
@@ -224,7 +241,7 @@ Uganda,UGA
 Ukraine,UKR
 United_Arab_Emirates,ARE
 United_Kingdom,GBR
-United_States_of_America,USA
+United_States,USA
 US_Virgin_Islands,VIR
 Uruguay,URY
 Uzbekistan,UZB

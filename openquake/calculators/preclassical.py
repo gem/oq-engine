@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,29 +16,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import logging
 import operator
+import psutil
 import numpy
-import h5py
-from openquake.baselib import general, parallel, hdf5, config
-from openquake.hazardlib import pmf, geo, source_reader
-from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.baselib import general, parallel, hdf5
+from openquake.hazardlib import pmf, geo
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
-from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.source_group import (
+    SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base, getters
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 
@@ -54,10 +55,10 @@ def source_data(sources):
     data = AccumDict(accum=[])
     for src in sources:
         data['src_id'].append(src.source_id)
-        data['nsites'].append(src.nsites)
+        data['nctxs'].append(src.nctxs)
         data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
-        data['ctimes'].append(0)
+        data['ctimes'].append(src.dt)
     return data
 
 
@@ -92,7 +93,7 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter(srcs, min_mag):
+def _filter_mag(srcs, min_mag):
     # filter by magnitude and count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
@@ -101,25 +102,18 @@ def _filter(srcs, min_mag):
     return out
 
 
-def preclassical(srcs, sites, cmaker, secparams, monitor):
+def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
-    Weight the sources. Also split them if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources before weighting them.
+    Filter and weight the sources. Also split them, except for
+    pointlike and multifault sources, which have been split already.
     """
-    grp_id = srcs[0].grp_id
-    if sites:
-        N = len(sites)
-        multiplier = 1 + len(sites) // 10_000
-        sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
-    else:
-        N = 0
-        multiplier = 1
-        sf = SourceFilter(None)
-    splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
+    sf.integration_distance = cmaker.maximum_distance
     maxdist = cmaker.maximum_distance.y[-1]
+    N = len(sf.sitecol) if sf.sitecol else 0
+    splits = []
     for src in srcs:
         if src.code == b'F':
             if N and N <= cmaker.max_sites_disagg:
@@ -127,12 +121,12 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-        elif src.code in b'pP' and sites:
+        elif src.code in b'pP' and sf.sitecol:
             # special case, compute distances
-            distances = sites.get_cdist(src.location)
+            distances = sf.sitecol.get_cdist(src.location)
             radius = src._get_max_rupture_projection_radius()
             src.nsites = (distances <= maxdist + radius).sum()
-        elif sites:
+        elif sf.sitecol:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
             # print(f'{src.source_id=}, {src.nsites=}')
@@ -145,65 +139,119 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
-    splits = _filter(splits, cmaker.oq.minimum_magnitude)
-    if splits:
-        mon = monitor('weighting sources', measuremem=False)
-        with mon:
-            cmaker.set_weight(splits, sf, multiplier)
-        yield {grp_id: splits}
+
+    # filter by magnitude and count ruptures
+    splits = _filter_mag(splits, cmaker.oq.minimum_magnitude)
+    if not splits:
+        return {}
+
+    cmaker.set_weight(splits, sf)
+    return {splits[0].grp_id: splits}
 
 
-def store_tiles(dstore, csm, sitecol, cmakers):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
     """
-    Store a `tiles` array if the calculation is large enough.
-    :returns: a triple (max_weight, trt_rlzs, gids)
+    Split the sources if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources.
+    """
+    # possibly grid the pointlike sources
+    if cmaker.ps_grid_spacing and cmaker.split_sources:
+        srcs = []
+        for src in sources:
+            if src.code in b'AM':
+                srcs.extend(split_source(src))
+            else:
+                srcs.append(src)
+        srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+    else:
+        srcs = sources
+
+    Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
+    # produce subtasks of kind set_weight
+    for i in range(Ns):
+        lst = srcs[i::Ns]
+        if lst:
+            yield filter_weight, lst, sf, cmaker, secparams
+
+
+def get_req_gb(data, N, oq):
+    """
+    :returns: an array with the required GB for the RateMaps
+    """
+    out = numpy.zeros(len(data))
+    L = oq.imtls.size
+    for rec in data:
+        if oq.disagg_by_src or rec['blocks'] > 1:
+            # NB: the float(rec['gsims']) is necessary for case_lisa
+            out[rec['grp_id']] = N * L * float(rec['gsims']) * 4 / GB
+    return out
+
+
+# executed at the end of preclassical
+def store_csm(dstore, csm, sitecol, cmakers):
+    """
+    Store the _csm datagroup.
+
+    :returns: max_weight
     """
     if sitecol is None:
-        N = 0
-    else:
-        N = len(sitecol)
-    if isinstance(cmakers, dict):
-        cmakers = cmakers['Default']
+        # when called from hamlet
+        csm.save(dstore)
+        return 1
+    N = len(sitecol)
     oq = cmakers[0].oq
-    fac = oq.imtls.size * N * 4 / 1024**3
+    fac = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight(oq)
 
-    # build source_groups
-    quartets = csm.split(cmakers, sitecol, max_weight, tiling=oq.tiling)
+    # build source_groups and store _csm
+    quartets = []
+    for sg, cmaker in zip(csm.src_groups, cmakers.to_array()):
+        quartet = csm.split_sg(
+            cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+        quartets.append(quartet)
+    csm.save(dstore, [q[2] for q in quartets])
+
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
-          len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
-         for cm, tgets, blocks, splits in quartets],
+        [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
+          len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
+         for cm, tgets, blocks, extra in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('splits', U16), ('size_mb', F32), ('weight', F32),
-         ('codes', '<S8'), ('trt', '<S32')])
+         ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
+    req_gb = get_req_gb(data, N, oq)
 
-    # determine light groups and tiling
-    light, = numpy.where(data['blocks'] == 1)
-    req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
-    if len(light):
-        logging.info('mem_gb = %.2f with %d light groups out of %d',
-                     mem_gb, len(light), len(data))
+    # sanity checks
+    if oq.tiling:
+        assert oq.calculation_mode != 'disaggregation'
+        assert not oq.disagg_by_src
+        assert N > oq.max_sites_disagg
     else:
-        logging.info('Required mem_gb = %.2f', req_gb)
-    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
-    regular = (mem_gb < max_gb or oq.disagg_by_src or
-               N < oq.max_sites_disagg or oq.tile_spec)
-    if oq.tiling is None:
-        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
-        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
-        tiling = ss and N > 10_000 or not regular
+        required_gb = req_gb.sum()
+        avail_gb = psutil.virtual_memory().available / 1024**3
+        if required_gb > avail_gb:
+            raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
+        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
+
+    # store source groups
+    dstore.create_dset('source_groups', data,
+                       attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
+                                  tiling=oq.tiling))
+    return max_weight
+
+
+def warn_use_rates(oq, num_rlzs):
+    """
+    Recommend setting use_rates and full enumeration when only the means
+    are to be computed
+    """
+    if oq.use_rates:
+        ns = oq.number_of_logic_tree_samples
+        if ns and ns <= 1_000_000:
+            logging.warning('You should set number_of_logic_tree_samples=0')
+        elif num_rlzs > 1_000_000:
+            logging.warning('You should set number_of_logic_tree_samples')
     else:
-        tiling = oq.tiling
-
-    # store source_groups
-    dstore.create_dset('source_groups', data, fillvalue=None,
-                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    if req_gb >= 30 and not config.directory.custom_tmp:
-        logging.info('We suggest to set custom_tmp')
-    return req_gb, max_weight, trt_rlzs
-
+        logging.warning('You should set use_rates=true')
+    
 
 @base.calculators.add('preclassical')
 class PreClassicalCalculator(base.HazardCalculator):
@@ -219,6 +267,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             super().init()
             self.full_lt = self.csm.full_lt
+        if self.oqparam.hazard_stats() == ['mean']:
+            warn_use_rates(self.oqparam, self.full_lt.get_num_paths())
 
     def store(self):
         # store full_lt, toms
@@ -236,7 +286,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
@@ -244,16 +294,23 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gfull = self.full_lt.gfull(trt_smrs)
+        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
-            logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
                             general.humansize(nbytes), extra)
 
-        # do nothing for atomic sources except counting the ruptures
+        if sites and not self.few_sites:
+            # in SAM from 539,831 -> 11,430 sites
+            lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
+            sf = SourceFilter(lowres, oq.maximum_distance)
+            sf.multiplier = len(sites) / len(lowres)
+            logging.info('Reducing %d->%d sites', len(sites), len(lowres))
+        else:
+            sf = SourceFilter(None)
         atomic_sources = []
         normal_sources = []
         reqv = 'reqv' in oq.inputs
@@ -262,6 +319,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         multifaults = []
+        cmakers = self.cmakers.to_array()
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
@@ -270,9 +328,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
+            # do nothing for atomic sources except counting the ruptures
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(
-                    sg, SourceFilter(sites, oq.maximum_distance))
+                # compute weight sequentially
+                for src in sg:
+                    src.num_ruptures = src.count_ruptures()
+                cmakers[grp_id].set_weight(sg, sf)
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
@@ -284,60 +345,38 @@ class PreClassicalCalculator(base.HazardCalculator):
                 len(multifaults), general.humansize(secparams.nbytes))
         else:
             secparams = ()
-        self._process(atomic_sources, normal_sources, sites, secparams)
+        self._process(atomic_sources, normal_sources, sf, secparams)
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
 
-    def _process(self, atomic_sources, normal_sources, sites, secparams):
+    def _process(self, atomic_sources, normal_sources, sf, secparams):
         # run preclassical in parallel for non-atomic sources
-        sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
-        logging.info('Starting preclassical with %d source groups',
-                     len(sources_by_key))
-        if sys.platform != 'darwin':
-            # avoid a segfault in macOS
-            self.datastore.swmr_on()
-        before_after = numpy.zeros(2, dtype=int)
-        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        for grp_id, srcs in sources_by_key.items():
-            cmaker = self.cmakers[grp_id]
-            cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
-            pointsources, pointlike, others = [], [], []
-            for src in srcs:
-                if hasattr(src, 'location'):
-                    pointsources.append(src)
-                elif hasattr(src, 'nodal_plane_distribution'):
-                    pointlike.append(src)
-                elif src.code in b'CFN':  # other heavy sources
-                    smap.submit(([src], sites, cmaker, secparams))
-                else:
-                    others.append(src)
-            check_maxmag(pointlike)
-            if pointsources or pointlike:
-                spacing = self.oqparam.ps_grid_spacing
-                if spacing:
-                    logging.info(f'Splitting/gridding point sources {grp_id=}')
-                    for plike in pointlike:
-                        pointsources.extend(split_source(plike))  # slow
-                    cpsources = grid_point_sources(pointsources, spacing)
-                    before_after += [len(pointsources), len(cpsources)]
-                    for block in block_splitter(cpsources, 200):
-                        smap.submit((block, sites, cmaker, secparams))
-                else:
-                    for block in block_splitter(pointsources, 2000):
-                        smap.submit((block, sites, cmaker, secparams))
-                    others.extend(pointlike)
-            for block in block_splitter(others, 40):
-                smap.submit((block, sites, cmaker, secparams))
-        res = smap.reduce()
+        if normal_sources:
+            sources_by_key = groupby(
+                normal_sources, operator.attrgetter('grp_id'))
+            logging.info('Starting preclassical with %d source groups',
+                         len(sources_by_key))
+            if sys.platform != 'darwin':
+                # avoid a segfault in macOS
+                self.datastore.swmr_on()
+            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+            cmakers = self.cmakers.to_array()
+            num_tasks = len(sources_by_key)
+            for grp_id, srcs in sources_by_key.items():
+                cmaker = cmakers[grp_id]
+                cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
+                pointlike = [src for src in srcs
+                             if hasattr(src, 'nodal_plane_distribution')]
+                check_maxmag(pointlike)
+                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
+            res = smap.reduce()
+        else:
+            res = {}
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
                     atomic_sources, lambda src: src.grp_id).items():
                 res[grp_id] = srcs
-        if before_after[0] != before_after[1]:
-            logging.info(
-                'Reduced the number of point sources from {:_d} -> {:_d}'.
-                format(before_after[0], before_after[1]))
         acc = AccumDict(accum=0)
         code2cls = get_code2cls()
         for grp_id, srcs in res.items():
@@ -367,24 +406,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
-        if os.path.exists(cachepath):
-            realpath = os.path.realpath(cachepath)
-            logging.info('Copying csm from %s', realpath)
-            with h5py.File(realpath, 'r') as cache:  # copy _csm
-                cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, toms
-        else:
-            self.populate_csm()
-            try:
-                self.datastore['_csm'] = self.csm
-            except RuntimeError as exc:
-                # this happens when setrecursionlimit is too low
-                # we can continue anyway, this is not critical
-                logging.error(str(exc), exc_info=True)
-            else:
-                if cachepath:
-                    os.symlink(self.datastore.filename, cachepath)
+        self.populate_csm()
         return self.csm
 
     def post_execute(self, csm):
@@ -394,9 +416,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.datastore.create_dset(
             'weights',
             F32([rlz.weight[-1] for rlz in self.full_lt.get_realizations()]))
-        totsites = sum(row[source_reader.NUM_SITES]
-                       for row in self.csm.source_info.values())
-        if totsites == 0:
+        tot = self.datastore['source_info']['est_ctxs'].sum()
+        if tot == 0:
             if self.N == 1:
                 logging.error('There are no sources close to the site!')
             else:
@@ -406,15 +427,14 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         fname = self.oqparam.inputs.get('delta_rates')
         if fname:
-            idx_nr = {row[0]: (idx, row[source_reader.NUM_RUPTURES])
+            idx_nr = {row[0]: (idx, row[NUM_RUPTURES])
                       for idx, row in enumerate(self.csm.source_info.values())}
             deltas = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        if self.sitecol is not None:
-            self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
-                self.datastore, self.csm, self.sitecol, self.cmakers)
+        self.max_weight = store_csm(
+            self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

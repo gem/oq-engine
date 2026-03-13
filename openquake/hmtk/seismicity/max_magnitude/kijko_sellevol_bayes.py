@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2026 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
 # redistribute it and/or modify it under the terms of the GNU Affero General
@@ -137,12 +137,9 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
         while d_t > config["tolerance"]:
             rval = pval / (pval + mmax - mmin)
             ldelt = (1.0 / (1.0 - (rval**qval))) ** neq
-            delta = (
-                ldelt
-                * quad(
-                    self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
-                )[0]
-            )
+            delta = ldelt * quad(
+                self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
+            )[0]
 
             tmmax = obsmax + delta
             d_t = np.abs(tmmax - mmax)

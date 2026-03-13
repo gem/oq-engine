@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575, RSD2080
+
 
 CONSTANTS = {"mstar": 6.0,
              "r1": 10.0,
@@ -136,7 +137,14 @@ def _get_basin_term(C, ctx, region):
     """
     Return the basin term (equation 9)
     """
-    dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))
+    z1pt0 = ctx.z1pt0.copy() # metres
+    mask = z1pt0 == -999
+    z1pt0_ref = np.exp(_get_lnmu_z1(region, ctx.vs30))
+
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    z1pt0[mask] = z1pt0_ref[mask]
+
+    dz1 = z1pt0 - z1pt0_ref
     fb = C['c5'] * dz1
     fb[dz1 > CONSTANTS["dz1ref"]] = (C["c5"] * CONSTANTS["dz1ref"])
     return fb

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import csv
 import sys
 import inspect
@@ -29,7 +30,11 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
 import toml
-import pandas
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # hiding tz warning datetime.datetime.utcfromtimestamp() is deprecated
+    # (unfortunately also others)
+    import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
@@ -85,7 +90,7 @@ def sanitize(value):
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           fillvalue=0, attrs=None):
+           fillvalue=None, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string
@@ -328,9 +333,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'][()]
+    >>> int(dic['a']['x'][()])
     1
-    >>> dic['b'][()]
+    >>> int(dic['b'][()])
     3
     >>> f.close()
     """
@@ -503,6 +508,7 @@ class File(h5py.File):
               len(obj) and isinstance(obj[0], str)):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
         elif isinstance(obj, numpy.ndarray) and obj.shape:
+            # called when storing _csm
             d = self.create_dataset(path, obj.shape, obj.dtype, fillvalue=None)
             d[:] = obj
         elif (isinstance(obj, numpy.ndarray) and
@@ -668,6 +674,12 @@ class ArrayWrapper(object):
         self.extra = list(extra)
         if len(array):
             self.array = array
+        n = len(extra)
+        if 'shape_descr' in attrs and n > 1:
+            assert len(attrs['shape_descr']) == len(array.shape[:-1]), (
+                attrs['shape_descr'], array.shape[:-1])
+        if n > 1:
+            assert array.shape[-1] == n, (array.shape[-1], n)
 
     def __iter__(self):
         if hasattr(self, 'array'):
@@ -921,11 +933,19 @@ def _read_csv(fname, compositedt, usecols=None, skip=0):
     return df
 
 
-def find_error(fname, errors, dtype):
+def find_error(fname, errors, dtype, exc):
     """
     Given a CSV file with an error, parse it with the csv.reader
     and get a better exception including the first line with an error
     """
+    # first of all, search for errors like 'cannot safely convert passed user
+    # dtype of float64 for object dtyped data in column 16'
+    mo = re.search(r'column (\d+)', str(exc))
+    if mo:
+        c = int(mo.group(1))
+        exc.lineno = -1
+        exc.line = f'column {c} = {dtype.names[c]}'
+        return exc
     with open(fname, encoding='utf-8-sig', errors=errors) as f:
         reader = csv.reader(f)
         start = 1
@@ -945,13 +965,13 @@ def find_error(fname, errors, dtype):
 
 
 # called in `oq info file.csv`, used expecially for the exposures
-def sniff(fnames, sep=',', ignore=set()):
+def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
 
     :returns: a list of CSVFile namedtuples.
     """
-    common = None
+    common = set()
     files = []
     for fname in fnames:
         df = pandas.read_csv(fname, encoding='utf-8-sig', nrows=1)
@@ -962,12 +982,14 @@ def sniff(fnames, sep=',', ignore=set()):
         else:
             header = df.columns
             skip = 1  # only header
-        if common is None:
-            common = set(header)
-        else:
-            common &= set(header)
-        files.append(CSVFile(fname, header, common, os.path.getsize(fname),
-                             skip, 'ID_2' in header))
+        csvfile = CSVFile(fname, header, common, os.path.getsize(fname),
+                          skip, 'ID_2' in header)
+        if keep(csvfile):
+            if not common:
+                common.update(header)
+            else:
+                common &= set(header)
+            files.append(csvfile)
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
@@ -977,7 +999,8 @@ def sniff(fnames, sep=',', ignore=set()):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None, usecols=None):
+             index=None, errors=None, usecols=None, ignorecols=(),
+             dframe=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -986,7 +1009,9 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
     :param usecols: columns to read
-    :returns: an ArrayWrapper, unless there is an index
+    :param ignorecols: columns to ignore
+    :param dframe: pass True to return a DataFrame
+    :returns: an ArrayWrapper, unless there is an index or df is true
     """
     attrs = {}
     if fname.endswith('.csv'):
@@ -1000,11 +1025,13 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                     continue
                 break
             header = first.strip().split(sep)
+            for ignorecol in set(ignorecols) & set(header):
+                header.remove(ignorecol)
             dt = build_dt(dtypedict, header, fname)
         try:
             df = _read_csv(fname, dt, usecols, skip)
         except Exception as exc:
-            err = find_error(fname, errors, dt)
+            err = find_error(fname, errors, dt, exc)
             if err:
                 raise InvalidFile('%s: %s\nline:%d:%s' %
                                   (fname, err, err.lineno, err.line))
@@ -1023,7 +1050,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
             new = renamedict.get(name, name)
             newnames.append(new)
         arr.dtype.names = newnames
-    if index:
+    if index or dframe:
         df = pandas.DataFrame.from_records(arr, index)
         vars(df).update(attrs)
         return df

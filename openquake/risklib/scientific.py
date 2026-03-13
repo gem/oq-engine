@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -71,7 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-affectedpop injured
+affectedpop injured embodied_carbon
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -215,6 +215,7 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
+        assert len(imls) > 1, (imt, imls)
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(
@@ -255,8 +256,11 @@ class VulnerabilityFunction(object):
         self.covs = F64(self.covs)
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        # NB: we use fill_value="extrapolate" for compatibility with numpy 1
+        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
+                                             fill_value="extrapolate")
+        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
+                                              fill_value="extrapolate")
 
     def interpolate(self, gmf_df, col):
         """
@@ -348,6 +352,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
+        if len(mlrs) == 1:
+            raise ValueError(f'The mean loss ratios for {self.id} are constant!')
         return self.__class__(
             self.id, self.imt, imls, mlrs, covs, self.distribution_name)
 
@@ -1478,7 +1484,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     :returns: Maximum Probable Loss at the given return period
 
     >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
-    >>> maximum_probable_loss(losses, 2000, 10_000)
+    >>> float(maximum_probable_loss(losses, 2000, 10_000))
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
@@ -1691,11 +1697,19 @@ class RiskComputer(dict):
                 if len(outs) == 0:  # can happen for nonstructural_ins
                     continue
                 elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                    # computing the average dataframe for event_based_risk/case_8
+                    # computing average dataframe for event_based_risk/case_8
                     out[lt] = _agg(outs, weights[peril, lt])
                 elif len(outs) > 1:
-                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                    if outs[0].dtype.names:
+                        # tested case_lisa with a composite array 'loss', 'poe'
+                        out[lt] = outs[0]
+                        poes = numpy.sum([out['poe'] * wei for out, wei in zip(
+                            outs, weights[peril, lt])], axis=0)
+                        out[lt]['poe'] = poes
+                    else:
+                        # for oq-risk-tests test_ebd
+                        out[lt] = numpy.average(
+                            outs, weights=weights[peril, lt], axis=0)
                 else:
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based
@@ -1760,8 +1774,8 @@ class RiskComputer(dict):
                     dic = ast.literal_eval(hdf5.obj_to_json(rf))
                     if getattr(rf, 'retro', False):
                         retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                            'retro'] = retro
+                        dic['openquake.risklib.scientific.'
+                            'VulnerabilityFunction']['retro'] = retro
                     rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
         dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
         if any(mal for mal in self.minimum_asset_loss.values()):

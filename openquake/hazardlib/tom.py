@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -62,14 +62,10 @@ class BaseTOM(object):
         """
         raise NotImplementedError
 
-    def sample_number_of_occurrences(self, seeds=None):
+    def sample_number_of_occurrences(self, rng):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
-
-        The method uses the numpy random generator, which needs a seed
-        in order to get reproducible results. If the seed is None, it
-        should be set outside of this method.
         """
 
     def get_probability_no_exceedance(self):
@@ -101,7 +97,7 @@ class FatedTOM(BaseTOM):
         else:
             return 1
 
-    def sample_number_of_occurrences(self, seeds=None):
+    def sample_number_of_occurrences(self, rng):
         return 1
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
@@ -138,7 +134,7 @@ class PoissonTOM(BaseTOM):
         """
         return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(num)
 
-    def sample_number_of_occurrences(self, occurrence_rate, seeds=None):
+    def sample_number_of_occurrences(self, rng, occurrence_rate):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
@@ -147,26 +143,15 @@ class PoissonTOM(BaseTOM):
         in order to get reproducible results. If the seed is None, it
         should be set outside of this method.
 
+        :param rng:
+            Random number generator
         :param occurrence_rate:
             The average number of events per year.
-        :param seeds:
-            Random number generator seeds, one per each occurrence_rate
         :return:
             Sampled integer number of events to occur within model's
             time span.
         """
-        if isinstance(seeds, numpy.ndarray):  # array of seeds
-            assert len(seeds) == len(occurrence_rate), (
-                len(seeds), len(occurrence_rate))
-            rates = occurrence_rate * self.time_span
-            occ = []
-            for rate, seed in zip(rates, seeds):
-                numpy.random.seed(seed)
-                occ.append(numpy.random.poisson(rate))
-            return numpy.array(occ)
-        elif isinstance(seeds, int):
-            numpy.random.seed(seeds)
-        return numpy.random.poisson(occurrence_rate * self.time_span)
+        return rng.poisson(occurrence_rate * self.time_span)
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
         """
@@ -236,6 +221,8 @@ class NegativeBinomialTOM(BaseTOM):
     """
     Negative Binomial temporal occurrence model.
     """
+    x = numpy.arange(10, dtype=float)  # determine the size of the returned PMF
+
     def __init__(self, time_span, mu, alpha):
         """
         :param time_span:
@@ -252,7 +239,6 @@ class NegativeBinomialTOM(BaseTOM):
 
             where τ=1/α
         """
-
         super().__init__(time_span)
         self.mu = mu
         self.alpha = alpha
@@ -291,7 +277,7 @@ class NegativeBinomialTOM(BaseTOM):
 
         return scipy.stats.nbinom.pmf(num, tau, theta)
 
-    def sample_number_of_occurrences(self, mean_rate=None, seed=None):
+    def sample_number_of_occurrences(self, rng, mean_rate=None):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
@@ -300,10 +286,10 @@ class NegativeBinomialTOM(BaseTOM):
         in order to get reproducible results. If the seed is None, it
         should be set outside of this method.
 
+        :param rng:
+            Random number generator
         :param mean_rate:
             The mean rate, or mean number of events per year
-        :param seed:
-            Random number generator seed
         :return:
             Sampled integer number of events to occur within model's
             time span.
@@ -314,35 +300,22 @@ class NegativeBinomialTOM(BaseTOM):
         tau = 1 / self.alpha
         theta = tau / (tau + (mean_rate * self.time_span))
 
-        if isinstance(seed, int):
-            numpy.random.seed(seed)
+        return scipy.stats.nbinom.rvs(tau, theta, random_state=rng)
 
-        return scipy.stats.nbinom.rvs(tau, theta)
-
-    def get_pmf(self, mean_rate, tol=1-1e-14, n_max=None):
+    def get_pmf(self, mean_rate):
         """
         :param mean_rate:
-            The average number of events per year.
-        :param tol:
-            Quantile value up to which calculate the pmf
+            The average number of events per year (scalar or array)
         :returns:
-            1D numpy array containing the probability mass distribution,
+            1D or 2D array containing the probability mass distribution,
             up to tolerance level.
         """
-        # Gets dispersion from source object
-        alpha = self.alpha
         # Recovers NB2 parametrization (tau/theta or n,p in literature)
-        tau = 1 / alpha
-        theta = tau / (tau + numpy.array(mean_rate).flatten()*self.time_span)
-        if not n_max:
-            n_max = numpy.max(
-                scipy.stats.nbinom.ppf(tol, tau, theta).astype(int))
-            if n_max < 4:
-                # minimum n_max for which the hazard equation is integrated,
-                # to avoid precision issues for probabilities of occur (<1e-6)
-                n_max = 4
-        pmf = scipy.stats.nbinom.pmf(
-            numpy.arange(0, n_max), tau, theta[:, None])
+        tau = 1 / self.alpha
+        theta = tau / (tau + mean_rate * self.time_span)
+        if isinstance(theta, numpy.ndarray):
+            theta = theta[:, numpy.newaxis]  # shape (n, 1)
+        pmf = scipy.stats.nbinom.pmf(self.x, tau, theta)
         return pmf
 
     def get_probability_no_exceedance(self, mean_rate, poes):

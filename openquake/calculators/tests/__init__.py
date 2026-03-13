@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,9 +40,9 @@ class DifferentFiles(Exception):
     pass
 
 
-def strip_calc_id(fname):
+def strip_calc_id(fname, suffix=''):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+', '', name)
+    return re.sub(r'_\d+', suffix, name)
 
 
 def ignore_gsd_fields(header, lines):
@@ -134,7 +134,13 @@ class CalculatorTestCase(unittest.TestCase):
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
         log = logs.init(params)
-        return base.calculators(log.get_oqparam(), log.calc_id)
+        oq = log.get_oqparam()
+        if (isinstance(oq.hazard_calculation_id, str) and
+                oq.hazard_calculation_id.endswith('.ini')):
+            base.fix_hc_id(oq)
+        calc = base.calculators(oq, log.calc_id)
+        calc.test_mode = True
+        return calc
 
     def run_calc(self, testfile, job_ini, **kw):
         """

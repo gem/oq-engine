@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -136,7 +136,7 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     """
     N = len(sitecol)
     M = len(cmaker.imtls)
-    [ctx] = cmaker.get_ctx_iter([ebrupture.rupture], sitecol)
+    [ctx] = cmaker.get_ctxs([ebrupture.rupture], sitecol)
     mean, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
     rlzs = numpy.concatenate(list(cmaker.gsims.values()))
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
@@ -194,8 +194,9 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
-    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32), ('gsim_id', U16),
-                          ('imt_id', U8), ('mea', F32), ('tau', F32), ('phi', F32)])
+    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32),
+                          ('gsim_id', U16), ('imt_id', U8),
+                          ('mea', F32), ('tau', F32), ('phi', F32)])
 
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an EBRupture instance containing a
@@ -223,7 +224,7 @@ class GmfComputer(object):
         self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
-        ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
+        ctxs = cmaker.get_ctxs([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
@@ -290,6 +291,9 @@ class GmfComputer(object):
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             key = f'{sp.__class__.__name__}_{outkey}'
+                            if outkey == 'Disp':
+                                # Catarina says to ignore small displacements
+                                outarr[outarr < 1e-4] = 0
                             data[key].append(outarr)
                 n += E
 
@@ -315,10 +319,19 @@ class GmfComputer(object):
         df['rlz'] = eid_sid_rlz[2]
 
         # remove the rows with all zero values
-        return df[ok]
+        df = df[ok]
+
+        # remove the rows with low intensity secondary perils to save
+        # storage space (i.e. the computed seismic risk will be wrong)
+        minimum = self.cmaker.oq.minimum_intensity
+        for sec_imt in self.cmaker.oq.sec_imts:
+            _col, imt = sec_imt.split('_')
+            if imt in minimum:
+                df = df[df[sec_imt] >= minimum[imt]]
+        return df
 
     def compute_all(self, mean_stds=None, max_iml=None,
-                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -333,7 +346,7 @@ class GmfComputer(object):
             if E == 0:  # crucial for performance
                 continue
             if mean_stds is None:
-                with mmon:
+                with self.cmaker.gmf_mon:
                     ms = self.cmaker.get_4MN([self.ctx], gs)
             else:  # conditioned
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
@@ -380,7 +393,8 @@ class GmfComputer(object):
                 gmf = gmf.repeat(E, axis=1)
             else:
                 # add a cutoff to remove negative eigenvalues
-                cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(len(cov_WY_WY)) * eps
+                cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(
+                    len(cov_WY_WY)) * eps
                 arr = rng.multivariate_normal(
                     mu_Y.flatten(), cov_Y_Y, size=E,
                     check_valid="raise", tol=1e-5, method="cholesky")
@@ -396,7 +410,8 @@ class GmfComputer(object):
             for s, sid in enumerate(self.ctx.sids):
                 if gmv[s] > min_iml:
                     self.mea_tau_phi.append(
-                        (self.rup_id, sid, gsim.gid, m, mean[s], tau[s], phi[s]))
+                        (self.rup_id, sid, gsim.gid, m,
+                         mean[s], tau[s], phi[s]))
 
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
@@ -446,8 +461,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     .. note::
 
      This calculator is using random numbers. In order to reproduce the
-     same results numpy random numbers generator needs to be seeded, see
-     http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+     same results numpy random numbers generator needs to be seeded.
 
     :param openquake.hazardlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.

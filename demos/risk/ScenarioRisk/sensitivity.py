@@ -28,6 +28,7 @@ def path(name, cwd=os.path.dirname(__file__)):
 
 
 base_ini = dict(
+    base_path="",
     description="scenario_risk with strike ",
     calculation_mode="scenario_risk",
     region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",

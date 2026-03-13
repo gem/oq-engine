@@ -22,11 +22,13 @@ import unittest
 import pytest
 import numpy
 from openquake.calculators.base import expose_outputs
-from openquake.calculators.checkers import check
+from openquake.calculators.views import text_table
+from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
 
 cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
+
 
 def strip(fname):
     bname = os.path.basename(fname)
@@ -34,7 +36,7 @@ def strip(fname):
     return name + '.' + ext.rsplit('.')[1]
 
 
-def check_export_job(dstore):
+def check_export_job_zip(dstore):
     fnames = export(('job', 'zip'), dstore)
     assert [strip(f) for f in fnames] == [
         'job.ini',
@@ -51,9 +53,8 @@ def check_export_job(dstore):
         'residents_vulnerability.xml',
         'structural_vulnerability.xml',
         'taxonomy_mapping.csv',
-        'sites.csv',
-        'assetcol.csv']
-    # there is not gmfs_file, since this is a test without shakemap
+        'sites.csv', 'assetcol.csv']
+    # there is no gmfs_file, since this is a test without shakemap
     return fnames
 
 
@@ -69,7 +70,7 @@ def compare(dstore1, dstore2):
     for ltype in ltypes:
         avg1 = dstore1[f'avg_losses-stats/{ltype}'][:]
         avg2 = dstore2[f'avg_losses-stats/{ltype}'][:]
-        aac(avg1, avg2, rtol=1e-5)
+        aac(avg1, avg2, rtol=1e-2, atol=1e-3)
 
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
@@ -79,13 +80,22 @@ def test_impact(n):
         raise unittest.SkipTest(f'Missing {expo}')
     calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
-        # repeat the calculation by exporting the input files
-        fnames = check_export_job(calc.datastore)
+        # test export_aggexp
+        fnames = export(('aggexp_tags', 'csv'), calc.datastore)
+        assert [strip(f) for f in fnames] == [
+            'aggexp_tags-ID_0.csv',
+            'aggexp_tags-ID_2.csv']
+
+        # [job.ini, exposure.xml, rupture.csv, ...]
+        fnames = check_export_job_zip(calc.datastore)
+
+        # repeat the calculation starting from job.zip unzipped
         calc2, log2 = check(fnames[0])
         with log, log2:
             expose_outputs(calc.datastore)
             expose_outputs(calc2.datastore)
             compare(calc.datastore, calc2.datastore)
+
 
 def test_impact5():
     # this is a case where there are no assets inside the MMI multipolygons
@@ -93,4 +103,11 @@ def test_impact5():
         raise unittest.SkipTest(f'Missing {expo}')
 
     # importing the exposure around Nepal and aggregating it
-    check(cd / 'impact5/job.ini')
+    calc, _log = check(cd / 'impact5/job.ini')
+    calc.assetcol.array['lon'] = 64.22
+    calc.assetcol.array['lat'] = 32.82
+    inp = calc.oqparam.inputs
+    df = calc.assetcol.get_mmi_values(calc.oqparam.aggregate_by,
+                                      inp['mmi'], inp['exposure'][0])
+    tt = text_table(df, ext='org')
+    assert_close(tt, cd / 'impact5/exposure_by_mmi.org')

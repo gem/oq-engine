@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+<sourceModel name="br1_IR_M1stor">
+  <sourceGroup name="The only group" tectonicRegion="Volcanic Shallow" >
+    <pointSource
+        id="Etna_103"
+        name="103"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5163000E+01 3.7709000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.2400000E-01" bValue="7.5000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="1.3300000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_104"
+        name="104"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5163000E+01 3.7729000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.3000000E-01" bValue="7.2000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="1.3640000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_147"
+        name="147"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5143000E+01 3.7649000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.5300000E-01" bValue="7.5000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="3.4070000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_207"
+        name="207"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5183000E+01 3.7709000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.3200000E-01" bValue="6.9000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="5.2570000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_211"
+        name="211"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5203000E+01 3.7729000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.3800000E-01" bValue="7.0000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="5.1610000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_44"
+        name="44"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5123000E+01 3.7729000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.2300000E-01" bValue="5.7000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="0.0000000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_45"
+        name="45"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5123000E+01 3.7749000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.2300000E-01" bValue="6.6000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="0.0000000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource
+        id="Etna_90"
+        name="90"
+        >
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>
+            1.5143000E+01 3.7629000E+01
+          </gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.0000000E+01
+        </lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.4600000E-01" bValue="7.2000000E-01" maxMag="4.2000000E+00" minMag="3.5000000E+00"/>
+      <nodalPlaneDist>
+        <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="1.4160000E+00" probability="1.0000000E+00"/>
+      </hypoDepthDist>
+    </pointSource>
+    <simpleFaultSource
+        id="Etna_FF"
+        name="Simple Fault"
+        >
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>
+            1.5090016E+01 3.7666061E+01 1.5146856E+01 3.7613330E+01
+          </gml:posList>
+        </gml:LineString>
+        <dip>
+          9.0000000E+01
+        </dip>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          1.5000000E+00
+        </lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <incrementalMFD
+          binWidth="1.0000000E-01"
+          minMag="4.3000000E+00"
+          >
+        <occurRates>
+          2.7434000E-03 4.2787000E-03 4.2787000E-03 2.7434000E-03
+        </occurRates>
+      </incrementalMFD>
+      <rake>
+        -9.0000000E+01
+      </rake>
+    </simpleFaultSource>
+    <simpleFaultSource
+        id="Etna_MF"
+        name="Simple Fault"
+        >
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>
+            1.5162938E+01 3.7661780E+01 1.5140449E+01 3.7731905E+01
+          </gml:posList>
+        </gml:LineString>
+        <dip>
+          7.0000000E+01
+        </dip>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          6.2000000E+00
+        </lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <incrementalMFD
+          binWidth="1.0000000E-01"
+          minMag="4.3000000E+00"
+          >
+        <occurRates>
+          1.3064000E-03 1.7247000E-03 2.0374000E-03 2.1538000E-03 2.0374000E-03 1.7247000E-03 1.3064000E-03
+        </occurRates>
+      </incrementalMFD>
+      <rake>
+        -9.0000000E+01
+      </rake>
+    </simpleFaultSource>
+    <simpleFaultSource
+        id="Etna_STF"
+        name="Simple Fault"
+        >
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>
+            1.5115882E+01 3.7686314E+01 1.5171644E+01 3.7634170E+01
+          </gml:posList>
+        </gml:LineString>
+        <dip>
+          9.0000000E+01
+        </dip>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          5.5000000E+00
+        </lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <incrementalMFD
+          binWidth="1.0000000E-01"
+          minMag="4.3000000E+00"
+          >
+        <occurRates>
+          7.3860000E-04 8.9991000E-04 1.0436000E-03 1.1519000E-03 1.2103000E-03 1.2103000E-03 1.1519000E-03 1.0436000E-03 8.9991000E-04 7.3860000E-04
+        </occurRates>
+      </incrementalMFD>
+      <rake>
+        -9.0000000E+01
+      </rake>
+    </simpleFaultSource>
+    <simpleFaultSource
+        id="Etna_SVF"
+        name="Simple Fault"
+        >
+      <simpleFaultGeometry>
+        <gml:LineString>
+          <gml:posList>
+            1.5125685E+01 3.7690801E+01 1.5165664E+01 3.7652170E+01
+          </gml:posList>
+        </gml:LineString>
+        <dip>
+          9.0000000E+01
+        </dip>
+        <upperSeismoDepth>
+          0.0000000E+00
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+          5.5000000E+00
+        </lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>
+        WC1994
+      </magScaleRel>
+      <ruptAspectRatio>
+        1.5000000E+00
+      </ruptAspectRatio>
+      <incrementalMFD
+          binWidth="1.0000000E-01"
+          minMag="4.3000000E+00"
+          >
+        <occurRates>
+          2.7434000E-03 4.2787000E-03 4.2787000E-03 2.7434000E-03
+        </occurRates>
+      </incrementalMFD>
+      <rake>
+        -9.0000000E+01
+      </rake>
+    </simpleFaultSource>
+  </sourceGroup>
+</sourceModel>
+</nrml>

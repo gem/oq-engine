@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,6 +33,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
 
+F64 = numpy.float64
 
 @dataclass
 class SourceParam:
@@ -199,11 +200,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
-    esites = 0  # updated in estimate_weight
+    nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
     trt_smr = -1  # set by the engine
     num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    dt = 0  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -272,11 +274,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: the magnitudes of the ruptures contained in the source
         """
-        mags = set()
         if hasattr(self, 'get_annual_occurrence_rates'):
-            for mag, rate in self.get_annual_occurrence_rates():
-                mags.add(mag)
-        elif hasattr(self, 'mags'):  # MultiFaultSource
+            return F64([m for m, r in self.get_annual_occurrence_rates()])
+        mags = set()
+        if hasattr(self, 'mags'):  # MultiFaultSource
             mags.update(self.mags)
         else:  # nonparametric
             for rup, pmf in self.data:
@@ -349,7 +350,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         String representation of a source, displaying the source class name
         and the source id.
         """
-        return '<%s %s, weight=%.2f>' % (
+        return '<%s %s, weight=%.1f>' % (
             self.__class__.__name__, self.source_id, self.weight)
 
 

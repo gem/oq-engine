@@ -83,15 +83,14 @@ Contacts
 ********
 
 - Support forum: https://groups.google.com/g/openquake-users
-- X/Twitter: https://x.com/gem_devs
 
 
 License
 *******
 
 This material is distributed under the Creative Common License
-Attribution-NonCommercial- ShareAlike 3.0 Unported (`CC BY-NC-SA 3.0
-<http://creativecommons.org/licenses/by-nc-sa/3.0/>`__). You
+Attribution-NonCommercial-ShareAlike 4.0 International (`CC BY-NC-SA 4.0
+<https://creativecommons.org/licenses/by-nc-sa/4.0/>`__). You
 can share it with others as long as you provide proper credit, 
 but you cannot change it in any way or use it commercially.
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,6 +72,7 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
+import os
 import re
 import sys
 import operator
@@ -337,6 +338,10 @@ def read_source_models(fnames, converter):
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
+
+        if os.environ.get('OQ_POINTLIKE'):  # debugging pointlike sources
+            for sg in sm.src_groups:
+                sg.sources = [src for src in sg if src.code in b'PAM']
 
         # check investigation time for NonParametricSeismicSources
         cit = converter.investigation_time

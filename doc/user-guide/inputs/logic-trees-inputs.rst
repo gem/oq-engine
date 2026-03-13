@@ -211,7 +211,7 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 - if ``uncertaintyType="characteristicFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance 
   of the ``characteristicFaultGeometry`` source node, as described in section :ref:`Characteristic faults <characteristic-faults>`
 
-The maximum number of logicTreeBranch elements per branchset is 182 and the uncertainty weights should sum to 1.0.
+The maximum number of logicTreeBranch elements per branchset is 183 and the uncertainty weights should sum to 1.0.
 
 The ``logicTreeBranchSet`` element offers also a number of optional attributes allowing for complex tree definitions:
 
@@ -571,7 +571,7 @@ The complete realizations can be obtained by not specifying ``applyToBranches``:
 You can serialize a logic tree built programmatically into an XML file
 with a call like this:
 
-.. python:
+.. code-block:: python
 
   with open('lt.xml', 'wb') as f:
       nrml.write([logictree.to_node()], f)
@@ -1088,3 +1088,62 @@ and not for others. Here is an example::
 Clearly the weights for each IMT must sum up to 1, otherwise the engine will complain. Note that this feature only 
 works for the classical calculators: in the event based case only the default ``uncertaintyWeight`` (i.e. the first in 
 the list of weights, the one without ``imt`` attribute) would be taken for all IMTs.
+
+***********************************
+Site-dependent logic trees
+***********************************
+
+In version 3.24 of the OpenQuake engine, in order to support the
+USA 2023 national hazard model, we implemented site-dependent
+logic trees, i.e. the ability to use different logic trees in
+different geographic regions. In order to use this feature,
+the user has to prepare the site model file, the logic tree file
+and the job.ini file carefully.
+
+Let's start from the job.ini file. Here the user just needs to specify
+the ``site_labels`` dictionary. This is a dictionary which explicitly
+links each region-specific GMM logic tree with the ``ilabel`` in the
+site model. An example could be::
+
+  # add to the job.ini
+  site_labels = {"Cascadia": 1, "LosAngeles": 2}
+
+This means that there are two special regions ("Cascadia" and "LosAngeles",
+notice that the site label cannot contain spaces), plus a default region
+corresponding to the rest of the United States. Each special region gets
+an integer label starting from 1, i.e. in this example::
+
+ Cascadia: ilabel=1
+ LosAngeles: ilabel=2
+
+The site model file has to be prepared accordingly: externally to the engine
+the user has to associate the sites belonging to the "Cascadia" region
+with the ``ilabel`` 1 and the sites belonging to the "LosAngeles" region
+with the ``ilabel`` 2. All the other sites get the default ``ilabel=0``. The
+default GMM logic trees for each TRT will be applied to sites with ``ilabel=0``,
+and otherwise the region-specific GMM logic tree associated with each ``ilabel``
+will be applied. 
+
+Finally the ``gsim_logic_tree_file`` has to be prepared by
+collecting together the default GMM logic trees, the GMM logic tree
+for region 1 and the GMM logic tree for region 2. If all the logic trees
+have the same number of branches per branchset there is nothing more to do.
+However, if some branches are missing, you will get an error. The solution
+is to add the missing branches by using a ``DummyGMPE`` with a weight of zero:
+
+.. code-block:: xml
+
+      <logicTreeBranch branchID="dummy">
+        <uncertaintyModel>DummyGMPE</uncertaintyModel>
+        <uncertaintyWeight>0.0</uncertaintyWeight>
+      </logicTreeBranch>
+
+By carefully adding dummy branches, the logic trees can be made consistent,
+in the sense that they will all generate the same number of realizations,
+even if some realizations will have zero weight in case of full
+enumeration, or will never be sampled in case of sampling.
+
+NB: site-dependent logic trees are currently **not supported** for event based
+calculations and in general for all risk calculations. The calculations
+will run, but only the weights corresponding to the default logic tree
+will be used.

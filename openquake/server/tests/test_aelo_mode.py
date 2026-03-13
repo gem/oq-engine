@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client, override_settings
 from django.conf import settings
 from openquake.baselib import config
+from openquake.calculators.base import get_aelo_version
+from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
 from openquake.server.views import get_disp_val
@@ -42,9 +44,6 @@ django.setup()
 try:
     User = get_user_model()
 except RuntimeError:
-    # Django tests are meant to be run with the command
-    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-    # ./openquake/server/manage.py test tests.views_test
     raise unittest.SkipTest('Use Django to run such tests')
 
 
@@ -127,20 +126,31 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('finished correctly', email_content)
                 email_from = settings.EMAIL_HOST_USER
                 email_to = settings.EMAIL_SUPPORT
+                asce_version = params.get(
+                    'asce_version', OqParam.asce_version.default)
                 self.assertIn(f'From: {email_from}', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn(f'Reply-To: {email_to}',
-                              email_content)
+                self.assertIn(f'Reply-To: {email_to}', email_content)
                 self.assertIn(
-                    f"Input values: lon = {params['lon']},"
-                    f" lat = {params['lat']}, vs30 = {params['vs30']},"
-                    f" siteid = {params['siteid']}", email_content)
+                    f"Site name: {params['site_name']}\n"
+                    f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
+                    f"Site Class: Vs30 = {params['vs30']} m/s\n"
+                    f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
+                    f"AELO version: {get_aelo_version()}\n\n", email_content)
                 if failure_reason:
                     self.assertIn(failure_reason, email_content)
                 else:
                     self.assertIn('Please find the results here:',
                                   email_content)
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_aelo')
+        self.c.get(f'/v1/calc/{job_id}/download_png/hcurves.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/site.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
@@ -158,8 +168,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
+        # NOTE: the site_name is transformed into a description and a custom_site_id
         params = dict(
-            lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
+            lon=lon, lat=lat, vs30='800.0', site_name='CCA SITE')
         self.aelo_run_then_remove(params)
 
     # NOTE: we can easily add tests for other models as follows:
@@ -167,18 +178,18 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     # def test_aelo_successful_run_EUR(self):
     #     lon, lat = self.get_tested_lon_lat('EUR')
     #     params = dict(
-    #         lon=lon, lat=lat, vs30='800.0', siteid='EUR_SITE')
+    #         lon=lon, lat=lat, vs30='800.0', site_name='EUR_SITE')
     #     self.aelo_run_then_remove(params)
 
     # def test_aelo_successful_run_JPN(self):
     #     lon, lat = self.get_tested_lon_lat('JPN')
     #     params = dict(
-    #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
+    #         lon=lon, lat=lat, vs30='800.0', site_name='JPN_SITE')
     #     self.aelo_run_then_remove(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
-            lon='-86.0', lat='88.0', vs30='800.0', siteid='SOMEWHERE')
+            lon='-86.0', lat='88.0', vs30='800.0', site_name='SOMEWHERE')
         failure_reason = (
             f"Site at lon={params['lon']} lat={params['lat']}"
             f" is not covered by any model!")
@@ -195,22 +206,22 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.assertIn(expected_error, resp_dict['error_msg'])
 
     def test_aelo_invalid_latitude(self):
-        params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
+        params = dict(lon='-86', lat='100', vs30='800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'latitude 100.0 > 90')
 
     def test_aelo_invalid_longitude(self):
-        params = dict(lon='-186', lat='12', vs30='800', siteid='CCA_SITE')
+        params = dict(lon='-186', lat='12', vs30='800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'longitude -186.0 < -180')
 
     def test_aelo_invalid_vs30(self):
-        params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
+        params = dict(lon='-86', lat='12', vs30='-800', site_name='CCA_SITE')
         self.aelo_invalid_input(params, 'vs30 -800.0 is smaller than the minimum (150)')
-        params = dict(lon='-86', lat='12', vs30='4000', siteid='CCA_SITE')
-        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (3000)')
+        params = dict(lon='-86', lat='12', vs30='4000', site_name='CCA_SITE')
+        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (1525)')
 
-    def test_aelo_invalid_siteid(self):
-        siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
-        params = dict(lon='-86', lat='12', vs30='800', siteid=siteid)
+    def test_aelo_invalid_site_name(self):
+        site_name = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
+        params = dict(lon='-86', lat='12', vs30='800', site_name=site_name)
         self.aelo_invalid_input(
             params,
             "site name can not be longer than %s characters" %
@@ -249,3 +260,17 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             '1.00', '1.00', '1.01', '1.10', '1.10', '1.50']
         computed = [get_disp_val(v) for v in test_vals_in]
         assert expected == computed
+
+    def test_aelo_changelog(self):
+        resp = self.c.get('/engine/aelo_changelog')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_aelo_site_classes(self):
+        resp = self.c.get('/v1/aelo_site_classes')
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(resp['ASCE7-22']['default'],
+                         {'display_name': 'Default', 'vs30': [260, 365, 530]})
+        self.assertEqual(resp['ASCE7-22']['BC'],
+                         {'display_name': 'BC - Soft rock', 'vs30': 760})
+        self.assertEqual(resp['ASCE7-16']['BC'],
+                         {'display_name': 'B-C boundary', 'vs30': 760})

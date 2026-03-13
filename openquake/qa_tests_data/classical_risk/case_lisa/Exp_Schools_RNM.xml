@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+
+  <exposureModel category="buildings" id="exposure" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="per_asset" unit="EUR"/>
+      </costTypes>
+    </conversions>
+
+  <exposureFields>
+    <field oq="id" input="ASSET_ID" />
+    <field oq="lon" input="LONGITUDE" />
+    <field oq="lat" input="LATITUDE" />
+    <field oq="taxonomy" input="TAXONOMY" />
+    <field oq="number" input="BUILDINGS" />
+    <field oq="area" input="TOTAL_AREA_SQM" />
+    <field oq="structural" input="TOTAL_REPL_COST_EUR" />
+    <field oq="day" input="OCCUPANTS_PER_ASSET_DAY" />
+    <field oq="night" input="OCCUPANTS_PER_ASSET_NIGHT" />
+  </exposureFields>
+
+    <occupancyPeriods>day night</occupancyPeriods>
+
+    <tagNames>ID_0 NAME ADRESS REGION LEVEL STATUS SOURCE MUNICIPALITY PUPILS STAFF</tagNames>
+    <assets>Exp_Schools_RNM.csv</assets>
+  </exposureModel>
+
+</nrml>

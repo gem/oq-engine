@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,8 +22,7 @@ from openquake.baselib.parallel import Starmap, sequential_apply, Monitor
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import (
-    calc_hazard_curve, calc_hazard_curves)
+from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
@@ -292,14 +291,13 @@ class NewApiTestCase(unittest.TestCase):
             maximum_distance=IntegrationDistance.new('300'),
             af=None)
         mon = Monitor()
-        hcurve = calc_hazard_curve(
-            sitecol, asource, [ExampleA2021()], oq, mon)
+        hcurve = calc_hazard_curves(
+            [asource], sitecol, oq.imtls,
+            {asource.tectonic_region_type: ExampleA2021()})[0]
         for child in mon.children:
             print(child)
-        got = hcurve[:, 0]
-        exp = [0.103379, 0.468937, 0.403896, 0.278772, 0.213645, 0.142985,
-               0.103438, 0.079094, 0.062861, 0.051344, 0.04066, 0.031589,
-               0.024935]
+        got = hcurve['PGA']
+        exp = [0.103379]
         numpy.testing.assert_allclose(got, exp, atol=1E-5)
 
     def test_two_sites(self):

@@ -16,7 +16,7 @@ file (job.ini) that combines the hazard and risk calculations, to
 demonstrate a complete end-to-end demonstration of the workflow.
 
 An alternate file, job_eb.ini, is also included in this demo, to
-demonstrate the newer `ebrisk` calculator.
+demonstrate the ground_motion_fields=false option.
 
 
 **Expected Runtimes and Outputs**

@@ -16,7 +16,7 @@ The _shared directory_ must be exported from the master node to the workers via 
 
 Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`. Also that folder must be exported from the master node to the workers.
 
-As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node. 
+As soon as the shared export is in place, the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node.
 
 ```
 [directory]
@@ -45,7 +45,7 @@ On the workers the _shared_dir_ should be mounted as the `openquake` user too
 shared_dir = /oq_shared
 ```
 
-It is not necessary to configure `openquake.cfg` for `/opt/openquake`
+It is not necessary to configure `openquake.cfg` for `/opt/openquake/venv`
 
 ### Network and security considerations
 
@@ -84,7 +84,7 @@ NFS for example).
 On the master node you will also need space for:
 
 - the **shared_dir** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
-- the OpenQuake database (located under `/var/lib/openquake/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
+- the OpenQuake database (located under `/opt/openquake/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
 - the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
 On large installations we strongly suggest to create a separate partition for `/home`.
@@ -112,7 +112,7 @@ need to install anything on the worker nodes except Python.
 The following file (on all nodes) should be modified to enable
 *zmq* support:
 
-`/opt/openquake/openquake.cfg`
+`/opt/openquake/venv/openquake.cfg`
 
 ```
 [distribution]
@@ -120,7 +120,6 @@ The following file (on all nodes) should be modified to enable
 oq_distribute = zmq
 
 [dbserver]
-file = /var/lib/openquake/oqdata/db.sqlite3
 # address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,11 +42,20 @@ Here is a minimal example of usage:
 """
 
 import os
+import re
+import sys
 import inspect
 import argparse
 import importlib
 
 NODEFAULT = object()
+
+
+def is_dotname(name):
+    """
+    :returns: True if the name is not a dotname, else False
+    """
+    return all(re.match(r'\w+', n) for n in name.split('.'))
 
 
 def _choices(choices):
@@ -63,6 +72,8 @@ def _populate(parser, func):
     if argspec.varargs:
         raise TypeError('varargs in the signature of %s are not supported'
                         % func)
+    if argspec.args[0] == 'self':  # strip self
+        argspec.args[:] = argspec.args[1:]
     defaults = argspec.defaults or ()
     nodefaults = len(argspec.args) - len(defaults)
     alldefaults = (NODEFAULT,) * nodefaults + defaults
@@ -164,12 +175,16 @@ def pkg2dic(pkg):
     return dic
 
 
-def parser(funcdict, **kw):
+def parser(obj, **kw):
     """
-    :param funcdict: a function or a nested dictionary of functions
+    :param obj: a function or a nested dictionary of functions
     :param kw: keyword arguments passed to the underlying ArgumentParser
     :returns: the ArgumentParser instance
     """
+    if hasattr(obj, '__subcommands__'):
+        funcdict = {k: getattr(obj, k) for k in obj.__subcommands__}
+    else:
+        funcdict = obj
     if isinstance(funcdict, dict):
         version = funcdict.pop('__version__', None)
     else:
@@ -187,7 +202,7 @@ def parser(funcdict, **kw):
     return parser
 
 
-def _run(parser, argv=None):
+def _run(parser, argv):
     namespace = parser.parse_args(argv)
     try:
         func = namespace.__dict__.pop('_func')
@@ -203,13 +218,19 @@ def _run(parser, argv=None):
     return func(**dic)
 
 
-def run(funcdict, argv=None, **parserkw):
+def run(obj, argv=None, **parserkw):
     """
-    :param funcdict: a function or a nested dictionary of functions
+    :param obj: a module, a function or a (nested) dictionary of functions
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
-    return _run(parser(funcdict, **parserkw), argv)
+    argv = argv or sys.argv[1:]
+    n = len(argv)
+    if n > 1 and sys.argv[1] == 'shell' and is_dotname(argv[1]):
+        # hack to support oq shell openquake.engine.global_ses -h
+        obj = importlib.import_module(argv[1])
+        return _run(parser(obj, **parserkw), argv[1:])
+    return _run(parser(obj, **parserkw), argv)
 
 
 def runline(line, **parserkw):
@@ -218,3 +239,14 @@ def runline(line, **parserkw):
     """
     pkg, *args = line.split()
     return run(importlib.import_module(pkg), args, **parserkw)
+
+
+def run_func(dic):
+    """
+    Run a function with arguments described by a dictionary (i.e.
+    {'func': 'openquake.calculators.postproc.funcname', 'a': 1, 'b': 2})
+    """
+    dotname = dic.pop('func')
+    modname, funcname = dotname.rsplit('.', 1)
+    func = getattr(importlib.import_module(modname), funcname)
+    return func(**dic)

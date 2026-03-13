@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ import operator
 import itertools
 import subprocess
 import collections
+import tracemalloc
 from datetime import datetime
 from contextlib import contextmanager
 from decorator import decorator
@@ -50,7 +51,9 @@ task_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
-
+starmap_info_dt = numpy.dtype(
+    [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
+     ('min', numpy.float32), ('max', numpy.float32)])
 F16= numpy.float16
 F64= numpy.float64
 I64 = numpy.int64
@@ -74,7 +77,7 @@ def print_stats(pr, fname):
     """
     Print the stats of a Profile instance
     """
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
         ps.print_stats()
 
@@ -115,6 +118,8 @@ def init_performance(hdf5file, swmr=False):
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
+    if 'starmap_info' not in h5:
+        hdf5.create(h5, 'starmap_info', starmap_info_dt)
     if 'task_sent' not in h5:
         h5['task_sent'] = '{}'
     if swmr:
@@ -215,7 +220,6 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
-    #config = config
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None, dbserver_host='127.0.0.1'):
@@ -326,6 +330,16 @@ class Monitor(object):
         hdf5.extend(h5['task_info'], data)
         h5['task_info'].flush()  # notify the reader
 
+    def save_starmap_info(self, h5, name, times):
+        """
+        Called at the end of a Starmap. Store stats about the times per core.
+        """
+        t = (name, times.mean(), times.std(), times.min(), times.max())
+        data = numpy.array([t], starmap_info_dt)
+        hdf5.extend(h5['starmap_info'], data)
+        logging.info('Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
+                     t[1], t[2], t[3], t[4])
+
     def reset(self):
         """
         Reset duration, mem, counts
@@ -338,6 +352,9 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
+        if getattr(h5, 'mode', 'r') == 'r':
+            # in AristotleParam h5 is replaced with a dictionary
+            return
         data = self.get_data()
         if len(data):
             hdf5.extend(h5['performance_data'], data)
@@ -396,6 +413,11 @@ class Monitor(object):
             elif dset.shape:
                 return dset[slc]
             return pickle.loads(dset[()])
+
+    def read_pdcolumns(self, key):
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            return f[key].attrs['__pdcolumns__']
 
     def iter(self, genobj, atstop=lambda: None):
         """
@@ -458,7 +480,7 @@ def compile(sigstr):
     """
     Compile a function Ahead-Of-Time using the given signature string
     """
-    return numba.njit(sigstr, error_model='numpy', cache=True)
+    return numba.njit(sigstr, error_model='numpy', cache=True, nogil=True)
 
 
 # used when reading _rates/sid
@@ -505,9 +527,10 @@ def get_slices(uint32s):
     :param uint32s: a sequence of uint32 integers (with repetitions)
     :returns: a dict integer -> [(start, stop), ...]
 
-    >>> from pprint import pprint
-    >>> pprint(get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0])))
-    {0: [(0, 2), (7, 8)], 2: [(5, 7)], 3: [(2, 5)]}
+    >>> slices = get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0]))
+    >>> slices
+    {0: array([[0, 2],
+           [7, 8]]), 3: array([[2, 5]]), 2: array([[5, 7]])}
     """
     if len(uint32s) == 0:
         return {}
@@ -516,7 +539,7 @@ def get_slices(uint32s):
         if idx not in indices:
             indices[idx] = []
         indices[idx].append((start, stop))
-    return indices
+    return {int(i): numpy.array(indices[i]) for i in indices}
 
 
 # this is used in split_array and it may dominate the performance
@@ -593,3 +616,15 @@ def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
     if afield:
         return res, split_array(array[afield], indices, counts)
     return res
+
+
+@contextmanager
+def monitor_alloc():
+    tracemalloc.start()
+    snap1 = tracemalloc.take_snapshot()
+    yield
+    snap2 = tracemalloc.take_snapshot()
+    top_stats = snap2.compare_to(snap1, 'lineno')
+    print("Top 10 memory differences:")
+    for stat in top_stats[:10]:
+        print(stat)

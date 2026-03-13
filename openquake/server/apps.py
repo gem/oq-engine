@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2025 GEM Foundation
+# Copyright (C) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,8 @@ from sqlite3 import OperationalError
 from openquake.baselib import config
 from openquake.server import dbserver, db
 
+oqdir = os.path.dirname(os.path.dirname(__file__))
+
 
 class ServerConfig(AppConfig):
     name = 'openquake.server'
@@ -34,6 +36,9 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
+        if settings.TEST:
+            config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
+
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
@@ -49,9 +54,9 @@ class ServerConfig(AppConfig):
             raise ValueError(
                 f'Invalid application mode: "{settings.APPLICATION_MODE}".'
                 f' It must be one of {settings.APPLICATION_MODES}')
-        if settings.APPLICATION_MODE == 'ARISTOTLE':
+        if settings.APPLICATION_MODE == 'IMPACT':
             try:
-                # NOTE: optional dependency needed for ARISTOTLE
+                # NOTE: optional dependency needed for IMPACT
                 from timezonefinder import TimezoneFinder  # noqa
             except ImportError:
                 raise ImportError(
@@ -59,35 +64,30 @@ class ServerConfig(AppConfig):
                     ' It is required in order to convert the UTC time to'
                     ' the local time of the event. You can install it'
                     ' running: pip install timezonefinder==6.5.2')
-        if settings.LOCKDOWN and settings.APPLICATION_MODE in (
-                'AELO', 'ARISTOTLE'):
+        if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
+                not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
-            try:
-                settings.EMAIL_BACKEND  # noqa
-            except NameError:
-                raise NameError(
-                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE} an'
-                    f' email backend must be defined')
-            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
-                try:
-                    settings.EMAIL_HOST           # noqa
-                    settings.EMAIL_PORT           # noqa
-                    settings.EMAIL_USE_TLS        # noqa
-                    settings.EMAIL_HOST_USER      # noqa
-                    settings.EMAIL_HOST_PASSWORD  # noqa
-                except NameError:
-                    raise NameError(
-                        f'If APPLICATION_MODE is {settings.APPLICATION_MODE}'
-                        f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
-                        f' must all be defined')
+            if settings.EMAIL_BACKEND is None:
+                raise NameError('If authentication is enabled (without PAM) an'
+                                ' email backend must be defined')
+            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+                required_email_settings = ('EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USE_TLS',
+                                           'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD')
+                for email_setting in required_email_settings:
+                    if getattr(settings, email_setting) is None:
+                        raise NameError(
+                            f'If authentication is enabled (without PAM)'
+                            f' all the following settings must be specified:'
+                            f' {required_email_settings}')
+        if settings.APPLICATION_MODE in ('AELO', 'IMPACT'):
             if not config.directory.mosaic_dir:
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
-        if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
-            # NOTE: this might be needed also for ARISTOTLE
-            aelo_changelog_path = os.path.join(
-                config.directory.mosaic_dir, 'aelo_changelog.ini')
-            if not os.path.isfile(aelo_changelog_path):
-                raise FileNotFoundError(
-                    f'{aelo_changelog_path} was not found!')
+            if settings.APPLICATION_MODE == 'AELO':
+                # NOTE: this might be needed also for IMPACT
+                aelo_changelog_path = os.path.join(
+                    config.directory.mosaic_dir, 'aelo_changelog.ini')
+                if not os.path.isfile(aelo_changelog_path):
+                    raise FileNotFoundError(
+                        f'{aelo_changelog_path} was not found!')

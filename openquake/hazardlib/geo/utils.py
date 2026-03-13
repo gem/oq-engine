@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,11 +27,15 @@ import collections
 
 import numpy
 import numba
+try:
+    from h3 import latlng_to_cell
+except ImportError:  # old version
+    from h3 import geo_to_h3 as latlng_to_cell
+
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry, contains_xy
+from shapely import geometry, contains_xy, Point, points
 from shapely.strtree import STRtree
-
 from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile, split_array
 from openquake.hazardlib import geo
@@ -118,7 +122,7 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
-@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+@compile(['(f8[:],f8[:])', '(f4[:],f4[:])'])
 def angular_mean_weighted(degrees, weights):
     # not using @ to avoid a NumbaPerformanceWarning:
     # '@' is faster on contiguous arrays
@@ -136,11 +140,11 @@ def angular_mean(degrees, weights=None):
     Given an array of angles in degrees, returns its angular mean.
     If weights are passed, assume sum(weights) == 1.
 
-    >>> angular_mean([179, -179])
+    >>> print(angular_mean([179, -179]))
     180.0
-    >>> angular_mean([-179, 179])
+    >>> print(angular_mean([-179, 179]))
     180.0
-    >>> angular_mean([-179, 179], [.75, .25])
+    >>> print(angular_mean([-179, 179], [.75, .25]))
     -179.4999619199226
     """
     if len(degrees) == 1:
@@ -247,11 +251,8 @@ class _GeographicObjects(object):
         mesh = exp.mesh
         assets_by_site = split_array(exp.assets, exp.assets['site_id'])
         if region:
-            # TODO: use SRTree
-            out = []
-            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-                if not geometry.Point(lon, lat).within(region):
-                    out.append(i)
+            ps = points(mesh.lons, mesh.lats)
+            out = [i for i, p in enumerate(ps) if not p.within(region)]
             if out:
                 ok = ~numpy.isin(numpy.arange(len(mesh)), out)
                 if ok.sum() == 0:
@@ -267,7 +268,8 @@ class _GeographicObjects(object):
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
-        for obj, distance, assets in zip(objs, distances, assets_by_site):
+        for obj, distance, assets, lon, lat in zip(
+                objs, distances, assets_by_site, mesh.lons, mesh.lats):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
@@ -331,8 +333,8 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     tree = STRtree(polygons)
     index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
 
-    for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-        point = geometry.Point(lon, lat)
+    for sid, point in zip(sitecol.sids, points(sitecol.lons, sitecol.lats)):
+        lon, lat = point.x, point.y
         result = next((index_by_id[id(o)]
                        for o in tree.geometries[tree.query(point)]
                        if o.contains(point)), None)
@@ -506,7 +508,9 @@ def get_bounding_box(obj, maxdist):
         min_lon, max_lon = lons.min(), lons.max()
         if cross_idl(min_lon, max_lon):
             lons %= 360
-        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+        min_lon, max_lon = lons.min(), lons.max()
+        bbox = min_lon, lats.min(), max_lon, lats.max()
+
     a1 = min(maxdist * KM_TO_DEGREES, 90)
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     delta = bbox[2] - bbox[0] + 2 * a2
@@ -514,7 +518,10 @@ def get_bounding_box(obj, maxdist):
         raise BBoxError('The buffer of %d km is too large, the bounding '
                         'box is larger than half the globe: %d degrees' %
                         (maxdist, delta))
-    return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+    min_, max_ = fix_lon(bbox[0] - a2), fix_lon(bbox[2] + a2)
+    if min_ > max_:  # swap
+        min_, max_ = max_, min_
+    return min_, bbox[1] - a1, max_, bbox[3] + a1
 
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
@@ -766,10 +773,7 @@ def point_to_polygon_distance(polygon, pxx, pyy):
     if pxx.ndim == 0:
         pxx = pxx.reshape((1, ))
         pyy = pyy.reshape((1, ))
-    result = numpy.array([
-        polygon.distance(geometry.Point(pxx.item(i), pyy.item(i)))
-        for i in range(pxx.size)
-    ])
+    result = polygon.distance(points(pxx, pyy))
     return result.reshape(pxx.shape)
 
 
@@ -914,7 +918,7 @@ def geohash5(coords):
     return b'_'.join(row.tobytes() for row in arr).decode('ascii')
 
 
-# corresponds to blocks of 78 km
+# corresponds to blocks of 78 km; not used anymore
 def geohash3(lons, lats):
     """
     :returns: a geohash of length 3 as a 16 bit integer
@@ -928,9 +932,9 @@ def geohash3(lons, lats):
 
 def geolocate(lonlats, geom_df, exclude=()):
     """
-    :param lonlats: array of shape (N, 2) of (lon, lat)
+    :param lonlats: array of shape (N, 2) or (N, 3)
     :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
+    :param exclude: list of codes to exclude from the results
     :returns: codes associated to the points
 
     NB: if the "code" field is not a primary key, i.e. there are
@@ -938,8 +942,11 @@ def geolocate(lonlats, geom_df, exclude=()):
     associates the code if at least one of the geometries matches
     """
     codes = numpy.array(['???'] * len(lonlats))
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for code, df in filtered_geom_df.groupby('code'):
+    if exclude:
+        filtered_df = geom_df[~geom_df['code'].isin(exclude)]
+    else:
+        filtered_df = geom_df
+    for code, df in filtered_df.groupby('code'):
         ok = numpy.zeros(len(lonlats), bool)
         for geom in df.geom:
             ok |= contains_xy(geom, lonlats)
@@ -947,21 +954,47 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
-def geolocate_geometries(geometries, geom_df, exclude=()):
+def geolocate_within_buffer(lon, lat, buffer_radius, geom_df, exclude=()):
     """
-    :param geometries: NumPy array of Shapely geometries to check
-    :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
-    :returns: NumPy array where each element contains a list of codes
-        of geometries that intersect each input geometry
+    :param lon: longitude (same CRS as geom_df)
+    :param lat: latitude
+    :param buffer_radius: maximum distance (in CRS units, e.g. degrees)
+    :param geom_df: GeoDataFrame with columns:
+                    - 'geom' (Shapely geometries)
+                    - 'code'
+    :param exclude: iterable of codes to exclude
+    :returns: list of codes of geometries within buffer_radius,
+              ordered by ascending minimum distance
     """
-    result_codes = numpy.empty(len(geometries), dtype=object)
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()  # to store intersecting codes for current geometry
-        for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values  # geometries associated with this code
-            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
-                intersecting_codes.add(code)
-        result_codes[i] = sorted(intersecting_codes)
-    return result_codes
+    point = Point(lon, lat)
+    # Exclude codes first
+    if exclude:
+        df = geom_df[~geom_df["code"].isin(exclude)]
+    else:
+        df = geom_df
+    # Spatial index query using buffer bounding box
+    minx, miny, maxx, maxy = point.buffer(buffer_radius).bounds
+    idx = list(df.sindex.intersection((minx, miny, maxx, maxy)))
+    candidates = df.iloc[idx]
+    code_min_dist = {}
+    for geom, code in zip(candidates.geometry.values,
+                          candidates["code"].values):
+        dist = geom.distance(point)
+        if dist <= buffer_radius:
+            prev = code_min_dist.get(code)
+            if prev is None or dist < prev:
+                code_min_dist[code] = dist
+    # Sort by ascending distance
+    ordered_codes = sorted(code_min_dist, key=code_min_dist.get)
+    return ordered_codes
+
+
+# resolution=3 means 12,386 square km (Connecticut)
+def hex6(lons, lats):
+    """
+    :returns: a list of H3 strings of length 6
+
+    >>> hex6(F64([10., 10.]), F64([45., 46.]))
+    ['831ea6', '831f99']
+    """
+    return [latlng_to_cell(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -43,7 +43,6 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Create context
         ctx = RuptureContext()
-        mags = ['6.00']
         ctx.mag = 6.0
         ref_vs30 = 3000
         wimp = 0.8
@@ -61,12 +60,12 @@ class NGAEastAUS23Test(unittest.TestCase):
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
         [mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
-            tgmm, ctx, [imts[0]], mags=mags)
+            tgmm, ctx, [imts[0]])
 
         # Compute values on rock for SA
         imts = [SA(0.2)]
         [mean_sa], [_sigma_sa], _, _ = contexts.get_mean_stds(
-            tgmm, ctx, [imts[0]], mags=mags)
+            tgmm, ctx, [imts[0]])
 
         # Compute linear term
         ctx.vs30[0:5] = np.ones((5)) * 400
@@ -82,7 +81,7 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Computed values
         [mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
-            mgmm, ctx, [imts[0]], mags=mags)
+            mgmm, ctx, [imts[0]])
 
         # Compute values on soil
         np.testing.assert_allclose(mean_comp, expected)
@@ -101,7 +100,6 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Create context
         ctx = RuptureContext()
-        mags = ['6.00']
         ctx.mag = 6.0
         ref_vs30 = 3000
         wimp = 0.8
@@ -119,12 +117,12 @@ class NGAEastAUS23Test(unittest.TestCase):
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
         [mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
-            tgmm, ctx, [imts[0]], mags=mags)
+            tgmm, ctx, [imts[0]])
 
         # Compute values on rock for SA
         imts = [SA(0.1)]
         [mean_sa], [_sigma_sa], _, _ = contexts.get_mean_stds(
-            tgmm, ctx, [imts[0]], mags=mags)
+            tgmm, ctx, [imts[0]])
 
         # Compute linear term
         ctx.vs30[0:5] = np.ones((5)) * 400
@@ -141,7 +139,7 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Computed values
         [mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
-            mgmm, ctx, [imts[0]], mags=mags)
+            mgmm, ctx, [imts[0]])
 
         # Compute values on soil
         np.testing.assert_allclose(mean_comp, expected)
@@ -156,7 +154,6 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Create context
         ctx = RuptureContext()
-        mags = ['6.00']
         ctx.mag = 6.0
         ref_vs30 = 3000
         wimp = 0.8
@@ -174,11 +171,11 @@ class NGAEastAUS23Test(unittest.TestCase):
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
         [_mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
-            tgmm, ctx, [imts[0]], mags=mags)
+            tgmm, ctx, [imts[0]])
 
         # Computed values
         [_mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
-            mgmm, ctx, [imts[0]], mags=mags)
+            mgmm, ctx, [imts[0]])
 
         # Compute values on soil
         # np.testing.assert_allclose(mean_comp, expected)

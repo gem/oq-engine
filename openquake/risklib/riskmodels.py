@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
+from openquake.sep.classes import corresponds
 from openquake.risklib import scientific
 
 U8 = numpy.uint8
@@ -66,7 +67,8 @@ def get_risk_files(inputs):
             rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
-        elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
+        elif key.endswith(('_fragility', '_vulnerability',
+                           '_vulnerability_retrofitted')):
             match = RISK_TYPE_REGEX.match(key)
             if match:
                 kind = match.group(2)  # fragility or vulnerability
@@ -270,10 +272,11 @@ class RiskModel(object):
                     vf.retro.mean_loss_ratios_with_steps(steps))
 
         # set imt_by_lt
-        self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['groundshaking'].items():
-            if rf.kind in ('vulnerability', 'fragility'):
-                self.imt_by_lt[lt] = rf.imt
+        self.imt_by_lt = {}  # dictionary loss_type, peril -> imt
+        for peril in risk_functions:
+            for lt, rf in risk_functions[peril].items():
+                if rf.kind in ('vulnerability', 'fragility'):
+                    self.imt_by_lt[lt, peril] = rf.imt
 
     @property
     def loss_types(self):
@@ -373,7 +376,8 @@ class RiskModel(object):
             for i, asset in enumerate(assets.to_records())]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, peril, loss_type, assets, hazard_curve, rng=None):
+    def classical_damage(
+            self, peril, loss_type, assets, hazard_curve, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -398,7 +402,7 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         sid = assets['site_id']
         if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
@@ -425,13 +429,13 @@ class RiskModel(object):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         for col in gmf_df.columns:
-            if col.endswith(imt):
+            if corresponds(col, peril, imt):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {imt} in gmf_data')
+            raise NameError(f'Missing {imt} in gmf_data for {peril}')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
@@ -539,7 +543,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     :param vulndict:
         a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
-        a dictionary riskid -> loss_type -> consequence functions
+        a dictionary key -> consequence dataframe
     """
     tmap_df = ()  # to be set
 
@@ -610,15 +614,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         cfs = '\n'.join(csq_files)
         df = self.tmap_df
         for peril in self.perils:
-            for byname, coeffs in self.consdict.items():
+            for byname, cdf in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
-                if len(coeffs):
+                if len(cdf):
                     for per, risk_id, weight in zip(
                             df.peril, df.risk_id, df.weight):
                         if (per == '*' or per == peril) and risk_id != '?':
-                            try:
-                                coeffs[risk_id][peril]
-                            except KeyError:
+                            ok = cdf[cdf.risk_id == risk_id]
+                            if len(ok) == 0:
                                 raise InvalidFile(
                                     f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
@@ -650,7 +653,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     if len(self.tmap_df.peril.unique()) == 1:
                         risk_ids = self.tmap_df.risk_id
                     else:
-                        risk_ids = self.tmap_df[self.tmap_df.peril==peril].risk_id
+                        risk_ids = self.tmap_df[
+                            self.tmap_df.peril==peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -660,7 +664,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # area, number, occupants, residents
                     for lt in self.loss_types:
                         try:
-                            rm.imt_by_lt[lt]
+                            rm.imt_by_lt[lt, peril]
                         except KeyError:
                             key = '%s/%s/%s' % (peril, kinds[0], lt)
                             fname = self.oqparam._risk_files[key]
@@ -681,20 +685,27 @@ class CompositeRiskModel(collections.abc.Mapping):
         # by construction all assets have the same taxonomy
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
-        for byname, coeffs in self.consdict.items():
+        limit_states = self.damage_states[1:]
+            
+        for byname, cdf in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
-            if len(coeffs):
+            if len(cdf):
                 consequence, _tagname = byname.split('_by_')
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
                         # dict loss_type -> coeffs for the given loss type
                         for pi, peril in enumerate(self.perils):
+                            row_df = cdf[(cdf.risk_id == risk_id) &
+                                         (cdf.peril == peril) &
+                                         (cdf.loss_type == lt)]
+                            if len(row_df) == 0:
+                                continue
+                            [row] = row_df[limit_states].to_numpy()
                             if len(df) == 1:
                                 [w] = df.weight
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
-                            coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[risk_id][peril][lt] * w)
+                            coeff = dd5[pi, :, :, li, 1:] @ row * w
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE

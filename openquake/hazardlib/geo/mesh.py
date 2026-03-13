@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -96,27 +96,6 @@ def sqrt(array):
     # here we replace the small negative values with zeros
     array[array < 0] = 0
     return numpy.sqrt(array)
-
-
-def surface_to_arrays(surface):
-    """
-    :param surface: a (Multi)Surface object
-    :returns: a list of S arrays of shape (3, N, M)
-    """
-    if hasattr(surface, 'surfaces'):  # multiplanar surfaces
-        lst = []
-        for surf in surface.surfaces:
-            arr = surf.mesh.array
-            if len(arr.shape) == 2:  # PlanarSurface
-                arr = arr.reshape(3, 1, 4)
-            lst.append(arr)
-        return lst
-    mesh = surface.mesh
-    if len(mesh.lons.shape) == 1:  # 1D mesh
-        shp = (3, 1) + mesh.lons.shape
-    else:  # 2D mesh
-        shp = (3,) + mesh.lons.shape
-    return [mesh.array.reshape(shp)]
 
 
 def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
@@ -615,6 +594,18 @@ class Mesh(object):
                 self.DIST_TOLERANCE)
         # debug_plot(polygons)
         return proj, polygon
+
+    def get_around(self, lon, lat, digits=5):
+        """
+        :returns: the submesh around lon, lat with the given precision
+        """
+        out = []
+        lons = numpy.round(self.lons, digits)
+        lats = numpy.round(self.lats, digits)
+        for i, (lo, la) in enumerate(zip(lons, lats)):
+            if lo == lon and la == lat:
+                out.append(i)
+        return self[out]
 
     def get_convex_hull(self):
         """

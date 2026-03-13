@@ -12,6 +12,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import add_alias
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
@@ -54,9 +55,9 @@ def site_term(self, mag, ctx, dists, imt):
     site class C to 760 m/s. Cap PGA_450 at 0.1 - 0.5g.
     """
     dst = getattr(ctx, self.distance_type)
-    imls_pga = self.mean_table['%.2f' % mag, 'PGA']
+    imls_pga = interp_table(self, mag, PGA(), 'IMLs')
     PGA450 = _get_mean(self.kind, imls_pga, dst, dists)
-    imls_SA02 = self.mean_table['%.2f' % mag, 'SA(0.2)']
+    imls_SA02 = interp_table(self, mag, SA(0.2), 'IMLs')
     SA02 = _get_mean(self.kind, imls_SA02, dst, dists)
     PGA450[SA02 / PGA450 < 2.0] = PGA450[SA02 / PGA450 < 2.0] * 0.8
 
@@ -131,11 +132,11 @@ class NBCC2015_AA13(GMPETable):
         dst = getattr(ctx, self.distance_type)
         # compute mean and stddevs
         for m, imt in enumerate(imts):
-            key = ('%.2f' % mag, imt.string)
-            imls = self.mean_table[key]
-            mean[m] = np.log(_get_mean(self.kind, imls, dst, dists)) + \
-                site_term(self, mag, ctx, dists, imt)
-            sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
+            imls = interp_table(self, mag, imt, 'IMLs')
+            sigs = interp_table(self, mag, imt, 'Total')
+            mean[m] = (np.log(_get_mean(self.kind, imls, dst, dists)) +
+                       site_term(self, mag, ctx, dists, imt))
+            sig[m] = _get_stddev(sigs, dst, dists, imt)
 
     COEFFS_2000_to_BC = CoeffsTable(sa_damping=5, table="""\
     IMT     c

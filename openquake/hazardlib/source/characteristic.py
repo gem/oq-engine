@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -90,11 +90,12 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         For each magnitude value in the given MFD, return an earthquake
         rupture with a surface always equal to the given surface.
         """
+        step = kwargs.get('step', 1)
         hypocenter = self.surface.get_middle_point()
-        for mag, occurrence_rate in self.get_annual_occurrence_rates():
+        for mag, occ_rate in self.get_annual_occurrence_rates()[::step]:
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
-                self.surface, occurrence_rate, self.temporal_occurrence_model)
+                self.surface, occ_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """

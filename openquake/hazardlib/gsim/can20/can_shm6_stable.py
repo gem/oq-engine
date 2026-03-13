@@ -25,7 +25,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, interp_table
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
 from openquake.hazardlib.gsim.gmpe_table import _get_mean, _get_stddev
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
@@ -66,10 +66,9 @@ def site_term_aa13(self, mag, ctx, dists, imt):
     # Get the distance type
     dst = getattr(ctx, self.distance_type)
 
-    # imls_pga = self._return_tables(rctx.mag, PGA(), "IMLs")
-    imls_pga = self.mean_table['%.2f' % mag, 'PGA']
+    imls_pga = interp_table(self, mag, PGA(), 'IMLs')
     PGA450 = _get_mean(self.kind, imls_pga, dst, dists)  # in units of g
-    imls_SA02 = self.mean_table['%.2f' % mag, 'SA(0.2)']
+    imls_SA02 = interp_table(self, mag, SA(0.2), 'IMLs')
     SA02 = _get_mean(self.kind, imls_SA02, dst, dists)
 
     # Correction to reduce non-linear term for eastern Canada
@@ -162,8 +161,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
 
         # Compute mean and stddevs
         for m, imt in enumerate(imts):
-            key = ('%.2f' % mag, imt.string)
-            imls = self.mean_table[key]
+            imls = interp_table(self, mag, imt, 'IMLs')
             # Compute mean on reference conditions
             mean[m] = np.log(_get_mean(self.kind, imls, dst, dists))
 
@@ -177,7 +175,8 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
             mean[m] += site_term_aa13(self, mag, ctx, dists, imt)
 
             # Get standard deviations
-            sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
+            sigs = interp_table(self, mag, imt, 'Total')
+            sig[m] = _get_stddev(sigs, dst, dists, imt)
 
 # =============================================================================
 # =============================================================================
@@ -196,7 +195,7 @@ def site_term_NGAE(self, ctx, mag, dists, imt, stddev_types):
     For PGA and PGV it follows Model B.
     """
     dst = getattr(ctx, self.distance_type)
-    imls_pga = self.mean_table['%.2f' % mag, 'PGA']
+    imls_pga = interp_table(self, mag, PGA(), 'IMLs')
     PGArock = _get_mean(self.kind, imls_pga, dst, dists)
 
     # site term from Model B.
@@ -476,9 +475,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
 
         # Compute mean and stddevs
         for m, imt in enumerate(imts):
-
-            key = (f'{mag:.2f}', imt.string)
-            imls = self.mean_table[key]
+            imls = interp_table(self, mag, imt, 'IMLs')
 
             # Compute mean on reference conditions
             mean[m] = np.log(_get_mean(self.kind, imls, ctx.rrup, dists))
@@ -492,7 +489,8 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
             mean[m] += site_term_NGAE(self, ctx, mag, dists, imt,[StdDev.TOTAL])
 
             # Get standard deviations
-            sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
+            sigs = interp_table(self, mag, imt, 'Total')
+            sig[m] = _get_stddev(sigs, dst, dists, imt)
 
 
     COEFFS_NGA_USGS = CoeffsTable(sa_damping=5, table="""\

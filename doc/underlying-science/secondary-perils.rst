@@ -281,45 +281,6 @@ The spatial extent is evaluated identically using the equation (9).
 
 The proposed probability threshold to convert to class outcome is 0.4.
 
-#####################
-Akhlagi et al. (2021)
-#####################
-
-Expanding the liquefaction inventory to include 51 earthquake, `Akhlagi et al. (2021) <https://earthquake.usgs.gov/cfusion/external_grants/reports/G20AP00029.pdf>`_ 
-proposed two candidate models to predict probability of liquefaction. Shaking is expressed in terms of 
-:math:`PGV \, [\text{cm/s}]`. Soil saturation is characterised using the set of proxies: distance to the nearest 
-coastline, :math:`d_{c} \, [\text{km}]`, distance to the closest river, :math:`d_{r} \, [\text{km}]`, elevation from 
-the closest water body, :math:`Z_{wb} \, [\text{m}]`. Soil density is characterised either by 
-:math:`V_{s30} \, [\text{m/s}]` or topographic roughness index, :math:`TRI` which is defined as the mean difference 
-between a central pixel and its eight surrounding cells. The explanatory variables of two candidate models are:
-
-Model 1: 
-
-.. math:: 
-
-   X = 4.925 + 0.694 \ln(PGV) - 0.459 \sqrt{TRI} - 0.403 \ln(d_{c} + 1) \quad
-
-.. math:: 
-
-   -0.309 \ln(d_{r} + 1) - 0.164 \sqrt{Z_{wb}} \\ (10)
-
-
-Model 2: 
-
-.. math:: 
-
-   X = 9.504 + 0.706 \ln(PGV) - 0.994 \ln(V_{s30}) - 0.389 \ln(d_{c} + 1) \quad
-
-.. math:: 
-
-   -0.291 \ln(d_{r} + 1) - 0.205 \sqrt{Z_{wb}} \\ (11)
-
-
-and the probability of liquefaction is calculated using equation (3). Zero probability is heuristically assigned if 
-:math:`PGV < 3 \, \text{cm/s}` or :math:`V_{s30} > 620 \, \text{m/s}`.
-
-The proposed probability threshold to convert to class outcome is 0.4.
-
 #######################################
 Allstadt et al. (2022) for liquefaction
 #######################################
@@ -748,4 +709,3 @@ properties atthe Earth surface, Geochem. Geophys. Geosyst., 13, Q12004, doi:10.1
 
 [23] Arino, O., Ramos Perez, J.J., Kalogirou, V., Bontemps, S., Defourny, P., Van Bogaert, E. (2012): Global Land Cover 
 Map for 2009 (GlobCover 2009), https://doi.org/10.1594/PANGAEA.787668.
-

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -167,8 +167,7 @@ class KothaEtAl2020regionalTestCase(BaseGSIMTestCase):
     ##Testing the regional version of the GMPE
     GSIM_CLASS = KothaEtAl2020regional
     ## for a list of pre defined scenarios, the GMPE predictions
-    ## were calculated in a notebook using the 
-    ## `KothaEtAl2020regional.get_mean_and_stddevs(ctxs, ctxs, ctxs, i, [StdDev.TOTAL])`
+    ## were calculated in a notebook
     def test_all(self):
         self.check("kotha20/KOTHA_2020_REGIONAL_MEAN.csv",
                 max_discrep_percentage=MAX_DISCREP)

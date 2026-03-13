@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -137,15 +137,15 @@ def apply_conversion(imc, imt):
     """
     C = COEFF[imc]
     C_PGA_PGV = COEFF_PGA_PGV[imc]
-    if imt.string == 'PGA':
+    if imt.name == 'PGA':
         conv_median = C_PGA_PGV[0]
         conv_sigma = C_PGA_PGV[1]
         rstd = C_PGA_PGV[2]
-    elif imt.string == 'PGV':
+    elif imt.name == 'PGV':
         conv_median = C_PGA_PGV[3]
         conv_sigma = C_PGA_PGV[4]
         rstd = C_PGA_PGV[5]
-    else:
+    elif imt.name == "SA":
         T = imt.period
         if imc.name in ('RotD50', 'GREATER_OF_TWO_HORIZONTAL'):
             term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
@@ -170,6 +170,11 @@ def apply_conversion(imc, imt):
                 conv_sigma = (C[2] + (C[3]-C[2]) *
                               np.log10(T/0.15) / np.log10(0.8/0.15))
             rstd = C[4]
+    else:
+        conv_median = 1
+        conv_sigma = 0
+        rstd = 1
+    
     return conv_median, conv_sigma, rstd
 
 

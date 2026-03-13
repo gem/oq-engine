@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2025 GEM Foundation
+# Copyright (c) 2016-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,6 +44,24 @@ def combine_probs(array, other, rlzs):
             if other[li] != 0.:
                 array[li, ri] = (
                     1. - (1. - array[li, ri]) * (1. - other[li]))
+
+
+def gen_chunks(sids, num_chunks):
+    """
+    :yields: chunkno, mask
+    """
+    if num_chunks == 1:
+        yield 0, slice(None)
+    else:
+        idxs = sids % num_chunks  # indices in the range 0..num_chunks-1
+        idx = numpy.unique(idxs)
+        if len(idx) == 1:  # there is a single chunk
+            yield idx[0], slice(None)
+        else:
+            for i in idx:
+                ok = idxs == i
+                if ok.any():
+                    yield i, ok
 
 
 def get_mean_curve(dstore, imt, site_id=0):
@@ -168,10 +186,10 @@ def check_hmaps(hcurves, imtls, poes):
                 if  rel_err > .05:
                     lows.append(sid)
             if zeros:
-                logging.error(
+                logging.warning(
                     f'There are {imt} zero-curves for sids=%s, {poe=}', zeros)
             elif lows:
-                logging.error(
+                logging.warning(
                     f'The {imt} hazard curve for sids=%s cannot '
                     f'be inverted reliably around {poe=}', lows)
 
@@ -185,13 +203,13 @@ def get_lvl(hcurve, imls, poe):
 
     >>> imls = numpy.array([.1, .2, .3, .4])
     >>> hcurve = numpy.array([1., .99, .90, .8])
-    >>> get_lvl(hcurve, imls, 1)
+    >>> int(get_lvl(hcurve, imls, 1))
     0
-    >>> get_lvl(hcurve, imls, .99)
+    >>> int(get_lvl(hcurve, imls, .99))
     1
-    >>> get_lvl(hcurve, imls, .91)
+    >>> int(get_lvl(hcurve, imls, .91))
     2
-    >>> get_lvl(hcurve, imls, .8)
+    >>> int(get_lvl(hcurve, imls, .8))
     3
     """
     [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
@@ -380,14 +398,10 @@ class MapArray(object):
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        if len(gid) == 0:
-            return numpy.array([], rates_dt)
         outs = []
         for i, g in enumerate(gid):
-            rates_g = self.array[:, :, i]
-            outs.append(from_rates_g(rates_g, g, self.sids))
-        if len(outs) == 1:
-            return outs[0]
+            rates = to_rates(self.array, self.sids, g, i, 0)
+            outs.append(rates)
         return numpy.concatenate(outs, dtype=rates_dt)
 
     def interp4D(self, imtls, poes):
@@ -426,11 +440,12 @@ class MapArray(object):
         arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update_indep(self, poes, ctxt, itime):
+    def update_indep(self, poes, ctxt, itime, rates=None):
         """
         Update probabilities for independent ruptures
         """
-        rates = ctxt.occurrence_rate
+        if rates is None:
+            rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
         if self.rates:
             update_pmap_r(self.array, poes, rates, ctxt.probs_occur,
@@ -452,6 +467,12 @@ class MapArray(object):
         update_pmap_m(self.array, poes, rates, probs_occur, weights,
                       sidxs, itime)
 
+    def __add__(self, other):
+        return self.new(self.array + other.array)
+
+    def __truediv__(self, other):
+        return self.new(self.array / other)
+
     def __invert__(self):
         return self.new(1. - self.array)
 
@@ -464,7 +485,23 @@ class MapArray(object):
         G = other.array.shape[2]  # NLG
         for i, g in enumerate(other.gid):
             iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
+        # assume .gid and .wei are consistent
+        if hasattr(other, 'gid'):
+            self.gid = other.gid
+        if hasattr(other, 'wei'):
+            self.wei = other.wei
         return self
+
+    def __toh5__(self):
+        N, Y, Z = self.shape
+        return self.array, dict(sids=self.sids, shape_y=Y, shape_z=Z,
+                                rates=self.rates)
+
+    def __fromh5__(self, array, attrs):
+        self.sids = attrs['sids']
+        self.shape = len(self.sids), attrs['shape_y'], attrs['shape_z']
+        self.rates = attrs['rates']
+        self.array = array
 
     def __repr__(self):
         tup = self.shape + (humansize(self.array.nbytes),)
@@ -477,27 +514,30 @@ def iadd(arr, array, sidx):
         arr[sid] += array[i]
 
 
-def from_rates_g(rates_g, g, sids):
+
+# NB: numba-compiling here is nearly useless in terms of performance
+@compile("(float32[:,:,:], uint32[:], int64, int64, int64)")
+def to_rates(ratesNLG, sids, g, i, level0):
     """
-    :param rates_g: an array of shape (N, L)
-    :param g: an integer representing a GSIM index
+    :param ratesNLG: an array of shape (N, L, G)
     :param sids: an array of site IDs
+    :param g: an integer representing a GSIM index
+    :param i: an index in the range 0..G-1
+    :param level0: level offset
     """
-    outs = []
-    for lid, rates in enumerate(rates_g.T):
-        idxs, = rates.nonzero()
-        if len(idxs):
-            out = numpy.zeros(len(idxs), rates_dt)
-            out['sid'] = sids[idxs]
-            out['lid'] = lid
-            out['gid'] = g
-            out['rate'] = rates[idxs]
-            outs.append(out)
-    if not outs:
-        return numpy.array([], rates_dt)
-    elif len(outs) == 1:
-        return outs[0]
-    return numpy.concatenate(outs, dtype=rates_dt)
+    ratesNL = ratesNLG[:, :, i].copy()
+    N, L = ratesNL.shape
+    assert N == len(sids), (N, len(sids))
+    out = numpy.zeros(N * L, rates_dt)
+    n = 0
+    for s, sid in enumerate(sids):
+        for lid, rate in enumerate(ratesNL[s]):
+            out[n]['sid'] = sid
+            out[n]['lid'] = level0 + lid
+            out[n]['gid'] = g
+            out[n]['rate'] = rate
+            n += 1
+    return out[out['rate'] > 0]
 
 
 class RateMap:
@@ -507,19 +547,19 @@ class RateMap:
     sidx = MapArray.sidx
     size_mb = MapArray.size_mb
     __repr__ = MapArray.__repr__
+    level0 = 0
 
     def __init__(self, sids, L, gids):
         self.sids = sids
         self.shape = len(sids), L, len(gids)
         self.array = numpy.zeros(self.shape, F32)
-        self.jid = {g: j for j, g in enumerate(gids)}
+        self.gdic = {g: j for j, g in enumerate(gids)}
 
     def __iadd__(self, other):
-        G = self.shape[2]
         sidx = self.sidx[other.sids]
         for i, g in enumerate(other.gid):
-            iadd(self.array[:, :, self.jid[g]],
-                 other.array[:, :, i % G], sidx)
+            oarray = other.array[:, :, i]
+            self.array[sidx, :, self.gdic[g]] += oarray
         return self
 
     def to_array(self, g):
@@ -527,5 +567,20 @@ class RateMap:
         Assuming self contains an array of rates,
         returns a composite array with fields sid, lid, gid, rate
         """
-        rates_g = self.array[:, :, self.jid[g]]
-        return from_rates_g(rates_g, g, self.sids)
+        return to_rates(self.array, self.sids, g, self.gdic[g], self.level0)
+
+    def split(self, L1):
+        """
+        Split in M = L / L1 RateMaps, one for each IMT
+        """
+        assert self.shape[1] % L1 == 0, "L != L1 * M"
+        out = []
+        for lvl in range(0, self.shape[1], L1):
+            new = object.__new__(self.__class__)
+            new.sids = self.sids
+            new.shape = len(self.sids), L1, len(self.gdic)
+            new.array = self.array[:, lvl:lvl+L1, :]
+            new.gdic = self.gdic
+            new.level0 = lvl
+            out.append(new)
+        return out

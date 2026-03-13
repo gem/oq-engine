@@ -1,3 +1,5 @@
+.. _ground_motion_models:
+
 Ground Motion Models
 ====================
 
@@ -14,18 +16,40 @@ have, as well as give some guidance for authors wanting to implement a parametri
 Signature of a GMPE class
 *************************
 
-The more robust way to define parametric GMPEs is to use a ``**kwargs`` signature (robust against subclassing)::
+The recommended way to define parametric GMPEs is to list explicitly the
+parameters in the signature of the ``__init__`` method:
+
+.. code-block:: python
 
 	from openquake.hazardlib.gsim.base import GMPE
 	
 	class MyGMPE(GMPE):
-	   def __init__(self, **kwargs):
-	       super().__init__(**kwargs)
-	       # doing some initialization here
+	   def __init__(self, param1, param2, ...):
+	       self.param1 = param1
+               self.param2 = param2
+               ...
 
-The call to ``super().__init__`` will set a ``self.kwargs`` attribute and perform a few checks, like raising a warning 
-if the GMPE is experimental. In absence of parameters ``self.kwargs`` is the empty dictionary, but in general it is 
-non-empty and it can be arbitrarily nested, with only one limitation: it must be a *dictionary of literal Python objects* 
+Notice that the base class ``GMPE`` has no ``__init__`` method, so we recommend not to
+call ``super().__init__()`` in the subclass (the situation was different in previous versions
+of the engine).
+
+This approach has the advantage of being very explicit, self-documenting and without surprises, since there is
+nothing going on in the superclass.
+
+The only restriction is that *the parameters must be Python literals*: this is to make sure that the GMPE instance
+admit a string representation in terms of literals.
+The parameters can have default values and usually they do, so that you can instantiate
+a GMPE without passing them if you want.
+
+Notice that using a generic ``**kwargs`` in the signature is very
+opaque and should be avoided, except in the cases where it is necessary since the parameters are not known in advance.
+
+In any case case the engine will automatically add a ``self.kwargs`` attribute just after the instantiation of the
+GMPE and after performing a few checks, like raising a warning
+if the GMPE is experimental (technically this is done by the method ``MetaGSIM.__call___`` in hazardlib/gsim/base.py)
+
+In absence of parameters, ``self.kwargs`` is the empty dictionary, but in general it is
+non-empty and it can be arbitrarily nested, provided it is a *dictionary of literal Python objects*,
 so that it admits a TOML representation.
 
 TOML is a simple format similar to the ``.ini`` format but hierarchical (see `toml-lang/toml <https://github.com/toml-lang/toml#user-content-example>`_). 
@@ -216,7 +240,7 @@ In engine 3.21 we added a helper function `valid.modified_gsim`
 to modify a GMPE. Internally it is creating a `ModifiableGMPE` instance,
 but it is much simpler to use. An example is:
 
-.. python:
+.. code-block:: python
 
    >>> from openquake.hazardlib import valid
    >>> orig_gsim = valid.gsim('Lin2011foot')

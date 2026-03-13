@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,41 +39,24 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.sourceconverter import SourceGroup
 
-NONPARAM = os.path.join(os.path.dirname(__file__),
-                        'source_model/nonparametric-source.xml')
-NONPARAM_KITE = os.path.join(os.path.dirname(__file__),
-                             'source_model/nonparametric-kite.xml')
-MIXED = os.path.join(os.path.dirname(__file__),
-                     'source_model/mixed.xml')
-SLIP_RATE = os.path.join(os.path.dirname(__file__),
-                         'source_model/complex-fault-source.xml')
-ALT_MFDS = os.path.join(os.path.dirname(__file__),
-                        'source_model/alternative-mfds_4test.xml')
-
-COLLECTION = os.path.join(os.path.dirname(__file__),
-                          'source_model/source_group_collection.xml')
-
+CD = pathlib.Path(__file__).parent
+NEGBIN = CD / 'source_model/negative-binomial.xml'
+NONPARAM = CD / 'source_model/nonparametric-source.xml'
+NONPARAM_KITE = CD / 'source_model/nonparametric-kite.xml'
+MIXED = CD / 'source_model/mixed.xml'
+SLIP_RATE = CD / 'source_model/complex-fault-source.xml'
+ALT_MFDS = CD / 'source_model/alternative-mfds_4test.xml'
+COLLECTION = CD / 'source_model/source_group_collection.xml'
 # NB: this is RUP_MUTEX, SRC_MUTEX is tested in multi_fault_test
-MUTEX = os.path.join(os.path.dirname(__file__),
-                     'source_model/nonparametric-source-mutex-ruptures.xml')
-
-MULTIPOINT = os.path.join(os.path.dirname(__file__),
-                          'source_model/multi-point-source.xml')
-
-MULTIFAULT = os.path.join(os.path.dirname(__file__),
-                          'source_model/multi-fault-source.xml')
-
-GRIDDED = os.path.join(os.path.dirname(__file__),
-                       'source_model/gridded.xml')
-
-KITEFAULT = os.path.join(os.path.dirname(__file__),
-                         'source_model/kite-fault-source.xml')
-
-TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
+MUTEX = CD / 'source_model/nonparametric-source-mutex-ruptures.xml'
+MULTIPOINT = CD / 'source_model/multi-point-source.xml'
+MULTIFAULT = CD / 'source_model/multi-fault-source.xml'
+GRIDDED = CD / 'source_model/gridded.xml'
+KITEFAULT = CD / 'source_model/kite-fault-source.xml'
+TOML = CD / 'expected_sources.toml'
 
 conv = SourceConverter(50., 1., 20, 0.1, 10.)
 
-HERE = pathlib.Path(__file__)
 OVERWRITE = False
 
 
@@ -92,6 +75,9 @@ class SourceWriterTestCase(unittest.TestCase):
         elif open(self.saved).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (self.saved, fname))
         return smodel
+
+    def test_negative_binomial(self):
+        self.check_round_trip(NEGBIN)
 
     def test_mixed(self):
         self.check_round_trip(MIXED)
@@ -200,7 +186,7 @@ class NonParametricSourceTest(unittest.TestCase):
         write_source_model(computed, [grp], name='test')
 
         # Reference
-        expected = HERE.parent / 'data' / 'test_non_param_write.xml'
+        expected = CD / 'data' / 'test_non_param_write.xml'
         if OVERWRITE:
             write_source_model(expected, [grp], name='test')
 

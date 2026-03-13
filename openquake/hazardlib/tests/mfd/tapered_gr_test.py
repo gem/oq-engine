@@ -16,7 +16,9 @@
 
 # pylint: disable=missing-docstring,protected-access
 
-from openquake.hazardlib.mfd import TaperedGRMFD
+import numpy as np
+
+from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD, mag_to_mo
 
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
 
@@ -124,3 +126,26 @@ class TaperedGRMFDMFDRoundingTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(min_mag, 0.65)
         self.assertEqual(mfd.get_min_max_mag(), (min_mag, min_mag + 0.2))
         self.assertEqual(num_bins, 3)
+
+
+class TaperedGRMFDFromMomentTestCase(BaseMFDTestCase):
+    def test(self):
+        total_moment_rate = 1e20
+
+        mfd = TaperedGRMFD.from_moment(6.0, 8.0, 7.0, 0.1, 1.0,
+                                       total_moment_rate)
+
+        np.testing.assert_approx_equal(total_moment_rate, 
+                                       mfd._get_total_moment_rate())
+        np.testing.assert_approx_equal(mfd.a_val, 7.14, significant=3)
+
+        moment_from_occ_rates = sum(
+                [mag_to_mo(r[0], mfd.c_val) * r[1]
+                 for r in mfd.get_annual_occurrence_rates()
+        ])
+
+        # may be off by a small margin
+        np.testing.assert_approx_equal(total_moment_rate,
+                                       moment_from_occ_rates,
+                                       significant=3)
+

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,9 @@ import math
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
     RectangularMesh
+
+TWO16 = 2**16
+F32 = numpy.float32
 
 
 def _get_finite_mesh(mesh):
@@ -237,6 +240,84 @@ class BaseSurface(metaclass=abc.ABCMeta):
 
         return dst
 
+    def get_x_l_ratio(self, mesh):
+        """
+        Compute normalized along-strike position (x/L) for each point in
+        ``mesh`` relative to the surface trace. Used for PFDHA applications.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of target points.
+        :returns:
+            Tuple (x_over_l, l_km) where x_over_l is numpy array in [0,1]
+            and l_km is trace length in km.
+        """
+        trace = self._get_tor()
+        site_lons = mesh.lons.flatten()
+        site_lats = mesh.lats.flatten()
+        n_sites = len(site_lons)
+
+        if trace.shape[0] < 2:
+            return numpy.zeros(n_sites), 0.0
+
+        # Compute geodetic trace length
+        seg_lengths_km = geodetic.geodetic_distance(
+            trace[:-1, 0], trace[:-1, 1],
+            trace[1:, 0], trace[1:, 1]
+        )
+        l_km = float(numpy.sum(seg_lengths_km))
+
+        # Project coordinates to 2D km space
+        all_lons = numpy.concatenate([trace[:, 0], site_lons])
+        all_lats = numpy.concatenate([trace[:, 1], site_lats])
+        proj = utils.OrthographicProjection.from_(all_lons, all_lats)
+        tr_x, tr_y = proj(trace[:, 0], trace[:, 1])
+        si_x, si_y = proj(site_lons, site_lats)
+
+        # Precompute segment geometry
+        txy = numpy.column_stack([tr_x, tr_y])
+        segs = txy[1:] - txy[:-1]
+        seg_lens_sq = numpy.sum(segs ** 2, axis=1)
+        seg_lens = numpy.sqrt(seg_lens_sq)
+        cumul = numpy.concatenate([[0.0], numpy.cumsum(seg_lens)])
+        l_proj = cumul[-1]
+
+        if l_proj == 0.0:
+            return numpy.zeros(n_sites), l_km
+
+        # Vectorized point-to-polyline projection
+        site_pts = numpy.column_stack([si_x, si_y])[:, numpy.newaxis, :]
+        seg_start = txy[:-1][numpy.newaxis, :, :]
+        seg_vec = segs[numpy.newaxis, :, :]
+        vec_to_seg = site_pts - seg_start
+        dot = (vec_to_seg[:, :, 0] * seg_vec[:, :, 0] +
+               vec_to_seg[:, :, 1] * seg_vec[:, :, 1])
+
+        # Handle zero-length segments
+        safe_lens_sq = seg_lens_sq.copy()
+        safe_lens_sq[safe_lens_sq == 0.0] = 1.0
+        t = dot / safe_lens_sq[numpy.newaxis, :]
+        numpy.clip(t, 0.0, 1.0, out=t)
+
+        # Compute squared distances
+        closest_pt = seg_start + t[:, :, numpy.newaxis] * seg_vec - site_pts
+        d_sq = closest_pt[:, :, 0]**2 + closest_pt[:, :, 1]**2
+
+        # Handle zero-length segments
+        zero_mask = seg_lens_sq == 0.0
+        if numpy.any(zero_mask):
+            vec_sq = vec_to_seg[:, :, 0]**2 + vec_to_seg[:, :, 1]**2
+            d_sq[:, zero_mask] = vec_sq[:, zero_mask]
+            t[:, zero_mask] = 0.0
+
+        # Find closest segment and compute x/L
+        min_indices = numpy.argmin(d_sq, axis=1)
+        rows = numpy.arange(n_sites)
+        best_t = t[rows, min_indices]
+        x_best = cumul[min_indices] + best_t * seg_lens[min_indices]
+        x_ratios = x_best / l_proj
+        numpy.clip(x_ratios, 0.0, 1.0, out=x_ratios)
+        return x_ratios, l_km
+
     def get_rx_distance(self, mesh):
         """
         Compute distance between each point of mesh and surface's great circle
@@ -318,6 +399,26 @@ class BaseSurface(metaclass=abc.ABCMeta):
         else:
             dep = numpy.min(top_edge.depths)
             return dep
+
+    def _get_tor(self):
+        """
+        Extract the top rupture trace (top edge) of the rupture surface as a
+        2D array of geographic coordinates.
+
+        Handles KiteSurface meshes that may contain NaN values in some
+        columns by filtering them out.
+
+        :returns:
+            numpy.ndarray of shape (N, 2) with columns [longitude, latitude]
+            representing the ordered vertices of the top rupture trace.
+        """
+        top_edge = self.mesh[0:1]
+        lons = top_edge.lons[0, :]
+        lats = top_edge.lats[0, :]
+        # Filter NaN values (KiteSurface compatibility, same pattern as
+        # get_ry0_distance but more robust by checking both lons and lats)
+        finite = numpy.isfinite(lons) & numpy.isfinite(lats)
+        return numpy.column_stack([lons[finite], lats[finite]])
 
     def get_top_edge_centroid(self):
         """
@@ -502,3 +603,73 @@ class BaseSurface(metaclass=abc.ABCMeta):
         mesh_closest = self.get_closest_points(mesh)
         return geodetic.azimuth(mesh.lons, mesh.lats, mesh_closest.lons,
                                 mesh_closest.lats)
+
+
+def surface_to_arrays(surface):
+    """
+    :param surface: a (Multi)Surface object or a list of simple surfaces
+    :returns: a list of S arrays of shape (3, Sy, Sz)
+    """
+    if hasattr(surface, 'surfaces'):  # multiplanar surfaces
+        surfaces = surface.surfaces
+    elif isinstance(surface, list):
+        surfaces = surface
+    else:  # single surface
+        mesh = surface.mesh
+        if len(mesh.lons.shape) == 1:  # 1D mesh
+            shp = (3, 1) + mesh.lons.shape
+        else:  # 2D mesh
+            shp = (3,) + mesh.lons.shape
+        return [mesh.array.reshape(shp)]
+    lst = []
+    for surf in surfaces:
+        arr = surf.mesh.array
+        if len(arr.shape) == 2:  # PlanarSurface
+            arr = arr.reshape(3, 1, 4)
+        lst.append(arr)
+    return lst
+
+
+def to_geom_lons_lats(surface):
+    """
+    Convert a (multi)surface into a float32 array
+  
+    :returns: geom, lons, lats
+    """
+    arrays = surface_to_arrays(surface)
+    points = []
+    shapes = []
+    lons = []
+    lats = []
+    for array in arrays:
+        s0, s1, s2 = array.shape
+        assert s0 == 3, s0
+        assert s1 < TWO16, 'Too many lines'
+        assert s2 < TWO16, 'The rupture mesh spacing is too small'
+        shapes.append(s1)
+        shapes.append(s2)
+        points.append(array.flat)
+        lons.append(array[0].flat)
+        lats.append(array[1].flat)
+    lons = numpy.concatenate(lons, dtype=F32)
+    lats = numpy.concatenate(lats, dtype=F32)
+    points = numpy.concatenate(points, dtype=F32)
+    geom = numpy.concatenate([[len(shapes) // 2], shapes, points], dtype=F32)
+    return geom, lons, lats
+
+
+def to_arrays(geom):
+    """
+    :param geom: an array [num_surfaces, shape_y, shape_z ..., coords]
+    :returns: a list of num_surfaces arrays with shape (3, shape_y, shape_z)
+    """
+    arrays = []
+    num_surfaces = int(geom[0])
+    start = num_surfaces * 2 + 1
+    for i in range(1, 2 * num_surfaces, 2):
+        s1, s2 = int(geom[i]), int(geom[i + 1])
+        size = s1 * s2 * 3
+        array = geom[start:start + size].reshape(3, s1, s2)
+        arrays.append(array)
+        start += size
+    return arrays

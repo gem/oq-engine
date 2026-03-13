@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2025 GEM Foundation
+# Copyright (C) 2013-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,8 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
 # Guo (2021) site amplification model.
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
-PSAS= os.path.join(os.path.dirname(__file__), 'chapman_guo_2021_psa_ratios.csv')
+PSAS= os.path.join(os.path.dirname(__file__), "chapman_guo_2021", 
+                   'chapman_guo_2021_psa_ratios.csv')
 
 
 # Coefficients for period-dependent bias adjustment provided by Ramos-Sepulveda

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,7 +69,6 @@ class AvgGMPE(GMPE):
         """
         Instantiate a dictionary branch_name -> gmpe_name -> gmpe_params
         """
-        super().__init__(**kwargs)
         weights = []
         self.gsims = []
         rrp = set()

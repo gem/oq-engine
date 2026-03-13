@@ -1,0 +1,98 @@
+/*
+ Copyright (C) 2015-2026 GEM Foundation
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
+ */
+
+tr.asce_output {
+    font-weight: bold;
+}
+.asce-key {
+    font-weight: normal;
+    float: left;
+    width: 100px;
+}
+.asce-value {
+    font-weight: normal;
+    float: left;
+}
+
+.aelo-input {
+    width: 90%;
+    vertical-align: top!important;
+    height: 11px!important;
+    padding-bottom: 10px!important;
+}
+
+input.aelo-input-site_name {
+    width: 100%;
+}
+
+.aelo-input-siteid {
+    width: 300px;
+}
+
+.aelo-label {
+    font-weight: bold;
+}
+
+.aelo-select {
+    height: 33px!important;
+    width: 95%;
+}
+
+.table-aelo-form {
+    width: 80%;
+    margin-bottom: 0;
+}
+
+.table-aelo-form-2 {
+    width: 80%;
+}
+
+.table-aelo-form tr th,
+.table-aelo-form-2 tr th {
+    padding: 0;
+}
+
+.table-aelo-form td,
+.table-aelo-form-2 td {
+    width: 33.33333%;
+    padding: 0;
+    border-top: 0;
+}
+
+.changelog {
+    width: 80%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}
+
+.changelog td:nth-child(1), .changelog th:nth-child(1) {
+    width: 15%;
+}
+.changelog td:nth-child(2), .changelog th:nth-child(2) {
+    width: 15%;
+}
+.changelog td:nth-child(3), .changelog th:nth-child(3) {
+    width: 70%;
+}

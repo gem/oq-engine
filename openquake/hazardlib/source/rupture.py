@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,8 +29,8 @@ import json
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import geo, site, scalerel
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.geo.mesh import (
-    Mesh, RectangularMesh, surface_to_arrays)
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.surface.base import surface_to_arrays, to_arrays
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (
@@ -129,23 +129,6 @@ def to_csv_array(ebruptures):
         _fixfloat32(extra)
         rec['extra'] = json.dumps(extra)
     return arr
-
-
-def to_arrays(geom):
-    """
-    :param geom: an array [num_surfaces, shape_y, shape_z ..., coords]
-    :returns: a list of num_surfaces arrays with shape (3, shape_y, shape_z)
-    """
-    arrays = []
-    num_surfaces = int(geom[0])
-    start = num_surfaces * 2 + 1
-    for i in range(1, 2 * num_surfaces, 2):
-        s1, s2 = int(geom[i]), int(geom[i + 1])
-        size = s1 * s2 * 3
-        array = geom[start:start + size].reshape(3, s1, s2)
-        arrays.append(array)
-        start += size
-    return arrays
 
 
 def get_ebr(rec, geom, trt):
@@ -329,9 +312,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
         .. note::
             This method is using random numbers. In order to reproduce the
-            same results numpy random numbers generator needs to be seeded, see
-            http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
-
+            same results numpy random numbers generator needs to be seeded.
+        
         :returns:
             numpy array of size n with number of rupture occurrences
         """
@@ -487,9 +469,14 @@ class ParametricProbabilisticRupture(BaseRupture):
             pp = projection_pp(site, normal, dist_to_plane, origin)
             pd, e, idx_nxtp = directp(
                 p0, p1, p2, p3, hypocenter, origin, pp)
+            pd0 = numpy.asarray(pd[0]).item()
+            pd1 = numpy.asarray(pd[1]).item()
+            pd2 = numpy.asarray(pd[2]).item()
+
             pd_geo = origin.point_at(
-                (pd[0] ** 2 + pd[1] ** 2) ** 0.5, -pd[2],
-                numpy.degrees(math.atan2(pd[0], pd[1])))
+                (pd0 * pd0 + pd1 * pd1) ** 0.5,
+                -pd2,
+                numpy.degrees(numpy.arctan2(pd0, pd1)))
 
             # determine the lower bound of E path value
             f1 = geodetic_distance(p0.longitude,
@@ -745,6 +732,7 @@ class EBRupture(object):
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
                  e0=0, seed=42):
+        assert id < TWO30, id
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr

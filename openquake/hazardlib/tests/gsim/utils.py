@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -223,7 +223,11 @@ class BaseGSIMTestCase(unittest.TestCase):
             normalize(fnames)
             return
 
-        gsim = self.GSIM_CLASS(**kwargs)
+        if hasattr(self, 'GSIM'): # For ModifiableGMPE tests
+            gsim = self.GSIM
+        else: # Assume a GSIM_CLASS attribute for regular tests
+            gsim = self.GSIM_CLASS(**kwargs)
+
         out_types = ["MEAN"]
         for sdt in contexts.STD_TYPES:
             if sdt in gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES:

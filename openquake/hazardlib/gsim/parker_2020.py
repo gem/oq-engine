@@ -23,7 +23,6 @@ Module exports :class:`ParkerEtAl2020SInter`
                :class:`ParkerEtAl2020SSlabB`
 """
 import os
-import math
 import numpy as np
 import pandas as pd
 from scipy.special import erf
@@ -35,11 +34,27 @@ from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
-EPI_ADJS = os.path.join(os.path.dirname(__file__),
+REGIONS = [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
+
+SAT_REGIONS = [None, "Aleutian", "CAM_N", "CAM_S", "SA_N",
+               "SA_S", "TW_E", "TW_W", "JP_Pac", "JP_Phi"]  
+
+BASINS = [None, "out", "Seattle"]
+
+EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
+
+# Alaska 2023 USGS model bias adjustment coefficients. The coeffs
+# have been taken from:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-sub-ak-interface-adjustment.csv
+AK_BIAS = os.path.join(os.path.dirname(__file__),
+                       "ngasub_interface_alaska_bias_adj",
+                       "nga_sub_ak_interface_adjustment.csv")
 
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
+
+METRES_PER_KM = 1000.
 
 _a0 = CallableDict()
 
@@ -49,7 +64,7 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     Return the adjusted version of the M9 basin term as detailed within the 
     USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
     """
-    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1279.)
+    delta_z2pt5_adj = np.log(z2pt5 * METRES_PER_KM) - np.log(1279.)
     fb_adj = np.zeros(len(z2pt5))
     idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
@@ -84,15 +99,16 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
 
     # Get period-dependent epistemic standard deviation (equation 27)
     period = imt.period
-    if period < adjs[f'T1_{add}']:
+    if period <= adjs[f'T1_{add}']:
         eps_std = adjs[f'SigEp1_{add}']
-    elif period >= adjs[f'T1_{add}'] and period < adjs[f'T2_{add}']:
-        p1 = adjs[f'SigEp1_{add}'
-                  ] - (adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
-        p2 = (np.log(period/adjs[f'T1_{add}']) / 
-              np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}']))
-        eps_std = p1 * p2
+    elif period > adjs[f'T1_{add}'] and period <= adjs[f'T2_{add}']:
+        p1 = adjs[f'SigEp1_{add}']
+        p2 = adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}']
+        p3 = np.log(period/adjs[f'T1_{add}']
+                    ) / np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}'])
+        eps_std = p1 - (p2 * p3)
     else:  # Must be SA with a period larger than or equal to T2
+        assert period > adjs[f'T2_{add}']
         eps_std = adjs[f'SigEp2_{add}']
 
     return eps_std
@@ -123,37 +139,46 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _get_basin_term(C, ctx, region, basin):
+def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term=False,
+                    usgs_basin_scaling=False):
     """
     Basin term main handler.
     """
     if not hasattr(ctx, 'z2pt5'):
         return 0
 
-    if region == "JP":
-        return _get_basin_term_factors(3.05, -0.8, 500, 0.33,
+    elif region == "JP":
+        return _get_basin_term_factors(C, ctx, 3.05, -0.8, 500, 0.33,
                                        C["J_e1"], C["J_e2"],
-                                       C["J_e3"], ctx)
+                                       C["J_e3"], imt,
+                                       m9_basin_term,
+                                       usgs_basin_scaling)
 
-    if region == "Cascadia":
+    elif region == "Cascadia":
         if basin is None:
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"], C["C_e2"],
-                                           C["C_e3"], ctx)
+                                           C["C_e3"], imt,
+                                           m9_basin_term,
+                                           usgs_basin_scaling)
         if basin == "out":
             dn = C["del_None"]
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"],
                                            C["C_e2"] + dn,
-                                           C["C_e3"] + dn, ctx)
+                                           C["C_e3"] + dn,
+                                           imt, m9_basin_term,
+                                           usgs_basin_scaling)
         if basin == "Seattle":
             ds = C["del_Seattle"]
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"],
                                            C["C_e2"] + ds,
-                                           C["C_e3"] + ds, ctx)
-    
-    return 0
+                                           C["C_e3"] + ds,
+                                           imt, m9_basin_term,
+                                           usgs_basin_scaling)
+    else:
+        return 0
 
 
 _c0 = CallableDict()
@@ -205,26 +230,59 @@ def _depth_scaling_2(trt, C, ctx):
     return res
 
 
-def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
+def _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig):
+    """
+    Return reference z2pt5 in metres
+    """
+    return 10 ** (theta0 + theta1 * (
+        1 + erf((np.log10(vs30) - np.log10(vmu)) / (vsig * np.sqrt(2)))))
+
+
+def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
+                            imt, m9_basin_term, usgs_basin_scaling):
     """
     Basin term for given factors.
     """
+    z2 = ctx.z2pt5.copy()
     btf = np.zeros_like(ctx.vs30)
-    select = ctx.z2pt5 != 0
+    select = z2 != 0
     if len(select) == 0:
         return btf
     vs30 = ctx.vs30[select]
-    z2pt5 = ctx.z2pt5[select]
+    z2pt5 = z2[select]
 
-    z2pt5_pred = 10 ** (theta0 + theta1
-                        * (1 + erf((np.log10(vs30) - math.log10(vmu))
-                                   / (vsig * math.sqrt(2)))))
+    z2pt5_pred = _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig)
+
+    # Use GMM's vs30 to z2pt5 to update none-measured values
+    mask = z2pt5 == -999
+    z2pt5[mask] = z2pt5_pred[mask]
+
     del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
 
-    btf[select] = np.where(del_z2pt5 <= (e1 / e3), e1,
-                           np.where(del_z2pt5 >= (e2 / e3), e2,
-                                    e3 * del_z2pt5))
-    return btf
+    btf[select] = np.where(
+        del_z2pt5 <= (e1 / e3), e1, np.where(
+            del_z2pt5 >= (e2 / e3), e2, e3 * del_z2pt5))
+    
+    # Get USGS basin scaling factor if req (should
+    # only really be applied to Cascadia region)
+    if usgs_basin_scaling:
+        usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
+    else:
+        usgs_baf = 1.0
+
+    # If required get the m9 basin adjustment if long period SA
+    # for deep basin sites
+    if m9_basin_term and imt != PGV:
+        if imt.period >= 1.9:
+            m9_adj = _get_adjusted_m9_basin_term(C, z2pt5)
+            btf[z2pt5 >= 6.0] = m9_adj[z2pt5 >= 6.0] 
+
+    # Now that basin term has been (if required) adjusted with m9
+    # correction then apply the usgs basin scaling factor (again
+    # if specified)
+    btf *= usgs_baf
+
+    return btf 
 
 
 def _linear_amplification(region, C, vs30):
@@ -246,11 +304,11 @@ def _linear_amplification(region, C, vs30):
 
     # linear site term
     fnl = np.where(vs30 <= v1,
-                   s1 * np.log(vs30 / v1) + s2 * math.log(v1 / vref),
+                   s1 * np.log(vs30 / v1) + s2 * np.log(v1 / vref),
                    0)
     fnl = np.where((v1 < vs30) & (vs30 <= C["V2"]),
                    s2 * np.log(vs30 / vref), fnl)
-    fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
+    fnl = np.where(vs30 > C["V2"], s2 * np.log(C["V2"] / vref), fnl)
 
     return fnl
 
@@ -281,7 +339,7 @@ def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     else:
         fnl = C["f4"] * (np.exp(C["f5"] * (
             np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"]))
-             - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+             - np.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
         fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
 
     return fnl
@@ -322,8 +380,8 @@ def _path_term_h_2(trt, mag, m_b=None):
     """
     H factor for path term, subduction slab.
     """
-    m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
-    return np.where(mag <= m_b, 10 ** (m * (mag - m_b) + math.log10(35)), 35)
+    m = (np.log10(35) - np.log10(3.12)) / (m_b - 4)
+    return np.where(mag <= m_b, 10 ** (m * (mag - m_b) + np.log10(35)), 35)
 
 
 def get_stddevs(C, rrup, vs30):
@@ -347,19 +405,19 @@ def get_stddevs(C, rrup, vs30):
             phi_rv[i] = C["phi22"]
         else:
             phi_rv[i] = ((C["phi22"] - C["phi21"])
-                         / (math.log(r2) - math.log(r1))) \
-                        * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
+                         / (np.log(r2) - np.log(r1))) \
+                        * (np.log(rrup[i]) - np.log(r1)) + C["phi21"]
 
         if vs30i <= v1:
             phi_rv[i] += C["phi2V"] * \
-                         (math.log(r2 / max(r1, min(r2, rrup[i])))
-                          / math.log(r2 / r1))
+                         (np.log(r2 / max(r1, min(r2, rrup[i])))
+                          / np.log(r2 / r1))
         elif vs30i < v2:
             phi_rv[i] += C["phi2V"] * \
-                      ((math.log(v2 / min(v2, vs30i)))
-                       / math.log(v2 / v1)) * \
-                      (math.log(r2 / max(r1, min(r2, rrup[i])))
-                       / math.log(r2 / r1))
+                      ((np.log(v2 / min(v2, vs30i)))
+                       / np.log(v2 / v1)) * \
+                      (np.log(r2 / max(r1, min(r2, rrup[i])))
+                       / np.log(r2 / r1))
 
     phi_tot = np.sqrt(phi_rv)
 
@@ -383,8 +441,9 @@ class ParkerEtAl2020SInter(GMPE):
                                    sigma_mu (which is the standard deviations 
                                    of the median) for the epistemic uncertainty
                                    model
+    :param ak23_bias_adj: Period-dependent bias adjustment as applied within
+                          the USGS 2023 USGS model for Alaska
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
@@ -414,17 +473,25 @@ class ParkerEtAl2020SInter(GMPE):
 
     def __init__(self, region=None, saturation_region=None, basin=None,
                  m9_basin_term=False, usgs_basin_scaling=False,
-                 sigma_mu_epsilon=0.0):
+                 sigma_mu_epsilon=0.0, ak23_bias_adj=False):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
+        # Check region/sat_region/basin params are valid
+        assert region in REGIONS
+        assert saturation_region in SAT_REGIONS
+        assert basin in BASINS
+
+        # Assign them
         self.region = region
         if saturation_region is None:
             self.saturation_region = region
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+
+        # US23 basin params
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         # USGS basin scaling and M9 basin term is only applied when the
@@ -441,9 +508,22 @@ class ParkerEtAl2020SInter(GMPE):
                                  'adjustment (i.e. it must have z2pt5 as a '
                                 ' required site parameter).')
 
+        # Epistemic uncertainty scaling
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
+
+        # Alaska 2023 USGS model bias adjustment
+        self.ak23_bias_adj = ak23_bias_adj
+        if self.ak23_bias_adj:
+            if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is not
+                const.TRT.SUBDUCTION_INTERFACE or self.region):
+                raise ValueError(f'The Alaska 2023 USGS model bias adjustment '
+                                 f'should only be applied to the "global" '
+                                 f'interface variant of '
+                                 f'{self.__class__.__name__}.')
+            with open(AK_BIAS) as f:
+                self.ak23_adjs_table = CoeffsTable(table=f.read())
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -455,13 +535,6 @@ class ParkerEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-
-            # Get USGS basin scaling factor if required (can only be
-            # applied for CAS region)
-            if self.usgs_basin_scaling:
-                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
-            else:
-                usgs_baf = np.ones(len(ctx.vs30))
 
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
@@ -477,27 +550,23 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _get_basin_term(C, ctx, self.region, self.basin)
+            fb = _get_basin_term(C, ctx, self.region, imt,
+                                 self.basin, self.m9_basin_term,
+                                 self.usgs_basin_scaling)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-            pre_baf_mean = fp + fnl + flin + fm + c0 + fd
-            
-            # If required get the m9 basin adjustment if long period SA
-            # for deep basin sites
-            if self.m9_basin_term and imt != PGV:
-                if imt.period >= 1.9:
-                    m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                    fb[ctx.z2pt5 >= 6.0] = m9_adj[ctx.z2pt5 >= 6.0] 
+            mean[m] = fp + fnl + flin + fm + c0 + fd + fb
 
-            # Now get the mean with basin term added
-            mean[m] = pre_baf_mean + (fb * usgs_baf)
+            if self.ak23_bias_adj:
+                # Apply Alaska 2023 bias adjustment
+                mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
-                # Apply epistemic uncertainty scaling
+                # Apply epistemic uncertainty factor
                 sigma_mu_adjust = _get_sigma_mu_adjustment(
                     self.saturation_region, trt, imt, self.epi_adjs_table)
                 mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon
@@ -575,7 +644,6 @@ class ParkerEtAl2020SSlabB(ParkerEtAl2020SSlab):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
 
-
 add_alias('ParkerEtAl2020SInterAleutian', ParkerEtAl2020SInter,
           region="AK", saturation_region="Aleutian")
 add_alias('ParkerEtAl2020SInterAlaska', ParkerEtAl2020SInter,
@@ -628,3 +696,4 @@ add_alias('ParkerEtAl2020SSlabJapanPac', ParkerEtAl2020SSlabB,
           region="JP", saturation_region="JP_Pac")
 add_alias('ParkerEtAl2020SSlabJapanPhi', ParkerEtAl2020SSlabB,
           region="JP", saturation_region="JP_Phi")
+

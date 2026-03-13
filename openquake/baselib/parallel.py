@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -219,12 +219,19 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
-def scratch_dir(job_id):
+def calc_dir(job_id_or_fname):
     """
-    :returns: scratch directory associated to the given job_id
+    :param job_id_or_fname: job ID (integer) or .hdf5 pathname (string)
+    :returns: directory associated to the given job_id_or_fname
     """
-    tmp = config.directory.custom_tmp or tempfile.gettempdir()
-    dirname = os.path.join(tmp, getpass.getuser(), f'calc_{job_id}')
+    if job_id_or_fname == 0:  # default WorkerPool in zmq mode
+        # for the "executing" functionality
+        return os.path.join(tempfile.gettempdir(), getpass.getuser())
+    if isinstance(job_id_or_fname, str):
+        dirname = job_id_or_fname[:-5]  # strip .hdf5
+    else:  # in SLURM clusters
+        from openquake.commonlib.logs import dbcmd
+        dirname = dbcmd('get_job', job_id_or_fname).ds_calc_dir
     try:
         os.makedirs(dirname)
     except FileExistsError:  # already created
@@ -270,13 +277,18 @@ def oq_distribute(task=None):
 
 
 def init_workers():
-    """Used to initialize the process pool"""
+    """
+    Used to initialize the process pool. Calls setproctitle (if available)
+    and sets the flag Starmap.on, so that it is possible to determine if
+    the current code is begin run in parallel or not.
+    """
     try:
         from setproctitle import setproctitle
     except ImportError:
         pass
     else:
         setproctitle('oq-worker')
+    Starmap.on = True
 
 
 class Pickled(object):
@@ -517,8 +529,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
-    elif func is split_task:
-        name = args[1].__name__
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
@@ -678,24 +688,26 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
-# determine the number of cores to use
+# determine the number of cores to use; for instance on a system with
+# 12 threads and 8 GB of RAM, tot_cores = min(12, 8) = 8
 cpu_count = psutil.cpu_count()
-if sys.platform == 'win32':
-    # assume hyperthreading is on; use half the threads to save memory
-    tot_cores = cpu_count // 2 or 1
-elif sys.platform == 'linux':
+gb_count = int(psutil.virtual_memory().total / 1E9)
+if sys.platform == 'linux':
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    tot_cores = len(psutil.Process().cpu_affinity())
+    tot_cores = min(len(psutil.Process().cpu_affinity()), gb_count)
 else:
-    tot_cores = cpu_count
+    tot_cores = min(cpu_count, gb_count)
+num_cores = int(os.environ.get('OQ_NUM_CORES') or
+                config.distribution.get('num_cores')
+                or tot_cores)
 
 
 class Starmap(object):
+    on = False
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
-    num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -709,16 +721,18 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pool = mp_context.Pool(
-                cls.num_cores if cls.num_cores <= tot_cores else tot_cores,
-                init_workers, maxtasksperchild=cls.maxtasksperchild)
+            cls.pool = mp_context.Pool(num_cores, init_workers,
+                                       maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
+            cls.pool = multiprocessing.dummy.Pool(num_cores)
+
+        if num_cores > tot_cores:
+            logging.warning(f'{num_cores=} but {tot_cores=}')
 
     @classmethod
     def shutdown(cls):
@@ -766,18 +780,6 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
-    def apply_split(cls, task, allargs, concurrent_tasks=None,
-                    maxweight=None, weight=lambda item: 1,
-                    key=lambda item: 'Unspecified',
-                    distribute=None, progress=logging.info, h5=None,
-                    duration=300, outs_per_task=5):
-        """
-        Same as Starmap.apply, but possibly produces subtasks
-        """
-        args = (allargs[0], task, allargs[1:], duration, outs_per_task)
-        return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
-                         maxweight, weight, key, distribute, progress, h5)
-
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, h5=None):
         self.__class__.init(distribute=distribute)
@@ -790,21 +792,18 @@ class Starmap(object):
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
-        if task_func is split_task:
-            self.name = task_args[0][1].__name__
-        else:
-            self.name = task_func.__name__
+        self.name = task_func.__name__
         self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
-        self.task_args = task_args
         self.progress = progress
         self.h5 = h5
         self.task_queue = []
         try:
-            self.num_tasks = len(self.task_args)
+            self.num_tasks = len(task_args)
         except TypeError:  # generators have no len
             self.num_tasks = None
+        self.task_args = task_args
         self.argnames = getargnames(task_func)
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
@@ -845,8 +844,8 @@ class Starmap(object):
         Initialize the list host_cores by reading the file with the hostcores
         generated by the worker nodes
         """
-        scr = scratch_dir(self.monitor.calc_id)
-        with open(os.path.join(scr, 'hostcores')) as f:
+        cdir = calc_dir(self.monitor.calc_id)
+        with open(os.path.join(cdir, 'hostcores')) as f:
             host_cores[:] = [ln.strip() for ln in f.readlines()]
 
     def submit(self, args, func=None):
@@ -862,12 +861,8 @@ class Starmap(object):
                 self.return_ip, self.socket.port)
             if self.distribute == 'slurm':
                 self.init_slurm()
-        OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
-        if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
-            self.task_no += 1
-            return
-        dist = 'no' if self.num_tasks == 1 or OQ_TASK_NO else self.distribute
-        if dist != 'no':
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist not in ('no', 'threadpool'):
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
@@ -882,15 +877,6 @@ class Starmap(object):
         submit[dist](self, func, args, self.monitor)
         self.tasks.append(self.task_no)
         self.task_no += 1
-
-    def submit_split(self, args,  duration, outs_per_task):
-        """
-        Submit the given arguments to the underlying task
-        """
-        self.monitor.operation = self.task_func.__name__ + '_'
-        self.submit(
-            (args[0], self.task_func, args[1:], duration, outs_per_task),
-            split_task)
 
     def submit_all(self):
         """
@@ -956,7 +942,6 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
-            #sbatch(self.monitor)
 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
@@ -989,28 +974,30 @@ class Starmap(object):
                               shortlist(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
+                if self.h5.mode != 'r':
+                    del self.h5['task_sent']
+                    self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
-                n = self.name + ':' + name if name == 'split_task' else name
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
                     if res.mon.task_no % 10 == 0:
-                        # measure the memory only for 1 task out of 10, to be fast
+                        # measure the memory only for 1 task out of 10
                         # with 8 nodes the time to get the memory is 0.01 secs
                         for line in host_cores:
                             host, _cores = line.split()
-                            addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+                            addr = 'tcp://%s:%s' % (
+                                host, config.zworkers.ctrl_port)
                             with Socket(addr, zmq.REQ, 'connect') as sock:
                                 mem_gb += sock.send('memory_gb')
                 elif self._shared:
-                    # do not measure the memory on the workers, only in the master
+                    # do not measure the memory on the workers
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
                 else:
                     mem_gb = memory_gb(Starmap.pids)
-                res.mon.save_task_info(self.h5, res, n, mem_gb)
-                res.mon.flush(self.h5)
+                if self.h5.mode != 'r':
+                    res.mon.save_task_info(self.h5, res, name, mem_gb)
+                    res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
@@ -1021,11 +1008,27 @@ class Starmap(object):
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
         self.unlink()
+        if self.expected_outputs:
+            assert self.expected_outputs == self.n_out, (
+                self.expected_outputs, self.n_out)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
-            logging.info(
-                'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                times.mean(), times.std(), times.min(), times.max())
+            if self.h5.mode != 'r':
+                self.monitor.save_starmap_info(self.h5, self.name, times)
+
+
+# as of Python 3.13 this is terribly inefficient compared to a processpool,
+# even for numba functions releasing the GIL(!), so don't use it for the
+# moment; it may become useful with the noGIL built of Python 3.14 or not
+class Threadmap(Starmap):
+    """
+    A Starmap subclass spawing only threadpools
+    """
+    def __init__(self, task_func, task_args=(),
+                 progress=logging.info, h5=None):
+        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
+        super().__init__(task_func, task_args, 'threadpool',
+                         logging.info, h5)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
@@ -1051,46 +1054,24 @@ class List(list):
     weight = 0
 
 
-def split_task(elements, func, args, duration, outs_per_task, monitor):
-    """
-    :param func: a task function with a monitor as last argument
-    :param args: arguments of the task function, with args[0] being a sequence
-    :param duration: split the task if it exceeds the duration
-    :param outs_per_task: number of splits to try (ex. 5)
-    :yields: a partial result, 0 or more task objects
-    """
-    n = len(elements)
-    if outs_per_task > n:  # too many splits
-        outs_per_task = n
-    elements = numpy.array(elements)  # from WeightedSequence to array
-    idxs = numpy.arange(n)
-    split_elems = [elements[idxs % outs_per_task == i]
-                   for i in range(outs_per_task)]
-    # see how long it takes to run the first slice
-    t0 = time.time()
-    for i, elems in enumerate(split_elems):
-        monitor.out_no = monitor.task_no + i * 65536
-        res = func(elems, *args, monitor=monitor)
-        dt = time.time() - t0
-        yield res
-        if dt > duration:
-            # spawn subtasks for the rest and exit, used in classical/case_14
-            for els in split_elems[i + 1:]:
-                ls = List(els)
-                ls.weight = sum(getattr(el, 'weight', 1.) for el in els)
-                yield (func, ls) + args
-            break
-
-
 def logfinish(n, tot):
     logging.info('Finished %d of %d jobs', n, tot)
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
+               names=()):
     """
-    Spawn processes with the given arguments
+    Spawn functions with the given arguments as subprocesses.
+
+    :param func: function to spawn
+    :param allargs: list of arguments
+    :param nprocs: number of processes running at the same time
+    :param logfinish: if True, log a progress message
+    :param names: optionally, give names to the spawned processes
     """
+    if names:
+        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
@@ -1101,7 +1082,8 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
     n = 1
     while allargs:
         args = allargs.pop()
-        proc = mp_context.Process(target=func, args=args)
+        name = names.pop() if names else None
+        proc = mp_context.Process(target=func, args=args, name=name)
         proc.start()
         procs[proc.sentinel] = proc
         while len(procs) >= nprocs:  # wait for something to finish
@@ -1109,20 +1091,19 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
                 procs[finished].join()
                 del procs[finished]
                 if logfinish:
-                    logging.info('Finished %d of %d jobs', n, tot)
+                    logging.info('Finished job %s [%d of %d]', name, n, tot)
                 n += 1
 
     while procs:
         for finished in wait(procs):
+            name = procs[finished].name or ''
             procs[finished].join()
             del procs[finished]
             if logfinish:
-                logging.info('Finished %d of %d jobs', n, tot)
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
 
 
 if oq_distribute() == 'slurm':
-    if not config.directory.custom_tmp:
-        raise ValueError('oq_distribute=slurm requires setting custom_tmp')
     if not hasattr(config.distribution, 'num_cores'):
         raise ValueError('oq_distribute=slurm requires setting num_cores')

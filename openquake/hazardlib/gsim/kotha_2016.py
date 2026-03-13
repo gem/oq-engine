@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,8 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-KOTHA_CSV = os.path.join(os.path.dirname(__file__), 'kotha_2016.csv')
+KOTHA_CSV = os.path.join(os.path.dirname(__file__), "kotha_2016", 
+                         'kotha_2016.csv')
 
 CONSTS = {"Mh": 6.75, "Mref": 5.5, "Rref": 1.0}
 

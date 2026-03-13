@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,17 +41,19 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
-        lst = ['oqparam', 'performance_data', 'task_info', 'task_sent']
+        lst = ['oqparam', 'performance_data', 'starmap_info', 'task_info',
+               'task_sent']
         self.assertEqual(sorted(self.dstore), lst)
         # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
         self.assertEqual(list(self.dstore), [
             'key1', 'key2', 'oqparam', 'performance_data',
-            'task_info', 'task_sent'])
+            'starmap_info', 'task_info', 'task_sent'])
         del self.dstore['/key2']
         self.assertEqual(list(self.dstore), [
-            'key1', 'oqparam', 'performance_data', 'task_info', 'task_sent'])
+            'key1', 'oqparam', 'performance_data', 'starmap_info',
+            'task_info', 'task_sent'])
         numpy.testing.assert_equal(self.dstore['key1'], value1)
 
         self.assertGreater(self.dstore.getsize('key1'), 0)

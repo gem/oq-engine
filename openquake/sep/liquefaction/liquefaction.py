@@ -471,125 +471,6 @@ def allstadt_etal_2022(
     return prob_liq, out_class, LSE
 
 
-def akhlagi_etal_2021_model_a(
-    pgv: Union[float, np.ndarray],
-    tri: Union[float, np.ndarray],
-    dc: Union[float, np.ndarray],
-    dr: Union[float, np.ndarray],
-    zwb: Union[float, np.ndarray],
-    intercept: float = 4.925,
-    pgv_coeff: float = 0.694,
-    tri_coeff: float = -0.459,
-    dc_coeff: float = -0.403,
-    dr_coeff: float = -0.309,
-    zwb_coeff: float = -0.164,
-) -> Union[float, np.ndarray]:
-    """
-    Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of the Akhlagi et al., 2021 model A.
-    The optimal threshold probability value to convert the predicted
-    probability into binary classification is 0.4
-    (see p.13 from Zhu et al., 2017).
-
-    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A.,
-    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction
-    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162).
-    Seismological Society of America.
-    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A.,
-    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the
-    Geospatial Liquefaction Database and Model.
-    Tufts University. Medford, Massachusetts, United States.
-
-    :param pgv:
-        Peak Ground Velocity, measured in cm/s
-    :param tri:
-        Topographic roughness index, unitless
-    :param dc:
-        Distance to the nearest coast, measured in km
-    :param dr:
-        Distance to the nearest river, measured in km
-    :param zwb:
-        Elevation above the nearest water body, measured in m
-
-    :returns:
-        prob_liq: Probability of liquefaction at the site.
-        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
-                   or liquefaction occurrence occurrence.
-    """
-
-    Xg = (
-        pgv_coeff * np.log(pgv)
-        + tri_coeff * np.sqrt(tri)
-        + dc_coeff * np.log(dc + 1)
-        + dr_coeff * np.log(dr + 1)
-        + zwb_coeff * np.sqrt(zwb)
-        + intercept
-    )
-    prob_liq = sigmoid(Xg)
-    out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
-
-
-def akhlagi_etal_2021_model_b(
-    pgv: Union[float, np.ndarray],
-    vs30: Union[float, np.ndarray],
-    dc: Union[float, np.ndarray],
-    dr: Union[float, np.ndarray],
-    zwb: Union[float, np.ndarray],
-    intercept: float = 9.504,
-    pgv_coeff: float = 0.706,
-    vs30_coeff: float = -0.994,
-    dc_coeff: float = -0.389,
-    dr_coeff: float = -0.291,
-    zwb_coeff: float = -0.205,
-) -> Union[float, np.ndarray]:
-    """
-    Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of the Akhlagi et al., 2021 model B.
-    The optimal threshold probability value to convert the predicted
-    probability into binary classification is 0.4
-    (see p.13 from Zhu et al., 2017).
-
-    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A.,
-    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction
-    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162).
-    Seismological Society of America.
-    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A.,
-    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the
-    Geospatial Liquefaction Database and Model.
-    Tufts University. Medford, Massachusetts, United States.
-
-    :param pgv:
-        Peak Ground Velocity, measured in cm/s
-    :param vs30:
-        Shear-wave velocity averaged over the upper 30 m of the earth at the
-        site, measured in m/s
-    :param dc:
-        Distance to the nearest coast, measured in m
-    :param dr:
-        Distance to the nearest river, measured in m
-    :param zwb:
-        Elevation above the nearest water body, measured in m
-
-    :returns:
-        prob_liq: Probability of liquefaction at the site.
-        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
-                   or liquefaction occurrence occurrence.
-    """
-
-    Xg = (
-        pgv_coeff * np.log(pgv)
-        + vs30_coeff * np.log(vs30)
-        + dc_coeff * np.log(dc + 1)
-        + dr_coeff * np.log(dr + 1)
-        + zwb_coeff * np.sqrt(zwb)
-        + intercept
-    )
-    prob_liq = sigmoid(Xg)
-    out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
-
-
 def bozzoni_etal_2021_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
@@ -700,7 +581,8 @@ def _hazus_magnitude_correction_factor(
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
+    return (m3_coeff * (mag**3) + m2_coeff * (mag**2) +
+            m1_coeff * mag + intercept)
 
 
 def _hazus_groundwater_correction_factor(
@@ -792,11 +674,13 @@ def hazus_liquefaction_probability(
         analysis, or how to compare this to other liquefaction models.
         Defaults to `True` following the HAZUS methods.
     """
-    groundwater_corr = _hazus_groundwater_correction_factor(groundwater_depth, unit="m")
+    groundwater_corr = _hazus_groundwater_correction_factor(
+        groundwater_depth, unit="m")
     mag_corr = _hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(
+            pga, liq_susc_cat)
         if do_map_proportion_correction:
             map_unit_proportion = HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[
                 liq_susc_cat
@@ -804,7 +688,8 @@ def hazus_liquefaction_probability(
         else:
             map_unit_proportion = 1.0
     else:
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(
+            pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(

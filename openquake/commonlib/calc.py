@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,9 +20,8 @@ import logging
 import operator
 import functools
 import numpy
-from shapely.geometry import Point
 
-from openquake.baselib import performance, parallel, hdf5, general
+from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
@@ -123,6 +122,21 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for event_based calculators ################ #
 
+def get_model_lts(h5):
+    """
+    :returns: (model, full_lt) pairs
+    """
+    out = []
+    full_lt = h5['full_lt']
+    if hasattr(full_lt, 'gsim_lt'):
+        out.append(('???', full_lt))
+    else:
+        # full_lt is a h5py group
+        for model in full_lt:
+            out.append((model, h5[f'full_lt/{model}']))
+    return out
+
+
 # TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
@@ -166,14 +180,16 @@ def make_uhs(hmap, info):
     return uhs
 
 
-def get_proxies(filename, rup_array, min_mag=0):
+def get_proxies(filename, rup_array=slice(None), min_mag=0):
     """
+    :param filename: where the ruptures and geometries are stored
+    :param rup_array: an array of ruptures or a slice
     :returns: a list of RuptureProxies
     """
     proxies = []
     try:
         h5 = datastore.read(filename)
-    except ValueError: # cannot extract calc_id
+    except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
         rupgeoms = h5['rupgeoms']
@@ -199,19 +215,12 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        self.full_lt = dstore['full_lt']
+        self.model_lts = get_model_lts(dstore)
         self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
         except KeyError:  # missing sitecol
             self.N = 0
-
-    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, ordinal):
-        """
-        :returns: a composite array with the associations eid->rlz
-        """
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array):
         """
@@ -222,17 +231,14 @@ class RuptureImporter(object):
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
-        self.datastore['rup_start_stop'] = performance.idx_start_stop(
-            rup_array['trt_smr'])
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']        
+        n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
-        self.datastore.create_dset('trt_smr_start_stop', idx_start_stop)
         self._save_events(rup_array, idx_start_stop)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
@@ -250,39 +256,23 @@ class RuptureImporter(object):
         oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
+        assert E < TWO32, E
         events = numpy.zeros(E, rupture.events_dt)
-        # DRAMATIC! the event IDs will be overridden a few lines below,
-        # see the line events['id'] = numpy.arange(len(events))
 
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        # build the associations eid -> rlz sequentially or in parallel
-        # this is very fast: I saw 30 million events associated in 1 minute!
-        iterargs = []
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
-        filename = self.datastore.filename
-        for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
-            slc = slice(start, stop)
-            proxies = get_proxies(filename, rup_array[slc])
-            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
-        acc = general.AccumDict()  # ordinal -> eid_rlz
-        if len(events) < 1E5:
-            for args in iterargs:
-                acc += self.get_eid_rlz(*args)
-        else:
-            self.datastore.swmr_on()  # before the Starmap
-            for res in parallel.Starmap(
-                    self.get_eid_rlz, iterargs,
-                    h5=self.datastore,
-                    progress=logging.debug):
-                acc += res
+        # build the associations eid -> rlz; this is very fast:
+        # I saw 30 million events associated in 1 minute!
         i = 0
-        for ordinal, eid_rlz in sorted(acc.items()):
-            for er in eid_rlz:
-                events[i] = er
-                i += 1
-                if i >= TWO32:
-                    raise ValueError('There are more than %d events!' % i)
+        for model, lt in self.model_lts:
+            rlzs_by_gsim = lt.get_rlzs_by_gsim_dic()
+            for trt_smr, start, stop in idx_start_stop:
+                rlzs = numpy.concatenate(
+                    list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
+                records = get_events(rup_array[start:stop], rlzs, self.scenario)
+                nr = len(records)
+                events[i:i + nr] = records  # (id, rup_id, rlz_id)
+                i += nr
 
         # sanity check
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
@@ -290,7 +280,6 @@ class RuptureImporter(object):
         # set event year and event ses starting from 1
         nses = oq.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
-
         rng = numpy.random.default_rng(oq.ses_seed)
         if oq.investigation_time:
             R = len(self.datastore['weights'])
@@ -299,7 +288,9 @@ class RuptureImporter(object):
                 ok, = numpy.where(events['rlz_id'] == r)
                 extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
+        self.datastore.create_dset(
+            'events', util.compose_arrays(events, extra))
+        self.datastore.flush()
 
     def check_overflow(self, E):
         """
@@ -411,6 +402,29 @@ def get_counts(idxs, N):
     return counts
 
 
+def split(sbe, max_gmvs_chunk):
+    """
+    :yield: blocks of slices by event
+    """
+    dic = general.AccumDict(accum=[])
+    for rec in sbe:
+        dic[rec['stop'] // max_gmvs_chunk].append(rec)
+    for recs in dic.values():
+        yield numpy.array(recs, sbe[0].dtype)
+
+
+def count_outputs(eids, sbe, maxw, weight,
+                  size=int(config.memory.max_gmvs_chunk)):
+    """
+    Count the alt and avg outputs for each task
+    """
+    tot = 0
+    for blk in general.block_splitter(sbe, maxw, weight):
+        alts = list(split(blk, size))
+        tot += len(alts) + 1  # 1 avg output, multiple alt outputs
+    return tot
+
+
 def get_slices(sbe, data, num_assets):
     """
     :returns: a list of triple (start, stop, weight)
@@ -435,13 +449,16 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
+    ct = int(oq.concurrent_tasks * .95) or 1
     data = dstore['gmf_data']
+    gmvs_per_task = len(data['sid']) // ct
+    logging.info('gmvs_per_task =~ {:_d}'.format(gmvs_per_task))
     if 'gmf_data' in dstore.parent:
         ds = dstore.parent
-        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
-        logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
+    nbytes = sum(data[k].nbytes for k in data)
+    logging.info('There are %.1f GB of GMFs', nbytes / 1024 ** 3)
     try:
         N = len(ds['complete'])
     except KeyError:
@@ -462,15 +479,19 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         for slc in general.gen_slices(0, len(sbe), 100_000):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
-    dstore.swmr_on()
-    maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
+
+    maxw = slices['weight'].sum() // ct or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
+    w = operator.itemgetter('weight')
+    if oq.calculation_mode == 'event_based_risk':
+        expected_outputs = count_outputs(data['eid'], slices, maxw, w)
+        logging.info('Expected outputs = %d', expected_outputs)
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Chile with 2 GB per core
-        maxweight=min(maxw, 200_000_000),
-        weight=operator.itemgetter('weight'),
-        h5=dstore.hdf5)
+        maxweight=maxw, weight=w, h5=dstore.hdf5)
+    if oq.calculation_mode == 'event_based_risk':
+        smap.expected_outputs = expected_outputs
     return smap
 
 
@@ -486,11 +507,9 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     :returns: list of mosaic models intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
-    hypocenter = Point(lon, lat)
-    hypo_buffer = hypocenter.buffer(buffer_radius)
-    geoms = numpy.array([hypo_buffer])
-    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
+    mosaic_df = readinput.read_mosaic_df()
+    close_mosaic_models = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
             f'({lon}, {lat}) is farther than {buffer_radius} deg'

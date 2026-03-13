@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2025 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ import pandas
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt, logictree
+from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid
 from openquake.commonlib import readinput, tests
 from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -1234,29 +1234,29 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
 class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
-        branches = [logictree.Branch('BS', 1, 0.2, 'A'),
-                    logictree.Branch('BS', 1, 0.3, 'B'),
-                    logictree.Branch('BS', 1, 0.5, 'C')]
+        branches = [logictree.Branch(1, 'A', .2, 'BS'),
+                    logictree.Branch(1, 'B', .3, 'BS'),
+                    logictree.Branch(1, 'C', .5, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         samples = lt.sample(branches, probs, 'early_weights')
 
         def count(samples, value):
             return sum(s.value == value for s in samples)
 
-        self.assertEqual(count(samples, value='A'), 225)
-        self.assertEqual(count(samples, value='B'), 278)
+        self.assertEqual(count(samples, value='A'), 218)
+        self.assertEqual(count(samples, value='B'), 285)
         self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
-        branches = [logictree.Branch('BS', 0, 0.1, 0),
-                    logictree.Branch('BS', 1, 0.2, 1)]
+        branches = [logictree.Branch(0, 0, 0.1, 'BS'),
+                    logictree.Branch(1, 1, 0.2, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         with self.assertRaises(IndexError):
             lt.sample(branches, probs, 'early_weights')
 
     def test_sample_one_branch(self):
         # always the same branch is returned
-        branches = [logictree.Branch('BS', 0, 1.0, 0)]
+        branches = [logictree.Branch(0, 0, 1.0, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         bs = lt.sample(branches, probs, 'early_weights')
         for b in bs:
@@ -1265,23 +1265,23 @@ class SampleTestCase(unittest.TestCase):
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
     def test_enumerate(self):
-        b0 = logictree.Branch('BS1', '0', 0.64, '0')
-        b1 = logictree.Branch('BS1', '1', 0.36, '1')
-        b00 = logictree.Branch('BS2', '0.0', 0.33, '0.0')
-        b01 = logictree.Branch('BS2', '0.1', 0.27, '0.1')
-        b02 = logictree.Branch('BS2', '0.2', 0.4, '0.2')
-        b10 = logictree.Branch('BS3', '1.0', 1.0, '1.0')
-        b100 = logictree.Branch('BS4', '1.0.0', 0.1, '1.0.0')
-        b101 = logictree.Branch('BS4', '1.0.1', 0.9, '1.0.1')
-        bs_root = logictree.BranchSet(None)
+        b0 = logictree.Branch('0', '0', 0.64, 'BS1')
+        b1 = logictree.Branch('1', '1', 0.36, 'BS1')
+        b00 = logictree.Branch('0.0', '0.0', 0.33, 'BS2')
+        b01 = logictree.Branch('0.1', '0.1', 0.27, 'BS2')
+        b02 = logictree.Branch('0.2', '0.2', 0.4, 'BS2')
+        b10 = logictree.Branch('1.0', '1.0', 1.0, 'BS3')
+        b100 = logictree.Branch('1.0.0', '1.0.0', 0.1, 'BS4')
+        b101 = logictree.Branch('1.0.1', '1.0.1', 0.9, 'BS4')
+        bs_root = logictree.BranchSet('sourceModel')
         bs_root.branches = [b0, b1]
-        bs0 = logictree.BranchSet(None)
+        bs0 = logictree.BranchSet('sourceModel')
         bs0.branches = [b00, b01, b02]
-        bs1 = logictree.BranchSet(None)
+        bs1 = logictree.BranchSet('sourceModel')
         bs1.branches = [b10]
         b0.bset = bs0
         b1.bset = bs1
-        bs10 = logictree.BranchSet(None)
+        bs10 = logictree.BranchSet('sourceModel')
         bs10.branches = [b100, b101]
         b10.bset = bs10
 
@@ -1305,18 +1305,18 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):
     def test(self):
-        bs = logictree.BranchSet(None)
-        b1 = logictree.Branch('BS', '1', 0.33, None)
-        b2 = logictree.Branch('BS', '2', 0.33, None)
-        bbzz = logictree.Branch('BS', 'bzz', 0.34, None)
+        bs = logictree.BranchSet('sourceModel')
+        b1 = logictree.Branch('1', None, 0.33, 'BS')
+        b2 = logictree.Branch('2', None, 0.33, 'BS')
+        bbzz = logictree.Branch('bzz', 0.34, None, 'BS')
         bs.branches = [b1, b2, bbzz]
         self.assertIs(bs['1'], b1)
         self.assertIs(bs['2'], b2)
         self.assertIs(bs['bzz'], bbzz)
 
     def test_nonexistent_branch(self):
-        bs = logictree.BranchSet(None)
-        br = logictree.Branch('BS', 'br', 1.0, None)
+        bs = logictree.BranchSet('sourceModel')
+        br = logictree.Branch('br', None, 1.0, 'BS')
         bs.branches.append(br)
         self.assertRaises(KeyError, bs.__getitem__, 'bz')
 
@@ -1561,13 +1561,13 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(
-            None, filters={'applyToSources': [1], 'foo': 'bar'})
+            'maxMagGRAbsolute', filters={'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_tectonic_region_type(self):
         def test(trt, source):
             return logictree.BranchSet(
-                None, filters={'applyToTectonicRegionType': trt}
+                'gmpeModel', filters={'applyToTectonicRegionType': trt}
             ).filter_source(source)
 
         asc = 'Active Shallow Crust'
@@ -1607,7 +1607,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         def test(sources, source, expected_result):
             return self.assertEqual(
                 logictree.BranchSet(
-                    None,
+                    'maxMagGRAbsolute',
                     filters={'applyToSources': [s.source_id for s in sources]}
                 ).filter_source(source),
                 expected_result)
@@ -1859,7 +1859,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         for rlz in rlzs:
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
+        self.assertEqual(counter, {('gA0',): 402, ('gB0',): 598})
 
     def test_multiple(self):
         xml = _make_nrml("""\
@@ -1909,13 +1909,14 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
-        self.assertEqual(rlz.value, ['example-source-model.xml', -0.2, 0.0])
-        self.assertEqual(('b1', 'b5', 'b7'), rlz.lt_path)
+        self.assertEqual(rlz.value, ['example-source-model.xml', 0.0, 0.1])
+        self.assertEqual(('b1', 'b4', 'b6'), rlz.lt_path)
 
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
-        self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
+        gsims = (valid.gsim('ChiouYoungs2008'), valid.gsim('SadighEtAl1997'))
+        self.assertEqual(rlz.value, gsims)
         self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
@@ -1994,15 +1995,15 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         oqparam.sampling_method = 'early_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
-                 'b1_b26', 'b2_.', 'b2_.', 'b2_.']
+        paths = ['b1_b22', 'b1_b22', 'b1_b23', 'b1_b23', 'b1_b23', 'b1_b24',
+                 'b1_b24', 'b1_b24', 'b1_b25', 'b2_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
 
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.102)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
@@ -2012,16 +2013,14 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         oqparam.sampling_method = 'late_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
-                 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.', 'b3_.']
+        paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b23',
+                 'b2_.', 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.04438889044, 0.05861275966, 0.031712341,
-                   0.01389718817, 0.18919751558, 0.189197515,
-                   0.18919751558, 0.09459875780, 0.094598757,
-                   0.09459875779]
+        weights = [0.01428537, 0.03094343, 0.08171773, 0.08171773, 0.17585239,
+                   0.17585239, 0.17585239, 0.17585239, 0.0439631, 0.0439631]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.116706)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch

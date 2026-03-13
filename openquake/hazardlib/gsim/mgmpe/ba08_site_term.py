@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -101,7 +101,7 @@ class BA08SiteTerm(GMPE):
         # Make sites with ref bedrock vs30
         rup_rock = copy.copy(ctx)
         rup_rock.vs30 = np.full_like(ctx.vs30, 760.)
-
+    
         # Compute mean on bedrock
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
         

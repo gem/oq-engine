@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,15 +22,19 @@ import logging
 import operator
 from contextlib import contextmanager
 import numpy
+import pandas
 from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+F32 = numpy.float32
 U32 = numpy.uint32
 MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
@@ -177,7 +181,7 @@ def floatdict(value):
     return value
 
 
-def magdepdist(pairs):
+def magdepdist(pairs=((MINMAG, 1000), (MAXMAG, 1000))):
     """
     :param pairs: a list of pairs [(mag, dist), ...]
     :returns: a scipy.interpolate.interp1d function
@@ -328,24 +332,144 @@ def split_source(src):
     return splits
 
 
-def close_ruptures(ruptures, sites, dist=800.):
+def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
     """
-    :returns: array of ruptures close to the sites
-    """    
+    :param ruptures: array of ruptures with the same magnitude
+    :param sitetree: kdtree for the reduced sites
+    :param num_assets: dictionary site_id -> number of assets on that site
+    :param dist: integration distance at that magnitude
+    :returns: ruptures close to the global site collection
+    """
     hypos = ruptures['hypo']
-    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
-    ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
-    all_sids = kr.query_ball_tree(ks, dist, eps=.1)
+    kr = KDTree(spherical_to_cartesian(
+        hypos[:, 0], hypos[:, 1], hypos[::, 2]))
+    all_sids = kr.query_ball_tree(sitetree, dist, eps=.1)
     out = []
     for r, sids in enumerate(all_sids):
         if sids:
-            ruptures[r]['nsites'] = len(sids)
-            out.append(ruptures[r])
+            rup = ruptures[r]
+            # NB: if there are stations num_assets[sid] can be empty
+            rup['nsites'] = sum(num_assets.get(s, 1)
+                                for sid in sids
+                                for s in orig_sids[sid])
+            out.append(rup)
     return numpy.array(out)
+
+
+# NB: this is fast because of KDTree and the magdist
+# NB: the magdist here is hard-coded and independent from oq
+# NB: sitecol.lower_res(5) is needed to save memory: for India
+# with 1.3M sites the filtering was taking 83 GB, now only 6 GB
+def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
+                   magdist=magdepdist(
+        [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
+         (8., 400.), (9., 700.), (11., 1200.)])):
+    """
+    :param ruptures: an array of rupture records
+    :param sitecol: a SiteCollection instance
+    :param assetcol: an AssetCollection or None
+    :param h5: hdf5 where to save the performance info
+    :returns: the ruptures close to the sites
+    """
+    if assetcol:
+        sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
+        num_assets = dict(zip(sids, counts))
+    else:
+        num_assets = {}
+    sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
+    if len(sites) < len(sitecol):
+        logging.info('Reducing %s->%d sites', sitecol, len(sites))
+    mags = numpy.round(ruptures['mag'], 1)
+    ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
+    smap = Starmap(filter_rups,
+                   distribute='no' if len(mags) < 1000 else None, h5=h5)
+    for mag in F32(numpy.arange(3, 11, .1)):
+        ok = mags == mag
+        if ok.sum() == 0:  # no ruptures in this magnitude range
+            continue
+        smap.submit((ruptures[ok], ks, orig_sids, num_assets, magdist(mag)))
+        if len(ruptures) > 100_000:
+            logging.info('Considering %d ruptures of magnitude %s',
+                         ok.sum(), mag)
+    arrays = [arr for arr in smap if len(arr)]
+    assert arrays, "All ruptures have been prefiltered out!"
+    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
 
 
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
+
+def rup_radius(rup):
+    """
+    Maximum distance from the rupture mesh to the hypocenter
+    """
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = distance.cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
+    return radius
+
+
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat'
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    # first raw filtering
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    tree = KDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
+
+    # then fine filtering
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
+
+
+class RuptureFilter(object):
+    """
+    Filter arrays/dataframes with lon, lat around a rupture
+    """
+    def __init__(self, rup, dist):
+        self.rup = rup
+        self.dist = dist
+
+    def __call__(self, array_df):
+        if isinstance(array_df, pandas.DataFrame):
+            # computing all the distances the slow way
+            if hasattr(array_df, 'lon'):
+                # when reading the exposure.csv files
+                mesh = Mesh(F32(array_df.lon), F32(array_df.lat))
+            else:
+                # when reading the exposure.hdf5 file
+                mesh = Mesh(F32(array_df.LONGITUDE), F32(array_df.LATITUDE))
+            dists = get_distances(self.rup, mesh, 'rrup')
+            return array_df[dists < self.dist]
+        # this is called when reading the site model from eexposure.hdf5
+        return filter_site_array_around(array_df, self.rup, self.dist)
+
+    def filter(self, lons, lats):
+        """
+        :returns: (mask, rup-sites distances)
+        """
+        mesh = Mesh(F32(lons), F32(lats))
+        dists = get_distances(self.rup, mesh, 'rrup')
+        return dists < self.dist, dists
+
+    def __repr__(self):
+        return '<%s mag=%.1f dist=%.0f>' % (self.__class__.__name__,
+                                            self.rup.mag, self.dist)
 
 class SourceFilter(object):
     """
@@ -354,6 +478,8 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
+    multiplier = 1  # not reduce
+
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
         self.integration_distance = integration_distance
@@ -367,36 +493,27 @@ class SourceFilter(object):
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete
-        return self.__class__(sc, self.integration_distance)
+        new = self.__class__(sc, self.integration_distance)
+        new.multiplier = multiplier
+        return new
 
-    def get_enlarged_box(self, src, maxdist=None):
+    def get_enlarged_box(self, src, maxdist):
         """
         Get the enlarged bounding box of a source.
 
         :param src: a source object
-        :param maxdist: a scalar maximum distance (or None)
+        :param maxdist: a scalar maximum distance
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        if maxdist is None:
-            if hasattr(self.integration_distance, 'y'):  # interp1d
-                maxdist = self.integration_distance.y[-1]
-            else:
-                maxdist = getdefault(self.integration_distance,
-                                     src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
+        except (FilteredAway, BBoxError):
+            # this is expected around the poles and will be ignored
+            raise
         except Exception:
-            logging.error(f'Error in source {src.source_id}')
+            logging.error(f'Error in source {src.source_id}', exc_info=True)
             raise
         return bbox
-
-    def get_rectangle(self, src):
-        """
-        :param src: a source object
-        :returns: ((min_lon, min_lat), width, height), useful for plotting
-        """
-        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
-        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
         """
@@ -405,7 +522,7 @@ class SourceFilter(object):
         """
         sids = self.close_sids(source)
         if len(sids):
-            return self.sitecol.filtered(sids)
+            return self.sitecol.complete.filtered(sids)
 
     def split(self, sources):
         """
@@ -447,9 +564,20 @@ class SourceFilter(object):
             return self._close_sids(lon, lat, dep, dist)
         else:  # source
             trt = src_or_rec.tectonic_region_type
+            if maxdist is None:
+                if hasattr(self.integration_distance, 'y'):  # interp1d
+                    maxdist = self.integration_distance.y[-1]
+                else:
+                    maxdist = getdefault(self.integration_distance, trt)[-1][1]
+            loc = getattr(src_or_rec, 'location', None)
+            if loc:
+                # special case for pointlike sources
+                maxdist += src_or_rec.max_radius(maxdist)
+                return self._close_sids(loc.x, loc.y, loc.z, maxdist)
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
             except FilteredAway:
+                # can be raised by multiFaultSources
                 return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids
@@ -459,9 +587,9 @@ class SourceFilter(object):
         if not hasattr(self, 'kdt'):
             self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
-        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
-        sids.sort()  # for cross-platform consistency
-        return sids
+        ids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+        ids.sort()  # for cross-platform consistency
+        return self.sitecol.sids[ids]  # works also for filtered sitecol
 
     def filter(self, sources):
         """

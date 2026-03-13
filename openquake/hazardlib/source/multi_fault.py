@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -81,9 +81,10 @@ class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list, faults: dict=(), investigation_time=0,
-                 infer_occur_rates=False):
+                 magnitudes: list, rakes: list, faults: dict=(),
+                 investigation_time=0, infer_occur_rates=False):
         nrups = len(magnitudes)
+        assert nrups > 0, f'Passed no magnitudes to {source_id}'
         assert len(occurrence_probs) == len(rakes) == nrups
         self._rupture_idxs = rupture_idxs
         # NB: using 32 bits for the occurrence_probs would be a disaster:
@@ -215,7 +216,8 @@ class MultiFaultSource(BaseSeismicSource):
             yield '%s.%d' % (self.source_id, i), slc
 
     def __iter__(self):
-        if len(self.mags) <= BLOCKSIZE:  # already split
+        if len(self.mags) <= BLOCKSIZE or hasattr(self, 'rupids_by_tag'):
+            # do not split
             yield self
             return
         # split in blocks of BLOCKSIZE ruptures each
@@ -304,7 +306,6 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
                             assume_unique=True)
     if len(off_rupids):
         src.rupids_by_tag['off_rupids'] = off_rupids
-
 
 
 # NB: as side effect delete _rupture_idxs,

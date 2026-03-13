@@ -1,0 +1,8 @@
+#,,,"generated_by='OpenQuake engine 3.25.0-gita29978772c', start_date='2025-11-22T03:05:38', checksum=595716330"
+loss_type,loss,stat,NAME_1
+structural,36317.285,mean,Far-Western
+structural,7969.71741461432,quantile-0.15,Far-Western
+structural,34079.3235207792,quantile-0.85,Far-Western
+structural,27960.465,mean,Mid-Western
+structural,20883.27636564571,quantile-0.15,Mid-Western
+structural,27401.739428951012,quantile-0.85,Mid-Western

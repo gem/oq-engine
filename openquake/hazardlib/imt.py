@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,11 +64,11 @@ def imt2tup(string):
         strength_ratio = float(rest[0][:-1].split(',')[1])
     else:
         raise NameError('IMT attributes not recognizable: %s' % rest[0][:-1])
-    if name.startswith("Sa_avg2") or name.startswith("SA_avg2"):
+    if name.startswith("Sa_avg2"):
         return ('Sa_avg2(%s)' % period, period)
-    elif name.startswith("Sa_avg3") or name.startswith("SA_avg3"):
+    elif name.startswith("Sa_avg3"):
         return ('Sa_avg3(%s)' % period, period)
-    elif name.startswith("SA") or name.startswith("Sa"):
+    elif name.startswith("SA"):
         return ('SA(%s)' % period, period)
     elif name.startswith("FIV3"):
         return ('FIV3(%s)' % period, period)
@@ -126,8 +126,8 @@ def dictarray(imtls):
 def repr(self):
     if self.period and self.damping != 5.0:
         if self.string.startswith('SDi'):
-            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
-                                        self.damping)
+            return 'SDi(%s, %s, %s)' % (
+                self.period, self.strength_ratio, self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
@@ -139,6 +139,7 @@ IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
 IMT.__ge__ = lambda self, other: self[1] >= other[1]
 IMT.__repr__ = repr
+IMT.name = property(lambda self: self[0].split('(', 1)[0])
 IMT.frequency = property(lambda self: 1. / self.period)
 
 
@@ -308,7 +309,7 @@ def JMA():
 
 # secondary IMTs
 sec_imts = '''ASH LAVA LAHAR PYRO
-Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb
+Disp DispProb LiqProb LiqOccur LSE PGDMax PGDGeomMean LsProb
 '''.split()
 for sec in sec_imts:
     assert '_' not in sec, sec

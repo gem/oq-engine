@@ -5,17 +5,27 @@ if [ ! -d "$1" ]; then
     exit 1
 fi
 
+if [ ! -d "$2" ]; then
+    echo "Please specify the location of the qa_tests_data folder. Aborting." >&2
+    exit 1
+fi
+
 oq info venv
 oq info cfg
 
 # create .tmp.ini files with oqparam.to_ini()
-python -c"import os
+python -c"import os, sys
 from openquake.calculators.checkers import check_ini
 for cwd, dirs, files in os.walk('$1'):
      for f in files:
          if f.endswith('.ini') and not f.endswith('.tmp.ini'):
              path = os.path.join(cwd, f)
-             check_ini(path, hc='risk' in f)"
+             check_ini(path, hc='risk' in f)  # creating .tmp.ini
+             if 'MedianSpectrum' in path:
+                 # this demo hangs on the M1 machine
+                 if sys.platform == 'darwin':
+                     os.remove(path.replace('.ini', '.tmp.ini'))
+"
 # run the demos with the generated file
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
@@ -29,13 +39,8 @@ for ini in $(find $1 -name job.tmp.ini | sort); do
     oq engine --run $ini --exports csv,hdf5
 done
 
-oq export hcurves 16  # export with GMPETables
-
 # test the --eos option
 oq engine --eos -1 /tmp
-
-# extract disaggregation data
-oq extract "disagg_layer?" 14
 
 # do something with the generated data, 9 is the AreaSource demo
 oq engine --lhc
@@ -48,11 +53,14 @@ MPLBACKEND=Agg oq plot 'task_info?kind=classical' 9
 MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 
+# run workflow
+oq run $1/hazard/AreaSourceClassicalPSHA/job.toml
+
 # run multi_risk test
-oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
+oq engine --run $2/multi_risk/case_1/job_2.ini
 
 echo "Testing ShakeMap calculator"
-oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
+oq engine --run $2/scenario_risk/case_shakemap/pre-job.ini $2/scenario_risk/case_shakemap/job.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv,hdf5
@@ -66,11 +74,8 @@ oq show agg_values
 oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
-# sensitivity to the strike angle
-oq shell $1/risk/ScenarioRisk/sensitivity.py
-
-echo "Testing csm2rup"
-OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+echo "Testing mean_rates"
+OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates $2/mosaic/KOR/in/job_vs30.ini
 
 echo "Testing oq info usgs_rupture"
 oq info usgs_rupture:us70006sj8

@@ -84,12 +84,6 @@ class CoeffsTable(object):
     of coefficients):
 
     >>> from openquake.hazardlib import imt
-    >>> ct[imt.PGA()]
-    (1., 2.4, -5., 0.01)
-    >>> ct[imt.PGD()]
-    (7.6, 12., 0., 44.1)
-    >>> ct[imt.SA(damping=5, period=0.1)]
-    (10., 20., 30., 40.)
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...

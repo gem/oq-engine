@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,9 @@ from openquake.hazardlib.valid import basename
 
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
-    ctxs = cmaker.from_srcs(src_frags, sitecol)
-    if ctxs:
-        mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
+    ctx = cmaker.from_srcs(src_frags, sitecol)
+    if len(ctx):
+        mean = cmaker.get_mean_stds([ctx])[0]  # shape (G, M, N)
         for m, imt in enumerate(cmaker.imtls):
             mean[:, m] = exp(mean[:, m], imt!='MMI')
         gsims = [str(gsim) for gsim in cmaker.gsims]
@@ -38,15 +38,15 @@ def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
 def main(dstore, csm):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    cmakers = read_cmakers(dstore, csm.full_lt)
+    cmakers = read_cmakers(dstore, csm.full_lt).to_array()
     oq.mags_by_trt = {
         trt: python3compat.decode(dset[:])
         for trt, dset in dstore['source_mags'].items()}
 
     # send one task per source
     allargs = []
-    for cm in cmakers:
-        sg = csm.src_groups[cm.grp_id]
+    for grp_id, cm in enumerate(cmakers):
+        sg = csm.src_groups[grp_id]
         for src_frags in groupby(sg, basename).values():
             allargs.append((src_frags, sitecol, cm))
     dstore.swmr_on()  # must come before the Starmap

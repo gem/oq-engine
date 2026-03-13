@@ -77,7 +77,7 @@ def assert_close(tbl, fname, atol=1E-5, rtol=1E-4):
 
 
 def check(ini, hc_id=None, exports='', what='', prefix='',
-          atol=1E-5, rtol=1E-4):
+          atol=1E-5, rtol=1E-4, tiling=False):
     """
     Perform a calculation and compare a view ("what") with the content of
     a corrisponding file (.txt or .org).
@@ -85,7 +85,7 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
     calc, log = get_calc_log(ini, hc_id)
-    calc.run(export_dir='/tmp', close=False)
+    calc.run(export_dir='/tmp', close=False, tiling=tiling)
     if exports:
         calc.export(exports)
     print('Spent %.1f seconds' % (time.time() - t0))

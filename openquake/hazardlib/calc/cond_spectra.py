@@ -146,7 +146,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
 def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
     """
     :param cmaker: a ContextMaker with a given TRT
-    :param srcs: seismic sources of the given TRT
+    :param srcs: seismic sources of a given TRT and TOM
     :param sitecol: a SiteCollection object
     :param imt_ref: reference Intensity Measure Type (as a string)
     :param imls: Intensity Measure Levels corresponding to the poes
@@ -154,7 +154,7 @@ def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
               of shape (G, M, N, P)
     """
     imti = list(cmaker.imtls).index(imt_ref)
-    [ctx] = cmaker.from_srcs(srcs, sitecol)
+    ctx = cmaker.from_srcs(srcs, sitecol)
     tom = getattr(srcs[0], 'temporal_occurrence_model')  # assume all equal
     out0 = get_cs_out(cmaker, ctx, imti, imls, tom)  # g -> MNOP
     mean = numpy.mean([out0[g] for g in out0], axis=0)  # MNOP

@@ -1,0 +1,21 @@
+#,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.25.0-git3bba9a1a69', start_date='2025-11-04T17:56:29', checksum=1576150219, kind='quantile-0.95', risk_investigation_time=1.0"
+asset_id,ADRESS,ID_0,LEVEL,MUNICIPALITY,NAME,PUPILS,REGION,SOURCE,STAFF,STATUS,taxonomy,lon,lat
+127,"st. Ribnik, n. 14",E_122,Secondary,Shtip,DSUOR Iskra,48,Eastern,AREC/WEB,39,Central,MUR/LWAL+DNO/H2-C,22.17614,41.73146
+125,"st. Trajko Kosevski, nn",E_120,Secondary,Shtip,SOU Jane Sandanski,743,Eastern,AREC/WEB,69,Central,CR/LFINF+CDL+DUL/H3,22.19924,41.73216
+101,v. Lakavica,E_96,Primary,Shtip,POU Vanco Prke,12,Eastern,AREC/WEB,1,Regional,CR/LFINF+CDM+DUM/H1,22.23614,41.63809
+519,v. Ciflik,Po_98.1,Primary,Zhelino,OOU Rametulla Ameti,97,Polog,IZIIS,15,Central,CR/LFINF+CDM+DUM/H2,21.12010,41.95310
+270,v. Kisava,Pe_41,Primary,Bitola,POU Krste Petkov Misirkov,70,Pelagonia,UN-47,17,Regional,CR/LFINF+CDM+DUM/H2,21.31260,40.88780
+298,v. Zhivojno,Pe_68,Primary,Novaci,POU Slavko Lumbarkovski,4,Pelagonia,AREC/WEB,1,Regional,MUR/LWAL+DNO/H1-R,21.59380,40.90470
+685,v. Drvos,SE_99,Primary,Bosilovo,POU Goce Delcev,26,Southeastern,AREC/WEB,4,Regional,MUR/LWAL+DNO/H1-R,22.77400,41.50004
+369,v. Zhitoshe,Pe_139,Primary,Dolneni,OOU Lirija,304,Pelagonia,AREC/WEB,48,Central,MCF/LWAL+DUL/H2,21.29155,41.41707
+599,v. Davidovo,SE_14,Primary,Gevgelija,POU Kliment Ohridski,13,Southeastern,UN-46,6,Regional,MUR+STRUB/LWAL+DNO/RWO/H1,22.43540,41.32920
+428,"st. Pance Popovski, n.35",Po_8,Primary,Gostivar,OOU Edinstvo,898,Polog,AREC/WEB,135,Central,MUR/LWAL+DNO/H2-C,20.91110,41.79170
+957,v. Berikovo,SW_47,Primary,Kicevo,POU Naim Frasheri,0,Southwestern,AREC/WEB,0,Regional,MUR/LWAL+DNO/H1-R,20.99770,41.64150
+883,"st. Lihnida, nn",Sk_162,Secondary,Gjorce Petrov,SUGS Koco Racin,631,Skopje,AREC/WEB,54,Central,S/LWAL+CDL+DUL/H1,21.36370,42.00490
+638,v. Konce,SE_53,Primary,Konce,OOU Goce Delcev,162,Southeastern,AREC/WEB,41,Central,CR/LFINF+CDM+DUL/H2,22.37730,41.49736
+291,v. Novaci,Pe_62.1,Primary,Novaci,OOU Slavko Lumbarkovski,29,Pelagonia,AREC/WEB,9,Central,MUR+CLBRS/LWAL+DNO/RWO/H1,21.45469,41.04056
+395,v. Izbista,Pe_165,Primary,Resen,POU Goce Delcev,1,Pelagonia,Other,1,Regional,P-R<20,21.00440,41.13180
+1027,v. Labunishta,SW_116,Primary,Struga,OOU Murat Labunishti,941,Southwestern,AREC/WEB,94,Central,CR/LFINF+CDM+DUL/H3,20.59598,41.26968
+1035,v. Dobovjani,SW_124,Primary,Struga,POU Zini Hani,9,Southwestern,AREC/WEB,1,Regional,MUR/LWAL+DNO/H1-R,20.65270,41.25160
+482,"st. Ljube Bozinovski Pis, n. 41",Po_61,Primary,Tetovo,POU Bratstvo Migjeni,534,Polog,AREC/WEB,73,Central,MUR/LWAL+DNO/H1-C,20.97556,42.01268
+20,v. Lipec,E_19,Primary,Vinica,POU Koco Racin,8,Eastern,AREC/WEB,3,Regional,MUR/LWAL+DNO/H1-R,22.55094,41.84148

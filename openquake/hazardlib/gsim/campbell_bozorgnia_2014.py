@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,7 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2019LowQ`
 """
 import numpy as np
+
 from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
@@ -37,7 +38,7 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 CONSTS = {"h4": 1.0, "c": 1.88, "n": 1.18}
 
 # CyberShake basin adjustments for CB14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CB14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
 IMT   slope_cy
@@ -57,11 +58,12 @@ def _get_alpha(C, vs30, pga_rock):
     """
     alpha = np.zeros(len(pga_rock))
     idx = vs30 < C["k1"]
+    vsk1 = vs30[idx] / C["k1"]
     if np.any(idx):
-        af1 = pga_rock[idx] +\
-            CONSTS["c"] * ((vs30[idx] / C["k1"]) ** CONSTS["n"])
+        af1 = pga_rock[idx] + CONSTS["c"] * (vsk1 ** CONSTS["n"])
         af2 = pga_rock[idx] + CONSTS["c"]
         alpha[idx] = C["k2"] * pga_rock[idx] * ((1.0 / af1) - (1.0 / af2))
+
     return alpha
 
 
@@ -96,10 +98,10 @@ def _basin_term(C, imt, z2pt5, SJ, cy):
     return fb
 
 
-def _select_basin_model(SJ, vs30):
+def _get_z2pt5_ref(SJ, vs30):
     """
     Select the preferred basin model (California or Japan) to scale
-    basin depth with respect to Vs30
+    basin depth with respect to Vs30. Returns z2pt5 in km
     """
     if SJ:
         # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
@@ -117,12 +119,15 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     apply any required adjustments.
     """
     # Get reference basin depth
-    z_ref = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
+    z_ref = _get_z2pt5_ref(SJ, 1100.0) * np.ones_like(ctx.vs30)
     z_ref_term = _basin_term(C, imt, z_ref, SJ, False)
 
     # Get basin term
     if isinstance(a1100, np.ndarray): # Site model defined
-        z2pt5 = ctx.z2pt5
+        z2pt5 = ctx.z2pt5.copy()
+        # Use GMM's vs30 to z2pt5 for non-measured values
+        mask = z2pt5 == -999
+        z2pt5[mask] = _get_z2pt5_ref(SJ, ctx.vs30[mask])
     else:
         z2pt5 = z_ref
     z2pt5_term = _basin_term(C, imt, z2pt5, SJ, cy)
@@ -130,7 +135,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Apply USGS basin scaling model if required
     if usgs_bs:
         # Get the scaling factor per site
-        usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+        usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
         z_scaled = z_ref_term * (1.0 - usgs_baf) + z2pt5_term * usgs_baf
         # Apply additional CyberShake (CY_CSIM) adjustment if required
         if cy and imt.period > 1.9:
@@ -343,7 +348,7 @@ def _get_style_of_faulting_term(C, ctx):
 def _get_taulny(C, mag):
     """
     Returns the inter-event random effects coefficient (tau)
-    Equation 28.
+    Equation 27.
     """
     res = C["tau2"] + (C["tau1"] - C["tau2"]) * (5.5 - mag)
     res[mag <= 4.5] = C["tau1"]
@@ -430,6 +435,40 @@ def _get_rholnpga(C, mag):
     return rho_ln_pga
 
 
+def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
+    """
+    Compute CB14's sigma (total, tau and phi)
+    """
+    # Get tau_lny on the basement rock
+    tau_lny_b = _get_taulny(C, ctx.mag)
+
+    # Get phi_lny on the basement rock
+    phi_lny_b = np.sqrt(_get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
+    
+    # Get site scaling term
+    alpha = _get_alpha(C, ctx.vs30, pga1100)
+
+    if imt.string in ['CAV', 'IA']:
+        # Use formula in CB19 supplementary spreadsheet
+        t = np.sqrt(tau_lny_b**2 + alpha**2 * tau_lnpga_b**2 +
+        2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lny_b * tau_lnpga_b)
+
+        p = np.sqrt(
+        phi_lny_b**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+        + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lny_b * phi_lnpga_b)
+
+    else:
+        # Use formula in CB14 supplementary spreadsheet
+        t = np.sqrt(tau_lny_b**2 + alpha**2 * tau_lnpga_b**2 +
+                2.0 * alpha * C["rholny"] * tau_lny_b * tau_lnpga_b) # Eq 29
+
+        p = np.sqrt(
+            phi_lny_b**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
+            + 2.0 * alpha * C["rholny"] * phi_lny_b * phi_lnpga_b)   # Eq 30
+        
+    return np.sqrt(t**2 + p**2), t, p
+
+
 class CampbellBozorgnia2014(GMPE):
     """
     Implements NGA-West 2 GMPE developed by Kenneth W. Campbell and Yousef
@@ -496,11 +535,19 @@ class CampbellBozorgnia2014(GMPE):
             _update_ctx(self, ctx)
 
         C_PGA = self.COEFFS[PGA()]
+
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx, PGA(),
                                          self.usgs_basin_scaling,
                                          self.cybershake_basin_adj))
      
+        # Get tau_lny for PGA on the basement rock
+        tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
+
+        # Get phi_lny for PGA on the basement rock
+        phi_lnpga_b = np.sqrt(
+            _get_philny(C_PGA, ctx.mag) ** 2. - C_PGA["philnAF"] ** 2.)
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
@@ -522,40 +569,8 @@ class CampbellBozorgnia2014(GMPE):
                 mean[m, idx] = pga[idx]
                 mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
-            # Get stddevs for PGA on basement rock
-            tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
-            phi_lnpga_b = np.sqrt(_get_philny(C_PGA, ctx.mag) ** 2. -
-                                  C_PGA["philnAF"] ** 2.)
-
-            # Get tau_lny on the basement rock
-            tau_lnyb = _get_taulny(C, ctx.mag)
-            # Get phi_lny on the basement rock
-            phi_lnyb = np.sqrt(_get_philny(C, ctx.mag) ** 2. -
-                               C["philnAF"] ** 2.)
-            # Get site scaling term
-            alpha = _get_alpha(C, ctx.vs30, pga1100)
-
-            if imt.string in ['CAV', 'IA']:
-                # Use formula in CB19 supplementary spreadsheet
-                t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                2. * alpha * _get_rholnpga(C, ctx.mag) * tau_lnyb * tau_lnpga_b)
-
-                p = np.sqrt(
-                phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                + 2.0 * alpha * _get_rholnpga(C, ctx.mag) * phi_lnyb * phi_lnpga_b)
-
-            else:
-                # Use formula in CB14 supplementary spreadsheet
-                t = np.sqrt(tau_lnyb**2 + alpha**2 * tau_lnpga_b**2 +
-                        2.0 * alpha * C["rholny"] * tau_lnyb * tau_lnpga_b)
-
-                p = np.sqrt(
-                    phi_lnyb**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
-                    + 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
-                
-            sig[m] = np.sqrt(t**2 + p**2)
-            tau[m] = t
-            phi[m] = p
+            sig[m], tau[m], phi[m] = compute_sigma(
+                C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny

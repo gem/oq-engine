@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,6 @@ Module exports :class:`ChiouYoungs2014`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
 """
-import os
-import pathlib
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -37,9 +35,11 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
+REF_VS = 1130.
+
 
 # CyberShake basin adjustments for CY14 (only applied above 
-# 1.9 seconds so don't provide dummy values listed below 2 s)
+# 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CY14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
 IMT   phi5cy   phi6cy   
@@ -52,20 +52,34 @@ IMT   phi5cy   phi6cy
 """)
 
 
-def _get_centered_z1pt0(region, ctx):
+def japan_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on Japan region CY14 relationship
+    """
+    return (-5.23 / 2.) * np.log(((
+        vs30 ** 2.) + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.))
+
+
+def global_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on non-Japan region CY14 relationship
+    """
+    return (-7.15 / 4.) * np.log((
+        (vs30) ** 4. + 570.94 ** 4.) / (1360 ** 4. + 570.94 ** 4.))
+
+
+def _get_centered_z1pt0(region, vs30, z1pt0):
     """
     Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
     California and non-Japan regions
     """
     if region == "JPN":
-        mean_z1pt0 = (-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) + 412.39 ** 2.)
-                                           / (1360 ** 2. + 412.39 ** 2.))
-        return ctx.z1pt0 - np.exp(mean_z1pt0)
+        mean_z1pt0 = japan_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
-    #: California and non-Japan regions
-    mean_z1pt0 = (-7.15 / 4.) * np.log(((ctx.vs30) ** 4. + 570.94 ** 4.)
-                                       / (1360 ** 4. + 570.94 ** 4.))
-    return ctx.z1pt0 - np.exp(mean_z1pt0)
+    else:
+        mean_z1pt0 = global_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
 
 def _get_centered_ztor(ctx):
@@ -147,7 +161,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         # first line of eq. 12
         ln_y_ref + eta
         # second line
-        + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
+        + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
@@ -161,17 +175,26 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
     """
+    z1pt0 = ctx.z1pt0.copy()
+
+    # Use GMMs vs30 to z1pt0 for non-measured values
+    mask = z1pt0 == -999
+    if region == "JPN":
+        z1pt0[mask] = np.exp(japan_mean_z1pt0(ctx.vs30[mask]))
+    else:
+        z1pt0[mask] = np.exp(global_mean_z1pt0(ctx.vs30[mask]))
+
     # Get USGS basin scaling factor if required
     if usgs_bs:
-        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
     else:
         usgs_baf = np.ones(len(ctx.vs30))
 
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(region, ctx)
+    dz1pt0 = _get_centered_z1pt0(region, ctx.vs30, z1pt0)
 
     # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+    dz1pt0[z1pt0 <= 0.0] = 0.0
     if region == "JPN":
         return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
 
@@ -321,15 +344,6 @@ def get_hanging_wall_term(C, ctx):
         fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
-
-def get_linear_site_term(region, C, ctx):
-    """
-    Returns the linear site scaling term
-    """
-    if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-
     
 def get_delta_c1(rrup, imt, mag):
     """
@@ -372,25 +386,31 @@ def _get_delta_cm(conf, imt):
     Return the delta_cm parameter as defined by equation A19 in Boore et al.
     (2022) for the host-to-target region source-scaling adjustment. 
     """
-    # If the stress parameters are not defined at the instantiation level, the
-    # conf dictionary does not contain the source_function_table
-    source_function_table = conf.get('source_function_table', None)
-    
-    # Get stress params
-    stress_par_host = conf.get('stress_par_host')
-    stress_par_targ = conf.get('stress_par_target')
-    C = source_function_table[imt]
+    # Get source function table
+    source_function_table = conf.get('source_function_table')
 
-    # Compute chi
-    if stress_par_targ > stress_par_host:
-        chi = C['chi_delta_pos']
+    if imt in source_function_table: # Only apply if IMT in user-defined source
+                                     # function table
+        # Get coeffs  
+        C = source_function_table[imt]
+        
+        # Get stress params
+        stress_par_host = conf.get('stress_par_host')
+        stress_par_targ = conf.get('stress_par_target')
+
+        # Compute chi
+        if stress_par_targ > stress_par_host:
+            chi = C['chi_delta_pos']
+        else:
+            chi = C['chi_delta_neg']
+
+        # Compute delta_cm
+        delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
+
+        return delta_cm
+
     else:
-        chi = C['chi_delta_neg']
-
-    # Compute delta_cm
-    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
-
-    return delta_cm
+        return 0. # No adjustment for given IMT
 
 
 def _get_delta_g(delta_gamma_tab, ctx, imt):
@@ -398,14 +418,19 @@ def _get_delta_g(delta_gamma_tab, ctx, imt):
     Returns the delta_g parameter as defined by equation 13 in Boore et al.
     (2022) for the host-to-target region path adjustment
     """
-    # Get coefficients for imt
-    C = delta_gamma_tab[imt]
+    if imt in delta_gamma_tab: # Only apply if IMT has coeffs in the table
+
+        # Get coefficients for imt
+        C = delta_gamma_tab[imt]
+        
+        # Compute delta_g (magnitude-dependent)
+        delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
+            ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
     
-    # Compute delta_g (magnitude-dependent)
-    delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
-        ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
+        return delta_g
     
-    return delta_g
+    else:
+        return 0. # No adjustment for given IMT
     
 
 def get_ln_y_ref(region, C, ctx, conf):
@@ -419,7 +444,7 @@ def get_ln_y_ref(region, C, ctx, conf):
     use_hw = conf.get('use_hw')
     alpha_nm = conf.get('alpha_nm')
 
-    # Get the region name from the name of the class
+    # Get z1pt0 delta
     delta_ztor = _get_centered_ztor(ctx)
 
     # If stress correction required get delta cm
@@ -473,16 +498,56 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
+def get_linear_site_term(region, C, ctx):
+    """
+    Returns the linear site scaling term
+    """
+    if region == "JPN":
+        return C["phi1jp"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+        
+    return C["phi1"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+
+
 def get_nonlinear_site_term(C, ctx, y_ref):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, 1130.0)
+    vs = ctx.vs30.clip(-np.inf, REF_VS)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
-                                np.exp(C["phi3"] * (1130. - 360.)))
+                                np.exp(C["phi3"] * (REF_VS - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
+
+
+def get_emme_site_term(C, ctx, C_EMME, conf):
+    """
+    Returns the EMME24 backbone model site term (both linear
+    and non-linear components). The site term is combination
+    of CY14 and IC23 GMMs site terms.
+    
+    Implementation based on slides and excel files provided by
+    A. Sandıkkaya to GEM which describe the EMME24 site model.
+    """
+    # Get prediction on ref velocity (800 m/s)
+    ref_vs = 800.
+    rock_ctx = ctx.copy()
+    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs)
+    ln_gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
+
+    # Linear component
+    linear = C_EMME["a1"] * np.log(np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
+    
+    # Part 1 of non-linear component
+    non_linear_p1 = C_EMME["a2"] * (
+        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
+        np.exp(440. * C_EMME["a3"])
+        ) 
+    
+    # Part 2 of non-linear component
+    non_linear_p2 = np.log(1 + (np.exp(ln_gm_rock) / C_EMME["a4"]))
+
+    return linear + (non_linear_p1 * non_linear_p2)
 
 
 def get_phi(C, mag, ctx, nl0):
@@ -559,7 +624,8 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
+def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
+                     cy=False):
     """
     Return mean and standard deviation values
     """
@@ -567,21 +633,30 @@ def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
-    # Get basin term
-    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
+    if not emme_coeffs:
+        # Get basin term
+        f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
-    # Get linear amplification term
-    f_lin = get_linear_site_term(region, C, ctx)
+        # Get linear amplification term
+        f_lin = get_linear_site_term(region, C, ctx)
 
-    # Get nonlinear amplification term
-    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+        # Get nonlinear amplification term
+        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
-    # Add on the site amplification
-    mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+        # Add on the site amplification
+        mean = ln_y_ref + f_lin + f_nl + f_z1pt0
 
-    # Get standard deviations
-    sig, tau, phi = get_stddevs(
-        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+        # Get standard deviations
+        sig, tau, phi = get_stddevs(
+            conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
+
+    else:
+        # Compute EMME24 site term instead (no basin effects considered here)
+        mean = ln_y_ref + get_emme_site_term(C, ctx, emme_coeffs[imt], conf)
+
+        # Sigma components are determined within EMME backbone's compute method
+        sig, tau, phi =\
+              np.zeros(mean.shape), np.zeros(mean.shape), np.zeros(mean.shape)
 
     return mean, sig, tau, phi
 
@@ -611,9 +686,16 @@ class ChiouYoungs2014(GMPE):
     :param stress_par_target:
         Stress parameter for the target-region in bars. Used in Boore et
         al. (2022) backbone methodology.
+    :param source_function_tab:
+        Path to file containing coefficients for host-to-target source
+        scaling as described in Boore et al. (2022) backbone paper. For
+        an example of the format required for this file look inside
+        `openquake.hazardlib.gsim.cy14_host_to_target`.
     :param delta_gamma_tab:
-        Filename containing path adjustments as described in Boore et al.
-        (2022) backbone paper.
+        Path to file containing coefficients for host-to-target path
+        adjustments as described in Boore et al. (2022) backbone paper.
+        For an example of the format required for this file look inside
+        `openquake.hazardlib.gsim.cy14_host_to_target`.
     """
     adapted = False  # Overridden in acme_2019
 
@@ -648,8 +730,9 @@ class ChiouYoungs2014(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
         
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
-                 add_delta_c1=False, alpha_nm=1.0, stress_par_host=None,
-                 stress_par_target=None, delta_gamma_tab=None,
+                 add_delta_c1=False, alpha_nm=1.0,
+                 stress_par_host=None, stress_par_target=None,
+                 source_function_tab=None, delta_gamma_tab=None,
                  usgs_basin_scaling=False, cybershake_basin_adj=False):
 
         # set region
@@ -676,12 +759,9 @@ class ChiouYoungs2014(GMPE):
         # - S2FS            param
         # - S2RS            param
         # - chi             i.e. χFS2RS in equation 6
-        if stress_par_target is not None:
-            cwd = pathlib.Path(__file__).parent.resolve()
-            fname = os.path.join('chiou_youngs_2014',
-                                 'source_function_table.txt')
-            fpath = os.path.join(cwd, fname)
-            with open(fpath, encoding='utf8') as f:
+        if source_function_tab is not None:
+            assert stress_par_host is not None and stress_par_target is not None
+            with open(source_function_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['source_function_table'] = CoeffsTable(
                 sa_damping=5, table=tmp)
@@ -705,6 +785,11 @@ class ChiouYoungs2014(GMPE):
         # CyberShake basin adj
         self.cybershake_basin_adj = cybershake_basin_adj
 
+        # If instantiating EMME24 backbone the COEFFS_EMME attribute
+        # will be set (it contains the coeffs for EMME24 site model)
+        if not hasattr(self, "COEFFS_EMME"):
+            setattr(self, "COEFFS_EMME", False)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -714,25 +799,32 @@ class ChiouYoungs2014(GMPE):
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
-            self.usgs_basin_scaling, self.cybershake_basin_adj)
-        # compute
+            self.region, self.COEFFS[PGA()], ctx, PGA(),
+            self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
+            self.cybershake_basin_adj)
+        
+        # Compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
+
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
+            
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
-                    self.usgs_basin_scaling, self.cybershake_basin_adj)
+                    self.region, self.COEFFS[imt], ctx, imt,
+                    self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
+                    self.cybershake_basin_adj)
+                
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
+                
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
@@ -828,6 +920,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
-            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))
-            exp2 = np.exp(C['phi3'] * (1130 - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, REF_VS) - 360))
+            exp2 = np.exp(C['phi3'] * (REF_VS - 360))
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, REF_VS)

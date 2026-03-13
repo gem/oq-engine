@@ -47,7 +47,7 @@ def set_imls(cmaker, uhs):
     return cmaker
 
 
-def get_mea_sig_wei(cmaker, ctx, uhs):
+def _mean_stds_wei(cmaker, ctx, uhs):
     """
     :param cmaker: a ContextMaker instance with G gsims and M imts
     :param ctx: a context array of size C
@@ -61,14 +61,16 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
     # reduce the levels to P levels per IMT
     cmaker = set_imls(cmaker, uhs)
     weight = np.empty((G, M, C, P), np.float32)
-    mean = np.empty((G, M, C), np.float32)
-    sigma = np.empty((G, M, C), np.float32)
+    mea_ = np.empty((G, M, C), np.float32)
+    sig_ = np.empty((G, M, C), np.float32)
+    tau_ = np.empty((G, M, C), np.float32)
     start = 0
-    for poes, mea, sig, ctxt in cmaker.gen_poes(ctx):
+    for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):
         c, _, _ = poes.shape  # L = M * P
         slc = slice(start, start + c)
-        mean[:, :, slc] = mea
-        sigma[:, :, slc] = sig
+        mea_[:, :, slc] = mea
+        sig_[:, :, slc] = sig
+        tau_[:, :, slc] = tau
         start += c
         ocr = cmaker.get_occ_rates(ctxt)
         for g, w in enumerate(cmaker.wei):
@@ -79,7 +81,7 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
             for p, poe in enumerate(cmaker.poes):
                 for m, imt in enumerate(cmaker.imtls):
                     weight[g, m, slc, p] = ocr * poes_g[:, m, p] / poe * w
-    return mean, sigma, weight
+    return mea_, sig_, tau_, weight
 
 
 def tr(arr):
@@ -115,19 +117,20 @@ def compute_median_spectrum(
     one_site_poe = len(sids) == 1 and P == 1
     for site_id in sids:
         ctx = context[context.sids == site_id]
-        mea, sig, wei = get_mea_sig_wei(cmaker, ctx, uhs[site_id])
+        grp_id = ctx[0]['grp_id']
+        mea, sig, tau, wei = _mean_stds_wei(cmaker, ctx, uhs[site_id])
         out = np.empty((3, M, P))  # <mea>, <sig>, tot_w
         out[0] = np.einsum("gmup,gmu->mp", wei, mea)
         out[1] = np.einsum("gmup,gmu->mp", wei, sig)
         out[2] = wei.sum(axis=(0, 2))
-        yield {(cmaker.grp_id, site_id): out}
+        yield {(grp_id, site_id): out}
         if one_site_poe:
             ok = wei.sum(axis=(0, 1, 3)) > 0
             arr = general.compose_arrays(
                 rup_id=ctx.rup_id, mag=ctx.mag, rrup=ctx.rrup,
                 occurrence_rate=ctx.occurrence_rate,
-                mea=tr(mea), sig=tr(sig), wei=tr(wei[:, :, :, 0]))
-            yield {(cmaker.grp_id, -1): [arr[ok]]}
+                mea=tr(mea), sig=tr(sig), tau=tr(tau), wei=tr(wei[:, :, :, 0]))
+            yield {(grp_id, -1): [arr[ok]]}
 
 
 # NB: we are ignoring IMT-dependent weights
@@ -151,8 +154,8 @@ def main(dstore, csm):
 
     # read the precomputed mean hazard spectrum
     ref_uhs = dstore.sel("hmaps-stats", stat="mean")[:, 0]  # shape NSMP -> NMP
-    cmakers = contexts.read_cmakers(dstore)
-    G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
+    cmakers = contexts.read_cmakers(dstore).to_array()
+    G = {grp_id: len(cm.gsims) for grp_id, cm in enumerate(cmakers)}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
@@ -161,7 +164,7 @@ def main(dstore, csm):
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = cmakers[grp_id]
-        splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
+        splits = np.ceil(len(ctx) * G[grp_id] / blocksize)
         for ctxt in np.array_split(ctx, splits):
             smap.submit((cmaker, ctxt, ref_uhs))
     res = smap.reduce()
@@ -174,7 +177,7 @@ def main(dstore, csm):
 
     # create median_spectrum_disagg datasets
     if N == 1 and P == 1:
-        for cm in cmakers:
+        for grp_id, cm in enumerate(cmakers):
             G = len(cm.gsims)
             dtlist = [('rup_id', I64),
                       ('mag', F32),
@@ -186,10 +189,12 @@ def main(dstore, csm):
             for g in range(G):
                 dtlist.append((f'sig{g}', dt))
             for g in range(G):
+                dtlist.append((f'tau{g}', dt))
+            for g in range(G):
                 dtlist.append((f'wei{g}', dt))
-            name = f"median_spectrum_disagg/grp{cm.grp_id}"
+            name = f"median_spectrum_disagg/grp{grp_id}"
             logging.info('Creating %s', name)
-            dstore.create_dset(name, dtlist, fillvalue=None)
+            dstore.create_dset(name, dtlist)
 
     for (grp_id, site_id), out in res.items():
         if site_id == -1:  # median_spectrum_disagg
@@ -200,8 +205,9 @@ def main(dstore, csm):
             tot_w[site_id] += out[2]
     dstore.create_dset("median_spectra", median_spectra)
     dstore.set_shape_descr("median_spectra", grp_id=Gr,
-                           site_id=N, kind=['mea', 'sig', 'wei'],
+                           site_id=N, kind=['mea', 'sig', 'tau', 'wei'],
                            period=periods, poe=oq.poes)
+
     # sanity check on the weights
     for p, poe in enumerate(oq.poes):
         maxw = tot_w[:, :, p].max()

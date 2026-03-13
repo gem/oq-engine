@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,7 @@ from openquake.hazardlib.calc.stochastic import (
     sample_ruptures, sample_cluster)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
+from openquake.hazardlib.calc.filters import magdepdist
 
 aae = numpy.testing.assert_almost_equal
 
@@ -47,6 +48,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
+<<<<<<< HEAD
         param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={})
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
@@ -150,3 +152,14 @@ class ClusterTestCase(unittest.TestCase):
         # Checking the number of ruptures generated
         msg = 'The ratio between computed and expected ruptures exceeds 1%'
         self.assertTrue(numpy.abs(tot_occ / nrlz / 150000 - 1.0) < 0.01, msg)
+=======
+        param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={},
+                     magdist=magdepdist())
+        dic = sum(sample_ruptures(group, param), {})
+        self.assertEqual(len(dic['rup_array']), 7)
+        self.assertEqual(len(dic['source_data']), 6)  # mutex sources
+
+        # test no filtering
+        ruptures = sum(sample_ruptures(group, param), {})['rup_array']
+        self.assertEqual(len(ruptures), 7)
+>>>>>>> origin

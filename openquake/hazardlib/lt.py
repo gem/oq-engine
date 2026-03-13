@@ -18,17 +18,19 @@
 
 import copy
 import pickle
+import operator
 import itertools
-import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE183, BASE33489
+from openquake.baselib.general import CallableDict, BASE183
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
-    split_coords_2d, split_coords_3d, SourceGroup)
+    split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
 
+NOAPPLY_UNCERTAINTIES = [
+    'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
 
 class LogicTreeError(Exception):
     """
@@ -79,6 +81,16 @@ def abGR(utype, node, filename):
     except ValueError:
         raise LogicTreeError(
             node, filename, 'expected a pair of floats separated by space')
+
+
+@parse_uncertainty.add('abMaxMagAbsolute')
+def abMMax(utype, node, filename):
+    try:
+        [a, b, c] = node.text.split()
+        return float(a), float(b), float(c)
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a triple of floats separated by space')
 
 
 @parse_uncertainty.add('incrementalMFDAbsolute')
@@ -292,6 +304,12 @@ def _abGR_absolute(utype, source, value):
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
 
 
+@apply_uncertainty.add('abMaxMagAbsolute')
+def _abMMax_absolute(utype, source, value):
+    a, b, mm = value
+    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
+
+
 @apply_uncertainty.add('bGRAbsolute')
 def _bGR_absolute(utype, source, value):
     b_val = float(value)
@@ -323,6 +341,7 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
+
 
 @apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):
@@ -430,8 +449,7 @@ def random(size, seed, sampling_method='early_weights'):
                plt.axhline(y)
        plt.show()
     """
-    numpy.random.seed(seed)
-    xs = numpy.random.uniform(size=size)
+    xs = numpy.random.default_rng(seed).uniform(size=size)
     if sampling_method.endswith('latin'):
         # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
         try:
@@ -477,61 +495,29 @@ def sample(weighted_objects, probabilities, sampling_method='early_weights'):
     return [weighted_objects[idx] for idx in idxs]
 
 
-Weighted = collections.namedtuple('Weighted', 'object weight')
-
-
-# used in notebooks for teaching, not in the engine
-def random_sample(branchsets, num_samples, seed, sampling_method):
-    """
-    >>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
-    >>> paths = random_sample(bsets, 100, 42, 'early_weights')
-    >>> collections.Counter(paths)
-    Counter({'YC': 26, 'XC': 24, 'YB': 17, 'XA': 13, 'YA': 10, 'XB': 10})
-
-    >>> paths = random_sample(bsets, 100, 42, 'late_weights')
-    >>> collections.Counter(paths)
-    Counter({'XA': 20, 'YA': 18, 'XB': 17, 'XC': 15, 'YB': 15, 'YC': 15})
-
-    >>> paths = random_sample(bsets, 100, 42, 'early_latin')
-    >>> collections.Counter(paths)
-    Counter({'YC': 31, 'XC': 19, 'YB': 17, 'XB': 13, 'YA': 12, 'XA': 8})
-
-    >>> paths = random_sample(bsets, 100, 45, 'late_latin')
-    >>> collections.Counter(paths)
-    Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})
-    """
-    probs = random((num_samples, len(branchsets)), seed, sampling_method)
-    arr = numpy.zeros((num_samples, len(branchsets)), object)
-    for b, bset in enumerate(branchsets):
-        arr[:, b] = sample([Weighted(*it) for it in bset], probs[:, b],
-                           sampling_method)
-    return [''.join(w.object for w in row) for row in arr]
-
-
 # ######################### branches and branchsets ######################## #
-
 
 class Branch(object):
     """
     Branch object, represents a ``<logicTreeBranch />`` element.
 
-    :param bs_id:
-        BranchSetID of the branchset to which the branch belongs
     :param branch_id:
         String identifier of the branch
-    :param weight:
-        float value of weight assigned to the branch. A text node contents
-        of ``<uncertaintyWeight />`` child node.
     :param value:
         The actual uncertainty parameter value. A text node contents
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type.
+    :param weight:
+        float value of weight assigned to the branch. A text node contents
+        of ``<uncertaintyWeight />`` child node.
+    :param bs_id:
+        BranchSetID of the branchset to which the branch belongs
     """
-    def __init__(self, bs_id, branch_id, weight, value):
-        self.bs_id = bs_id
+    def __init__(self, branch_id, value, weight, bs_id=''):
         self.branch_id = branch_id
-        self.weight = weight
         self.value = value
+        self.weight = weight
+        self.bs_id = bs_id
         self.bset = None
 
     @property
@@ -543,7 +529,6 @@ class Branch(object):
         :returns: True if the branch has no branchset or has a dummy branchset
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
-
 
     def to_node(self):
         attrib = dict(branchID=self.branch_id)
@@ -622,11 +607,15 @@ class BranchSet(object):
     """
     applied = None  # to be replaced by a string in hazardlib.logictree
 
-    def __init__(self, uncertainty_type, ordinal=0, filters=None,
+    def __init__(self, uncertainty_type, filters=None, ordinal=0,
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
-        self.ordinal = ordinal
+        if (uncertainty_type not in NOAPPLY_UNCERTAINTIES and
+                not uncertainty_type in apply_uncertainty):
+            raise NotImplementedError(
+                f'apply_uncertainty: missing {uncertainty_type}')
         self.filters = filters or {}
+        self.ordinal = ordinal
         self.collapsed = collapsed
         self.branches = []
 
@@ -693,7 +682,6 @@ class BranchSet(object):
                 # [('simpleFaultGeometry', ([(-64.5, -0.3822), (-64.5, 0.3822)],
                 #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
-
 
     def __getitem__(self, branch_id):
         """
@@ -771,9 +759,20 @@ class BranchSet(object):
         values = [pickle.dumps(br.value, protocol=4) for br in self.branches]
         if len(set(values)) < len(values):
             bs_id = self.branches[0].bs_id
-            brvalues = '\n'.join(str(br.value) for br in self.branches)
+            brvalues = '\n'.join(f'{br.branch_id}: value={br.value}'
+                                 for br in self.branches)
             raise ValueError(
                 f'{filename}: duplicated branches in {bs_id}:\n{brvalues}')
+
+    def check_weights(self):
+        """
+        The branch weights must sum up to 1.
+        """
+        tot = 0
+        for br in self.branches:
+            assert 0 <= br.weight <= 1, br.weight
+            tot += br.weight
+        assert abs(tot - 1.) < 1E-6, [br.weight for br in self.branches]
 
     def __len__(self):
         return len(self.branches)
@@ -807,7 +806,7 @@ def dummy_branchset():
     :returns: a dummy BranchSet with a single branch
     """
     bset = BranchSet('dummy')
-    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches = [Branch('.', None, 1, 'dummy%d' % next(dummy_counter))]
     bset.branches[0].short_id = '.'
     return bset
 
@@ -838,7 +837,9 @@ class Realization(object):
 
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
-    base = BASE33489 if bset.uncertainty_type == 'sourceModel' else BASE183
+    base = BASE183
+    if brno + len(bset.branches) >= len(BASE183):
+        brno = 0
     for br in bset.branches:
         br.short_id = base[brno]
         path = ['*'] * tot
@@ -856,11 +857,16 @@ class CompositeLogicTree(object):
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
     """
-    def __init__(self, branchsets):
+    def __init__(self, branchsets, seed=42, num_samples=0,
+                 sampling_method='early_weights'):
         self.branchsets = branchsets
+        self.seed = seed
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
         for i, bset in enumerate(branchsets):
             bset.ordinal = i
             bset.check_duplicates()
+            bset.check_weights()
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
@@ -899,18 +905,63 @@ class CompositeLogicTree(object):
         return paths
 
     def __iter__(self):
-        nb = len(self.branchsets)
-        ordinal = 0
-        for weight, branches in self.branchsets[0].enumerate_paths():
-            value = [br.value for br in branches]
-            # NB: the branch_ids must be one-character long if we want to use
-            # apply_all
-            lt_path = ''.join(br.id for br in branches)
-            yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
-            ordinal += 1
+        """
+        Yield Realization tuples. Notice that the weight is homogeneous when
+        sampling is enabled, since it is accounted for in the sampling
+        procedure.
+        """
+        if self.num_samples:
+            # random sampling of the logic tree
+            probs = random((self.num_samples, len(self.branchsets)),
+                           self.seed, self.sampling_method)
+            ordinal = 0
+            for branches in self.branchsets[0].sample(
+                    probs, self.sampling_method):
+                value = [br.value for br in branches]
+                smlt_path_ids = [br.branch_id for br in branches]
+                if self.sampling_method.startswith('early_'):
+                    weight = 1. / self.num_samples  # already accounted
+                elif self.sampling_method.startswith('late_'):
+                    weight = numpy.prod([br.weight for br in branches])
+                else:
+                    raise NotImplementedError(self.sampling_method)
+                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
+                ordinal += 1
+        else:  # full enumeration
+            rlzs = []
+            for weight, branches in self.branchsets[0].enumerate_paths():
+                value = [br.value for br in branches]
+                branch_ids = [branch.branch_id for branch in branches]
+                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else count_paths(
+            self.branchsets[0].branches)
 
     def get_all_paths(self):
-        return [rlz.lt_path for rlz in self]
+        out = []
+        nb = len(self.branchsets)
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            lt_path = ''.join(br.id for br in branches)
+            out.append(lt_path.ljust(nb, '.'))
+        return out
+
+    def sample_paths(self, num_samples, seed=42,
+                     sampling_method='early_weights'):
+        nbs = len(self.branchsets)
+        probs = random((num_samples, nbs), seed, sampling_method)
+        out = []
+        for branches in self.branchsets[0].sample(probs, sampling_method):
+            out.append(''.join(br.id for br in branches))
+        return out
 
     def to_node(self):
         """
@@ -985,8 +1036,8 @@ def build(*bslists, applyToSources=''):
         bsid = 'bs%02d' % i
         branches = []
         for brid, value, weight in brlists:
-            branches.append(Branch(bsid, brid, weight, value))
-        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+            branches.append(Branch(brid, value, weight, bsid))
+        bset = BranchSet(utype, dict(applyToBranches=applyto))
         if applyToSources and utype.endswith('Absolute'):
             bset.filters['applyToSources'] = applyToSources.split()
         bset.branches = branches

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,7 +48,7 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
         for taxonomy, assets in group.items():
             number = assets['value-number']
             ordinal = assets['ordinal']
-            dd5 = numpy.zeros((1, len(assets), 1, L, D), F32)  # 1 peril, 1 event
+            dd5 = numpy.zeros((1, len(assets), 1, L, D), F32)  # 1 peril,1 event
             # NB: assuming trivial taxonomy mapping for multi_risk
             df = crm.tmap_df[crm.tmap_df.taxi == taxonomy]
             [rm] = [crm._riskmodels[k] for k, w in zip(df.risk_id, df.weight)]

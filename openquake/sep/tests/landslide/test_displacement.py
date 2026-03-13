@@ -15,6 +15,9 @@ from openquake.sep.landslide.displacement import (
     jibson_etal_2000,
 )
 
+def arr(scalar, n=1):
+    return np.full(n, scalar)
+
 
 def test_critical_accel():
     slopes = np.array([0.0, 0.052408, 0.176327, 0.466308, 1.191754, 2.747477])
@@ -36,7 +39,7 @@ def test_critical_accel():
 
 def test_jibson_2007_a_landslide():
     pgas = np.linspace(0.0, 2.0, num=10)
-    Disp = jibson_2007_model_a(pgas, crit_accel=1.0)
+    Disp = jibson_2007_model_a(pgas, crit_accel=arr(1.0, 10))
     Disp_ = np.array(
         [
             0.00000000e00,
@@ -56,7 +59,7 @@ def test_jibson_2007_a_landslide():
 
 def test_jibson_2007_b_landslide():
     pgas = np.linspace(0.0, 2.0, num=10)
-    Disp = jibson_2007_model_b(pgas, crit_accel=1.0, mag=6.5)
+    Disp = jibson_2007_model_b(pgas, crit_accel=arr(1.0, 10), mag=6.5)
     Disp_ = np.array(
         [
             0.000000e00,
@@ -85,62 +88,62 @@ def test_cho_rathje_2022():
 
 
 def test_fotopoulou_pitilakis_2015_a():
-    pgv = 1.40e01
+    pgv = arr(1.40e01)
     mag = 6.5
-    crit_accel = 0.02
+    crit_accel = arr(0.02)
     Disp = fotopoulou_pitilakis_2015_model_a(pgv, mag, crit_accel)
     Disp_ = np.array([4.0162336e-02])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_fotopoulou_pitilakis_2015_b():
-    pga = 2.84e-01
+    pga = arr(2.84e-01)
     mag = 6.5
-    crit_accel = 0.02
+    crit_accel = arr(0.02)
     Disp = fotopoulou_pitilakis_2015_model_b(pga, mag, crit_accel)
     Disp_ = np.array([0.100601584210005])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_fotopoulou_pitilakis_2015_c():
-    pga = 2.84e-01
+    pga = arr(2.84e-01)
     mag = 6.5
-    crit_accel = 0.02
+    crit_accel = arr(0.02)
     Disp = fotopoulou_pitilakis_2015_model_c(pga, mag, crit_accel)
     Disp_ = np.array([0.910418270987024])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_fotopoulou_pitilakis_2015_d():
-    pgv = 1.40e01
-    pga = 2.84e-01
-    crit_accel = 0.02
+    pgv = arr(1.40e01)
+    pga = arr(2.84e-01)
+    crit_accel = arr(0.02)
     Disp = fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel)
     Disp_ = np.array([0.073120196833772])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_saygili_rathje_2008_landslide():
-    pga = 2.84e-01
-    pgv = 1.40e01
-    crit_accel = 0.02
+    pga = arr(2.84e-01)
+    pgv = arr(1.40e01)
+    crit_accel = arr(0.02)
     Disp = saygili_rathje_2008(pga, pgv, crit_accel)
     Disp_ = np.array([0.186370166332798])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_rathje_saygili_2009_landslide():
-    pga = 2.84e-01
+    pga = arr(2.84e-01)
     mag = 6.5
-    crit_accel = 0.02
+    crit_accel = arr(0.02)
     Disp = rathje_saygili_2009(pga, mag, crit_accel)
     Disp_ = np.array([0.548088621109107])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
 
 
 def test_jibson_etal_2000_landslide():
-    ia = 1.90e00
-    crit_accel = 0.02
+    ia = arr(1.90e00)
+    crit_accel = arr(0.02)
     Disp = jibson_etal_2000(ia, crit_accel)
     Disp_ = np.array([1.8366713252543503])
     np.testing.assert_allclose(Disp, Disp_, atol=1e-9)

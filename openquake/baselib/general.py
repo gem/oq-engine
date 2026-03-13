@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,16 +51,16 @@ from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
 U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO32 = U64(2 ** 32)
 BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-BASE33489 = []  # built in 0.003 seconds
-for a, b in itertools.product(BASE183, BASE183):
-    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 
@@ -223,6 +223,21 @@ class WeightedSequence(MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+def find_among(strings, sortedvalues, value):
+    """
+    >>> find_among('ABCD', [.1, .2, .3], .0)
+    'A'
+    >>> find_among('ABCD', [.1, .2, .3], .19)
+    'B'
+    >>> find_among('ABCD', [.1, .2, .3], .3)
+    'C'
+    >>> find_among('ABCD', [.1, .2, .3], .4)
+    'D'
+    """
+    assert len(strings) == len(sortedvalues) + 1, (
+        len(strings), len(sortedvalues))
+    return strings[numpy.searchsorted(sortedvalues, value)]
+
 
 def distinct(keys):
     """
@@ -350,9 +365,9 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     The WeightedSequences are of homogeneous key and they try to be
     balanced in weight. For instance
 
-     >>> items = 'ABCDE'
-     >>> list(split_in_blocks(items, 3))
-     [<WeightedSequence ['A'], weight=1>, <WeightedSequence ['B'], weight=1>, <WeightedSequence ['C'], weight=1>, <WeightedSequence ['D'], weight=1>, <WeightedSequence ['E'], weight=1>]
+    >>> items = 'ABCDE'
+    >>> split_in_blocks(items, 3)
+    [['A'], ['B'], ['C'], ['D'], ['E']]
     """
     if isinstance(sequence, pandas.DataFrame):
         num_elements = len(sequence)
@@ -372,7 +387,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, total_weight / hint, weight, key)
+    return [list(b) for b in block_splitter(
+        items, total_weight / hint, weight, key)]
 
 
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
@@ -1029,7 +1045,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     >>> values = numpy.arange(10)
     >>> for group in groupby_bin(values, 3):
-    ...     print(group)
+    ...     print([int(x) for x in group])
     [0, 1, 2]
     [3, 4, 5]
     [6, 7, 8, 9]
@@ -1208,11 +1224,11 @@ def not_equal(array_or_none1, array_or_none2):
     >>> a1 = numpy.array([1])
     >>> a2 = numpy.array([2])
     >>> a3 = numpy.array([2, 3])
-    >>> not_equal(a1, a2)
+    >>> bool(not_equal(a1, a2))
     True
-    >>> not_equal(a1, a3)
+    >>> bool(not_equal(a1, a3))
     True
-    >>> not_equal(a1, None)
+    >>> bool(not_equal(a1, None))
     True
     """
     if array_or_none1 is None and array_or_none2 is None:
@@ -1293,6 +1309,32 @@ def deprecated(func, msg='', *args, **kw):
     return func(*args, **kw)
 
 
+def reduce_object(obj, attr, ntimes):
+    """
+    Reduce an object containing an attribute which is a sequence by
+    returning a copy of the object with a reduced (reversed) sequence.
+    If the sequence length is less than ntimes, don't reduce it.
+    For instance
+
+    >>> class Obj:
+    ...     def __init__(self, lst):
+    ...         self.lst = lst
+    ...     def __repr__(self):
+    ...         return '<Obj %r>' % self.lst
+    >>> obj = Obj([1, 2, 3, 4, 5])
+    >>> reduce_object(obj, 'lst', 3)
+    <Obj [5, 2]>
+    >>> reduce_object(Obj([1, 2]), 'lst', 3)
+    <Obj [1, 2]>
+    """
+    seq = getattr(obj, attr)
+    if len(seq) < ntimes:
+        return obj
+    new = copy.copy(obj)
+    setattr(new, attr, seq[::-ntimes])
+    return new
+
+
 def random_filter(objects, reduction_factor, seed=42):
     """
     Given a list of objects, returns a sublist by extracting randomly
@@ -1341,13 +1383,13 @@ def random_histogram(counts, nbins_or_binweights, seed):
     bins and a faster algorithm will be used. Otherwise pass the weights.
     Here are a few examples:
 
-    >>> list(random_histogram(1, 2, seed=42))
+    >>> [int(x) for x in random_histogram(1, 2, seed=42)]
     [0, 1]
-    >>> list(random_histogram(100, 5, seed=42))
+    >>> [int(x) for x in random_histogram(100, 5, seed=42)]
     [22, 17, 21, 26, 14]
-    >>> list(random_histogram(10000, 5, seed=42))
+    >>> [int(x) for x in random_histogram(10000, 5, seed=42)]
     [2034, 2000, 2014, 1998, 1954]
-    >>> list(random_histogram(1000, [.3, .3, .4], seed=42))
+    >>> [int(x) for x in random_histogram(1000, [.3, .3, .4], seed=42)]
     [308, 295, 397]
     """
     rng = numpy.random.default_rng(seed)
@@ -1516,6 +1558,8 @@ def getsizeof(o, ids=None):
                             for k, v in o.items())
     elif isinstance(o, Container):
         return nbytes + sum(getsizeof(x, ids) for x in o)
+    elif hasattr(o, '__dict__'):
+        return nbytes + sum(getsizeof(x, ids) for x in o.__dict__.values())
 
     return nbytes
 
@@ -1589,8 +1633,9 @@ def get_nbytes_msg(sizedict, size=8):
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
-    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    >>> nbytes, msg = get_nbytes_msg(dict(nsites=2, nbins=5))
+    >>> assert nbytes == 80
+    >>> assert msg == '(nsites=2) * (nbins=5) * 8 bytes = 80 B'
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('({}={:_d})'.format(k, int(v))
@@ -1655,8 +1700,7 @@ class RecordBuilder(object):
     >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
     >>> rb.dtype
     dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
-    >>> rb()
-    (0, 1., b'2')
+    >>> assert tuple(rb()) == (0, 1, b'2')
     """
     def __init__(self, **defaults):
         self.names = []
@@ -1691,6 +1735,19 @@ class RecordBuilder(object):
             except IndexError:
                 rec[name] = self.values[i]
         return rec
+
+
+def delta(a, b):
+    """
+    :returns: the relative differences between a and b; zeros return zeros
+    """
+    a = numpy.array(a, F32)
+    b = numpy.array(b, F32)
+    c = a + b
+    ok = c != 0.
+    res = numpy.zeros_like(a)
+    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
+    return res
 
 
 def rmsdiff(a, b):

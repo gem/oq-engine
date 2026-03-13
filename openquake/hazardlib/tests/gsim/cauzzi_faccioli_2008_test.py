@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,14 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import (
     CauzziFaccioli2008, FaccioliEtAl2010)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.contexts import RuptureContext
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.const import StdDev
-
-import numpy
+from openquake.hazardlib.contexts import RuptureContext, mean_stds
 
 # Test data generated from OpenSHA implementation.
 
@@ -41,6 +38,7 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # (for rhypo=0 the distance term has a singularity). In this case the
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
+        gsim = self.GSIM_CLASS()
         ctx = RuptureContext()
         ctx.rup_id = 0
         ctx.sids = [0, 1, 2]
@@ -50,10 +48,10 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         ctx.occurrence_rate = .0001
         ctx.rhypo = numpy.array([0.0, 10.0, 16.0])
         ctx.rrup = numpy.array([0.0, 10.0, 17.0])
-        mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
-        mean_15, stds_15 = self.GSIM_CLASS().get_mean_and_stddevs(
-            ctx, ctx, ctx, PGA(), [StdDev.TOTAL])
+        mean_0, stds_0 = mean_stds(ctx, gsim, 'PGA', [0, 1])
+        ctx.rhypo = numpy.array([15.0, 15.0, 16.0])
+        ctx.rrup = numpy.array([15.0, 15.0, 17.0])
+        mean_15, stds_15 = mean_stds(ctx, gsim, 'PGA', [0, 1])
         numpy.testing.assert_array_equal(mean_0, mean_15)
         numpy.testing.assert_array_equal(stds_0, stds_15)
 

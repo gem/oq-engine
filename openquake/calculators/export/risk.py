@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,8 +28,10 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.extract import extract, sanitize, avglosses
-from openquake.calculators import post_risk
+from openquake.commonlib import readinput
+from openquake.calculators.extract import (
+    extract, sanitize, avglosses, aggexp_tags)
+from openquake.calculators import base, post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -236,6 +238,20 @@ def export_avg_losses(ekey, dstore):
     return writer.getsaved()
 
 
+@export.add(('avg_losses_by', 'csv'))
+def export_avg_losses_by(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for tagname in dstore[ekey[0]]:
+        df = dstore.read_df('avg_losses_by/' + tagname)
+        dest = dstore.build_fname('avg_losses_by_', tagname, 'csv')
+        writer.save(df, dest)
+    return writer.getsaved()
+
+
 @export.add(('src_loss_table', 'csv'))
 def export_src_loss_table(ekey, dstore):
     """
@@ -429,11 +445,13 @@ def export_damages_csv(ekey, dstore):
     csqs = tuple(dstore.getitem('crm').attrs['consequences'])
     for i, ros in enumerate(rlzs_or_stats):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
-            if len(csqs) == 0:  # no consequences, export nothing
+            if len(csqs) == 0:
+                print('No consequences, exporting nothing')
                 return []
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i]
-            dtlist = [(col, F32) for col in data.dtype.names if col.endswith(csqs)]
+            dtlist = [(col, F32) for col in data.dtype.names
+                      if col.endswith(csqs)]
             damages = numpy.zeros(len(data), dtlist)
             for csq, _ in dtlist:
                 damages[csq] = data[csq] * rate
@@ -607,11 +625,16 @@ def export_aggexp_tags_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    df = extract(dstore, ekey[0] + '?')
+    oq = dstore['oqparam']
+    fulldf, slices = aggexp_tags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('%s.%s' % ekey)
-    writer.save(df, fname, comment=dstore.metadata)
-    return [fname]
+    fnames = []
+    for aggby, slc in zip(oq.aggregate_by, slices):
+        df = fulldf[slc]
+        fname = dstore.export_path('%s-%s.csv' % (ekey[0], '-'.join(aggby)))
+        writer.save(df, fname, comment=dstore.metadata)
+        fnames.append(fname)
+    return fnames
 
 
 @export.add(('aggcurves', 'csv'))
@@ -625,7 +648,7 @@ def export_aggcurves_csv(ekey, dstore):
     agg_values = assetcol.get_agg_values(oq.aggregate_by)
     aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
-    R = len(dstore['weights'])
+    R = len(base.get_weights(oq, dstore))
     K = len(dstore['agg_values']) - 1
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
@@ -753,6 +776,54 @@ def export_vulnerability_xml(dstore):
     return dic
 
 
+@export.add(('vulnerability', 'xml'))
+def export_vuln_xml(ekey, dstore):
+    return export_vulnerability_xml(dstore).values()
+
+
+def convert_df_to_fragility(peril, loss_type, limit_states, df):
+    N = node.Node
+    root = N('fragilityModel', {'id': "fragility_model",
+                                'assetCategory': "buildings",
+                                "lossCategory": loss_type})
+    root.append(N('description', {}, f"{loss_type} fragility model"))
+    root.append(N('limitStates', {}, text=limit_states))
+    for riskfunc in df.riskfunc:
+        rfunc = json.loads(riskfunc)[
+            'openquake.risklib.scientific.FragilityFunctionList']
+        ffunc = N('FragilityFunction',
+                  {'id': rfunc['id'], 'format': rfunc['format']})
+        attr = {'imt': rfunc['imt'], 'noDamageLimit': rfunc['nodamage']}
+        imls = N('imls', attr, rfunc['imls'])
+        ffunc.append(imls)
+        for row, ls in zip(rfunc['array'], limit_states):
+            ffunc.append(N('poes', {"ls": ls}, row))
+        root.append(ffunc)
+    return root
+
+
+def export_fragility_xml(dstore):
+    oq = dstore['oqparam']
+    crm = dstore.read_df('crm')
+    ddic = {peril: {} for peril in crm.peril.unique()}
+    for (peril, loss_type), df in crm.groupby(['peril', 'loss_type']):
+        nodeobj = convert_df_to_fragility(peril, loss_type, oq.limit_states, df)
+        dest = dstore.export_path('%s_%s_fragility.xml' % (peril, loss_type))
+        with open(dest, 'wb') as out:
+            nrml.write([nodeobj], out)
+        ddic[peril][loss_type] = dest
+    return ddic  # peril -> loss_type -> fname
+
+
+@export.add(('fragility', 'xml'))
+def export_frag_xml(ekey, dstore):
+    fnames = []
+    ddic = export_fragility_xml(dstore).values()
+    for dic in ddic.values():
+        fnames.extend(dic.values())
+    return fnames
+
+
 def export_assetcol_csv(ekey, dstore):
     assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -763,7 +834,13 @@ def export_assetcol_csv(ekey, dstore):
         tags = []
         for asset_idx in range(len(assetcol)):
             tag_id = assetcol[tagname][asset_idx]
-            tags.append(assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1])
+            if tagname == 'id':  # special case, tag_id is already a string
+                # test in event_based_risk:case_master
+                tags.append(tag_id)
+            else:
+                # tag_id is an index to be converted into "tagname=tag"
+                tag = assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1]
+                tags.append(tag)
         df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
@@ -801,6 +878,7 @@ def export_exposure(ekey, dstore):
     return [exposure_xml, assetcol_csv]
 
 
+# tested in impact_test[1]
 @export.add(('job', 'zip'))
 def export_job_zip(ekey, dstore):
     """
@@ -812,6 +890,7 @@ def export_job_zip(ekey, dstore):
     - exposure.xml and assetcol.csv
     - vulnerability functions.xml
     - taxonomy_mapping.csv
+    - consequences.csv
     """
     inputs = {}
     oq = dstore['oqparam']
@@ -830,7 +909,10 @@ def export_job_zip(ekey, dstore):
         oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
     else:
-        gsim_lt = dstore['full_lt'].gsim_lt
+        model = dstore['ruptures'][0]['model'].decode('ascii')
+        # FIXME: extracts the gsim_lt of the first model only
+        [(model, lt)] = base.get_model_lts(dstore, model)
+        gsim_lt = lt.gsim_lt
         gmf_fname = ''
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
@@ -839,26 +921,43 @@ def export_job_zip(ekey, dstore):
     inputs['exposure'] = exposure_xml
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = dstore.export_path('rupture.csv')
-    with open(dest, 'w') as out:
+    with open(dest, 'w', encoding='utf8') as out:
         out.write(csv)
     inputs['rupture_model'] = dest
-    if gsim_lt:
+    if 'gsim_logic_tree' in oq.inputs or oq.gsim == '[FromFile]':
         dest = dstore.export_path('gsim_logic_tree.xml')
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
         inputs['gsim_logic_tree'] = dest
-    inputs.update(export_vulnerability_xml(dstore))
+    if oq.calculation_mode.endswith('risk'):
+        inputs.update(export_vulnerability_xml(dstore))
+    elif oq.calculation_mode.endswith('damage'):
+        ddic = export_fragility_xml(dstore)
+        for peril, dic in ddic.items():
+            inputs[f'{peril}_fragility'] = dic
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
     taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
     del taxmap['taxi']
     writer.save(taxmap, dest)
     inputs['taxonomy_mapping'] = dest
+    if 'consequence' in oq.inputs:
+        consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
+        dic = {}
+        for name_by_key, df in consdict.items():
+            name, key = name_by_key.split('_by_')
+            df['consequence'] = name
+            dest = dstore.export_path(f'consequence_by_{key}.csv')
+            writer.save(df, dest)
+            dic[key] = dest
+        inputs['consequence'] = dic
     inputs['sites'] = dstore.export_path('sites.csv')
-    writer.save(dstore['sitecol'].array, inputs['sites'])
-    with open(job_ini, 'w') as out:
+    sitecol = dstore['sitecol']
+    sitecol.make_complete()  # needed for test_impact[1]
+    writer.save(sitecol.array, inputs['sites'])
+    with open(job_ini, 'w', encoding='utf8') as out:
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
     return fnames + ([gmf_fname] if gmf_fname else [])

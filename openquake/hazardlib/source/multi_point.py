@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -93,8 +93,7 @@ class MultiPointSource(ParametricSeismicSource):
         """
         Yield the ruptures of the underlying point sources
         """
-        step = kwargs.get('step', 1)
-        for ps in list(self)[::step]:
+        for ps in self:
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
 

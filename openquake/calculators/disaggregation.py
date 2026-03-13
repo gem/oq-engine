@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -127,10 +127,11 @@ def check_memory(N, Z, shape8D):
     avail_gb = psutil.virtual_memory().available / 1024**3
     req_gb = numpy.prod(shape8D) * N * Z * 8 / 1024**3
     if avail_gb < req_gb*2:
-        # req_gb*2 because when storing the outputs a lot more memory will be used
-        raise MemoryError('You have %.1f GB available but %.1f GB are required. '
-                          'The solution is to reduce the number of bins' %
-                          (avail_gb, req_gb*2))
+        # req_gb*2 because when storing a lot more memory will be used
+        raise MemoryError(
+            'You have %.1f GB available but %.1f GB are required. '
+            'The solution is to reduce the number of bins' %
+            (avail_gb, req_gb*2))
     logging.info('The AccumDict will require %.1f GB', req_gb)
 
 
@@ -195,15 +196,22 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)
+        # the real test for this is case_multi in the oq-risk-tests
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in range(self.N):
-                    hcurve = self.mgetters[sid].get_hcurve(sid)
-                    mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
-                        full_lt.wget)
+                    mgetter = self.mgetters[sid]
+                    hcurve = mgetter.get_hcurve(sid)  # shape (L, R)
+                    if oq.fastmean:
+                        # reshape mean (N, M, L1) -> (N, L) with N=1
+                        mean = mgetter.get_fast_mean().array.reshape((1, -1))
+                    else:
+                        mean = getters.build_stat_curve(
+                            hcurve, oq.imtls, stats.mean_curve,
+                            full_lt.gsim_lt.wget)
+                    # mean has shape (1, L)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
@@ -244,13 +252,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         logging.info("Reading contexts")
-        cmakers = read_cmakers(dstore)
+        cmakers = read_cmakers(dstore).to_array()
         if 'src_mutex' in dstore:
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             gp = dict(dstore['grp_probability'])  # grp_id -> probability
             src_mutex_by_grp = {
                 grp_id: {'src_id': disagg.get_ints(df.src_id),
                          'weight': df.mutex_weight.to_numpy(),
+                         'rup_mutex': df.rup_mutex.to_numpy(),
                          'grp_probability': gp[grp_id]}
                 for grp_id, df in gb}
         else:
@@ -278,11 +287,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
-        mutex_by_grp = self.datastore['mutex_by_grp'][:]
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
+            rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
+
             # NB: in case_27 src_mutex for grp_id=1 has the form
             # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
             if rup_mutex:
@@ -298,7 +307,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
             # submit single task
             ntasks = len(ctxt) * cmaker.Z / maxsize
-            if ntasks < 1 or src_mutex or rup_mutex:
+            if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
                        self.bin_edges, src_mutex, rwdic)
@@ -432,6 +441,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                             poe_agg, mean_rates.CUTOFF)
 
         self.datastore[name] = out
+        for key in out:
+            sd = ['site_id'] + key.split('_') + ['imt', 'poe', 'Z']
+            self.datastore[f'{name}/{key}'].attrs['shape_descr'] = sd
+
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
 

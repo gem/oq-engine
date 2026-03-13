@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2025 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import tempfile
 import unittest.mock as mock
 import unittest
@@ -26,15 +25,14 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
 from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
-from openquake.qa_tests_data import mosaic
+from openquake.qa_tests_data.event_based_risk import (
+    case_02 as ebr2, case_caracas)
 
 
 TMP = tempfile.gettempdir()
@@ -96,7 +94,6 @@ export_dir = %s
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
-                'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},
@@ -114,33 +111,6 @@ export_dir = %s
                 self.assertEqual(expected_params[key], params[key])
         finally:
             os.unlink(sites_csv)
-
-    def test_wrong_sites_csv(self):
-        # site_id not starting from 0
-        sites_csv = general.gettemp(
-            'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
-        source = general.gettemp("""
-[general]
-calculation_mode = scenario
-[geometry]
-site_model_file = %s
-[misc]
-maximum_distance=1
-truncation_level=3
-random_seed=5
-[site_params]
-reference_vs30_type = measured
-reference_vs30_value = 600.0
-reference_depth_to_2pt5km_per_sec = 5.0
-reference_depth_to_1pt0km_per_sec = 100.0
-intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
-export_dir = %s
-""" % (os.path.basename(sites_csv), TMP))
-        oq = readinput.get_oqparam(source)
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_mesh_exp(oq)
-        self.assertIn('site_id not sequential from zero', str(ctx.exception))
-        os.unlink(sites_csv)
 
     def test_invalid_magnitude_distance_filter(self):
         source = general.gettemp("""
@@ -330,8 +300,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_zero_number(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insurance_losses = False
@@ -349,8 +320,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure1]}
@@ -367,8 +339,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 69, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
@@ -386,8 +359,9 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
 
     def test_invalid_taxonomy(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure3]}
@@ -433,7 +407,7 @@ description = Description containing a % sign''')
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
-        fname = os.path.join(os.path.dirname(case_2.__file__),
+        fname = os.path.join(os.path.dirname(ebr2.__file__),
                              'exposure.xml')
         for ass in asset.Exposure.read_all([fname]).assets:
             # make sure all the attributes exist
@@ -528,33 +502,19 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['AA.CA', 'AA.CB', 'AA.DA', 'AA.DB', 'ABACA', 'ABACB',
-                    'ABADA', 'ABADB', 'ABBCA', 'ABBCB', 'ABBDA', 'ABBDB']
+        expected = [('SM1', '.', 'gA0', 'gA1'),
+                    ('SM1', '.', 'gA0', 'gB1'),
+                    ('SM1', '.', 'gB0', 'gA1'),
+                    ('SM1', '.', 'gB0', 'gB1'),
+                    ('SM2', 'a3b1', 'gA0', 'gA1'),
+                    ('SM2', 'a3b1', 'gA0', 'gB1'),
+                    ('SM2', 'a3b1', 'gB0', 'gA1'),
+                    ('SM2', 'a3b1', 'gB0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gB1')]
         self.assertEqual(paths, expected)
-
-
-class ReadGeometryTestCase(unittest.TestCase):
-    def test(self):
-        t0 = time.time()
-        mosaic_dir = os.path.dirname(mosaic.__file__)
-        geom_df = readinput.read_mosaic_df(buffer=1)
-        self.assertEqual(len(geom_df), 30)
-        sites_df = pandas.read_csv(
-            os.path.join(mosaic_dir, 'famous_ruptures.csv'),
-            usecols=['lat', 'lon'])
-        lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = geolocate(lonlats, geom_df)
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
-
-        t0 = time.time()
-        risk_df = readinput.read_countries_df()  # this is slow
-        self.assertEqual(len(risk_df), 218)
-        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
 
 
 class ReadRiskTestCase(unittest.TestCase):
@@ -563,8 +523,9 @@ class ReadRiskTestCase(unittest.TestCase):
         sitecol = readinput.get_site_collection(oq)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_station_data(oq, sitecol, duplicates_strategy='error')
-        self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
-                      str(ctx.exception))
+        self.assertIn(
+            "Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+            str(ctx.exception))
         df = readinput.read_df(
             oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
             duplicates_strategy='keep_first')

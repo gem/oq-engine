@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,12 +16,11 @@
 import unittest
 import os.path
 import numpy
-import pytest
 
 from openquake.baselib.general import pprod
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg, filters
-from openquake.hazardlib import nrml, read_input, valid
+from openquake.hazardlib import nrml, valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
@@ -118,7 +117,6 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
         cls.bin_edges, _ = disagg.get_edges_shapedic(cls.cmaker.oq, sitecol)
         cls.sources[0].grp_id = 0
-        cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]
 
     def test_minimum_distance(self):
@@ -258,27 +256,10 @@ class PMFExtractorsTestCase(unittest.TestCase):
 
     def test_mean(self):
         # for doc purposes: the mean of PMFs is not the PMF of the mean
-        numpy.random.seed(42)
-        matrix = numpy.random.random(self.matrix.shape)
+        rng = numpy.random.default_rng(42)
+        matrix = rng.random(self.matrix.shape)
         pmf1 = valid.mag_pmf(self.matrix)
         pmf2 = valid.mag_pmf(matrix)
         mean = (matrix + self.matrix) / 2
-        numpy.testing.assert_allclose(
-            (pmf1 + pmf2) / 2, [1, 1])
-        numpy.testing.assert_allclose(
-            valid.mag_pmf(mean), [0.99999944, 0.99999999])
-
-
-@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
-def test_single_source(job_ini):
-    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
-    inp = read_input(job_ini)
-    oq = inp.oq
-    [site] = inp.sitecol
-    edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    _sid, srcid, _std4D, rates4D, rates2D = disagg.disagg_source(
-        inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
-    # rates4D has shape (Ma, D, E, M), rates2D shape (M, L1)
-    print(srcid)
-    print(rates4D.sum(axis=(1, 2)))
-    print(rates2D)
+        numpy.testing.assert_allclose((pmf1 + pmf2) / 2, [1, 1])
+        numpy.testing.assert_allclose(valid.mag_pmf(mean), [1, 1])

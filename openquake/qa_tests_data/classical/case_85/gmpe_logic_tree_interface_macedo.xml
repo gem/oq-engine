@@ -15,8 +15,10 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="MACEDOSInterBCHydroGlobal"
             >
                 <uncertaintyModel>
-                    [MacedoEtAl2019SInter]
+                    [ModifiableGMPE]
                     gmpe.AbrahamsonEtAl2015SInter = {}
+                    [ModifiableGMPE.conditional_gmpe]
+                    "IA" = {gmpe.MacedoEtAl2019SInter = {}}
                 </uncertaintyModel>
                 <uncertaintyWeight>
                     0.5
@@ -26,9 +28,10 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="MACEDOSInterBCHydroSouthAmerica"
             >
                 <uncertaintyModel>
-                    [MacedoEtAl2019SInter]
+                    [ModifiableGMPE]
                     gmpe.AbrahamsonEtAl2015SInter = {}
-                    region = "South America"
+                    [ModifiableGMPE.conditional_gmpe]
+                    "IA" = {gmpe.MacedoEtAl2019SInter = {region = "South America"}}
                 </uncertaintyModel>
                 <uncertaintyWeight>
                     0.5

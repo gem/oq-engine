@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -355,15 +355,15 @@ class Line(object):
         s02eq_s089n
         >>> print(line.flip())
         s089n_s02eq
-        >>> line.get_azimuths()
-        [0.0]
-        >>> line.flip().get_azimuths()
-        [180.0]
+        >>> line.get_azimuths() == [0]
+        True
+        >>> line.flip().get_azimuths() == [180.0]
+        True
         >>> line = Line([Point(1, 0), Point(2, 0)])
-        >>> line.get_azimuths()
-        [90.0]
-        >>> line.flip().get_azimuths()
-        [270.0]
+        >>> line.get_azimuths() == [90.0]
+        True
+        >>> line.flip().get_azimuths() == [270.0]
+        True
         """
         return self.from_coo(np.flip(self.coo, axis=0))
 

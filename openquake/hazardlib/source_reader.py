@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import zlib
 import os.path
 import pickle
@@ -23,36 +24,25 @@ import operator
 import logging
 import numpy
 
-from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import (
-    nrml, sourceconverter, InvalidFile, calc, gsim_lt)
+from openquake.baselib import parallel, general, hdf5
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib.source_group import CompositeSourceModel
 from openquake.hazardlib.source.multi_fault import save_and_split
-from openquake.hazardlib.source.point import msr_name
-from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.valid import basename
 
-U16 = numpy.uint16
-TWO16 = 2 ** 16  # 65,536
-TWO24 = 2 ** 24  # 16,777,216
-TWO30 = 2 ** 30  # 1,073,741,24
-TWO32 = 2 ** 32  # 4,294,967,296
 bybranch = operator.attrgetter('branch')
-
-CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
-
+checksum = operator.attrgetter('checksum')
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
-    ('num_sites', numpy.uint32),       # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('weight', numpy.float32),         # 6
-    ('mutex_weight', numpy.float64),   # 7
-    ('trti', numpy.uint8),             # 8
+    ('num_ctxs', numpy.uint64),        # 4
+    ('est_ctxs', numpy.uint64),        # 5
+    ('num_ruptures', numpy.uint32),    # 6
+    ('weight', numpy.float32),         # 7
 ])
-
-checksum = operator.attrgetter('checksum')
 
 
 def check_unique(ids, msg='', strict=True):
@@ -81,65 +71,14 @@ def check_unique(ids, msg='', strict=True):
                 logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
 
 
-def zpik(obj):
-    """
-    zip and pickle a python object
-    """
-    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
-    return numpy.frombuffer(gz, numpy.uint8)
-
-
-def mutex_by_grp(src_groups):
-    """
-    :returns: a composite array with boolean fields src_mutex, rup_mutex
-    """
-    lst = []
-    for sg in src_groups:
-        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
-    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
-
-
-def build_rup_mutex(src_groups):
-    """
-    :returns: a composite array with fields (grp_id, src_id, rup_id, weight)
-    """
-    lst = []
-    dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
-              ('rup_id', numpy.int64), ('weight', numpy.float64)]
-    for sg in src_groups:
-        if sg.rup_interdep == 'mutex':
-            for src in sg:
-                for i, (rup, _) in enumerate(src.data):
-                    lst.append((src.grp_id, src.id, i, rup.weight))
-    return numpy.array(lst, dtlist)
-
-
 def create_source_info(csm, h5):
     """
     Creates source_info, trt_smrs, toms
     """
-    data = {}  # src_id -> row
-    lens = []
-    for srcid, srcs in general.groupby(
-            csm.get_sources(), basename).items():
-        src = srcs[0]
-        mutex = getattr(src, 'mutex_weight', 0)
-        trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
-        lens.append(len(src.trt_smrs))
-        row = [srcid, src.grp_id, src.code, 0, 0,
-               sum(s.num_ruptures for s in srcs),
-               sum(s.weight for s in srcs),
-               mutex, trti]
-        data[srcid] = row
-
-    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
-                 len(csm.src_groups), len(data), numpy.mean(lens))
-    csm.source_info = data  # src_id -> row
+    csm.source_info = csm.get_source_info()
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
-    h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
-    h5['rup_mutex'] = build_rup_mutex(csm.src_groups)
+    h5.create_dataset('source_info', (num_srcs,), source_info_dt)
 
 
 def trt_smrs(src):
@@ -147,6 +86,8 @@ def trt_smrs(src):
 
 
 def _sample(srcs, sample, applied):
+    if not srcs:
+        return []
     out = [src for src in srcs if src.source_id in applied]
     rand = general.random_filter(srcs, sample)
     return (out + rand) or [srcs[0]]
@@ -162,6 +103,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
+    t0 = time.time()
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
     for sg in sm.src_groups:
@@ -173,6 +115,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                 else:
                     srcs.extend(calc.filters.split_source(src))
             sg.sources = _sample(srcs, float(sample), applied)
+    sm.rtime = time.time() - t0  # save the read time
     return {fname: sm}
 
 
@@ -234,8 +177,18 @@ def check_duplicates(smdict, strict):
 
     found = find_false_duplicates(smdict)
     if found:
-        logging.warning('Found different sources with same ID %s',
-                        general.shortlist(found))
+        logging.info('Found different sources with same ID %s',
+                     general.shortlist(found))
+
+
+def save_read_times(dstore, source_models):
+    """
+    Store how many seconds it took to read each source model file
+    in a table (fname, rtime)
+    """
+    dt = [('fname', hdf5.vstr), ('rtime', float)]
+    arr = numpy.array([(sm.fname, sm.rtime) for sm in source_models], dt)
+    dstore.create_dset('source_model_read_times', arr)
 
 
 def get_csm(oq, full_lt, dstore=None):
@@ -278,6 +231,8 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
+    if dstore:
+        save_read_times(dstore, smdict.values())
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
@@ -298,18 +253,18 @@ def get_csm(oq, full_lt, dstore=None):
             for src in sg:
                 segments.append(src.source_id.split(':')[1])
                 t = (src.source_id, src.grp_id,
-                     src.count_ruptures(), src.mutex_weight)
+                     src.count_ruptures(), src.mutex_weight,
+                     sg.rup_interdep == 'mutex')
                 out.append(t)
             probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
     if out:
         dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
-                  ('num_ruptures', int), ('mutex_weight', float)]
-        dstore.create_dset('src_mutex', numpy.array(out, dtlist),
-                           fillvalue=None)
+                  ('num_ruptures', int), ('mutex_weight', float),
+                  ('rup_mutex', bool)]
+        dstore.create_dset('src_mutex', numpy.array(out, dtlist))
         lst = [('grp_id', int), ('probability', float)]
-        dstore.create_dset('grp_probability', numpy.array(probs, lst),
-                           fillvalue=None)
+        dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
     # split multifault sources if there is a single site
     try:
@@ -317,7 +272,9 @@ def get_csm(oq, full_lt, dstore=None):
     except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
         sitecol = None
     else:
-        if len(sitecol) > 1:
+        # NB: in AELO we can have multiple vs30 on the same location
+        lonlats = set(zip(sitecol.lons, sitecol.lats))
+        if len(lonlats) > 1:
             sitecol = None
     # must be called *after* _fix_dupl_ids
     fix_geometry_sections(
@@ -412,7 +369,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
     if sections:
         # save in the temporary file sources and sections
         assert hdf5path, ('You forgot to pass the dstore to '
-                        'get_composite_source_model')
+                          'get_composite_source_model')
         mfsources = []
         for sg in src_groups:
             for src in sg:
@@ -457,6 +414,11 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
@@ -501,10 +463,11 @@ def reduce_sources(sources_with_same_id, full_lt):
 
 def split_by_tom(sources):
     """
-    Groups together sources with the same TOM
+    Groups together sources with the same TOM and collect multifault sources
     """
     def key(src):
-        return getattr(src, 'temporal_occurrence_model', None).__class__.__name__
+        tom = getattr(src, 'temporal_occurrence_model', None)
+        return (tom.__class__.__name__, src.code == b'F')
     return general.groupby(sources, key).values()
 
 
@@ -538,271 +501,3 @@ def _get_csm(full_lt, groups, event_based):
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(full_lt, src_groups)
-
-
-class CompositeSourceModel:
-    """
-    :param full_lt:
-        a :class:`FullLogicTree` instance
-    :param src_groups:
-        a list of SourceGroups
-    :param event_based:
-        a flag True for event based calculations, flag otherwise
-    """
-    def __init__(self, full_lt, src_groups):
-        self.src_groups = src_groups
-        trts = {sg.trt for sg in src_groups}
-        gsim_trts = set(full_lt.gsim_lt.bsetdict)
-        if trts < gsim_trts:
-            # the bset must be reduced so that `oq show rlz` works
-            full_lt.gsim_lt.bsetdict = {
-                trt: bset for trt, bset in full_lt.gsim_lt.bsetdict.items()
-                if trt in trts}
-        self.init(full_lt)
-
-    def init(self, full_lt):
-        self.full_lt = full_lt
-        self.gsim_lt = full_lt.gsim_lt
-        self.source_model_lt = full_lt.source_model_lt
-        self.sm_rlzs = full_lt.sm_rlzs
-
-        # initialize the code dictionary
-        self.code = {}  # srcid -> code
-        for grp_id, sg in enumerate(self.src_groups):
-            assert len(sg)  # sanity check
-            for src in sg:
-                src.grp_id = grp_id
-                if src.code != b'P':
-                    source_id = basename(src)
-                    self.code[source_id] = src.code
-
-    def get_trt_smrs(self):
-        """
-        :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
-        """
-        keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
-        assert len(keys) < TWO16, len(keys)
-        return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
-
-    def get_sources(self, atomic=None):
-        """
-        There are 3 options:
-
-        atomic == None => return all the sources (default)
-        atomic == True => return all the sources in atomic groups
-        atomic == True => return all the sources not in atomic groups
-        """
-        srcs = []
-        for src_group in self.src_groups:
-            if atomic is None:  # get all sources
-                srcs.extend(src_group)
-            elif atomic == src_group.atomic:
-                srcs.extend(src_group)
-        return srcs
-
-    def get_basenames(self):
-        """
-        :returns: a sorted list of source names stripped of the suffixes
-        """
-        sources = set()
-        for src in self.get_sources():
-            sources.add(basename(src, ';:.').split('!')[0])
-        return sorted(sources)
-
-    def get_mags_by_trt(self, maximum_distance):
-        """
-        :param maximum_distance: dictionary trt -> magdist interpolator
-        :returns: a dictionary trt -> magnitudes in the sources as strings
-        """
-        mags = general.AccumDict(accum=set())  # trt -> mags
-        for sg in self.src_groups:
-            for src in sg:
-                mags[sg.trt].update(src.get_magstrs())
-        out = {}
-        for trt in mags:
-            minmag = maximum_distance(trt).x[0]
-            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
-        return out
-
-    def get_floating_spinning_factors(self):
-        """
-        :returns: (floating rupture factor, spinning rupture factor)
-        """
-        data = []
-        for sg in self.src_groups:
-            for src in sg:
-                if hasattr(src, 'hypocenter_distribution'):
-                    data.append(
-                        (len(src.hypocenter_distribution.data),
-                         len(src.nodal_plane_distribution.data)))
-        if not data:
-            return numpy.array([1, 1])
-        return numpy.array(data).mean(axis=0)
-
-    def update_source_info(self, source_data):
-        """
-        Update (eff_ruptures, num_sites, calc_time) inside the source_info
-        """
-        assert len(source_data) < TWO24, len(source_data)
-        for src_id, nsites, weight, ctimes in python3compat.zip(
-                source_data['src_id'], source_data['nsites'],
-                source_data['weight'], source_data['ctimes']):
-            baseid = basename(src_id)
-            row = self.source_info[baseid]
-            row[CALC_TIME] += ctimes
-            row[NUM_SITES] += nsites
-
-    def count_ruptures(self):
-        """
-        Call src.count_ruptures() on each source. Slow.
-        """
-        n = 0
-        for src in self.get_sources():
-            n += src.count_ruptures()
-        return n
-
-    def fix_src_offset(self):
-        """
-        Set the src.offset field for each source
-        """
-        src_id = 0
-        for srcs in general.groupby(self.get_sources(), basename).values():
-            offset = 0
-            if len(srcs) > 1:  # order by split number
-                srcs.sort(key=fragmentno)
-            for src in srcs:
-                src.id = src_id
-                src.offset = offset
-                if not src.num_ruptures:
-                    src.num_ruptures = src.count_ruptures()
-                offset += src.num_ruptures
-                if src.num_ruptures >= TWO30:
-                    raise ValueError(
-                        '%s contains more than 2**30 ruptures' % src)
-                # print(src, src.offset, offset)
-            src_id += 1
-
-    def get_msr_by_grp(self):
-        """
-        :returns: a dictionary grp_id -> MSR string
-        """
-        acc = general.AccumDict(accum=set())
-        for grp_id, sg in enumerate(self.src_groups):
-            for src in sg:
-                acc[grp_id].add(msr_name(src))
-        return {grp_id: ' '.join(sorted(acc[grp_id])) for grp_id in acc}
-
-    def get_max_weight(self, oq):  # used in preclassical
-        """
-        :param oq: an OqParam instance
-        :returns: total weight and max weight of the sources
-        """
-        srcs = self.get_sources()
-        tot_weight = 0
-        nr = 0
-        for src in srcs:
-            nr += src.num_ruptures
-            tot_weight += src.weight
-            if src.code == b'C' and src.num_ruptures > 20_000:
-                msg = ('{} is suspiciously large, containing {:_d} '
-                       'ruptures with complex_fault_mesh_spacing={} km')
-                spc = oq.complex_fault_mesh_spacing
-                logging.info(msg.format(src, src.num_ruptures, spc))
-        assert tot_weight
-        max_weight = tot_weight / (oq.concurrent_tasks or 1)
-        max_weight *= 1.05  # increased to produce fewer tasks
-        logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
-                     format(int(tot_weight), int(max_weight), len(srcs)))
-        return max_weight
-
-    def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
-        """
-        :yields: (cmaker, tilegetters, blocks, splits) for each source group
-        """
-        grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-            for cmaker in cmakers:
-                yield self._split(
-                    cmaker, sitecol, max_weight, num_chunks, tiling)
-            return
-        # cmakers is a dictionary label -> array of cmakers
-        for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
-                if self.src_groups[cmaker.grp_id].weight == 0:
-                    # happens in LogicTreeTestCase::test_case_08 since the
-                    # point sources are far away as determined in preclassical
-                    continue
-                if len(cmakers) > 1:  # has labels
-                    sites = sitecol.filter(sitecol.label == idx)
-                else:
-                    sites = sitecol
-                if len(sites):
-                    yield self._split(
-                        cmaker, sites, max_weight, num_chunks, tiling)
-
-    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
-        N = len(sitecol)
-        oq = cmaker.oq
-        grp_id = cmaker.grp_id
-        sg = self.src_groups[grp_id]
-        max_mb = float(config.memory.pmap_max_mb)
-        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        G = len(cmaker.gsims)
-        splits = G * mb_per_gsim / max_mb
-        hint = sg.weight / max_weight
-        if sg.atomic or tiling:
-            blocks = [None]
-            tiles = max(hint, splits)
-        else:
-            # if hint > max_blocks generate max_blocks and more tiles
-            blocks = list(general.split_in_blocks(
-                sg, min(hint, oq.max_blocks), lambda s: s.weight))
-            tiles = max(hint / oq.max_blocks * splits, splits)
-        tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-        cmaker.tiling = tiling
-        cmaker.gsims = list(cmaker.gsims)  # save data transfer
-        cmaker.codes = sg.codes
-        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-        cmaker.num_chunks = num_chunks
-        cmaker.blocks = len(blocks)
-        cmaker.weight = sg.weight
-        cmaker.atomic = sg.atomic
-        return cmaker, tilegetters, blocks, numpy.ceil(splits)
-
-    def __toh5__(self):
-        G = len(self.src_groups)
-        arr = numpy.zeros(G + 1, hdf5.vuint8)
-        for grp_id, grp in enumerate(self.src_groups):
-            arr[grp_id] = zpik(grp)
-        arr[G] = zpik(self.source_info)
-        size = sum(len(val) for val in arr)
-        logging.info(f'Storing {general.humansize(size)} '
-                     'of CompositeSourceModel')
-        return arr, {}
-
-    # tested in case_36
-    def __fromh5__(self, arr, attrs):
-        objs = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
-        self.src_groups = objs[:-1]
-        self.source_info = objs[-1]
-
-    def __repr__(self):
-        """
-        Return a string representation of the composite model
-        """
-        contents = []
-        for sg in self.src_groups:
-            arr = numpy.array(_strip_colons(sg))
-            line = f'grp_id={sg.sources[0].grp_id} {arr}'
-            contents.append(line)
-        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))
-
-
-def _strip_colons(sources):
-    ids = set()
-    for src in sources:
-        if ':' in src.source_id:
-            ids.add(src.source_id.split(':')[0])
-        else:
-            ids.add(src.source_id)
-    return sorted(ids)

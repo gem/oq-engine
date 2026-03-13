@@ -41,6 +41,7 @@ CR = ord('\r')
 def _long_funcs(module, maxlen):
     out = []
     code = open(module.__file__, encoding='utf-8').read()
+    assert 'numpy.''random.''seed' not in code, module.__file__
     tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
@@ -53,9 +54,11 @@ def _long_funcs(module, maxlen):
             # Adjust start line to skip the docstring if present
             if (doc and isinstance(node.body[0], ast.Expr)
                     and isinstance(node.body[0].value, ast.Constant)):
-                start_line = node.body[0].end_lineno + 1  # First line after docstring
+                start_line = node.body[0].end_lineno + 1
+                # First line after docstring
             else:
-                start_line = node.lineno + 1  # First line after function definition
+                start_line = node.lineno + 1
+                # First line after function definition
             numlines = node.end_lineno - start_line
             if numlines > maxlen:
                 out.append((dotname, numlines))
@@ -122,8 +125,8 @@ def test_serious_violations():
     assert out.getvalue().decode('utf8') == ''
 
 
-# cut & paste from github cause the following character to creep inside
-# the codebase
+# cut & paste from github may cause the following invisible
+# characters to creep inside the codebase
 def test_annoying_character():
     object_replacement_character = b'\xef\xbf\xbc'
     for cwd, dirs, files in os.walk(REPO):
@@ -193,6 +196,7 @@ def test_forbid_long_funcs():
                                  'openquake.engine',
                                  'openquake.hmtk',
                                  'openquake.sep',
+                                 'openquake._unc',
                                  ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)

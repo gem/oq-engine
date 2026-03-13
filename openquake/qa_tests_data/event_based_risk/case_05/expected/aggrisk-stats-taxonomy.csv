@@ -1,0 +1,14 @@
+#,,,"generated_by='OpenQuake engine 3.25.0-gita29978772c', start_date='2025-11-22T03:05:38', checksum=595716330"
+loss_type,loss,stat,taxonomy
+structural,36317.285,mean,Adobe/Com
+structural,7969.71741461432,quantile-0.15,Adobe/Com
+structural,34079.3235207792,quantile-0.85,Adobe/Com
+structural,25004.85,mean,Adobe/Res
+structural,16338.539765907155,quantile-0.15,Adobe/Res
+structural,24320.668992118313,quantile-0.85,Adobe/Res
+structural,464.92828,mean,Wood/Com
+structural,0.0,quantile-0.15,Wood/Com
+structural,0.0,quantile-0.85,Wood/Com
+structural,2490.684,mean,Wood/Res
+structural,153.7459304804738,quantile-0.15,Wood/Res
+structural,2306.1890213549095,quantile-0.85,Wood/Res

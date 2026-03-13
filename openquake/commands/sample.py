@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,10 +81,10 @@ def main(fname, reduction_factor: valid.probability,
     This is a debugging utility to reduce large computations to small ones.
     """
     if fname.endswith('.json'):  # used to sample the USGS stations
-        with open(fname) as f:
+        with open(fname, encoding='utf-8-sig') as f:
             data = json.load(f)
         data['features'] = general.random_filter(data['features'], reduction_factor)
-        with open(fname, 'w') as f:
+        with open(fname, 'w', encoding='utf8') as f:
             json.dump(data, f)
         return
     elif fname.endswith('.csv'):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2025 GEM Foundation
+# Copyright (C) 2020-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,6 @@ import glob
 import shutil
 import socket
 import getpass
-import zipfile
 import tempfile
 import argparse
 import platform
@@ -72,9 +71,9 @@ except ImportError:
             )
 
 PYVER = sys.version_info
-if PYVER < (3, 10, 0):
+if PYVER < (3, 11, 0):
     sys.exit(
-        "Error: you need at least Python 3.10, but you have %s"
+        "Error: you need at least Python 3.11, but you have %s"
         % ".".join(map(str, sys.version_info)))
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = """Found pre-existing venv %s
@@ -208,7 +207,6 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
-DEMOS = "https://artifacts.openquake.org/travis/demos-master.zip"
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
@@ -220,8 +218,7 @@ def ensure(pip=None, pyvenv=None):
     try:
         if pyvenv:
             if os.path.exists(pyvenv):
-                answer = input(REMOVE_VENV % pyvenv)
-                if answer.lower() == "y":
+                if input(REMOVE_VENV % pyvenv).lower() == "y":
                     shutil.rmtree(pyvenv)
                 else:
                     sys.exit(0)
@@ -233,8 +230,8 @@ def ensure(pip=None, pyvenv=None):
             shutil.rmtree(inst.VENV)
             raise RuntimeError(
                 "Could not execute ensurepip --upgrade: %s"
-                % ("Probably you are using the system Python (%s)" % sys.executable)
-            )
+                % ("Probably you are using the system Python (%s)" %
+                   sys.executable))
 
 
 def get_requirements_branch(version, inst, from_fork):
@@ -254,9 +251,8 @@ def get_requirements_branch(version, inst, from_fork):
         # retrieve the tag name of the current stable version
         with urlopen("https://pypi.org/pypi/openquake.engine/json") as resp:
             content = resp.read()
-        stable_version_number = json.loads(content)["info"]["version"]
-        stable_version_tag_name = f"v{stable_version_number}"
-        return stable_version_tag_name
+        version = json.loads(content)["info"]["version"]  # i.e. '3.24.1'
+        return f"v{version}"
     mo = re.match(r"(\d+\.\d+)+", version)
     if mo:
         return "engine-" + mo.group(0)
@@ -268,6 +264,7 @@ def install_standalone(venv):
     """
     Install the standalone Django applications if possible
     """
+    errors = []
     print("The standalone applications are not installed yet")
     if sys.platform == "win32":
         if os.path.exists("python\\python._pth.old"):
@@ -280,27 +277,28 @@ def install_standalone(venv):
         "oq-platform-standalone",
         "oq-platform-ipt",
         "oq-platform-taxonomy",
-        "oq-platform-taxtweb",
-        "openquake.taxonomy",
     ]:
         try:
             print("Applications " + app + " are not installed yet \n")
 
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE, app]
+                [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
+                 app]
             )
         except Exception as exc:
-            print("%s: could not install %s" % (exc, app))
+            # for instance is somebody removed a wheel from the wheelhouse
+            errors.append("%s: could not install %s" % (exc, app))
+    return errors
 
 
-def before_checks(inst, venv, port, remove, usage):
+def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
-    if venv:
-        inst.VENV = os.path.abspath(os.path.expanduser(venv))
-    if port:
-        inst.DBPORT = int(port)
+    if args.venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
+    if args.dbport:
+        inst.DBPORT = int(args.dbport)
 
     # check platform
     if (inst is server and sys.platform != "linux") or (
@@ -314,18 +312,34 @@ def before_checks(inst, venv, port, remove, usage):
 
     # check user
     user = getpass.getuser()
-    if (inst is server and user != "root") or (inst is devel_server and user != "root"):
+    if (inst is server and user != "root") or (
+            inst is devel_server and user != "root"):
         sys.exit(
             "Error: you cannot perform a server or devel_server "
             "installation unless "
             "you are root. If you do not have root permissions, you "
             "can install the engine in user mode.\n\n" + usage
         )
-    elif (inst is user and user == "root") or (inst is devel and user == "root"):
-        sys.exit("Error: you cannot perform a user or devel installation" " as root.")
+    elif (inst is user and user == "root") or (
+            inst is devel and user == "root"):
+        sys.exit("Error: you cannot perform a user or devel installation"
+                 " as root.")
+    elif inst is devel:
+        if shutil.which("git") is None:
+            raise RuntimeError("git is missing, please install it")
+        try:
+            branch = subprocess.check_output(
+                ['git', 'branch', '--show-current']
+            ).decode('utf8').strip()
+        except subprocess.CalledProcessError:
+            raise RuntimeError('install.py must be called from the engine '
+                               f'repository, not from {os.getcwd()}')
+        if branch.startswith('engine-') and not args.version:
+            # use version consistent with the branch
+            args.version == branch
 
     # check if there is a DbServer running
-    if not remove:
+    if not args.remove:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(("localhost", inst.DBPORT))
@@ -382,6 +396,19 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
+def normalize_version(version):
+    """
+    Convert a user-supplied --version argument into a pip-compatible
+    version specifier.
+    """
+    if version.count('.') == 1:
+        # e.g. "3.23" -> latest patch in that series, expands to >=3.23.0,<3.24
+        return f"~={version}.0"
+    else:
+        # e.g. "3.23.4" -> exact match
+        return f"=={version}"
+
+
 def install(inst, version, from_fork):
     """
     Install the engine in one of the three possible modes
@@ -423,13 +450,13 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists("python\\python._pth.old"):
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel", "urllib3"]
-            )
+                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
+                 "urllib3"])
         else:
             subprocess.check_call([pycmd, "-m", "ensurepip", "--upgrade"])
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel", "urllib3"]
-            )
+                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
+                 "urllib3"])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)
@@ -439,9 +466,8 @@ def install(inst, version, from_fork):
         mac = ("",)
     req = (
         f"https://raw.githubusercontent.com/gem/oq-engine/{branch}/"
-        "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform] + mac)
-    )
-
+        "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform]
+                                          + mac))
     subprocess.check_call(
         [
             pycmd,
@@ -465,17 +491,23 @@ def install(inst, version, from_fork):
         )
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", "openquake.engine==" + version]
+            [pycmd, "-m", "pip", "install", "--upgrade",
+             f"openquake.engine{normalize_version(version)}"]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
         print("Installing commit", commit)
-        subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", GITBRANCH % commit]
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            custom_env = os.environ.copy()
+            custom_env["TMPDIR"] = tmp  # Linux/macOS
+            custom_env["TEMP"] = tmp    # Windows
+            subprocess.check_call(
+                [pycmd, "-m", "pip", "install",
+                 "--upgrade", GITBRANCH % commit, "--no-clean"],
+                env=custom_env)
         fix_version(commit, inst.VENV)
 
-    install_standalone(inst.VENV)
+    errors = install_standalone(inst.VENV)
 
     # create openquake.cfg
     if inst is server or inst is devel_server:
@@ -495,6 +527,7 @@ def install(inst, version, from_fork):
         oqreal = "%s\\Scripts\\oq" % inst.VENV
     else:
         oqreal = "%s/bin/oq" % inst.VENV
+
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
 
@@ -515,7 +548,8 @@ def install(inst, version, from_fork):
             "\\Scripts\\activate.ps1 (in PowerShell)"
         )
     elif inst in (user, devel):
-        print(f"Please activate the venv with source {inst.VENV}" "/bin/activate")
+        print(f"Please activate the venv with source {inst.VENV}"
+              "/bin/activate")
 
     # create systemd services
     if (inst is server and os.path.exists("/run/systemd/system")) or (
@@ -538,30 +572,21 @@ def install(inst, version, from_fork):
                         command=command,
                     )
                     f.write(srv)
-            subprocess.check_call(["systemctl", "enable", "--now", service_name])
+            subprocess.check_call(
+                ["systemctl", "enable", "--now", service_name])
             subprocess.check_call(["systemctl", "start", service_name])
 
     if inst in (user, server):
-        # download and unzip the demos
-        try:
-            with urlopen(DEMOS) as f:
-                data = f.read()
-        except OSError:
-            msg = "However, we could not download the demos from %s" % DEMOS
-        else:
-            th, tmp = tempfile.mkstemp(suffix=".zip")
-            with os.fdopen(th, "wb") as t:
-                t.write(data)
-            zipfile.ZipFile(tmp).extractall(inst.VENV)
-            os.remove(tmp)
-            path = os.path.join(
-                inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA", "job.ini"
-            )
-            msg = (
-                "You can run a test calculation with the command\n"
-                f"{oqreal} engine --run {path}"
-            )
-            print("The engine was installed successfully.\n" + msg)
+        path = os.path.join(
+            inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
+            "job.ini")
+        msg = (
+            "You can run a test calculation with the command\n"
+            f"{oqreal} engine --run {path}"
+        )
+        print("The engine was installed successfully.\n" + msg)
+
+    return errors
 
 
 def remove(inst):
@@ -579,8 +604,9 @@ def remove(inst):
                 os.remove(service_path)
                 print("removed " + service_name)
         subprocess.check_call(["systemctl", "daemon-reload"])
-    shutil.rmtree(inst.VENV)
-    print("%s has been removed" % inst.VENV)
+    if os.path.exists(inst.VENV):
+        shutil.rmtree(inst.VENV)
+        print("%s has been removed" % inst.VENV)
     if (
         inst is server
         and os.path.exists(server.OQ)
@@ -592,8 +618,8 @@ def remove(inst):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "inst",
         choices=["server", "user", "devel", "devel_server"],
@@ -601,22 +627,26 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
-    parser.add_argument("--remove", action="store_true", help="disinstall the engine")
+    parser.add_argument("--remove", action="store_true",
+                        help="disinstall the engine")
     parser.add_argument("--version", help="version to install (default stable)")
     parser.add_argument("--dbport", help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
-        "--from_fork", dest="from_fork", action="store_true", help=argparse.SUPPRESS
-    )
+        "--from_fork", dest="from_fork", action="store_true",
+        help=argparse.SUPPRESS)
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove, parser.format_usage())
+        before_checks(inst, args, parser.format_usage())
         if args.remove:
             remove(inst)
         else:
-            install(inst, args.version, args.from_fork)
+            errors = install(inst, args.version, args.from_fork)
+            if errors:
+                # NB: even if one of the tools is missing, the engine will work
+                sys.exit('\n'.join(errors))
     else:
         sys.exit("Please specify the kind of installation")

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,6 +98,7 @@ def cross_correlation_matrix(imts, corr='yes'):
     return cross_matrix
 
 
+# not used since the ShakeMap does it already
 def amplify_gmfs(imts, vs30s, gmfs):
     """
     Amplify the ground shaking depending on the vs30s

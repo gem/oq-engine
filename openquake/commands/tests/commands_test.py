@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,16 +20,17 @@ import io
 import os
 import re
 import sys
+from pathlib import Path
+from unittest import skipIf
 import unittest.mock as mock
 from contextlib import redirect_stdout
 import shutil
+import pathlib
 import zipfile
 import subprocess
 import tempfile
 import unittest
 import numpy
-
-from pathlib import Path
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp, chdir
@@ -39,11 +40,12 @@ from openquake.baselib.tests.flake8_test import check_newlines
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
-from openquake.commonlib.readinput import get_params
-from openquake.engine.engine import create_jobs, run_jobs
+from openquake.commonlib.readinput import get_params, jobs_from_inis
+from openquake.engine.engine import (
+    create_jobs, run_jobs, run_workflow, read_many)
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
-from openquake.qa_tests_data import mosaic
+from openquake.qa_tests_data import mosaic, mosaic_for_ses
 from openquake.qa_tests_data.event_based_damage import case_15
 from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
@@ -52,11 +54,16 @@ from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
     case_1 as eb_case_1, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_1 as case_eb)
+    case_master, case_01 as case_eb, case_4a)
 from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
+
+try:
+    import rtgmpy
+except ImportError:
+    rtgmpy = None
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
@@ -97,10 +104,10 @@ class InfoTestCase(unittest.TestCase):
 
     def test_shp(self):
         mosaic_dir = os.path.dirname(mosaic.__file__)
-        path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+        path = os.path.join(mosaic_dir, 'aelo_boundaries.gpkg')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
-        self.assertIn('GLD', str(p))
+        self.assertIn('EUR', str(p))
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -268,7 +275,27 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch():
-            cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+            cls.calc_id = sap.runline(f'openquake.commands run {job_ini}')
+        cls.job_ini = job_ini
+
+    def test_jobs_from_inis(self):
+        dic = jobs_from_inis([self.job_ini])
+        self.assertEqual(len(dic['success']), 1)
+        self.assertEqual(dic['error'], '')
+
+        dic = jobs_from_inis(['/non/existing/job.ini'])
+        self.assertEqual(dic['success'], [])
+        self.assertIn('File not found', dic['error'])
+
+    def test_workflow_read(self):
+        ses_dir = os.path.dirname(mosaic_for_ses.__file__)
+        ses_toml = os.path.join(ses_dir, 'ses.toml')
+        [wf] = read_many(ses_toml, dict(description='test_workflow'))
+        self.assertEqual(wf.checkout, {'EUR': 'master', 'MIE': 'master'})
+
+    def test_workflow_run(self):
+        base = pathlib.Path(case_4a.__file__).parent
+        run_workflow(base / 'jobs.toml', dict(description='test_workflow'))
 
     def test_show_calc(self):
         with Print.patch() as p:
@@ -282,7 +309,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id | code | calc_time | num_sites', str(p))
+        self.assertIn('source_id | code | calc_time | num_ctxs', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -617,17 +644,14 @@ Source Loss Table'''.splitlines())
 
     def test_shakemap2gmfs(self):
         # test shakemap2gmfs with sitemodel with a filtered sitecol
-        # and three choices of site_effects
-        effects = ['no', 'shakemap', 'sitemodel']
-        expected = [0.213411, 0.287633, 0.21091]
+        exp = 0.213411
         with chdir(os.path.dirname(case_25.__file__)):
-            for eff, exp in zip(effects, expected):
-                with redirect_stdout(io.StringIO()) as out:
-                    sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
-                                'site_model_uniform_grid_rock.csv -n 1 -t 0 '
-                                f'--spatialcorr no -c no --site-effects={eff}')
-                got = out.getvalue()
-                assert f'gmv={exp}' in got
+            with redirect_stdout(io.StringIO()) as out:
+                sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
+                            'site_model_uniform_grid_rock.csv -n 1 -t 0 '
+                            '--spatialcorr no -c no')
+            got = out.getvalue()
+            assert f'gmv={exp}' in got
 
 
 class CheckInputTestCase(unittest.TestCase):
@@ -811,6 +835,65 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         self._check_output(out_path, expected_path)
 
 
+@skipIf(rtgmpy is None, 'Missing rtgmpy')
+class RunSiteTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mosaic_dir = os.path.dirname(mosaic.__file__)
+        if not os.path.exists('asce'):
+            # create directory in qa_tests_data/mosaic/asce to store the files
+            os.makedirs('asce')
+
+    def test_runsite_case1(self):
+        # tests when there is a lonlat file without vs30 but its given as
+        # argument and instead ASCE7-22 is specified
+        file = os.path.join(DATADIR, 'site_case1.csv')
+        vs30 = 430
+        asce_version = 'ASCE7-22'
+        with Print.patch():
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} '
+                f'{self.mosaic_dir} -v {vs30} -a {asce_version}')
+        dstore = read(calc_id)
+        assert dstore['oqparam'].override_vs30 == [vs30]
+        assert dstore['oqparam'].asce_version == asce_version
+
+    def test_runsite_case2(self):
+        # tests when there is a lonlat file without vs30 but its NOT given as
+        # argument and the default asce version is used
+        file = os.path.join(DATADIR, 'site_case1.csv')
+        with Print.patch():
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+        dstore = read(calc_id)
+        assert dstore['oqparam'].override_vs30 == [760]
+        assert dstore['oqparam'].asce_version == 'ASCE7-16'
+
+    def test_runsite_case3(self):
+        # tests when there is a lonlat file with vs30 and the default asce
+        # version is used
+        file = os.path.join(DATADIR, 'site_case3.csv')
+        with Print.patch():
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+        dstore = read(calc_id)
+        assert dstore['oqparam'].override_vs30 == [222]
+        assert dstore['oqparam'].asce_version == 'ASCE7-16'
+
+    def test_runsite_case4(self):
+        # tests when there is a lonlat file with vs30 and the default site
+        # class (and therefore asce 7-22) are used
+        file = os.path.join(DATADIR, 'site_case4.csv')
+        with Print.patch():
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} '
+                f' {self.mosaic_dir} -a ASCE7-22')
+        dstore = read(calc_id)
+        assert dstore['oqparam'].override_vs30 == [260.0, 365.0, 530.0]
+
+
 def teardown_module():
     parallel.Starmap.shutdown()
+    sap.runline('openquake.commands purge failed')
     del os.environ['OQ_DATABASE']

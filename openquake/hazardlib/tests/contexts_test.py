@@ -21,6 +21,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
@@ -216,8 +217,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
-
+        ctx = cm.get_ctxs(self.src, self.sitec)[-1]
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -270,7 +270,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        [ctx] = cm.get_ctx_iter(self.src, self.sitec)
+        [ctx] = cm.get_ctxs(self.src, self.sitec)
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
@@ -291,6 +291,33 @@ class GetCtxs02TestCase(unittest.TestCase):
     def test_ry0_distance(self):
         dst = self.rup.surface.get_ry0_distance(self.sitec.mesh)
         self.assertAlmostEqual(dst, self.ctx.ry0, delta=1e-3)
+
+
+class FastRatesTestCase(unittest.TestCase):
+    """
+    Optimized ways to compute the rates for a source
+    """
+    @classmethod
+    def setUpClass(cls):
+        from openquake.commonlib import readinput
+        job_ini =os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
+        oq = readinput.get_oqparam(job_ini)
+        csm = readinput.get_composite_source_model(oq)
+        cls.sources = csm.get_sources()
+        cls.cmakers = csm.get_cmakers(oq)
+        cls.sitecol = readinput.get_site_collection(oq)
+        with Monitor('get_rmap', measuremem=True) as cls.mon:
+            cls.rmap = cls.cmakers.get_rmap(csm.src_groups, cls.sitecol)
+
+    def test_get_rmaps(self):
+        # changing 100 times abGR on an area sources is 10x faster
+        # and allocates 10x less memory with get_rmaps
+        with Monitor('get_rmaps', measuremem=True) as mon:
+            rmaps = self.cmakers.get_rmaps(self.sources, self.sitecol)
+        print(self.mon)
+        print(mon)
+        aac(self.rmap.array[:, :, 0], rmaps[0].array[:, :, 0])
+        aac(self.rmap.array[:, :, 99], rmaps[99].array[:, :, 0])
 
 
 class PlanarDistancesTestCase(unittest.TestCase):
@@ -322,7 +349,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         cmaker = ContextMaker(
             trt, gsims, dict(imtls=imtls, truncation_level=3.))
         cmaker.tom = tom
-        ctx, = cmaker.get_ctx_iter(src, sites)
+        [ctx] = cmaker.get_ctxs(src, sites)
         aac(ctx.rrup, [9.32409196, 20.44343079])
         aac(ctx.rx, [0., 0.])
         aac(ctx.ry0, [9.26597563, 20.38546829])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2025 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,17 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 
+import logging
 import numpy
 import pandas
+try:
+    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
+except ImportError:  # old version
+    from h3.api.numpy_int import (
+        geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -32,7 +38,10 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
-U32LIMIT = 2 ** 32
+TWO32 = 2 ** 32
+U32 = numpy.uint32
+F32 = numpy.float32
+F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
@@ -49,24 +58,24 @@ def calculate_z1pt0(vs30, country):
     '''
     Reads an array of vs30 values (in m/s) and returns the depth to
     the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the 
+    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the
     Chiou and Youngs NGA model for the average horizontal component
     of peak ground motion and response spectra.' Earthquake Spectra,
     30(3), pp.1117–1153.
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
-    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.gpkg
 
     '''
     z1pt0 = numpy.zeros(len(vs30))
     df = pandas.DataFrame({'codes': country})
-    idx_glo = df.loc[df.codes!='JPN'].index.values
-    idx_jpn = df.loc[df.codes=='JPN'].index.values
+    idx_glo = df.loc[df.codes != 'JPN'].index.values
+    idx_jpn = df.loc[df.codes == 'JPN'].index.values
 
     c1_glo = 571 ** 4.
     c2_glo = 1360.0 ** 4.
     z1pt0[idx_glo] = numpy.exp((-7.15 / 4.0) * numpy.log(
         (vs30[idx_glo] ** 4 + c1_glo) / (c2_glo + c1_glo)))
-    
+
     c1_jpn = 412 ** 2.
     c2_jpn = 1360.0 ** 2.
     z1pt0[idx_jpn] = numpy.exp((-5.23 / 2.0) * numpy.log(
@@ -85,20 +94,20 @@ def calculate_z2pt5(vs30, country):
     Earthquake Spectra, 30(3), pp.1087–1114.
 
     :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
-    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
-                    
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.gpkg
+
     '''
     z2pt5 = numpy.zeros(len(vs30))
     df = pandas.DataFrame({'codes': country})
-    idx_glo = df.loc[df.codes!='JPN'].index.values
-    idx_jpn = df.loc[df.codes=='JPN'].index.values
+    idx_glo = df.loc[df.codes != 'JPN'].index.values
+    idx_jpn = df.loc[df.codes == 'JPN'].index.values
 
     c1_glo = 7.089
     c2_glo = -1.144
     z2pt5[idx_glo] = numpy.exp(c1_glo + numpy.log(vs30[idx_glo]) * c2_glo)
 
     c1_jpn = 5.359
-    c2_jpn = -1.102    
+    c2_jpn = -1.102
     z2pt5[idx_jpn] = numpy.exp(c1_jpn + c2_jpn * numpy.log(vs30[idx_jpn]))
 
     return z2pt5
@@ -116,13 +125,27 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
-    def __call__(self, complete):
-        if self.ntiles == 1:
+    def get_tile_size(self, complete):
+        """
+        :returns: how many sites per tile (at max)
+        """
+        return int(numpy.ceil(len(complete) / self.ntiles))
+
+    def __call__(self, complete, ilabel=None):
+        if self.ntiles == 1 and ilabel is None:
             return complete
         sc = SiteCollection.__new__(SiteCollection)
-        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
+        array = complete.array[complete.sids % self.ntiles == self.tileno]
+        if ilabel is not None:
+            sc.array = array[array['ilabel'] == ilabel]
+        else:
+            sc.array = array
         sc.complete = complete
         return sc
+
+    def __repr__(self):
+        return  '<%s %d of %d>' % (self.__class__.__name__,
+                                   self.tileno, self.ntiles)
 
 
 class Site(object):
@@ -143,7 +166,11 @@ class Site(object):
         start to propagate with a speed above 2.5 km/sec, in km.
 
     :raises ValueError:
-        If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+        If ``vs30`` is zero or negative
+        OR
+        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        -999 informs basin param using GMMs to estimate values for such sites
+        with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
     .. note::
 
@@ -154,10 +181,10 @@ class Site(object):
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
-            raise ValueError('z1pt0 must be positive')
-        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
-            raise ValueError('z2pt5 must be positive')
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0 and z1pt0 != -999:
+            raise ValueError('z1pt0 must be positive or set to -999')
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0 and z2pt5 != -999:
+            raise ValueError('z2pt5 must be positive or set to -999')
 
         self.location = location
         self.vs30 = vs30
@@ -208,7 +235,6 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
-    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -219,7 +245,7 @@ site_param_dt = {
     'z2pt5': numpy.float64,
     'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
-    'label': numpy.uint8,
+    'ilabel': numpy.uint8,
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
@@ -267,7 +293,7 @@ site_param_dt = {
     'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
-    'lithology': (numpy.bytes_,2),
+    'lithology': (numpy.bytes_, 2),
     'landcover': (numpy.float64),
     'hratio': (numpy.float64),
     'tslope': (numpy.float64),
@@ -285,6 +311,21 @@ site_param_dt = {
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }
+
+
+def add(string, suffix, maxlen):
+    """
+    Add a suffix to a string staying within the maxlen limit
+
+    >>> add('pippo', ':xxx', 8)
+    'pippo:xx'
+    >>> add('pippo', ':x', 8)
+    'pippo:x'
+    """
+    n = len(string)
+    assert n < maxlen, string
+    assert len(suffix) <= maxlen, suffix
+    return string + suffix[:maxlen-n]
 
 
 class SiteCollection(object):
@@ -313,6 +354,16 @@ class SiteCollection(object):
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
     req_site_params = ()
+
+    @classmethod
+    def from_(cls, array):
+        """
+        Build a site collection from a site model array
+        """
+        self = object.__new__(cls)
+        self.array = array
+        self.complete = self
+        return self
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -349,7 +400,7 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
-        assert len(lons) < U32LIMIT, len(lons)
+        assert len(lons) < TWO32, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
@@ -387,9 +438,11 @@ class SiteCollection(object):
             # duplicates (there could be millions)
             n = len(dupl)
             dots = ' ...' if n > 9 else ''
-            items = list(dupl.items())[:9]
+            items = []
+            for (x, y), _ in list(dupl.items())[:9]:
+                items.append('%.5f %.5f' % (x, y))
             raise ValueError('There are %d duplicate sites %s%s' %
-                             (n, items, dots))
+                             (n, ', '.join(items), dots))
         return self
 
     @classmethod
@@ -468,10 +521,85 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
+
+    # tested in classical/case_38
+    def multiply(self, vs30s,
+                 soil_classes=numpy.array(
+                     [b'E', b'DE', b'D', b'CD', b'C', b'BC', b'B', b'A']),
+                 soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
+        """
+        Multiply a site collection with the given vs30 values.
+        NB: if there are multiple values the sites with vs30 = -999. are
+        multiplied, otherwise the given value is applied to all sites.
+        """
+        classes = general.find_among(soil_classes, soil_values, vs30s)
+        n = len(vs30s)
+        N = len(self)
+        dt = self.array.dtype
+        names = list(dt.names)
+        try:
+            dt['custom_site_id']
+        except KeyError:
+            new_csi = True  # not already there
+            dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
+                (n, dt[n]) for n in names]
+            names.insert(0, 'custom_site_id')
+        else:
+            new_csi = False
+        ok = self['vs30'] == -999.
+        sites_to_multiply = ok.sum()
+        tot = sites_to_multiply * n + (N - sites_to_multiply)
+        array = numpy.empty(tot, dt)
+        j = 0
+        multi_vs30 = len(vs30s) > 1
+        for i, orig_rec in enumerate(self.array):
+            if multi_vs30 and not ok[i]:  # do not multiply
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id':
+                        rec[name] = (f'{j}'.encode('ascii') if new_csi
+                                     else orig_rec[name])
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
+                continue
+            # else override the vs30
+            for cl, vs30 in zip(classes, vs30s):
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id' and new_csi:
+                        # tested in classical/case_08
+                        csi = f'{i}'.encode('ascii')
+                        rec[name] = add(csi[:5], b':' + cl, 8)
+                    elif name == 'custom_site_id':
+                        # tested in classical/case_38
+                        rec[name] = add(orig_rec[name][:5], b':' + cl, 8)
+                    elif name == 'vs30':
+                        rec[name] = vs30
+                    elif name == 'sids':
+                        rec[name] = j
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
+        new = object.__new__(self.__class__)
+        new.array = array
+        new.complete = new
+        return new
+
+    def get_around(self, lon, lat, digits=5):
+        """
+        :returns: the submesh around lon, lat with the given precision
+        """
+        out = []
+        lons = numpy.round(self.lons, digits)
+        lats = numpy.round(self.lats, digits)
+        for i, (lo, la) in enumerate(zip(lons, lats)):
+            if lo == lon and la == lat:
+                out.append(i)
+        return self[out]
 
     def reduce(self, nsites):
         """
@@ -498,6 +626,16 @@ class SiteCollection(object):
             if values is not None:
                 arr[colname] = values
             self.array = arr
+
+    def ensure_custom_site_id(self, size):
+        """
+        Add a custom_site_id if not present
+        """
+        if 'custom_site_id' not in self.array.dtype.names:
+            gh = self.geohash(size)
+            if len(numpy.unique(gh)) < len(gh):
+                logging.error('geohashes are not unique')
+            self.add_col('custom_site_id', f'S{size}', gh)
 
     def make_complete(self):
         """
@@ -535,7 +673,7 @@ class SiteCollection(object):
         Build a complete SiteCollection from a list of Site objects
         """
         extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                 if p in site_param_dt]
+                 if p in site_param_dt and p != 'depth']
         dtlist = [(p, site_param_dt[p])
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
@@ -564,19 +702,25 @@ class SiteCollection(object):
         return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
     def __fromh5__(self, dic, attrs):
-        if isinstance(dic, dict):  # engine >= 3.11
-            params = attrs['__pdcolumns__'].split()
-            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
-            self.array = numpy.zeros(len(dic['sids']), dtype)
-            for p in dic:
-                self.array[p] = dic[p][()]
-        else:  # old engine, dic is actually a structured array
-            self.array = dic
+        params = attrs['__pdcolumns__'].split()
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+        self.array = numpy.zeros(len(dic['sids']), dtype)
+        for p in dic:
+            self.array[p] = dic[p][()]
         self.complete = self
 
     @property
+    def names(self):
+        """
+        :returns: .array.dtype.names
+        """
+        return self.array.dtype.names
+
+    @property
     def mesh(self):
-        """Return a mesh with the given lons, lats, and depths"""
+        """
+        :return: a mesh with the given lons, lats, and depths
+        """
         return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
@@ -608,12 +752,13 @@ class SiteCollection(object):
         elif hint > len(self):
             hint = len(self)
         tiles = []
-        for sids in numpy.array_split(self.sids, hint):
-            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
-            sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.complete.array[sids]
-            sc.complete = self.complete
-            tiles.append(sc)
+        for tileno in range(hint):
+            ok = self.sids % hint == tileno
+            if ok.any():
+                sc = SiteCollection.__new__(SiteCollection)
+                sc.array = self.complete.array[self.sids[ok]]
+                sc.complete = self.complete
+                tiles.append(sc)
         return tiles
 
     def split_by_gh3(self):
@@ -677,7 +822,7 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
-    def assoc(self, site_model, assoc_dist, ignore=()):
+    def assoc(self, site_model, assoc_dist, mode, ignore=()):
         """
         Associate the `site_model` parameters to the sites.
         Log a warning if the site parameters are more distant than
@@ -686,16 +831,14 @@ class SiteCollection(object):
         :returns: the site model array reduced to the hazard sites
         """
         # NB: self != self.complete in the impact tests with stations
-        m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self.complete, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id', 'sids'}
         for name in ok:
-            vals = site_model[name]
-            self._set(name, vals[self.sids])
-            self.complete._set(name, vals)
+            self._set(name, site_model[name])
 
         # sanity check
         for param in self.req_site_params:
@@ -723,15 +866,22 @@ class SiteCollection(object):
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
             site IDs within the bounding box
+
+        NB: if the bounding box crosses the IDL, do not filter.       
         """
+        # This is the only sane approach across the IDL, since sometimes
+        # we want to take the greater arc (for the Oceans) and sometimes
+        # the smaller arc (for Alaska). Disabling the prefiltering means a
+        # slight performance penalty but not errors, since the real filtering
+        # will kick off next and do the right thing in the engine.
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self['lon'], self['lat']
-        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
-        mask = (min_lon < lons) * (lons < max_lon) * \
-               (min_lat < lats) * (lats < max_lat)
-        return mask.nonzero()[0]
+        if cross_idl(min_lon, max_lon):
+            return self.sids
+        lons, lats = self.lons, self.lats
+        mask = ((min_lon < lons) & (lons < max_lon) &
+                (min_lat < lats) & (lats < max_lat))
+        ok, = mask.nonzero()
+        return self.sids[ok]
 
     def extend(self, lons, lats):
         """
@@ -759,7 +909,7 @@ class SiteCollection(object):
         """
         Return the countries for each site in the SiteCollection.
         The boundaries of the countries are defined as in the file
-        geoBoundariesCGAZ_ADM0.shp
+        geoBoundariesCGAZ_ADM0.gpkg
         """
         from openquake.commonlib import readinput
         geom_df = readinput.read_countries_df()
@@ -779,6 +929,22 @@ class SiteCollection(object):
         out['num_sites'] = cnt
         out.sort(order='num_sites')
         return out
+
+    def lower_res(self, res=2):
+        """
+        Collapse together points within the same hexagon (with an
+        edge of 84 km for res=2, the default).
+
+        :returns: (reduce sitecol, list of arrays orig_sids)
+        """
+        sids_by_hex = general.AccumDict(accum=[])
+        for sid, lon, lat in zip(self.sids, self.lons, self.lats):
+            h = latlng_to_cell(lat, lon, res)
+            sids_by_hex[h].append(sid)
+        # build an array of shape (N, 2)
+        latlons = F32([cell_to_latlng(h) for h in sids_by_hex])
+        orig_sids = [U32(sids) for sids in sids_by_hex.values()]
+        return self.from_points(latlons[:, 1], latlons[:, 0]), orig_sids
 
     def geohash(self, length):
         """
@@ -820,8 +986,13 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name in ('lons', 'lats', 'depths'):  # legacy names
+        if name in ('lons', 'lats'):  # legacy names
             return self.array[name[:-1]]
+        if name == 'depths':
+            try:
+                return self.array['depth']
+            except ValueError:  # missing depth
+                return numpy.zeros_like(self.array['lon'])
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]
@@ -848,8 +1019,9 @@ def check_all_equal(mosaic_model, dicts, *keys):
     for key in keys:
         for dic in dicts[1:]:
             if dic[key] != dic0[key]:
-                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
-                                   dic[key], dic0[key], mosaic_model)
+                raise RuntimeError(
+                    'Inconsistent key %s!=%s while processing %s',
+                    dic[key], dic0[key], mosaic_model)
 
 
 def merge_without_dupl(array1, array2, uniquefield):

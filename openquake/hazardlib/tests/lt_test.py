@@ -20,6 +20,7 @@ import os
 import filecmp
 import difflib
 import unittest
+import collections
 import numpy
 from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import (
@@ -104,20 +105,19 @@ class CollapseTestCase(unittest.TestCase):
         #    ___/ b11 (w=.2)
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
-        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute', 0)
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute')
+        bs0.branches = [lt.Branch('A', (4.6, 1.1), .4, 'bs0'),
+                        lt.Branch('B', (4.4, 0.9), .6, 'bs0')]
 
-        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute', 1,
+        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute',
                                       dict(applyToBranches=['A']))
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
+                        lt.Branch('D', 7.6, .5, 'bs1')]
 
         self.clt = lt.CompositeLogicTree([bs0, bs1])
 
         # setup sitecol, srcfilter, gsims, imtls
-        self.sitecol = site.SiteCollection(
-            [site.Site(Point(0, 0), numpy.array([760.]))])
+        self.sitecol = site.SiteCollection([site.Site(Point(0, 0), 760.)])
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
@@ -141,6 +141,7 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
+            src.num_ruptures = src.count_ruptures()
         time_span = srcs[0].temporal_occurrence_model.time_span
         idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,
@@ -270,7 +271,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <logicTreeBranchSet
         applyToBranches="CD"
         branchSetID="bs2"
-        uncertaintyType="applyToTRT"
+        uncertaintyType="applyToTectonicRegionType"
         >
             <logicTreeBranch
             branchID="E"
@@ -309,18 +310,18 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        bs0.branches = [lt.Branch('A', (4.6, 1.1), .4, 'bs0'),
+                        lt.Branch('B', (4.4, 0.9), .6, 'bs0')]
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
+                        lt.Branch('D', 7.6, .5, 'bs1')]
 
-        bs2 = lt.BranchSet('applyToTRT',
+        bs2 = lt.BranchSet('applyToTectonicRegionType',
                            filters={'applyToBranches': 'CD'})
-        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
-                        lt.Branch('bs2', 'F', .7, 'B')]
+        bs2.branches = [lt.Branch('E', 'A', .3, 'bs2'),
+                        lt.Branch('F', 'B', .7, 'bs2')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
@@ -385,9 +386,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['ssm2', 'common2', 0.4]],
                        ['setLowerSeismDepthAbsolute', ['ssm1'],
                         ['lsd10', '10', 0.3],
-                        ['lsd15', '15', 0.4]])
+                        ['lsd15', '15', 0.7]])
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'AB.'])
+                         ['AA', 'AB', 'B.'])
 
     def test_build2(self):
         ltl = [
@@ -418,6 +419,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
+        paths = ltssc.sample_paths(10)
+        self.assertEqual(paths, ['EAFI', 'AC.I', 'AAEJ', 'CC.G', 'CAFI',
+                                 'EAFI', 'EAEG', 'BAFJ', 'BAEG', 'AAEI'])
 
     def test_build3(self):
         # test with applyToSources for the BCHydro project
@@ -487,3 +491,16 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                 msg += line
                 msg += '\n'
         self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
+
+    def test_zero_weight(self):
+        # check that branches with zero weight are not sampled
+        clt = lt.build(['sourceModel', [],
+                        ['A', 'common1', 0.65],
+                        ['B', 'common2', 0.35],
+                        ['C', 'dummy', 0.0]])
+        clt.num_samples = 100
+        rlzs = list(clt)
+        paths = [''.join(rlz.lt_path) for rlz in rlzs]
+        cnt = collections.Counter(paths)
+        assert cnt == {'A': 64, 'B': 36}
+

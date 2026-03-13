@@ -148,6 +148,38 @@ def get_trts(gsim_logic_tree_file):
     return trts
 
 
+class IMTWeigher:
+    """
+    A class to manage IMT-dependent weights in the gsim logic tree
+    """
+    def __init__(self, gsim_lt, num_samples=0, weights=None):
+        imts = {}
+        for br in gsim_lt.branches:
+            imts.update(br.weight.dic)
+        # uppercase is sorted before lowercase, so 'weight' is the last
+        self.imti = {imt: i for (i, imt) in enumerate(sorted(imts))}
+        self.num_samples = num_samples
+        self.weights = weights
+
+    # this is nontrivial only for Canada, see logictree/case_39
+    def __call__(self, weights=None, imt=None):
+        """
+        :param weight: an array of weights of shape (R, 1) or (R, M+1)
+        :returns: imt-index for imt-dependent weights
+        """
+        if weights is None:
+            assert self.weights is not None
+            weights = self.weights
+        if self.num_samples:
+            return weights[:, -1]
+        try:
+            i = self.imti[imt]
+        except KeyError:
+            # the default weight is stored in the last index
+            i = len(self.imti) - 1
+        return weights[:, i]
+
+
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -190,7 +222,7 @@ class GsimLogicTree(object):
             alldata = f['model_trt_gsim_weight'][:]
         data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
         dat = data[data['trt'] == trt]
-        assert len(dat) > 0
+        assert len(dat) > 0, f'No gsims for {trt}, use {set(data["trt"])}'
         trt = decode(trt)
         gsims = decode(dat['gsim'])
         weights = decode(dat['weight'])
@@ -270,28 +302,8 @@ class GsimLogicTree(object):
             raise InvalidLogicTree(
                 '%s is missing in %s' % (set(tectonic_region_types), fname))
 
-    @cached_property
-    def imti(self):
-        # build imti dictionary
-        imts = {}
-        for br in self.branches:
-            imts.update(br.weight.dic)
-        # uppercase is sorted before lowercase, so 'weight' is the last
-        return {imt: i for (i, imt) in enumerate(sorted(imts))}
+        self.wget = IMTWeigher(self)
 
-    # this is nontrivial only for Canada, see logictree/case_39
-    def wget(self, weights, imt=None):
-        """
-        :param weight: an array of weights of shape (R, 1) or (R, M+1)
-        :returns: imt-index for imt-dependent weights
-        """
-        try:
-            i = self.imti[imt]
-        except KeyError:
-            # the default weight is stored in the last index
-            i = len(self.imti) - 1
-        return weights[:, i]
-        
     @property
     def req_site_params(self):
         site_params = set()
@@ -370,7 +382,8 @@ class GsimLogicTree(object):
             for gsims in self.values.values():
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
-                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
+                    # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
+                    # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None
@@ -643,13 +656,14 @@ class GsimLogicTree(object):
         """
         Yield :class:`openquake.hazardlib.logictree.Realization` instances
         """
+        imti = self.wget.imti
         groups = []
         # NB: branches are already sorted
         for trt in self.values:
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
-            weight = numpy.ones(len(self.imti))
+            weight = numpy.ones(len(imti))
             lt_path = []
             lt_uid = []
             value = []
@@ -657,7 +671,7 @@ class GsimLogicTree(object):
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '.')
                 for imt in branch.weight.dic:
-                    i = self.imti.get(imt, len(self.imti))
+                    i = imti.get(imt, len(imti))
                     weight[i] *= branch.weight[imt]
                 value.append(branch.gsim)
             yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))

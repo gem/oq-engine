@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2025 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -451,7 +451,7 @@ def get_source_attributes(source):
         elif rup.weight is not None:
             weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
-    elif isinstance(source, PointSource):
+    elif hasattr(source, 'temporal_occurrence_model'):
         tom = source.temporal_occurrence_model
         if isinstance(tom, NegativeBinomialTOM):
             attrs['tom'] = 'NegativeBinomialTOM'
@@ -805,7 +805,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         for grp_node in nodes:
             for src_node in grp_node:
                 if src_node["id"] in gridded_attrs:
-                    src_node.nodes = [n for n in src_node.nodes if n.tag == 'faults']
+                    src_node.nodes = [
+                        n for n in src_node.nodes if n.tag == 'faults']
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
@@ -825,6 +826,7 @@ def write_source_model(dest, sources_or_groups, name=None,
                     for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
+            # tested in multi_fault_test.py
             nrml.write([gmodel], f, '%s')
             out.append(f.name)
     return out
@@ -834,7 +836,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
+    dic = valid.fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)

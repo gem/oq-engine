@@ -125,7 +125,7 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'])
-        [ctx] = cmaker.from_srcs([src], sitecol)
+        ctx = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         if PLOTTING:
@@ -164,7 +164,7 @@ class MultiFaultTestCase(unittest.TestCase):
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
-    def test_slow(self):
+    def test_performance(self):
         # performance test with a reduced UCERF source
         [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
         sitecol = SiteCollection.from_points([-122, -121], [37, 27])
@@ -178,7 +178,7 @@ class MultiFaultTestCase(unittest.TestCase):
         secparams = build_secparams(src.get_sections())
         nsites = sf.get_close(secparams)
         src.set_msparams(secparams, nsites > 0, ry0=True)
-        [ctxt] = cmaker.from_srcs([src], sitecol)
+        ctxt = cmaker.from_srcs([src], sitecol)
         print(cmaker.ir_mon)
         print(cmaker.ctx_mon)
 
@@ -214,7 +214,7 @@ def main100sites():
     src.set_msparams(secparams, ry0=True)
     sites = srcfilter.get_close_sites(src)
     with cProfile.Profile() as prof:
-        list(cmaker.get_ctx_iter(src, sites))
+        cmaker.get_ctxs(src, sites)
     prof.print_stats('cumulative')
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2025 GEM Foundation
+# Copyright (C) 2018-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import sys
 import collections
 import numpy
@@ -71,9 +73,8 @@ class Comparator(object):
                 sids = [int(sid) for sid in open(samplesites).read().split()]
             else:
                 if len(self.sitecol) > numsamples:
-                    numpy.random.seed(numsamples)
-                    sids = numpy.random.choice(
-                        len(self.sitecol), numsamples, replace=False)
+                    rng = numpy.random.default_rng(numsamples)
+                    sids = rng.choice(len(self.sitecol), numsamples, replace=0)
         return numpy.sort(sids)
 
     def getdata(self, what, imt, sids, rtol, atol):
@@ -167,7 +168,8 @@ class Comparator(object):
                 else:
                     rows['all'].append([sid, ex.calc_id] + list(cols))
         if files:
-            fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
+            fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w',
+                                      encoding='utf8')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
                 f.write(views.text_table(rows[calc_id], header, ext='org'))
@@ -181,11 +183,14 @@ class Comparator(object):
 
 def compare_rates(calc_1: int, calc_2: int):
     """
-    Compare the ruptures affecting the given site ID as pandas DataFrames
+    Compare the rates as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
         df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    if len(df1) != len(df2):
+        print(f'{len(df1)=}, {len(df2)=}')
+        return
     delta = numpy.abs(df1 - df2).to_numpy().max()
     print('Maximum difference in the rates =%s' % delta)
 
@@ -352,32 +357,42 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def delta(a, b):
+def to_float(float_like):
     """
-    :returns: the relative differences between a and b; zeros return zeros
+    Convert strings containing numbers to floats or raise a ValueError
     """
-    c = a + b
-    ok = c != 0.
-    res = numpy.zeros_like(a)
-    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
-    return res
+    out = []
+    for fl in float_like:
+        if isinstance(fl, str):
+            if fl.startswith('<'):  # i.e. '<0.005'
+                fl = fl[1:]
+            out.append(float(fl))
+        else:
+            out.append(float(fl))
+    return F64(out)
 
 
-def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
+def compare_column_values(array0, array1, what, atol=1E-4, rtol=1E-3):
+    """
+    Compare arrays of floats or strings, used to compare the ASCE files
+
+    >>> a0, a1 = ['<0.005', '0.0450'], ['<0.005', '0.0451']
+    >>> compare_column_values(a0, a1, 'test')
+    True
+    """
     try:
-        array0 = F64(array0)
-        array1 = F64(array1)
+        array0 = to_float(array0)
+        array1 = to_float(array1)
     except ValueError:
         diff_idxs = numpy.where(array0 != array1)[0]
     else:
         diff = numpy.abs(array0 - array1)
         diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
     if len(diff_idxs) == 0:
-        print(f'The column {what} is okay')
         return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
-    print(array0[diff_idxs], array1[diff_idxs])
+    print(array0[diff_idxs], array1[diff_idxs], diff_idxs)
 
 
 def check_column_names(array0, array1, what, calc_id0, calc_id1):
@@ -488,20 +503,30 @@ def read_org_df(fname):
     return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
 
 
-def compare_asce(file1_org: str, file2_org: str, atol=1E-3, rtol=1E-3):
+def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     """
-    compare_asce('asce07.org', 'asce07_expected.org') exits with 0
-    if all values are equal within the tolerance, otherwise with 1.
+    compare_asce('asce', 'expected') exits with 0
+    if all file are equal within the tolerance, otherwise with 1.
     """
-    df1 = read_org_df(file1_org)
-    df2 = read_org_df(file2_org)
-    equal = []
-    for col in df1.columns:
-        ok = compare_column_values(strip(df1[col].to_numpy()),
-                                   strip(df2[col].to_numpy()),
-                                   col, atol, rtol)
-        equal.append(ok)
-    sys.exit(not all(equal))
+    err = 0
+    for fname in os.listdir(dir2):
+        if fname.endswith('.org'):
+            fname2 = os.path.join(dir2, fname)
+            if not os.path.exists(fname2):
+                print(f"{fname2} does not exist, cannot compare")
+                continue
+            print(f"Comparing {fname}")
+            df1 = read_org_df(os.path.join(dir1, fname))
+            df2 = read_org_df(fname2)
+            equal = []
+            for col in df1.columns:
+                ok = compare_column_values(strip(df1[col].to_numpy()),
+                                           strip(df2[col].to_numpy()),
+                                           col, atol, rtol)
+                equal.append(ok)
+            if not all(equal):
+                err += 1
+    sys.exit(err)
 
 
 main = dict(rups=compare_rups,
