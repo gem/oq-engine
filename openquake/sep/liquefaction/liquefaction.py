@@ -80,6 +80,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 FT_PER_M = 3.28084
 CM_PER_M = 100
 NUM = 10**2.24
+MIN_HAZARD = 1e-5
 
 
 def sigmoid(x):
@@ -159,7 +160,7 @@ def zhu_etal_2015_general(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    pga = np.clip(pga, 1e-5, None)
+    pga = np.clip(pga, MIN_HAZARD, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -222,7 +223,7 @@ def zhu_etal_2017_coastal(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
-    pgv = np.clip(pgv, 1e-5, None)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + vs30_coeff * np.log(vs30)
@@ -293,7 +294,7 @@ def zhu_etal_2017_general(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
-    pgv = np.clip(pgv, 1e-5, None)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (
         pgv_coeff * np.log(pgv_scaling_factor * pgv)
         + vs30_coeff * np.log(vs30)
@@ -366,7 +367,7 @@ def rashidian_baise_2020(
                    or liquefaction occurrence occurrence.
     """
 
-    pgv = np.clip(pgv, 1e-5, None)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     precip = np.clip(precip, None, 1700)
     prob_liq, _, _ = zhu_etal_2017_general(
         pgv,
@@ -450,7 +451,7 @@ def allstadt_etal_2022(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    pgv = np.clip(pgv, 1e-5, 150)
+    pgv = np.clip(pgv, MIN_HAZARD, 150)
     precip = np.clip(precip, None, 2500)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
@@ -516,7 +517,7 @@ def bozzoni_etal_2021_europe(
                    or liquefaction occurrence occurrence.
     """
     
-    pga = np.clip(pga, 1e-5, None)
+    pga = np.clip(pga, MIN_HAZARD, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -569,7 +570,7 @@ def todorovic_silva_2022_nonparametric_general(
         out_prob: probability of belonging to class 1.
     """
     
-    pgv = np.clip(pgv, 1e-5, None)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
     results = session.run(None, {"X": matrix})

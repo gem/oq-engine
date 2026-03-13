@@ -3,7 +3,7 @@ import scipy
 import numpy as np
 
 g: float = 9.81
-
+MIN_HAZARD = 1e-5
 
 landcover_values={
     "14": 0.91,
@@ -129,7 +129,7 @@ def nowicki_jessee_2018(
     else:
         landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
 
-    pgv = np.clip(pgv, 1e-5, None)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (
         pgv_coeff * np.log(pgv) +
         slope_coeff * np.degrees(np.arctan(slope)) +
@@ -176,7 +176,7 @@ def allstadt_etal_2022_b(
     """
     
     cti = np.clip(cti, 0, 19)
-    pgv = np.clip(pgv, 1e-5, 211)
+    pgv = np.clip(pgv, MIN_HAZARD, 211)
 
     coeff_table_lith = LITHOLOGY_TABLE.copy()
     coeff_table_lith["su"] = -1.36
