@@ -252,7 +252,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = cmaker.oq
-    rmon = monitor('ruptures', measuremem=True)
+    rmon = monitor('reading ruptures', measuremem=True)
     smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
