@@ -26,31 +26,7 @@ FIXED_DEPTH = 0.
 N_POINTS = 100
 
 
-def discretise_lines(ctx):
-    """
-    Discretize the line of minimum distance from each rupture surface to each
-    site and create mesh with matching discretization
-    :param ctx:
-        ctx: Context of ruptures and sites to compute ground-motions for
-    """
-    # Get line from each rupture to each site
-    l_mesh = {}
-    for idx_path, val_site in enumerate(ctx.lon):
-
-        # Discretise shortest dist from rup srf to site and store as line
-        # Fix depth to zero as within Zhao et al. 2016
-        dsct_line = npoints_between(
-            ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
-            ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
-            N_POINTS)
-
-        # Create mesh of discretized line
-        l_mesh[idx_path] = pgn.Mesh(dsct_line[0], dsct_line[1])
-
-    return l_mesh
-
-
-def get_dist_traversed_per_zone(l_mesh, volc_pgns, ctx):
+def get_dist_traversed_per_zone(volc_pgns, ctx):
     """
     Find the intercepts of the line from each rupture surface to each site
     within each volcanic zone polygon (if present) and returns the distance
@@ -69,8 +45,14 @@ def get_dist_traversed_per_zone(l_mesh, volc_pgns, ctx):
     # For each travel path
     for idx_path, _site in enumerate(ctx.lon):
 
-        # Get mesh representing travel path line
-        mesh = l_mesh[idx_path]
+        # Discretise the line
+        dsct_line = npoints_between(
+                    ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
+                    ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
+                    N_POINTS)
+
+        # Create mesh of discretized line
+        mesh = pgn.Mesh(dsct_line[0], dsct_line[1])
 
         # Distance between consecutive discretised points along the path
         line_spacing = distance(
@@ -82,7 +64,7 @@ def get_dist_traversed_per_zone(l_mesh, volc_pgns, ctx):
             zone_id: np.count_nonzero(polygon.intersects(mesh)) * line_spacing
             for zone_id, polygon in volc_pgns.items()
         }
-        
+
     return r_zone_path
 
 
@@ -122,11 +104,8 @@ def get_rvolcs(ctx, pgn_store):
         pgn_store: Dict of zone ids + latitude and longitude of vertices
         used to construct each polygon and the polygons themselves
     """
-    # Discretise the line from closest pnt on each rup to each site
-    l_mesh = discretise_lines(ctx)
-
     # Get the distances traversed across each volcanic zone
-    r_zone_path = get_dist_traversed_per_zone(l_mesh, pgn_store, ctx)
+    r_zone_path = get_dist_traversed_per_zone(pgn_store, ctx)
 
     # Get the total distance traversed across each zone, with limits placed on
     # the min and max of rvolc as described within the Zhao et al. 2016 GMMs
