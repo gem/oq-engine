@@ -198,7 +198,8 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
             recs = rup_array
         if len(recs) == 0:
             return []
-        gmin, gmax = recs['geom_id'].min(), recs['geom_id'].max()
+        # gmin, gmax = recs['geom_id'].min(), recs['geom_id'].max()
+        gmin = 0
         rupgeoms = h5['rupgeoms'][:]
         for rec in recs:
             proxy = rupture.RuptureProxy(rec)
