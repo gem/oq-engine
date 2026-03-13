@@ -34,7 +34,7 @@ except ImportError:  # old version
 
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry, contains_xy, Point
+from shapely import geometry, contains_xy, Point, points
 from shapely.strtree import STRtree
 from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile, split_array
@@ -775,10 +775,7 @@ def point_to_polygon_distance(polygon, pxx, pyy):
     if pxx.ndim == 0:
         pxx = pxx.reshape((1, ))
         pyy = pyy.reshape((1, ))
-    result = numpy.array([
-        polygon.distance(geometry.Point(pxx.item(i), pyy.item(i)))
-        for i in range(pxx.size)
-    ])
+    result = polygon.distance(points(pxx, pyy))
     return result.reshape(pxx.shape)
 
 
