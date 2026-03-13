@@ -252,12 +252,15 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = cmaker.oq
-    rmon = monitor('reading sites and ruptures', measuremem=True)
+    rmon = monitor('reading ruptures', measuremem=True)
+    smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
     cmaker.init_monitoring(monitor)
     with rmon:
+        proxies = get_proxies(hdf5path, rups)
+    with smon:
         with hdf5.File(hdf5path) as f:
             try:
                 complete = f['complete']  # the current dstore
@@ -265,7 +268,6 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
                 complete = f['sitecol']  # the parent dstore
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
-        proxies = get_proxies(hdf5path, rups)
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
@@ -385,7 +387,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for block in block_splitter(rups, maxw * 1.02, rup_weight):
+        for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (block, cmaker, sitecol.sids, station_data_sites,
                     dstore.filename)
             allargs.append(args)

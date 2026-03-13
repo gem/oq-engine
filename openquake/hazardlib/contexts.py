@@ -1053,7 +1053,6 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-            self.dparam = None
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
         with self.ctx_mon:
