@@ -129,6 +129,7 @@ def nowicki_jessee_2018(
     else:
         landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
 
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv) +
         slope_coeff * np.degrees(np.arctan(slope)) +

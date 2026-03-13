@@ -159,6 +159,7 @@ def zhu_etal_2015_general(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    pga = np.clip(pga, 1e-5, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -221,6 +222,7 @@ def zhu_etal_2017_coastal(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + vs30_coeff * np.log(vs30)
@@ -291,6 +293,7 @@ def zhu_etal_2017_general(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, 1e-5, None)
     Xg = (
         pgv_coeff * np.log(pgv_scaling_factor * pgv)
         + vs30_coeff * np.log(vs30)
@@ -363,7 +366,8 @@ def rashidian_baise_2020(
                    or liquefaction occurrence occurrence.
     """
 
-    precip = np.where(precip > 1700, 1700, precip)
+    pgv = np.clip(pgv, 1e-5, None)
+    precip = np.clip(precip, None, 1700)
     prob_liq, _, _ = zhu_etal_2017_general(
         pgv,
         vs30,
@@ -446,8 +450,8 @@ def allstadt_etal_2022(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    pgv = np.where(pgv > 150, 150, pgv)
-    precip = np.where(precip > 2500, 2500, precip)
+    pgv = np.clip(pgv, 1e-5, 150)
+    precip = np.clip(precip, None, 2500)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
         pga,
@@ -511,6 +515,8 @@ def bozzoni_etal_2021_europe(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    
+    pga = np.clip(pga, 1e-5, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -562,6 +568,8 @@ def todorovic_silva_2022_nonparametric_general(
                    or liquefaction occurrence occurrence.
         out_prob: probability of belonging to class 1.
     """
+    
+    pgv = np.clip(pgv, 1e-5, None)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
     results = session.run(None, {"X": matrix})
@@ -606,30 +614,18 @@ def _hazus_conditional_liquefaction_probability(
     coeff_table=HAZUS_LIQUEFACTION_COND_PROB_PGA_TABLE,
 ):
     """
-    Calculates the probility of liquefaction of a soil susceptibility category
+    Calculates the probability of liquefaction of a soil susceptibility category
     conditional on the value of PGA observed.
     """
     if isinstance(susceptibility_category, str):
-        coeffs = coeff_table[susceptibility_category]
-        liq_prob = coeffs[0] * pga - coeffs[1]
+        coeff_0, coeff_1 = coeff_table[susceptibility_category]
     else:
-        coeffs = [coeff_table[susc_cat] for susc_cat in susceptibility_category]
-        coeff_0 = np.array([c[0] for c in coeffs])
-        coeff_1 = np.array([c[1] for c in coeffs])
-        liq_prob = coeff_0 * pga - coeff_1
+        coeff_0, coeff_1 = np.array(
+            [coeff_table[susc_cat] for susc_cat in susceptibility_category]
+        ).T
 
-    # TODO: Refactor below using np.clip
-    if np.isscalar(liq_prob):
-        if liq_prob <= 0:
-            liq_prob = 0.0
-        elif liq_prob >= 1:
-            liq_prob = 1.0
-        else:
-            liq_prob = liq_prob
-    else:
-        liq_prob = liq_prob
-        liq_prob[liq_prob < 0.0] = 0.0
-        liq_prob[liq_prob > 1.0] = 1.0
+    liq_prob = coeff_0 * pga - coeff_1
+    liq_prob = np.clip(liq_prob, 0.0, 1.0)
 
     return liq_prob
 
