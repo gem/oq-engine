@@ -259,15 +259,15 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     cmaker.scenario = 'scenario' in oq.calculation_mode
     cmaker.init_monitoring(monitor)
     with rmon:
+        proxies = get_proxies(hdf5path, rups)
+    with smon:
         with hdf5.File(hdf5path) as f:
             try:
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']  # the parent dstore
-    with smon:
-        proxies = get_proxies(hdf5path, rups)
-    sites = complete.filtered(sids) if stations[0] is None else complete
-    srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
+        sites = complete.filtered(sids) if stations[0] is None else complete
+        srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
