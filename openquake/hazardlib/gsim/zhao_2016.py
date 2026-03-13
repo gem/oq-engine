@@ -525,20 +525,11 @@ def get_volc_zones(volc_polygons):
     return zone_pgn
 
 
-
 def get_dist_traversed_per_zone(volc_pgns, ctx):
     """
     Find the intercepts of the line from each rupture surface to each site
     within each volcanic zone polygon (if present) and returns the distance
     traversed per polygon.
-
-    :param l_mesh:
-        l_mesh: Dict of meshes representing the line from each rupture to
-        each site
-    :param volc_pgns:
-        volc_pgns: Polygon for each zone
-    :param ctx:
-        ctx: Context of ruptures and sites to compute ground-motions for
     """
     r_zone_path = {}
 
@@ -547,7 +538,9 @@ def get_dist_traversed_per_zone(volc_pgns, ctx):
 
         # Discretise the line
         dsct_line = npoints_between(
+                    # .lon/.lat is the site lon/lat
                     ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
+                    # .clon/.clat is the corresponding clst point to rup
                     ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
                     N_POINTS)
 
@@ -574,8 +567,6 @@ def get_total_rvolc_per_path(r_zone_path):
     volcanic zones for each travel path in the Zhao et al. (2016) papers is
     capped at minimum of 12 km (assuming the zone is actually traversed) and
     maximum of 80 km.
-    :param r_zone_path:
-        r_zone_path: Dict of distance traversed per zone per travel path
     """
     # Stack dist per zone per path
     r_values = np.stack([list(r_zone_path[path].values())
@@ -597,12 +588,7 @@ def get_rvolcs(ctx, pgn_store):
     Get total distance per travel path through anelastically attenuating
     volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
     The rvolc value is computed for each rupture to each site stored within
-    each ground-motion computation context
-    :param ctx:
-        ctx: Context of ruptures and sites to compute ground-motions for
-    :param pgn_store:
-        pgn_store: Dict of zone ids + latitude and longitude of vertices
-        used to construct each polygon and the polygons themselves
+    each ground-motion computation context.
     """
     # Get the distances traversed across each volcanic zone
     r_zone_path = get_dist_traversed_per_zone(pgn_store, ctx)
