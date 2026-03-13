@@ -45,7 +45,7 @@ def discretise_lines(ctx):
     return l_mesh
 
 
-def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
+def get_dist_traversed_per_zone(l_mesh, pgn_zone, ctx):
     """
     Find the intercepts of the line from each rupture surface to each site
     within each volcanic zone polygon (if present) and returns the distance
@@ -54,9 +54,6 @@ def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
     :param l_mesh:
         l_mesh: Dict of meshes representing the line from each rupture to
         each site
-    :param pgn_store:
-        pgn_store: Dict of zone ids + latitude and longitude of vertices
-        used to construct each polygon
     :param pgn_zone:
         pgn_zone: Polygon for each zone
     :param ctx:
@@ -76,15 +73,14 @@ def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
                                 mesh_lons[1], mesh_lats[1], 0)
 
         # For each zone...
-        for idx_zone, zone in enumerate(pgn_store['zone']):
-            zone_id = pgn_store['zone'][zone]
+        for zone in pgn_zone:
 
             # Check if any points of mesh lie within zone
-            checks = pgn_zone[zone_id].intersects(l_mesh[idx_path])
+            checks = pgn_zone[zone].intersects(l_mesh[idx_path])
 
             # N points in zone * line spacing = distance in zone
             r_per_zone = len(np.argwhere(checks)) * line_spacing
-            r_zone_path[idx_path][zone_id] = r_per_zone
+            r_zone_path[idx_path][zone] = r_per_zone
 
             # Get coordinates of mesh points in zone
             in_zone_lons, in_zone_lats = [], []
@@ -92,12 +88,12 @@ def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
                 if checks[idx_pnt]:
                     in_zone_lons.append(mesh_lons[idx_pnt])
                     in_zone_lats.append(mesh_lats[idx_pnt])
-            pnts_in_zone[idx_path][zone_id] = [in_zone_lons, in_zone_lats]
+            pnts_in_zone[idx_path][zone] = [in_zone_lons, in_zone_lats]
 
-    return r_zone_path, pnts_in_zone
+    return r_zone_path
 
 
-def get_total_rvolc_per_path(r_zone_path, pgn_store):
+def get_total_rvolc_per_path(r_zone_path):
     """
     Get total rvolc per travel path. Note that total distance traversed through
     volcanic zones for each travel path in the Zhao et al. (2016) papers is
@@ -105,9 +101,6 @@ def get_total_rvolc_per_path(r_zone_path, pgn_store):
     maximum of 80 km.
     :param r_zone_path:
         r_zone_path: Dict of distance traversed per zone per travel path
-    :param pgn_store:
-        pgn_store: Dict of zone ids + latitude and longitude of vertices
-        used to construct each polygon
     """
     # Stack dist per zone per path
     r_values = np.stack([list(r_zone_path[path].values())
@@ -124,7 +117,7 @@ def get_total_rvolc_per_path(r_zone_path, pgn_store):
     return rvolc_per_path
 
 
-def get_rvolcs(ctx, pgn_store, pgn_zone):
+def get_rvolcs(ctx, pgn_store):
     """
     Get total distance per travel path through anelastically attenuating
     volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
@@ -134,20 +127,16 @@ def get_rvolcs(ctx, pgn_store, pgn_zone):
         ctx: Context of ruptures and sites to compute ground-motions for
     :param pgn_store:
         pgn_store: Dict of zone ids + latitude and longitude of vertices
-        used to construct each polygon
-    :param pgn_zone:
-        pgn_zone: Polygon for each zone
+        used to construct each polygon and the polygons themselves
     """
     # Discretise the line from closest pnt on each rup to each site
     l_mesh = discretise_lines(ctx)
 
     # Get the distances traversed across each volcanic zone
-    r_zone_path, _pnts_in_zone = get_dist_traversed_per_zone(l_mesh, pgn_store,
-                                                             pgn_zone, ctx)
+    r_zone_path = get_dist_traversed_per_zone(l_mesh, pgn_store, ctx)
 
     # Get the total distance traversed across each zone, with limits placed on
-    # the minimum and maximum of rvolc as described within the Zhao et al. 2016
-    # GMMs
-    rvolc_per_path = get_total_rvolc_per_path(r_zone_path, pgn_store)
+    # the min and max of rvolc as described within the Zhao et al. 2016 GMMs
+    rvolc_per_path = get_total_rvolc_per_path(r_zone_path)
 
     return rvolc_per_path
