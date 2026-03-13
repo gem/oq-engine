@@ -250,36 +250,65 @@ class CountryReportBuilder:
         self._compute_layout()
 
         self._register_unicode_font()
-        self.styles["Normal"].fontName = "DejaVu"
-        self.styles["Italic"].fontName = "DejaVu-Italic"
-        self.styles["Heading1"].fontName = "DejaVu-Bold"
+        self.styles["Normal"].fontName = "NotoSans"
+        self.styles["Italic"].fontName = "NotoSans-Italic"
+        self.styles["Heading1"].fontName = "NotoSans-Bold"
 
     def _register_unicode_font(self):
-        import matplotlib
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
-        dejavu_dir = Path(matplotlib.get_data_path()) / "fonts" / "ttf"
-        pdfmetrics.registerFont(
-            TTFont("DejaVu",
-                   str(dejavu_dir / "DejaVuSans.ttf")))
-        pdfmetrics.registerFont(
-            TTFont("DejaVu-Bold",
-                   str(dejavu_dir / "DejaVuSans-Bold.ttf")))
-        pdfmetrics.registerFont(
-            TTFont("DejaVu-Italic",
-                   str(dejavu_dir / "DejaVuSans-Oblique.ttf")))
-        pdfmetrics.registerFont(
-            TTFont("DejaVu-BoldItalic",
-                   str(dejavu_dir / "DejaVuSans-BoldOblique.ttf")))
-        registerFontFamily(
-            "DejaVu",
-            normal="DejaVu",
-            bold="DejaVu-Bold",
-            italic="DejaVu-Italic",
-            boldItalic="DejaVu-BoldItalic",
-        )
+        font_dir = Path(config.directory.fonts_dir)
+
+        # family_name -> font file prefix
+        font_families = {
+            "NotoSans":      "NotoSansSC",  # default: Latin, Cyrillic, Chinese
+            "NotoSans-TC":   "NotoSansTC",  # Traditional Chinese
+            "NotoSans-KR":   "NotoSansKR",  # Korean
+            "NotoSans-AR":   "NotoSansArabic",      # Arabic
+            "NotoSans-Deva": "NotoSansDevanagari",  # Hindi, Nepali, etc.
+            "NotoSans-Beng": "NotoSansBengali",     # Bengali
+            "NotoSans-Thai": "NotoSansThai",        # Thai
+        }
+        for family, name in font_families.items():
+            regular = font_dir / f"{name}-Regular.ttf"
+            bold = font_dir / f"{name}-Bold.ttf"
+            if not regular.exists():
+                logging.warning(f"Font not found: {regular}, skipping")
+                continue
+            bold_path = str(bold) if bold.exists() else str(regular)
+            pdfmetrics.registerFont(TTFont(family,             str(regular)))
+            pdfmetrics.registerFont(TTFont(f"{family}-Bold",   bold_path))
+            pdfmetrics.registerFont(TTFont(f"{family}-Italic", str(regular)))
+            registerFontFamily(
+                family,
+                normal=family,
+                bold=f"{family}-Bold",
+                italic=f"{family}-Italic",
+                boldItalic=f"{family}-Bold",
+            )
+
+    def _select_font(self, text):
+        """Pick the right font family based on Unicode block detection."""
+        text = str(text)  # handle non-string input gracefully
+        for ch in text:
+            cp = ord(ch)
+            if 0x0600 <= cp <= 0x06FF:
+                return "NotoSans-AR"
+            if 0x0900 <= cp <= 0x097F:
+                return "NotoSans-Deva"
+            if 0x0980 <= cp <= 0x09FF:
+                return "NotoSans-Beng"
+            if 0x0E00 <= cp <= 0x0E7F:
+                return "NotoSans-Thai"
+            if 0xAC00 <= cp <= 0xD7AF:
+                return "NotoSans-KR"
+            if 0x4E00 <= cp <= 0x9FFF:
+                return "NotoSans"
+            if 0xF900 <= cp <= 0xFAFF:
+                return "NotoSans-TC"
+        return "NotoSans"
 
     def _one_line_paragraph(
             self, text, base_style, max_width, min_font_size=8, step=0.5):
@@ -287,6 +316,14 @@ class CountryReportBuilder:
         Try to keep paragraph on one line by reducing font size if needed.
         """
         font_size = base_style.fontSize
+
+        font_name = self._select_font(text)
+        if font_name != base_style.fontName:
+            base_style = self.ParagraphStyle(
+                name="tmp_font",
+                parent=base_style,
+                fontName=font_name,
+            )
 
         while font_size >= min_font_size:
             style = self.ParagraphStyle(
@@ -551,8 +588,11 @@ class CountryReportBuilder:
             self.Paragraph("<b>Most affected regions</b>",
                            self.styles["Normal"]),
             self.ListFlowable(
-                [self.ListItem(self.Paragraph(x, self.styles["Normal"]))
-                 for x in most_affected],
+                [self.ListItem(self.Paragraph(region_name, self.ParagraphStyle(
+                    "region",
+                    parent=self.styles["Normal"],
+                    fontName=self._select_font(region_name),
+                ))) for region_name in most_affected],
                 bulletType="bullet",
                 leftIndent=15,
             ),
@@ -596,9 +636,14 @@ class CountryReportBuilder:
         return tbl
 
     def _build_notes(self):
+        notes_font = self._select_font(self.notes_txt)
+        notes_style = self.ParagraphStyle(
+            "notes",
+            parent=self.styles["Normal"],
+            fontName=notes_font,
+        )
         tbl = self.Table(
-            [[self.Paragraph(f"<b>Notes</b>: {self.notes_txt}",
-                             self.styles["Normal"])]],
+            [[self.Paragraph(f"<b>Notes</b>: {self.notes_txt}", notes_style)]],
             colWidths=[self.page_width],
             rowHeights=[self.NOTES_H],
         )
