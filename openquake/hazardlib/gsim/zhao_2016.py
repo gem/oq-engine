@@ -28,7 +28,6 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import copy
 import numpy as np
-import pandas as pd
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -513,9 +512,9 @@ def get_volc_zones(volc_polygons):
 
     with fiona.open(volc_polygons, 'r') as inp:
         for feature in inp:
-            zone_id = pd.Series(feature['properties']).iloc[0]
+            zone_id = feature["properties"]["volc_zone_id"]
             coords = feature['geometry']['coordinates'][0]
-            points = [Point(lon, lat) for lon, lat, *_ in coords]
+            points = [Point(lon, lat) for lon, lat in coords]
             zone_pgn[zone_id] = Polygon(points)
 
     return zone_pgn
