@@ -179,7 +179,6 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-<<<<<<< HEAD
 def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
 
     eb_ruptures = []
@@ -240,7 +239,7 @@ def _get_src_indep_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
             f'{group.src_interdep=}, {group.rup_interdep=}')
 
     # Create the EBRuptures
-    for i_src, (nocc, src) in enumerate(zip(occ_per_src, group)):
+    for nocc, src in zip(occ_per_src, group):
 
         if nocc < 1:
             continue
@@ -310,11 +309,7 @@ def _set_ids(n_srcs, ids, seed, weights=None):
             rng.choice(src_idxs, n_src, replace=False))
 
 
-# NB: there is postfiltering of the ruptures, which is more efficient
-def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
-=======
 def sample_ruptures(sources, param, monitor=Monitor()):
->>>>>>> origin
     """
     :param sources:
         a sequence of sources of the same group
