@@ -64,37 +64,25 @@ def get_dist_traversed_per_zone(l_mesh, volc_pgns, ctx):
     :param ctx:
         ctx: Context of ruptures and sites to compute ground-motions for
     """
-    # Store the distance per volc zone per travel path
-    r_zone_path, pnts_in_zone = {}, {}
-    for path_idx, site in enumerate(ctx.lon):
-        r_zone_path[path_idx], pnts_in_zone[path_idx] = {}, {}
+    r_zone_path = {}
 
     # For each travel path
-    for idx_path, site in enumerate(ctx.lon):
-        mesh_lons, mesh_lats = l_mesh[idx_path].lons, l_mesh[idx_path].lats
+    for idx_path, _site in enumerate(ctx.lon):
 
-        # Get distance between each point
-        line_spacing = distance(mesh_lons[0], mesh_lats[0], 0,
-                                mesh_lons[1], mesh_lats[1], 0)
+        # Get mesh representing travel path line
+        mesh = l_mesh[idx_path]
 
-        # For each zone...
-        for zone in volc_pgns:
+        # Distance between consecutive discretised points along the path
+        line_spacing = distance(
+            mesh.lons[0], mesh.lats[0], FIXED_DEPTH,
+            mesh.lons[1], mesh.lats[1], FIXED_DEPTH)
 
-            # Check if any points of mesh lie within zone
-            checks = volc_pgns[zone].intersects(l_mesh[idx_path])
-
-            # N points in zone * line spacing = distance in zone
-            r_per_zone = len(np.argwhere(checks)) * line_spacing
-            r_zone_path[idx_path][zone] = r_per_zone
-
-            # Get coordinates of mesh points in zone
-            in_zone_lons, in_zone_lats = [], []
-            for idx_pnt, pnt in enumerate(checks):
-                if checks[idx_pnt]:
-                    in_zone_lons.append(mesh_lons[idx_pnt])
-                    in_zone_lats.append(mesh_lats[idx_pnt])
-            pnts_in_zone[idx_path][zone] = [in_zone_lons, in_zone_lats]
-
+        # N points intersecting zone * spacing = distance traversed in zone
+        r_zone_path[idx_path] = {
+            zone_id: np.count_nonzero(polygon.intersects(mesh)) * line_spacing
+            for zone_id, polygon in volc_pgns.items()
+        }
+        
     return r_zone_path
 
 
