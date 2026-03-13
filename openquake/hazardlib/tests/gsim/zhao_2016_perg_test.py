@@ -103,6 +103,7 @@ EXP = {
     },
 }
 
+
 def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     """
     Get ground-motion with and without non-ergodic path effect modifications
@@ -128,7 +129,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     ctxs.occurrence_rate = 0.0
     mean, _std, _tau, _phi = ctxm.get_mean_stds([ctxs])
 
-    # Plot perg vs non-perg predicted gm vs rjb
+    # Plot perg and non-perg ground-motions vs rrup
     dist_x = ctxs.rrup
     mean_perg = mean_perg[0][0]
     mean = mean[0][0]
@@ -159,16 +160,7 @@ class TestZhao2016PErg(unittest.TestCase):
 
     The test scenarios below consider sites generated w.r.t. the same rupture,
     but with different site azimuths, resulting in different travel path
-    configurations through these volcanic zone polygons. The expected distances
-    for many scenarios also not considered here were measured using QGIS, and
-    excellent matches were observed when compared against the values computed
-    using the ray tracing functions implemented here. These ray-tracing
-    functions are found within
-    openquake.hazardlib.gsim.zhao_2016_volc_perg.volc_perg
-
-    The tests below test the execution of the non-ergodic implementation
-    of ZhaoEtAlSSlabPErg, and demonstrate the difference in predicted
-    ground-motion if these path modifications are considered.
+    configurations through these volcanic zone polygons.
     """
     def setUp(self):
         """
