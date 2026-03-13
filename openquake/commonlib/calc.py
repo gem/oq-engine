@@ -192,10 +192,11 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
     except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
-        rupgeoms = h5['rupgeoms']
         if hasattr(rup_array, 'start'):  # is a slice
+            rupgeoms = h5['rupgeoms']
             recs = h5['ruptures'][rup_array]
         else:
+            rupgeoms = h5['rupgeoms'][:]
             recs = rup_array
         for rec in recs:
             proxy = rupture.RuptureProxy(rec)
