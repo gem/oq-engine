@@ -71,7 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-affectedpop injured
+affectedpop injured embodied_carbon
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]

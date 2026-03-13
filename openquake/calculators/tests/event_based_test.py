@@ -95,20 +95,18 @@ class EventBasedTestCase(CalculatorTestCase):
         aac(avg_gmf[:, 0], avgstd)
 
     def test_compute_avg_gmf(self):
-        numpy.random.seed(42)
+        rng = numpy.random.default_rng(42)
         E = 1000
         eids = numpy.arange(E)
         min_iml = numpy.array([.05])
-        gmvs = numpy.random.lognormal(mean=-2.0, sigma=.5, size=E)
+        gmvs = rng.lognormal(mean=-2.0, sigma=.5, size=E)
         ok = gmvs >= min_iml
-        self.assertEqual(ok.sum(), 983)
+        self.assertEqual(ok.sum(), 975)
         gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
                                   numpy.zeros(E, int)[ok])
         weights = numpy.ones(E)
         [(_sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
-        # aac(avgstd, [[0.13664978], [1.63127694]]) without cutting min_iml
-        # aac(avgstd, [[0.14734], [1.475266]], atol=1E-6)  # cutting at .10
-        aac(avgstd, [[0.137023], [1.620616]], atol=1E-6)
+        aac(avgstd, [[0.134056], [1.620217]], atol=1E-6)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
@@ -257,8 +255,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 8764)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 1038)  # SadighEtAl1997 assocs
+        self.assertEqual(A, 8765)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 1037)  # SadighEtAl1997 assocs
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -314,12 +312,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'A~A': 308,  # w = .6 * .5 = .30
-                          b'A~B': 173,  # w = .6 * .3 = .18
-                          b'A~C': 119,  # w = .6 * .2 = .12
-                          b'B~A': 192,  # w = .4 * .5 = .20
-                          b'B~B': 127,  # w = .4 * .3 = .12
-                          b'B~C': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'A~A': 313,  # w = .6 * .5 = .30
+                          b'A~B': 172,  # w = .6 * .3 = .18
+                          b'A~C': 115,  # w = .6 * .2 = .12
+                          b'B~A': 187,  # w = .4 * .5 = .20
+                          b'B~B': 128,  # w = .4 * .3 = .12
+                          b'B~C': 85},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -466,7 +464,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # testing slowest ruptures
         df = view('rup_info', self.calc.datastore)
         self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
-                                            'rrup', 'time', 'surface'])
+                                            'rrup', 'time', 'weight',
+                                            'surface'])
 
     def test_case_23(self):
         # case with implicit grid and site model on a larger grid

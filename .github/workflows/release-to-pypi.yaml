@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+name: Publish Python distribution to PyPI and TestPyPI
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +22,7 @@ on:
         default: false
         required: true
   schedule:
-    - cron: "30 9 * * *"
+    - cron: "30 6 * * 1"
 
 jobs:
   build:
@@ -110,3 +110,7 @@ jobs:
         path: dist/
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        verbose: true
+
+

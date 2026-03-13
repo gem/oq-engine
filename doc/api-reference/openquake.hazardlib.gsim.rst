@@ -800,6 +800,14 @@ hong_goda_2007
     :undoc-members:
     :show-inheritance:
 
+holmgren_2024
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.holmgren_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 idini_2017
 ---------------------------------------------
 

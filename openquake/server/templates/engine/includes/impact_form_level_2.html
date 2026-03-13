@@ -13,7 +13,7 @@
                   {% endfor %}
               </div>
               <div id="usgs_id_grp" class="impact_form_row usgs_id_grp">
-                <label for"usgs_id">{{ impact_form_labels.usgs_id }}</label>
+                <label for="usgs_id">{{ impact_form_labels.usgs_id }}</label>
                 <input class="impact-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ impact_form_placeholders.usgs_id }}" value="{{ impact_default_usgs_id }}"/>
               </div>
               <div id="shakemap_version_grp" class="impact_form_row usgs_id_grp">
@@ -22,12 +22,12 @@
                 <span class="populating_shakemap_version"></span>
               </div>
               <div id="rupture_from_usgs_grp" class="impact_form_row">
-                <label for"rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
+                <label for="rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="rupture_from_usgs" name="rupture_data_file_from_usgs" placeholder="{{ impact_form_placeholders.rupture_from_usgs }}" disabled />
                 <input class="impact-input" type="text" id="rupture_was_loaded" name="rupture_was_loaded" disabled />
               </div>
               <div id="upload_rupture_grp" class="impact_form_row hidden">
-                <label for"rupture_file">{{ impact_form_labels.rupture_file }}</label>
+                <label for="rupture_file">{{ impact_form_labels.rupture_file }}</label>
                 <input class="impact-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ impact_form_placeholders.rupture_file }}" >
                 <button type="button" id="clearRuptureFile">Clear File</button>
               </div>

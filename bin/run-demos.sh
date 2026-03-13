@@ -74,9 +74,6 @@ oq show agg_values
 oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
-# sensitivity to the strike angle
-oq shell $1/risk/ScenarioRisk/sensitivity.py
-
 echo "Testing mean_rates"
 OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates $2/mosaic/KOR/in/job_vs30.ini
 

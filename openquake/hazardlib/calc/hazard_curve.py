@@ -71,8 +71,8 @@ def classical(group, sitecol, cmaker):
             res = RmapMaker(cmaker, sitecol, grp).make()
             dic['rmap'].array += res['rmap'].array
             dic['source_data'] += res['source_data']
-            dic['dparam_mb'] += cmaker.dparam_mb
-            dic['source_mb'] += cmaker.source_mb
+            dic['dparam_mb'] += res['dparam_mb']
+            dic['source_mb'] +=res['source_mb']
     else:  # simply a list of sources
         dic = RmapMaker(cmaker, sitecol, group).make()
     return dic

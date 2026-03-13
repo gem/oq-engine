@@ -32,10 +32,6 @@ model parameters required.
 +---------------------------------+------------------------+----------+-----------------------------------------+
 | AllstadtEtAl2022Liquefaction    | LiqProb, LiqOccur, LSE | PGV, PGA | vs30, dw, gwd, precip                   |
 +---------------------------------+------------------------+----------+-----------------------------------------+
-| AkhlagiEtAl2021LiquefactionA    | LiqProb, LiqOccur      | PGV      | tri, dc, dr, zwb                        |
-+---------------------------------+------------------------+----------+-----------------------------------------+
-| AkhlagiEtAl2021LiquefactionB    | LiqProb, LiqOccur      | PGV      | vs30, dc, dr, zwb                       |
-+---------------------------------+------------------------+----------+-----------------------------------------+
 | Bozzoni2021LiquefactionEurope   | LiqProb, LiqOccur      | PGA, M   | cti, vs30                               |
 +---------------------------------+------------------------+----------+-----------------------------------------+
 | TodorovicSilva2022NonParametric | LiqProb, LiqOccur      | PGV      | vs30, dw, gwd, precip                   |

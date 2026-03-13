@@ -21,6 +21,7 @@ import pathlib
 import unittest
 import pytest
 import numpy
+from openquake.calculators.base import expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
@@ -35,7 +36,7 @@ def strip(fname):
     return name + '.' + ext.rsplit('.')[1]
 
 
-def check_export_job(dstore):
+def check_export_job_zip(dstore):
     fnames = export(('job', 'zip'), dstore)
     assert [strip(f) for f in fnames] == [
         'job.ini',
@@ -52,9 +53,8 @@ def check_export_job(dstore):
         'residents_vulnerability.xml',
         'structural_vulnerability.xml',
         'taxonomy_mapping.csv',
-        'sites.csv',
-        'assetcol.csv']
-    # there is not gmfs_file, since this is a test without shakemap
+        'sites.csv', 'assetcol.csv']
+    # there is no gmfs_file, since this is a test without shakemap
     return fnames
 
 
@@ -83,21 +83,18 @@ def test_impact(n):
         # test export_aggexp
         fnames = export(('aggexp_tags', 'csv'), calc.datastore)
         assert [strip(f) for f in fnames] == [
-            'aggexp_tags-NAME_1-OCCUPANCY.csv',
-            'aggexp_tags-NAME_1.csv',
-            'aggexp_tags-OCCUPANCY.csv']
+            'aggexp_tags-ID_0.csv',
+            'aggexp_tags-ID_2.csv']
 
-        fnames = check_export_job(calc.datastore)
+        # [job.ini, exposure.xml, rupture.csv, ...]
+        fnames = check_export_job_zip(calc.datastore)
 
-        # repeat the calculation by exporting the input files
-        # this is not working yet
-        '''
+        # repeat the calculation starting from job.zip unzipped
         calc2, log2 = check(fnames[0])
         with log, log2:
             expose_outputs(calc.datastore)
             expose_outputs(calc2.datastore)
             compare(calc.datastore, calc2.datastore)
-        '''
 
 
 def test_impact5():

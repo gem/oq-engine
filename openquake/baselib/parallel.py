@@ -862,7 +862,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist != 'no':
+        if dist not in ('no', 'threadpool'):
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
@@ -974,8 +974,9 @@ class Starmap(object):
                               shortlist(sorted(todo)))
                 task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
+                if self.h5.mode != 'r':
+                    del self.h5['task_sent']
+                    self.h5['task_sent'] = str(task_sent)
                 name = res.mon.operation[6:]  # strip 'total '
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
@@ -994,8 +995,9 @@ class Starmap(object):
                     mem_gb = memory_gb()
                 else:
                     mem_gb = memory_gb(Starmap.pids)
-                res.mon.save_task_info(self.h5, res, name, mem_gb)
-                res.mon.flush(self.h5)
+                if self.h5.mode != 'r':
+                    res.mon.save_task_info(self.h5, res, name, mem_gb)
+                    res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
@@ -1011,9 +1013,22 @@ class Starmap(object):
                 self.expected_outputs, self.n_out)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
-            logging.info(
-                'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                times.mean(), times.std(), times.min(), times.max())
+            if self.h5.mode != 'r':
+                self.monitor.save_starmap_info(self.h5, self.name, times)
+
+
+# as of Python 3.13 this is terribly inefficient compared to a processpool,
+# even for numba functions releasing the GIL(!), so don't use it for the
+# moment; it may become useful with the noGIL built of Python 3.14 or not
+class Threadmap(Starmap):
+    """
+    A Starmap subclass spawing only threadpools
+    """
+    def __init__(self, task_func, task_args=(),
+                 progress=logging.info, h5=None):
+        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
+        super().__init__(task_func, task_args, 'threadpool',
+                         logging.info, h5)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

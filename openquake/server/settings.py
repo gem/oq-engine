@@ -129,10 +129,6 @@ LANGUAGE_CODE = 'en-us'
 # to load the internationalization machinery.
 USE_I18N = True
 
-# If you set this to False, Django will not format dates, numbers and
-# calendars according to the current locale
-USE_L10N = True
-
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
@@ -213,6 +209,11 @@ FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 # multiple installations of the Engine are available. This helps avoiding
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
+
+# In the list of calculations, the name of the owner of the job can be
+# displayed with or without the host name
+# (either 'username@hostname' or just 'username')
+DISPLAY_USER_HOST = False
 
 APPLICATION_MODES = [
     'PUBLIC',      # The default behavior without authentication

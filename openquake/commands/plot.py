@@ -1090,6 +1090,10 @@ def make_figure_sources(extractors, what):
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
     plot_sources(srcs, ax)
+    sitecol = ex.get('sitecol')
+    if sitecol:
+        ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
+                   label='sites')
     print('Plotting mosaic borders...')
     xlim, ylim = auto_limits(ax)
     add_borders(ax, readinput.read_mosaic_df)
@@ -1139,6 +1143,10 @@ def make_figure_build_rupture(extractors, what):
     $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
 
     also plots country borders.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True&with_region_labels=True"
+
+    also plots region labels.
     """
     params, with_borders, with_region_labels = getparams(what)
     rup = build_planar_rupture_from_dict(params)

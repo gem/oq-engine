@@ -64,7 +64,8 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
-    [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+    [('rup_id', I64), ('rrup', F32), ('time', F32), ('weight', F32),
+     ('task_no', U16)])
 
 
 def rup_weight(rup):
@@ -169,25 +170,19 @@ def count_ruptures(srcs, monitor):
     return {src.source_id: src.count_ruptures() for src in srcs}
 
 
-def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
+def get_computer(cmaker, proxy, sites, station_data, station_sids):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
-    sids = srcfilter.close_sids(proxy, cmaker.trt)
-    if len(sids) == 0:  # filtered away
-        raise FarAwayRupture
-
-    filtered = srcfilter.sitecol.complete.filtered
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
-    if station_sitecol:
-        stations = numpy.isin(sids, station_sitecol.sids)
+    if len(station_sids):
+        stations = numpy.isin(sites.sids, station_sids)
         if stations.any():
-            station_sids = sids[stations]
+            station_sids = sites.sids[stations]
             return ConditionedGmfComputer(
-                ebr, filtered(sids),
-                filtered(station_sids),
+                ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],
                 oq.observed_imts,
                 cmaker, oq.correl_model, oq.cross_correl,
@@ -198,13 +193,12 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, filtered(sids), cmaker,
+        ebr, sites, cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
 
-def _event_based(proxies, cmaker, stations, srcfilter, shr,
-                 fmon, cmon, umon, mmon):
+def _event_based(proxies, cmaker, stations, srcfilter, shr, cmon, umon):
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -214,29 +208,32 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     mea_tau_phi = []
     for proxy in proxies:
         t0 = time.time()
-        with fmon:
-            if proxy['mag'] < cmaker.min_mag:
-                continue
-            try:
-                computer = get_computer(cmaker, proxy, srcfilter, *stations)
-            except FarAwayRupture:
-                # skip this rupture
-                continue
+        if proxy['mag'] < cmaker.min_mag:
+            continue
+        sids = srcfilter.close_sids(proxy, cmaker.trt)
+        if len(sids) == 0:  # filtered away
+            continue
+        try:
+            computer = get_computer(
+                cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
+                *stations)
+        except FarAwayRupture:
+            continue
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all(
-                    [mea, tau, phi], max_iml, mmon, cmon, umon)
+                df = computer.compute_all([mea, tau, phi], max_iml, cmon, umon)
         else:  # regular GMFs
-            df = computer.compute_all(None, max_iml, mmon, cmon, umon)
+            df = computer.compute_all(None, max_iml, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
                 mea_tau_phi.append(mtp)
         sig_eps.append(computer.build_sig_eps(se_dt))
         dt = time.time() - t0
-        times.append((proxy['id'], computer.ctx.rrup.min(), dt))
+        times.append((proxy['id'], computer.ctx.rrup.min(), dt,
+                      rup_weight(proxy)))
         alldata.append(df)
-    times = numpy.array([tup + (fmon.task_no,) for tup in times], rup_dt)
+    times = numpy.array([tup + (cmon.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
     if sum(len(df) for df in alldata) == 0:
         return dict(gmfdata={}, times=times, sig_eps=())
@@ -255,13 +252,15 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     Compute GMFs and optionally hazard curves
     """
     oq = cmaker.oq
-    rmon = monitor('reading sites and ruptures', measuremem=True)
-    fmon = monitor('instantiating GmfComputer', measuremem=False)
-    mmon = monitor('computing mean_stds', measuremem=False)
+    rmon = monitor('reading ruptures', measuremem=True)
+    smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
+    cmaker.init_monitoring(monitor)
     with rmon:
+        proxies = get_proxies(hdf5path, rups)
+    with smon:
         with hdf5.File(hdf5path) as f:
             try:
                 complete = f['complete']  # the current dstore
@@ -269,11 +268,10 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
                 complete = f['sitecol']  # the parent dstore
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
-        proxies = get_proxies(hdf5path, rups)
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
-                           monitor.shared, fmon, cmon, umon, mmon)
+                           monitor.shared, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -334,6 +332,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
             rlzs_by_gsim[model, trt_smr] = rbg
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    rup_id = os.environ.get('OQ_RUPTURE')
+    if rup_id is not None:
+        allrups = allrups[allrups['id'] == int(rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
@@ -363,7 +364,8 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    dstore['filtered_ruptures'] = filrups
+    if dstore.hdf5.mode != 'r' and 'ruptures' not in dstore.hdf5:
+        dstore['filtered_ruptures'] = filrups
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
@@ -385,7 +387,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for block in block_splitter(rups, maxw * 1.02, rup_weight):
+        for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (block, cmaker, sitecol.sids, station_data_sites,
                     dstore.filename)
             allargs.append(args)
@@ -395,7 +397,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
 
 
 # NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
+def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
                       dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -408,8 +410,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
         if numpy.isnan(vs30).any():
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
-    proxy = RuptureProxy(dstore['ruptures'][0])
-
+    proxy = RuptureProxy(rup0)
+    model = rup0['model'].decode('ascii')
+    _model, full_lt = base.get_model_lts(dstore, model)[0]
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
@@ -430,8 +433,12 @@ def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
+        sids = srcfilter.close_sids(proxy, cmaker.trt)
+        if len(sids) == 0:  # filtered away
+            raise FarAwayRupture
         computer = get_computer(
-            cmaker, proxy, srcfilter, station_data, station_sites)
+            cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
+            station_data, station_sites.sids)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
@@ -447,8 +454,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
 
     with performance.Monitor(
             'building arguments', measuremem=True, h5=dstore.hdf5):
+        station_sids = () if station_sites is None else station_sites.sids
         allargs = get_allargs(
-            oq, sitecol, assetcol, (station_data, station_sites), dstore)
+            oq, sitecol, assetcol, (station_data, station_sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
@@ -807,7 +815,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            _, self.full_lt = base.get_model_lts(dstore.parent)[0]
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)
             self.build_events_from_sources()
@@ -844,8 +851,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
+        rup0 = dstore['ruptures'][0]
         smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol,
+            event_based, oq, rup0, self.sitecol,
             getattr(self, 'assetcol', None), dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:

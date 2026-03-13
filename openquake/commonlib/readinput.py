@@ -43,7 +43,10 @@ import itertools
 import numpy
 import pandas
 import requests
-from shapely import wkt, geometry
+import geopandas as gpd
+from shapely import wkt
+from shapely.geometry import shape
+from shapely.validation import make_valid, explain_validity
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -508,17 +511,12 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             valid.longitude(lon)
         except ValueError:  # has a header
-            sm = hdf5.read_csv(fname, site.site_param_dt).array
+            sm = hdf5.read_csv(fname, site.site_param_dt,
+                               ignorecols=['site_id']).array
         else:
             sm = get_poor_site_model(fname)
 
     sm_fieldsets[fname] = set(sm.dtype.names)
-
-    # make sure site_id starts from 0, if given
-    if 'site_id' in sm.dtype.names:
-        if (sm['site_id'] != numpy.arange(len(sm))).any():
-            raise InvalidFile('%s: site_id not sequential from zero'
-                              % fname)
 
     # round coordinates and check for duplicate points
     sm['lon'] = numpy.round(sm['lon'], 5)
@@ -703,8 +701,6 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.sites and 'site_model' in oqparam.inputs and oqparam.hazard_calculation_id:
-        1/0
     if h5 and 'sitecol' in h5:
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
@@ -1053,43 +1049,51 @@ def get_crmodel(oqparam):
         oqparam.limit_states = limit_states
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
-    consdict = {}
+
     if 'consequence' in oqparam.inputs:
-        if not limit_states:
-            raise InvalidFile('Missing fragility functions in %s' %
-                              oqparam.inputs['job_ini'])
-        # build consdict of the form consequence_by_tagname -> tag -> array
-        loss_dt = oqparam.loss_dt()
-        for by, fnames in oqparam.inputs['consequence'].items():
-            if by == 'taxonomy':  # obsolete name
-                by = 'risk_id'
-            if isinstance(fnames, str):  # single file
-                fnames = [fnames]
-            # i.e. files collapsed.csv, fatalities.csv, ... with headers like
-            # taxonomy,consequence,slight,moderate,extensive
-            df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
-            # NB: consequence files depend on loss_type, unlike fragility files
-            if 'taxonomy' in df.columns:  # obsolete name
-                df['risk_id'] = df['taxonomy']
-                del df['taxonomy']
-            if 'loss_type' not in df.columns:
-                df['loss_type'] = 'structural'
-            if 'peril' not in df.columns:
-                df['peril'] = 'groundshaking'
-            for consequence, group in df.groupby('consequence'):
-                if consequence not in scientific.KNOWN_CONSEQUENCES:
-                    raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fnames))
-                bytag = {
-                    tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
-                    for tag, grp in group.groupby(by)}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
-    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
-    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
+        consdict = read_consdict(oqparam, limit_states, perils)
+    else:
+        consdict = {}
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
 
+def read_consdict(oqparam, limit_states, perils):
+    """
+    :returns: consequence dictionary csq_by_losses -> by_tag
+
+    For instance consdict['collapsed_by_taxonomy'] => dframe
+    """
+    if not limit_states:
+        raise InvalidFile('Missing fragility functions in %s' %
+                          oqparam.inputs['job_ini'])
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    for by, fnames in oqparam.inputs['consequence'].items():
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
+        if isinstance(fnames, str):  # single file
+            fnames = [fnames]
+        # i.e. files collapsed.csv, fatalities.csv, ... with headers like
+        # taxonomy,consequence,slight,moderate,extensive
+        df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+        # NB: consequence files depend on loss_type, unlike fragility files
+        if 'taxonomy' in df.columns:  # obsolete name
+            df['risk_id'] = df['taxonomy']
+            del df['taxonomy']
+        if 'loss_type' not in df.columns:
+            df['loss_type'] = 'structural'
+        if 'peril' not in df.columns:
+            df['peril'] = 'groundshaking'
+        for consequence in df.consequence.unique():
+            if consequence not in scientific.KNOWN_CONSEQUENCES:
+                raise InvalidFile('Unknown consequence %s in %s' %
+                                  (consequence, fnames))
+            consdict['%s_by_%s' % (consequence, by)] = df[
+                    df.consequence==consequence]
+    return consdict
+
+    
 def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
@@ -1431,7 +1435,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: F32})
     imtls = {}
     dic = {}
     for fname in fnames:
@@ -1445,7 +1449,7 @@ def get_pmap_from_csv(oqparam, fnames):
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)
     L = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((N, L))
+    data = numpy.zeros((N, L), F32)
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1733,27 +1737,30 @@ def read_geometries(fname, name):
     """
     :param fname: path of the file containing the geometries
     :param name: name of the primary key field
-    :returns: data frame with codes and geometries
+    :returns: GeoDataFrame frame with codes and geometries
     """
+    codes = []
+    geoms = []
     with fiona.open(fname) as f:
-        codes = []
-        geoms = []
+        crs = f.crs
         for feature in f:
-            props = feature['properties']
-            geom = feature['geometry']
+            props = feature["properties"]
+            geom = feature["geometry"]
             code = props[name]
             if code and geom:
+                g = shape(geom)
+                if not g.is_valid:
+                    logging.warning("Invalid geometry for %s: %s",
+                                    code, explain_validity(g))
+                    g = make_valid(g)
                 codes.append(code)
-                # NOTE: the following commented line would expand/reduce
-                #       boundaries by the specified degrees (costly). For
-                #       geospatial queries we prefer to keep these
-                #       geometries unaltered and use a buffer around the
-                #       coordinates of of a site instead.
-                # geoms.append(geometry.shape(geom).buffer(deg))
-                geoms.append(geometry.shape(geom))
+                geoms.append(g)
             else:
-                logging.error(f'{code=}, {geom=} in {fname}')
-    return pandas.DataFrame(dict(code=codes, geom=geoms))
+                logging.error(f"{code=}, {geom=} in {fname}")
+    # NOTE: "geometry" instead of "geom" would be the standard in GeoPandas,
+    #       but using "geom" we avoid changing other code using this object
+    return gpd.GeoDataFrame(
+        dict(code=codes, geom=geoms), geometry="geom", crs=crs)
 
 
 @functools.lru_cache()

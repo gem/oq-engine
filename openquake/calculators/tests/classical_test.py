@@ -21,7 +21,7 @@ import sys
 import gzip
 import numpy
 from unittest import mock
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
@@ -40,7 +40,8 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
     case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
     case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93)
+    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93,
+    case_94)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -80,7 +81,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
-            slow = view('task:classical:-1', self.calc.datastore)
+            slow = view('task_cl:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('time', slow)
 
@@ -119,9 +120,10 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
 
         # check missing vs30
-        with self.assertRaises(InvalidFile) as ctx:
+        with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_03.__file__, 'job_wrong.ini')
-        self.assertIn('reference_vs30_value not specified', str(ctx.exception))
+        self.assertIn("Please set a value for 'reference_vs30_value'",
+                      str(ctx.exception))
 
     def test_case_04(self):
         # make sure the UHS are sorted correctly
@@ -143,7 +145,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_06(self):
         # test with site-dependent logic trees
-        self.run_calc(case_06.__file__, 'job.ini')
+        with mock.patch.dict(config.memory, {'pmap_max_mb': .0006}):
+            self.run_calc(case_06.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
 
@@ -191,9 +194,9 @@ class ClassicalTestCase(CalculatorTestCase):
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
-        ae(flt0.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~AA', 'A~BA', 'A~AA'])
+        ae(flt0.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
         ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
-        ae(flt2.rlzs['branch_path'], ['A~CA', 'A~CA', 'A~AA', 'A~CA', 'A~AA'])
+        ae(flt2.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~CA', 'A~BA'])
 
         sitecol = self.calc.sitecol
         sites0 = sitecol.filter(sitecol.ilabel == 0)
@@ -204,13 +207,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # check the mean hazard curves manually
         hcurve0, wei0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)
-        aac(wei0, [0.4, 0.6, 0., 1.], atol=1e-12)
+        aac(wei0, [0.2, 0.8, 0., 1.], atol=1e-12)
         hcurve1, wei1 = calc.mean_rates.calc_mcurves(
             src_groups, sites1, flt1, oq)
         aac(wei1, [0., 1., 0., 1.], atol=1e-12)
         hcurve2, wei2 = calc.mean_rates.calc_mcurves(
             src_groups, sites2, flt2, oq)
-        aac(wei2, [0.4, 0., 0.6, 1.], atol=1e-12)
+        aac(wei2, [0.2, 0.6, 0.2, 1.], atol=1e-12)
         pga0 = self.calc.datastore['hcurves-stats'][0]
         pga1 = self.calc.datastore['hcurves-stats'][1]
         pga2 = self.calc.datastore['hcurves-stats'][2]
@@ -291,16 +294,21 @@ class ClassicalTestCase(CalculatorTestCase):
         return self.calc.datastore['hcurves-stats'][3, 0]
 
     def test_case_22(self):
-        # crossing date line calculation for Alaska testing full tiling
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-            self.assert_curves_ok([
-                '/hazard_curve-mean-PGA.csv',
-                'hazard_curve-mean-SA(0.1)',
-                'hazard_curve-mean-SA(0.2).csv',
-                'hazard_curve-mean-SA(0.5).csv',
-                'hazard_curve-mean-SA(1.0).csv',
-                'hazard_curve-mean-SA(2.0).csv',
-            ], case_22.__file__, delta=1E-6, tiling=True)
+        # crossing date line calculation for Alaska
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=False)
+
+        data = self.calc.datastore['source_groups']
+        self.assertFalse(data.attrs['tiling'])
+        self.assertEqual(data['tiles'], [1])
+        self.assertEqual(data['blocks'], [2])
+        self.assert_curves_ok([
+            '/hazard_curve-mean.csv',
+            'hazard_map-mean.csv',
+        ], case_22.__file__, delta=1E-6, tiling=True)
+
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], [4])
@@ -326,7 +334,6 @@ class ClassicalTestCase(CalculatorTestCase):
         total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
-        numpy.testing.assert_equal(self.calc.cfactor, [1560, 5])
         # NB: rjb is depth-independent, the hypocenters could be collapsed
 
     def test_case_25(self):  # negative depths
@@ -1052,4 +1059,11 @@ class ClassicalTestCase(CalculatorTestCase):
 
         from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
-        print(info)
+        print(info)  # debug
+
+    def test_case_94(self):
+        # Tests applying a delta to sigma, tau and phi using mgmpe
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(0.5).csv'],
+            case_94.__file__)

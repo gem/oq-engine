@@ -31,6 +31,8 @@ import signal
 import zlib
 import re
 import psutil
+import time
+
 from threading import Event
 from unittest.mock import patch
 from collections import defaultdict
@@ -221,7 +223,12 @@ def store(request_files, ini, calc_id):
         # NB: TemporaryUploadedFile Django objects are not sortable
         for input_file in input_files:
             new_path = os.path.join(calc_dir, input_file.name)
-            shutil.move(input_file.temporary_file_path(), new_path)
+            # Using shutil.copy2, Django deletes the temporary file
+            # when the request ends. With shutil.move it would
+            # attempt to delete it immediately when it is still in
+            # use by the Django process, which would raise an
+            # exception on Windows.
+            shutil.copy2(input_file.temporary_file_path(), new_path)
             if input_file.name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
@@ -586,7 +593,7 @@ def calc_list(request, id=None):
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
-        if host:
+        if settings.DISPLAY_USER_HOST and host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False

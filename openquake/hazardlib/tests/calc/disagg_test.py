@@ -256,12 +256,10 @@ class PMFExtractorsTestCase(unittest.TestCase):
 
     def test_mean(self):
         # for doc purposes: the mean of PMFs is not the PMF of the mean
-        numpy.random.seed(42)
-        matrix = numpy.random.random(self.matrix.shape)
+        rng = numpy.random.default_rng(42)
+        matrix = rng.random(self.matrix.shape)
         pmf1 = valid.mag_pmf(self.matrix)
         pmf2 = valid.mag_pmf(matrix)
         mean = (matrix + self.matrix) / 2
-        numpy.testing.assert_allclose(
-            (pmf1 + pmf2) / 2, [1, 1])
-        numpy.testing.assert_allclose(
-            valid.mag_pmf(mean), [0.99999944, 0.99999999])
+        numpy.testing.assert_allclose((pmf1 + pmf2) / 2, [1, 1])
+        numpy.testing.assert_allclose(valid.mag_pmf(mean), [1, 1])

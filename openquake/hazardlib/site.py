@@ -24,11 +24,10 @@ import logging
 import numpy
 import pandas
 try:
+    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
+except ImportError:  # old version
     from h3.api.numpy_int import (
         geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
-except ImportError:
-    # h3 version 4
-    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
@@ -236,7 +235,6 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
-    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -440,9 +438,11 @@ class SiteCollection(object):
             # duplicates (there could be millions)
             n = len(dupl)
             dots = ' ...' if n > 9 else ''
-            items = list(dupl.items())[:9]
+            items = []
+            for (x, y), _ in list(dupl.items())[:9]:
+                items.append('%.5f %.5f' % (x, y))
             raise ValueError('There are %d duplicate sites %s%s' %
-                             (n, items, dots))
+                             (n, ', '.join(items), dots))
         return self
 
     @classmethod
@@ -702,14 +702,11 @@ class SiteCollection(object):
         return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
     def __fromh5__(self, dic, attrs):
-        if isinstance(dic, dict):  # engine >= 3.11
-            params = attrs['__pdcolumns__'].split()
-            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
-            self.array = numpy.zeros(len(dic['sids']), dtype)
-            for p in dic:
-                self.array[p] = dic[p][()]
-        else:  # old engine, dic is actually a structured array
-            self.array = dic
+        params = attrs['__pdcolumns__'].split()
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+        self.array = numpy.zeros(len(dic['sids']), dtype)
+        for p in dic:
+            self.array[p] = dic[p][()]
         self.complete = self
 
     @property
@@ -869,15 +866,22 @@ class SiteCollection(object):
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
             site IDs within the bounding box
+
+        NB: if the bounding box crosses the IDL, do not filter.       
         """
+        # This is the only sane approach across the IDL, since sometimes
+        # we want to take the greater arc (for the Oceans) and sometimes
+        # the smaller arc (for Alaska). Disabling the prefiltering means a
+        # slight performance penalty but not errors, since the real filtering
+        # will kick off next and do the right thing in the engine.
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self['lon'], self['lat']
-        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
-        mask = (min_lon < lons) * (lons < max_lon) * \
-               (min_lat < lats) * (lats < max_lat)
-        return mask.nonzero()[0]
+        if cross_idl(min_lon, max_lon):
+            return self.sids
+        lons, lats = self.lons, self.lats
+        mask = ((min_lon < lons) & (lons < max_lon) &
+                (min_lat < lats) & (lats < max_lat))
+        ok, = mask.nonzero()
+        return self.sids[ok]
 
     def extend(self, lons, lats):
         """

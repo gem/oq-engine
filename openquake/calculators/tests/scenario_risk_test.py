@@ -270,20 +270,28 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_12.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
-                'expected/%s' % strip_calc_id(fname), fname)
+                'expected/%s' % strip_calc_id(fname), fname,
+                make_comparable=lambda _header, lines:
+                [lines[0]] + sorted(lines[1:]))
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles('expected/avg_losses.csv', fname)
 
     def test_case_13(self):
         # testing Youd gsim, with primary IMT LSD
-        # also testing OQ_SAMPLE_ASSETS
-        with mock.patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': '.5'}):
-            out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
+        out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles('expected/avg_losses.csv', fname)
+
+        # check aggregation by MACRO_TAXONOMY, avg_losses_by
+        df = extract(self.calc.datastore, 'avg_losses_by/MACRO_TAXONOMY')
+        assert list(df.MACRO_TAXONOMY) == ['CR+CIP/NONRES']
+
+        [f1, f2] = out[('avg_losses_by', 'csv')]
+        self.assertEqualFiles('expected/avg_losses_by_macro.csv', f1)
+        self.assertEqualFiles('expected/avg_losses_by_taxo.csv', f2)
 
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')

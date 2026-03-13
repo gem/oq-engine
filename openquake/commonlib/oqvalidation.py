@@ -622,6 +622,16 @@ postproc_args:
   Example: *postproc_args = {'imt': 'PGA'}*
   Default: {} (no arguments)
 
+postrisk_func:
+  Specify a postrisk function in calculators/postrisk.
+  Example: *postrisk_func = pdf_report.main*
+  Default: '' (no postprocessing)
+
+postrisk_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postrisk_args = {}*
+  Default: {} (no arguments)
+
 prefer_global_site_params:
   INTERNAL. Automatically set by the engine.
 
@@ -906,7 +916,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'workflow']
 
 COST_TYPES = [
-    'structural', 'nonstructural', 'contents', 'business_interruption']
+    'structural', 'nonstructural', 'contents',
+    'business_interruption', 'embodied_carbon']
 ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
@@ -971,7 +982,9 @@ def check_increasing(dframe, *columns):
 
 
 class OqParam(valid.ParamSet):
+    _amplifier = None
     _input_files = ()  # set in get_oqparam
+    _sec_perils = ()
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
@@ -1120,6 +1133,8 @@ class OqParam(valid.ParamSet):
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    postrisk_func = valid.Param(valid.mod_func, '')
+    postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
@@ -1568,12 +1583,16 @@ class OqParam(valid.ParamSet):
                 imts.add(im.string)
 
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):
-                continue  # disable the check
-            restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-            if restrict_imts:
-                names = set(cls.__name__ for cls in restrict_imts)
-                invalid_imts = ', '.join(imts - names)
+            params = getattr(gsim, 'params', {})
+            ok_imts = {cls.__name__ for cls in gsim.
+                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if 'conditional_gmpe' in params:
+                ok_imts |= set(params['conditional_gmpe'])
+            elif hasattr(gsim, 'gmpe'):
+                ok_imts |= {cls.__name__ for cls in gsim.gmpe.
+                           DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if ok_imts:
+                invalid_imts = ', '.join(imts - ok_imts)
                 if invalid_imts:
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %
@@ -1740,7 +1759,7 @@ class OqParam(valid.ParamSet):
         for imt in risk_imts - seco_imts:
             # LSD is considered a primary IMT because it is directly
             # computed by two GMPEs, Youd and Zang, Zhao
-            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI', 'LSD')):
+            if imt.startswith(('AvgSA', 'PGA', 'PGV', 'SA', 'MMI', 'LSD')):
                 pass  # ground shaking IMT
             else:
                 raise ValueError(f'The risk functions contain {imt} which is '
@@ -1944,8 +1963,7 @@ class OqParam(valid.ParamSet):
             if not self.quantiles:
                 self.quantiles = [0.05, 0.50, 0.95]
             if not self.aggregate_by:
-                # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
-                self.aggregate_by = [['ID_2']]
+                self.aggregate_by = [['ID_0'], ['ID_2']]
         return yes
 
     @property
@@ -2384,6 +2402,8 @@ class OqParam(valid.ParamSet):
 
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'limit_states' in dic:
+            dic['limit_states'] = ' '.join(dic['limit_states'])
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])
@@ -2437,25 +2457,28 @@ def _rel_fnames(obj, base):
         return str(dic)
 
 
+# called by get_checksum32
 def to_ini(key, val):
     """
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, _name = pathlib.Path(val['job_ini']).parts
+        dic = val.copy()
+        job_ini = dic.pop('job_ini')
+        *base, _name = pathlib.Path(job_ini).parts
         fnames = []
-        for k, v in val.items():
-            if k == 'job_ini':
-                continue
-            elif isinstance(v, str):
+        for k, v in dic.items():
+            if isinstance(v, str):
                 fnames.append(v)
             elif isinstance(v, list):
                 fnames.extend(v)
             elif isinstance(v, dict):
                 fnames.extend(v.values())
-        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
-                         for k, v in val.items()
-                         if not k.startswith('_'))
+        out = []
+        for k, v in dic.items():
+            if not k.startswith('_'):
+                out.append(f'{k}_file = {_rel_fnames(v, base)}')
+        return '\n'.join(out)
     elif key == 'sites':
         sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
         return f"sites = {sites}"
