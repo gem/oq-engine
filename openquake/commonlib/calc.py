@@ -196,14 +196,14 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
             rupgeoms = h5['rupgeoms']
             recs = h5['ruptures'][rup_array]
         else:
-            rupgeoms = h5['rupgeoms'][:]
+            rupgeoms = h5['rupgeoms'][rup_array['geom_id']]
             recs = rup_array
-        for rec in recs:
+        for i, rec in enumerate(recs):
             proxy = rupture.RuptureProxy(rec)
             if proxy['mag'] < min_mag:
                 # discard small magnitudes
                 continue
-            proxy.geom = rupgeoms[proxy['geom_id']]
+            proxy.geom = rupgeoms[i]
             proxies.append(proxy)
     return proxies
 
