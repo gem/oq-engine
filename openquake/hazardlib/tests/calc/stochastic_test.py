@@ -79,10 +79,10 @@ class ClusterTestCase(unittest.TestCase):
         ssm_fname = str(
             HERE / '..' / 'source_model' / 'source_group_cluster.xml')
 
-        # Reading the SSM
+        # Read the SSM
         ssm = nrml.to_python(ssm_fname, self.sconv)
 
-        # Generating the SESs
+        # Generate the SESs
         ebrups = sample_cluster(ssm[0], 10000000, 1)
 
         # Computing the total number of occurrences
@@ -102,7 +102,7 @@ class ClusterTestCase(unittest.TestCase):
         # mutually exclusive (equally weighted) and ruptures independent. In
         # case of 1_000_000 samples of 1 year each, we expect on average
         # 100_000 occurences of the cluster. For each realization we sample one
-        # source that will generate either with 1 or 2 ruptures. So the
+        # source that will generate either 1 or 2 ruptures. So the
         # total number of ruptures should be in the order of 150_000.
 
         # Source model file name
@@ -116,12 +116,10 @@ class ClusterTestCase(unittest.TestCase):
         nrlz = 10
         for i in range(nrlz):
 
+            # Number of ruptures per realization
             ebrups = sample_cluster(ssm[0], 1000000, i)
 
             # Computing the total number of occurrences
-            if ebrups is None:
-                breakpoint()
-                continue
             tot_occ += numpy.sum([e.n_occ for e in ebrups])
 
         # Checking the number of ruptures generated
@@ -131,10 +129,10 @@ class ClusterTestCase(unittest.TestCase):
     def test_src_indep(self):
         # Sources are independent and ruptures mutex. The rate of occurrence of
         # the cluster is 1/10. With 1_000_000 samples of 1 year each, we expect
-        # on average 100_000 occurences of the cluster. For each realization we
-        # sample either one or two sources that will generate 1 rupture. So the
-        # total number of ruptures should be also in this case in the order of
-        # 150_000.
+        # on average 100_000 occurrences of the cluster. For each realization
+        # we sample either one or two sources that will generate 1 rupture. So
+        # the total number of ruptures should be also in this case in the order
+        # of 150_000.
 
         # Source model file name
         ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_indep_mutex.xml')
