@@ -81,7 +81,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.assertIn('sent', info)
             self.assertIn('received', info)
 
-            slow = view('task:classical:-1', self.calc.datastore)
+            slow = view('task_cl:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
             self.assertIn('time', slow)
 
@@ -1059,8 +1059,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
-        print(info)
-
+        print(info)  # debug
 
     def test_case_94(self):
         # Tests applying a delta to sigma, tau and phi using mgmpe
@@ -1068,4 +1067,3 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
             case_94.__file__)
-        
