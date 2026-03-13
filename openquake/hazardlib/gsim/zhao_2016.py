@@ -270,8 +270,7 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                          pgn_per_zone=None):
+def get_distance_term_asc(trt, C, ctx, pgn_store=None, pgn_per_zone=None):
     """
     Returns the distance scaling term defined in equation 3
     """
@@ -294,8 +293,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                         pgn_per_zone=None):
+def get_distance_term_um(trt, C, ctx, pgn_store=None, pgn_per_zone=None):
     """
     Returns the distance attenuation term
     """
@@ -315,8 +313,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                             pgn_per_zone=None):
+def get_distance_term_SInter(trt, C, ctx, pgn_store=None, pgn_per_zone=None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
@@ -338,8 +335,7 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                            pgn_per_zone=None):
+def get_distance_term_sslab(trt, C, ctx, pgn_store=None, pgn_per_zone=None):
     """
     Returns the distance scaling term in equation 2a
 
@@ -347,8 +343,8 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     implementation of :class:`ZhaoEtAl2016SSlabPErg`.
     """
     cctx = copy.copy(ctx)
-    # Check if need to apply non-ergodic path effects
-    if volc_arc_str is not None:
+    # Check if need to apply non-ergodic path effect
+    if pgn_store is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
         # with rvolc capped at 80km if total distance traversed through zones is 
         # greater than 80km, and set to 12 km if zones are traversed but the
@@ -594,11 +590,9 @@ class ZhaoEtAl2016Asc(GMPE):
     def __init__(self, volc_arc_file=None):
         if volc_arc_file is not None:
             with open(volc_arc_file, 'rb') as fle:
-                self.volc_arc_str = fle.read().decode('utf-8')
-            self.pgn_store, self.pgn_per_zone = get_volc_zones(
-                self.volc_arc_str)
+                volc_arc_str = fle.read().decode('utf-8')
+            self.pgn_store, self.pgn_per_zone = get_volc_zones(volc_arc_str)
         else:
-            self.volc_arc_str = None
             self.pgn_store = None
             self.pgn_per_zone = None
 
@@ -613,14 +607,12 @@ class ZhaoEtAl2016Asc(GMPE):
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             _s_c, idx = _get_site_classification(ctx.vs30)
-            volc_arc_str = self.volc_arc_str
             pgn_store = self.pgn_store
             pgn_per_zone = self.pgn_per_zone
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, volc_arc_str, pgn_store,
-                                         pgn_per_zone))
+                       get_distance_term(trt, C, ctx, pgn_store, pgn_per_zone))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
             
             if self.__class__.__name__.endswith('SiteSigma'):
