@@ -22,6 +22,10 @@ from openquake.hazardlib.geo import polygon as pgn
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 
 
+FIXED_DEPTH = 0.
+N_POINTS = 100
+
+
 def discretise_lines(ctx):
     """
     Discretize the line of minimum distance from each rupture surface to each
@@ -35,9 +39,10 @@ def discretise_lines(ctx):
 
         # Discretise shortest dist from rup srf to site and store as line
         # Fix depth to zero as within Zhao et al. 2016
-        dsct_line = npoints_between(ctx.lon[idx_path], ctx.lat[idx_path], 0,
-                                    ctx.clon[idx_path], ctx.clat[idx_path], 0,
-                                    100)
+        dsct_line = npoints_between(
+            ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
+            ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
+            N_POINTS)
 
         # Create mesh of discretized line
         l_mesh[idx_path] = pgn.Mesh(dsct_line[0], dsct_line[1])
@@ -45,7 +50,7 @@ def discretise_lines(ctx):
     return l_mesh
 
 
-def get_dist_traversed_per_zone(l_mesh, pgn_zone, ctx):
+def get_dist_traversed_per_zone(l_mesh, volc_pgns, ctx):
     """
     Find the intercepts of the line from each rupture surface to each site
     within each volcanic zone polygon (if present) and returns the distance
@@ -54,8 +59,8 @@ def get_dist_traversed_per_zone(l_mesh, pgn_zone, ctx):
     :param l_mesh:
         l_mesh: Dict of meshes representing the line from each rupture to
         each site
-    :param pgn_zone:
-        pgn_zone: Polygon for each zone
+    :param volc_pgns:
+        volc_pgns: Polygon for each zone
     :param ctx:
         ctx: Context of ruptures and sites to compute ground-motions for
     """
@@ -73,10 +78,10 @@ def get_dist_traversed_per_zone(l_mesh, pgn_zone, ctx):
                                 mesh_lons[1], mesh_lats[1], 0)
 
         # For each zone...
-        for zone in pgn_zone:
+        for zone in volc_pgns:
 
             # Check if any points of mesh lie within zone
-            checks = pgn_zone[zone].intersects(l_mesh[idx_path])
+            checks = volc_pgns[zone].intersects(l_mesh[idx_path])
 
             # N points in zone * line spacing = distance in zone
             r_per_zone = len(np.argwhere(checks)) * line_spacing
