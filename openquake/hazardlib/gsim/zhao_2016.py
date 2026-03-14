@@ -559,14 +559,14 @@ def get_rvolcs(ctx, volc_pgns):
             for zone_id, polygon in volc_pgns.items()
         }
 
-    # Stack dist per zone per path
+    # Stack rvolc dist per zone per path
     r_values = np.stack([list(r_zone_path[path].values())
                          for path in r_zone_path])
 
-    # Sum over zones to get total r per path
+    # Sum over zones to get total rvolc per path
     rvolc_per_path = r_values.sum(axis=1)
 
-    # Apply min/max bounds on rvolc as described in Zhao et al. 2016 per path
+    # Apply min/max bounds on rvolc as described in Zhao et al. 2016
     rvolc_per_path[np.logical_and(rvolc_per_path > 0.0,
                                   rvolc_per_path <= 12.0)] = 12.0
     rvolc_per_path[rvolc_per_path >= 80.0] = 80.0
