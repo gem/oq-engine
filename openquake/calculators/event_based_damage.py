@@ -22,7 +22,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib.stats import compute_stats2, mean_curve
 from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore, calc
 from openquake.calculators import base
@@ -260,12 +260,12 @@ class DamageCalculator(EventBasedRiskCalculator):
             'damages-rlzs', asset_id=len(arr), rlz_id=self.R)
         s = oq.hazard_stats()
         if s and self.R > 1:
-            _statnames, statfuncs = zip(*s.items())
+            logging.info('Computing mean damages per asset')
             weights = self.datastore['weights'][:]
-            self.datastore.hdf5.create_dataset(
-                'damages-stats', data=compute_stats2(arr, statfuncs, weights))
+            data = compute_stats2(arr, [mean_curve], weights)
+            self.datastore.hdf5.create_dataset('damages-stats', data=data)
             self.datastore.set_shape_descr(
-                'damages-stats', asset_id=len(arr), stat=list(s))
+                'damages-stats', asset_id=len(arr), stat=['mean'])
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
             results = connectivity.analysis(self.datastore)
