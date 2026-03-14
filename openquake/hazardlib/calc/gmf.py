@@ -333,6 +333,7 @@ class GmfComputer(object):
                 df = df[df[sec_imt] >= minimum[imt]]
         return df
     
+    @staticmethod
     def get_symmetric_bounds(cov_matrix, level):
         """
         Calculates the lower and upper bound vectors for symmetric truncation
@@ -416,20 +417,25 @@ class GmfComputer(object):
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
-                # add a cutoff to remove negative eigenvalues
-                cov_Y_Y = cov_WY_WY + cov_BY_BY + numpy.eye(
-                    len(cov_WY_WY)) * eps
-                std = numpy.sqrt(numpy.maximum(numpy.diag(cov_Y_Y), eps))
-                corr = cov_Y_Y / std[:, None] / std[None, :]
-                corr = (corr + corr.T) / 2.0
-                numpy.fill_diagonal(corr, 1.0)
-                tl = tlw
-                bounds = numpy.full(len(corr), tl)
-                seed = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
-                eps_y = TruncatedMVN(
-                    numpy.zeros(len(corr)), corr, -bounds, bounds, seed=seed
+                N = len(cov_WY_WY)
+
+                # Add a cutoff to remove negative eigenvalues before sampling.
+                cov_WY_WY = cov_WY_WY + numpy.eye(N) * eps
+                cov_BY_BY = cov_BY_BY + numpy.eye(N) * eps
+
+                lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, tlw)
+                seed_w = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
+                z_w_truncated = TruncatedMVN(
+                    numpy.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
                 ).sample(E)
-                arr = mu_Y.flatten()[:, None] + std[:, None] * eps_y
+
+                lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, tlb)
+                seed_b = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
+                z_b_truncated = TruncatedMVN(
+                    numpy.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
+                ).sample(E)
+
+                arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
                 gmf = exp(arr, imt != "MMI")
             return gmf  # shapes (N, E)
 
