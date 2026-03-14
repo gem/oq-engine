@@ -959,10 +959,6 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     #: Supported tectonic region type is subduction inslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    # Additional rupture parameters required for ray tracing
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth',
-                                   'ztor', 'rake', 'strike', 'dip'}
-
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 
