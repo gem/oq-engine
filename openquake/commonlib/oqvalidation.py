@@ -1283,10 +1283,27 @@ class OqParam(valid.ParamSet):
             self.prefer_global_site_params = True
 
     def _set_truncation_levels(self):
-        # Backward-compatible truncation levels:
-        # - legacy: truncation_level applies to both components
+        """
+        If 'truncation_level' is set, it serves as the primary parameter
+         and is used to initialize both 'truncation_level_between' and 'truncation_level_within'
+         if they are not already explicitly set.
+
+        If 'truncation_level' is None but either 'truncation_level_between' or
+         'truncation_level_within' is set, these component-specific levels are used
+         to fill in each other (if one is set, both get the same value) and to set
+         the main 'truncation_level'.
+
+        Thus users can either:
+        - Set a single truncation_level that applies to all residual components
+        - Override with truncation_level_between and truncation_level_within
+        - Set only component-specific levels, which then define the global level
+
+        All resulting values are stored back as instance attributes for use in
+        truncated normal / multivariate normal distribution sampling.
+        """
+        # - truncation_level applies to both components if not overridden
         # - new: truncation_level_between/within can be set independently
-        tl = getattr(self, 'truncation_level', None)
+        tl = getattr(self, 'truncation_level', 99.)
         tlb = self.truncation_level_between
         tlw = self.truncation_level_within
         if tl is not None:
