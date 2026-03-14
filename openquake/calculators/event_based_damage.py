@@ -262,8 +262,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         if s and self.R > 1:
             _statnames, statfuncs = zip(*s.items())
             weights = self.datastore['weights'][:]
-            self.datastore.hdf5.create_dataset(
-                'damages-stats', data=compute_stats2(arr, statfuncs, weights))
+            data = compute_stats2(arr, statfuncs, weights)
+            self.datastore.hdf5.create_dataset('damages-stats', data=data)
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=list(s))
         if oq.infrastructure_connectivity_analysis:
