@@ -332,6 +332,17 @@ class GmfComputer(object):
             if imt in minimum:
                 df = df[df[sec_imt] >= minimum[imt]]
         return df
+    
+    def get_symmetric_bounds(cov_matrix, level):
+        """
+        Calculates the lower and upper bound vectors for symmetric truncation
+        based on the marginal standard deviations of the covariance matrix.
+        """
+        # Extract marginal standard deviations from the diagonal
+        sigmas = numpy.sqrt(numpy.diag(cov_matrix))
+        upper = level * sigmas
+        lower = -level * sigmas
+        return lower, upper
 
     def compute_all(self, mean_stds=None, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
@@ -412,7 +423,7 @@ class GmfComputer(object):
                 corr = cov_Y_Y / std[:, None] / std[None, :]
                 corr = (corr + corr.T) / 2.0
                 numpy.fill_diagonal(corr, 1.0)
-                tl = max(tlw, tlb)
+                tl = tlw
                 bounds = numpy.full(len(corr), tl)
                 seed = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
                 eps_y = TruncatedMVN(
