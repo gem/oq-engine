@@ -260,12 +260,12 @@ class DamageCalculator(EventBasedRiskCalculator):
             'damages-rlzs', asset_id=len(arr), rlz_id=self.R)
         s = oq.hazard_stats()
         if s and self.R > 1:
-            _statnames, statfuncs = zip(*s.items())
+            logging.info('Computing mean damages per asset')
             weights = self.datastore['weights'][:]
             data = compute_stats2(arr, [mean_curve], weights)
             self.datastore.hdf5.create_dataset('damages-stats', data=data)
             self.datastore.set_shape_descr(
-                'damages-stats', asset_id=len(arr), stat=list(s))
+                'damages-stats', asset_id=len(arr), stat=['mean'])
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
             results = connectivity.analysis(self.datastore)
