@@ -1,8 +1,15 @@
+  [Christopher Brooks]
+  * Add ability to specify deltas for tau and phi within ModifiableGMPE.
+
+  [Michele Simionato]
+  * Extended the cross checking between IMTs and GSIMs to ConditionalGMPEs
+  * Extended export_job_zip to scenario calculations
+
   [Anirudh Rao]
-  * Add the Holmgren et al. (2024) GMM for Southeastern Africa
-  * Remove experimental liquefaction models and refactor 
+  * Added the Holmgren et al. (2024) GMM for Southeastern Africa
+  * Removed experimental liquefaction models and refactored
     the secondary perils test suite
-  * Support embodied carbon as a new loss category
+  * Supported embodied carbon as a new loss category
 
   [Michele Simionato]
   * Improved error message when all assets are filtered out

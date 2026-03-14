@@ -12,11 +12,11 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "00 3,11 * * *"
+    - cron: "00 3,15 * * *"
 
 jobs:
   Scheduled_demos_and_WebUI:
-    name: Fail for 3.23 pypip - OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     env:
       # Current LTS version on PyPI (TODO: keep the LTS version updated)
@@ -31,7 +31,9 @@ jobs:
         # - current LTS released on PyPI (TODO: keep the LTS version updated)
         # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed
         # after the maxtrix
-        engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
+        #engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
+        #AE: disable 3.23 after talk at scrum: 11032026
+        engine-ref: ["master", "engine-3.23", "engine-3.25"]
     if: github.event.inputs.git-ref == ''
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
@@ -44,19 +46,26 @@ jobs:
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
           # demos are taken from the matching engine-* branch.
-          if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
-              RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
-          else
-              RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
+          # AE: 20260312 change due remove test LTS pypi package
+          #if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
+          #    RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
+          #else
+          #    RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
+          #fi
+          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ matrix.engine-ref }}" == "engine-3.23" ]]; then
+              echo "Python3.13 is not supported on LTS Release"
+              exit 0
           fi
-          curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
+          # AE: 20260312 change due remove test LTS pypi package
+          #curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 60
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: (Scheduled) Run demos 
+      - name: (Scheduled) Run demos
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x

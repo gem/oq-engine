@@ -137,7 +137,7 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     """
     N = len(sitecol)
     M = len(cmaker.imtls)
-    [ctx] = cmaker.get_ctx_iter([ebrupture.rupture], sitecol)
+    [ctx] = cmaker.get_ctxs([ebrupture.rupture], sitecol)
     mean, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # shapes (G, M, N)
     rlzs = numpy.concatenate(list(cmaker.gsims.values()))
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
@@ -225,7 +225,7 @@ class GmfComputer(object):
         self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
-        ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
+        ctxs = cmaker.get_ctxs([rupture], sitecol)
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
@@ -345,7 +345,7 @@ class GmfComputer(object):
         return lower, upper
 
     def compute_all(self, mean_stds=None, max_iml=None,
-                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -360,7 +360,7 @@ class GmfComputer(object):
             if E == 0:  # crucial for performance
                 continue
             if mean_stds is None:
-                with mmon:
+                with self.cmaker.gmf_mon:
                     ms = self.cmaker.get_4MN([self.ctx], gs)
             else:  # conditioned
                 ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])

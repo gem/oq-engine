@@ -1647,12 +1647,16 @@ class OqParam(valid.ParamSet):
                 imts.add(im.string)
 
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):
-                continue  # disable the check
-            restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-            if restrict_imts:
-                names = set(cls.__name__ for cls in restrict_imts)
-                invalid_imts = ', '.join(imts - names)
+            params = getattr(gsim, 'params', {})
+            ok_imts = {cls.__name__ for cls in gsim.
+                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if 'conditional_gmpe' in params:
+                ok_imts |= set(params['conditional_gmpe'])
+            elif hasattr(gsim, 'gmpe'):
+                ok_imts |= {cls.__name__ for cls in gsim.gmpe.
+                           DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if ok_imts:
+                invalid_imts = ', '.join(imts - ok_imts)
                 if invalid_imts:
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %

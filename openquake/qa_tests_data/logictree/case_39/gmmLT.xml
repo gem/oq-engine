@@ -46,7 +46,7 @@
                     <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
                 </logicTreeBranch>
                 <logicTreeBranch branchID="Campbell1997">
-                    <uncertaintyModel>Campbell1997</uncertaintyModel>
+                    <uncertaintyModel>ToroEtAl1997MwNSHMP2008</uncertaintyModel>
                     <uncertaintyWeight>0.0</uncertaintyWeight>
                     <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
                     <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>

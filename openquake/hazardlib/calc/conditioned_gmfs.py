@@ -572,7 +572,7 @@ def get_mean_covs(
     # standard deviations at the *station* sites ("_D")
     cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in observed_imts})
 
-    [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
+    [ctx_D] = cmaker_D.get_ctxs([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
     # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
 
@@ -580,7 +580,7 @@ def get_mean_covs(
     # standard deviations at the *target* sites ("_Y")
     cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in target_imts})
 
-    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
+    [ctx_Y] = cmaker_Y.get_ctxs([rupture], target_sitecol)
     mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
 
     # filter sites
