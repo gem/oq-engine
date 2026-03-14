@@ -44,7 +44,7 @@ be controlled with:
 - ``truncation_level_between``: truncation level for between-event residuals.
 - ``truncation_level_within``: truncation level for within-event residuals.
 
-For backward compatibility, if only ``truncation_level`` is specified, the
+Otherwise, if only ``truncation_level`` is specified, the
 engine assumes::
 
 	truncation_level_between = truncation_level
