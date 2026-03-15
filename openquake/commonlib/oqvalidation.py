@@ -1282,45 +1282,17 @@ class OqParam(valid.ParamSet):
             inp['site_model'] = [inp.pop('sites')]
             self.prefer_global_site_params = True
 
-    def _set_truncation_levels(self):
+    def _set_truncation_levels(self, _names_vals):
         """
-        If 'truncation_level' is set, it serves as the primary parameter
-         and is used to initialize both 'truncation_level_between' and 'truncation_level_within'
-         if they are not already explicitly set.
-
-        If 'truncation_level' is None but either 'truncation_level_between' or
-         'truncation_level_within' is set, these component-specific levels are used
-         to fill in each other (if one is set, both get the same value) and to set
-         the main 'truncation_level'.
-
-        Thus users can either:
-        - Set a single truncation_level that applies to all residual components
-        - Override with truncation_level_between and truncation_level_within
-        - Set only component-specific levels, which then define the global level
-
-        All resulting values are stored back as instance attributes for use in
-        truncated normal / multivariate normal distribution sampling.
+        Each split parameter inherits from truncation_level if it is unset.
         """
-        # - truncation_level applies to both components if not overridden
-        # - new: truncation_level_between/within can be set independently
-        tl = getattr(self, 'truncation_level', 99.)
-        tlb = self.truncation_level_between
-        tlw = self.truncation_level_within
-        if tl is not None:
-            if tlb is None:
-                tlb = tl
-            if tlw is None:
-                tlw = tl
-        elif tlb is not None or tlw is not None:
-            if tlb is None:
-                tlb = tlw
-            if tlw is None:
-                tlw = tlb
-            tl = tlw
-        if tl is not None:
-            self.truncation_level = tl
-        self.truncation_level_between = tlb
-        self.truncation_level_within = tlw
+        tl = getattr(self, 'truncation_level', None)
+        if tl is valid.Param.NODEFAULT:
+            tl = None
+        if self.truncation_level_between is None:
+            self.truncation_level_between = tl
+        if self.truncation_level_within is None:
+            self.truncation_level_within = tl
 
     def _set_hazard_imtls(self, names_vals):
         if 'iml_disagg' in names_vals:
@@ -1363,7 +1335,7 @@ class OqParam(valid.ParamSet):
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
-        self._set_truncation_levels()
+        self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
                names_vals['hazard_calculation_id'] == 0)

@@ -276,7 +276,20 @@ class OqParamTestCase(unittest.TestCase):
             truncation_level_between='2')
         oq.validate()
         self.assertEqual(oq.truncation_level_between, 2.0)
-        self.assertEqual(oq.truncation_level_within, 2.0)
+        self.assertIsNone(oq.truncation_level_within)
+
+    def test_truncation_levels_override_single_component(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=GST,
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            sites='0.1 0.2',
+            reference_vs30_value='200',
+            maximum_distance='400',
+            truncation_level='3',
+            truncation_level_between='2')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_between, 2.0)
+        self.assertEqual(oq.truncation_level_within, 3.0)
 
     def test_ambiguous_gsim(self):
         with self.assertRaises(InvalidFile) as ctx:
