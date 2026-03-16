@@ -19,8 +19,6 @@ jobs:
   Run_demos_and_test_WebUI:
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    env: 
-      RUN_DEMOS_BRANCH: "${{ matrix.engine-ref }}"
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +26,11 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
         # engine-ref values, if manual run do not use the matrix
         # engine-ref: ["master", "engine-3.25"]
-        engine-ref: ${{ github.event_name == 'workflow_dispatch' && fromJson(format('["{0}"]', inputs.manual_ref)) || fromJson('["master", "engine-3.25"]') }}
+        engine-ref: ${{ fromJson(
+          github.event_name == 'workflow_dispatch'
+            && format('["{0}"]', inputs.git-ref)
+            || '["master","engine-3.25"]'
+        ) }}
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -38,16 +40,16 @@ jobs:
         id: install_oq
         run: |
           set -x
-          curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
           # Resolve engine-ref to an installable version
-          python install.py user --version=${RUN_DEMOS_BRANCH} --venv $HOME/gh-venv-${RUN_DEMOS_BRANCH}
+          python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 60
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Run demos
         run: |
-          source $HOME/gh-venv-${RUN_DEMOS_BRANCH}/bin/activate
+          source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
@@ -56,15 +58,15 @@ jobs:
           # Resolve demos branch:
           # PyPI LTS installs do not correspond to a Git ref;
           # demos are taken from the matching engine-* branch.
-          cd $HOME/gh-venv-${RUN_DEMOS_BRANCH}
-          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${RUN_DEMOS_BRANCH}/bin/run-demos.sh
+          cd $HOME/gh-venv-${{ matrix.engine-ref }}
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${{ matrix.engine-ref }}/bin/run-demos.sh
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
           bash -x ./run-demos.sh demos ${qa_tests_data_dir}
           deactivate
       - name: Test WebUI and run https calculation
         run: |
-          source $HOME/gh-venv-${RUN_DEMOS_BRANCH}/bin/activate
+          source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
