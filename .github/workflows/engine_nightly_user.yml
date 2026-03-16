@@ -73,6 +73,7 @@ jobs:
         # after the maxtrix
         #engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
         #AE: disable 3.23 after talk at scrum: 11032026
+    steps:
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
