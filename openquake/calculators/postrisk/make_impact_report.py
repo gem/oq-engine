@@ -263,8 +263,9 @@ class CountryReportBuilder:
 
         # family_name -> font file prefix
         font_families = {
-            "NotoSans":      "NotoSansSC",  # default: Latin, Cyrillic, Chinese
+            "NotoSans":      "NotoSansSC",  # default: Latin, Cyrillic, Greek, Chinese
             "NotoSans-TC":   "NotoSansTC",  # Traditional Chinese
+            "NotoSans-JP":   "NotoSansJP",  # Japanese
             "NotoSans-KR":   "NotoSansKR",  # Korean
             "NotoSans-AR":   "NotoSansArabic",      # Arabic
             "NotoSans-Deva": "NotoSansDevanagari",  # Hindi, Nepali, etc.
@@ -304,6 +305,10 @@ class CountryReportBuilder:
                 return "NotoSans-Thai"
             if 0xAC00 <= cp <= 0xD7AF:
                 return "NotoSans-KR"
+            if 0x3040 <= cp <= 0x309F:
+                return "NotoSans-JP"  # Hiragana
+            if 0x30A0 <= cp <= 0x30FF:
+                return "NotoSans-JP"  # Katakana
             if 0x4E00 <= cp <= 0x9FFF:
                 return "NotoSans"
             if 0xF900 <= cp <= 0xFAFF:
