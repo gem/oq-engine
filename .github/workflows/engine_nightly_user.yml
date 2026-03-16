@@ -129,15 +129,13 @@ jobs:
           #else
           #    RUN_DEMOS_BRANCH="${{ github.event.inputs.git-ref }}"
           #fi
-          #curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
-          #python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}
-          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ matrix.engine-ref }}" == "engine-3.23" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ github.event.inputs.git-ref }}" == "engine-3.23" ]]; then
               echo "Python3.13 is not supported on LTS Release"
               exit 0
           fi
-          curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
+          curl -L -O https://github.com/gem/oq-engine/raw/${{ github.event.inputs.git-ref }}/install.py
           # Resolve engine-ref to an installable version
-          python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv-${{ github.event.inputs.git-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
