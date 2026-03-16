@@ -1,3 +1,13 @@
+  [Anirudh Rao]
+  * Support sampling from the truncated multivariate normal distribution
+    using Paul Brunzema's implementation of the Botev (2017) algorithm
+    (https://github.com/brunzema/truncated-mvn-sampler), permitting
+    truncation in calculations employing a cross-IM correlation model
+  * Introduce two new job parameters: `truncation_level_between` and
+    `truncation_level_within` allowing the user to specify different
+    truncation levels for between-event residuals and within-event
+    residuals in a scenario or event-based calculation
+
   [Christopher Brooks]
   * Add ability to specify deltas for tau and phi within ModifiableGMPE.
 
