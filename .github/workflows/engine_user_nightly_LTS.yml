@@ -36,10 +36,13 @@ jobs:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set -x
-          if [[ "${{ github.event.inputs.git-ref }}" == " "  ]]; then
+          if [[ -z "${{ github.event.inputs.git-ref }}" ]]; then
           # Current LTS branch (TODO: keep the LTS version updated)
-              BRANCH="engine-3.23"
+             BRANCH="engine-3.23"
+          else
+              BRANCH="${{ github.event.inputs.git-ref }}"
           fi
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           curl -L -O https://github.com/gem/oq-engine/raw/${BRANCH}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${BRANCH} --venv $HOME/gh-venv-${BRANCH}
