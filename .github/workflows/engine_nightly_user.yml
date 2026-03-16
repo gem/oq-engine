@@ -15,9 +15,11 @@ on:
     - cron: "00 3,15 * * *"
 
 jobs:
-  Scheduled_demos_and_WebUI:
+  check:
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    outputs:
+      status : ${{ steps.jobstatus.outputs.status }}
     env:
       # Current LTS version on PyPI (TODO: keep the LTS version updated)
       OQ_LTS_PYPI_VERSION: 3.23
@@ -40,6 +42,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Check python version and LTS Relase of OQ
+        id: jobstatus
+        run: |
+          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ matrix.engine-ref }}" == "engine-3.23" ]]; then
+              echo "Python3.13 is not supported on LTS Release"
+              exit 0
+              echo "status=skip" >> $GITHUB_OUTPUT
+          fi
+
+  Test_demos_and_webUI:
+    needs: Check_LTS_python
+    if: needs.check.outputs.status != 'skip'
+    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    env:
+      # Current LTS version on PyPI (TODO: keep the LTS version updated)
+      OQ_LTS_PYPI_VERSION: 3.23
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
@@ -52,10 +71,6 @@ jobs:
           #else
           #    RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
           #fi
-          if [[ "${{ matrix.python-version }}" == "3.13" && "${{ matrix.engine-ref }}" == "engine-3.23" ]]; then
-              echo "Python3.13 is not supported on LTS Release"
-              exit 0
-          fi
           # AE: 20260312 change due remove test LTS pypi package
           #curl -L -O https://github.com/gem/oq-engine/raw/${RUN_DEMOS_BRANCH}/install.py
           curl -L -O https://github.com/gem/oq-engine/raw/${{ matrix.engine-ref }}/install.py
