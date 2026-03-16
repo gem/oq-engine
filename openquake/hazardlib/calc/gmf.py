@@ -37,6 +37,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
+TRUNCATION_LEVEL_THRESHOLD = 1E-9
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -374,13 +375,13 @@ class GmfComputer(object):
                     intra_eps = [None] * self.M
                 else:
                     # arrays of random numbers of shape (M, N, E) and (M, E)
-                    if tlw <= 1E-9:
+                    if tlw <= TRUNCATION_LEVEL_THRESHOLD:
                         intra_eps = [numpy.zeros((self.N, E), F32)
                                      for _ in range(self.M)]
                     else:
                         intra_eps = [self.within_dist.rvs((self.N, E), rng)
                                      for _ in range(self.M)]
-                    if tlb <= 1E-9:
+                    if tlb <= TRUNCATION_LEVEL_THRESHOLD:
                         self.eps[idxs] = 0.
                     else:
                         self.eps[idxs] = self.cross_correl.get_inter_eps(
@@ -412,7 +413,7 @@ class GmfComputer(object):
             eps = self.cmaker.oq.correlation_cutoff
             tlw = self.cmaker.truncation_level_within
             tlb = self.cmaker.truncation_level_between
-            if max(tlw, tlb) <= 1E-9:
+            if max(tlw, tlb) <= TRUNCATION_LEVEL_THRESHOLD:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
@@ -450,8 +451,8 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        if (self.cmaker.truncation_level_within <= 1E-9 and
-                self.cmaker.truncation_level_between <= 1E-9):
+        if (self.cmaker.truncation_level_within <= TRUNCATION_LEVEL_THRESHOLD and
+                self.cmaker.truncation_level_between <= TRUNCATION_LEVEL_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '
