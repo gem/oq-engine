@@ -73,11 +73,6 @@ jobs:
         # after the maxtrix
         #engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
         #AE: disable 3.23 after talk at scrum: 11032026
-    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
-    env:
-      # Current LTS version on PyPI (TODO: keep the LTS version updated)
-      OQ_LTS_PYPI_VERSION: 3.23
       - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
