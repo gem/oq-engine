@@ -170,11 +170,10 @@ def count_ruptures(srcs, monitor):
     return {src.source_id: src.count_ruptures() for src in srcs}
 
 
-def get_computer(cmaker, proxy, sites, station_data, station_sids):
+def get_computer(cmaker, ebr, sites, station_data=(), station_sids=()):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
-    ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
     if len(station_sids):
@@ -214,8 +213,9 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr, cmon, umon):
         if len(sids) == 0:  # filtered away
             continue
         try:
+            ebr = proxy.to_ebr(cmaker.trt)
             computer = get_computer(
-                cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
+                cmaker, ebr, srcfilter.sitecol.complete.filtered(sids),
                 *stations)
         except FarAwayRupture:
             continue
@@ -436,8 +436,9 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
         sids = srcfilter.close_sids(proxy, cmaker.trt)
         if len(sids) == 0:  # filtered away
             raise FarAwayRupture
+        ebr = proxy.to_ebr(cmaker.trt)
         computer = get_computer(
-            cmaker, proxy, srcfilter.sitecol.complete.filtered(sids),
+            cmaker, ebr, srcfilter.sitecol.complete.filtered(sids),
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
