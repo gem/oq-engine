@@ -26,11 +26,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
         # engine-ref values, if manual run do not use the matrix
         # engine-ref: ["master", "engine-3.25"]
-        engine-ref: ${{ fromJson(
-          github.event_name == 'workflow_dispatch'
-            && format('["{0}"]', inputs.git-ref)
-            || '["master","engine-3.25"]'
-        ) }}
+        engine-ref: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master","engine-3.25"]') }}
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
