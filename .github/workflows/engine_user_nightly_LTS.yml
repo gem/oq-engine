@@ -1,0 +1,79 @@
+name: Nightly LTS Engine Demos on User mode
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: engine-3.23
+        required: true
+      debug_enabled:
+        type: boolean
+        description: 'SSH Connection '
+        required: false
+        default: false
+  schedule:
+    - cron: "00 2,10 * * *"
+
+jobs:
+  Scheduled_demos_and_WebUI:
+    name: OQ LTS Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    env:
+      # Current LTS version on PyPI (TODO: keep the LTS version updated)
+      OQ_LTS_PYPI_VERSION: 3.23
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install OQ 
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          set -x
+          if [[ "${{ github.event.inputs.git-ref }}" == " "  ]]; then
+      # Current LTS branch (TODO: keep the LTS version updated)
+              BRANCH="engine-3.23"
+          fi
+          curl -L -O https://github.com/gem/oq-engine/raw/${BRANCH}/install.py
+          # Resolve engine-ref to an installable version
+          python install.py user --version=${BRANCH} --venv $HOME/gh-venv-${BRANCH}
+      - name: Setup debugging session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 60
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - name: Run demos
+        run: |
+          source $HOME/gh-venv-${BRANCH}/bin/activate
+          set -x
+          oq engine --upgrade-db
+          oq --version
+          sleep 1
+          # Run all demos
+          cd $HOME/gh-venv-${BRANCH}/
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${BRANCH}/bin/run-demos.sh
+          oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
+          qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
+          bash -x ./run-demos.sh demos ${qa_tests_data_dir}
+          deactivate
+      - name: Test WebUI and run https calculation
+        run: |
+          source $HOME/gh-venv-${BRANCH}/bin/activate
+          set -x
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          # START WEBUI
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 7 # wait for 1/10 of the second before check again
+          done
+          echo "Test WebUI with curl "
+          sleep 1
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+          sleep 1

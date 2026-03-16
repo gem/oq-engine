@@ -6,6 +6,7 @@ on:
     workflows:
       - "Build Image Nightly for Docker"
       - "Nightly Engine Demos on User mode"
+      - "Nightly LTS Engine Demos on User mode"
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
       - "MacOS M1"
