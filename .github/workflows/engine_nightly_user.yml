@@ -52,8 +52,27 @@ jobs:
           fi
 
   Test_demos_and_webUI:
-    needs: Check_LTS_python
+    needs: check
     if: needs.check.outputs.status != 'skip'
+    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    outputs:
+      status : ${{ steps.jobstatus.outputs.status }}
+    env:
+      # Current LTS version on PyPI (TODO: keep the LTS version updated)
+      OQ_LTS_PYPI_VERSION: 3.23
+    strategy:
+      #fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11", "3.12", "3.13"]
+        # engine-ref values:
+        # - Git branches: master, engine-X.Y
+        # - current LTS released on PyPI (TODO: keep the LTS version updated)
+        # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed
+        # after the maxtrix
+        #engine-ref: ["master", "engine-3.23", "engine-3.25", "3.23"]
+        #AE: disable 3.23 after talk at scrum: 11032026
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     env:
