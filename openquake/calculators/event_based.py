@@ -209,14 +209,12 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr, cmon, umon):
         t0 = time.time()
         if proxy['mag'] < cmaker.min_mag:
             continue
-        sids = srcfilter.close_sids(proxy, cmaker.trt)
-        if len(sids) == 0:  # filtered away
+        sites = srcfilter.get_close_sites(proxy, cmaker.trt)
+        if sites is None:  # filtered away
             continue
         try:
             ebr = proxy.to_ebr(cmaker.trt)
-            computer = get_computer(
-                cmaker, ebr, srcfilter.sitecol.complete.filtered(sids),
-                *stations)
+            computer = get_computer(cmaker, ebr, sites, *stations)
         except FarAwayRupture:
             continue
         if stations and stations[0] is not None:  # conditioned GMFs
@@ -433,13 +431,12 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
-        sids = srcfilter.close_sids(proxy, cmaker.trt)
-        if len(sids) == 0:  # filtered away
+        sites = srcfilter.get_close_sites(proxy, cmaker.trt)
+        if sites is None:  # filtered away
             raise FarAwayRupture
         ebr = proxy.to_ebr(cmaker.trt)
         computer = get_computer(
-            cmaker, ebr, srcfilter.sitecol.complete.filtered(sids),
-            station_data, station_sites.sids)
+            cmaker, ebr, sites, station_data, station_sites.sids)
         G = len(cmaker.gsims)
         M = len(cmaker.imts)
         N = len(computer.sitecol)
