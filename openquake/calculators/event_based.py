@@ -187,14 +187,14 @@ def get_computer(cmaker, ebr, sites, station_data=(), station_sids=()):
                 cmaker, oq.correl_model, oq.cross_correl,
                 oq.ground_motion_correlation_params,
                 oq.number_of_ground_motion_fields,
-                oq._amplifier, oq._sec_perils)
+                oq._amplifier, oq.get_sec_perils())
         else:
             logging.warning('There are no stations!')
 
     return GmfComputer(
         ebr, sites, cmaker,
         oq.correl_model, oq.cross_correl,
-        oq._amplifier, oq._sec_perils)
+        oq._amplifier, oq.get_sec_perils())
 
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr, cmon, umon):

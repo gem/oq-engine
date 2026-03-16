@@ -1157,7 +1157,6 @@ class HazardCalculator(BaseCalculator):
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
-        oq._sec_perils = sec_perils
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
