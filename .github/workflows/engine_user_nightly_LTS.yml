@@ -37,7 +37,7 @@ jobs:
         run: |
           set -x
           if [[ "${{ github.event.inputs.git-ref }}" == " "  ]]; then
-      # Current LTS branch (TODO: keep the LTS version updated)
+          # Current LTS branch (TODO: keep the LTS version updated)
               BRANCH="engine-3.23"
           fi
           curl -L -O https://github.com/gem/oq-engine/raw/${BRANCH}/install.py
