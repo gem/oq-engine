@@ -12,13 +12,12 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "00 3,15 * * *"
+    - cron: "30 3,15 * * *"
 
 jobs:
   Run_demos_and_test_WebUI:
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    env:
     strategy:
       fail-fast: false
       matrix:
