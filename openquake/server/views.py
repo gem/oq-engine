@@ -31,7 +31,6 @@ import signal
 import zlib
 import re
 import psutil
-import time
 
 from threading import Event
 from unittest.mock import patch
