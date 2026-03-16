@@ -19,6 +19,8 @@ jobs:
   Run_demos_and_test_WebUI:
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    env: 
+      RUN_DEMOS_BRANCH: "${{ matrix.engine-ref }}"
     strategy:
       fail-fast: false
       matrix:
@@ -28,8 +30,6 @@ jobs:
         # engine-ref: ["master", "engine-3.25"]
         engine-ref: ${{ github.event_name == 'workflow_dispatch' && fromJson(format('["{0}"]', inputs.manual_ref)) || fromJson('["master", "engine-3.25"]') }}
     steps:
-      env: 
-        RUN_DEMOS_BRANCH: "${{ matrix.engine-ref }}"
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
