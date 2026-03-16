@@ -342,8 +342,7 @@ class GmfComputer(object):
         # Extract marginal standard deviations from the diagonal
         sigmas = numpy.sqrt(numpy.diag(cov_matrix))
         upper = level * sigmas
-        lower = -level * sigmas
-        return lower, upper
+        return -upper, upper
 
     def compute_all(self, mean_stds=None, max_iml=None,
                     cmon=Monitor(), umon=Monitor()):
