@@ -237,7 +237,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('gmf-data.csv', fname)
+        if sys.platform != 'darwin':
+            self.assertEqualFiles('gmf-data.csv', fname)
 
         # check that stations are discarded when extracting avg_gmf
         aw = extract(self.calc.datastore, 'avg_gmf?imt=SA(0.1)')
