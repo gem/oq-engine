@@ -1150,6 +1150,8 @@ class HazardCalculator(BaseCalculator):
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
+        self.add_sec_perils(oq)
+
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -1159,6 +1161,14 @@ class HazardCalculator(BaseCalculator):
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
                                  ).sort_values('return_period')
             self.datastore.create_df('post_loss_amplification', df)
+
+    def add_sec_perils(self, oq):
+        self.sec_perils = oq.get_sec_perils()
+        added = 0
+        for sp in self.sec_perils:
+            added += sp.prepare(self.sitecol) or 0  # add columns as needed
+        if added:
+            self.datastore['sitecol'] = self.sitecol
 
     def store_rlz_info(self, rel_ruptures):
         """
