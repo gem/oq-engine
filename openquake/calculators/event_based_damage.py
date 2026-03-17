@@ -116,7 +116,8 @@ def event_based_damage(df, oq, dstore, monitor):
                 for li in range(L):
                     for a in range(A):
                         for e in range(E):
-                            dd4[a, e, li, :D] = scientific.compose_dds(dd5[:, a, e, li, :D])
+                            dd4[a, e, li, :D] = scientific.compose_dds(
+                                dd5[:, a, e, li, :D])
                             dd4[a, e, li, D:] = dd5[:, a, e, li, D:].max(axis=0)
             else:
                 dd4 = dd5[0]
