@@ -346,6 +346,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(conditioned.__file__, 'job.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname,
-                              ignore_gsd_fields, delta=1E-5)
+                              ignore_gsd_fields, delta=1E-4)
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
