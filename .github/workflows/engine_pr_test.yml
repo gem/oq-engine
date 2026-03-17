@@ -34,7 +34,7 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          pip install -r requirements-py-aelo-linux64.txt
           oq engine --upgrade-db
 
           # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
@@ -294,6 +294,7 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
+          pip install -r requirements-py311-impact-linux64.txt
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log

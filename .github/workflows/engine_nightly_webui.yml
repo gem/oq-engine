@@ -61,6 +61,8 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
+          PY_VER=$(echo "${{ matrix.python-version }}" | tr -d '.')
+          pip install -r requirements-py${PY_VER}-impact-linux64.txt
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
