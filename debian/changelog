@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Correct the `_apply_subduction_trench_correction` term in 
+    Si and Midorikawa (1999)'s `NorthEastCorrection` subclasses
+    to use `rhypo` instead of `rrup`.
+
   [Anirudh Rao]
   * Support sampling from the truncated multivariate normal distribution
     using Paul Brunzema's implementation of the Botev (2017) algorithm

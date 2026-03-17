@@ -107,18 +107,18 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     return vf.get_rx_distance(ctx)
 
 
-def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
+def _apply_subduction_trench_correction(mean, x_tr, H, rhypo, imt):
     """
     Implement equation for subduction trench correction as described in
     equation 3.5.2-1, page 3-148 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
     if imt.string == 'PGV':
-        corr = np.maximum(1., 10 ** -0.012 * (rrup / 300.) ** 2.064)
+        corr = np.maximum(1., 10 ** -0.012 * (rhypo / 300.) ** 2.064)
         corr[H > 30] *= 10 ** ((-4.021E-5 * x_tr[H > 30] + 9.905e-3) *
                                (H[H > 30] - 30))
     else:
-        corr = np.maximum(1., 10 ** 0.13 * (rrup / 300.) ** 3.2)
+        corr = np.maximum(1., 10 ** 0.13 * (rhypo / 300.) ** 3.2)
         corr[H > 30] *= 10 ** ((-8.1E-5 * x_tr[H > 30] + 2.0e-2) *
                                (H[H > 30] - 30))
     return np.log(np.exp(mean) * corr)
