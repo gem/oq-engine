@@ -507,7 +507,13 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 
+# NB: called only once with the site collection in
+# calculators/base.py and then once without in event_based.py
 def prepare(self, sites=None):
+    """
+    Works by side effects adding fields "Fs" and "crit_accel" to the
+    site collection.
+    """
     if sites is not None:
         sites.add_col(
             "Fs",
