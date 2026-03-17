@@ -28,7 +28,7 @@ from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf, valid
 from openquake.hazardlib.source import (
-    NonParametricSeismicSource, check_complex_fault, PointSource)
+    NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)

@@ -113,8 +113,6 @@ import psutil
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.correlation_utils import (IterationLimitWarning,
-                                                      corr_clipped)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.const import StdDev
