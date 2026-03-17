@@ -18,7 +18,6 @@
 import numpy as np
 import unittest
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import RuptureContext, mean_stds
 from openquake.hazardlib.gsim.mgmpe.split_sigma_gmpe import SplitSigmaGMPE
 

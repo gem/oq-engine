@@ -235,11 +235,11 @@ class TruncatedMVN:
         a = 0.66  # threshold used in MATLAB implementation
         # three cases to consider
         # case 1: a<lb<ub
-        I = lb > a
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.ntail(tl, tu)
+        I_ = lb > a
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.ntail(tl, tu)
         # case 2: lb<ub<-a
         J = ub < -a
         if np.any(J):
@@ -247,11 +247,11 @@ class TruncatedMVN:
             tu = -lb[J]
             x[J] = - self.ntail(tl, tu)
         # case 3: otherwise use inverse transform or accept-reject
-        I = ~(I | J)
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.tn(tl, tu)
+        I_ = ~(I_ | J)
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.tn(tl, tu)
         return x
 
     def tn(self, lb, ub, tol=2):
@@ -262,36 +262,36 @@ class TruncatedMVN:
         sw = tol  # controls switch between methods, threshold can be tuned for maximum speed for each platform
         x = np.empty_like(lb)
         # case 1: abs(ub-lb)>tol, uses accept-reject from randn
-        I = abs(ub - lb) > sw
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.trnd(tl, tu)
+        I_ = abs(ub - lb) > sw
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.trnd(tl, tu)
 
         # case 2: abs(u-l)<tol, uses inverse-transform
-        I = ~I
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
+        I_ = ~I_
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
             pl = special.erfc(tl / np.sqrt(2)) / 2
             pu = special.erfc(tu / np.sqrt(2)) / 2
-            x[I] = np.sqrt(2) * special.erfcinv(2 * (pl - (pl - pu) * self.random_state.rand(len(tl))))
+            x[I_] = np.sqrt(2) * special.erfcinv(2 * (pl - (pl - pu) * self.random_state.rand(len(tl))))
         return x
 
     def trnd(self, lb, ub):
         # uses acceptance rejection to simulate from truncated normal
         x = self.random_state.randn(len(lb))  # sample normal
         test = (x < lb) | (x > ub)
-        I = np.where(test)[0]
-        d = len(I)
+        I_ = np.where(test)[0]
+        d = len(I_)
         while d > 0:  # while there are rejections
-            ly = lb[I]
-            uy = ub[I]
+            ly = lb[I_]
+            uy = ub[I_]
             y = self.random_state.randn(len(uy))  # resample
             idx = (y > ly) & (y < uy)  # accepted
-            x[I[idx]] = y[idx]
-            I = I[~idx]
-            d = len(I)
+            x[I_[idx]] = y[idx]
+            I_ = I_[~idx]
+            d = len(I_)
         return x
 
     def ntail(self, lb, ub):
@@ -305,15 +305,15 @@ class TruncatedMVN:
         f = np.expm1(c - ub ** 2 / 2)
         x = c - np.log(1 + self.random_state.rand(n) * f)  # sample using Rayleigh
         # keep list of rejected
-        I = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
-        d = len(I)
+        I_ = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
+        d = len(I_)
         while d > 0:  # while there are rejections
-            cy = c[I]
-            y = cy - np.log(1 + self.random_state.rand(d) * f[I])
+            cy = c[I_]
+            y = cy - np.log(1 + self.random_state.rand(d) * f[I_])
             idx = (self.random_state.rand(d) ** 2 * y) < cy  # accepted
-            x[I[idx]] = y[idx]  # store the accepted
-            I = I[~idx]  # remove accepted from the list
-            d = len(I)
+            x[I_[idx]] = y[idx]  # store the accepted
+            I_ = I_[~idx]  # remove accepted from the list
+            d = len(I_)
         return np.sqrt(2 * x)  # this Rayleigh transform can be delayed till the end
 
     def psy(self, x, mu):
@@ -329,7 +329,7 @@ class TruncatedMVN:
     def get_gradient_function(self):
         # wrapper to avoid dependancy on self
 
-        def gradpsi(y, L, l, u):
+        def gradpsi(y, L, l_, u):
             # implements gradient of psi(x) to find optimal exponential twisting, returns also the Jacobian
             # NOTE: assumes scaled 'L' with zero diagonal
             d = len(u)
@@ -340,7 +340,7 @@ class TruncatedMVN:
 
             # compute now ~l and ~u
             c[1:d] = L[1:d, :] @ x
-            lt = l - mu - c
+            lt = l_ - mu - c
             ut = u - mu - c
 
             # compute gradients avoiding catastrophic cancellation
@@ -377,14 +377,14 @@ class TruncatedMVN:
 
         for j in perm.copy():
             pr = np.ones_like(z) * np.inf  # compute marginal prob.
-            I = np.arange(j, self.dim)  # search remaining dimensions
+            I_ = np.arange(j, self.dim)  # search remaining dimensions
             D = np.diag(self.cov)
-            s = D[I] - np.sum(L[I, 0:j] ** 2, axis=1)
+            s = D[I_] - np.sum(L[I_, 0:j] ** 2, axis=1)
             s[s < 0] = self.eps
             s = np.sqrt(s)
-            tl = (self.lb[I] - L[I, 0:j] @ z[0:j]) / s
-            tu = (self.ub[I] - L[I, 0:j] @ z[0:j]) / s
-            pr[I] = lnNormalProb(tl, tu)
+            tl = (self.lb[I_] - L[I_, 0:j] @ z[0:j]) / s
+            tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
+            pr[I_] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
             k = np.argmin(pr)
 
@@ -420,11 +420,11 @@ def lnNormalProb(a, b):
     # computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'
     p = np.zeros_like(a)
     # case b>a>0
-    I = a > 0
-    if np.any(I):
-        pa = lnPhi(a[I])
-        pb = lnPhi(b[I])
-        p[I] = pa + np.log1p(-np.exp(pb - pa))
+    I_ = a > 0
+    if np.any(I_):
+        pa = lnPhi(a[I_])
+        pb = lnPhi(b[I_])
+        p[I_] = pa + np.log1p(-np.exp(pb - pa))
     # case a<b<0
     idx = b < 0
     if np.any(idx):
@@ -432,11 +432,11 @@ def lnNormalProb(a, b):
         pb = lnPhi(-b[idx])
         p[idx] = pb + np.log1p(-np.exp(pa - pb))
     # case a < 0 < b
-    I = (~I) & (~idx)
-    if np.any(I):
-        pa = special.erfc(-a[I] / np.sqrt(2)) / 2  # lower tail
-        pb = special.erfc(b[I] / np.sqrt(2)) / 2  # upper tail
-        p[I] = np.log1p(-pa - pb)
+    I_ = (~I_) & (~idx)
+    if np.any(I_):
+        pa = special.erfc(-a[I_] / np.sqrt(2)) / 2  # lower tail
+        pb = special.erfc(b[I_] / np.sqrt(2)) / 2  # upper tail
+        p[I_] = np.log1p(-pa - pb)
     return p
 
 

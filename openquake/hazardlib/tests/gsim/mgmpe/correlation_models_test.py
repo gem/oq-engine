@@ -87,24 +87,24 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
         avg_periods = np.array([1, 2, 4])
         # Assertions:
         with self.assertRaises(ValueError) as e:
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, TEST_RHO_ARRAYS, TEST_PERIODS
             )
 
-        assert (f"Period (4.000) is greater than the maximum allowable "
-                f"period for the correlation model (3.000).") == \
+        assert ("Period (4.000) is greater than the maximum allowable "
+                "period for the correlation model (3.000).") == \
                 str(e.exception)
 
     def test_init_with_small_period(self):
         avg_periods = np.array([0.5, 2, 2.5])
         # Assertions:
         with self.assertRaises(ValueError) as e:
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, TEST_RHO_ARRAYS, TEST_PERIODS
             )
 
-        assert (f"Period (0.500) is less than the minimum allowable "
-                f"period for the correlation model (1.000).") == \
+        assert ("Period (0.500) is less than the minimum allowable "
+                "period for the correlation model (1.000).") == \
                 str(e.exception)
 
     def test_init_with_no_periods(self):
@@ -128,7 +128,7 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError) as e:
             # it goes into build_correlation_matrix nothing happens 
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, {}, TEST_PERIODS
             )
         assert str(e.exception) == \
@@ -140,7 +140,7 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
         
         with self.assertRaises(TypeError) as e:
             # it goes into build_correlation_matrix nothing happens 
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, 1.0, TEST_PERIODS
             )
         assert str(e.exception) == \
