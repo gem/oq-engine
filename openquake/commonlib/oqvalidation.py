@@ -861,6 +861,16 @@ truncation_level:
   Example: *truncation_level = 0* to compute median GMFs.
   Default: no default
 
+truncation_level_between:
+  Truncation level used for between-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
+
+truncation_level_within:
+  Truncation level used for within-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
+
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
   Example: *uniform_hazard_spectra = true*.
@@ -1193,6 +1203,10 @@ class OqParam(valid.ParamSet):
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
+    truncation_level_between = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
+    truncation_level_within = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
@@ -1268,32 +1282,19 @@ class OqParam(valid.ParamSet):
             inp['site_model'] = [inp.pop('sites')]
             self.prefer_global_site_params = True
 
-    def __init__(self, **names_vals):
-        if '_log' in names_vals:  # called from engine
-            del names_vals['_log']
-        self.fix_legacy_names(names_vals)
-        super().__init__(**names_vals)
-        self.check_siteid()
-        hc0 = ('hazard_calculation_id' in names_vals and
-               names_vals['hazard_calculation_id'] == 0)
-        if hc0:
-            self.hazard_calculation_id = 0  # fake calculation_id
-        if 'job_ini' not in self.inputs:
-            self.inputs['job_ini'] = '<in-memory>'
-        if 'calculation_mode' not in names_vals:
-            self.raise_invalid('Missing calculation_mode')
-        if 'region_constraint' in names_vals:
-            if 'region' in names_vals:
-                self.raise_invalid('You cannot have both region and '
-                                   'region_constraint')
-            logging.warning(
-                'region_constraint is obsolete, use region instead')
-            self.region = valid.wkt_polygon(
-                names_vals.pop('region_constraint'))
-        if ('intensity_measure_types_and_levels' in names_vals and
-                'intensity_measure_types' in names_vals):
-            logging.warning('Ignoring intensity_measure_types since '
-                            'intensity_measure_types_and_levels is set')
+    def _set_truncation_levels(self, _names_vals):
+        """
+        Each split parameter inherits from truncation_level if it is unset.
+        """
+        tl = getattr(self, 'truncation_level', None)
+        if tl is valid.Param.NODEFAULT:
+            tl = None
+        if self.truncation_level_between is None:
+            self.truncation_level_between = tl
+        if self.truncation_level_within is None:
+            self.truncation_level_within = tl
+
+    def _set_hazard_imtls(self, names_vals):
         if 'iml_disagg' in names_vals:
             # normalize things like SA(0.10) -> SA(0.1)
             self.iml_disagg = {str(from_string(imt)): [float(iml)]
@@ -1316,18 +1317,49 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(
-                self.intensity_measure_types, [0])
+            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
+
+    def _normalize_minimum_intensity(self):
+        dic = {}
+        for imt, iml in self.minimum_intensity.items():
+            if imt == 'default':
+                dic[imt] = iml
+            else:
+                # normalize IMT, for instance SA(1.) => SA(1.0)
+                dic[from_string(imt).string] = iml
+        self.minimum_intensity = dic
+
+    def __init__(self, **names_vals):
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
+        self.fix_legacy_names(names_vals)
+        super().__init__(**names_vals)
+        self._set_truncation_levels(names_vals)
+        self.check_siteid()
+        hc0 = ('hazard_calculation_id' in names_vals and
+               names_vals['hazard_calculation_id'] == 0)
+        if hc0:
+            self.hazard_calculation_id = 0  # fake calculation_id
+        if 'job_ini' not in self.inputs:
+            self.inputs['job_ini'] = '<in-memory>'
+        if 'calculation_mode' not in names_vals:
+            self.raise_invalid('Missing calculation_mode')
+        if 'region_constraint' in names_vals:
+            if 'region' in names_vals:
+                self.raise_invalid('You cannot have both region and '
+                                   'region_constraint')
+            logging.warning(
+                'region_constraint is obsolete, use region instead')
+            self.region = valid.wkt_polygon(
+                names_vals.pop('region_constraint'))
+        if ('intensity_measure_types_and_levels' in names_vals and
+                'intensity_measure_types' in names_vals):
+            logging.warning('Ignoring intensity_measure_types since '
+                            'intensity_measure_types_and_levels is set')
+        self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
-            dic = {}
-            for imt, iml in self.minimum_intensity.items():
-                if imt == 'default':
-                    dic[imt] = iml
-                else:
-                    # normalize IMT, for instance SA(1.) => SA(1.0)
-                    dic[from_string(imt).string] = iml
-            self.minimum_intensity = dic
+            self._normalize_minimum_intensity()
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
@@ -1402,9 +1434,13 @@ class OqParam(valid.ParamSet):
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if 'multi_peril' not in self.inputs and not hasattr(
-                    self, 'truncation_level'):
-                self.raise_invalid("Missing truncation_level")
+            if ('multi_peril' not in self.inputs and
+                    getattr(self, 'truncation_level', None) is None and
+                    self.truncation_level_between is None and
+                    self.truncation_level_within is None):
+                self.raise_invalid(
+                    "Missing truncation_level or "
+                    "truncation_level_between/truncation_level_within")
 
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
@@ -1944,6 +1980,12 @@ class OqParam(valid.ParamSet):
             cls = getattr(cross_correlation, self.cross_correlation)
         except AttributeError:
             return None
+        if issubclass(cls, cross_correlation.CrossCorrelationBetween):
+            tlb = self.truncation_level_between
+            if tlb is None:
+                tlb = (self.truncation_level
+                       if self.truncation_level is not None else 99.)
+            return cls(tlb)
         return cls()
 
     @property
@@ -2080,7 +2122,7 @@ class OqParam(valid.ParamSet):
         In presence of a correlation model the truncation level must be nonzero
         """
         if self.ground_motion_correlation_model:
-            return self.truncation_level != 0
+            return self.truncation_level_within != 0
         else:
             return True
 

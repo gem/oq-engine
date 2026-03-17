@@ -52,6 +52,24 @@ The parameters unique to the scenario calculator are described below:
 - ``station_data_file``: this is an optional parameter used to specify the observed intensity values for one or more intensity measure types at a set of ground motion recording stations. See example file in Table 2.1.
 - ``gsim``: this parameter indicates the name of a ground motion prediction equation. Note: There are other option to indicate the ground motion models, see the sections below.
 
+*****************
+Truncation levels
+*****************
+
+For scenario hazard calculations, truncation of the residual sampling can be
+controlled separately for between-event and within-event residuals:
+
+- ``truncation_level_between``: truncation level for between-event residuals.
+- ``truncation_level_within``: truncation level for within-event residuals.
+
+Otherwise, if only ``truncation_level`` is specified, the
+engine assumes::
+
+	truncation_level_between = truncation_level
+	truncation_level_within = truncation_level
+
+If both new parameters are provided, they take precedence for GMF sampling.
+
 Note that each of the GSIMs specified for a conditioned GMF calculation must provide the within-event and between-event 
 standard deviations separately. If a GSIM of interest provides only the total standard deviation, a (non-ideal) 
 workaround might be for the user to specify the ratio between the within-event and between-event standard deviations, 
