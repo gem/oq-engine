@@ -315,7 +315,7 @@ def get_args(dstore):
     return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
 
 
-def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
+def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     """
     :returns: list of starmap arguments
     """
@@ -370,11 +370,6 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # NB: must be done before instantiating the ContextMaker
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
-    sec_perils = oq.get_sec_perils()
-    if sec_perils:
-        for sp in sec_perils:
-            sp.prepare(sitecol)
-        dstore['sitecol'] = sitecol
 
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
@@ -402,7 +397,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
 
 
 # NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
+def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
                       dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -461,7 +456,8 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol,
             'building arguments', measuremem=True, h5=dstore.hdf5):
         station_sids = () if station_sites is None else station_sites.sids
         allargs = get_allargs(
-            oq, sitecol, assetcol, (station_data, station_sids), dstore)
+            oq, sitecol, assetcol, sec_perils,
+            (station_data, station_sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
@@ -842,6 +838,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     oq.hazard_curves_from_gmfs is False):
                 return {}
 
+        if not hasattr(self, 'sec_perils'):
+            self.add_sec_perils(oq)
         if oq.ground_motion_fields and 'gmf_data' not in dstore:
             # if GMFs not already created by store_gmfs_from_shakemap
             prim_imts = oq.get_primary_imtls()
@@ -856,7 +854,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rup0 = dstore['ruptures'][0]
         smap = starmap_from_rups(
             event_based, oq, rup0, self.sitecol,
-            getattr(self, 'assetcol', None), dstore)
+            getattr(self, 'assetcol', None), self.sec_perils, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc

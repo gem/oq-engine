@@ -513,19 +513,20 @@ def prepare(self, sites):
     """
     Works by side effects adding fields "Fs" and "crit_accel" to the
     site collection. Must be called once.
+
+    :returns: the number of columns that were added
     """
-    sites.add_col(
-        "Fs",
-        float,
-        infinite_slope_fs(
+    add1 = sites.add_col(
+        "Fs", float, infinite_slope_fs(
             slope=sites.slope,
             cohesion=sites.cohesion_mid,
             friction_angle=sites.friction_mid,
             saturation_coeff=sites.saturation,
             soil_dry_density=sites.dry_density,
             slab_thickness=sites.slab_thickness))
-    sites.add_col(
+    add2 = sites.add_col(
         "crit_accel", float, critical_accel(sites.Fs, sites.slope))
+    return add1 + add2
 
 
 class Jibson2007ALandslides(SecondaryPeril):
