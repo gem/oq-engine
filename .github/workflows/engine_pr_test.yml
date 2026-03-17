@@ -167,7 +167,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-restricted-python${{ matrix.python-version }}-{{ matrix.os }}
+          name: playwright-artifacts-restricted-python${{ matrix.python-version }}-${{ matrix.os }}
           path: test-results
           retention-days: 7
 
@@ -254,7 +254,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
+          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-${{ matrix.os }}
           path: test-results
           retention-days: 7
 
