@@ -688,6 +688,7 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
+
 # determine the number of cores to use; for instance on a system with
 # 12 threads and 8 GB of RAM, tot_cores = min(12, 8) = 8
 cpu_count = psutil.cpu_count()
@@ -739,9 +740,13 @@ class Starmap(object):
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
+            # disable signal handler for SIGCHLD to cleanup worker pool
+            # we reinstate later
+            child_handler = signal.signal(signal.SIGCHLD, signal.SIG_IGN)
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
+            signal.signal(signal.SIGCHLD, child_handler)
             del cls.pool
             cls.pids = []
         elif hasattr(cls, 'executor'):
