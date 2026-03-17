@@ -318,11 +318,12 @@ def _expand3(arrayN3, maxsize):
     return U32(out)
 
 
-def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
+def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
     :param sids: array of site indices
+    :param secperils: list of secondary peril instances
     :param stations: empty pair or (station_data, station_sitecol)
     :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
@@ -343,7 +344,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
     for dic in event_based.event_based(
-            rups, cmaker, sids, stations, hdf5path, monitor):
+            rups, cmaker, sids, secperils, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             loss3 = {'aids': [], 'bids': [], 'loss': []}

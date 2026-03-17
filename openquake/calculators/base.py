@@ -654,7 +654,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 
-    def import_perils(self):  # called in pre_execute
+    def import_perils(self):  # called in pre_execute, relevant for volcanic
         """
         Read the hazard fields as csv files, associate them to the sites
         and create suitable `gmf_data` and `events`.
@@ -1145,19 +1145,11 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
 
-        # manage secondary perils
-        sec_perils = oq.get_sec_perils()
-        for sp in sec_perils:
-            sp.prepare(self.sitecol)  # add columns as needed
-        if sec_perils:
-            self.datastore['sitecol'] = self.sitecol
-
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
-        oq._sec_perils = sec_perils
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
