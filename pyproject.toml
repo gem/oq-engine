@@ -2,6 +2,64 @@
 requires = ["setuptools >= 69.0"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "openquake.engine"
+dynamic = ["readme", "version"]
+description = "OpenQuake Engine: A software for Seismic Hazard and Risk Analysis"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0" }
+authors = [
+    { name = "GEM Foundation", email = "info@openquake.org" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+# Core dependencies (simplified based on common engine requirements)
+# Note: oq-engine often uses requirements-py3x.txt files for exact pinning
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.7",
+    "pandas>=1.3",
+    "h5py>=3.0",
+    "django>=4.2",
+    "psutil",
+    "requests",
+    "pyzmq",
+    "h3>=4.4",
+]
+
+[project.urls]
+Homepage = "https://openquake.org"
+Repository = "https://github.com/gem/oq-engine"
+Documentation = "https://docs.openquake.org"
+
+[project.scripts]
+oq = "openquake.commands.__main__:main"
+
+[tool.setuptools]
+packages = ["openquake"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+version = {attr = "openquake.baselib.__version__"}
+
+[tool.setuptools.package-data]
+"*" = ["*.cfg", "*.sql", "*.html", "*.css", "*.js", "*.csv", "*.onnx",".onnx.gz", "demos/**"]
+
+# If you use specific dev tools like pytest or black
+[tool.pytest.ini_options]
+testpaths = ["openquake/qa_tests"]
+python_files = "test_*.py"
+
 [tool.ruff]
 line-length = 79
 lint.select = ["NPY201"]
