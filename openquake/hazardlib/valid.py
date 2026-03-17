@@ -512,8 +512,8 @@ def namelists(value):
     [['a1'], ['b_2'], ['1c']]
     """
     lists = []
-    for string in value.split(';'):
-        names = string.replace(',', ' ').split()
+    for strng in value.split(';'):
+        names = strng.replace(',', ' ').split()
         for n in names:
             try:
                 source_id(n)

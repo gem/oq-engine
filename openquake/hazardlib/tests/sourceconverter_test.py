@@ -19,7 +19,6 @@ import os
 import io
 import unittest.mock
 import numpy
-from openquake.baselib import hdf5
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.sourceconverter import update_source_model, \

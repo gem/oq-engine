@@ -455,7 +455,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         return interped_rhos
     
     def _check_valid_residual_type(self, residual_type):
-        if not residual_type in self.valid_residual_types:
+        if residual_type not in self.valid_residual_types:
             raise ValueError(f"Invalid type of residual ({residual_type}) for "
                              f"correlation model.")
     

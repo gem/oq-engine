@@ -65,7 +65,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     def test_against_oq(self):
         # Convolution Vs OQ
 
-        xlim = [1e-2, 5]
 
         # Convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
