@@ -1145,6 +1145,13 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
 
+        # manage secondary perils
+        sec_perils = oq.get_sec_perils()
+        for sp in sec_perils:
+            sp.prepare(self.sitecol)  # add columns as needed
+        if sec_perils:
+            self.datastore['sitecol'] = self.sitecol
+
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:

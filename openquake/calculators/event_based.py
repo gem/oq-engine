@@ -374,7 +374,6 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     if sec_perils:
         for sp in sec_perils:
             sp.prepare(sitecol)
-        dstore['sitecol'] = sitecol
 
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
