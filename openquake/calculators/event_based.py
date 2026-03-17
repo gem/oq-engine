@@ -371,8 +371,11 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
     sec_perils = oq.get_sec_perils()
-    for sp in sec_perils:
-        sp.prepare()
+    if sec_perils:
+        for sp in sec_perils:
+            sp.prepare(sitecol)
+        dstore['sitecol'] = sitecol
+
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'

@@ -509,24 +509,23 @@ supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 # NB: called only once with the site collection in
 # calculators/base.py and then once without in event_based.py
-def prepare(self, sites=None):
+def prepare(self, sites):
     """
     Works by side effects adding fields "Fs" and "crit_accel" to the
-    site collection.
+    site collection. Must be called once.
     """
-    if sites is not None:
-        sites.add_col(
-            "Fs",
-            float,
-            infinite_slope_fs(
-                slope=sites.slope,
-                cohesion=sites.cohesion_mid,
-                friction_angle=sites.friction_mid,
-                saturation_coeff=sites.saturation,
-                soil_dry_density=sites.dry_density,
-                slab_thickness=sites.slab_thickness))
-        sites.add_col(
-            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
+    sites.add_col(
+        "Fs",
+        float,
+        infinite_slope_fs(
+            slope=sites.slope,
+            cohesion=sites.cohesion_mid,
+            friction_angle=sites.friction_mid,
+            saturation_coeff=sites.saturation,
+            soil_dry_density=sites.dry_density,
+            slab_thickness=sites.slab_thickness))
+    sites.add_col(
+        "crit_accel", float, critical_accel(sites.Fs, sites.slope))
 
 
 class Jibson2007ALandslides(SecondaryPeril):
