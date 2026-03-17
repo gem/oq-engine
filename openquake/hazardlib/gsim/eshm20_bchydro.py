@@ -202,7 +202,7 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -240,7 +240,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -278,7 +278,7 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -323,7 +323,7 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -361,7 +361,7 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -399,7 +399,7 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     """
 
     # Requires Vs30 and distance to the volcanic front
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf', 'backarc'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
