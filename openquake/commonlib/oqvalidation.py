@@ -994,6 +994,7 @@ def check_increasing(dframe, *columns):
 class OqParam(valid.ParamSet):
     _amplifier = None
     _input_files = ()  # set in get_oqparam
+    _sec_perils = ()
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',

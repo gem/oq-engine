@@ -30,6 +30,7 @@ def main(calc_id: int, calculation_mode=None, pdb=False):
         oq.calculation_mode = calculation_mode
     oq.hazard_calculation_id = calc_id
     oq._amplifier = None
+    oq._sec_perils = ()
     log, dstore = datastore.create_job_dstore(oq.description, parent)
     with dstore, log:
         calc = base.calculators(oq, log.calc_id)

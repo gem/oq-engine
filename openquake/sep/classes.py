@@ -110,7 +110,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         return instances
 
     @abc.abstractmethod
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         """Add attributes to sites"""
 
     @abc.abstractmethod
@@ -132,7 +132,7 @@ class HazusLiquefaction(SecondaryPeril):
     def __init__(self, map_proportion_flag=True):
         self.map_proportion_flag = map_proportion_flag
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -172,7 +172,7 @@ class HazusDeformation(SecondaryPeril):
             }
         self.pga_threshold_table = pga_threshold_table
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -213,7 +213,7 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
         self.cti_coeff = cti_coeff
         self.vs30_coeff = vs30_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -253,7 +253,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
         self.dcdr_coeff = dcdr_coeff
         self.precip_coeff = precip_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -298,7 +298,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
         self.wtd_coeff = wtd_coeff
         self.precip_coeff = precip_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -343,7 +343,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
         self.wtd_coeff = wtd_coeff
         self.precip_coeff = precip_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -400,7 +400,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         self.wtd_coeff = wtd_coeff
         self.precip_coeff = precip_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -456,7 +456,7 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         self.cti_coeff = cti_coeff
         self.vs30_coeff = vs30_coeff
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         pass
 
     def compute(self, mag, imt_gmf, sites):
@@ -479,7 +479,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
     peril = 'liquefaction'
     outputs = ["LiqOccur", "LiqProb"]
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         model_file = "liquefaction/data/todorovic_silva_2022/" + \
             "todorovic_silva_2022.onnx.gz"
         model_path = path.join(path.dirname(__file__), model_file)
@@ -507,27 +507,6 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 
-# NB: called only once with the site collection in
-# calculators/base.py and then once without in event_based.py
-def prepare(self, sites):
-    """
-    Works by side effects adding fields "Fs" and "crit_accel" to the
-    site collection. Must be called once.
-    """
-    sites.add_col(
-        "Fs",
-        float,
-        infinite_slope_fs(
-            slope=sites.slope,
-            cohesion=sites.cohesion_mid,
-            friction_angle=sites.friction_mid,
-            saturation_coeff=sites.saturation,
-            soil_dry_density=sites.dry_density,
-            slab_thickness=sites.slab_thickness))
-    sites.add_col(
-        "crit_accel", float, critical_accel(sites.Fs, sites.slope))
-
-
 class Jibson2007ALandslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements of landslides
@@ -535,7 +514,6 @@ class Jibson2007ALandslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
 
     def __init__(
             self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
@@ -543,6 +521,23 @@ class Jibson2007ALandslides(SecondaryPeril):
         self.c2 = c2
         self.c3 = c3
         self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -565,7 +560,6 @@ class Jibson2007BLandslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
 
     def __init__(
         self,
@@ -580,6 +574,23 @@ class Jibson2007BLandslides(SecondaryPeril):
         self.c3 = c3
         self.c4 = c4
         self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -600,7 +611,23 @@ class ChoRathje2022Landslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -622,7 +649,23 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -641,7 +684,23 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -651,8 +710,7 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
                           gmf, mag, sites.crit_accel,)
                 out.append(Disp)
         return out      
-
-
+        
 class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements from pga (in terms of ratio with
@@ -660,7 +718,23 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -679,7 +753,23 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     '''    
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -713,7 +803,22 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
         
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -744,7 +849,24 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
+        
+        print(sites)
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -762,7 +884,23 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
     '''
     peril = 'landslide'
     outputs = ["Disp", "DispProb"]
-    prepare = prepare
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -954,12 +1092,10 @@ class Volcanic(SecondaryPeril):
     peril = 'volcanic'
     outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
 
-    def prepare(self, sites=None):
+    def prepare(self, sites):
         """
         Import the CSV files for the volcanic subperils
         """
-        if sites is None:
-            return
         for peril in self.oq.inputs['multi_peril']:
             assert peril in self.outputs, peril
         self.fname_by_peril = self.oq.inputs['multi_peril']

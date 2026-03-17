@@ -271,7 +271,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
                                  (chk, rup, sur))
             cls._code[rup, sur] = chk
             code2cls[chk] = rup, sur
-            BaseRupture.str2code[f'{rup.__name__} {sur.__name__}'] = chk
+            BaseRupture.str2code['%s %s' % (rup.__name__, sur.__name__)] = chk
         return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,

@@ -515,12 +515,12 @@ class SourceFilter(object):
             raise
         return bbox
 
-    def get_close_sites(self, source, trt=None):
+    def get_close_sites(self, source):
         """
         Returns the sites within the integration distance from the source,
         or None.
         """
-        sids = self.close_sids(source, trt)
+        sids = self.close_sids(source)
         if len(sids):
             return self.sitecol.complete.filtered(sids)
 
