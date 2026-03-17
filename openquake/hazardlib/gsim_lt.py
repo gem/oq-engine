@@ -34,7 +34,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
-    duplicated, BASE183, group_array, cached_property, AccumDict)
+    duplicated, BASE183, group_array, AccumDict)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

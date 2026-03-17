@@ -194,7 +194,8 @@ class TaperedGRMFD(BaseMFD):
         s = 1.0 - self.beta
         x_lo = 10.0 ** (1.5 * (m_lo - self.corner_mag))
         x_hi = 10.0 ** (1.5 * (m_hi - self.corner_mag))
-        U = lambda x: _upper_gamma(s, x) + np.exp(-x) * (x **(1.0 - self.beta))
+        def U(x):
+            return _upper_gamma(s, x) + np.exp(-x) * (x **(1.0 - self.beta))
         return U(x_lo) - U(x_hi)
 
     def _get_total_moment_rate(self) -> float:
