@@ -341,9 +341,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                               fname, delta=1E-5)
 
     def test_conditioned_stations(self):
-        self.run_calc(conditioned.__file__, 'job.ini')
+        self.run_calc(conditioned.__file__, 'job.ini', concurrent_tasks='8')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
         self.assertEqualFiles('expected/avg_gmf.csv', fname,
                               ignore_gsd_fields, delta=1E-4)
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
