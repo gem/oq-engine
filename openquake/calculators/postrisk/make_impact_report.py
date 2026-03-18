@@ -797,14 +797,28 @@ def main(dstore, adm_level=1, threshold_deg=None):
     mag = oqparam.rupture_dict['mag']
     lon = oqparam.rupture_dict['lon']
     lat = oqparam.rupture_dict['lat']
-    if (oqparam.number_of_ground_motion_fields == 1
-            and abs(oqparam.truncation_level) < 1e-8):
-        no_uncertainty = True
-    else:
-        no_uncertainty = False
+    # If the ground motion is fully deterministic, we suppress uncertainty
+    # ranges in the report and show only the central (point) estimate.
+    no_uncertainty = (
+        oqparam.number_of_ground_motion_fields == 1
+        and abs(oqparam.truncation_level) < 1e-8
+    )
     hypocenter = (lon, lat)
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
-    losses_df = pd.DataFrame(avg_losses.mean)
+    # Use the median (quantile-0.5) as the representative point estimate for the
+    # spatial loss maps, consistent with how _get_impact_summary_data displays the
+    # central value.  Fall back to the mean only if the median is unavailable
+    # (e.g. a calculation run without quantile outputs).
+    if hasattr(avg_losses, 'quantile-0.5') and avg_losses['quantile-0.5'] is not None:
+        losses_df = pd.DataFrame(avg_losses['quantile-0.5'])
+    elif hasattr(avg_losses, 'mean') and avg_losses.mean is not None:
+        logging.warning(
+            "Median losses not available; falling back to mean for loss maps.")
+        losses_df = pd.DataFrame(avg_losses.mean)
+    else:
+        raise RuntimeError(
+            "avg_losses has neither 'quantile' nor 'mean' attribute; "
+            "cannot build losses DataFrame.")
     rupdic = oqparam.rupture_dict
     try:
         event_name = rupdic['description']
