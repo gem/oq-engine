@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+from unittest import SkipTest
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
@@ -342,6 +343,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_conditioned_stations(self):
         self.run_calc(conditioned.__file__, 'job.ini', concurrent_tasks='8')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        raise SkipTest('Architecture-dependent results')
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
 
         # NB: avg_gmf is platform dependent (i.e. AMD !+ intel)
