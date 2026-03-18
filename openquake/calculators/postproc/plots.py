@@ -564,6 +564,20 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     fig, ax = plt.subplots(figsize=figsize)
 
+    if basemap_path is not None:
+        try:
+            import rasterio
+        except ImportError as exc:
+            raise RuntimeError(
+                "In order to plot raster basemaps, 'rasterio' should be installed"
+                ) from exc
+        from rasterio.plot import show
+        basemap_path = Path(basemap_path)
+        with rasterio.open(basemap_path) as src:
+            if src.crs != df.crs:
+                raise ValueError("Raster CRS does not match vector CRS")
+            show(src, ax=ax, alpha=0.8)
+
     # Plot each class with its corresponding color
     for i, color in enumerate(colors):
         subset = df[df["class"] == i]
@@ -590,20 +604,6 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
-
-    if basemap_path is not None:
-        try:
-            import rasterio
-        except ImportError as exc:
-            raise RuntimeError(
-                "In order to plot raster basemaps, 'rasterio' should be installed"
-                ) from exc
-        from rasterio.plot import show
-        basemap_path = Path(basemap_path)
-        with rasterio.open(basemap_path) as src:
-            if src.crs != df.crs:
-                raise ValueError("Raster CRS does not match vector CRS")
-            show(src, ax=ax, alpha=0.8)
 
     if x_limits:
         ax.set_xlim(x_limits)
