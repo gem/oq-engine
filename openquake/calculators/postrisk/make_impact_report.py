@@ -165,6 +165,8 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
         (aggrisk_tags['loss_type'].isin(mapping.values()))
     ]
     if rows.empty:
+        logging.info(
+            f"No losses estimated for country {iso3}. Skipping report")
         return None
     summary_data = {}
     for label, lt in mapping.items():
@@ -178,6 +180,9 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
     # Return None if all mean losses are approximately zero
     if all(r.lossmea < 1e-5 for _, r in
            rows.loc[rows['loss_type'].isin(mapping.values())].iterrows()):
+        logging.info(
+            f"Estimated losses for country {iso3} are negligible"
+            f" (all lossmea < 1e-5). Skipping report.")
         return None
     return summary_data
 
