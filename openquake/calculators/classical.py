@@ -25,7 +25,7 @@ import operator
 import numpy
 import pandas
 from PIL import Image
-from openquake.baselib import parallel, hdf5, config, python3compat
+from openquake.baselib import parallel, hdf5, config, general
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
@@ -529,7 +529,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.csm = read_csm(parent, self.full_lt)
             self.datastore['source_info'] = parent['source_info'][:]
             oq.mags_by_trt = {
-                trt: python3compat.decode(dset[:])
+                trt: general.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
             if 'source_data' in parent and not os.environ.get('OQ_TASK_NO'):
                 # execute finished correctly, repeat post-processing only

@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, python3compat, config
+from openquake.baselib import hdf5, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs, split
 from openquake.risklib.scientific import (
@@ -95,7 +95,7 @@ def debugprint(ln, asset_loss_table, adf):
     """
     if '+' in ln or ln == 'claim':
         df = asset_loss_table.set_index('aid').rename(columns={'loss': ln})
-        df['asset_id'] = python3compat.decode(adf.id[df.index].to_numpy())
+        df['asset_id'] = general.decode(adf.id[df.index].to_numpy())
         del df['variance']
         print(df)
 

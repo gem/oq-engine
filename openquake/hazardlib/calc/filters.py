@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import ast
-import sys
 import logging
 import operator
 from contextlib import contextmanager
@@ -26,7 +25,6 @@ import pandas
 from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
-from openquake.baselib.python3compat import raise_
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
@@ -131,11 +129,9 @@ def context(src):
     """
     try:
         yield
-    except Exception:
-        etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, err)
-        raise_(etype, msg, tb)
+    except Exception as err:
+        raise err.__class__('An error occurred with source id=%s. Error: %s'
+                            % (src.source_id, err)) from None
 
 
 def getdefault(dic_with_default, key):

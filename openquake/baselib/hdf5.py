@@ -38,7 +38,7 @@ with warnings.catch_warnings():
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)

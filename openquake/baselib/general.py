@@ -47,7 +47,6 @@ import numpy
 import pandas
 from decorator import decorator
 from openquake.baselib import __version__, config
-from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -489,6 +488,51 @@ def check_extension(fnames):
         _, ext = os.path.splitext(fname)
         if ext != extension:
             raise NameError(f'{fname} does not end with {ext}')
+
+
+########################## string utilities ##############################
+
+def encode(val):
+    """
+    Encode a string assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: bytes
+    """
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # encode a sequence of strings
+        return [encode(v) for v in val]
+    elif isinstance(val, str):
+        return val.encode('utf-8')
+    else:
+        # assume it was an already encoded object
+        return val
+
+
+def decode(val):
+    """
+    Decode an object assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: a unicode object
+    """
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        return [decode(v) for v in val]
+    elif hasattr(val, 'decode'):
+        # assume it is an encoded bytes object
+        return val.decode('utf-8')
+    else:
+        return str(val)
+
+
+# NB: using numpy.round would be advisable, but it would break
+# plenty of tests, including the AELO tests, so it is a no go
+def round(x, d=0):
+    """
+    Python2-compatible round function
+    """
+    p = 10 ** d
+    return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
 
 def engine_version():

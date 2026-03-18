@@ -28,11 +28,11 @@ from scipy.interpolate import interp1d
 import numpy as np
 
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib.const import TRT, StdDev
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE
-from openquake.baselib.python3compat import round
+from openquake.baselib.general import round
 
 _get_mean = CallableDict()
 FLOAT = (float, np.float32, np.float64)

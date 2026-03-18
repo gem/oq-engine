@@ -31,7 +31,7 @@ import toml
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
     duplicated, BASE183, group_array, AccumDict)

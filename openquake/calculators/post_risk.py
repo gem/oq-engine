@@ -23,7 +23,7 @@ import itertools
 import numpy
 import pandas
 
-from openquake.baselib import general, parallel, python3compat
+from openquake.baselib import general, parallel
 from openquake.hazardlib.stats import weighted_quantiles
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
@@ -213,7 +213,7 @@ def get_src_loss_table(dstore, loss_id):
     rlz_ids = evs['rlz_id']
     srcidx = dict(ruptures[['id', 'source_id']])
     srcids = [srcidx[rup_id] for rup_id in evs['rup_id']]
-    srcs = python3compat.decode(source_id[srcids])
+    srcs = general.decode(source_id[srcids])
     acc = general.AccumDict(accum=0)
     for src, rlz_id, loss in zip(srcs, rlz_ids, alt.loss.to_numpy()):
         acc[src] += loss * ws[rlz_id]
