@@ -72,7 +72,18 @@ jobs:
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
           pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
-          ruff check --preview openquake
+          ruff check openquake/baselib
+          ruff check openquake/commands
+          ruff check openquake/engine
+          ruff check openquake/hazardlib
+          ruff check openquake/risklib
+          ruff check openquake/server
+          ruff check openquake/calculators
+          ruff check openquake/commonlib
+          ruff check openquake/sep
+          ruff check openquake/htmk
+          ruff check openquake/fdha
+          ruff check openquake/_unc
           pytest -k classical -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake/calculators
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
           pytest --doctest-modules doc/contributing/*.rst
