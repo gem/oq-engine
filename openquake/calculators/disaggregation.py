@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
-from openquake.baselib.python3compat import encode
+from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp

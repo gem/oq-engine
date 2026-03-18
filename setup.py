@@ -28,7 +28,7 @@ if sys.version_info < (3, 11):
 def generate_data_files(source_dir):
     # Helper function for demos
     data_files_list = []
-    for target_dir, dirs, files in os.walk(source_dir):
+    for target_dir, _dirs, files in os.walk(source_dir):
         if files:
             source_files = [os.path.join(target_dir, f) for f in files]
             data_files_list.append((target_dir, source_files))

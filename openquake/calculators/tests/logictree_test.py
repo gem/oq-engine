@@ -20,7 +20,7 @@ import sys
 import unittest
 import numpy
 from openquake.baselib import general, config
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     get_rmap, calc_mean_rates, to_rates)

@@ -611,7 +611,7 @@ class BranchSet(object):
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
         if (uncertainty_type not in NOAPPLY_UNCERTAINTIES and
-                not uncertainty_type in apply_uncertainty):
+                uncertainty_type not in apply_uncertainty):
             raise NotImplementedError(
                 f'apply_uncertainty: missing {uncertainty_type}')
         self.filters = filters or {}

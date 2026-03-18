@@ -27,7 +27,7 @@ from playwright.sync_api import expect
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_0(
         application_mode, authenticated_page, user, default_usgs_id):
-    page = ImpactPageLevel0(authenticated_page)
+    ImpactPageLevel0(authenticated_page)
     # TODO: check that:
     #       * there is no input form
     #       * only shared calculations are visible

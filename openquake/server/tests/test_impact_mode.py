@@ -41,7 +41,7 @@ CALC_RUN_TIMEOUT = 120
 
 
 def get_email_content(directory, search_string):
-    for root, dirs, files in os.walk(directory):
+    for root, _dirs, files in os.walk(directory):
         for filename in files:
             file_path = os.path.join(root, filename)
             with open(file_path, 'r', encoding='utf-8') as file:
@@ -116,7 +116,7 @@ class ImpactModeTestCase(django.test.TestCase):
     @classmethod
     def wait(cls, job_id):
         # wait until the calculation stops
-        for i in range(CALC_RUN_TIMEOUT):
+        for _ in range(CALC_RUN_TIMEOUT):
             time.sleep(1)  # sec
             # NOTE: is_running is True both for 'submitted' and 'executing'
             #       job status
@@ -179,7 +179,7 @@ class ImpactModeTestCase(django.test.TestCase):
                     [job_id] = json.loads(resp.content.decode('utf8'))
                 except Exception:
                     raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content)
+                        b'Invalid JSON response: %r' % resp.content) from None
                 job_dic = self.wait(job_id)
                 tb = self.get_json('%s/traceback' % job_id)
                 if job_dic is None:

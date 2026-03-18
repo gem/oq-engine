@@ -19,7 +19,7 @@
 import logging
 import numpy
 import pandas
-from openquake.baselib import sap, hdf5, python3compat, parallel, general
+from openquake.baselib import sap, hdf5, general, parallel
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.logictree import FullLogicTree
@@ -113,7 +113,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
         imls = imls_by_sid[sid]
         dic = get_rel_source_ids(dstore, imts, imls, sid, threshold=.1)
         for imt, ids in dic.items():
-            rel_ids_by_imt[sid][imt] = ids = python3compat.decode(sorted(ids))
+            rel_ids_by_imt[sid][imt] = ids = general.decode(sorted(ids))
             logging.info('(%.1f,%.1f) relevant source for %s: %s',
                          lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
@@ -194,7 +194,7 @@ def main(dstore, csm, imts, imls_by_sid):
                               (oq.inputs['job_ini'], imt))
 
     parent = dstore.parent or dstore
-    oq.mags_by_trt = {trt: python3compat.decode(dset[:])
+    oq.mags_by_trt = {trt: general.decode(dset[:])
                       for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     sites = [site for site in sitecol if site.id in imls_by_sid]

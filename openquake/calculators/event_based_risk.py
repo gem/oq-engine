@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, python3compat, config
+from openquake.baselib import hdf5, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs, split
 from openquake.risklib.scientific import (
@@ -95,7 +95,7 @@ def debugprint(ln, asset_loss_table, adf):
     """
     if '+' in ln or ln == 'claim':
         df = asset_loss_table.set_index('aid').rename(columns={'loss': ln})
-        df['asset_id'] = python3compat.decode(adf.id[df.index].to_numpy())
+        df['asset_id'] = general.decode(adf.id[df.index].to_numpy())
         del df['variance']
         print(df)
 
@@ -318,11 +318,12 @@ def _expand3(arrayN3, maxsize):
     return U32(out)
 
 
-def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
+def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
     :param sids: array of site indices
+    :param secperils: list of secondary peril instances
     :param stations: empty pair or (station_data, station_sitecol)
     :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
@@ -343,7 +344,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
     for dic in event_based.event_based(
-            rups, cmaker, sids, stations, hdf5path, monitor):
+            rups, cmaker, sids, secperils, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             loss3 = {'aids': [], 'bids': [], 'loss': []}
@@ -511,9 +512,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             rup0 = self.datastore['ruptures'][0]
+            if not hasattr(self, 'sec_perils'):
+                self.add_sec_perils(oq)
             smap = event_based.starmap_from_rups(
                 ebrisk, oq, rup0, self.sitecol, self.assetcol,
-                self.datastore, self.save_tmp)
+                self.sec_perils, self.datastore, self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(

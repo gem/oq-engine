@@ -38,7 +38,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
                              rupture_mesh_spacing=10.,
                              investigation_time=1.)
         # This provides a SourceModel
-        self.sg = getattr(nrml.to_python(testfile, sc), 'src_groups')
+        self.sg = nrml.to_python(testfile, sc).src_groups
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.2, 0.3, 1.0]})
         gsim = SadighEtAl1997()
         self.gsim_by_trt = {"Active Shallow Crust": gsim}

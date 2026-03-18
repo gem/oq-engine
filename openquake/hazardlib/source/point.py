@@ -28,7 +28,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
-    ParametricProbabilisticRupture, PointRupture)
+    ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 

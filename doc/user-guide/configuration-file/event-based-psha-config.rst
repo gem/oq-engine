@@ -34,6 +34,24 @@ model to be used for the generation of ground motion fields.::
 The acceptable flags for the parameter ``vs30_clustering`` are ``False`` and ``True``, with a capital ``F`` and ``T`` 
 respectively. ``0`` and ``1`` are also acceptable flags.
 
+*****************
+Truncation levels
+*****************
+
+For event-based PSHA calculations, truncation of residual sampling in GMFs can
+be controlled with:
+
+- ``truncation_level_between``: truncation level for between-event residuals.
+- ``truncation_level_within``: truncation level for within-event residuals.
+
+Otherwise, if only ``truncation_level`` is specified, the
+engine assumes::
+
+	truncation_level_between = truncation_level
+	truncation_level_within = truncation_level
+
+If both new parameters are provided, they are used for GMF sampling.
+
 ******
 output
 ******

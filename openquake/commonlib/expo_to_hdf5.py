@@ -20,7 +20,6 @@ import os
 import time
 import logging
 import operator
-from collections import Counter
 import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general, performance

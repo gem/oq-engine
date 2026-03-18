@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, writers, general, node
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
 from openquake.risklib import scientific
 from openquake.commonlib import readinput
