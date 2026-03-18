@@ -29,16 +29,6 @@ from scipy import special, optimize
 
 EPS = 10e-15
 
-def safe_argmin(array):
-    """
-    When an array is constant (in terms of 32 bit floats) returns 0;
-    otherwise return argmin. This solves the platform-dependence
-    """
-    arr32 = array.astype(np.float32)
-    if len(np.unique(arr32)) == 1:
-        return 0
-    return np.argmin(arr32)
-
 
 class TruncatedMVN:
     r"""
@@ -430,7 +420,7 @@ class TruncatedMVN:
             tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
             pr[I_] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
-            k = safe_argmin(pr)
+            k = np.argmin(pr)
 
             # flip dimensions k-->j
             jk = [j, k]
