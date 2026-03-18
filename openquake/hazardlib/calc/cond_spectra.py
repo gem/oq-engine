@@ -155,7 +155,7 @@ def cond_spectra(cmaker, srcs, sitecol, imt_ref, imls):
     """
     imti = list(cmaker.imtls).index(imt_ref)
     ctx = cmaker.from_srcs(srcs, sitecol)
-    tom = getattr(srcs[0], 'temporal_occurrence_model')  # assume all equal
+    tom = srcs[0].temporal_occurrence_model  # assume all equal
     out0 = get_cs_out(cmaker, ctx, imti, imls, tom)  # g -> MNOP
     mean = numpy.mean([out0[g] for g in out0], axis=0)  # MNOP
     out = get_cs_out(cmaker, ctx, imti, imls, tom, mean)  # g -> MNOP

@@ -44,7 +44,7 @@ django.setup()
 try:
     User = get_user_model()
 except RuntimeError:
-    raise unittest.SkipTest('Use Django to run such tests')
+    raise unittest.SkipTest('Use pytest-django to run such tests') from None
 
 
 class EngineServerAeloModeTestCase(EngineServerTestCase):
@@ -97,7 +97,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     js = json.loads(resp.content.decode('utf8'))
                 except Exception:
                     raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content)
+                        b'Invalid JSON response: %r' % resp.content) from None
                 job_id = js['job_id']
                 self.wait()
                 if failure_reason:
