@@ -81,7 +81,7 @@ class GenericGMPEAvgSaTablesTestCaseClemettAsc(BaseGSIMTestCase):
     """
     GSIM_CLASS = GenericGmpeAvgSA
 
-    def test_all(self):
+    def test_with_SA(self):
         self.check(
             'generic_avgsa/generic_gmpe_avgsa_clemettasc_mean.csv',
             'generic_avgsa/generic_gmpe_avgsa_clemettasc_stddev.csv',
@@ -89,7 +89,16 @@ class GenericGMPEAvgSaTablesTestCaseClemettAsc(BaseGSIMTestCase):
             gmpe_name="KothaEtAl2020ESHM20",
             avg_periods=[0.3, 0.4, 0.5],
             corr_func="clemett_asc")
-
+        
+    def test_with_PGA(self):
+        self.check(
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_w_pga_mean.csv',
+            'generic_avgsa/generic_gmpe_avgsa_clemettasc_w_pga_stddev.csv',
+            max_discrep_percentage=0.01,
+            gmpe_name="KothaEtAl2020ESHM20",
+            avg_periods=[0.0, 0.1, 0.2],
+            corr_func="clemett_asc")      
+        
 
 class GmpeIndirectAvgSAGeneralTestCase(unittest.TestCase):
     """General test case for the GmpeIndirectAvgSA, specifically verifying

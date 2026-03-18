@@ -21,8 +21,10 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import os
 import sys
 import abc
+import pathlib
 import inspect
 import warnings
 import functools
@@ -113,6 +115,26 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
+def fix_toml(v):
+    """
+    The kwargs dictionary of a GSIM can contain Python objects convertible
+    to TOML (arrays, CoeffsTables) and we implement the conversion here.
+    """
+    if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
+        return os.path.basename(v)
+    if isinstance(v, (numpy.float32, numpy.float64)):
+        return float(v)
+    elif isinstance(v, numpy.ndarray):
+        return list(v)
+    elif hasattr(v, 'to_dict'):
+        return v.to_dict()
+    elif hasattr(v, 'items'):
+        return {k1: fix_toml(v1) for k1, v1 in v.items()}
+    elif isinstance(v, list):
+        return [fix_toml(x) for x in v]
+    return v
+
+
 OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
@@ -159,8 +181,8 @@ class MetaGSIM(abc.ABCMeta):
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         self = type.__call__(cls, **kwargs)
-        if not hasattr(self, 'kwargs'):
-            self.kwargs = kwargs
+        self.kwargs = kwargs
+        self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table

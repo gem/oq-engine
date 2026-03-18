@@ -83,10 +83,10 @@ class GodaAtkinson2009Test(unittest.TestCase):
 
         rng= numpy.random.default_rng(42)
         eps = self.cm.get_inter_eps(self.imts, 2, rng)  # a 4x2 matrix
-        aac(eps, numpy.array([[-1.131419,  0.316332],
-                              [-0.182555,  1.594268],
-                              [-0.121286,  2.252899],
-                              [ 0.162968,  2.217294]]), rtol=1e-5)
+        aac(eps, numpy.array([[-0.247138,  1.398272],
+                              [-0.043084,  1.014166],
+                              [-0.161839,  1.791450],
+                              [-0.429684,  2.086792]]), rtol=2e-5)
 
 
 class NoCrossCorrelationTest(unittest.TestCase):

@@ -31,10 +31,10 @@ import toml
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
-    duplicated, BASE183, group_array, cached_property, AccumDict)
+    duplicated, BASE183, group_array, AccumDict)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -382,7 +382,8 @@ class GsimLogicTree(object):
             for gsims in self.values.values():
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
-                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
+                    # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
+                    # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None

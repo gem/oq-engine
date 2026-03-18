@@ -73,9 +73,8 @@ class Comparator(object):
                 sids = [int(sid) for sid in open(samplesites).read().split()]
             else:
                 if len(self.sitecol) > numsamples:
-                    numpy.random.seed(numsamples)
-                    sids = numpy.random.choice(
-                        len(self.sitecol), numsamples, replace=False)
+                    rng = numpy.random.default_rng(numsamples)
+                    sids = rng.choice(len(self.sitecol), numsamples, replace=0)
         return numpy.sort(sids)
 
     def getdata(self, what, imt, sids, rtol, atol):
@@ -184,11 +183,14 @@ class Comparator(object):
 
 def compare_rates(calc_1: int, calc_2: int):
     """
-    Compare the ruptures affecting the given site ID as pandas DataFrames
+    Compare the rates as pandas DataFrames
     """
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('_rates', ['gid', 'sid', 'lid'])
         df2 = ds2.read_df('_rates', ['gid', 'sid', 'lid'])
+    if len(df1) != len(df2):
+        print(f'{len(df1)=}, {len(df2)=}')
+        return
     delta = numpy.abs(df1 - df2).to_numpy().max()
     print('Maximum difference in the rates =%s' % delta)
 
@@ -355,17 +357,6 @@ def compare_events(calc_ids: int):
     print(df)
 
 
-def delta(a, b):
-    """
-    :returns: the relative differences between a and b; zeros return zeros
-    """
-    c = a + b
-    ok = c != 0.
-    res = numpy.zeros_like(a)
-    res[ok] = numpy.abs(a[ok] - b[ok]) / c[ok]
-    return res
-
-
 def to_float(float_like):
     """
     Convert strings containing numbers to floats or raise a ValueError
@@ -512,7 +503,7 @@ def read_org_df(fname):
     return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
 
 
-def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
+def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     """
     compare_asce('asce', 'expected') exits with 0
     if all file are equal within the tolerance, otherwise with 1.

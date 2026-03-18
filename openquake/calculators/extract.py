@@ -33,7 +33,7 @@ from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, performance, writers
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
@@ -618,7 +618,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code num_sites num_ruptures'
+    fields = 'source_id code num_ctxs num_ruptures'
     info = dstore['source_info'][()][fields.split()]
     arrays = []
     if source_ids is not None:
@@ -1044,7 +1044,8 @@ def extract_avg_losses_by(dstore, tagname):
     :returns: an aggregate DataFrame with fields (tagname, loss_type, ...)
     """
     oq = dstore['oqparam']
-    assert oq.collect_rlzs  # there is a single realization in avg_losses-rlzs
+    R = len(base.get_weights(oq, dstore))
+    assert R == 1 or oq.collect_rlzs  # single realization in avg_losses-rlzs
     assetcol = dstore['assetcol']
     out = {tagname: getattr(assetcol.tagcol, tagname)[1:]}
     for lt, dset in dstore['avg_losses-rlzs'].items():
@@ -1258,10 +1259,7 @@ def extract_avg_gmf(dstore, what):
     try:
         complete = dstore['complete']
     except KeyError:
-        if dstore.parent:
-            complete = dstore.parent['sitecol'].complete
-        else:
-            complete = dstore['sitecol'].complete
+        complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
@@ -1376,7 +1374,7 @@ def extract_relevant_events(dstore, dummy=None):
     if 'relevant_events' not in dstore:
         all_events.sort(order='id')
         return all_events
-    rel_events = dstore['relevant_events'][:]
+    rel_events = dstore['relevant_events']['id']
     events = all_events[rel_events]
     events.sort(order='id')
     return events
@@ -1620,11 +1618,19 @@ def extract_ebruptures(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/ebruptures?min_mag=6
     """
     qdict = parse(what)
-    rups = dstore['ruptures'][:]
+    try:
+        rups = dstore['filtered_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
+    if 'relevant_events' in dstore:
+        rupids = numpy.unique(dstore['relevant_events']['rup_id'])
+        ok = numpy.isin(rups['id'], rupids)
+    else:
+        ok = numpy.full(len(rups), True)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
         rups = rups[rups['mag'] >= min_mag]
-    return rups
+    return rups[ok], rups[~ok]
 
 
 # used in the rupture exporter and in the plugin

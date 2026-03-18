@@ -31,7 +31,7 @@ import numpy
 import pandas
 import itertools
 
-from openquake.baselib import __version__, hdf5, python3compat, config
+from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
     DictArray, AccumDict, cached_property, engine_version)
@@ -482,6 +482,11 @@ max:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
+max_nodes_network:
+   Restrict the maximum number of nodes in a network
+   Example: *max_nodes_network = 100*
+   Default: 1000
+
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
   Example: *max_potential_gmfs = 1E9*.
@@ -610,11 +615,21 @@ pointsource_distance:
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
   Example: *postproc_func = compute_mrd.main*
-  Default: 'dummy.main' (no postprocessing)
+  Default: '' (no postprocessing)
 
 postproc_args:
   Specify the arguments to be passed to the postprocessing function
   Example: *postproc_args = {'imt': 'PGA'}*
+  Default: {} (no arguments)
+
+postrisk_func:
+  Specify a postrisk function in calculators/postrisk.
+  Example: *postrisk_func = pdf_report.main*
+  Default: '' (no postprocessing)
+
+postrisk_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postrisk_args = {}*
   Default: {} (no arguments)
 
 prefer_global_site_params:
@@ -801,11 +816,16 @@ spatial_correlation:
 specific_assets:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 split_sources:
   INTERNAL
 
-split_by_gsim:
-  INTERNAL
+split_time:
+  After how much time starts splitting classical tasks
+  Example: *split_time = 600*
+  Default: None, meaning the split_time is automatically determined
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
@@ -840,6 +860,16 @@ truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
   Default: no default
+
+truncation_level_between:
+  Truncation level used for between-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
+
+truncation_level_within:
+  Truncation level used for within-event residual sampling in GMFs.
+  If not specified, it is inferred from truncation_level.
+  Default: None
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -896,7 +926,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'workflow']
 
 COST_TYPES = [
-    'structural', 'nonstructural', 'contents', 'business_interruption']
+    'structural', 'nonstructural', 'contents',
+    'business_interruption', 'embodied_carbon']
 ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
@@ -961,6 +992,7 @@ def check_increasing(dframe, *columns):
 
 
 class OqParam(valid.ParamSet):
+    _amplifier = None
     _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
@@ -1086,6 +1118,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
+    max_nodes_network = valid.Param(valid.positiveint, 1000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -1107,8 +1140,10 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
+    postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    postrisk_func = valid.Param(valid.mod_func, '')
+    postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
@@ -1160,12 +1195,17 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
+    truncation_level_between = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
+    truncation_level_within = valid.Param(
+        valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
@@ -1241,32 +1281,19 @@ class OqParam(valid.ParamSet):
             inp['site_model'] = [inp.pop('sites')]
             self.prefer_global_site_params = True
 
-    def __init__(self, **names_vals):
-        if '_log' in names_vals:  # called from engine
-            del names_vals['_log']
-        self.fix_legacy_names(names_vals)
-        super().__init__(**names_vals)
-        self.check_siteid()
-        hc0 = ('hazard_calculation_id' in names_vals and
-               names_vals['hazard_calculation_id'] == 0)
-        if hc0:
-            self.hazard_calculation_id = 0  # fake calculation_id
-        if 'job_ini' not in self.inputs:
-            self.inputs['job_ini'] = '<in-memory>'
-        if 'calculation_mode' not in names_vals:
-            self.raise_invalid('Missing calculation_mode')
-        if 'region_constraint' in names_vals:
-            if 'region' in names_vals:
-                self.raise_invalid('You cannot have both region and '
-                                   'region_constraint')
-            logging.warning(
-                'region_constraint is obsolete, use region instead')
-            self.region = valid.wkt_polygon(
-                names_vals.pop('region_constraint'))
-        if ('intensity_measure_types_and_levels' in names_vals and
-                'intensity_measure_types' in names_vals):
-            logging.warning('Ignoring intensity_measure_types since '
-                            'intensity_measure_types_and_levels is set')
+    def _set_truncation_levels(self, _names_vals):
+        """
+        Each split parameter inherits from truncation_level if it is unset.
+        """
+        tl = getattr(self, 'truncation_level', None)
+        if tl is valid.Param.NODEFAULT:
+            tl = None
+        if self.truncation_level_between is None:
+            self.truncation_level_between = tl
+        if self.truncation_level_within is None:
+            self.truncation_level_within = tl
+
+    def _set_hazard_imtls(self, names_vals):
         if 'iml_disagg' in names_vals:
             # normalize things like SA(0.10) -> SA(0.1)
             self.iml_disagg = {str(from_string(imt)): [float(iml)]
@@ -1289,18 +1316,49 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(
-                self.intensity_measure_types, [0])
+            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
+
+    def _normalize_minimum_intensity(self):
+        dic = {}
+        for imt, iml in self.minimum_intensity.items():
+            if imt == 'default':
+                dic[imt] = iml
+            else:
+                # normalize IMT, for instance SA(1.) => SA(1.0)
+                dic[from_string(imt).string] = iml
+        self.minimum_intensity = dic
+
+    def __init__(self, **names_vals):
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
+        self.fix_legacy_names(names_vals)
+        super().__init__(**names_vals)
+        self._set_truncation_levels(names_vals)
+        self.check_siteid()
+        hc0 = ('hazard_calculation_id' in names_vals and
+               names_vals['hazard_calculation_id'] == 0)
+        if hc0:
+            self.hazard_calculation_id = 0  # fake calculation_id
+        if 'job_ini' not in self.inputs:
+            self.inputs['job_ini'] = '<in-memory>'
+        if 'calculation_mode' not in names_vals:
+            self.raise_invalid('Missing calculation_mode')
+        if 'region_constraint' in names_vals:
+            if 'region' in names_vals:
+                self.raise_invalid('You cannot have both region and '
+                                   'region_constraint')
+            logging.warning(
+                'region_constraint is obsolete, use region instead')
+            self.region = valid.wkt_polygon(
+                names_vals.pop('region_constraint'))
+        if ('intensity_measure_types_and_levels' in names_vals and
+                'intensity_measure_types' in names_vals):
+            logging.warning('Ignoring intensity_measure_types since '
+                            'intensity_measure_types_and_levels is set')
+        self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
-            dic = {}
-            for imt, iml in self.minimum_intensity.items():
-                if imt == 'default':
-                    dic[imt] = iml
-                else:
-                    # normalize IMT, for instance SA(1.) => SA(1.0)
-                    dic[from_string(imt).string] = iml
-            self.minimum_intensity = dic
+            self._normalize_minimum_intensity()
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
@@ -1315,7 +1373,6 @@ class OqParam(valid.ParamSet):
         self.check_gsim_lt()
         self.set_loss_types()
         self.check_risk()
-        self.check_ebrisk()
 
     def raise_invalid(self, msg):
         """
@@ -1376,9 +1433,13 @@ class OqParam(valid.ParamSet):
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if 'multi_peril' not in self.inputs and not hasattr(
-                    self, 'truncation_level'):
-                self.raise_invalid("Missing truncation_level")
+            if ('multi_peril' not in self.inputs and
+                    getattr(self, 'truncation_level', None) is None and
+                    self.truncation_level_between is None and
+                    self.truncation_level_within is None):
+                self.raise_invalid(
+                    "Missing truncation_level or "
+                    "truncation_level_between/truncation_level_within")
 
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
@@ -1410,18 +1471,13 @@ class OqParam(valid.ParamSet):
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
 
-    def check_ebrisk(self):
-        # check specific to ebrisk
-        if self.calculation_mode == 'ebrisk':
-            if self.ground_motion_fields:
-                print('ground_motion_fields overridden to false',
-                      file=sys.stderr)
-                self.ground_motion_fields = False
-            if self.hazard_curves_from_gmfs:
-                self.raise_invalid(
-                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
-
     def check_hazard(self):
+        # check for sites, site_model and hc_id
+        if (self.sites and 'site_model' in self.inputs and
+                self.hazard_calculation_id):
+            self.raise_invalid('You cannot specify both sites and site_model '
+                               'in the presence of a parent calculation')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and not self.sites):
@@ -1562,12 +1618,16 @@ class OqParam(valid.ParamSet):
                 imts.add(im.string)
 
         for gsim in gsims:
-            if hasattr(gsim, 'weight'):
-                continue  # disable the check
-            restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-            if restrict_imts:
-                names = set(cls.__name__ for cls in restrict_imts)
-                invalid_imts = ', '.join(imts - names)
+            params = getattr(gsim, 'params', {})
+            ok_imts = {cls.__name__ for cls in gsim.
+                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if 'conditional_gmpe' in params:
+                ok_imts |= set(params['conditional_gmpe'])
+            elif hasattr(gsim, 'gmpe'):
+                ok_imts |= {cls.__name__ for cls in gsim.gmpe.
+                           DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+            if ok_imts:
+                invalid_imts = ', '.join(imts - ok_imts)
                 if invalid_imts:
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %
@@ -1734,7 +1794,7 @@ class OqParam(valid.ParamSet):
         for imt in risk_imts - seco_imts:
             # LSD is considered a primary IMT because it is directly
             # computed by two GMPEs, Youd and Zang, Zhao
-            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI', 'LSD')):
+            if imt.startswith(('AvgSA', 'PGA', 'PGV', 'SA', 'MMI', 'LSD')):
                 pass  # ground shaking IMT
             else:
                 raise ValueError(f'The risk functions contain {imt} which is '
@@ -1919,6 +1979,12 @@ class OqParam(valid.ParamSet):
             cls = getattr(cross_correlation, self.cross_correlation)
         except AttributeError:
             return None
+        if issubclass(cls, cross_correlation.CrossCorrelationBetween):
+            tlb = self.truncation_level_between
+            if tlb is None:
+                tlb = (self.truncation_level
+                       if self.truncation_level is not None else 99.)
+            return cls(tlb)
         return cls()
 
     @property
@@ -1938,8 +2004,7 @@ class OqParam(valid.ParamSet):
             if not self.quantiles:
                 self.quantiles = [0.05, 0.50, 0.95]
             if not self.aggregate_by:
-                # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
-                self.aggregate_by = [['ID_2']]
+                self.aggregate_by = [['ID_0'], ['ID_2']]
         return yes
 
     @property
@@ -2056,7 +2121,7 @@ class OqParam(valid.ParamSet):
         In presence of a correlation model the truncation level must be nonzero
         """
         if self.ground_motion_correlation_model:
-            return self.truncation_level != 0
+            return self.truncation_level_within != 0
         else:
             return True
 
@@ -2378,6 +2443,8 @@ class OqParam(valid.ParamSet):
 
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'limit_states' in dic:
+            dic['limit_states'] = ' '.join(dic['limit_states'])
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])
@@ -2396,8 +2463,8 @@ class OqParam(valid.ParamSet):
             # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
-                name = python3compat.decode(name_)
-                literal = python3compat.decode(literal_)
+                name = general.decode(name_)
+                literal = general.decode(literal_)
                 if '.' in name:
                     k1, k2 = name.split('.', 1)
                     dd[k1][k2] = ast.literal_eval(literal)
@@ -2406,7 +2473,7 @@ class OqParam(valid.ParamSet):
             vars(self).update(dd)
         else:
             # for version >= 3.12
-            vars(self).update(json.loads(python3compat.decode(array)))
+            vars(self).update(json.loads(general.decode(array)))
 
         Idist = calc.filters.IntegrationDistance
         if hasattr(self, 'maximum_distance') and not isinstance(
@@ -2431,25 +2498,28 @@ def _rel_fnames(obj, base):
         return str(dic)
 
 
+# called by get_checksum32
 def to_ini(key, val):
     """
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, _name = pathlib.Path(val['job_ini']).parts
+        dic = val.copy()
+        job_ini = dic.pop('job_ini')
+        *base, _name = pathlib.Path(job_ini).parts
         fnames = []
-        for k, v in val.items():
-            if k == 'job_ini':
-                continue
-            elif isinstance(v, str):
+        for k, v in dic.items():
+            if isinstance(v, str):
                 fnames.append(v)
             elif isinstance(v, list):
                 fnames.extend(v)
             elif isinstance(v, dict):
                 fnames.extend(v.values())
-        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
-                         for k, v in val.items()
-                         if not k.startswith('_'))
+        out = []
+        for k, v in dic.items():
+            if not k.startswith('_'):
+                out.append(f'{k}_file = {_rel_fnames(v, base)}')
+        return '\n'.join(out)
     elif key == 'sites':
         sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
         return f"sites = {sites}"

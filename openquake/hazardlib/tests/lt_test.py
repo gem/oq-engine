@@ -117,8 +117,7 @@ class CollapseTestCase(unittest.TestCase):
         self.clt = lt.CompositeLogicTree([bs0, bs1])
 
         # setup sitecol, srcfilter, gsims, imtls
-        self.sitecol = site.SiteCollection(
-            [site.Site(Point(0, 0), numpy.array([760.]))])
+        self.sitecol = site.SiteCollection([site.Site(Point(0, 0), 760.)])
         self.gsims = [valid.gsim('ToroEtAl2002')]
         self.imtls = DictArray({'PGA': valid.logscale(.01, 1, 5)})
         self.sg = sourceconverter.SourceGroup(ps.tectonic_region_type, [ps])
@@ -421,8 +420,8 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
         paths = ltssc.sample_paths(10)
-        self.assertEqual(paths, ['BC.H', 'BADI', 'CB.J', 'EADG', 'BAEG',
-                                 'CAEH', 'BB.H', 'CAEG', 'AC.I', 'BAEH'])
+        self.assertEqual(paths, ['EAFI', 'AC.I', 'AAEJ', 'CC.G', 'CAFI',
+                                 'EAFI', 'EAEG', 'BAFJ', 'BAEG', 'AAEI'])
 
     def test_build3(self):
         # test with applyToSources for the BCHydro project
@@ -503,5 +502,5 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         rlzs = list(clt)
         paths = [''.join(rlz.lt_path) for rlz in rlzs]
         cnt = collections.Counter(paths)
-        assert cnt == {'A': 68, 'B': 32}
+        assert cnt == {'A': 64, 'B': 36}
 

@@ -38,11 +38,10 @@ source_info_dt = numpy.dtype([
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
-    ('num_sites', numpy.uint64),       # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('weight', numpy.float32),         # 6
-    ('mutex_weight', numpy.float64),   # 7
-    ('trti', numpy.uint8),             # 8
+    ('num_ctxs', numpy.uint64),        # 4
+    ('est_ctxs', numpy.uint64),        # 5
+    ('num_ruptures', numpy.uint32),    # 6
+    ('weight', numpy.float32),         # 7
 ])
 
 
@@ -87,6 +86,8 @@ def trt_smrs(src):
 
 
 def _sample(srcs, sample, applied):
+    if not srcs:
+        return []
     out = [src for src in srcs if src.source_id in applied]
     rand = general.random_filter(srcs, sample)
     return (out + rand) or [srcs[0]]
@@ -462,11 +463,11 @@ def reduce_sources(sources_with_same_id, full_lt):
 
 def split_by_tom(sources):
     """
-    Groups together sources with the same TOM
+    Groups together sources with the same TOM and collect multifault sources
     """
     def key(src):
         tom = getattr(src, 'temporal_occurrence_model', None)
-        return tom.__class__.__name__
+        return (tom.__class__.__name__, src.code == b'F')
     return general.groupby(sources, key).values()
 
 

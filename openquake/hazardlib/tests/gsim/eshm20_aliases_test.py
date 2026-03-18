@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.base import gsim_aliases
 from openquake.hazardlib.gsim.kotha_2020 import\
     KothaEtAl2020ESHM20, eshm20_crust_lines, ICELAND_dL2L
 from openquake.hazardlib.gsim.eshm20_craton import ESHM20Craton
-from openquake.hazardlib.gsim.bchydro_2016_epistemic import\
+from openquake.hazardlib.gsim.eshm20_bchydro import\
     BCHydroESHM20SInter, BCHydroESHM20SSlab
 
 MILLER_RICE_GAUSS_3PNT = [-1.732051, 0.0, 1.732051]

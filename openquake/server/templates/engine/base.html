@@ -8,6 +8,11 @@
   <link href="{{ STATIC_URL }}font/lato_font.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
+  {% if application_mode == 'AELO' %}
+  <link href="{{ STATIC_URL }}css/aelo.css" rel="stylesheet" type="text/css" />
+  {% elif application_mode == 'IMPACT' %}
+  <link href="{{ STATIC_URL }}css/impact.css" rel="stylesheet" type="text/css" />
+  {% endif %}
   <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}lib/outdatedbrowser/outdatedbrowser.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/cookie_consent.css" rel="stylesheet"/>

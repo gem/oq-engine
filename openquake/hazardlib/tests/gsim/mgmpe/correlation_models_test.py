@@ -87,24 +87,24 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
         avg_periods = np.array([1, 2, 4])
         # Assertions:
         with self.assertRaises(ValueError) as e:
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, TEST_RHO_ARRAYS, TEST_PERIODS
             )
 
-        assert (f"Period (4.000) is greater than the maximum allowable "
-                f"period for the correlation model (3.000).") == \
+        assert ("Period (4.000) is greater than the maximum allowable "
+                "period for the correlation model (3.000).") == \
                 str(e.exception)
 
     def test_init_with_small_period(self):
         avg_periods = np.array([0.5, 2, 2.5])
         # Assertions:
         with self.assertRaises(ValueError) as e:
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, TEST_RHO_ARRAYS, TEST_PERIODS
             )
 
-        assert (f"Period (0.500) is less than the minimum allowable "
-                f"period for the correlation model (1.000).") == \
+        assert ("Period (0.500) is less than the minimum allowable "
+                "period for the correlation model (1.000).") == \
                 str(e.exception)
 
     def test_init_with_no_periods(self):
@@ -128,7 +128,7 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError) as e:
             # it goes into build_correlation_matrix nothing happens 
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, {}, TEST_PERIODS
             )
         assert str(e.exception) == \
@@ -140,7 +140,7 @@ class EmpiricalAvgSACorrelationModelTestCase(unittest.TestCase):
         
         with self.assertRaises(TypeError) as e:
             # it goes into build_correlation_matrix nothing happens 
-            corr_model = EmpiricalAvgSACorrelationModel(
+            EmpiricalAvgSACorrelationModel(
             avg_periods, 1.0, TEST_PERIODS
             )
         assert str(e.exception) == \
@@ -264,11 +264,11 @@ class ClemettCorrelationModelAscTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(self.corr_model(0, 1), 0.9845)
         
         actual = self.corr_model.get_correlation(0.025, 0.06)
-        np.testing.assert_almost_equal(actual, 0.972)
+        np.testing.assert_almost_equal(actual, 0.9720)
         
     def test_between_event_correlation(self):
         actual = self.corr_model.get_between_event_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.988)
+        np.testing.assert_almost_equal(actual, 0.9880)
 
     def test_between_site_correlation(self):
         actual = self.corr_model.get_between_site_correlation(0.06, 0.025)
@@ -276,7 +276,7 @@ class ClemettCorrelationModelAscTestCase(unittest.TestCase):
 
     def test_within_event_correlation(self):
         actual = self.corr_model.get_within_event_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.953)
+        np.testing.assert_almost_equal(actual, 0.9530)
 
 
 class ClemettCorrelationModelSInterTestCase(unittest.TestCase):
@@ -293,15 +293,15 @@ class ClemettCorrelationModelSInterTestCase(unittest.TestCase):
         
     def test_between_event_correlation(self):
         actual = self.corr_model.get_between_event_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.9775)
+        np.testing.assert_almost_equal(actual, 0.9780)
 
     def test_between_site_correlation(self):
         actual = self.corr_model.get_between_site_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.985)
-
+        np.testing.assert_almost_equal(actual, 0.9850)
+    
     def test_within_event_correlation(self):
         actual = self.corr_model.get_within_event_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.9375)
+        np.testing.assert_almost_equal(actual, 0.9380)
 
 
 class ClemettCorrelationModelSSlabTestCase(unittest.TestCase):
@@ -314,32 +314,32 @@ class ClemettCorrelationModelSSlabTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(self.corr_model(0, 1), 0.993)
         
         actual = self.corr_model.get_correlation(0.025, 0.06)
-        np.testing.assert_almost_equal(actual, 0.977)
-        
+        np.testing.assert_almost_equal(actual, 0.9760)
+   
     def test_between_event_correlation(self):
         actual = self.corr_model.get_between_event_correlation(0.06, 0.025)
         np.testing.assert_almost_equal(actual, 0.9815)
 
     def test_between_site_correlation(self):
         actual = self.corr_model.get_between_site_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.983)
+        np.testing.assert_almost_equal(actual, 0.9820)
 
     def test_within_event_correlation(self):
         actual = self.corr_model.get_within_event_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.954)
+        np.testing.assert_almost_equal(actual, 0.9525)
 
 
 class ClemettCorrelationModelVranceaTestCase(unittest.TestCase):
     def setUp(self):
         self.corr_model = ClemettCorrelationModelVrancea(np.array([1, 1.1, 2.0]))
-
+    
     def test_total_correlations(self):
         # testing the creation of the total correlation matrix
         np.testing.assert_almost_equal(self.corr_model(0, 0), 1.0)
         np.testing.assert_almost_equal(self.corr_model(0, 1), 0.995)
         
         actual = self.corr_model.get_correlation(0.025, 0.06)
-        np.testing.assert_almost_equal(actual, 0.9765)
+        np.testing.assert_almost_equal(actual, 0.9740)
         
     def test_between_event_correlation(self):
         actual = self.corr_model.get_between_event_correlation(0.06, 0.025)
@@ -347,7 +347,7 @@ class ClemettCorrelationModelVranceaTestCase(unittest.TestCase):
 
     def test_between_site_correlation(self):
         actual = self.corr_model.get_between_site_correlation(0.06, 0.025)
-        np.testing.assert_almost_equal(actual, 0.988)
+        np.testing.assert_almost_equal(actual, 0.9865)
 
     def test_within_event_correlation(self):
         actual = self.corr_model.get_within_event_correlation(0.06, 0.025)

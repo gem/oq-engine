@@ -329,11 +329,10 @@ probabilities of exceedence. The ``ContextMaker`` provides a method to
 compute directly the rates (annual frequencies), from which the hazard
 curves can be extracted::
 
-	>>> rmap = cmaker.get_rmap([src], sitecol)
-        >>> 1. - numpy.exp(- rmap.array)  # rates -> poes, shape (N, L, G)
-	array([[[0.00508004]]], dtype=float32)
+	>>> cmaker.get_pmap(ctx).array  # shape (N, L, G)
+	array([[[0.00507998]]], dtype=float32)
 
-If you want to know exactly how ``get_rmap`` works you are invited to
+If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
 
 Reading the hazard sources programmatically
@@ -375,6 +374,47 @@ model realizations as follows::
 In this table ``ordinal`` is the same as the ``smr`` argument in
 ``get_sources``. If ``smr`` is not passed all the sources from all
 source model realizations are returned.
+
+With all the ingredients explained above, it is possible to implement
+a custom version of the PHSA classical calculator able to
+compute mean hazard curves, in a few lines of code:
+
+.. code-block:: python
+
+  import numpy
+  from openquake.baselib import sap
+  from openquake.commonlib import readinput, datastore
+  from openquake.hazardlib.calc.mean_rates import to_probs
+  
+  def main(job_ini):
+      job, dstore = datastore.create_job_dstore(ini=job_ini)
+      with job, dstore:
+          oq = job.get_oqparam()
+          csm = readinput.get_composite_source_model(oq, dstore)
+          csm.set_msparams()
+          sitecol = readinput.get_site_collection(oq, dstore)
+          cmakers = csm.get_cmakers(oq)
+          N, L = len(sitecol), oq.imtls.size
+          mean_rates = numpy.zeros((N, L))
+          for cmaker, src_group in zip(cmakers.to_array(), csm.src_groups):
+              ctx = cmaker.from_srcs(src_group, sitecol)
+              mean_rates += cmaker.get_rmap(ctx).array @ cmaker.wei
+          mean_hcurves = to_probs(mean_rates, oq.investigation_time)
+          for imt in oq.imtls:
+              print(imt, mean_hcurves[:, oq.imtls(imt)])
+  
+  main.job_ini = 'path to a job.ini file'
+  
+  if __name__ == '__main__':
+      sap.run(main)
+
+This calculator is not parallel and will run out of memory for large
+calculations, however it is perfect for usage in Jupyter notebooks,
+for single site calculations and simple hazard models.
+
+Notice that the details may change in future versions of the engine,
+the code above is meant to give you some hints, but there is still
+not a stable API for code at this level of sophistication.
 
 Generating ground motion fields from a rupture
 ----------------------------------------------

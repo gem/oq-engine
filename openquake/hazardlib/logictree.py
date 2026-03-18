@@ -37,7 +37,7 @@ import collections
 import operator
 import numpy
 from openquake.baselib import hdf5, node
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183)

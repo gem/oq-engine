@@ -35,7 +35,7 @@ import numpy
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
-from openquake.hazardlib.gsim.base import registry, gsim_aliases
+from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
@@ -156,22 +156,6 @@ def to_toml(uncertainty):
     return text
 
 
-def _fix_toml(v):
-    # horrible hack to remove a pickle error with
-    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
-    # using toml.loads(s, _dict=dict) would be the right way, but it does
-    # not work :-(
-    if isinstance(v, numpy.ndarray):
-        return list(v)
-    elif hasattr(v, 'items'):
-        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
-    elif isinstance(v, list):
-        return [_fix_toml(x) for x in v]
-    elif isinstance(v, numpy.float64):
-        return float(v)
-    return v
-
-
 def calculation(value):
     """
     Convert a string into an integer calculation ID
@@ -195,7 +179,7 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
-    kwargs = _fix_toml(kwargs)
+    kwargs = fix_toml(kwargs)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')):
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
@@ -209,7 +193,6 @@ def gsim(value, basedir=''):
         gs = gsim_class(**kwargs)
     else:  # is an alias, i.e. a thunk
         gs = gsim_class()
-    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
 
@@ -473,7 +456,7 @@ def utf8_not_empty(value):
 def base64names(value):
     """
     :param value: input string
-    :returns: list of strings with characters in base64
+    :returns: list of strings of <=8 characters in base64
 
     >>> base64names('XYzu- f_')
     ['XYzu-', 'f_']
@@ -484,7 +467,9 @@ def base64names(value):
     """
     names = value.split()
     for name in names:
-        if set(name) - BASE64:
+        if len(name) > 8:
+            raise ValueError(f'{name} is longer than 8 characters')
+        elif set(name) - BASE64:
             raise ValueError('List of names containing an invalid name:'
                              f' {name!r}')
     return names
@@ -527,8 +512,8 @@ def namelists(value):
     [['a1'], ['b_2'], ['1c']]
     """
     lists = []
-    for string in value.split(';'):
-        names = string.replace(',', ' ').split()
+    for strng in value.split(';'):
+        names = strng.replace(',', ' ').split()
         for n in names:
             try:
                 source_id(n)
@@ -1568,7 +1553,7 @@ class ParamSet(metaclass=MetaParamSet):
         """
         :returns: the parameters as a JSON string
         """
-        dic = {k: _fix_toml(v)
+        dic = {k: fix_toml(v)
                for k, v in self.__dict__.items() if not k.startswith('_')}
         return json.dumps(dic)
 

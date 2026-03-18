@@ -68,7 +68,7 @@ def test_PAC():
         lat = sites[1][1]
         lon2 = sites[0][0]
         lat2 = sites[0][1]
-        site = 'PAC-first PAC-second'
+        site = 'PAC1 PAC2'
         dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2),
                    siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR))
@@ -114,7 +114,7 @@ def test_KOR():
         calc.run()
     if rtgmpy:
         asce07 = json.loads(calc.datastore['asce07'][0])
-        aac(asce07['PGA'], 1.60312, atol=5E-5)
+        aac(asce07['PGA'], 1.68641, atol=5E-5)
         # check all plots created
         assert 'png/site.png' in calc.datastore
         assert 'png/mce.png' in calc.datastore

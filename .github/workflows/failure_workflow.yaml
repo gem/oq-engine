@@ -6,6 +6,7 @@ on:
     workflows:
       - "Build Image Nightly for Docker"
       - "Nightly Engine Demos on User mode"
+      - "Nightly LTS Engine Demos on User mode"
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
       - "MacOS M1"
@@ -17,6 +18,7 @@ on:
       - "Weekly Engine tests"
       - "Cluster ZMQ"
       - "WebUI frontend UI tests" 
+      - "Publish Python distribution to PyPI and TestPyPI"
     types:
       - completed
 

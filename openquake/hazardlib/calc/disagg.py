@@ -31,7 +31,7 @@ import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.valid import corename

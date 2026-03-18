@@ -1,0 +1,58 @@
+Checksum of the inputs: 1277147439
+
+* v3.23
+
+Mean time per core=11504s, std=914.6s, min=10713s, max=13944s
+| calc_9474, maxmem=191.3 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total tiling               | 2_208_917 | 642.4     | 649         |
+| get_poes                   | 1_504_457 | 0.0       | 421_444_112 |
+| computing mean_std         | 408_080   | 0.0       | 8_704_790   |
+| total fast_mean            | 268_040   | 359.9     | 889         |
+| reading rates              | 267_893   | 359.8     | 889         |
+| planar contexts            | 50_519    | 0.0       | 47_531_875  |
+| nonplanar contexts         | 27_675    | 0.0       | 4_208_330   |
+| iter_ruptures              | 19_531    | 0.0       | 3_036_719   |
+| ClassicalCalculator.run    | 18_348    | 2_872     | 1           |
+| storing rates              | 10_358    | 4_949     | 649         |
+
+| operation-duration | counts | mean   | stddev | min    | max    | slowfac |
+|--------------------+--------+--------+--------+--------+--------+---------|
+| tiling             | 523    | 4_180  | 74%    | 365.9  | 10_116 | 2.4202  |
+| fast_mean          | 889    | 301.5  | 13%    | 197.7  | 326.9  | 1.0841  |
+
+* v3.24, 2.1x worse without custom_tmp
+
+Mean time per core=11679s, std=4941.6s, min=6517s, max=21987s
+| calc_9390, maxmem=218.1 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total tiling               | 2_242_423 | 1_470     | 391         |
+| get_poes                   | 1_526_507 | 0.0       | 389_883_423 |
+| computing mean_std         | 371_474   | 0.0       | 7_813_798   |
+| total fast_mean            | 350_212   | 103.5469  | 3_557       |
+| ClassicalCalculator.run    | 39_404    | 2_360     | 1           |
+| storing rates              | 34_291    | 10_188    | 391         |
+
+| operation-duration | counts | mean    | stddev | min     | max      | slowfac |
+|--------------------+--------+---------+--------+---------+----------+---------|
+| tiling             | 297    | 7_461   | 85%    | 579.3   | 21_988   | 2.9472  |
+| fast_mean          | 3_557  | 98.4570 | 08%    | 54.8105 | 112.9773 | 1.1475  |
+
+* v3.25, 2.3x better
+
+Mean time per core=14601s, std=127.2s, min=14471s, max=15074s
+| calc_9389, maxmem=490.8 GB | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total classical            | 2_803_465 | 310.6     | 1_689       |
+| get_poes                   | 1_889_348 | 0.0       | 537_396_675 |
+| computing mean_std         | 515_720   | 0.0       | 10_810_104  |
+| total fast_mean            | 130_637   | 1_784     | 202         |
+| planar contexts            | 56_331    | 0.0       | 58_573_527  |
+| nonplanar contexts         | 29_819    | 0.0       | 2_788_870   |
+| total save_rates           | 20_662    | 185.6     | 98          |
+| ClassicalCalculator.run    | 17_221    | 29_896    | 1           |
+
+| operation-duration | counts | mean   | stddev | min     | max     | slowfac |
+|--------------------+--------+--------+--------+---------+---------+---------|
+| classical          | 907    | 3_045  | 100%   | 222.0   | 9_616   | 3.1575  |
+| fast_mean          | 192    | 678.0  | 00%    | 677.6   | 678.5   | 1.0007  |

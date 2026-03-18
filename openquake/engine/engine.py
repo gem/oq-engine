@@ -47,7 +47,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 from urllib.request import urlopen, Request
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib import (
     hdf5, parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile
@@ -233,19 +233,6 @@ def run_calc(log):
     return calc
 
 
-def check_directories(calc_id):
-    """
-    Make sure that the datadir and the scratch_dir (if any) are writeable
-    """
-    datadir = logs.get_datadir()
-    scratch_dir = parallel.scratch_dir(calc_id)
-    for dir in (datadir, scratch_dir):
-        assert os.path.exists(dir), dir
-        fname = os.path.join(dir, 'check')
-        open(fname, 'w').close()  # check writeable
-        os.remove(fname)
-
-
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                 user_name=USER, hc_id=None, host=None, workflow_id=None,
                 pdb=False):
@@ -270,7 +257,6 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
                         host, workflow_id, pdb)
         jobs.append(job)
-    check_directories(jobs[0].calc_id)
 
     return jobs
 
@@ -342,8 +328,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
 
         # run the jobs sequentially or in parallel, with slurm or without
         if dist == 'slurm' and sbatch:
-            scratch_dir = parallel.scratch_dir(job_id)
-            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+            calc_dir = parallel.calc_dir(job_id)
+            with open(os.path.join(calc_dir, 'jobs.pik'), 'wb') as f:
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
@@ -438,6 +424,10 @@ OVERRIDABLE_PARAMS = (
     'minimum_magnitude',
     'mosaic_model',
     'ps_grid_spacing',
+    'postproc_func',
+    'postproc_args',
+    'postrisk_func',
+    'postrisk_args',
     'return_periods',
     'ses_seed',
     'sites',

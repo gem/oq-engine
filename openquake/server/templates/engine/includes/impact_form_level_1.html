@@ -8,25 +8,28 @@
             <form id="impact_get_rupture_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div class="impact_form_row usgs_id_grp">
-                <label for"usgs_id">{{ impact_form_labels.usgs_id }}</label>
+                <label for="usgs_id">{{ impact_form_labels.usgs_id }}</label>
                 <input class="impact-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ impact_form_placeholders.usgs_id }}" value="{{ impact_default_usgs_id }}"/>
               </div>
               <div class="impact_form_row usgs_id_grp">
                 <label for="shakemap_version">{{ impact_form_labels.shakemap_version }}</label>
                 <select name="shakemap_version" id="shakemap_version" class="impact-select"></select>
+                <span class="populating_shakemap_version"></span>
               </div>
               <div class="impact_form_row hidden_except_submit">
-                <label for"rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
+                <label for="rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="rupture_from_usgs" name="rupture_data_file_from_usgs" placeholder="{{ impact_form_placeholders.rupture_from_usgs }}" disabled />
                 <input class="impact-input" type="text" id="rupture_was_loaded" name="rupture_was_loaded" disabled />
               </div>
               <div class="impact_form_row hidden_except_submit">
-                <label for"rupture_file">{{ impact_form_labels.rupture_file }}</label>
+                <label for="rupture_file">{{ impact_form_labels.rupture_file }}</label>
                 <input class="impact-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ impact_form_placeholders.rupture_file }}" disabled >
               </div>
               <div class="impact_form_row">
                 <button id="submit_impact_get_rupture" type="submit" class="btn">Retrieve ShakeMap data</button>
                 <!-- <input type="submit"> -->
+                <br/>
+                <span class="submit_impact_get_rupture_waiting"></span>
               </div>
             </form>
             <div id="shakemap-image-row" style="display: none;">

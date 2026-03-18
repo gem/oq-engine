@@ -38,7 +38,7 @@ with warnings.catch_warnings():
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -999,7 +999,8 @@ def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None, usecols=None, dframe=None):
+             index=None, errors=None, usecols=None, ignorecols=(),
+             dframe=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -1008,6 +1009,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
     :param usecols: columns to read
+    :param ignorecols: columns to ignore
     :param dframe: pass True to return a DataFrame
     :returns: an ArrayWrapper, unless there is an index or df is true
     """
@@ -1023,6 +1025,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                     continue
                 break
             header = first.strip().split(sep)
+            for ignorecol in set(ignorecols) & set(header):
+                header.remove(ignorecol)
             dt = build_dt(dtypedict, header, fname)
         try:
             df = _read_csv(fname, dt, usecols, skip)

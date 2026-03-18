@@ -1,6 +1,95 @@
+  [Christopher Brooks]
+  * Correct the `_apply_subduction_trench_correction` term in 
+    Si and Midorikawa (1999)'s `NorthEastCorrection` subclasses
+    to use `rhypo` instead of `rrup`.
+
+  [Anirudh Rao]
+  * Support sampling from the truncated multivariate normal distribution
+    using Paul Brunzema's implementation of the Botev (2017) algorithm
+    (https://github.com/brunzema/truncated-mvn-sampler), permitting
+    truncation in calculations employing a cross-IM correlation model
+  * Introduce two new job parameters: `truncation_level_between` and
+    `truncation_level_within` allowing the user to specify different
+    truncation levels for between-event residuals and within-event
+    residuals in a scenario or event-based calculation
+
+  [Christopher Brooks]
+  * Add ability to specify deltas for tau and phi within ModifiableGMPE.
+
   [Michele Simionato]
-  * Removed the long time deprecated method `get_mean_and_stddevs` from the GSIMs;
-    you can use the helper function `contexts.mean_stds` instead
+  * Extended the cross checking between IMTs and GSIMs to ConditionalGMPEs
+  * Extended export_job_zip to scenario calculations
+
+  [Anirudh Rao]
+  * Added the Holmgren et al. (2024) GMM for Southeastern Africa
+  * Removed experimental liquefaction models and refactored
+    the secondary perils test suite
+  * Supported embodied carbon as a new loss category
+
+  [Michele Simionato]
+  * Improved error message when all assets are filtered out
+  * Fixed a bug when prefiltering sources around the poles
+  * Made it possible to run risk calculations depending on AvgSA
+  * Internal: inferring the slow tasks information from starmap_info
+  * Removed numpy.random.seed in the engine code base
+  * The NegativeBinomialTOM can now be applied to all parametric sources
+
+python3-oq-engine (3.25.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Reduced the memory consumption with multifault sources by splitting
+    in more tiles
+
+  [Christopher Brooks]
+  * Make source/path adjustment coeff files used in modifications of CY14
+    as described in Boore et al. (2022) more flexible to avoid need for
+    dummy values for IMTs with unknown coeffs for source scaling but known
+    for path scaling or vice versa.
+
+  [Michele Simionato]
+  * Fixed `avg_losses_by` in case of a single realization
+  * Optimized the saving of the rates in large classical calculations
+  * Fixed the rup_id <-> event_id associations in openquake.engine.global_ses
+
+  [Yen-Shin Chen]
+  * FDHA: added primary surface displacement package (base, Youngs et al. 2003
+    AD/MD, tests)
+  * FDHA: added primary surface rupture package (base, Youngs et al. 2003
+    ExC/GB/nBR, tests)
+
+  [Michele Simionato]
+  * Changed the task distribution in classical calculations and reduced the
+    slow tasks, resulting in huge speedups in same cases (like 2.5x for USA)
+  * Bug fix: using `sites=lon1 lat1, ...` with a parent calculation
+    did not result in the specified sites to be used
+
+  [Yen-Shin Chen]
+  * Added get_x_l_ratio() method to BaseSurface for computing normalized
+    along-strike position (x/L) for PFDHA applications
+  * Vectorized get_x_l_ratio() implementation using NumPy broadcasting
+    for improved performance with large site meshes
+  * Added _get_tor() helper method to extract the top rupture
+    trace with NaN handling for KiteSurface compatibility
+
+  [Christopher Brooks]
+  * Added the EMME24 site model to the existing OQ implementation of the
+    EMME backbone model for ASCR (files describing the site model were
+    provided by Abdullah Sandıkkaya).
+
+  [Michele Simionato]
+  * Changed large classical calculations to store the rates in `ds_calc_dir`;
+    removed the need to specify `custom_tmp` for the SLURM distribution
+  * Internal: instantiating a GSIM automagically generates a ._toml
+    attribute from the GSIM name and arguments, associated to the GSIM hash
+
+  [Christopher Brooks]
+  * Fix small bug in Hashash et al. (2020) site term implementation within the
+    NGA East models and regenerate the test tables (very small differences are
+    observed and only for SA(0.4)).
+
+  [Michele Simionato]
+  * Removed the long time deprecated method `get_mean_and_stddevs` from the
+    GSIMs; you can use the helper function `contexts.mean_stds` instead
   * Internal: changed `cmaker.from_srcs` to return a context array and not a
     list with a single context array
   * Fixed AssertionError on len(mags) for GenericGmpeAvgSA with table-based
@@ -9,8 +98,8 @@
     the model contains complex fault sources
 
   [Nicholas Clemett]
-   * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional
-     argument
+  * Refactored the BaseAvgSACorrelationModel to make avg_periods an optional
+    argument
   * Added EmpiricalAvgSACorrelationModel
   * Added classes for the Clemett correlation models for active shallow crust,
     subduction interface, subduction slab and vrancea regions in europe based
@@ -26,6 +115,9 @@
     GSIMs within conditional GMPEs.
 
   [Paolo Tormene]
+  * Refactored the WebUI, separating its logic into multiple files
+  * Added Playwright tests to test the WebUI frontend in different
+    application modes
   * Added an extractor `exposure_by_location`
 
   [Michele Simionato]
@@ -169,6 +261,10 @@
   [Michele Simionato, Antonio Ettorre]
   * Upgraded numpy to version 2.2, including related dependencies such as
     pandas, pyproj, GDAL, fiona, etc
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 02 Mar 2026 13:48:36 +0000
+
+python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene]
   * When running a job via the WebUI it is possible to specify in the POST an

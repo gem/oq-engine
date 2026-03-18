@@ -43,13 +43,16 @@ import itertools
 import numpy
 import pandas
 import requests
-from shapely import wkt, geometry
+import geopandas as gpd
+from shapely import wkt
+from shapely.geometry import shape
+from shapely.validation import make_valid, explain_validity
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
@@ -219,7 +222,8 @@ def update(params, items, base_path):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
                 input_type, fnames = _normalize(key, dic.values(), base_path)
-                params['inputs'][input_type] = dict(zip(dic, fnames))
+                params['inputs'][input_type] = dict(
+                    zip(dic, fnames, strict=True))
                 params[input_type] = ' '.join(dic)
             elif value:
                 input_type, fnames = _normalize(key, [value], base_path)
@@ -330,7 +334,7 @@ def get_params(job_ini, kw={}):
     try:
         update(params, items, base_path)
         update(params, kw.items(), base_path)  # override on demand
-    except:
+    except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
     if input_zip:
@@ -508,17 +512,12 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             valid.longitude(lon)
         except ValueError:  # has a header
-            sm = hdf5.read_csv(fname, site.site_param_dt).array
+            sm = hdf5.read_csv(fname, site.site_param_dt,
+                               ignorecols=['site_id']).array
         else:
             sm = get_poor_site_model(fname)
 
     sm_fieldsets[fname] = set(sm.dtype.names)
-
-    # make sure site_id starts from 0, if given
-    if 'site_id' in sm.dtype.names:
-        if (sm['site_id'] != numpy.arange(len(sm))).any():
-            raise InvalidFile('%s: site_id not sequential from zero'
-                              % fname)
 
     # round coordinates and check for duplicate points
     sm['lon'] = numpy.round(sm['lon'], 5)
@@ -998,9 +997,7 @@ def get_composite_source_model(oqparam, dstore=None):
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
-    h5 = dstore.hdf5 if dstore else None
-    with Monitor('building full_lt', measuremem=True, h5=h5):
-        full_lt = get_full_lt(oqparam)  # builds the weights
+    full_lt = get_full_lt(oqparam)  # builds the weights
     csm = source_reader.get_csm(oqparam, full_lt, dstore)
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
@@ -1053,43 +1050,51 @@ def get_crmodel(oqparam):
         oqparam.limit_states = limit_states
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
-    consdict = {}
+
     if 'consequence' in oqparam.inputs:
-        if not limit_states:
-            raise InvalidFile('Missing fragility functions in %s' %
-                              oqparam.inputs['job_ini'])
-        # build consdict of the form consequence_by_tagname -> tag -> array
-        loss_dt = oqparam.loss_dt()
-        for by, fnames in oqparam.inputs['consequence'].items():
-            if by == 'taxonomy':  # obsolete name
-                by = 'risk_id'
-            if isinstance(fnames, str):  # single file
-                fnames = [fnames]
-            # i.e. files collapsed.csv, fatalities.csv, ... with headers like
-            # taxonomy,consequence,slight,moderate,extensive
-            df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
-            # NB: consequence files depend on loss_type, unlike fragility files
-            if 'taxonomy' in df.columns:  # obsolete name
-                df['risk_id'] = df['taxonomy']
-                del df['taxonomy']
-            if 'loss_type' not in df.columns:
-                df['loss_type'] = 'structural'
-            if 'peril' not in df.columns:
-                df['peril'] = 'groundshaking'
-            for consequence, group in df.groupby('consequence'):
-                if consequence not in scientific.KNOWN_CONSEQUENCES:
-                    raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fnames))
-                bytag = {
-                    tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
-                    for tag, grp in group.groupby(by)}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
-    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
-    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
+        consdict = read_consdict(oqparam, limit_states, perils)
+    else:
+        consdict = {}
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
 
+def read_consdict(oqparam, limit_states, perils):
+    """
+    :returns: consequence dictionary csq_by_losses -> by_tag
+
+    For instance consdict['collapsed_by_taxonomy'] => dframe
+    """
+    if not limit_states:
+        raise InvalidFile('Missing fragility functions in %s' %
+                          oqparam.inputs['job_ini'])
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    for by, fnames in oqparam.inputs['consequence'].items():
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
+        if isinstance(fnames, str):  # single file
+            fnames = [fnames]
+        # i.e. files collapsed.csv, fatalities.csv, ... with headers like
+        # taxonomy,consequence,slight,moderate,extensive
+        df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+        # NB: consequence files depend on loss_type, unlike fragility files
+        if 'taxonomy' in df.columns:  # obsolete name
+            df['risk_id'] = df['taxonomy']
+            del df['taxonomy']
+        if 'loss_type' not in df.columns:
+            df['loss_type'] = 'structural'
+        if 'peril' not in df.columns:
+            df['peril'] = 'groundshaking'
+        for consequence in df.consequence.unique():
+            if consequence not in scientific.KNOWN_CONSEQUENCES:
+                raise InvalidFile('Unknown consequence %s in %s' %
+                                  (consequence, fnames))
+            consdict['%s_by_%s' % (consequence, by)] = df[
+                    df.consequence==consequence]
+    return consdict
+
+    
 def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
@@ -1204,7 +1209,7 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
                  nsites, len(sitecol.complete))
     dic = {(lo, la): sid
            for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
+    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats, strict=True)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
@@ -1431,7 +1436,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: F32})
     imtls = {}
     dic = {}
     for fname in fnames:
@@ -1445,7 +1450,7 @@ def get_pmap_from_csv(oqparam, fnames):
     mesh = geo.Mesh(array['lon'], array['lat'])
     N = len(mesh)
     L = sum(len(imls) for imls in oqparam.imtls.values())
-    data = numpy.zeros((N, L))
+    data = numpy.zeros((N, L), F32)
     level = 0
     for im in oqparam.imtls:
         arr = dic[im]
@@ -1513,7 +1518,7 @@ def reduce_sm(paths, source_ids):
                 else:
                     weights = [1] * len(src_group.nodes)
                 reduced_weigths = []
-                for src_node, weight in zip(src_group, weights):
+                for src_node, weight in zip(src_group, weights, strict=True):
                     total += 1
                     if ok(src_node):
                         good += 1
@@ -1727,28 +1732,36 @@ def get_custom_site_id(descr):
     return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
-# NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
+# NOTE: we expect to call this for mosaic or global_risk (adm0-1-2)
 @functools.lru_cache(maxsize=4)
-def read_geometries(fname, name, buffer=0):
+def read_geometries(fname, name):
     """
     :param fname: path of the file containing the geometries
     :param name: name of the primary key field
-    :param buffer: shapely buffer in degrees
-    :returns: data frame with codes and geometries
+    :returns: GeoDataFrame frame with codes and geometries
     """
+    codes = []
+    geoms = []
     with fiona.open(fname) as f:
-        codes = []
-        geoms = []
+        crs = f.crs
         for feature in f:
-            props = feature['properties']
-            geom = feature['geometry']
+            props = feature["properties"]
+            geom = feature["geometry"]
             code = props[name]
             if code and geom:
+                g = shape(geom)
+                if not g.is_valid:
+                    logging.warning("Invalid geometry for %s: %s",
+                                    code, explain_validity(g))
+                    g = make_valid(g)
                 codes.append(code)
-                geoms.append(geometry.shape(geom).buffer(buffer))
+                geoms.append(g)
             else:
-                logging.error(f'{code=}, {geom=} in {fname}')
-    return pandas.DataFrame(dict(code=codes, geom=geoms))
+                logging.error(f"{code=}, {geom=} in {fname}")
+    # NOTE: "geometry" instead of "geom" would be the standard in GeoPandas,
+    #       but using "geom" we avoid changing other code using this object
+    return gpd.GeoDataFrame(
+        dict(code=codes, geom=geoms), geometry="geom", crs=crs)
 
 
 @functools.lru_cache()
@@ -1766,8 +1779,9 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
+def read_mosaic_df(mosaic_dir=config.directory.mosaic_dir):
     """
+    :param mosaic_dir: directory containing mosaic boundaries
     :returns: a DataFrame of geometries for the mosaic models
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
@@ -1777,17 +1791,17 @@ def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     print(f'Reading {mosaic_boundaries_file}')
-    return read_geometries(mosaic_boundaries_file, 'name', buffer)
+    return read_geometries(mosaic_boundaries_file, 'name')
 
 
-def read_countries_df(buffer=0.1):
+def read_countries_df():
     """
     :returns: a DataFrame of geometries for the world countries
     """
     logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.gpkg')
-    return read_geometries(fname, 'shapeGroup', buffer)
+    return read_geometries(fname, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',

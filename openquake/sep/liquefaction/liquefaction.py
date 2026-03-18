@@ -80,6 +80,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 FT_PER_M = 3.28084
 CM_PER_M = 100
 NUM = 10**2.24
+MIN_HAZARD = 1e-5
 
 
 def sigmoid(x):
@@ -159,6 +160,7 @@ def zhu_etal_2015_general(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    pga = np.clip(pga, MIN_HAZARD, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -221,6 +223,7 @@ def zhu_etal_2017_coastal(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (
         pgv_coeff * np.log(pgv)
         + vs30_coeff * np.log(vs30)
@@ -291,6 +294,7 @@ def zhu_etal_2017_general(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (
         pgv_coeff * np.log(pgv_scaling_factor * pgv)
         + vs30_coeff * np.log(vs30)
@@ -363,7 +367,8 @@ def rashidian_baise_2020(
                    or liquefaction occurrence occurrence.
     """
 
-    precip = np.where(precip > 1700, 1700, precip)
+    pgv = np.clip(pgv, MIN_HAZARD, None)
+    precip = np.clip(precip, None, 1700)
     prob_liq, _, _ = zhu_etal_2017_general(
         pgv,
         vs30,
@@ -446,8 +451,8 @@ def allstadt_etal_2022(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    pgv = np.where(pgv > 150, 150, pgv)
-    precip = np.where(precip > 2500, 2500, precip)
+    pgv = np.clip(pgv, MIN_HAZARD, 150)
+    precip = np.clip(precip, None, 2500)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
         pga,
@@ -469,125 +474,6 @@ def allstadt_etal_2022(
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
     return prob_liq, out_class, LSE
-
-
-def akhlagi_etal_2021_model_a(
-    pgv: Union[float, np.ndarray],
-    tri: Union[float, np.ndarray],
-    dc: Union[float, np.ndarray],
-    dr: Union[float, np.ndarray],
-    zwb: Union[float, np.ndarray],
-    intercept: float = 4.925,
-    pgv_coeff: float = 0.694,
-    tri_coeff: float = -0.459,
-    dc_coeff: float = -0.403,
-    dr_coeff: float = -0.309,
-    zwb_coeff: float = -0.164,
-) -> Union[float, np.ndarray]:
-    """
-    Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of the Akhlagi et al., 2021 model A.
-    The optimal threshold probability value to convert the predicted
-    probability into binary classification is 0.4
-    (see p.13 from Zhu et al., 2017).
-
-    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A.,
-    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction
-    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162).
-    Seismological Society of America.
-    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A.,
-    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the
-    Geospatial Liquefaction Database and Model.
-    Tufts University. Medford, Massachusetts, United States.
-
-    :param pgv:
-        Peak Ground Velocity, measured in cm/s
-    :param tri:
-        Topographic roughness index, unitless
-    :param dc:
-        Distance to the nearest coast, measured in km
-    :param dr:
-        Distance to the nearest river, measured in km
-    :param zwb:
-        Elevation above the nearest water body, measured in m
-
-    :returns:
-        prob_liq: Probability of liquefaction at the site.
-        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
-                   or liquefaction occurrence occurrence.
-    """
-
-    Xg = (
-        pgv_coeff * np.log(pgv)
-        + tri_coeff * np.sqrt(tri)
-        + dc_coeff * np.log(dc + 1)
-        + dr_coeff * np.log(dr + 1)
-        + zwb_coeff * np.sqrt(zwb)
-        + intercept
-    )
-    prob_liq = sigmoid(Xg)
-    out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
-
-
-def akhlagi_etal_2021_model_b(
-    pgv: Union[float, np.ndarray],
-    vs30: Union[float, np.ndarray],
-    dc: Union[float, np.ndarray],
-    dr: Union[float, np.ndarray],
-    zwb: Union[float, np.ndarray],
-    intercept: float = 9.504,
-    pgv_coeff: float = 0.706,
-    vs30_coeff: float = -0.994,
-    dc_coeff: float = -0.389,
-    dr_coeff: float = -0.291,
-    zwb_coeff: float = -0.205,
-) -> Union[float, np.ndarray]:
-    """
-    Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of the Akhlagi et al., 2021 model B.
-    The optimal threshold probability value to convert the predicted
-    probability into binary classification is 0.4
-    (see p.13 from Zhu et al., 2017).
-
-    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A.,
-    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction
-    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162).
-    Seismological Society of America.
-    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A.,
-    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the
-    Geospatial Liquefaction Database and Model.
-    Tufts University. Medford, Massachusetts, United States.
-
-    :param pgv:
-        Peak Ground Velocity, measured in cm/s
-    :param vs30:
-        Shear-wave velocity averaged over the upper 30 m of the earth at the
-        site, measured in m/s
-    :param dc:
-        Distance to the nearest coast, measured in m
-    :param dr:
-        Distance to the nearest river, measured in m
-    :param zwb:
-        Elevation above the nearest water body, measured in m
-
-    :returns:
-        prob_liq: Probability of liquefaction at the site.
-        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
-                   or liquefaction occurrence occurrence.
-    """
-
-    Xg = (
-        pgv_coeff * np.log(pgv)
-        + vs30_coeff * np.log(vs30)
-        + dc_coeff * np.log(dc + 1)
-        + dr_coeff * np.log(dr + 1)
-        + zwb_coeff * np.sqrt(zwb)
-        + intercept
-    )
-    prob_liq = sigmoid(Xg)
-    out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
 
 
 def bozzoni_etal_2021_europe(
@@ -630,6 +516,8 @@ def bozzoni_etal_2021_europe(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+    
+    pga = np.clip(pga, MIN_HAZARD, None)
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
@@ -681,6 +569,8 @@ def todorovic_silva_2022_nonparametric_general(
                    or liquefaction occurrence occurrence.
         out_prob: probability of belonging to class 1.
     """
+    
+    pgv = np.clip(pgv, MIN_HAZARD, None)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
     results = session.run(None, {"X": matrix})
@@ -725,30 +615,18 @@ def _hazus_conditional_liquefaction_probability(
     coeff_table=HAZUS_LIQUEFACTION_COND_PROB_PGA_TABLE,
 ):
     """
-    Calculates the probility of liquefaction of a soil susceptibility category
+    Calculates the probability of liquefaction of a soil susceptibility category
     conditional on the value of PGA observed.
     """
     if isinstance(susceptibility_category, str):
-        coeffs = coeff_table[susceptibility_category]
-        liq_prob = coeffs[0] * pga - coeffs[1]
+        coeff_0, coeff_1 = coeff_table[susceptibility_category]
     else:
-        coeffs = [coeff_table[susc_cat] for susc_cat in susceptibility_category]
-        coeff_0 = np.array([c[0] for c in coeffs])
-        coeff_1 = np.array([c[1] for c in coeffs])
-        liq_prob = coeff_0 * pga - coeff_1
+        coeff_0, coeff_1 = np.array(
+            [coeff_table[susc_cat] for susc_cat in susceptibility_category]
+        ).T
 
-    # TODO: Refactor below using np.clip
-    if np.isscalar(liq_prob):
-        if liq_prob <= 0:
-            liq_prob = 0.0
-        elif liq_prob >= 1:
-            liq_prob = 1.0
-        else:
-            liq_prob = liq_prob
-    else:
-        liq_prob = liq_prob
-        liq_prob[liq_prob < 0.0] = 0.0
-        liq_prob[liq_prob > 1.0] = 1.0
+    liq_prob = coeff_0 * pga - coeff_1
+    liq_prob = np.clip(liq_prob, 0.0, 1.0)
 
     return liq_prob
 

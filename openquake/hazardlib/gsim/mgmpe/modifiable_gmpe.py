@@ -75,7 +75,7 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
     # Compute the original mean and std devs for required IMTs
     shp = (len(imts_comp), len(ctx_copy))
     mean_t, sig_t, tau_t, phi_t = (
-        np.empty(shp), np.empty(shp), np.empty(shp), np.empty(shp))
+        np.zeros(shp), np.zeros(shp), np.zeros(shp), np.zeros(shp))
     gmpe.compute(
         ctx_copy, imts_comp, mean_t, sig_t, tau_t, phi_t)
     
@@ -102,7 +102,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     imts_req = self.imts_req
     sh = (len(imts_req), len(ctx_copy))
     mean_b, sig_b, tau_b, phi_b = (
-        np.empty(sh), np.empty(sh), np.empty(sh), np.empty(sh))
+        np.zeros(sh), np.zeros(sh), np.zeros(sh), np.zeros(sh))
     self.gmpe.compute(ctx_copy, imts_req, mean_b, sig_b, tau_b, phi_b)
 
     # Store them for use in conditional GMPE(s) later
@@ -114,9 +114,8 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
         preds[imt.string]["tau"] = tau_b[i]
         preds[imt.string]["phi"] = phi_b[i]
         
-    # Sometimes need underlying GSIM within conditional GMPEs compute method
-    # if has ctx-dependent conditioning periods like possible within
-    # AbrahamsonBhasin2020
+    # Might need underlying GSIM within conditional GMPEs compute method
+    # if has ctx-dependent conditioning periods
     preds["base"] = self.gmpe
 
     # Now get the IMTs we wish to compute using the underlying GSIM
@@ -161,13 +160,12 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
         # for use in the conditional GMM
         cond_imts = [imt_cond.string for imt_cond in cond.REQUIRES_IMTS]
         missing = [imt_req for imt_req in cond_imts
-                   if imt_req not in base_preds.keys()]
+                   if imt_req not in base_preds]
         if missing:
             raise ValueError(
                 f"To use {cond.__class__.__name__} for the calculation "
                 f"of {imt}, the user must provide a GMM which is defined for "
-                f"the following IMTS: {cond_imts} (Missing = {missing})"
-            )
+                f"the following IMTS: {cond_imts} (Missing = {missing})")
 
         # Compute mean and sigma for IMT conditioned
         me_c, sig_c, tau_c, phi_c = cond.compute(ctx, base_preds)
@@ -300,6 +298,7 @@ IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
                      "set_fixed_total_sigma"]
 
 
+# affects the NWA model
 def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
@@ -398,6 +397,46 @@ def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
     si[:] = (si**2 + np.sign(delta) * delta**2)**0.5
 
 
+def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A delta std to be applied to tau
+    """
+    # First check if adjusted tau would be negative
+    new_tau = ta + delta
+    if np.any(new_tau < 0):
+        raise ValueError(
+            f"delta={delta} produces a negative tau - "
+            f"minimum tau would be {new_tau.min():.3f}"
+        )
+
+    # Adjust tau
+    ta[:] = new_tau
+
+    # Need to adjust total sig too after adjusting tau
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
+def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A delta std to be applied to phi
+    """
+    # First check if adjusted phi would be negative
+    new_phi = ph + delta
+    if np.any(new_phi < 0):
+        raise ValueError(
+            f"delta={delta} produces a negative phi - "
+            f"minimum phi would be {new_phi.min():.3f}"
+        )
+
+    # Adjust phi
+    ph[:] = new_phi
+
+    # Need to adjust total sig too after adjusting phi
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
 def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
@@ -492,8 +531,7 @@ class ModifiableGMPE(GMPE):
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         if 'add_between_within_stds' in self.params:
-            setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
-                    {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT}
 
         if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
             # Require rake and rjb in the ctx for computing bedrock PGA
@@ -529,7 +567,7 @@ class ModifiableGMPE(GMPE):
             self.params[key]['tau_coetab'] = get_tau_at_quantile(
                 TAU_SETUP[tau_model]["MEAN"],
                 TAU_SETUP[tau_model]["STD"],
-                tau_quantile)
+                tau_quantile)  # NB: this a dict an not a CoeffsTable :-/
 
             # Phi SS
             phi_model = self.params[key].get("phi_model", "global")
@@ -547,10 +585,6 @@ class ModifiableGMPE(GMPE):
                     if isinstance(self.params[key][subkey], dict):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
-
-        if "conditional_gmpe" in self.params:
-            self.imts_req = init_underlying_gmpes(
-                self.params["conditional_gmpe"])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -573,6 +607,9 @@ class ModifiableGMPE(GMPE):
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
         if "conditional_gmpe" in self.params:
+            if not hasattr(self, 'imts_req'):
+                self.imts_req = init_underlying_gmpes(
+                    self.params["conditional_gmpe"])
             conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs

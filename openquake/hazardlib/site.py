@@ -23,7 +23,11 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import logging
 import numpy
 import pandas
-from h3.api.numpy_int import geo_to_h3, h3_to_geo
+try:
+    from h3.api.numpy_int import latlng_to_cell, cell_to_latlng
+except ImportError:  # old version
+    from h3.api.numpy_int import (
+        geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
@@ -231,7 +235,6 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
-    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -435,9 +438,11 @@ class SiteCollection(object):
             # duplicates (there could be millions)
             n = len(dupl)
             dots = ' ...' if n > 9 else ''
-            items = list(dupl.items())[:9]
+            items = []
+            for (x, y), _ in list(dupl.items())[:9]:
+                items.append('%.5f %.5f' % (x, y))
             raise ValueError('There are %d duplicate sites %s%s' %
-                             (n, items, dots))
+                             (n, ', '.join(items), dots))
         return self
 
     @classmethod
@@ -612,15 +617,17 @@ class SiteCollection(object):
         Add a column to the underlying array (if not already there)
         """
         names = self.array.dtype.names
-        if colname not in names:
-            dtlist = [(name, self.array.dtype[name]) for name in names]
-            dtlist.append((colname, dtype))
-            arr = numpy.zeros(len(self), dtlist)
-            for name in names:
-                arr[name] = self.array[name]
-            if values is not None:
-                arr[colname] = values
-            self.array = arr
+        if colname in names:
+            return 0
+        dtlist = [(name, self.array.dtype[name]) for name in names]
+        dtlist.append((colname, dtype))
+        arr = numpy.zeros(len(self), dtlist)
+        for name in names:
+            arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
+        self.array = arr
+        return 1
 
     def ensure_custom_site_id(self, size):
         """
@@ -697,19 +704,25 @@ class SiteCollection(object):
         return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
     def __fromh5__(self, dic, attrs):
-        if isinstance(dic, dict):  # engine >= 3.11
-            params = attrs['__pdcolumns__'].split()
-            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
-            self.array = numpy.zeros(len(dic['sids']), dtype)
-            for p in dic:
-                self.array[p] = dic[p][()]
-        else:  # old engine, dic is actually a structured array
-            self.array = dic
+        params = attrs['__pdcolumns__'].split()
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+        self.array = numpy.zeros(len(dic['sids']), dtype)
+        for p in dic:
+            self.array[p] = dic[p][()]
         self.complete = self
 
     @property
+    def names(self):
+        """
+        :returns: .array.dtype.names
+        """
+        return self.array.dtype.names
+
+    @property
     def mesh(self):
-        """Return a mesh with the given lons, lats, and depths"""
+        """
+        :return: a mesh with the given lons, lats, and depths
+        """
         return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
@@ -825,7 +838,7 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id', 'sids'}
         for name in ok:
             self._set(name, site_model[name])
 
@@ -855,15 +868,22 @@ class SiteCollection(object):
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
             site IDs within the bounding box
+
+        NB: if the bounding box crosses the IDL, do not filter.       
         """
+        # This is the only sane approach across the IDL, since sometimes
+        # we want to take the greater arc (for the Oceans) and sometimes
+        # the smaller arc (for Alaska). Disabling the prefiltering means a
+        # slight performance penalty but not errors, since the real filtering
+        # will kick off next and do the right thing in the engine.
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self['lon'], self['lat']
-        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
-            lons = lons % 360
-            min_lon, max_lon = min_lon % 360, max_lon % 360
-        mask = (min_lon < lons) * (lons < max_lon) * \
-               (min_lat < lats) * (lats < max_lat)
-        return mask.nonzero()[0]
+        if cross_idl(min_lon, max_lon):
+            return self.sids
+        lons, lats = self.lons, self.lats
+        mask = ((min_lon < lons) & (lons < max_lon) &
+                (min_lat < lats) & (lats < max_lat))
+        ok, = mask.nonzero()
+        return self.sids[ok]
 
     def extend(self, lons, lats):
         """
@@ -921,10 +941,10 @@ class SiteCollection(object):
         """
         sids_by_hex = general.AccumDict(accum=[])
         for sid, lon, lat in zip(self.sids, self.lons, self.lats):
-            h = geo_to_h3(lat, lon, res)
+            h = latlng_to_cell(lat, lon, res)
             sids_by_hex[h].append(sid)
         # build an array of shape (N, 2)
-        latlons = F32([h3_to_geo(h) for h in sids_by_hex])
+        latlons = F32([cell_to_latlng(h) for h in sids_by_hex])
         orig_sids = [U32(sids) for sids in sids_by_hex.values()]
         return self.from_points(latlons[:, 1], latlons[:, 0]), orig_sids
 

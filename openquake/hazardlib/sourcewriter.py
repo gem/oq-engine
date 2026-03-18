@@ -28,7 +28,7 @@ from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf, valid
 from openquake.hazardlib.source import (
-    NonParametricSeismicSource, check_complex_fault, PointSource)
+    NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import NegativeBinomialTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -451,7 +451,7 @@ def get_source_attributes(source):
         elif rup.weight is not None:
             weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
-    elif isinstance(source, PointSource):
+    elif hasattr(source, 'temporal_occurrence_model'):
         tom = source.temporal_occurrence_model
         if isinstance(tom, NegativeBinomialTOM):
             attrs['tom'] = 'NegativeBinomialTOM'
@@ -836,7 +836,7 @@ def tomldump(obj, fileobj=None):
     """
     Write a generic serializable object in TOML format
     """
-    dic = valid._fix_toml(node_to_dict(obj_to_node(obj)))
+    dic = valid.fix_toml(node_to_dict(obj_to_node(obj)))
     if fileobj is None:
         return toml.dumps(dic)
     toml.dump(dic, fileobj)

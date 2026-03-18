@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from openquake.baselib import parallel, python3compat
+from openquake.baselib import parallel, general
 from openquake.baselib.general import groupby
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.gmf import exp
@@ -40,7 +40,7 @@ def main(dstore, csm):
     sitecol = dstore['sitecol']
     cmakers = read_cmakers(dstore, csm.full_lt).to_array()
     oq.mags_by_trt = {
-        trt: python3compat.decode(dset[:])
+        trt: general.decode(dset[:])
         for trt, dset in dstore['source_mags'].items()}
 
     # send one task per source

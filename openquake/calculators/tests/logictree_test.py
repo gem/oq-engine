@@ -20,7 +20,7 @@ import sys
 import unittest
 import numpy
 from openquake.baselib import general, config
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     get_rmap, calc_mean_rates, to_rates)
@@ -32,9 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_28, case_30, case_31,
-    case_36, case_39, case_45, case_46, case_52, case_56, case_58, case_59,
-    case_67, case_68, case_71, case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_28,
+    case_30, case_31, case_36, case_39, case_45, case_46, case_52, case_56,
+    case_58, case_59, case_67, case_68, case_71, case_73, case_79, case_80,
+    case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -474,6 +475,22 @@ hazard_uhs-std.csv
             'hc21.csv', 'hc22.csv', 'hc23.csv',
             'hc24.csv', 'hc25.csv', 'hc26.csv'], case_21.__file__, delta=2E-05)
 
+    def test_case_22(self):
+        # sigma_model_alatik2015
+        self.assert_curves_ok(["hazard_curve-mean-SA06.csv"], case_22.__file__)
+
+    def test_case_23(self):
+        # arctic region (and IDL)
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",  # slim.csv
+                               "hazard_map-mean-PGA.csv"], case_23.__file__)
+        nc = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
+
+        # running a calculation with more sites must give more contexts
+        self.run_calc(case_23.__file__, 'job.ini',
+                      site_model_file='fat.csv slim.csv')
+        nc2 = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
+        assert nc2 >= nc
+
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
@@ -486,7 +503,6 @@ hazard_uhs-std.csv
         ae(info['source_id'], [b'21;0', b'21;1', b'22'])
         ae(info['grp_id'], [0, 1, 2])
         ae(info['weight'] > 0, [True, True, True])
-        ae(info['trti'], [0, 0, 1])
 
         # check collapse_gsim_logic_tree
         aw = extract(self.calc.datastore, 'realizations')
@@ -567,14 +583,14 @@ hazard_uhs-std.csv
         aac(haz, 0.563831, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 8 times b1 and 2 times b2
-        aac(ws, [0.029412, 0.029412, 0.029412, 0.264706, 0.264706, 0.029412,
-                 0.029412, 0.264706, 0.029412, 0.029412], rtol=1E-5)
+        aac(ws, [0.029412, 0.029412, 0.264706, 0.029412, 0.264706, 0.264706,
+                 0.029412, 0.029412, 0.029412, 0.029412], atol=1e-5)
 
         # early_weights
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_weights')
         haz = self.calc.datastore['hcurves-stats'][0, 0, 0, 6]
-        aac(haz, 0.56355, rtol=1E-6)
+        aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         aac(ws, [0.1] * 10)  # all equal
 
@@ -593,7 +609,7 @@ hazard_uhs-std.csv
         aac(haz, 0.558779, rtol=1E-6)
         ws = extract(self.calc.datastore, 'weights')
         # sampled 5 times b1 and 5 times b2
-        aac(ws, [0.18, 0.02, 0.18, 0.18, 0.02, 0.02, 0.02, 0.02, 0.18, 0.18])
+        aac(ws, [0.02, 0.18, 0.18, 0.18, 0.18, 0.02, 0.02, 0.02, 0.18, 0.02])
 
         self.run_calc(case_52.__file__, 'job.ini',
                       sampling_method='early_latin')
@@ -689,8 +705,8 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
-               b'AA~A', b'B.~A', b'B.~A', b'B.~A']
+        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+               b'B.~A', b'B.~A', b'B.~A', b'B.~A', b'B.~A']
         ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
@@ -710,9 +726,8 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8], []])
-        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        ae(list(cmakers[0].gsims.values()), [[1, 2, 3, 4], [0, 5], []])
+        ae(list(cmakers[1].gsims.values()), [[6], [9], [7, 8]])
 
     def test_case_73(self):
         # test LT

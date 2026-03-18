@@ -35,7 +35,7 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg, sum_records)
 from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
@@ -260,7 +260,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_sites', 'num_ruptures']
+                                 'calc_time', 'num_ctxs', 'num_ruptures']
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -293,12 +293,12 @@ def view_contents(token, dstore):
     tot = (dstore.filename, humansize(os.path.getsize(dstore.filename)))
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data] + [tot]
-    scratch_dir = dstore['/'].attrs.get('scratch_dir')
-    if scratch_dir:
+    calc_dir = dstore.filename[:-5]
+    if os.path.exists(calc_dir):
         size = 0
-        for fname in os.listdir(scratch_dir):
-            size += os.path.getsize(os.path.join(scratch_dir, fname))
-        rows.append((scratch_dir, humansize(size)))
+        for fname in os.listdir(calc_dir):
+            size += os.path.getsize(os.path.join(calc_dir, fname))
+        rows.append((calc_dir, humansize(size)))
     return numpy.array(rows, dt('dataset size'))
 
 
@@ -332,7 +332,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['heavy_factor'] = df.weight / df.calc_time
-    del df['grp_id'], df['trti'], df['mutex_weight']
+    del df['grp_id']
     return df
 
 
@@ -770,43 +770,69 @@ def view_task_durations(token, dstore):
     return arr
 
 
-@view.add('task')
-def view_task_hazard(token, dstore):
+@view.add('task_eb')
+def view_task_eb(token, dstore):
     """
-    Display info about a given task. Here are a few examples of usage::
+    Display info about event based tasks. Here are a few examples of usage::
 
-     $ oq show task:classical:0  # the fastest task
-     $ oq show task:classical:-1  # the slowest task
+     $ oq show task_eb:0  # the fastest task
+     $ oq show task_eb:-1  # the slowest task
     """
-    _, name, index = token.split(':')
-    if 'source_data' not in dstore:
-        return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=encode(name))
+    _, index = token.split(':')
+    data = get_array(dstore['task_info'][()], taskname=b'event_based')
     if len(data) == 0:
-        raise RuntimeError('No task_info for %s' % name)
+        raise RuntimeError('No task_info for event_based')
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    if len(dstore['source_data/src_id']):
-        grp_keys = dstore['grp_keys'][taskno].decode('ascii')
-        sdata = dstore.read_df('source_data')
-        sd = sdata[sdata.taskno == taskno]
-        acc = AccumDict(accum=numpy.zeros(4))
-        for src_id, nctxs, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
-            acc[basename(src_id, ';:.')] += numpy.array(
-                [nctxs, nrupts, weight, ctimes])
-        df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
-            df[name] = [arr[i] for arr in acc.values()]
-        df = df.sort_values('ctimes').set_index('src_id')
-        time = df.ctimes.sum()
-        weight = df.weight.sum()
-        msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
-            % df
-        return msg
-    else:
-        msg = ''
+    rdata = dstore.read_df('gmf_data/rup_info')
+    rd = rdata[rdata.task_no == taskno]
+    acc = AccumDict(accum=numpy.zeros(2))
+    for rup_id, time, weight in zip(rd.rup_id, rd.time, rd.weight):
+        acc[rup_id] += numpy.array([weight, time])
+    df = pandas.DataFrame(dict(rup_id=list(acc)))
+    for i, name in enumerate(['weight', 'time']):
+        df[name] = [arr[i] for arr in acc.values()]
+    df = df.sort_values('time').set_index('rup_id')
+    time = df.time.sum()
+    weight = df.weight.sum()
+    msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
+    return msg
+
+
+@view.add('task_cl')
+def view_task_cl(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
+    """
+    _, index = token.split(':')
+    if 'source_data' not in dstore:
+        return 'Missing source_data'
+    data = get_array(dstore['task_info'][()], taskname=b'classical')
+    if len(data) == 0:
+        raise RuntimeError('No task_info for classical')
+    data.sort(order='duration')
+    rec = data[int(index)]
+    taskno = rec['task_no']
+    grp_keys = dstore['grp_keys'][taskno].decode('ascii')
+    sdata = dstore.read_df('source_data')
+    sd = sdata[sdata.taskno == taskno]
+    acc = AccumDict(accum=numpy.zeros(4))
+    for src_id, nctxs, nrupts, weight, ctimes in zip(
+            sd.src_id, sd.nctxs, sd.nrupts, sd.weight, sd.ctimes):
+        acc[basename(src_id, ';:.')] += numpy.array(
+            [nctxs, nrupts, weight, ctimes])
+    df = pandas.DataFrame(dict(src_id=list(acc)))
+    for i, name in enumerate(['nctxs', 'nrupts', 'weight', 'ctimes']):
+        df[name] = [arr[i] for arr in acc.values()]
+    df = df.sort_values('ctimes').set_index('src_id')
+    time = df.ctimes.sum()
+    weight = df.weight.sum()
+    msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
+        % df
     return msg
 
 

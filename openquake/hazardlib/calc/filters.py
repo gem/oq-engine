@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import ast
-import sys
 import logging
 import operator
 from contextlib import contextmanager
@@ -26,7 +25,6 @@ import pandas
 from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
-from openquake.baselib.python3compat import raise_
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
@@ -131,11 +129,9 @@ def context(src):
     """
     try:
         yield
-    except Exception:
-        etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, err)
-        raise_(etype, msg, tb)
+    except Exception as err:
+        raise err.__class__('An error occurred with source id=%s. Error: %s'
+                            % (src.source_id, err)) from None
 
 
 def getdefault(dic_with_default, key):
@@ -467,6 +463,9 @@ class RuptureFilter(object):
         dists = get_distances(self.rup, mesh, 'rrup')
         return dists < self.dist, dists
 
+    def __repr__(self):
+        return '<%s mag=%.1f dist=%.0f>' % (self.__class__.__name__,
+                                            self.rup.mag, self.dist)
 
 class SourceFilter(object):
     """
@@ -494,20 +493,14 @@ class SourceFilter(object):
         new.multiplier = multiplier
         return new
 
-    def get_enlarged_box(self, src, maxdist=None):
+    def get_enlarged_box(self, src, maxdist):
         """
         Get the enlarged bounding box of a source.
 
         :param src: a source object
-        :param maxdist: a scalar maximum distance (or None)
+        :param maxdist: a scalar maximum distance
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        if maxdist is None:
-            if hasattr(self.integration_distance, 'y'):  # interp1d
-                maxdist = self.integration_distance.y[-1]
-            else:
-                maxdist = getdefault(self.integration_distance,
-                                     src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
         except (FilteredAway, BBoxError):
@@ -518,22 +511,14 @@ class SourceFilter(object):
             raise
         return bbox
 
-    def get_rectangle(self, src):
-        """
-        :param src: a source object
-        :returns: ((min_lon, min_lat), width, height), useful for plotting
-        """
-        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
-        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
-
-    def get_close_sites(self, source):
+    def get_close_sites(self, source, trt=None):
         """
         Returns the sites within the integration distance from the source,
         or None.
         """
-        sids = self.close_sids(source)
+        sids = self.close_sids(source, trt)
         if len(sids):
-            return self.sitecol.filtered(sids)
+            return self.sitecol.complete.filtered(sids)
 
     def split(self, sources):
         """
@@ -575,9 +560,20 @@ class SourceFilter(object):
             return self._close_sids(lon, lat, dep, dist)
         else:  # source
             trt = src_or_rec.tectonic_region_type
+            if maxdist is None:
+                if hasattr(self.integration_distance, 'y'):  # interp1d
+                    maxdist = self.integration_distance.y[-1]
+                else:
+                    maxdist = getdefault(self.integration_distance, trt)[-1][1]
+            loc = getattr(src_or_rec, 'location', None)
+            if loc:
+                # special case for pointlike sources
+                maxdist += src_or_rec.max_radius(maxdist)
+                return self._close_sids(loc.x, loc.y, loc.z, maxdist)
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
             except FilteredAway:
+                # can be raised by multiFaultSources
                 return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids

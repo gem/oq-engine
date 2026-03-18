@@ -93,9 +93,9 @@ jobs:
           echo "test run of calc on running container "
           time docker exec -t openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
           sleep 3
-          time docker exec -t openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          time docker exec -t openquake oq engine --run /usr/src/oq-engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
           echo "test run of a calcs on new created container"
-          time docker run openquake/engine:$DOCKER_TAG oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          time docker run openquake/engine:$DOCKER_TAG oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
       - name: push Openquake engine image on dockerhub
         run: |
           if [ ${{ github.event.inputs.version }} != '' ]; then

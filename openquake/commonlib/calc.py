@@ -20,7 +20,6 @@ import logging
 import operator
 import functools
 import numpy
-from shapely.geometry import Point
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
@@ -123,6 +122,21 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for event_based calculators ################ #
 
+def get_model_lts(h5):
+    """
+    :returns: (model, full_lt) pairs
+    """
+    out = []
+    full_lt = h5['full_lt']
+    if hasattr(full_lt, 'gsim_lt'):
+        out.append(('???', full_lt))
+    else:
+        # full_lt is a h5py group
+        for model in full_lt:
+            out.append((model, h5[f'full_lt/{model}']))
+    return out
+
+
 # TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
@@ -175,20 +189,24 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
     proxies = []
     try:
         h5 = datastore.read(filename)
-    except ValueError: # cannot extract calc_id
+    except ValueError:  # cannot extract calc_id
         h5 = hdf5.File(filename)
     with h5:
-        rupgeoms = h5['rupgeoms']
         if hasattr(rup_array, 'start'):  # is a slice
             recs = h5['ruptures'][rup_array]
         else:
             recs = rup_array
+        if len(recs) == 0:
+            return []
+        # gmin, gmax = recs['geom_id'].min(), recs['geom_id'].max()
+        gmin = 0
+        rupgeoms = h5['rupgeoms'][:]
         for rec in recs:
             proxy = rupture.RuptureProxy(rec)
-            if proxy['mag'] < min_mag:
+            if rec['mag'] < min_mag:
                 # discard small magnitudes
                 continue
-            proxy.geom = rupgeoms[proxy['geom_id']]
+            proxy.geom = rupgeoms[rec['geom_id'] - gmin]
             proxies.append(proxy)
     return proxies
 
@@ -201,7 +219,7 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        self.full_lt = dstore['full_lt']
+        self.model_lts = get_model_lts(dstore)
         self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
@@ -221,7 +239,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']        
+        n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
@@ -249,15 +267,16 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz; this is very fast:
         # I saw 30 million events associated in 1 minute!
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         i = 0
-        for trt_smr, start, stop in idx_start_stop:
-            rlzs = numpy.concatenate(
-                list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
-            records = get_events(rup_array[start:stop], rlzs, self.scenario)
-            nr = len(records)
-            events[i:i + nr] = records  # (id, rup_id, rlz_id)
-            i += nr
+        for model, lt in self.model_lts:
+            rlzs_by_gsim = lt.get_rlzs_by_gsim_dic()
+            for trt_smr, start, stop in idx_start_stop:
+                rlzs = numpy.concatenate(
+                    list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
+                records = get_events(rup_array[start:stop], rlzs, self.scenario)
+                nr = len(records)
+                events[i:i + nr] = records  # (id, rup_id, rlz_id)
+                i += nr
 
         # sanity check
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
@@ -492,11 +511,9 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     :returns: list of mosaic models intersecting the circle
         centered on the given coordinates having the specified radius
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=1)
-    hypocenter = Point(lon, lat)
-    hypo_buffer = hypocenter.buffer(buffer_radius)
-    geoms = numpy.array([hypo_buffer])
-    [close_mosaic_models] = geo.utils.geolocate_geometries(geoms, mosaic_df)
+    mosaic_df = readinput.read_mosaic_df()
+    close_mosaic_models = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, mosaic_df)
     if not close_mosaic_models:
         raise ValueError(
             f'({lon}, {lat}) is farther than {buffer_radius} deg'

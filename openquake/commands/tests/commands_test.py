@@ -32,7 +32,7 @@ import tempfile
 import unittest
 import numpy
 
-from openquake.baselib.python3compat import encode
+from openquake.baselib.general import encode
 from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
@@ -104,7 +104,7 @@ class InfoTestCase(unittest.TestCase):
 
     def test_shp(self):
         mosaic_dir = os.path.dirname(mosaic.__file__)
-        path = os.path.join(mosaic_dir, 'ModelBoundaries.gpkg')
+        path = os.path.join(mosaic_dir, 'aelo_boundaries.gpkg')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
         self.assertIn('EUR', str(p))
@@ -286,7 +286,7 @@ class RunShowExportTestCase(unittest.TestCase):
         dic = jobs_from_inis(['/non/existing/job.ini'])
         self.assertEqual(dic['success'], [])
         self.assertIn('File not found', dic['error'])
-    
+
     def test_workflow_read(self):
         ses_dir = os.path.dirname(mosaic_for_ses.__file__)
         ses_toml = os.path.join(ses_dir, 'ses.toml')
@@ -309,7 +309,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id | code | calc_time | num_sites', str(p))
+        self.assertIn('source_id | code | calc_time | num_ctxs', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -871,7 +871,7 @@ class RunSiteTestCase(unittest.TestCase):
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
 
     def test_runsite_case3(self):
-        # tests when there is a lonlat file with vs30 and the default asce 
+        # tests when there is a lonlat file with vs30 and the default asce
         # version is used
         file = os.path.join(DATADIR, 'site_case3.csv')
         with Print.patch():
@@ -882,7 +882,7 @@ class RunSiteTestCase(unittest.TestCase):
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
 
     def test_runsite_case4(self):
-        # tests when there is a lonlat file with vs30 and the default site 
+        # tests when there is a lonlat file with vs30 and the default site
         # class (and therefore asce 7-22) are used
         file = os.path.join(DATADIR, 'site_case4.csv')
         with Print.patch():

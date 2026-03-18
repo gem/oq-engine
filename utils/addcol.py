@@ -19,18 +19,26 @@
 from openquake.baselib import sap
 from openquake.risklib.countries import code2country
 
-# example: utils/addcol.py country=VEN Exposure_Res_Venezuela.csv
-
-
 def addcol(namevalue, fnames):
+    """
+    Add columns, for instance:
+ 
+    utils/addcol.py country=VEN Exposure_Res_Venezuela.csv
+    utils/addcol.py custom_site_id=S++ sites.csv  # autoincremental
+    """
     name, value = namevalue.split('=')
+    autoincr = value[-2:] == '++'
     if name == 'country':
         assert value in code2country, value
     for fname in fnames:
         header, *lines = open(fname).readlines()
         out = [header.rstrip() + ',' + name]
-        for line in lines:
-            out.append(line.rstrip() + ',' + value)
+        for i, line in enumerate(lines):
+            if autoincr:
+                val = value[:-2] + str(i)
+            else:
+                val = value
+            out.append(line.rstrip() + ',' + val)
         with open(fname, 'w') as f:
             for line in out:
                 f.write(line + '\n')

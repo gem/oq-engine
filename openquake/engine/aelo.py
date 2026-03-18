@@ -36,20 +36,20 @@ PRELIMINARY_MODEL_WARNING_MSG = (
 def get_boundaries_file(mosaic_dir, other_dir):
     """
     Search the passed mosaic_dir and then qa_tests_data/mosaic
-    for ModelBoundaries.gpkg|shp
+    for aelo_boundaries.gpkg|shp
     """
     fname = config.directory.mosaic_boundaries_file
     if fname:
         assert os.path.exists(fname), fname
         return fname
     for mdir in (mosaic_dir, other_dir):
-        fname = os.path.join(mdir, 'ModelBoundaries.gpkg')
+        fname = os.path.join(mdir, 'aelo_boundaries.gpkg')
         if os.path.exists(fname):
             return fname
-        fname = os.path.join(mdir, 'ModelBoundaries.shp')
+        fname = os.path.join(mdir, 'aelo_boundaries.shp')
         if os.path.exists(fname):
             return fname
-    raise FileNotFoundError('ModelBoundaries')
+    raise FileNotFoundError('aelo_boundaries')
 
 
 def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
@@ -67,7 +67,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = readinput.read_mosaic_df(buffer=0)
+    mosaic_df = readinput.read_mosaic_df()
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:

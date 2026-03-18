@@ -449,8 +449,7 @@ def random(size, seed, sampling_method='early_weights'):
                plt.axhline(y)
        plt.show()
     """
-    numpy.random.seed(seed)
-    xs = numpy.random.uniform(size=size)
+    xs = numpy.random.default_rng(seed).uniform(size=size)
     if sampling_method.endswith('latin'):
         # https://zmurchok.github.io/2019/03/15/Latin-Hypercube-Sampling.html
         try:
@@ -612,7 +611,7 @@ class BranchSet(object):
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
         if (uncertainty_type not in NOAPPLY_UNCERTAINTIES and
-                not uncertainty_type in apply_uncertainty):
+                uncertainty_type not in apply_uncertainty):
             raise NotImplementedError(
                 f'apply_uncertainty: missing {uncertainty_type}')
         self.filters = filters or {}
