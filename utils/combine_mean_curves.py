@@ -34,9 +34,10 @@ def combine_mean_curves(calc_big: int, calc_small: int):
     sitecol_big = dstore_big['sitecol']
     sitecol_small = dstore_small['sitecol']
     site_id_big = {(lon, lat): sid for sid, lon, lat in zip(
-        sitecol_big.sids, sitecol_big.lons, sitecol_big.lats)}
+        sitecol_big.sids, sitecol_big.lons, sitecol_big.lats, strict=True)}
     site_id_small = {(lon, lat): sid for sid, lon, lat in zip(
-        sitecol_small.sids, sitecol_small.lons, sitecol_small.lats)}
+        sitecol_small.sids, sitecol_small.lons, sitecol_small.lats,
+        strict=True)}
     common = set(site_id_big) & set(site_id_small)
     if not common:
         raise RuntimeError('There are no common sites between calculation '

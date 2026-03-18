@@ -95,7 +95,7 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        for i in range(300):  # 300 seconds of timeout
+        for _ in range(300):  # 300 seconds of timeout
             time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
