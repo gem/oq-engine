@@ -538,10 +538,14 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     plt = import_plt()
     import matplotlib.patheffects as path_effects
     import matplotlib.patches as mpatches
-    if len(colors) != classifier.k:
-        # NOTE: sometimes the classifier assumes a different number of bins, and
-        #       we need colors to adapt to it
+    if len(colors) > classifier.k:
+        # The classifier may settle on fewer bins than the caller anticipated;
+        # silently truncate the surplus colors to match.
         colors = colors[:classifier.k]
+    elif len(colors) < classifier.k:
+        raise ValueError(
+            f"Not enough colors: got {len(colors)}, need {classifier.k}. "
+            f"Please supply at least as many colors as classifier bins.")
     if df.crs != admin_boundaries.crs:
         raise ValueError("df and admin_boundaries CRS do not match")
     df = df.copy()
