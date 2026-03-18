@@ -41,14 +41,6 @@ performance
     :undoc-members:
     :show-inheritance:
 
-general
---------------------------------------
-
-.. automodule:: openquake.baselib.general
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 runtests
 ---------------------------------
 

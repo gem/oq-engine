@@ -21,7 +21,7 @@ import unittest
 import numpy
 import pandas
 import matplotlib.pyplot as plt
-from openquake.baselib import hdf5, general,  writers
+from openquake.baselib import hdf5, general, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
