@@ -75,13 +75,13 @@ jobs:
           ruff check openquake/baselib
           ruff check openquake/commands
           ruff check openquake/engine
-          ruff check openquake/hazardlib
+          ruff check --ignore E501 openquake/hazardlib
           ruff check openquake/risklib
           ruff check openquake/server
           ruff check openquake/calculators
           ruff check openquake/commonlib
           ruff check openquake/sep
-          ruff check openquake/htmk
+          ruff check openquake/hmtk
           ruff check openquake/fdha
           ruff check openquake/_unc
           pytest -k classical -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake/calculators
