@@ -1,4 +1,4 @@
 https://wheelhouse.openquake.org/v3/linux/py313/rasterio-1.4.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
-adjustText==1.3.0
-mapclassify==2.10.0
-reportlab==4.4.9
+https://wheelhouse.openquake.org/v3/py/adjustText-1.3.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/mapclassify-2.10.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/reportlab-4.4.9-py3-none-any.whl
