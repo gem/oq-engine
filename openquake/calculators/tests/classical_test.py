@@ -21,7 +21,7 @@ import gzip
 import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group

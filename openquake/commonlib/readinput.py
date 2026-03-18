@@ -52,7 +52,7 @@ from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
@@ -222,7 +222,8 @@ def update(params, items, base_path):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
                 input_type, fnames = _normalize(key, dic.values(), base_path)
-                params['inputs'][input_type] = dict(zip(dic, fnames))
+                params['inputs'][input_type] = dict(
+                    zip(dic, fnames, strict=True))
                 params[input_type] = ' '.join(dic)
             elif value:
                 input_type, fnames = _normalize(key, [value], base_path)
@@ -1208,7 +1209,7 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
                  nsites, len(sitecol.complete))
     dic = {(lo, la): sid
            for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
+    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats, strict=True)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
@@ -1517,7 +1518,7 @@ def reduce_sm(paths, source_ids):
                 else:
                     weights = [1] * len(src_group.nodes)
                 reduced_weigths = []
-                for src_node, weight in zip(src_group, weights):
+                for src_node, weight in zip(src_group, weights, strict=True):
                     total += 1
                     if ok(src_node):
                         good += 1

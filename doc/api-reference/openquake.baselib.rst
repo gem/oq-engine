@@ -41,10 +41,10 @@ performance
     :undoc-members:
     :show-inheritance:
 
-python3compat
+general
 --------------------------------------
 
-.. automodule:: openquake.baselib.python3compat
+.. automodule:: openquake.baselib.general
     :members:
     :undoc-members:
     :show-inheritance:

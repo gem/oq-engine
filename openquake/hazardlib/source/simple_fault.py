@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
-from openquake.baselib.python3compat import round
+from openquake.baselib.general import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface

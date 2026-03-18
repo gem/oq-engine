@@ -21,7 +21,7 @@ import unittest
 import numpy
 import pandas
 import matplotlib.pyplot as plt
-from openquake.baselib import hdf5, python3compat, general, writers
+from openquake.baselib import hdf5, general,  writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
@@ -108,7 +108,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # check the stored section indices
         with hdf5.File(gm_hdf5, 'r') as f:
-            lines = python3compat.decode(f['01/rupture_idxs'][:])
+            lines = general.decode(f['01/rupture_idxs'][:])
         self.assertEqual(lines, ['1 2', '0', '1', '2', '0 1', '0 2', '0 1 2'])
 
         # test rupture generation

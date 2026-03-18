@@ -19,7 +19,7 @@
 import os
 import shutil
 import logging
-from openquake.baselib import performance, general, python3compat
+from openquake.baselib import performance, general
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput, datastore
 
@@ -86,7 +86,7 @@ def main(what):
     info = info[info['num_sites'] > 0]  # reduce to sources affecting sites
     src_ids = info['source_id']
     num_ids = len(src_ids)
-    bad_dupl = get_dupl(python3compat.decode(src_ids))
+    bad_dupl = get_dupl(general.decode(src_ids))
     if bad_dupl:
         logging.info('Duplicates %s not removed' % bad_dupl)
     ok_ids = general.group_array(info[['source_id', 'code']], 'source_id')
