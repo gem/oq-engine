@@ -35,7 +35,7 @@ from openquake.baselib.general import (
     get_array, group_array, fast_agg, sum_records)
 from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers

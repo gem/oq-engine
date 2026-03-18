@@ -587,12 +587,12 @@ class Catalogue(object):
             An instance of :class:`htmk.seismicity.catalogue.Catalogue`
         """
 
-        atts = getattr(self, "data")
-        attn = getattr(catalogue, "data")
+        atts = self.data
+        attn = catalogue.data
         data = _merge_data(atts, attn)
 
         if data is not None:
-            setattr(self, "data", data)
+            self.data = data
             for attrib in vars(self):
                 atts = getattr(self, attrib)
                 attn = getattr(catalogue, attrib)

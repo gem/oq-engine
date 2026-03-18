@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import numpy
-from openquake.baselib import config, python3compat
+from openquake.baselib import config, general
 from openquake.commonlib import datastore
 
 F32 = numpy.float32
@@ -194,7 +194,7 @@ def get_assets(dstore):
     lons = numpy.round(assetcol['lon'], 5)
     lats = numpy.round(assetcol['lat'], 5)
     for a, lon, lat in zip(assetcol.array, lons, lats):
-        tup = tuple(python3compat.encode(tag[t][a[t]]) for t in tagnames)
+        tup = tuple(general.encode(tag[t][a[t]]) for t in tagnames)
         asset_data.append((a['id'],) + tup + (lon, lat))
     return numpy.array(asset_data, dtlist)
 

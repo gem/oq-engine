@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 30 16:13:22 2025
-
-@author: 35191
-"""
-
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -28,8 +22,7 @@ Test suite for Taherian et al. (2024) GMPE for inland scenarios.
 """
 
 from openquake.hazardlib.gsim.taherian_2024_inland import (
-    Taherian2024Inland
-)
+    Taherian2024Inland)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 

@@ -27,7 +27,7 @@ import pandas
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table

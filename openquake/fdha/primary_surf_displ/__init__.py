@@ -20,8 +20,3 @@
 Package :mod:`openquake.fdha.primary_surf_displ` contains models for
 conditional exceedance probability of primary surface fault displacement.
 """
-
-from openquake.fdha.primary_surf_displ.youngs2003 import (
-    Youngs2003PrimaryFD_AD,
-    Youngs2003PrimaryFD_MD,
-)

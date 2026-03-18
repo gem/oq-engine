@@ -203,7 +203,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_gb, init_performance)
