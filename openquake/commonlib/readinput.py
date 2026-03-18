@@ -1798,7 +1798,9 @@ def read_countries_df():
     """
     :returns: a DataFrame of geometries for the world countries
     """
-    country_boundaries_file = config.directory.admin0_boundaries_file
+    country_boundaries_file = None
+    if hasattr(config.directory, 'admin0_boundaries_file'):
+        country_boundaries_file = config.directory.admin0_boundaries_file
     if not country_boundaries_file:
         country_boundaries_file = os.path.join(
             os.path.dirname(global_risk.__file__),
