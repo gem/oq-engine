@@ -43,7 +43,7 @@ Repository = "https://github.com/gem/oq-engine"
 Documentation = "https://docs.openquake.org"
 
 [project.scripts]
-oq = "openquake.commands.__main__:main"
+oq = "openquake.commands.__main__:oq"
 
 [tool.setuptools]
 packages = ["openquake"]
