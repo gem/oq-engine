@@ -118,13 +118,6 @@ def load_admin_boundaries(
     return gdf.to_crs(crs)
 
 
-def load_losses_csv(csv_path):
-    df = pd.read_csv(csv_path, header=[0, 1])
-    df.columns = df.columns.get_level_values(1)
-    df = df.drop(index=0).reset_index(drop=True)
-    return df
-
-
 def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
     gdf = gpd.GeoDataFrame(
         df,
