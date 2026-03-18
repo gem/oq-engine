@@ -503,7 +503,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     :param classifier: mapclassify classifier
         Fitted classifier (e.g. NaturalBreaks).
     :param colors: list[str]
-        One color per class (length must equal classifier.k).
+        One color per class (length must at least the same as classifier.k).
     :param country_name: str, optional
         Used only for output naming or titles.
     :param plot_title: str, optional
@@ -511,7 +511,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     :param legend_title: str, optional
         Legend title.
     :param cities: dict[str, tuple[float, float]], optional
-        Mapping of city name → (lon, lat).
+        Mapping of city name -> (lon, lat).
     :param legend_digits: int
         Decimal digits for legend bin labels.
     :param x_limits, y_limits: tuple, optional
@@ -576,8 +576,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             label='Epicenter')
 
     # Create legend handles based on color and label
-    handles = [mpatches.Patch(color=c, label=l)
-               for c, l in zip(colors, labels)]
+    handles = [mpatches.Patch(color=color, label=label)
+               for color, label in zip(colors, labels)]
     if epicenter_handle:
         handles.append(epicenter_handle)
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
@@ -628,7 +628,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             legend = ax.get_legend()
             adjust_text(texts, ax=ax,
                         add_objects=[ax.collections[-1], legend],
-                        arrowprops=None,   # disable arrows completely
+                        arrowprops=None,  # disable arrows completely
                         force_text=(0.1, 0.2),
                         expand_points=(1.2, 1.2),
                         save_steps=False)
