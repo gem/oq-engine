@@ -59,7 +59,10 @@ LOSS_METADATA = {
 LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
 
-@functools.lru_cache(maxsize=2)
+# maxsize=1 is sufficient when only one admin-level boundary file is loaded
+# per process (the common case). Increase to 2 if both adm1 and adm2 files
+# are ever used within the same process.
+@functools.lru_cache(maxsize=1)
 def _read_admin_layer(fname):
     gdf = gpd.read_file(fname)
     invalid = ~gdf.is_valid
