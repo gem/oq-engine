@@ -531,8 +531,7 @@ class ModifiableGMPE(GMPE):
             self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
 
         if 'add_between_within_stds' in self.params:
-            setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
-                    {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT}
 
         if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
             # Require rake and rjb in the ctx for computing bedrock PGA

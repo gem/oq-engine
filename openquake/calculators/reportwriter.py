@@ -27,7 +27,7 @@ import logging
 import numpy
 import pandas
 
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 from openquake.commonlib import logs
 from openquake.calculators import views
 

@@ -41,14 +41,6 @@ performance
     :undoc-members:
     :show-inheritance:
 
-python3compat
---------------------------------------
-
-.. automodule:: openquake.baselib.python3compat
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 runtests
 ---------------------------------
 

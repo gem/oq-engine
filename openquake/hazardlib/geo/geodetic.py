@@ -23,7 +23,7 @@ transformations, optimized for massive calculations.
 import math
 import numpy as np
 from scipy.spatial.distance import cdist
-from openquake.baselib.python3compat import round
+from openquake.baselib.general import round
 from openquake.baselib.performance import compile
 
 #: Earth radius in km.

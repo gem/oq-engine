@@ -91,7 +91,7 @@ class MultiMFD(BaseMFD):
                     raise
                 # missing bindWidth in GR MDFs is ok
         if 'occurRates' in ASSOC[kind][1:]:
-            lengths = ~getattr(node, 'lengths')
+            lengths = ~node.lengths
             if len(lengths) == 1:  # all occurRates are the same
                 lengths = [lengths[0]] * size
             _reshape(kwargs, lengths)

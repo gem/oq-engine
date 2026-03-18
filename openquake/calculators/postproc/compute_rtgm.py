@@ -46,7 +46,7 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-from openquake.baselib import hdf5, general, python3compat
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -441,7 +441,7 @@ class MCEGetter:
         out = postproc.disagg_by_rel_sources.main(
             dstore, csm, job_imts, imls_by_sid)
         sitecol = dstore['sitecol']
-        custom_ids = python3compat.decode(sitecol.custom_site_id)
+        custom_ids = general.decode(sitecol.custom_site_id)
         for sid, (mag_dist_eps, sigma_by_src) in out.items():
             lon = sitecol.lons[sid]
             lat = sitecol.lats[sid]
@@ -513,7 +513,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
             site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
         sid = site.id
         vs30 = site.vs30
-        custom_id = python3compat.decode(site.custom_site_id)
+        custom_id = general.decode(site.custom_site_id)
         loc = site.location
         if notification_name in ['zero_hazard', 'low_hazard']:
             mce_df = pd.DataFrame({'IMT': imts,
@@ -831,7 +831,7 @@ def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     out = postproc.disagg_by_rel_sources.main(
         dstore, csm, job_imts, imls_by_sid)
     sitecol = dstore['sitecol']
-    custom_ids = python3compat.decode(sitecol['custom_site_id'])
+    custom_ids = general.decode(sitecol['custom_site_id'])
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
         lat = sitecol.lats[sid]
@@ -1031,7 +1031,7 @@ def main(dstore, csm):
         fact = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
         facts.append(fact)
     sitecol = dstore['sitecol']
-    custom_ids = python3compat.decode(sitecol['custom_site_id'])
+    custom_ids = general.decode(sitecol['custom_site_id'])
     DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in sitecol}
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')

@@ -62,4 +62,5 @@ python_files = "test_*.py"
 
 [tool.ruff]
 line-length = 79
-lint.select = ["NPY201"]
+lint.select = ["E", "F"]
+lint.extend-ignore = ["E501"]  # ignore long lines in docstrings

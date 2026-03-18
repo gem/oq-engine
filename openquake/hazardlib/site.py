@@ -617,15 +617,17 @@ class SiteCollection(object):
         Add a column to the underlying array (if not already there)
         """
         names = self.array.dtype.names
-        if colname not in names:
-            dtlist = [(name, self.array.dtype[name]) for name in names]
-            dtlist.append((colname, dtype))
-            arr = numpy.zeros(len(self), dtlist)
-            for name in names:
-                arr[name] = self.array[name]
-            if values is not None:
-                arr[colname] = values
-            self.array = arr
+        if colname in names:
+            return 0
+        dtlist = [(name, self.array.dtype[name]) for name in names]
+        dtlist.append((colname, dtype))
+        arr = numpy.zeros(len(self), dtlist)
+        for name in names:
+            arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
+        self.array = arr
+        return 1
 
     def ensure_custom_site_id(self, size):
         """

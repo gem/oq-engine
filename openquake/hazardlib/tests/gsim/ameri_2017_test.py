@@ -21,7 +21,6 @@ Implements the tests for the set of GMPE classes included within the
 GMPE of Ameri et al (2017)
 """
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-import pathlib
 from openquake.hazardlib import gsim
 import numpy as np
 

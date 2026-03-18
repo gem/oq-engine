@@ -47,7 +47,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 from urllib.request import urlopen, Request
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.baselib import (
     hdf5, parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile

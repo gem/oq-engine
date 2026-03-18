@@ -788,7 +788,7 @@ class ChiouYoungs2014(GMPE):
         # If instantiating EMME24 backbone the COEFFS_EMME attribute
         # will be set (it contains the coeffs for EMME24 site model)
         if not hasattr(self, "COEFFS_EMME"):
-            setattr(self, "COEFFS_EMME", False)
+            self.COEFFS_EMME = False
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
