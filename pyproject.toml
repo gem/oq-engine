@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 # Core dependencies (simplified based on common engine requirements)
-# Note: oq-engine often uses requirements-py3x.txt files for exact pinning
+# Note: oq-engine uses requirements-py3x.txt files for exact pinning
 dependencies = [
     "numpy>=1.20",
     "scipy>=1.7",
@@ -53,12 +53,13 @@ readme = {file = ["README.md"]}
 version = {attr = "openquake.baselib.__version__"}
 
 [tool.setuptools.package-data]
-"*" = ["*.cfg", "*.sql", "*.html", "*.css", "*.js", "*.csv", "*.onnx",".onnx.gz", "demos/**"]
+"*" = ["*.cfg", "*.sql", "*.html", "*.css", "*.js", "*.csv", "*.onnx", ".onnx.gz",
+       "demos/**"]
 
 # If you use specific dev tools like pytest or black
 [tool.pytest.ini_options]
 testpaths = ["openquake/qa_tests"]
-python_files = "test_*.py"
+python_files = "*_test.py"
 
 [tool.ruff]
 line-length = 79
