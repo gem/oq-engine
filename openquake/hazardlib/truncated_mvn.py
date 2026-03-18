@@ -32,20 +32,29 @@ EPS = 10e-15
 
 class TruncatedMVN:
     r"""
-    Create a normal distribution :math:`X  \sim N ({\mu}, {\Sigma})` subject to linear inequality constraints
-    :math:`lb < X < ub` and sample from it using minimax tilting. Based on the MATLAB implemention by the authors
-    (reference below).
+    Create a normal distribution :math:`X  \sim N ({\mu}, {\Sigma})` subject
+    to linear inequality constraints
+    :math:`lb < X < ub` and sample from it using minimax tilting.
+    Based on the MATLAB implemention by the authors (reference below).
 
-    :param np.ndarray mu: (size D) mean of the normal distribution :math:`\mathbf {\mu}`.
-    :param np.ndarray cov: (size D x D) covariance of the normal distribution :math:`\mathbf {\Sigma}`.
-    :param np.ndarray lb: (size D) lower bound constrain of the multivariate normal distribution :math:`\mathbf lb`.
-    :param np.ndarray ub: (size D) upper bound constrain of the multivariate normal distribution :math:`\mathbf ub`.
-    :param Union[int, None] seed: a random seed.
+    :param np.ndarray mu:
+        (size D) mean of the normal distribution :math:`\mathbf {\mu}`.
+    :param np.ndarray cov:
+        (size D x D) covariance of the normal distribution :math:`\mathbf {\Sigma}`.
+    :param np.ndarray lb:
+        (size D) lower bound constrain of the multivariate normal distribution
+        :math:`\mathbf lb`.
+    :param np.ndarray ub:
+        (size D) upper bound constrain of the multivariate normal distribution
+        :math:`\mathbf ub`.
+    :param Union[int, None] seed:
+        a random seed.
 
     Note that the algorithm may not work if 'cov' is close to being rank deficient.
 
     Reference:
-    Botev, Z. I., (2016), The normal law under linear restrictions: simulation and estimation via minimax tilting,
+    Botev, Z. I., (2016), The normal law under linear restrictions: simulation
+    and estimation via minimax tilting,
     Journal of the Royal Statistical Society Series B, 79, issue 1, p. 125-148,
 
     Example:
@@ -64,18 +73,20 @@ class TruncatedMVN:
         >>>
         >>> # create truncated normal and sample from it
         >>> n_samples = 100000
-        >>> samples = TruncatedMVN(mu, cov, lb, ub).sample(n_samples)
+        >>> samples = TruncatedMVN(mu, cov, lb, ub, seed=42).sample(n_samples)
 
     Reimplementation by Paul Brunzema
     """
 
-    def __init__(self, mu, cov, lb, ub, seed=None):
+    def __init__(self, mu, cov, lb, ub, seed):
         self.dim = len(mu)
         if not cov.shape[0] == cov.shape[1]:
             raise RuntimeError("Covariance matrix must be of shape DxD!")
-        if not (self.dim == cov.shape[0] and self.dim == len(lb) and self.dim == len(ub)):
-            raise RuntimeError("Dimensions D of mean (mu), covariance matric (cov), lower bound (lb) "
-                               "and upper bound (ub) must be the same!")
+        if not (self.dim == cov.shape[0] and self.dim == len(lb)
+                and self.dim == len(ub)):
+            raise RuntimeError(
+                "Dimensions D of mean (mu), covariance matric (cov), "
+                "lower bound (lb) and upper bound (ub) must be the same!")
 
         self.cov = cov
         self.orig_mu = mu
@@ -86,11 +97,12 @@ class TruncatedMVN:
         self.lb = lb - mu  # move distr./bounds to have zero mean
         self.ub = ub - mu  # move distr./bounds to have zero mean
         if np.any(self.ub <= self.lb):
-            raise RuntimeError("Upper bound (ub) must be strictly greater than lower bound (lb) for all D dimensions!")
+            raise RuntimeError("Upper bound (ub) must be strictly greater "
+                               "than lower bound (lb) for all D dimensions!")
 
         # scaled Cholesky with zero diagonal, permutated
-        self.L = np.empty_like(cov)
-        self.unscaled_L = np.empty_like(cov)
+        self.L = np.zeros_like(cov)
+        self.unscaled_L = np.zeros_like(cov)
 
         # placeholder for optimization
         self.perm = None
@@ -124,7 +136,7 @@ class TruncatedMVN:
         accept, iteration = 0, 0
         while accept < n:
             logpr, Z = self.mvnrnd(n, self.mu)  # simulate n proposals
-            idx = -np.log(self.random_state.rand(n)) > (self.psistar - logpr)  # acceptance tests
+            idx = -np.log(self.random_state.rand(n)) > (self.psistar - logpr)
             rv = np.concatenate((rv, Z[:, idx]), axis=1)  # accumulate accepted
             accept = rv.shape[1]  # keep track of # of accepted
             iteration += 1
@@ -142,7 +154,9 @@ class TruncatedMVN:
         rv = rv[order, :]
 
         # retransfer to original mean
-        rv += np.tile(self.orig_mu.reshape(self.dim, 1), (1, rv.shape[-1]))  # Z = X + mu
+        rv += np.tile(self.orig_mu.reshape(self.dim, 1), (1, rv.shape[-1]))
+        # Z = X + mu
+
         return rv
     
     def compute_factors(self):
@@ -167,9 +181,11 @@ class TruncatedMVN:
         x0 = np.zeros(2 * (self.dim - 1))
 
         # find optimal tilting parameter non-linear equation solver
-        sol = optimize.root(gradpsi, x0, args=(self.L, self.lb, self.ub), method='hybr', jac=True)
+        sol = optimize.root(gradpsi, x0, args=(self.L, self.lb, self.ub),
+                            method='hybr', jac=True)
         if not sol.success:
-            print('Warning: Method may fail as covariance matrix is close to singular!')
+            print('Warning: Method may fail as covariance matrix is close '
+                  'to singular!')
         self.x = sol.x[:self.dim - 1]
         self.mu = sol.x[self.dim - 1:]
 
@@ -177,15 +193,16 @@ class TruncatedMVN:
         self.psistar = self.psy(self.x, self.mu)
         
     def reset(self):
-        # reset factors -> when sampling, optimization for optimal tilting parameters is performed again
+        # reset factors -> when sampling, optimization for optimal
+        # tilting parameters is performed again
 
-        # permutated
-        self.lb = self.orig_lb - self.orig_mu  # move distr./bounds to have zero mean
+        # move distr./bounds to have zero mean
+        self.lb = self.orig_lb - self.orig_mu
         self.ub = self.orig_ub - self.orig_mu
 
         # scaled Cholesky with zero diagonal, permutated
-        self.L = np.empty_like(self.cov)
-        self.unscaled_L = np.empty_like(self.cov)
+        self.L = np.zeros_like(self.cov)
+        self.unscaled_L = np.zeros_like(self.cov)
 
         # placeholder for optimization
         self.perm = None
@@ -194,7 +211,8 @@ class TruncatedMVN:
         self.psistar = None
 
     def mvnrnd(self, n, mu):
-        # generates the proposals from the exponentially tilted sequential importance sampling pdf
+        # generates the proposals from the exponentially tilted sequential
+        # importance sampling pdf
         # output:     logpr, log-likelihood of sample
         #             Z, random sample
         mu = np.append(mu, [0.])
@@ -214,32 +232,40 @@ class TruncatedMVN:
 
     def trandn(self, lb, ub):
         r"""
-        Sample generator for the truncated standard multivariate normal distribution :math:`X \sim N(0,I)` s.t.
-        :math:`lb<X<ub`.
+        Sample generator for the truncated standard multivariate normal
+        distribution :math:`X \sim N(0,I)` s.t. :math:`lb<X<ub`.
 
-        If you wish to simulate a random variable 'Z' from the non-standard Gaussian :math:`N(m,s^2)`
-        conditional on :math:`lb<Z<ub`, then first simulate x=TruncatedMVNSampler.trandn((l-m)/s,(u-m)/s) and set
-        Z=m+s*x.
+        If you wish to simulate a random variable 'Z' from the non-standard
+        Gaussian :math:`N(m,s^2)`
+        conditional on :math:`lb<Z<ub`, then first simulate
+        x=TruncatedMVNSampler.trandn((l-m)/s,(u-m)/s) and set Z=m+s*x.
         Infinite values for 'ub' and 'lb' are accepted.
 
-        :param np.ndarray lb: (size D) lower bound constrain of the normal distribution :math:`\mathbf lb`.
-        :param np.ndarray ub: (size D) upper bound constrain of the normal distribution :math:`\mathbf lb`.
-
-        :return: D samples if the truncated normal distribition x ~ N(0, I) subject to lb < x < ub.
-        :rtype: np.ndarray
+        :param np.ndarray lb:
+            (size D) lower bound constrain of the normal distribution
+            :math:`\mathbf lb`.
+        :param np.ndarray ub:
+            (size D) upper bound constrain of the normal distribution
+            :math:`\mathbf lb`.
+        :return:
+            D samples if the truncated normal distribition x ~ N(0, I)
+            subject to lb < x < ub.
+        :rtype:
+            np.ndarray
         """
         if not len(lb) == len(ub):
-            raise RuntimeError("Lower bound (lb) and upper bound (ub) must be of the same length!")
+            raise RuntimeError("Lower bound (lb) and upper bound (ub) "
+                               "must be of the same length!")
 
-        x = np.empty_like(lb)
+        x = np.zeros_like(lb)
         a = 0.66  # threshold used in MATLAB implementation
         # three cases to consider
         # case 1: a<lb<ub
-        I = lb > a
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.ntail(tl, tu)
+        I_ = lb > a
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.ntail(tl, tu)
         # case 2: lb<ub<-a
         J = ub < -a
         if np.any(J):
@@ -247,73 +273,80 @@ class TruncatedMVN:
             tu = -lb[J]
             x[J] = - self.ntail(tl, tu)
         # case 3: otherwise use inverse transform or accept-reject
-        I = ~(I | J)
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.tn(tl, tu)
+        I_ = ~(I_ | J)
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.tn(tl, tu)
         return x
 
     def tn(self, lb, ub, tol=2):
-        # samples a column vector of length=len(lb)=len(ub) from the standard multivariate normal distribution
-        # truncated over the region [lb,ub], where -a<lb<ub<a for some 'a' and lb and ub are column vectors
+        # samples a column vector of length=len(lb)=len(ub) from
+        # the standard multivariate normal distribution
+        # truncated over the region [lb,ub], where -a<lb<ub<a for some 'a'
+        # and lb and ub are column vectors
         # uses acceptance rejection and inverse-transform method
 
-        sw = tol  # controls switch between methods, threshold can be tuned for maximum speed for each platform
-        x = np.empty_like(lb)
+        sw = tol  # controls switch between methods, threshold can be tuned
+        # for maximum speed for each platform
+        x = np.zeros_like(lb)
         # case 1: abs(ub-lb)>tol, uses accept-reject from randn
-        I = abs(ub - lb) > sw
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
-            x[I] = self.trnd(tl, tu)
+        I_ = abs(ub - lb) > sw
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
+            x[I_] = self.trnd(tl, tu)
 
         # case 2: abs(u-l)<tol, uses inverse-transform
-        I = ~I
-        if np.any(I):
-            tl = lb[I]
-            tu = ub[I]
+        I_ = ~I_
+        if np.any(I_):
+            tl = lb[I_]
+            tu = ub[I_]
             pl = special.erfc(tl / np.sqrt(2)) / 2
             pu = special.erfc(tu / np.sqrt(2)) / 2
-            x[I] = np.sqrt(2) * special.erfcinv(2 * (pl - (pl - pu) * self.random_state.rand(len(tl))))
+            x[I_] = np.sqrt(2) * special.erfcinv(
+                2 * (pl - (pl - pu) * self.random_state.rand(len(tl))))
         return x
 
     def trnd(self, lb, ub):
         # uses acceptance rejection to simulate from truncated normal
         x = self.random_state.randn(len(lb))  # sample normal
         test = (x < lb) | (x > ub)
-        I = np.where(test)[0]
-        d = len(I)
+        I_ = np.where(test)[0]
+        d = len(I_)
         while d > 0:  # while there are rejections
-            ly = lb[I]
-            uy = ub[I]
+            ly = lb[I_]
+            uy = ub[I_]
             y = self.random_state.randn(len(uy))  # resample
             idx = (y > ly) & (y < uy)  # accepted
-            x[I[idx]] = y[idx]
-            I = I[~idx]
-            d = len(I)
+            x[I_[idx]] = y[idx]
+            I_ = I_[~idx]
+            d = len(I_)
         return x
 
     def ntail(self, lb, ub):
-        # samples a column vector of length=len(lb)=len(ub) from the standard multivariate normal distribution
-        # truncated over the region [lb,ub], where lb>0 and lb and ub are column vectors
+        # samples a column vector of length=len(lb)=len(ub)
+        # from the standard multivariate normal distribution
+        # truncated over the region [lb,ub], where lb>0 and lb and ub
+        # are column vectors
         # uses acceptance-rejection from Rayleigh distr. similar to Marsaglia (1964)
         if not len(lb) == len(ub):
-            raise RuntimeError("Lower bound (lb) and upper bound (ub) must be of the same length!")
+            raise RuntimeError("Lower bound (lb) and upper bound (ub) "
+                               "must be of the same length!")
         c = (lb ** 2) / 2
         n = len(lb)
         f = np.expm1(c - ub ** 2 / 2)
         x = c - np.log(1 + self.random_state.rand(n) * f)  # sample using Rayleigh
         # keep list of rejected
-        I = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
-        d = len(I)
+        I_ = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
+        d = len(I_)
         while d > 0:  # while there are rejections
-            cy = c[I]
-            y = cy - np.log(1 + self.random_state.rand(d) * f[I])
+            cy = c[I_]
+            y = cy - np.log(1 + self.random_state.rand(d) * f[I_])
             idx = (self.random_state.rand(d) ** 2 * y) < cy  # accepted
-            x[I[idx]] = y[idx]  # store the accepted
-            I = I[~idx]  # remove accepted from the list
-            d = len(I)
+            x[I_[idx]] = y[idx]  # store the accepted
+            I_ = I_[~idx]  # remove accepted from the list
+            d = len(I_)
         return np.sqrt(2 * x)  # this Rayleigh transform can be delayed till the end
 
     def psy(self, x, mu):
@@ -329,8 +362,9 @@ class TruncatedMVN:
     def get_gradient_function(self):
         # wrapper to avoid dependancy on self
 
-        def gradpsi(y, L, l, u):
-            # implements gradient of psi(x) to find optimal exponential twisting, returns also the Jacobian
+        def gradpsi(y, L, l_, u):
+            # implements gradient of psi(x) to find optimal exponential
+            # twisting, returns also the Jacobian
             # NOTE: assumes scaled 'L' with zero diagonal
             d = len(u)
             c = np.zeros(d)
@@ -340,7 +374,7 @@ class TruncatedMVN:
 
             # compute now ~l and ~u
             c[1:d] = L[1:d, :] @ x
-            lt = l - mu - c
+            lt = l_ - mu - c
             ut = u - mu - c
 
             # compute gradients avoiding catastrophic cancellation
@@ -377,14 +411,14 @@ class TruncatedMVN:
 
         for j in perm.copy():
             pr = np.ones_like(z) * np.inf  # compute marginal prob.
-            I = np.arange(j, self.dim)  # search remaining dimensions
+            I_ = np.arange(j, self.dim)  # search remaining dimensions
             D = np.diag(self.cov)
-            s = D[I] - np.sum(L[I, 0:j] ** 2, axis=1)
+            s = D[I_] - np.sum(L[I_, 0:j] ** 2, axis=1)
             s[s < 0] = self.eps
             s = np.sqrt(s)
-            tl = (self.lb[I] - L[I, 0:j] @ z[0:j]) / s
-            tu = (self.ub[I] - L[I, 0:j] @ z[0:j]) / s
-            pr[I] = lnNormalProb(tl, tu)
+            tl = (self.lb[I_] - L[I_, 0:j] @ z[0:j]) / s
+            tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
+            pr[I_] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
             k = np.argmin(pr)
 
@@ -405,42 +439,46 @@ class TruncatedMVN:
             elif s < 0:
                 s = self.eps
             L[j, j] = np.sqrt(s)
-            new_L = self.cov[j + 1:self.dim, j] - L[j + 1:self.dim, 0:j] @ L[j, 0:j].T
+            new_L = (self.cov[j + 1:self.dim, j] -
+                     L[j + 1:self.dim, 0:j] @ L[j, 0:j].T)
             L[j + 1:self.dim, j] = new_L / L[j, j]
 
             # find mean value, z(j), of truncated normal
             tl = (self.lb[j] - L[j, 0:j - 1] @ z[0:j - 1]) / L[j, j]
             tu = (self.ub[j] - L[j, 0:j - 1] @ z[0:j - 1]) / L[j, j]
-            w = lnNormalProb(tl, tu)  # aids in computing expected value of trunc. normal
-            z[j] = (np.exp(-.5 * tl ** 2 - w) - np.exp(-.5 * tu ** 2 - w)) / np.sqrt(2 * math.pi)
+            w = lnNormalProb(tl, tu)
+            # aids in computing expected value of trunc. normal
+            z[j] = (np.exp(-.5 * tl ** 2 - w) - np.exp(-.5 * tu ** 2 - w)
+                    ) / np.sqrt(2 * math.pi)
         return L, perm
 
 
 def lnNormalProb(a, b):
     # computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'
     p = np.zeros_like(a)
-    # case b>a>0
-    I = a > 0
-    if np.any(I):
-        pa = lnPhi(a[I])
-        pb = lnPhi(b[I])
-        p[I] = pa + np.log1p(-np.exp(pb - pa))
-    # case a<b<0
+    # case b > a > 0
+    I_ = a > 0
+    if np.any(I_):
+        pa = lnPhi(a[I_])
+        pb = lnPhi(b[I_])
+        p[I_] = pa + np.log1p(-np.exp(pb - pa))
+    # case a < b < 0
     idx = b < 0
     if np.any(idx):
         pa = lnPhi(-a[idx])  # log of lower tail
         pb = lnPhi(-b[idx])
         p[idx] = pb + np.log1p(-np.exp(pa - pb))
     # case a < 0 < b
-    I = (~I) & (~idx)
-    if np.any(I):
-        pa = special.erfc(-a[I] / np.sqrt(2)) / 2  # lower tail
-        pb = special.erfc(b[I] / np.sqrt(2)) / 2  # upper tail
-        p[I] = np.log1p(-pa - pb)
+    I_ = (~I_) & (~idx)
+    if np.any(I_):
+        pa = special.erfc(-a[I_] / np.sqrt(2)) / 2  # lower tail
+        pb = special.erfc(b[I_] / np.sqrt(2)) / 2  # upper tail
+        p[I_] = np.log1p(-pa - pb)
     return p
 
 
 def lnPhi(x):
-    # computes logarithm of  tail of Z~N(0,1) mitigating numerical roundoff errors
-    out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)  # divide by zeros error -> add eps
+    # computes logarithm of tail of Z~N(0,1) mitigating numerical roundoff errors
+    out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)
+    # divide by zeros error -> add eps
     return out

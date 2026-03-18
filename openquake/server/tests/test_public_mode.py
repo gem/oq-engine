@@ -68,7 +68,8 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         try:
             js = json.loads(resp.content.decode('utf8'))
         except Exception:
-            raise ValueError(b'Invalid JSON response: %r' % resp.content)
+            raise ValueError(
+                b'Invalid JSON response: %r' % resp.content) from None
         if resp.status_code == 200:  # ok case
             return dict(job_id=js['job_id'])
         else:  # error case

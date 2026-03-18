@@ -24,7 +24,7 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.baselib import config, python3compat, hdf5, performance
+from openquake.baselib import config, hdf5, performance
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, groupby)
 from openquake.hazardlib.calc.filters import split_source
@@ -436,7 +436,7 @@ class CompositeSourceModel:
         """
         # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
-        for src_id, nctxs, ctimes in python3compat.zip(
+        for src_id, nctxs, ctimes in zip(
                 source_data['src_id'],
                 source_data['nctxs'],
                 source_data['ctimes']):
@@ -532,7 +532,7 @@ class CompositeSourceModel:
         with_labels = len(cmdict) > 1
         for idx, label in enumerate(cmdict):
             cms = cmdict[label].to_array(grp_ids)
-            for cmaker, grp_id in zip(cms, grp_ids):
+            for cmaker, grp_id in zip(cms, grp_ids, strict=True):
                 sg = self.src_groups[grp_id]
                 if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the

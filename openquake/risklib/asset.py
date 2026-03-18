@@ -28,7 +28,7 @@ from shapely import geometry, prepare, contains_xy
 
 from openquake.baselib import hdf5, general, config, performance
 from openquake.baselib.node import Node, context
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.geo.utils import SiteAssociationError

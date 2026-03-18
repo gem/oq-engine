@@ -532,18 +532,19 @@ def get_rvolcs(ctx, volc_pgns):
     The total rvolc per path is capped at a minimum of 12 km (if any zone
     is traversed) and a maximum of 80 km.
     """
-    r_zone_path = {}
+    n_paths = len(ctx.lon)
+    rvolc_per_path = np.zeros(n_paths)
 
-    # For each travel path
-    for idx_path, _site in enumerate(ctx.lon):
+    for idx_path in range(n_paths):
 
-        # Discretise the line
+        # Discretize the line
         dsct_line = npoints_between(
-                    # .lon/.lat is the site lon/lat
-                    ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
-                    # .clon/.clat is the corresponding clst point to rup
-                    ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
-                    N_POINTS)
+            # .lon/.lat is the site lon/lat
+            ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
+            # .clon/.clat is the corresponding clst point to rup
+            ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
+            N_POINTS
+        )
 
         # Create mesh of discretized line
         mesh = Mesh(dsct_line[0], dsct_line[1])
@@ -551,24 +552,19 @@ def get_rvolcs(ctx, volc_pgns):
         # Distance between consecutive discretised points along the path
         line_spacing = distance(
             mesh.lons[0], mesh.lats[0], FIXED_DEPTH,
-            mesh.lons[1], mesh.lats[1], FIXED_DEPTH)
+            mesh.lons[1], mesh.lats[1], FIXED_DEPTH
+        )
 
-        # N points intersecting zone * spacing = distance traversed in zone
-        r_zone_path[idx_path] = {
-            zone_id: np.count_nonzero(polygon.intersects(mesh)) * line_spacing
-            for zone_id, polygon in volc_pgns.items()
-        }
+        # Sum distance traversed in all volcanic polygons for given path
+        total = 0.0
+        for polygon in volc_pgns.values():
+            # dist traversed in zone = N points intersecting zone * spacing
+            total += np.count_nonzero(polygon.intersects(mesh)) * line_spacing
+        rvolc_per_path[idx_path] = total
 
-    # Stack rvolc dist per zone per path
-    r_values = np.stack([list(r_zone_path[path].values())
-                         for path in r_zone_path])
-
-    # Sum over zones to get total rvolc per path
-    rvolc_per_path = r_values.sum(axis=1)
-
-    # Apply min/max bounds on rvolc as described in Zhao et al. 2016
-    rvolc_per_path[np.logical_and(rvolc_per_path > 0.0,
-                                  rvolc_per_path <= 12.0)] = 12.0
+    # Apply min/max bounds as per Zhao et al. 2016
+    mask = (rvolc_per_path > 0.0) & (rvolc_per_path <= 12.0)
+    rvolc_per_path[mask] = 12.0
     rvolc_per_path[rvolc_per_path >= 80.0] = 80.0
 
     return rvolc_per_path
