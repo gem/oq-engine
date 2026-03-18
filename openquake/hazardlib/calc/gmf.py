@@ -417,6 +417,8 @@ class GmfComputer(object):
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
+                # NB: truncated MVN is tested in the scenario risk tests
+                # conditioned_stations, case_21_stations, case_26_stations
                 N = len(cov_WY_WY)
 
                 # Add a cutoff to remove negative eigenvalues before sampling.
@@ -425,6 +427,7 @@ class GmfComputer(object):
 
                 lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, tlw)
                 seed_w = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
+
                 z_w_truncated = TruncatedMVN(
                     numpy.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
                 ).sample(E)

@@ -29,6 +29,16 @@ from scipy import special, optimize
 
 EPS = 10e-15
 
+def safe_argmin(array):
+    """
+    When an array is constant (in terms of 32 bit floats) returns 0;
+    otherwise return argmin. This solves the platform-dependence
+    """
+    arr32 = array.astype(np.float32)
+    if len(np.unique(arr32)) == 1:
+        return 0
+    return np.argmin(arr32)
+
 
 class TruncatedMVN:
     r"""
@@ -154,7 +164,9 @@ class TruncatedMVN:
         rv = rv[order, :]
 
         # retransfer to original mean
-        rv += np.tile(self.orig_mu.reshape(self.dim, 1), (1, rv.shape[-1]))  # Z = X + mu
+        rv += np.tile(self.orig_mu.reshape(self.dim, 1), (1, rv.shape[-1]))
+        # Z = X + mu
+        breakpoint()
         return rv
     
     def compute_factors(self):
@@ -418,7 +430,7 @@ class TruncatedMVN:
             tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
             pr[I_] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
-            k = np.argmin(pr)
+            k = safe_argmin(pr)
 
             # flip dimensions k-->j
             jk = [j, k]
@@ -454,13 +466,13 @@ class TruncatedMVN:
 def lnNormalProb(a, b):
     # computes ln(P(a<Z<b)) where Z~N(0,1) very accurately for any 'a', 'b'
     p = np.zeros_like(a)
-    # case b>a>0
+    # case b > a > 0
     I_ = a > 0
     if np.any(I_):
         pa = lnPhi(a[I_])
         pb = lnPhi(b[I_])
         p[I_] = pa + np.log1p(-np.exp(pb - pa))
-    # case a<b<0
+    # case a < b < 0
     idx = b < 0
     if np.any(idx):
         pa = lnPhi(-a[idx])  # log of lower tail
@@ -476,6 +488,7 @@ def lnNormalProb(a, b):
 
 
 def lnPhi(x):
-    # computes logarithm of  tail of Z~N(0,1) mitigating numerical roundoff errors
-    out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)  # divide by zeros error -> add eps
+    # computes logarithm of tail of Z~N(0,1) mitigating numerical roundoff errors
+    out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)
+    # divide by zeros error -> add eps
     return out
