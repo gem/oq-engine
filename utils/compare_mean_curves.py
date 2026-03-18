@@ -36,9 +36,9 @@ def compare_mean_curves(calc_ref: int, calc: int, nsigma: float = 3):
     sitecol_ref = dstore_ref['sitecol']
     sitecol = dstore['sitecol']
     site_id_ref = {(lon, lat): sid for sid, lon, lat in zip(
-        sitecol_ref.sids, sitecol_ref.lons, sitecol_ref.lats)}
+        sitecol_ref.sids, sitecol_ref.lons, sitecol_ref.lats, strict=True)}
     site_id = {(lon, lat): sid for sid, lon, lat in zip(
-        sitecol.sids, sitecol.lons, sitecol.lats)}
+        sitecol.sids, sitecol.lons, sitecol.lats, strict=True)}
     common = set(site_id_ref) & set(site_id)
     if not common:
         raise RuntimeError('There are no common sites between calculation '

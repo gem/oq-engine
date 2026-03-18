@@ -24,7 +24,7 @@ import numpy
 import pandas
 from shapely import geometry
 from openquake.baselib import (
-    config, hdf5, parallel, python3compat, performance)
+    config, hdf5, parallel, general, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
@@ -480,7 +480,7 @@ def set_mags(oq, dstore):
     if 'source_mags' in dstore:
         # classical or event_based
         oq.mags_by_trt = {
-            trt: python3compat.decode(dset[:])
+            trt: general.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
     elif 'ruptures' in dstore:
         # scenario

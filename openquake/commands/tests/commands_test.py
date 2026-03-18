@@ -32,7 +32,7 @@ import tempfile
 import unittest
 import numpy
 
-from openquake.baselib.python3compat import encode
+from openquake.baselib.general import encode
 from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv

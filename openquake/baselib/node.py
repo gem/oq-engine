@@ -149,7 +149,7 @@ import itertools
 import pprint as pp
 import configparser
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, decode, encode
+from openquake.baselib.general import decode, encode
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape, quoteattr
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -760,12 +760,11 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
-    except Exception:
-        etype, exc, tb = sys.exc_info()
+    except Exception as exc:
         msg = str(exc)
         if str(fname) not in msg:
             msg = '%s in %s' % (msg, fname)
-        raise_(etype, msg, tb)
+        raise exc.__class__(msg) from None
 
 
 def node_from_xml(xmlfile, nodefactory=Node):
@@ -847,11 +846,10 @@ def context(fname, node):
     """
     try:
         yield node
-    except Exception:
-        etype, exc, tb = sys.exc_info()
+    except Exception as exc:
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)
-        raise_(etype, msg, tb)
+        raise exc.__class__(msg) from None
 
 
 class ValidatingXmlParser(object):

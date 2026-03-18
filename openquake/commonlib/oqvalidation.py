@@ -31,7 +31,7 @@ import numpy
 import pandas
 import itertools
 
-from openquake.baselib import __version__, hdf5, python3compat, config
+from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
     DictArray, AccumDict, cached_property, engine_version)
@@ -2463,8 +2463,8 @@ class OqParam(valid.ParamSet):
             # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
-                name = python3compat.decode(name_)
-                literal = python3compat.decode(literal_)
+                name = general.decode(name_)
+                literal = general.decode(literal_)
                 if '.' in name:
                     k1, k2 = name.split('.', 1)
                     dd[k1][k2] = ast.literal_eval(literal)
@@ -2473,7 +2473,7 @@ class OqParam(valid.ParamSet):
             vars(self).update(dd)
         else:
             # for version >= 3.12
-            vars(self).update(json.loads(python3compat.decode(array)))
+            vars(self).update(json.loads(general.decode(array)))
 
         Idist = calc.filters.IntegrationDistance
         if hasattr(self, 'maximum_distance') and not isinstance(

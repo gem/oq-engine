@@ -103,7 +103,8 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         if not sec_peril_params:
             sec_peril_params = [{}] * len(secondary_perils)
         instances = []
-        for clsname, params in zip(secondary_perils, sec_peril_params):
+        for clsname, params in zip(
+                secondary_perils, sec_peril_params, strict=True):
             obj = globals()[clsname](**params)
             obj.oq = oq
             instances.append(obj)
