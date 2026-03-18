@@ -644,5 +644,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     ax.set_xlabel("Longitude", fontsize=font_size)
     ax.set_ylabel("Latitude", fontsize=font_size)
-    fig.tight_layout(rect=[0, 0, 0.85, 1])
+    # Legend is placed inside the axes (loc="best"), so no right-side
+    # reservation is needed.
+    fig.tight_layout()
     return fig, ax
