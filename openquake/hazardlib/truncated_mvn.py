@@ -166,7 +166,7 @@ class TruncatedMVN:
         # retransfer to original mean
         rv += np.tile(self.orig_mu.reshape(self.dim, 1), (1, rv.shape[-1]))
         # Z = X + mu
-        breakpoint()
+
         return rv
     
     def compute_factors(self):
