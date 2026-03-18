@@ -596,7 +596,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     # Create legend handles based on color and label
     handles = [mpatches.Patch(color=color, label=label)
                for color, label in zip(colors, labels)]
-    if epicenter_handle:
+    if epicenter_handle is not None:
         handles.append(epicenter_handle)
     ax.legend(handles=handles, title=legend_title, framealpha=0.7,
               title_fontsize=font_size, fontsize=legend_font_size,
@@ -610,6 +610,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     if y_limits:
         ax.set_ylim(y_limits)
 
+    city_scatters = []
     if cities:
         try:
             from adjustText import adjust_text
@@ -618,7 +619,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         texts = []
         for city, (x, y) in cities.items():
             # Plot the city dot
-            ax.scatter(x, y, color='black', marker='o', s=8, zorder=6)
+            sc = ax.scatter(x, y, color='black', marker='o', s=8, zorder=6)
+            city_scatters.append(sc)
             # Create the text object (don't offset it yet)
             t = ax.text(x, y, city, fontsize=city_font_size,
                         color="black", fontweight="normal",
@@ -631,7 +633,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
         if adjust_text and texts:
             legend = ax.get_legend()
             adjust_text(texts, ax=ax,
-                        add_objects=[ax.collections[-1], legend],
+                        add_objects=city_scatters + [legend],
                         arrowprops=None,  # disable arrows completely
                         force_text=(0.1, 0.2),
                         expand_points=(1.2, 1.2),
