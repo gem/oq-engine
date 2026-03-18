@@ -440,25 +440,27 @@ class CountryReportBuilder:
         self.row_h = self.grid_total_h / 2
         self.col_w = self.page_width / 2
 
-    def _generate_country_plot(self):
+    def _generate_country_plots(self):
         import matplotlib.pyplot as plt
         tags_agg_losses = list(LOSS_METADATA)
         admin_boundaries = load_admin_boundaries(
             self.country_name, self.iso3, self.adm_level)
         points_gdf = points_to_gdf(self.losses_df, crs=admin_boundaries.crs)
-        df = aggregate_losses(points_gdf, admin_boundaries, tags_agg_losses)
-        df = df.rename(columns={k: v["label"]
-                                for k, v in LOSS_METADATA.items()})
-        save_most_affected_regions(df, self.dstore, self.iso3)
-        self.x_limits, self.y_limits = self._compute_viewport_from_boundaries(df)
+        aggloss_df = aggregate_losses(
+            points_gdf, admin_boundaries, tags_agg_losses)
+        aggloss_df = aggloss_df.rename(columns={k: v["label"]
+                                       for k, v in LOSS_METADATA.items()})
+        save_most_affected_regions(aggloss_df, self.dstore, self.iso3)
+        self.x_limits, self.y_limits = self._compute_viewport_from_boundaries(
+            aggloss_df)
         self.cities = self._get_cities_in_viewport()
 
-        classifiers = build_classifiers(df, breaks=[1, 10, 100, 1000])
+        classifiers = build_classifiers(aggloss_df, breaks=[1, 10, 100, 1000])
         images = {}
         for meta in LOSS_METADATA.values():
             label = meta["label"]
             fig, ax = plot_variable(
-                df, admin_boundaries, label, classifiers[label],
+                aggloss_df, admin_boundaries, label, classifiers[label],
                 meta["colors"], country_name=self.country_name,
                 plot_title=meta["title"],
                 legend_title=label, cities=self.cities,
@@ -469,7 +471,7 @@ class CountryReportBuilder:
             plt.close(fig)
             buf.seek(0)
             images[label] = buf.getvalue()
-        return df, images
+        return images
 
     def _build_disclaimer(self):
         tbl = self.Table(
@@ -547,7 +549,8 @@ class CountryReportBuilder:
 
         return tbl
 
-    def _build_grid(self):
+    # NOTE: passing images explicitly to avoid implicit ordering dependency
+    def _build_grid(self, images):
         # Determine column header based on uncertainty
         col_header = "Estimated losses" if self.no_uncertainty else "Range of losses"
         table_data = [["", col_header]] + [
@@ -605,19 +608,19 @@ class CountryReportBuilder:
         ]
 
         img_top_right = self._scaled_image_from_bytes(
-            self.images[LOSS_METADATA['number']['label']],
+            images[LOSS_METADATA['number']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
 
         img_bot_left = self._scaled_image_from_bytes(
-            self.images[LOSS_METADATA['occupants']['label']],
+            images[LOSS_METADATA['occupants']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
 
         img_bot_right = self._scaled_image_from_bytes(
-            self.images[LOSS_METADATA['residents']['label']],
+            images[LOSS_METADATA['residents']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
@@ -666,7 +669,7 @@ class CountryReportBuilder:
 
     def build(self):
         logging.info(f'Making impact PDF report for {self.iso3}...')
-        self.df, self.images = self._generate_country_plot()
+        images = self._generate_country_plots()
 
         buffer = BytesIO()
 
@@ -683,7 +686,7 @@ class CountryReportBuilder:
             [
                 [self._build_disclaimer()],
                 [self._build_header()],
-                [self._build_grid()],
+                [self._build_grid(images)],
                 [self._build_notes()],
             ],
             colWidths=[self.page_width],
