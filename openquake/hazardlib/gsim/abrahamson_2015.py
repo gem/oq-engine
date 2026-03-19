@@ -100,36 +100,64 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     return base + f_mag + theta13 * (10. - mag) ** 2.
 
 
-def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
+def _compute_backarc_term(dists, min_dist, a, b, backarc):
+    """
+    Compute backarc term of original BCHydro GMM.
+    """
+    f_faba = np.zeros_like(dists)
+    fixed_dists = dists[backarc]  # Only applies to backarc sites (f_faba
+                                  # term is zero for the forearc sites)
+    fixed_dists[fixed_dists < min_dist] = min_dist
+    f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
+
+    return f_faba
+
+
+def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
+    """
+    Compute ESHM20 forearc-backarc term. This term is applied when
+    specifying an ESHM20 FABA tapering model. 
+    """
+    if faba_model:
+        fixed_dists = np.copy(dists)
+        fixed_dists[fixed_dists < min_dist] = min_dist
+        f_faba = a + b * np.log(fixed_dists / 40.)
+        return f_faba * faba_model(-1*xvf)
+    else:
+        return np.zeros_like(dists) # Apply no eshm20 faba term
+
+
+def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
+    """
+    Apply either the original BCHydro backarc term (uses backarc
+    param in site model) or the ESHM20 frontarc-backarc tapering
+    model (uses distance to volcanic front (xvf) paramter in site
+    model).
+    """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = ctx.rrup
         a, b = C['theta15'], C['theta16']
         min_dist = 100.
-    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+    else:
+        assert trt == const.TRT.SUBDUCTION_INTRASLAB
         dists = ctx.rhypo
         a, b = C['theta7'], C['theta8']
         min_dist = 85.
+    
+    if kind != "eshm20":
+       return _compute_backarc_term(dists, min_dist, a, b,
+                                    np.bool_(ctx.backarc)) 
+
     else:
-        raise NotImplementedError(trt)
-    if faba_model is None:
-        backarc = np.bool_(ctx.backarc)
-        f_faba = np.zeros_like(dists)
-        # Only applies to backarc sites (f_faba is zero for forearc sites)
-        fixed_dists = dists[backarc]
-        fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
-        return f_faba
-
-    # Must be a faba model specified
-    fixed_dists = np.copy(dists)
-    fixed_dists[fixed_dists < min_dist] = min_dist
-    f_faba = a + b * np.log(fixed_dists / 40.)
-
-    return f_faba * faba_model(-ctx.xvf)
+        assert kind == "eshm20"
+        return _compute_eshm20_faba_term(dists, min_dist, a, b,
+                                         faba_model, ctx.xvf)
 
 
-def _compute_dist_term(C1, theta2, theta14, theta3, ctx, c4, theta9,
-                       theta6, theta10, dists, theta6_adj):
+def _compute_dist_term(
+        C1, ctx, c4, dists, theta6_adj,
+        theta2, theta3, theta6, theta9, theta10, theta14
+        ):
     """
     Compute distance term.
     """
@@ -141,11 +169,9 @@ def _compute_dist_term(C1, theta2, theta14, theta3, ctx, c4, theta9,
     return part1 * part2 + part3 + theta10
 
 
-def _compute_distance_term(kind, trt, C, ctx, theta6_adj=None):
+def _compute_distance_term(kind, trt, C, ctx, theta6_adj):
     """
     Computes the distance scaling term, as contained within equation (1).
-
-    theta6_adj is admitted within the ESHM20 subclasses.
     """
     if kind.startswith("montalva"):
         theta3 = C['theta3']
@@ -155,20 +181,21 @@ def _compute_distance_term(kind, trt, C, ctx, theta6_adj=None):
         C1 = 7.2
     else:
         C1 = 7.8
+
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = ctx.rrup
         theta14 = 0.
         theta10 = 0.
-    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+    else:
+        assert trt == const.TRT.SUBDUCTION_INTRASLAB
         dists = ctx.rhypo
         theta14 = C['theta14']
         theta10 = C['theta10']
-    else:
-        raise NotImplementedError(trt)
-    
+
     return _compute_dist_term(
-        C1, C['theta2'], theta14, theta3, ctx, CONSTS['c4'],
-        CONSTS['theta9'], C['theta6'], theta10, dists, theta6_adj)
+        C1, ctx, CONSTS['c4'], dists, theta6_adj,
+        C['theta2'], theta3, C['theta6'], CONSTS['theta9'], theta10, theta14
+        )
 
 
 def _compute_focal_depth_term(trt, C, ctx):
@@ -190,7 +217,7 @@ def _compute_magnitude_term(kind, C, dc1, mag):
     """
     Computes the magnitude scaling term given by equation (2)
     """
-    if kind == "base":
+    if kind in ["base", "eshm20"]:
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], CONSTS['theta4'],
             CONSTS['theta5'], C['theta13'], dc1, mag)
@@ -213,7 +240,7 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     mean = (_compute_magnitude_term(kind, C, dc1, ctx.mag) +
             _compute_distance_term(kind, trt, C, ctx, theta6_adj) +
             _compute_focal_depth_term(trt, C, ctx) +
-            _compute_forearc_backarc_term(trt, faba_model, C, ctx))
+            _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model))
     
     # Apply linear site term
     site_response = (
@@ -328,12 +355,11 @@ class AbrahamsonEtAl2015SInter(GMPE):
         
         # ESHM20 FABA model
         if faba_taper_model:
-            if "xvf" not in self.REQUIRES_SITES_PARAMETERS:
-                # Currently only BCHydro subclasses considering XVF
-                # are the ESHM20 subclasses
+            if "xvf" not in self.REQUIRES_SITES_PARAMETERS or \
+                self.kind != "eshm20":
                 raise ValueError(
                     "An ESHM20 FABA model can only be used in combination "
-                    "with a GSIM which considers the XVF site parameter.")
+                    "with an ESHM20 subclass of the BCHydro GSIM.")
             self.faba_model = self.ESHM20_FABA_MODELS[ # This att is only set
                 faba_taper_model](**faba_args)         # in ESHM20 subclasses
         else:
@@ -363,7 +389,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 _compute_focal_depth_term(
                     self.trt, C, ctx) +
                 _compute_forearc_backarc_term(
-                    self.trt, self.faba_model, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.faba_model) +
                 _compute_site_response_term(
                     C, ctx, pga1000))
             if self.sigma_mu_epsilon:

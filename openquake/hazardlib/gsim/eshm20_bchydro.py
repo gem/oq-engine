@@ -186,8 +186,9 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
 
     Introduces several configurable parameters; theta6_adjustment, sigma_mu_epsilon,
     and faba_model. Please see the original BCHydro model (in abrahamson_2015.py) for
-    an explanation of these parameters (they are admitted into the init method there).
+    an explanation of these parameters.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -226,6 +227,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -264,6 +266,7 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -309,6 +312,7 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     sigma_mu_epsilon - number of standard deviations above or below the mean
     to apply the statistical uncertainty sigma_mu term.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -347,6 +351,7 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -385,6 +390,7 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
