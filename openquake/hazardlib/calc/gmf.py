@@ -406,13 +406,13 @@ class GmfComputer(object):
             return self.strip_zeros(data)
 
     def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs, rng=None):
+        tlw = self.cmaker.truncation_level_within
+        tlb = self.cmaker.truncation_level_between
         if len(mean_stds) == 3:  # conditioned GMFs
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
             eps = self.cmaker.oq.correlation_cutoff
-            tlw = self.cmaker.truncation_level_within
-            tlb = self.cmaker.truncation_level_between
             if max(tlw, tlb) <= TRUNCATION_LEVEL_THRESHOLD:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
@@ -454,10 +454,8 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        tw = self.cmaker.truncation_level_within
-        tb = self.cmaker.truncation_level_between
-        if (tw <= TRUNCATION_LEVEL_THRESHOLD and
-                tb <= TRUNCATION_LEVEL_THRESHOLD):
+        if (tlw <= TRUNCATION_LEVEL_THRESHOLD and
+                tlb <= TRUNCATION_LEVEL_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '
