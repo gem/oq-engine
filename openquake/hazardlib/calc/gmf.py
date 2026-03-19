@@ -38,7 +38,8 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
-LEGACY_APPROACH = False
+IGNORE_TRUNCATION = False
+
 
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
@@ -419,12 +420,12 @@ class GmfComputer(object):
     def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E, rng):
         N = len(cov_WY_WY)
         cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
-        if LEGACY_APPROACH:
+        if IGNORE_TRUNCATION:
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
                 check_valid="raise", tol=1e-5, method="cholesky")
-            return arr
+            return arr.T
 
         # NB: truncated MVN is tested in the scenario risk tests
         # conditioned_stations, case_21_stations, case_26_stations
