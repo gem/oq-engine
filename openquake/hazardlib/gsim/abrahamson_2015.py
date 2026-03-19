@@ -128,8 +128,8 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
     else:
         # Apply no eshm20 faba term - xvf is still in the site
         # model given required in BCHydro subclasses but the user
-        # doesn't have to ensure it's configured to null the faba
-        # term which simplifies usage
+        # doesn't have to ensure it's configured to nullify the
+        # faba term which simplifies usage outside of ESHM20
         return np.zeros_like(dists)
 
 
@@ -151,10 +151,12 @@ def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
         min_dist = 85.
     
     if kind != "eshm20":
+       # Apply the default BCHydro backarc term
        return _compute_backarc_term(dists, min_dist, a, b,
                                     np.bool_(ctx.backarc)) 
 
     else:
+        # Apply ESHM20 FABA tapering
         assert kind == "eshm20"
         return _compute_eshm20_faba_term(dists, min_dist, a, b,
                                          faba_model, ctx.xvf)

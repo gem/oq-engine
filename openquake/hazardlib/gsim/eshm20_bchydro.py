@@ -184,9 +184,9 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     ESHM20 adjustment of the BC Hydro GMPE for subduction interface events with
     theta6 calibrated to Mediterranean data.
 
-    Introduces several configurable parameters; theta6_adjustment, sigma_mu_epsilon,
-    and faba_model. Please see the original BCHydro model (in abrahamson_2015.py) for
-    an explanation of these parameters.
+    Introduces several configurable parameters; theta6_adjustment,
+    sigma_mu_epsilon, and faba_model. Please see the original BCHydro
+    model (in abrahamson_2015.py) for an explanation of these parameters.
     """
     kind = "eshm20"
 
