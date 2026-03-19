@@ -345,11 +345,11 @@ class GmfComputer(object):
         upper = level * sigmas
         return -upper, upper
 
-    def compute_all(self, mean_stds=None, max_iml=None,
-                    cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mean_stds=None, cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
+        max_iml = self.cmaker.oq.get_max_iml()
         conditioned = mean_stds is not None
         self.init_eid_rlz_sig_eps()
         rng = numpy.random.default_rng(self.seed)
@@ -454,8 +454,10 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        if (self.cmaker.truncation_level_within <= TRUNCATION_LEVEL_THRESHOLD and
-                self.cmaker.truncation_level_between <= TRUNCATION_LEVEL_THRESHOLD):
+        tw = self.cmaker.truncation_level_within
+        tb = self.cmaker.truncation_level_between
+        if (tw <= TRUNCATION_LEVEL_THRESHOLD and
+                tb <= TRUNCATION_LEVEL_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '

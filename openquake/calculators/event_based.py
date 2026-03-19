@@ -203,7 +203,6 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     alldata = []
     sig_eps = []
     times = []
-    max_iml = oq.get_max_iml()
     se_dt = sig_eps_dt(oq.imtls)
     mea_tau_phi = []
     for proxy in proxies:
@@ -221,9 +220,9 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
         if stations and stations[0] is not None:  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], max_iml, cmon, umon)
+                df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
-            df = computer.compute_all(None, max_iml, cmon, umon)
+            df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
                 mea_tau_phi.append(mtp)
