@@ -37,7 +37,7 @@ U16 = np.uint16
 U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
-TRUNCATION_LEVEL_THRESHOLD = 1E-9
+TRUNCATION_THRESHOLD = 1E-9
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -382,13 +382,13 @@ class GmfComputer(object):
                     within_eps = [None] * self.M
                 else:
                     # arrays of random numbers of shape (M, N, E) and (M, E)
-                    if self.tlw <= TRUNCATION_LEVEL_THRESHOLD:
+                    if self.tlw <= TRUNCATION_THRESHOLD:
                         within_eps = [np.zeros((self.N, E), F32)
                                      for _ in range(self.M)]
                     else:
                         within_eps = [self.within_dist.rvs((self.N, E), rng)
                                      for _ in range(self.M)]
-                    if self.tlb <= TRUNCATION_LEVEL_THRESHOLD:
+                    if self.tlb <= TRUNCATION_THRESHOLD:
                         self.eps[idxs] = 0.
                     else:
                         self.eps[idxs] = self.cross_correl.get_inter_eps(
@@ -446,7 +446,7 @@ class GmfComputer(object):
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
-            if max(self.tlw, self.tlb) <= TRUNCATION_LEVEL_THRESHOLD:
+            if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
@@ -466,8 +466,8 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        if (self.tlw <= TRUNCATION_LEVEL_THRESHOLD and
-                self.tlb <= TRUNCATION_LEVEL_THRESHOLD):
+        if (self.tlw <= TRUNCATION_THRESHOLD and
+                self.tlb <= TRUNCATION_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '
@@ -484,18 +484,15 @@ class GmfComputer(object):
             gmf = exp(mean[:, None] + sig[:, None] * within_eps, im != 'MMI')
             self.sig[idxs, m] = np.nan
         else:
-            # the [:, None] is used to implement multiplication by row;
-            # for instance if  a = [1 2], b = [[1 2] [3 4]] then
-            # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
+            # NB: [:, newaxis] is used to implement multiplication by row;
+            # for instance, if  a = [1 2], b = [[1 2] [3 4]], then
+            # a[:, newaxis] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
-            within_res = phi[:, None] * within_eps  # shape (N, E)
+            within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
             if self.correlation_model is not None:
                 within_res = self.correlation_model.apply_correlation(
                     self.sites, imt, within_res, phi)
-                if len(within_res.shape) == 1:  # a vector
-                    within_res = within_res[:, None]
-
-            between_res = tau[:, None] * self.eps[idxs, m]
+            between_res = tau[:, np.newaxis] * self.eps[idxs, m]
             # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + within_res + between_res, im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
