@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 69.0"]
+requires = ["setuptools >= 69.0", "wheel"]]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,20 +17,18 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
 ]
 
 # Core dependencies (simplified based on common engine requirements)
 # Note: oq-engine uses requirements-py3x.txt files for exact pinning
 dependencies = [
-    "numpy>=1.20",
+    "numpy>=2.26",
     "scipy>=1.7",
-    "pandas>=1.3",
-    "h5py>=3.0",
-    "django>=4.2",
+    "pandas>=2.2.3",
+    "h5py>=3.13",
+    "django>=4.2, <5",
     "psutil",
     "requests",
     "pyzmq",
@@ -47,14 +45,28 @@ oq = "openquake.commands.__main__:oq"
 
 [tool.setuptools]
 packages = ["openquake"]
+include-package-data = true
+
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
 version = {attr = "openquake.baselib.__version__"}
+dependencies = {file = ["requirements.txt"]} # Se hai le dipendenze in un file di testo
+optional-dependencies = {dev = {file = ["requirements-dev.txt"]}}
+
+
+[tool.setuptools.packages.find]
+include = ["openquake.*"]
+exclude = [
+    "qa_tests", "qa_tests.*",
+    "tools",
+    "*.*.tests", "*.*.tests.*",
+    "openquake.engine.bin",
+    "openquake.engine.bin.*"
+]
 
 [tool.setuptools.package-data]
-"*" = ["*.cfg", "*.sql", "*.html", "*.css", "*.js", "*.csv", "*.onnx", ".onnx.gz",
-       "demos/**"]
+"openquake.engine" = ["openquake.cfg", "README.md", "LICENSE", "CONTRIBUTORS.txt"]
 
 # If you use specific dev tools like pytest or black
 [tool.pytest.ini_options]
