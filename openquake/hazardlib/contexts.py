@@ -218,6 +218,9 @@ class Oq(object):
             imtls = self.hazard_imtls
         return numpy.array([1E-10 for imt in imtls])
 
+    def get_max_iml(self):
+        return numpy.full(len(self.imtls), numpy.nan)
+
     def get_reqv(self):
         if 'reqv' not in self.inputs:
             return
