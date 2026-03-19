@@ -126,10 +126,10 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
         return f_faba * faba_model(-1*xvf)
     
     else:
-        # Apply no eshm20 faba term - xvf is still in the site
-        # model given required in BCHydro subclasses but the user
-        # doesn't have to ensure it's configured to nullify the
-        # faba term which simplifies usage outside of ESHM20
+        # Apply no eshm20 faba term - xvf is still in the site model
+        # given required in BCHydro subclasses BUT the user doesn't
+        # have to ensure it's configured to nullify the faba term which
+        # simplifies usage outside of ESHM20 subclasses
         return np.zeros_like(dists)
 
 
@@ -364,11 +364,11 @@ class AbrahamsonEtAl2015SInter(GMPE):
         
         # ESHM20 FABA model
         if faba_taper_model:
-            if "xvf" not in self.REQUIRES_SITES_PARAMETERS or \
-                self.kind != "eshm20":
+            if self.kind != "eshm20":
                 raise ValueError(
                     "An ESHM20 FABA model can only be used in combination "
                     "with an ESHM20 subclass of the BCHydro GSIM.")
+            assert "xvf" in self.REQUIRES_SITES_PARAMETERS
             self.faba_model = self.ESHM20_FABA_MODELS[ # This att is only set
                 faba_taper_model](**faba_args)         # in ESHM20 subclasses
         else:
