@@ -170,7 +170,7 @@ class FABATaperGaussian(FABATaperStep):
         return y
 
 
-AbrahamsonEtAl2015SInter.FABA_ALL_MODELS = {
+AbrahamsonEtAl2015SInter.ESHM20_FABA_MODELS = {
     "Step": FABATaperStep,
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
@@ -184,21 +184,9 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     ESHM20 adjustment of the BC Hydro GMPE for subduction interface events with
     theta6 calibrated to Mediterranean data.
 
-    Introduces several configurable parameters:
-
-    :param float theta6_adjustment:
-        The amount to increase or decrease the theta6 - should be +0.0015 (for
-        slower attenuation) and -0.0015 (for faster attenuation)
-
-    :param float sigma_mu_epsilon:
-        The number of standard deviations above or below the mean to apply the
-        statistical uncertainty sigma_mu term.
-
-    :param faba_model:
-        Choice of model for the forearc/backarc tapering function, choice of
-        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
-
-    Depending on the choice of taper model, additional parameters may be passed
+    Introduces several configurable parameters; theta6_adjustment, sigma_mu_epsilon,
+    and faba_model. Please see the original BCHydro model (in abrahamson_2015.py) for
+    an explanation of these parameters (they are admitted into the init method there).
     """
 
     # Requires Vs30 and distance to the volcanic front
