@@ -1487,9 +1487,9 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, params['siteid'], description, asce_version, site_class, jobctx,
-        job_owner_email, outputs_uri_web, config.directory.mosaic_dir,
-        aelo_callback)).start()
+        lon, lat, vs30, params['siteid'], description, asce_version,
+        site_class, jobctx, job_owner_email, outputs_uri_web,
+        config.directory.mosaic_dir, aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
 
@@ -1568,8 +1568,8 @@ def save_pik(job, dirname):
 
 def get_allowed_outputs(oes, request):
     if settings.LOCKDOWN:
-        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
-        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to
+        # users with level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
         user = request.user
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
