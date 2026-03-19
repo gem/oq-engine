@@ -122,6 +122,7 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     fixed_dists = np.copy(dists)
     fixed_dists[fixed_dists < min_dist] = min_dist
     f_faba = a + b * np.log(fixed_dists / 40.)
+    
     return f_faba * faba_model(-ctx.xvf)
 
 
@@ -134,6 +135,7 @@ def _compute_dist_term(C1, theta2, theta14, theta3, ctx, c4, theta9,
     part2 = np.log(dists + c4 * np.exp((ctx.mag - 6.) * theta9))
     adj_theta6 = (theta6_adj or 0) + theta6
     part3 = adj_theta6 * dists
+
     return part1 * part2 + part3 + theta10
 
 
@@ -177,7 +179,9 @@ def _compute_focal_depth_term(trt, C, ctx):
     """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return np.zeros_like(ctx.mag)
+    
     z_h = np.clip(ctx.hypo_depth, None, 120.)
+
     return C['theta11'] * (z_h - 60.)
 
 
@@ -189,13 +193,15 @@ def _compute_magnitude_term(kind, C, dc1, mag):
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], CONSTS['theta4'],
             CONSTS['theta5'], C['theta13'], dc1, mag)
+    
     elif kind == "montalva16":
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], C['theta4'],
             C['theta5'], C['theta13'], dc1, mag)
+    
     elif kind == "montalva17":
-        return _compute_magterm(C1, C['theta1'], C['theta4'],
-                                C['theta5'], 0., dc1, mag)
+        return _compute_magterm(
+            C1, C['theta1'], C['theta4'], C['theta5'], 0., dc1, mag)
 
 
 def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
@@ -227,15 +233,18 @@ def _compute_site_response_term(C, ctx, pga1000):
     vs_star[vs_star > 1000.0] = 1000.
     arg = vs_star / C["vlin"]
     site_resp_term = C["theta12"] * np.log(arg)
+    
     # Get linear scaling term
     idx = ctx.vs30 >= C["vlin"]
     site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
+
     # Get nonlinear scaling term
     idx = np.logical_not(idx)
     site_resp_term[idx] += (
         -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
         C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
                         (arg[idx] ** CONSTS["n"])))
+    
     return site_resp_term
 
 
