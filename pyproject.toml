@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://openquake.org"
+Homepage = "https://globalquakemodel.org"
 Repository = "https://github.com/gem/oq-engine"
 Documentation = "https://docs.openquake.org"
 
@@ -47,26 +47,14 @@ oq = "openquake.commands.__main__:oq"
 packages = ["openquake"]
 include-package-data = true
 
-
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
 version = {attr = "openquake.baselib.__version__"}
-dependencies = {file = ["requirements.txt"]} # Se hai le dipendenze in un file di testo
-optional-dependencies = {dev = {file = ["requirements-dev.txt"]}}
-
-
-[tool.setuptools.packages.find]
-include = ["openquake.*"]
-exclude = [
-    "qa_tests", "qa_tests.*",
-    "tools",
-    "*.*.tests", "*.*.tests.*",
-    "openquake.engine.bin",
-    "openquake.engine.bin.*"
-]
 
 [tool.setuptools.package-data]
-"openquake.engine" = ["openquake.cfg", "README.md", "LICENSE", "CONTRIBUTORS.txt"]
+"*" = ["README.md", "LICENSE", "CONTRIBUTORS.txt", "*.cfg", "*.sql", "*.html", 
+       "*.css", "*.js", "*.csv", "*.onnx", ".onnx.gz", "demos/**"]
+
 
 # If you use specific dev tools like pytest or black
 [tool.pytest.ini_options]
