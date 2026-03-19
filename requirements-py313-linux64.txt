@@ -66,7 +66,7 @@ https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/py/python_pam-2.0.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/requests-2.31.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/setuptools-69.0.2-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/setuptools-79.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/six-1.16.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl
