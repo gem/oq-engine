@@ -420,6 +420,7 @@ class GmfComputer(object):
     def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E, rng):
         N = len(cov_WY_WY)
         cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
+        # the cutoff is needed to remove negative eigenvalues
         if IGNORE_TRUNCATION:
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
             arr = rng.multivariate_normal(
@@ -427,10 +428,8 @@ class GmfComputer(object):
                 check_valid="raise", tol=1e-5, method="cholesky")
             return arr.T
 
-        # NB: truncated MVN is tested in the scenario risk tests
+        # NB: truncated MVN is used in the scenario risk tests
         # conditioned_stations, case_21_stations, case_26_stations
-
-        # Add a cutoff to remove negative eigenvalues before sampling.
         cov_WY_WY = cov_WY_WY + cutoff
         cov_BY_BY = cov_BY_BY + cutoff
 
