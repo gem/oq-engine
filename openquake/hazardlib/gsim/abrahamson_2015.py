@@ -99,18 +99,12 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
 
 
 # theta6_adj used in BCHydro
-def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
-                     theta6_adj, theta6, theta10):
-    if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = ctx.rrup
-        assert theta10 == 0., theta10
-    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = ctx.rhypo
-    else:
-        raise NotImplementedError(trt)
-    return (theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
-        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) + (
-        theta6_adj + theta6) * dists + theta10
+def _compute_disterm(C1, theta2, theta14, theta3, ctx, c4, theta9,
+                     theta6_adj, theta6, theta10, dists):
+    return (
+        theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
+            dists + c4 * np.exp((ctx.mag - 6.) * theta9)) + (
+                theta6_adj + theta6) * dists + theta10
 
 
 def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
@@ -153,14 +147,18 @@ def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
     else:
         C1 = 7.8
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        return _compute_disterm(
-            trt, C1, C['theta2'], 0., theta3, ctx, CONSTS['c4'],
-            CONSTS['theta9'], theta6_adj, C['theta6'], theta10=0.)
-    else:  # sslab
-        return _compute_disterm(
-            trt, C1, C['theta2'], C['theta14'], theta3, ctx,
-            CONSTS['c4'], CONSTS['theta9'], theta6_adj, C['theta6'],
-            C["theta10"])
+        dists = ctx.rrup
+        theta14 = 0.
+        theta10 = 0.
+    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+        dists = ctx.rhypo
+        theta14 = C['theta14']
+        theta10 = C['theta10']
+    else:
+        raise NotImplementedError(trt)
+    return _compute_disterm(
+        C1, C['theta2'], theta14, theta3, ctx, CONSTS['c4'],
+        CONSTS['theta9'], theta6_adj, C['theta6'], theta10, dists)
 
 
 def _compute_focal_depth_term(trt, C, ctx):
@@ -331,8 +329,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                     C, ctx, pga1000))
             if self.sigma_mu_epsilon:
                 sigma_mu = get_stress_factor(
-                    imt, self.trt ==
-                    const.TRT.SUBDUCTION_INTRASLAB)
+                    imt, self.trt == const.TRT.SUBDUCTION_INTRASLAB)
                 mean[m] += sigma_mu * self.sigma_mu_epsilon
 
             sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
