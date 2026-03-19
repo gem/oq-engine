@@ -92,7 +92,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
                 A15._compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
                 A15._compute_distance_term(
-                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.theta6_adj) +
                 A15._compute_focal_depth_term(
                     self.trt, C, ctx) +
                 A15._compute_forearc_backarc_term(

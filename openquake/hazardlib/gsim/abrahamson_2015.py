@@ -118,13 +118,19 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
     Compute ESHM20 forearc-backarc term. This term is applied when
     specifying an ESHM20 FABA tapering model. 
     """
+    # If there is an ESHM20 FABA model apply it
     if faba_model:
         fixed_dists = np.copy(dists)
         fixed_dists[fixed_dists < min_dist] = min_dist
         f_faba = a + b * np.log(fixed_dists / 40.)
         return f_faba * faba_model(-1*xvf)
+    
     else:
-        return np.zeros_like(dists) # Apply no eshm20 faba term
+        # Apply no eshm20 faba term - xvf is still in the site
+        # model given required in BCHydro subclasses but the user
+        # doesn't have to ensure it's configured to null the faba
+        # term which simplifies usage
+        return np.zeros_like(dists)
 
 
 def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
@@ -302,8 +308,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
         statistical uncertainty sigma_mu term.
 
     :param faba_model:
-        Choice of ESHM20 model for the forearc/backarc tapering function, can be
-        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian", None}.
+        Choice of ESHM20 model for the forearc/backarc tapering function which
+        can be applied within the ESHM20 subclasses (see eshm20_bchydro.py),
+        can be "Step", "Linear", "SFunc", "Sigmoid", "Gaussian" or None.
 
     """
     #: Supported tectonic region type is subduction interface
