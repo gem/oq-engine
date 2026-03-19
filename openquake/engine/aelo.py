@@ -144,6 +144,7 @@ def main(lon: valid.longitude,
          outputs_uri=None,
          mosaic_dir=config.directory.mosaic_dir,
          callback=trivial_callback,
+         email_file_path=None,
          ):
     """
     This script is meant to be called from the WebUI
@@ -163,7 +164,7 @@ def main(lon: valid.longitude,
         # - if no model covers the given coordinates.
         # - if no ini file was found
         callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=exc, warnings=warnings)
+                 exc=exc, warnings=warnings, email_file_path=email_file_path)
         raise exc
 
     if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
@@ -173,10 +174,10 @@ def main(lon: valid.longitude,
         engine.run_jobs([jobctx])
     except Exception as exc:
         callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=exc, warnings=warnings)
+                 exc=exc, warnings=warnings, email_file_path=email_file_path)
     else:
         callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=None, warnings=warnings)
+                 exc=None, warnings=warnings, email_file_path=email_file_path)
 
 
 if __name__ == '__main__':
