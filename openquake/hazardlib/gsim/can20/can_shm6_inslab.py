@@ -264,7 +264,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
                 _compute_focal_depth_term_abr(
                     self.trt, C, ctx) +
                 _compute_forearc_backarc_term(
-                    self.trt, self.faba_model, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.faba_model) +
                 _compute_site_response_term(
                     C, ctx, pga1000))
             if self.sigma_mu_epsilon:
