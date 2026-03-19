@@ -98,15 +98,6 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     return base + f_mag + theta13 * (10. - mag) ** 2.
 
 
-# theta6_adj used in BCHydro
-def _compute_disterm(C1, theta2, theta14, theta3, ctx, c4, theta9,
-                     theta6_adj, theta6, theta10, dists):
-    return (
-        theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
-            dists + c4 * np.exp((ctx.mag - 6.) * theta9)) + (
-                theta6_adj + theta6) * dists + theta10
-
-
 def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = ctx.rrup
@@ -134,9 +125,23 @@ def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
     return f_faba * faba_model(-ctx.xvf)
 
 
-def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
+def _compute_dist_term(C1, theta2, theta14, theta3, ctx, c4, theta9,
+                       theta6, theta10, dists, theta6_adj):
     """
-    Computes the distance scaling term, as contained within equation (1)
+    Compute distance term.
+    """
+    part1 = theta2 + theta14 + theta3 * (ctx.mag - C1)
+    part2 = np.log(dists + c4 * np.exp((ctx.mag - 6.) * theta9))
+    adj_theta6 = (theta6_adj or 0) + theta6
+    part3 = adj_theta6 * dists
+    return part1 * part2 + part3 + theta10
+
+
+def _compute_distance_term(kind, trt, C, ctx, theta6_adj=None):
+    """
+    Computes the distance scaling term, as contained within equation (1).
+
+    theta6_adj is admitted within the ESHM20 subclasses.
     """
     if kind.startswith("montalva"):
         theta3 = C['theta3']
@@ -156,9 +161,10 @@ def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
         theta10 = C['theta10']
     else:
         raise NotImplementedError(trt)
-    return _compute_disterm(
+    
+    return _compute_dist_term(
         C1, C['theta2'], theta14, theta3, ctx, CONSTS['c4'],
-        CONSTS['theta9'], theta6_adj, C['theta6'], theta10, dists)
+        CONSTS['theta9'], C['theta6'], theta10, dists, theta6_adj)
 
 
 def _compute_focal_depth_term(trt, C, ctx):
@@ -198,13 +204,15 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     (vs30 = 1000 m/s)
     """
     mean = (_compute_magnitude_term(kind, C, dc1, ctx.mag) +
-            _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
+            _compute_distance_term(kind, trt, C, ctx, theta6_adj) +
             _compute_focal_depth_term(trt, C, ctx) +
             _compute_forearc_backarc_term(trt, faba_model, C, ctx))
     
     # Apply linear site term
-    site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
-                     np.log(1000. / C['vlin']))
+    site_response = (
+        (C['theta12'] + C['b'] * CONSTS['n']) * np.log(1000. / C['vlin'])
+        )
+    
     return mean + site_response
 
 
@@ -320,7 +328,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 _compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
                 _compute_distance_term(
-                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.theta6_adj,) +
                 _compute_focal_depth_term(
                     self.trt, C, ctx) +
                 _compute_forearc_backarc_term(
