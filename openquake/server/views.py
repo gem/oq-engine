@@ -1223,12 +1223,12 @@ def create_impact_job(request, params):
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
             impact_callback)
     # if 'pytest' in sys.argv[0]:
+    #     # import sys
     #     # hack for debugging the tests
     #     # unfortunately it does not work yet because check_email
     #     # is meant to work with a subprocess
     #     impact.main_web(*args)
-    # else:
-    #  spawn the Aristotle main process
+    # spawn the Aristotle main process
     mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
@@ -1463,11 +1463,18 @@ def aelo_run(request):
             ' accessible at the following link: %s'
             % (outputs_uri_api, traceback_uri))
 
-    # spawn the AELO main process
-    mp.Process(target=aelo.main, args=(
+    args = (
         lon, lat, vs30, params['siteid'], description, asce_version,
         site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback)).start()
+        config.directory.mosaic_dir, aelo_callback)
+    # if 'pytest' in sys.argv[0]:
+    #     # import sys
+    #     # hack for debugging the tests
+    #     # unfortunately it does not work yet because check_email
+    #     # is meant to work with a subprocess
+    #     aelo.main(*args)
+    # spawn the AELO main process
+    mp.Process(target=aelo.main, args=args).start()
     return JsonResponse(response_data, status=200)
 
 
