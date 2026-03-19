@@ -40,7 +40,8 @@ class TruncatedMVN:
     :param np.ndarray mu:
         (size D) mean of the normal distribution :math:`\mathbf {\mu}`.
     :param np.ndarray cov:
-        (size D x D) covariance of the normal distribution :math:`\mathbf {\Sigma}`.
+        (size D x D) covariance of the normal distribution
+        :math:`\mathbf {\Sigma}`.
     :param np.ndarray lb:
         (size D) lower bound constrain of the multivariate normal distribution
         :math:`\mathbf lb`.
@@ -50,7 +51,8 @@ class TruncatedMVN:
     :param Union[int, None] seed:
         a random seed.
 
-    Note that the algorithm may not work if 'cov' is close to being rank deficient.
+    Note that the algorithm may not work if 'cov' is close to being rank
+    deficient.
 
     Reference:
     Botev, Z. I., (2016), The normal law under linear restrictions: simulation
@@ -166,10 +168,12 @@ class TruncatedMVN:
         self.unscaled_L, self.perm = self.colperm()
         D = np.diag(self.unscaled_L)
         if np.any(D < self.eps):
-            print('Warning: Method might fail as covariance matrix is singular!')
+            print('Warning: Method might fail as '
+                  'covariance matrix is singular!')
 
         # rescale
-        scaled_L = self.unscaled_L / np.tile(D.reshape(self.dim, 1), (1, self.dim))
+        scaled_L = self.unscaled_L / np.tile(
+            D.reshape(self.dim, 1), (1, self.dim))
         self.lb = self.lb / D
         self.ub = self.ub / D
 
@@ -328,15 +332,16 @@ class TruncatedMVN:
         # samples a column vector of length=len(lb)=len(ub)
         # from the standard multivariate normal distribution
         # truncated over the region [lb,ub], where lb>0 and lb and ub
-        # are column vectors
-        # uses acceptance-rejection from Rayleigh distr. similar to Marsaglia (1964)
+        # are column vectors; uses acceptance-rejection from Rayleigh
+        # distr. similar to Marsaglia (1964)
         if not len(lb) == len(ub):
             raise RuntimeError("Lower bound (lb) and upper bound (ub) "
                                "must be of the same length!")
         c = (lb ** 2) / 2
         n = len(lb)
         f = np.expm1(c - ub ** 2 / 2)
-        x = c - np.log(1 + self.random_state.rand(n) * f)  # sample using Rayleigh
+        x = c - np.log(1 + self.random_state.rand(n) * f)
+        # sample using Rayleigh
         # keep list of rejected
         I_ = np.where(self.random_state.rand(n) ** 2 * x > c)[0]
         d = len(I_)
@@ -347,7 +352,8 @@ class TruncatedMVN:
             x[I_[idx]] = y[idx]  # store the accepted
             I_ = I_[~idx]  # remove accepted from the list
             d = len(I_)
-        return np.sqrt(2 * x)  # this Rayleigh transform can be delayed till the end
+        # this Rayleigh transform can be delayed till the end
+        return np.sqrt(2 * x)
 
     def psy(self, x, mu):
         # implements psi(x,mu); assumes scaled 'L' without diagonal
@@ -478,7 +484,9 @@ def lnNormalProb(a, b):
 
 
 def lnPhi(x):
-    # computes logarithm of tail of Z~N(0,1) mitigating numerical roundoff errors
-    out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)
+    # computes logarithm of tail of Z~N(0,1) mitigating numerical roundoff
+    # errors
+    out = -0.5 * x ** 2 - np.log(2) + np.log(
+        special.erfcx(x / np.sqrt(2)) + EPS)
     # divide by zeros error -> add eps
     return out
