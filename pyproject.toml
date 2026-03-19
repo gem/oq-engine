@@ -7,7 +7,8 @@ name = "openquake.engine"
 dynamic = ["readme", "version"]
 description = "OpenQuake Engine: A software for Seismic Hazard and Risk Analysis"
 requires-python = ">=3.11"
-license = { text = "AGPL-3.0" }
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [
     { name = "GEM Foundation", email = "info@openquake.org" }
 ]
@@ -15,7 +16,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
@@ -44,7 +44,6 @@ Documentation = "https://docs.openquake.org"
 oq = "openquake.commands.__main__:oq"
 
 [tool.setuptools]
-packages = ["openquake"]
 include-package-data = true
 
 [tool.setuptools.dynamic]
@@ -52,9 +51,18 @@ readme = {file = ["README.md"]}
 version = {attr = "openquake.baselib.__version__"}
 
 [tool.setuptools.package-data]
-"*" = ["README.md", "LICENSE", "CONTRIBUTORS.txt", "*.cfg", "*.sql", "*.html", 
-       "*.css", "*.js", "*.csv", "*.onnx", ".onnx.gz", "demos/**"]
+"openquake" = ["openquake.cfg", "README.md", "LICENSE", "CONTRIBUTORS.txt"]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openquake.*"]
+exclude = [
+    "qa_tests", "qa_tests.*",
+    "tools",
+    "*.*.tests", "*.*.tests.*",
+    "openquake.engine.bin",
+    "openquake.engine.bin.*"
+]
 
 # If you use specific dev tools like pytest or black
 [tool.pytest.ini_options]
