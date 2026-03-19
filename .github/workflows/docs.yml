@@ -98,7 +98,7 @@ jobs:
           pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
-          pip install -e 
+          pip install -e .
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
       - name: Check consistency between debian/changelog and CONTRIBUTORS.txt
         shell: bash
