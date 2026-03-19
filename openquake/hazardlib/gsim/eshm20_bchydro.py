@@ -18,6 +18,7 @@
 
 import numpy as np
 from scipy.special import erf
+
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,

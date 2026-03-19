@@ -20,15 +20,15 @@
 |case\_34|AvgSA|
 |case\_35|Test cluster feature|
 |case\_37|Christchurch GMPEs|
-|case\_38|Example with custom\_site\_id and BCHydro GMPEs|
-|case\_39|0-IMT-weights, pointsource\_distance=0 and ruptures collapsing|
+|case\_38|Example with custom site id and BCHydro GMPEs|
+|case\_39|0-IMT-weights, pointsource distance=0 and ruptures collapsing|
 |case\_40|NGAEast GMPEs|
 |case\_41|SERA Site Amplification Models including EC8 Site Classes and Geology|
 |case\_42|Split/filter a long complex fault source with maxdist=1000 km|
-|case\_43|Test for ps\_grid\_spacing|
-|case\_44|Test for shift\_hypo feature|
+|case\_43|Test for ps grid spacing|
+|case\_44|Test for shift hypo feature|
 |case\_47|Mixture Model for Sigma using PEER (2018) Test Case 2.5b|
-|case\_48|Precise test of pointsource\_distance|
+|case\_48|Precise test of pointsource distance|
 |case\_49|Test the use of the convolution method to amplify the motion|
 |case\_50|Test the use of the kernel method to amplify the motion|
 |case\_51|Test the use of a modifiable GMPE|
@@ -37,15 +37,15 @@
 |case\_55|Tests the use of amplification functions|
 |case\_57|Test for sampling AvgPoeGMPE|
 |case\_60|Test CampbellBozorgnia2003NSHMP2007 and no hazard|
-|case\_61|Test KiteFault source|
+|case\_61|Test KiteFault source and an ESHM20 BCHydro GSIM without a FABA model specified|
 |case\_62|Tests a sample model from SHERIFS|
 |case\_63|Test for GMM with soiltype|
 |case\_64|LanzanoEtAl2016 with bas term|
 |case\_65|Test for the multi fault source|
-|case\_66|Tests sites\_slice and site <-> sitemodel association|
+|case\_66|Tests sites slice and site <-> sitemodel association|
 |case\_68|Check indirect AvgSA GMPEs can still compute non-AvgSA IMTs using underlying GMPE if no AvgSA IMTs in job file|
 |case\_69|Collapse area source, 1 site|
-|case\_70|Test abrahamson\_gulerce\_2020|
+|case\_70|Test AbrahamsonGulerce2020|
 |case\_71|Test NGAEast (gmpe table) as underlying GSIM when using conditional GMPEs|
 |case\_72|Test calculation with a subset of the 2014 US model|
 |case\_74|Tests EAS-based calculation|
