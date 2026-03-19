@@ -126,11 +126,8 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
         return f_faba * faba_model(-1*xvf)
     
     else:
-        # Apply no eshm20 faba term - xvf is still in the site model
-        # given required in BCHydro subclasses BUT the user doesn't
-        # have to ensure it's configured to nullify the faba term which
-        # simplifies usage outside of ESHM20 subclasses
-        return np.zeros_like(dists)
+        # Apply no xvf-dependent eshm20 faba term
+        return np.zeros_like(xvf)
 
 
 def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
