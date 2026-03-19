@@ -346,14 +346,20 @@ class GmfComputer(object):
         upper = level * sigmas
         return -upper, upper
 
+    @property
+    def tlb(self):
+        return self.cmaker.truncation_level_between
+
+    @property
+    def tlw(self):
+        return self.cmaker.truncation_level_within
+
     def compute_all(self, mean_stds=None, cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         max_iml = self.cmaker.oq.get_max_iml()
         conditioned = mean_stds is not None
-        tlw = self.cmaker.truncation_level_within
-        tlb = self.cmaker.truncation_level_between
         rng = np.random.default_rng(self.seed)
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
@@ -376,13 +382,13 @@ class GmfComputer(object):
                     within_eps = [None] * self.M
                 else:
                     # arrays of random numbers of shape (M, N, E) and (M, E)
-                    if tlw <= TRUNCATION_LEVEL_THRESHOLD:
+                    if self.tlw <= TRUNCATION_LEVEL_THRESHOLD:
                         within_eps = [np.zeros((self.N, E), F32)
                                      for _ in range(self.M)]
                     else:
                         within_eps = [self.within_dist.rvs((self.N, E), rng)
                                      for _ in range(self.M)]
-                    if tlb <= TRUNCATION_LEVEL_THRESHOLD:
+                    if self.tlb <= TRUNCATION_LEVEL_THRESHOLD:
                         self.eps[idxs] = 0.
                     else:
                         self.eps[idxs] = self.cross_correl.get_inter_eps(
@@ -409,40 +415,42 @@ class GmfComputer(object):
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
 
+    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E, rng):
+        # NB: truncated MVN is tested in the scenario risk tests
+        # conditioned_stations, case_21_stations, case_26_stations
+        N = len(cov_WY_WY)
+        eps = self.cmaker.oq.correlation_cutoff
+
+        # Add a cutoff to remove negative eigenvalues before sampling.
+        cov_WY_WY = cov_WY_WY + np.eye(N) * eps
+        cov_BY_BY = cov_BY_BY + np.eye(N) * eps
+
+        lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
+        seed_w = int(rng.integers(0, np.iinfo(np.int32).max))
+
+        z_w_truncated = TruncatedMVN(
+            np.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
+        ).sample(E)
+
+        lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
+        seed_b = int(rng.integers(0, np.iinfo(np.int32).max))
+        z_b_truncated = TruncatedMVN(
+            np.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
+        ).sample(E)
+
+        arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
+        return arr
+
     def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs, rng=None):
-        tlw = self.cmaker.truncation_level_within
-        tlb = self.cmaker.truncation_level_between
         if len(mean_stds) == 3:  # conditioned GMFs
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
-            eps = self.cmaker.oq.correlation_cutoff
-            if max(tlw, tlb) <= TRUNCATION_LEVEL_THRESHOLD:
+            if max(self.tlw, self.tlb) <= TRUNCATION_LEVEL_THRESHOLD:
                 gmf = exp(mu_Y, imt.string != "MMI")
                 gmf = gmf.repeat(E, axis=1)
             else:
-                # NB: truncated MVN is tested in the scenario risk tests
-                # conditioned_stations, case_21_stations, case_26_stations
-                N = len(cov_WY_WY)
-
-                # Add a cutoff to remove negative eigenvalues before sampling.
-                cov_WY_WY = cov_WY_WY + np.eye(N) * eps
-                cov_BY_BY = cov_BY_BY + np.eye(N) * eps
-
-                lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, tlw)
-                seed_w = int(rng.integers(0, np.iinfo(np.int32).max))
-
-                z_w_truncated = TruncatedMVN(
-                    np.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
-                ).sample(E)
-
-                lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, tlb)
-                seed_b = int(rng.integers(0, np.iinfo(np.int32).max))
-                z_b_truncated = TruncatedMVN(
-                    np.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
-                ).sample(E)
-
-                arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
+                arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E, rng)
                 gmf = exp(arr, imt != "MMI")
             return gmf  # shapes (N, E)
 
@@ -458,8 +466,8 @@ class GmfComputer(object):
                         (self.rup_id, sid, gsim.gid, m,
                          mean[s], tau[s], phi[s]))
 
-        if (tlw <= TRUNCATION_LEVEL_THRESHOLD and
-                tlb <= TRUNCATION_LEVEL_THRESHOLD):
+        if (self.tlw <= TRUNCATION_LEVEL_THRESHOLD and
+                self.tlb <= TRUNCATION_LEVEL_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '
