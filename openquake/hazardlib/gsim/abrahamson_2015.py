@@ -331,7 +331,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                     C, ctx, pga1000))
             if self.sigma_mu_epsilon:
                 sigma_mu = get_stress_factor(
-                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                    imt, self.trt ==
                     const.TRT.SUBDUCTION_INTRASLAB)
                 mean[m] += sigma_mu * self.sigma_mu_epsilon
 
