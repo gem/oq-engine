@@ -144,7 +144,8 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
     rng = np.random.default_rng(ebrupture.seed)
     between_correl = NoCrossCorrelation(cmaker.truncation_level_between)
-    within_dist = NoCrossCorrelation(cmaker.truncation_level_within).distribution
+    within_dist = NoCrossCorrelation(
+        cmaker.truncation_level_within).distribution
     gmfs = []
     for g, (gs, rlzs) in enumerate(cmaker.gsims.items()):
         idxs, = np.where(np.isin(rlz, rlzs))
@@ -156,8 +157,8 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
         gmf = np.zeros((M, N, E))
         for m, imt in enumerate(cmaker.imtls):
             within_res = phi[g, m, :, None] * within_eps  # shape (N, E)
-            inter_res = tau[g, m, :, None] * eps[idxs, m]  # shape (N, E)
-            gmf[m] = np.exp(mean[g, m, :, None] + within_res + inter_res)
+            between_res = tau[g, m, :, None] * eps[idxs, m]  # shape (N, E)
+            gmf[m] = np.exp(mean[g, m, :, None] + within_res + between_res)
         gmfs.append(gmf)
     return np.concatenate(gmfs)  # shape (M, N, E)
 
@@ -486,9 +487,9 @@ class GmfComputer(object):
                 if len(within_res.shape) == 1:  # a vector
                     within_res = within_res[:, None]
 
-            inter_res = tau[:, None] * self.eps[idxs, m]
+            between_res = tau[:, None] * self.eps[idxs, m]
             # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + within_res + inter_res, im != 'MMI')
+            gmf = exp(mean[:, None] + within_res + between_res, im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
         return gmf  # shapes (N, E)
 
