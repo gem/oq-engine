@@ -255,7 +255,7 @@ class GmfComputer(object):
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = np.zeros((E, M), F32)  # same for all events
-        self.eps = np.zeros((E, M), F32)  # not the same
+        self.between_eps = np.zeros((E, M), F32)  # not the same
 
     def build_sig_eps(self, se_dt):
         """
@@ -267,7 +267,7 @@ class GmfComputer(object):
         sig_eps['rlz_id'] = self.rlz
         for m, imt in enumerate(self.cmaker.imtls):
             sig_eps[f'sig_inter_{imt}'] = self.sig[:, m]
-            sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
+            sig_eps[f'eps_inter_{imt}'] = self.between_eps[:, m]
         return sig_eps
 
     def update(self, data, array, rlzs, mean, max_iml=None):
@@ -388,19 +388,20 @@ class GmfComputer(object):
                     else:
                         within_eps = [self.within_dist.rvs((self.N, E), rng)
                                      for _ in range(self.M)]
+                    # between_eps are used in _compute
                     if self.tlb <= TRUNCATION_THRESHOLD:
-                        self.eps[idxs] = 0.
+                        self.between_eps[idxs] = 0.
                     else:
-                        self.eps[idxs] = self.cross_correl.get_inter_eps(
-                            self.imts, E, rng).T
-                self._update(result, gs, ms, idxs, within_eps, rng)
+                        self.between_eps[idxs] = \
+                            self.cross_correl.get_inter_eps(self.imts, E, rng).T
+                self._compute_update(result, gs, ms, idxs, within_eps, rng)
             with umon:
                 result = result.transpose(1, 0, 2)  # shape (N, M, E)
                 self.update(data, result, rlzs, ms[0], max_iml)
         with umon:
             return self.strip_zeros(data)
 
-    def _update(self, result, gs, ms, idxs, within_eps, rng):
+    def _compute_update(self, result, gs, ms, idxs, within_eps, rng):
         for m, imt in enumerate(self.imts):
             try:
                 result[m] = self._compute(
@@ -419,11 +420,10 @@ class GmfComputer(object):
         # NB: truncated MVN is tested in the scenario risk tests
         # conditioned_stations, case_21_stations, case_26_stations
         N = len(cov_WY_WY)
-        eps = self.cmaker.oq.correlation_cutoff
 
         # Add a cutoff to remove negative eigenvalues before sampling.
-        cov_WY_WY = cov_WY_WY + np.eye(N) * eps
-        cov_BY_BY = cov_BY_BY + np.eye(N) * eps
+        cov_WY_WY = cov_WY_WY + np.eye(N) * self.cmaker.oq.correlation_cutoff
+        cov_BY_BY = cov_BY_BY + np.eye(N) * self.cmaker.oq.correlation_cutoff
 
         lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
         seed_w = int(rng.integers(0, np.iinfo(np.int32).max))
@@ -492,7 +492,7 @@ class GmfComputer(object):
             if self.correlation_model is not None:
                 within_res = self.correlation_model.apply_correlation(
                     self.sites, imt, within_res, phi)
-            between_res = tau[:, np.newaxis] * self.eps[idxs, m]
+            between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]
             # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + within_res + between_res, im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
