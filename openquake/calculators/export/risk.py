@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib.stats import compute_stats2, mean_curve
 from openquake.risklib import scientific
 from openquake.commonlib import readinput
 from openquake.calculators.extract import (
@@ -436,7 +436,7 @@ def export_damages_csv(ekey, dstore):
                        risk_investigation_time=rit))
     R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
-        rlzs_or_stats = oq.hazard_stats()
+        rlzs_or_stats = {'mean': mean_curve}
     else:
         rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     name = ekey[0].split('-')[0]

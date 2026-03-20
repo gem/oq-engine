@@ -293,7 +293,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # conditioned GMFs with assets on top of a station
         out = self.run_calc(case_19.__file__, 'job.ini', exports='csv')
         [fname] = out[('aggrisk', 'csv')]
-        self.assertEqualFiles('expected/aggrisk.csv', fname)
+        # on Windows the numbers are different at 0.032%
+        self.assertEqualFiles('expected/aggrisk.csv', fname, delta=4E-4)
 
     def test_case_20(self):
         # conditioned GMFs with nontrivial site parameter associations
