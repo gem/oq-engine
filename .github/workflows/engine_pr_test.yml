@@ -152,11 +152,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'default' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.default.tmpl; do
-              cp -- "$file" "${file%.default.tmpl}"
-          done
       - name: Server 'RESTRICTED' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -164,6 +159,7 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
+          source ./openquake/server/migrate.sh ./openquake/server default
           pytest -v openquake/server/tests/test_restricted_mode.py
           pytest \
             --browser chromium \
@@ -236,18 +232,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'aelo' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.aelo.tmpl; do
-              cp -- "$file" "${file%.aelo.tmpl}"
-          done
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          ./openquake/server/manage.py migrate
-          ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
-          ./openquake/server/manage.py collectstatic --noinput
+          source ./openquake/server/migrate.sh ./openquake/server aelo
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
@@ -292,11 +281,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'impact' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.impact.tmpl; do
-              cp -- "$file" "${file%.impact.tmpl}"
-          done
       - name: Server 'IMPACT' mode tests
         run: |
           set -x
@@ -306,7 +290,65 @@ jobs:
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          ./openquake/server/manage.py migrate
+          source ./openquake/server/migrate.sh 
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          source ./openquake/server/migrate.sh ./openquake/server impact
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install pytest-playwright
+          playwright install
+          pytest -v openquake/server/tests/test_aelo_mode.py
+          pytest \
+            --browser chromium \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_aelo_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
+          path: test-results
+          retention-days: 7
+
+  server_impact_mode:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: IMPACT
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Server 'IMPACT' mode tests
+        run: |
+          set -x
+          date
+          wget https://downloads.openquake.org/test_data/exposure.hdf5
+          date
+          mv exposure.hdf5 openquake/qa_tests_data/mosaic/
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          source ./openquake/server/migrate.sh ./openquake/server impact
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py
