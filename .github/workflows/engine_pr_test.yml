@@ -159,7 +159,6 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
-          source ./openquake/server/migrate.sh ./openquake/server default
           pytest -v openquake/server/tests/test_restricted_mode.py
           pytest \
             --browser chromium \
@@ -236,7 +235,6 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          source ./openquake/server/migrate.sh ./openquake/server aelo
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
@@ -290,7 +288,6 @@ jobs:
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          source ./openquake/server/migrate.sh ./openquake/server impact
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py
