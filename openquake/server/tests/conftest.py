@@ -40,7 +40,6 @@ def copy_templates(tdir, ext):
 
 
 @pytest.fixture(scope="session", autouse=True)
-@pytest.mark.django_db
 def migrate_before_tests():
     serverdir = pathlib.Path(__file__).parent.parent
     appmode = os.environ.get('OQ_APPLICATION_MODE')
