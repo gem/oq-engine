@@ -18,6 +18,10 @@
 
 import os
 import pytest
+import glob
+import shutil
+import pathlib
+import subprocess
 from django.contrib.auth import get_user_model
 
 # pytest-playwright starts an asyncio event loop at session startup.
@@ -25,6 +29,33 @@ from django.contrib.auth import get_user_model
 # is already running and raises SynchronousOnlyOperation during test DB setup.
 # This flag explicitly allows sync Django DB usage in this test environment.
 os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
+
+
+def copy_templates(tdir, ext):
+    fnames = glob.glob(f'{tdir}/*{ext}')
+    for fname in fnames:
+        stripped = fname[:-len(ext)]
+        # i.e. email_subject.txt.aelo.templ -> email_subject.txt'
+        shutil.copy(fname, stripped)
+
+
+@pytest.fixture(scope="session", autouse=True)
+@pytest.mark.django_db
+def migrate_before_tests():
+    serverdir = pathlib.Path(__file__).parent.parent
+    appmode = os.environ.get('OQ_APPLICATION_MODE')
+    if appmode in ('AELO', 'IMPACT'):
+        ext = f'.{appmode.lower()}.tmpl'
+    else:
+        ext = '.default.tmpl'
+    copy_templates(serverdir / 'templates/registration', ext)
+    manage = serverdir / 'manage.py'
+    subprocess.run([manage, 'migrate'])
+    if appmode == 'AELO':
+        js = (serverdir / 'fixtures/0001_cookie_consent_required_'
+              'plus_hide_cookie_bar.json')
+        subprocess.run([manage, 'loaddata', js])
+    yield
 
 
 @pytest.fixture
