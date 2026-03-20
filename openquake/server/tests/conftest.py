@@ -31,29 +31,32 @@ from django.contrib.auth import get_user_model
 os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
 
 
-def copy_templates(tdir, ext):
+def copy_from_templates_if_needed(tdir, ext):
     fnames = glob.glob(f'{tdir}/*{ext}')
     for fname in fnames:
         stripped = fname[:-len(ext)]
         # i.e. email_subject.txt.aelo.templ -> email_subject.txt'
-        shutil.copy(fname, stripped)
+        if not os.path.exists(stripped):
+            shutil.copy(fname, stripped)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def migrate_before_tests():
+    """
+    Generate the needed registration files
+    """
     serverdir = pathlib.Path(__file__).parent.parent
     appmode = os.environ.get('OQ_APPLICATION_MODE')
     if appmode in ('AELO', 'IMPACT'):
         ext = f'.{appmode.lower()}.tmpl'
     else:
         ext = '.default.tmpl'
-    copy_templates(serverdir / 'templates/registration', ext)
-    manage = serverdir / 'manage.py'
-    subprocess.run([manage, 'migrate'])
+    copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
+    subprocess.run([serverdir/'manage.py', 'migrate'])
     if appmode == 'AELO':
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
               'plus_hide_cookie_bar.json')
-        subprocess.run([manage, 'loaddata', js])
+        subprocess.run([serverdir/'manage.py', 'loaddata', js])
     yield
 
 
