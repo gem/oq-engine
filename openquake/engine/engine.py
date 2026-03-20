@@ -156,12 +156,14 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
-        signal.signal(signal.SIGCHLD, sigchld_handler)
-        logging.debug('Installed signal handlers')
+        if hasattr(signal, "SIGCHLD"):
+            # Do not register SIGCHLD handler on Windows 
+            signal.signal(signal.SIGCHLD, sigchld_handler)
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
                 signal.signal(signal.SIGHUP, manage)
+        logging.debug('Installed signal handlers')
     except ValueError:
         pass
 
