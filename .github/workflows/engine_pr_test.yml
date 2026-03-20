@@ -152,11 +152,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'default' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.default.tmpl; do
-              cp -- "$file" "${file%.default.tmpl}"
-          done
       - name: Server 'RESTRICTED' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -236,18 +231,10 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'aelo' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.aelo.tmpl; do
-              cp -- "$file" "${file%.aelo.tmpl}"
-          done
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          ./openquake/server/manage.py migrate
-          ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
-          ./openquake/server/manage.py collectstatic --noinput
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
@@ -292,11 +279,6 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Actualize 'impact' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.impact.tmpl; do
-              cp -- "$file" "${file%.impact.tmpl}"
-          done
       - name: Server 'IMPACT' mode tests
         run: |
           set -x
@@ -306,7 +288,6 @@ jobs:
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py
