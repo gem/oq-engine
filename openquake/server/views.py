@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import ast
 import csv
 import shutil
@@ -1240,13 +1241,11 @@ def create_impact_job(request, params, email_file_path):
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
             impact_callback, email_file_path)
 
-    # hack for debugging the tests
-    # import sys
-    # if 'pytest' in sys.argv[0]:
-    #     impact.main_web(*args)
-
-    # spawn the Aristotle main process
-    mp.Process(target=impact.main_web, args=args).start()
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        impact.main_web(*args)
+    else:
+        # spawn the Impact main process
+        mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
 
@@ -1488,13 +1487,11 @@ def aelo_run(request):
         site_class, jobctx, job_owner_email, outputs_uri_web,
         config.directory.mosaic_dir, aelo_callback, email_file_path)
 
-    # hack for debugging the tests
-    # import sys
-    # if 'pytest' in sys.argv[0]:
-    #     aelo.main(*args)
-
-    # spawn the AELO main process
-    mp.Process(target=aelo.main, args=args).start()
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        aelo.main(*args)
+    else:
+        # spawn the AELO main process
+        mp.Process(target=aelo.main, args=args).start()
     return JsonResponse(response_data, status=200)
 
 
