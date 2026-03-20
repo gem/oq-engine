@@ -17,8 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import signal
-import logging
 from django.apps import AppConfig
 from django.conf import settings
 from sqlite3 import OperationalError
@@ -26,26 +24,6 @@ from openquake.baselib import config
 from openquake.server import dbserver, db
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
-logger = logging.getLogger(__name__)
-
-
-def reap_children(signum, frame):
-    while True:
-        try:
-            pid, wait_status = os.waitpid(-1, os.WNOHANG)
-        except ChildProcessError:
-            # No children exist at all
-            break
-        if pid == 0:
-            # No more zombies right now, but children still running
-            break
-        # Decode and log the exit reason
-        if os.WIFEXITED(wait_status):
-            logger.debug("Child %d exited with code %d", pid,
-                         os.WEXITSTATUS(wait_status))
-        elif os.WIFSIGNALED(wait_status):
-            logger.warning(
-                "Child %d killed by signal %d", pid, os.WTERMSIG(wait_status))
 
 
 class ServerConfig(AppConfig):
@@ -113,4 +91,3 @@ class ServerConfig(AppConfig):
                 if not os.path.isfile(aelo_changelog_path):
                     raise FileNotFoundError(
                         f'{aelo_changelog_path} was not found!')
-        signal.signal(signal.SIGCHLD, reap_children)
