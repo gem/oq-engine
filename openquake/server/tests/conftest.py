@@ -31,8 +31,8 @@ from django.contrib.auth import get_user_model
 os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
 
 
-def copy_from_templates_if_needed(tdir, ext):
-    fnames = glob.glob(f'{tdir}/*{ext}')
+def copy_from_templates_if_needed(tmpldir, ext):
+    fnames = glob.glob(f'{tmpldir}/*{ext}')
     for fname in fnames:
         stripped = fname[:-len(ext)]
         # i.e. email_subject.txt.aelo.templ -> email_subject.txt'
@@ -43,20 +43,21 @@ def copy_from_templates_if_needed(tdir, ext):
 @pytest.fixture(scope="session", autouse=True)
 def migrate_before_tests():
     """
-    Generate the needed registration files
+    Migrate the database (if not already done) and
+    generate the registration files (if not already done)
     """
     serverdir = pathlib.Path(__file__).parent.parent
     appmode = os.environ.get('OQ_APPLICATION_MODE')
-    if appmode in ('AELO', 'IMPACT'):
-        ext = f'.{appmode.lower()}.tmpl'
-    else:
-        ext = '.default.tmpl'
-    copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     subprocess.run([serverdir/'manage.py', 'migrate'])
     if appmode == 'AELO':
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
               'plus_hide_cookie_bar.json')
         subprocess.run([serverdir/'manage.py', 'loaddata', js])
+    if appmode in ('AELO', 'IMPACT'):
+        ext = f'.{appmode.lower()}.tmpl'
+    else:
+        ext = '.default.tmpl'
+    copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     yield
 
 
