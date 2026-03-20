@@ -117,6 +117,10 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
     """
     Compute ESHM20 forearc-backarc term. This term is applied when
     specifying an ESHM20 FABA tapering model. 
+
+    NOTE: Although XVF is still required in the site model, if the user
+    does not specify a FABA model, then the parameter is in effect ignored
+    because we zero-out the FABA term in this case (see below).
     """
     # If there is an ESHM20 FABA model apply it
     if faba_model:
