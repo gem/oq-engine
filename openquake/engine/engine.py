@@ -130,24 +130,21 @@ def manage_signals(job_id, signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
-def reap_children(signum, frame):
-    while True:
+def sigchld_handler(signum, frame):
+    """
+    Signal handler for SIGCHLD: reap zombie children and propagate
+    unexpected deaths by killing the parent of the offending worker.
+    """
+    if parallel.WORKER_POOL_ACTIVE:
         try:
             pid, wait_status = os.waitpid(-1, os.WNOHANG)
         except ChildProcessError:
-            # No children exist at all
-            break
-        if pid == 0:
-            # No more zombies right now, but children still running
-            break
-        # Decode and log the exit reason
-        if os.WIFEXITED(wait_status):
-            logging.warning("Child %d exited with code %d", pid,
-                            os.WEXITSTATUS(wait_status))
-        elif os.WIFSIGNALED(wait_status):
-            logging.error(
-                "Child %d killed by signal %d", pid, os.WTERMSIG(wait_status))
-            raise MasterKilled('Some worker was killed')
+            return
+        else:
+            raise MasterKilled(
+                f'sigchld_handler: some worker was killed: {pid=}, {wait_status=}')
+    else:
+        logging.debug('sigchld_handler: worker pool not active, ignoring.')
 
 
 def register_signals(job_id):
@@ -159,7 +156,8 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
-        signal.signal(signal.SIGCHLD, reap_children)
+        signal.signal(signal.SIGCHLD, sigchld_handler)
+        logging.debug('Installed signal handlers')
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
