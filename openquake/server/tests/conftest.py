@@ -48,13 +48,13 @@ def migrate_before_tests():
     """
     serverdir = pathlib.Path(__file__).parent.parent
     appmode = os.environ.get('OQ_APPLICATION_MODE')
-    subprocess.run([serverdir/'manage.py', 'migrate'])
-    if appmode == 'AELO':
-        js = (serverdir / 'fixtures/0001_cookie_consent_required_'
-              'plus_hide_cookie_bar.json')
-        subprocess.run([serverdir/'manage.py', 'loaddata', js])
     if appmode in ('AELO', 'IMPACT'):
         ext = f'.{appmode.lower()}.tmpl'
+        subprocess.run([serverdir/'manage.py', 'migrate'])
+        if appmode == 'AELO':
+            js = (serverdir / 'fixtures/0001_cookie_consent_required_'
+                  'plus_hide_cookie_bar.json')
+            subprocess.run([serverdir/'manage.py', 'loaddata', js])
     else:
         ext = '.default.tmpl'
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
