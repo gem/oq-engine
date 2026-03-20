@@ -304,14 +304,6 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     """
     ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events with
     theta6 calibrated to Mediterranean data.
-
-    Introduces two configurable parameters:
-
-    a6_adjustment - the amount to increase or decrease the theta6 (should be
-    +0.0015 (for slower attenuation) and -0.0015 (for faster attenuation)
-
-    sigma_mu_epsilon - number of standard deviations above or below the mean
-    to apply the statistical uncertainty sigma_mu term.
     """
     kind = "eshm20"
 
