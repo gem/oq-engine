@@ -1,6 +1,6 @@
 #!/bin/bash
 for file in $1/templates/registration/*.$2.tmpl; do
-    cp -- "$file" "${file%.$1.tmpl}"
+    cp -- "$file" "${file%.$2.tmpl}"
 done
 
 $1/manage.py migrate
