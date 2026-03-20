@@ -41,7 +41,6 @@ import toml
 import h5py
 import numpy
 import pandas
-import contextlib
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -131,48 +130,24 @@ def manage_signals(job_id, signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
-def sigchld_handler(signum, frame):
-    """
-    Signal handler for SIGCHLD: reap zombie children and propagate
-    unexpected deaths by killing the parent of the offending worker.
-    """
-    killed_by_signal = []
-    # Reap all zombie children without blocking (WNOHANG).
-    # We loop because multiple children may have exited between
-    # two deliveries of SIGCHLD (signals are not queued).
+def reap_children(signum, frame):
     while True:
         try:
             pid, wait_status = os.waitpid(-1, os.WNOHANG)
         except ChildProcessError:
-            # No children exist at all (not even running ones)
+            # No children exist at all
             break
         if pid == 0:
-            # No zombies left to reap, but some children are still running
+            # No more zombies right now, but children still running
             break
         # Decode and log the exit reason
         if os.WIFEXITED(wait_status):
-            # Child exited normally
-            logging.warning(
-                f"Child {pid} exited with code {os.WEXITSTATUS(wait_status)}")
+            logging.warning("Child %d exited with code %d", pid,
+                            os.WEXITSTATUS(wait_status))
         elif os.WIFSIGNALED(wait_status):
-            # Child was killed by a signal (e.g. SIGKILL, SIGSEGV, OOM killer)
-            # This should abort the calculation
             logging.error(
-                f"Child {pid} killed by signal {os.WTERMSIG(wait_status)}")
-            killed_by_signal.append(pid)
-    if killed_by_signal:
-        # The worker process is already dead at this point, but psutil
-        # may still be able to retrieve its parent from /proc before
-        # the kernel fully cleans up the entry
-        for pid in killed_by_signal:
-            with contextlib.suppress(psutil.NoSuchProcess, ProcessLookupError):
-                parent = psutil.Process(pid).parent()
-                # Kill the parent (e.g. the pool manager or spawn process)
-                # but never the master process itself, which will be stopped
-                # by the MasterKilled exception below
-                if parent and parent.pid != os.getpid():
-                    parent.send_signal(signal.SIGTERM)
-        raise MasterKilled('Some worker was killed')
+                "Child %d killed by signal %d", pid, os.WTERMSIG(wait_status))
+            raise MasterKilled('Some worker was killed')
 
 
 def register_signals(job_id):
@@ -184,7 +159,7 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
-        signal.signal(signal.SIGCHLD, sigchld_handler)
+        signal.signal(signal.SIGCHLD, reap_children)
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
