@@ -389,7 +389,7 @@ def set_fixed_total_sigma(ctx, imt, me, si, ta, ph, total_sigma):
     si[:] = total_sigma[imt]["total_sigma"]
 
 
-def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_std_to_total_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
         A delta std e.g. a phi S2S to be removed from total
@@ -397,7 +397,7 @@ def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
     si[:] = (si**2 + np.sign(delta) * delta**2)**0.5
 
 
-def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_std_to_tau_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
         A delta std to be applied to tau
@@ -417,7 +417,7 @@ def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
     si[:] = np.sqrt(ta**2 + ph**2)
 
 
-def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_std_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
         A delta std to be applied to phi

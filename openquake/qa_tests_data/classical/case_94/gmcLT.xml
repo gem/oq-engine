@@ -8,7 +8,7 @@
       <uncertaintyModel>
         [ModifiableGMPE]
         gmpe.AkkarEtAlRjb2014 = {}
-        add_delta_std_to_total_std.delta = 0.15
+        add_delta_std_to_total_std_scalar.delta = 0.15
       </uncertaintyModel>
       <uncertaintyWeight>0.34</uncertaintyWeight>
     </logicTreeBranch>
@@ -17,7 +17,7 @@
       <uncertaintyModel>
         [ModifiableGMPE]
         gmpe.AkkarEtAlRjb2014 = {}
-        add_delta_std_to_tau_std.delta = 0.1
+        add_delta_std_to_tau_std_scalar.delta = 0.1
       </uncertaintyModel>
       <uncertaintyWeight>0.33</uncertaintyWeight>
     </logicTreeBranch>
@@ -26,7 +26,7 @@
       <uncertaintyModel>
         [ModifiableGMPE]
         gmpe.AkkarEtAlRjb2014 = {}
-        add_delta_std_to_phi_std.delta = -0.2
+        add_delta_std_to_phi_std_scalar.delta = -0.2
       </uncertaintyModel>
       <uncertaintyWeight>0.33</uncertaintyWeight>
     </logicTreeBranch>
