@@ -4,13 +4,23 @@ xmlns="http://openquake.org/xmlns/nrml/0.4">
 <logicTree logicTreeID='lt1'>
   
   <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                      applyToTectonicRegionType="Active Shallow Crust">
+                      applyToTectonicRegionType="Subduction Interface">
     
     <logicTreeBranch branchID="b1">
-      <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-      <uncertaintyWeight>1.0</uncertaintyWeight>
+        <uncertaintyModel>
+        BCHydroESHM20SInter
+        </uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
     </logicTreeBranch>
-    
+
+    <logicTreeBranch branchID="b2">
+        <uncertaintyModel>
+        [BCHydroESHM20SInter]
+        faba_taper_model = "Step"
+        </uncertaintyModel>
+    <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+
   </logicTreeBranchSet>
   
 </logicTree>

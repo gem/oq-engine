@@ -18,6 +18,7 @@
 
 import numpy as np
 from scipy.special import erf
+
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,
@@ -170,7 +171,7 @@ class FABATaperGaussian(FABATaperStep):
         return y
 
 
-AbrahamsonEtAl2015SInter.FABA_ALL_MODELS = {
+AbrahamsonEtAl2015SInter.ESHM20_FABA_MODELS = {
     "Step": FABATaperStep,
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
@@ -184,22 +185,11 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     ESHM20 adjustment of the BC Hydro GMPE for subduction interface events with
     theta6 calibrated to Mediterranean data.
 
-    Introduces several configurable parameters:
-
-    :param float theta6_adjustment:
-        The amount to increase or decrease the theta6 - should be +0.0015 (for
-        slower attenuation) and -0.0015 (for faster attenuation)
-
-    :param float sigma_mu_epsilon:
-        The number of standard deviations above or below the mean to apply the
-        statistical uncertainty sigma_mu term.
-
-    :param faba_model:
-        Choice of model for the forearc/backarc tapering function, choice of
-        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
-
-    Depending on the choice of taper model, additional parameters may be passed
+    Introduces several configurable parameters; theta6_adjustment,
+    sigma_mu_epsilon, and faba_model. Please see the original BCHydro
+    model (in abrahamson_2015.py) for an explanation of these parameters.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -238,6 +228,7 @@ class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -276,6 +267,7 @@ class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -312,15 +304,8 @@ class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     """
     ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events with
     theta6 calibrated to Mediterranean data.
-
-    Introduces two configurable parameters:
-
-    a6_adjustment - the amount to increase or decrease the theta6 (should be
-    +0.0015 (for slower attenuation) and -0.0015 (for faster attenuation)
-
-    sigma_mu_epsilon - number of standard deviations above or below the mean
-    to apply the statistical uncertainty sigma_mu term.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -359,6 +344,7 @@ class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}
@@ -397,6 +383,7 @@ class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
+    kind = "eshm20"
 
     # Requires Vs30 and distance to the volcanic front
     REQUIRES_SITES_PARAMETERS = {'vs30', 'xvf'}

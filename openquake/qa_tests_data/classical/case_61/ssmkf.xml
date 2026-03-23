@@ -2,8 +2,8 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
     xmlns:gml="http://www.opengis.net/gml">
     <sourceModel name="Example Source Model Containing a Simple Fault Source">
-        <sourceGroup name="group 1" tectonicRegion="Active Shallow Crust">
-            <kiteFaultSource id="3" name="Kite Fault Source" tectonicRegion="Active Shallow Crust">
+        <sourceGroup name="group 1" tectonicRegion="Subduction Interface">
+            <kiteFaultSource id="3" name="Kite Fault Source" tectonicRegion="Subduction Interface">
                     
                 <simpleFaultGeometry>
                     <gml:LineString>

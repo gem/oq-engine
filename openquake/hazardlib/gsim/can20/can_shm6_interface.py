@@ -92,11 +92,11 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
                 A15._compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
                 A15._compute_distance_term(
-                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.theta6_adj) +
                 A15._compute_focal_depth_term(
                     self.trt, C, ctx) +
                 A15._compute_forearc_backarc_term(
-                    self.trt, self.faba_model, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.faba_model) +
                 A15._compute_site_response_term(
                     C, ctx, pga1000))
 
@@ -246,8 +246,7 @@ def _site_term_am09(ctx, imt):
     pga760 = _get_mean_760_am09(ctx, PGA())
     BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
-    F = CanadaSHM6_ASC._get_site_scaling_ba14(
-        "", "", C, np.exp(pga760), ctx, imt, ctx.rjb)
+    F = CanadaSHM6_ASC._get_site_scaling_ba14(None, C, np.exp(pga760), ctx, imt)
     return F
 
 
