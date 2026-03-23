@@ -151,23 +151,21 @@ class ModifiableGMPETest(unittest.TestCase):
 
         # Check adding/removing a delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
-            add_delta_std_to_total_std={"delta": -0.20})
-
+            add_delta_to_total_std_scalar={"delta": -0.20})
         aae(sig[ORIG, 0], 0.712105)
         aae(sig[MODI, 0], 0.68344277)
 
         # Check adding/removing a delta std to tau
         mea, sig, tau, phi = self.get_mean_stds(
-            add_delta_std_to_tau_std={"delta": -0.10})
+            add_delta_to_tau_std_scalar={"delta": -0.10})
         aae(tau[ORIG, 0], 0.3501)
         aae(tau[MODI, 0], 0.2501)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
         aae(sig[MODI, 0], 0.66863594) # readjusted based on adjustment of tau
 
-
         # Check adding/removing a delta std to phi
         mea, sig, tau, phi = self.get_mean_stds(
-            add_delta_std_to_phi_std={"delta": -0.10})
+            add_delta_to_phi_std_scalar={"delta": -0.10})
         aae(phi[ORIG, 0], 0.6201)
         aae(phi[MODI, 0], 0.5201)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
