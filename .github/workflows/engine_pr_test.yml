@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: calculators tests
+name: engine tests
 
 on:
   pull_request:
@@ -30,7 +30,7 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Calculators hazard tests
+      - name: Calculators + _unc tests
         run: |
           set -e
           source ~/openquake/bin/activate
@@ -40,8 +40,8 @@ jobs:
           # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
           pytest openquake/baselib/tests/pyproj_wheel_test.py
           pytest openquake/hazardlib/tests/pyproj_wheel_test.py
-
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not classical'
+          pytest -m "not slow" -v openquake/_unc
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -89,7 +89,7 @@ jobs:
           pytest --doctest-modules doc/contributing/*.rst
         shell: bash
 
-  server_aelo_mode:
+  server_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -132,7 +132,6 @@ jobs:
             --tracing retain-on-failure \
             --screenshot only-on-failure \
             --video retain-on-failure
-          pytest -m "not slow" -v openquake/_unc
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v4
