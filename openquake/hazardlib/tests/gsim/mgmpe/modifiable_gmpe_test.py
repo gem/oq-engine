@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import numpy as np
+
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -31,6 +32,10 @@ ORIG, MODI = 0, 1  # original vs modified GMPE
 class ModifiableGMPETest(unittest.TestCase):
 
     def test_AlAtik2015Sigma(self):
+        """
+        Test application of the Al Atik (2015) sigma model
+        within ModifiableGMPE.
+        """
         gmpe = valid.gsim('YenierAtkinson2015BSSA')
         params1 = {"tau_model": "global", "ergodic": False}
         params2 = {"tau_model": "cena", "ergodic": True}
@@ -70,6 +75,10 @@ class ModifiableGMPETest(unittest.TestCase):
                            set_between_epsilon={'epsilon_tau': 0.5})
 
     def test_AkkarEtAlRjb2014(self):
+        """
+        Test specification of the epsilon used to constrain the
+        between-event variability.
+        """
         # check mean and stds
         gmm = valid.gsim('AkkarEtAlRjb2014')
         gsims = [valid.modified_gsim(
@@ -93,7 +102,9 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(sig[0], phi[1])
 
     def test_coefficients_as_dictionary(self):
-        """Check the parsing of the coefficients to a dictionary"""
+        """
+        Check the parsing of the coefficients to a dictionary
+        """
         input_coeffs = {"PGA": 1.0, "SA(0.2)": 2.0, "SA(3.0)": 3.0}
         output_coeffs = _dict_to_coeffs_table(input_coeffs, "XYZ")
         self.assertListEqual(list(output_coeffs), ["XYZ"])
@@ -116,9 +127,11 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx.rjb = np.array([1., 10., 30., 70.])
         return cmaker.get_mean_stds([ctx])
 
-    def test(self):
-
-        # check the scaling of the median ground motion - IMT-independent
+    def test_mgmpe_general(self):
+        """
+        Test general capabilities of ModifiableGMPE
+        """
+        # Check the scaling of the median ground motion - IMT-independent
         mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_median_scalar={'scaling_factor': 1.2})
         aae(np.exp(mea[MODI]) / np.exp(mea[ORIG]), 1.2)
@@ -152,11 +165,14 @@ class ModifiableGMPETest(unittest.TestCase):
         # Check set total std as between plus phi SS
         mea, sig, tau, phi = self.get_mean_stds(
             set_total_std_as_tau_plus_delta={"delta": 0.45})
-
         aae(phi[ORIG, 0], 0.6201)
         aae(sig[MODI, 0], 0.5701491121)
 
     def test_gmm_sigma_deltas(self):
+        """
+        Test capabilities for applying a delta to a component
+        of a GMM's sigma (total, tau or phi)
+        """
         # Check adding/removing a delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_total_std_scalar={"delta": -0.20})
@@ -214,7 +230,9 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(sig[MODI, 1], 0.76920081) # recomputed after phi adj
 
     def test_avg_gmpe_mgmpe(self):
+        """
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
+        """
         gmm_toml =\
         """
         [AvgGMPE]
