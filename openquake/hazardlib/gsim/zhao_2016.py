@@ -250,7 +250,7 @@ def get_depth_term_um(trt, C, ctx):
 
 
 @get_depth_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_depth_term_SInter(trt, C, ctx):
+def get_depth_term_sinter(trt, C, ctx):
     """
     Returns depth term (dependent on top of rupture depth) as given
     in equations 1 and 2

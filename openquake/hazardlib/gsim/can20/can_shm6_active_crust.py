@@ -56,7 +56,7 @@ def _check_imts(imts):
 
 
 # NB: this is calling the basin term
-def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, imt, rjb):
+def _get_site_scaling_ba14(region, C, pga_rock, sites, imt):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling
@@ -109,8 +109,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
             mean[m] = (
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +
-                _get_site_scaling_ba14(self.kind, self.region, C, pga_rock,
-                                       ctx, imt, ctx.rjb))
+                _get_site_scaling_ba14(self.region, C, pga_rock, ctx, imt))
             sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 # =============================================================================
