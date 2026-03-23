@@ -135,17 +135,14 @@ def sigchld_handler(signum, frame):
     Signal handler for SIGCHLD: reap zombie children and propagate
     unexpected deaths by killing the parent of the offending worker.
     """
-    if parallel.Starmap.WORKER_POOL_ACTIVE:
+    if parallel.WORKER_POOL_ACTIVE:
         try:
             pid, wait_status = os.waitpid(-1, os.WNOHANG)
         except ChildProcessError:
             return
         else:
-            if pid in parallel.Starmap.pids:
-                raise MasterKilled(
-                    f'sigchld_handler: worker {pid} was killed:, {wait_status=}')
-            else:
-                logging.debug(f'sigchld_handler: reaped non-worker child {pid}')
+            raise MasterKilled(
+                f'sigchld_handler: some worker was killed: {pid=}, {wait_status=}')
     else:
         logging.debug('sigchld_handler: worker pool not active, ignoring.')
 
