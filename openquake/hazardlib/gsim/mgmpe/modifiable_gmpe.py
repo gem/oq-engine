@@ -448,7 +448,7 @@ def add_delta_std_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
 
 
 def add_delta_std_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
-    """
+    """ m
     :param delta:
         An IMT-dependent vector of delta std to be applied to total GMM
         sigma for a given IMT. 
@@ -458,8 +458,8 @@ def add_delta_std_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
     new_sig = np.sqrt(si**2 + np.sign(sig_delta) * sig_delta**2)
     if np.any(new_sig < 0):
         raise ValueError(
-            f"delta={sig_delta} produces a negative GMM (total) sigma "
-            f"- minimum GMM sigma would be {new_sig.min():.6f}"
+            f"delta={sig_delta} for {imt} produces a negative total sigma "
+            f"- minimum sigma for {imt} would be {new_sig.min():.6f}"
         )
 
     # Adjust total sigma for given IMT
