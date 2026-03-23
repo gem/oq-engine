@@ -1,3 +1,8 @@
+  [Paolo Tormene, Michele Simionato, Paul Henshaw]
+  * If any worker dies before completion, the corresponding master and
+    all its subprocesses are killed and the event causing the
+    interruption is logged
+
   [Christopher Brooks]
   * Fix a bug where ESHM20 subclasses of BCHydro without a FABA
     taper model incorrectly fellback to the original BCHydro backarc
