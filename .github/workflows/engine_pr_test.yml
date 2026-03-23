@@ -36,7 +36,7 @@ jobs:
           source ~/openquake/bin/activate
           pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k "not classical"
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -69,6 +69,7 @@ jobs:
           ruff check openquake
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/calculators -k classical
           pytest --doctest-modules doc/contributing/*.rst
         shell: bash
 
