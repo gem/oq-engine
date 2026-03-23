@@ -66,7 +66,6 @@ class FABATaperTestCase(unittest.TestCase):
 
 
 # Subduction Interface
-
 class BCHydroESHM20SInterCentralTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SInter
 
@@ -145,9 +144,8 @@ class BCHydroESHM20SInterGaussianFABATaperTestCase(BaseGSIMTestCase):
             max_discrep_percentage=MAX_DISCREP,
             faba_taper_model="Gaussian", sigma=30.0, a=-100.0, b=100.0)
 
+
 # Subduction Slab
-
-
 class BCHydroESHM20SSlabCentralTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroESHM20SSlab
 
