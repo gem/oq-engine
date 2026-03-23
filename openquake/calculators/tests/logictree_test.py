@@ -151,7 +151,7 @@ class LogictreeTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/curve-mean-bis.csv', fname)
 
     def test_case_06(self):
-        # two source model, use_rates and disagg_by_src
+        # two source models, use_rates and disagg_by_src
         self.assert_curves_ok(
             ['curve-mean.csv', 'curve-rlz0.csv', 'curve-rlz1.csv'],
             case_06.__file__)
