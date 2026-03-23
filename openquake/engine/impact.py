@@ -32,7 +32,8 @@ CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
 def trivial_callback(
-        job_id, params, job_owner_email=None, outputs_uri=None, exc=None):
+        job_id, params, job_owner_email=None, outputs_uri=None, exc=None,
+        email_file_path=None):
     if exc:
         logging.error('', exc_info=True)
         sys.exit('There was an error: %s' % exc)
@@ -41,7 +42,7 @@ def trivial_callback(
 
 def main_web(allparams, jobctxs,
              job_owner_email=None, outputs_uri=None,
-             callback=trivial_callback):
+             callback=trivial_callback, email_file_path=None):
     """
     This script is meant to be called from the WebUI
     """
@@ -50,9 +51,10 @@ def main_web(allparams, jobctxs,
             engine.run_jobs([job])
         except Exception as exc:
             callback(job.calc_id, params, job_owner_email,
-                     outputs_uri, exc=exc)
+                     outputs_uri, exc=exc, email_file_path=email_file_path)
         else:  # success
-            callback(job.calc_id, params, job_owner_email, outputs_uri)
+            callback(job.calc_id, params, job_owner_email, outputs_uri,
+                     email_file_path=email_file_path)
 
 
 def main_cmd(usgs_id, rupture_file=None,

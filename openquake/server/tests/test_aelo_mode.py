@@ -18,7 +18,6 @@
 
 
 import os
-import glob
 import sys
 import json
 import tempfile
@@ -31,9 +30,8 @@ import logging
 import django
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client, override_settings
+from django.test import Client
 from django.conf import settings
-from openquake.baselib import config
 from openquake.calculators.base import get_aelo_version
 from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
@@ -78,79 +76,80 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         super().tearDownClass()
 
     def aelo_run_then_remove(self, params, failure_reason=None):
+        # NOTE: We make Django filebased.EmailBackend write each email
+        # notification into a separate directory, so afterwards we can
+        # retrieve a single file from it, corresponding to the tested job
         with tempfile.TemporaryDirectory() as email_dir:
-            # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
-            # issues in case tests run in parallel, because we are checking the
-            # last email that was created instead of the only email created in
-            # a test-specific directory
-            with override_settings(EMAIL_FILE_PATH=email_dir):
-                resp = self.post('aelo_run', params)
-                if resp.status_code == 400:
-                    self.assertIsNotNone(failure_reason)
-                    content = json.loads(resp.content)
-                    self.assertIn(failure_reason, content['error_msg'])
-                    return
-                self.assertEqual(resp.status_code, 200)
-                # the job is supposed to start
-                # and, if failure_reason is not None, to fail afterwards
-                try:
-                    js = json.loads(resp.content.decode('utf8'))
-                except Exception:
-                    raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content) from None
-                job_id = js['job_id']
-                self.wait()
-                if failure_reason:
-                    tb = self.get('%s/traceback' % job_id)
-                    if not tb:
-                        sys.stderr.write('Empty traceback, please check!\n')
-                    self.assertIn(failure_reason, '\n'.join(tb))
-                else:
-                    results = self.get('%s/results' % job_id)
-                    self.assertGreater(
-                        len(results), 0, 'The job produced no outputs!')
-                # # FIXME: we should use the overridden EMAIL_FILE_PATH,
-                # #        so email_dir would contain only one file
-                # email_file = os.listdir(email_dir)[0]
-                app_msgs_dir = os.path.join(
-                    config.directory.custom_tmp or tempfile.gettempdir(),
-                    'app-messages')
-                email_files = glob.glob(os.path.join(app_msgs_dir, '*'))
-                email_file = max(email_files, key=os.path.getctime)
-                with open(os.path.join(email_dir, email_file), 'r') as f:
-                    email_content = f.read()
-                    print(email_content)
-                if failure_reason:
-                    self.assertIn('failed', email_content)
-                else:
-                    self.assertIn('finished correctly', email_content)
-                email_from = settings.EMAIL_HOST_USER
-                email_to = settings.EMAIL_SUPPORT
-                asce_version = params.get(
-                    'asce_version', OqParam.asce_version.default)
-                self.assertIn(f'From: {email_from}', email_content)
-                self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn(f'Reply-To: {email_to}', email_content)
-                self.assertIn(
-                    f"Site name: {params['site_name']}\n"
-                    f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
-                    f"Site Class: Vs30 = {params['vs30']} m/s\n"
-                    f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
-                    f"AELO version: {get_aelo_version()}\n\n", email_content)
-                if failure_reason:
-                    self.assertIn(failure_reason, email_content)
-                else:
-                    self.assertIn('Please find the results here:',
-                                  email_content)
-                    self.assertIn(f'engine/{job_id}/outputs', email_content)
-        # Check that the Django views to visualize simplified and advanced outputs
-        # pages do not raise any exceptions
+            # NOTE: we can't use Django override_settings to override
+            #       EMAIL_FILE_PATH, because it would work only in the
+            #       current process (subprocess would use the original
+            #       settings). Instead, we explicitly propagate the
+            #       directory to the child process.
+            params['email_file_path'] = email_dir
+            resp = self.post('aelo_run', params)
+            if resp.status_code == 400:
+                self.assertIsNotNone(failure_reason)
+                content = json.loads(resp.content)
+                self.assertIn(failure_reason, content['error_msg'])
+                return
+            self.assertEqual(resp.status_code, 200)
+            # the job is supposed to start
+            # and, if failure_reason is not None, to fail afterwards
+            try:
+                js = json.loads(resp.content.decode('utf8'))
+            except Exception:
+                raise ValueError(
+                    b'Invalid JSON response: %r' % resp.content) from None
+            job_id = js['job_id']
+            self.wait()
+            if failure_reason:
+                tb = self.get('%s/traceback' % job_id)
+                if not tb:
+                    sys.stderr.write('Empty traceback, please check!\n')
+                self.assertIn(failure_reason, '\n'.join(tb))
+            else:
+                results = self.get('%s/results' % job_id)
+                self.assertGreater(
+                    len(results), 0, 'The job produced no outputs!')
+            email_files = os.listdir(email_dir)
+            self.assertEqual(
+                len(email_files), 1,
+                f'Expected exactly one email, found {len(email_files)}'
+                f' in {email_dir}: {email_files}')
+            with open(os.path.join(email_dir, email_files[0]), 'r') as f:
+                email_content = f.read()
+                print(email_content)
+            if failure_reason:
+                self.assertIn('failed', email_content)
+            else:
+                self.assertIn('finished correctly', email_content)
+            email_from = settings.EMAIL_HOST_USER
+            email_to = settings.EMAIL_SUPPORT
+            asce_version = params.get(
+                'asce_version', OqParam.asce_version.default)
+            self.assertIn(f'From: {email_from}', email_content)
+            self.assertIn('To: django-test-user@email.test', email_content)
+            self.assertIn(f'Reply-To: {email_to}', email_content)
+            self.assertIn(
+                f"Site name: {params['site_name']}\n"
+                f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
+                f"Site Class: Vs30 = {params['vs30']} m/s\n"
+                f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
+                f"AELO version: {get_aelo_version()}\n\n", email_content)
+            if failure_reason:
+                self.assertIn(failure_reason, email_content)
+            else:
+                self.assertIn('Please find the results here:', email_content)
+                self.assertIn(f'engine/{job_id}/outputs', email_content)
+        # Check that the Django views to visualize simplified and advanced
+        # outputs pages do not raise any exceptions
         self.c.get(f'/engine/{job_id}/outputs')
         self.c.get(f'/engine/{job_id}/outputs_aelo')
         self.c.get(f'/v1/calc/{job_id}/download_png/hcurves.png')
         self.c.get(f'/v1/calc/{job_id}/download_png/site.png')
         self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
-        self.c.get(f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
+        self.c.get(
+            f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
@@ -168,7 +167,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
-        # NOTE: the site_name is transformed into a description and a custom_site_id
+        # NOTE: site_name is transformed into description and custom_site_id
         params = dict(
             lon=lon, lat=lat, vs30='800.0', site_name='CCA SITE')
         self.aelo_run_then_remove(params)
@@ -215,9 +214,11 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     def test_aelo_invalid_vs30(self):
         params = dict(lon='-86', lat='12', vs30='-800', site_name='CCA_SITE')
-        self.aelo_invalid_input(params, 'vs30 -800.0 is smaller than the minimum (150)')
+        self.aelo_invalid_input(
+            params, 'vs30 -800.0 is smaller than the minimum (150)')
         params = dict(lon='-86', lat='12', vs30='4000', site_name='CCA_SITE')
-        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (1525)')
+        self.aelo_invalid_input(
+            params, 'vs30 4000.0 is bigger than the maximum (1525)')
 
     def test_aelo_invalid_site_name(self):
         site_name = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
