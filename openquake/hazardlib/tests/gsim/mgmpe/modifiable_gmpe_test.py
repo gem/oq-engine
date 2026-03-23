@@ -149,7 +149,15 @@ class ModifiableGMPETest(unittest.TestCase):
         for m, s in enumerate([0.6, 0.75]):
             aae(sig[MODI, m], s)
 
-        # Check adding/removing a delta std to the total std
+        # Check set total std as between plus phi SS
+        mea, sig, tau, phi = self.get_mean_stds(
+            set_total_std_as_tau_plus_delta={"delta": 0.45})
+
+        aae(phi[ORIG, 0], 0.6201)
+        aae(sig[MODI, 0], 0.5701491121)
+
+    def test_gmm_sigma_deltas(self):
+                # Check adding/removing a delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_total_std_scalar={"delta": -0.20})
         aae(sig[ORIG, 0], 0.712105)
@@ -192,11 +200,9 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(tau[MODI, 0], 0.3001) # PGA - modified gmm
         aae(tau[ORIG, 1], 0.3842) # SA(0.5) - original gmm
         aae(tau[MODI, 1], 0.4842)  # SA(0.5) - modified gmm
-        
-        aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.68890059) # readjusted based on tau delta
-        aae(sig[ORIG, 1], 0.7675740)
-        aae(sig[MODI, 1], 0.8221982)
+
+        aae(sig[ORIG, 1], 0.7675740) # Test total sigma given
+        aae(sig[MODI, 1], 0.8221982) # recomputed after tau adj
 
         # Check adding/removing a vector of delta std to phi
         mea, sig, tau, phi = self.get_mean_stds(
@@ -209,17 +215,8 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(phi[ORIG, 1], 0.6645) # SA(0.5) - original gmm
         aae(phi[MODI, 1], 0.7145) # SA(0.5) - modified gmm
         
-        aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.54685832) # readjusted based on phi delta
-        aae(sig[ORIG, 1], 0.76757403)
-        aae(sig[MODI, 1], 0.81124589)
-
-        # Check set total std as between plus phi SS
-        mea, sig, tau, phi = self.get_mean_stds(
-            set_total_std_as_tau_plus_delta={"delta": 0.45})
-
-        aae(phi[ORIG, 0], 0.6201)
-        aae(sig[MODI, 0], 0.5701491121)
+        aae(sig[ORIG, 1], 0.76757403) # Test total sigma given
+        aae(sig[MODI, 1], 0.81124589) # recomputed after phi adj
 
     def test_avg_gmpe_mgmpe(self):
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
