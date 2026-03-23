@@ -172,11 +172,6 @@ def main(lon: valid.longitude,
     logging.root.handlers = []  # avoid breaking the logs
     try:
         engine.run_jobs([jobctx])
-    except engine.MasterKilled as exc:
-        if str(exc) == 'The openquake master process was killed manually':
-            logging.warning(str(exc))
-        else:
-            raise
     except Exception as exc:
         callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
                  exc=exc, warnings=warnings, email_file_path=email_file_path)
