@@ -64,15 +64,14 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
           pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           ruff check openquake
-          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib,engine,_unc}
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
           pytest --doctest-modules doc/contributing/*.rst
         shell: bash
 
-  server_tests:
+  server:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -81,7 +80,6 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: AELO
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -95,7 +93,7 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
-      - name: Server 'AELO' mode tests
+      - name: Server tests
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
@@ -108,6 +106,7 @@ jobs:
           OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py
           OQ_APPLICATION_MODE=IMPACT pytest -v openquake/server/tests/test_impact_mode.py
           OQ_APPLICATION_MODE=AELO pytest -v openquake/server/tests/test_aelo_mode.py
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{engine,_unc}
           OQ_APPLICATION_MODE=AELO pytest \
             --browser chromium \
             --capture=no \
