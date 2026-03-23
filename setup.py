@@ -19,7 +19,7 @@
 import os
 import re
 import sys
-from setuptools import setup, find_namespace_packages
+from setuptools import setup
 
 def generate_data_files(source_dir):
     # Helper function for demos
