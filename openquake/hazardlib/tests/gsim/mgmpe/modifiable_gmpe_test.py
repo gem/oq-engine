@@ -157,7 +157,7 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(sig[MODI, 0], 0.5701491121)
 
     def test_gmm_sigma_deltas(self):
-                # Check adding/removing a delta std to the total std
+        # Check adding/removing a delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_total_std_scalar={"delta": -0.20})
         aae(sig[ORIG, 0], 0.712105)
@@ -167,56 +167,51 @@ class ModifiableGMPETest(unittest.TestCase):
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_tau_std_scalar={"delta": -0.10})
         aae(tau[ORIG, 0], 0.3501)
-        aae(tau[MODI, 0], 0.2501)
+        aae(tau[MODI, 0], 0.33551455)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.66863594) # readjusted based on tau delta
+        aae(sig[MODI, 0], 0.70504895) # readjusted based on tau delta
 
         # Check adding/removing a delta std to phi
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_phi_std_scalar={"delta": -0.10})
         aae(phi[ORIG, 0], 0.6201)
-        aae(phi[MODI, 0], 0.5201)
+        aae(phi[MODI, 0], 0.61198367)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.62695615) # readjusted based phi delta
+        aae(sig[MODI, 0], 0.70504895) # readjusted based phi delta
 
         # Check adding/removing a vector of delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_total_std_vector={"delta": {
                 "PGA": -0.25, "SA(0.2)": 0.20
                 }})
-        
         aae(sig[ORIG, 0], 0.71210534) # PGA - original gmm
         aae(sig[MODI, 0], 0.66677884) # PGA - modified gmm
-        aae(sig[ORIG, 1], 0.76757403) # SA(0.5) - original gmm
-        aae(sig[MODI, 1], 0.7932023)  # SA(0.5) - modified gmm
+        aae(sig[ORIG, 1], 0.76757403) # SA(0.2) - original gmm
+        aae(sig[MODI, 1], 0.7932023)  # SA(0.2) - modified gmm
 
         # Check adding/removing a vector of delta std to tau
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_tau_std_vector={"delta": {
                 "PGA": -0.05, "SA(0.2)": 0.1
                 }})
-        
-        aae(tau[ORIG, 0], 0.3501) # PGA - original gmm
-        aae(tau[MODI, 0], 0.3001) # PGA - modified gmm
-        aae(tau[ORIG, 1], 0.3842) # SA(0.5) - original gmm
-        aae(tau[MODI, 1], 0.4842)  # SA(0.5) - modified gmm
-
-        aae(sig[ORIG, 1], 0.7675740) # Test total sigma given
-        aae(sig[MODI, 1], 0.8221982) # recomputed after tau adj
+        aae(tau[ORIG, 0], 0.3501)      # PGA - original gmm
+        aae(tau[MODI, 0], 0.3465112)   # PGA - modified gmm
+        aae(tau[ORIG, 1], 0.3842)      # SA(0.2) - original gmm
+        aae(tau[MODI, 1], 0.39700081)  # SA(0.2) - modified gmm
+        aae(sig[ORIG, 1], 0.7675740)   # Test total sigma given
+        aae(sig[MODI, 1], 0.77406065)  # recomputed after tau adj
 
         # Check adding/removing a vector of delta std to phi
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_to_phi_std_vector={"delta": {
                 "PGA": -0.2, "SA(0.2)": 0.05
                 }})
-        
-        aae(phi[ORIG, 0], 0.6201) # PGA - original gmm
-        aae(phi[MODI, 0], 0.4201) # PGA - modified gmm
-        aae(phi[ORIG, 1], 0.6645) # SA(0.5) - original gmm
-        aae(phi[MODI, 1], 0.7145) # SA(0.5) - modified gmm
-        
+        aae(phi[ORIG, 0], 0.6201)     # PGA - original gmm
+        aae(phi[MODI, 0], 0.58696168) # PGA - modified gmm
+        aae(phi[ORIG, 1], 0.6645)     # SA(0.2) - original gmm
+        aae(phi[MODI, 1], 0.66637846) # SA(0.2) - modified gmm
         aae(sig[ORIG, 1], 0.76757403) # Test total sigma given
-        aae(sig[MODI, 1], 0.81124589) # recomputed after phi adj
+        aae(sig[MODI, 1], 0.76920081) # recomputed after phi adj
 
     def test_avg_gmpe_mgmpe(self):
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
