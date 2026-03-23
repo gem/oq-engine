@@ -161,7 +161,7 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(tau[ORIG, 0], 0.3501)
         aae(tau[MODI, 0], 0.2501)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.66863594) # readjusted based on adjustment of tau
+        aae(sig[MODI, 0], 0.66863594) # readjusted based on tau delta
 
         # Check adding/removing a delta std to phi
         mea, sig, tau, phi = self.get_mean_stds(
@@ -169,7 +169,50 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(phi[ORIG, 0], 0.6201)
         aae(phi[MODI, 0], 0.5201)
         aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
-        aae(sig[MODI, 0], 0.62695615) # readjusted based on adjustment of phi
+        aae(sig[MODI, 0], 0.62695615) # readjusted based phi delta
+
+        # Check adding/removing a vector of delta std to the total std
+        mea, sig, tau, phi = self.get_mean_stds(
+            add_delta_to_total_std_vector={"delta": {
+                "PGA": -0.25, "SA(0.2)": 0.20
+                }})
+        
+        aae(sig[ORIG, 0], 0.71210534) # PGA - original gmm
+        aae(sig[MODI, 0], 0.66677884) # PGA - modified gmm
+        aae(sig[ORIG, 1], 0.76757403) # SA(0.5) - original gmm
+        aae(sig[MODI, 1], 0.7932023)  # SA(0.5) - modified gmm
+
+        # Check adding/removing a vector of delta std to tau
+        mea, sig, tau, phi = self.get_mean_stds(
+            add_delta_to_tau_std_vector={"delta": {
+                "PGA": -0.05, "SA(0.2)": 0.1
+                }})
+        
+        aae(tau[ORIG, 0], 0.3501) # PGA - original gmm
+        aae(tau[MODI, 0], 0.3001) # PGA - modified gmm
+        aae(tau[ORIG, 1], 0.3842) # SA(0.5) - original gmm
+        aae(tau[MODI, 1], 0.4842)  # SA(0.5) - modified gmm
+        
+        aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
+        aae(sig[MODI, 0], 0.68890059) # readjusted based on tau delta
+        aae(sig[ORIG, 1], 0.7675740)
+        aae(sig[MODI, 1], 0.8221982)
+
+        # Check adding/removing a vector of delta std to phi
+        mea, sig, tau, phi = self.get_mean_stds(
+            add_delta_to_phi_std_vector={"delta": {
+                "PGA": -0.2, "SA(0.2)": 0.05
+                }})
+        
+        aae(phi[ORIG, 0], 0.6201) # PGA - original gmm
+        aae(phi[MODI, 0], 0.4201) # PGA - modified gmm
+        aae(phi[ORIG, 1], 0.6645) # SA(0.5) - original gmm
+        aae(phi[MODI, 1], 0.7145) # SA(0.5) - modified gmm
+        
+        aae(sig[ORIG, 0], 0.71210534) # Also check total sigma because it's
+        aae(sig[MODI, 0], 0.54685832) # readjusted based on phi delta
+        aae(sig[ORIG, 1], 0.76757403)
+        aae(sig[MODI, 1], 0.81124589)
 
         # Check set total std as between plus phi SS
         mea, sig, tau, phi = self.get_mean_stds(
