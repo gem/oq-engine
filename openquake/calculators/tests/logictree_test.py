@@ -41,7 +41,7 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-class LogicTreeTestCase(CalculatorTestCase):
+class LogictreeTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
         kind = kw.pop('kind', '')
@@ -338,7 +338,7 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
-        # test classical with 2 gsims and 1 sample
+        # test classical with 2 gsims and 5 samples
         self.assert_curves_ok(['hazard_curve-mean.csv'],
                               case_18.__file__)
 

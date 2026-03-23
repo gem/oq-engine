@@ -27,13 +27,16 @@ import inspect
 import importlib
 import unittest
 from contextlib import redirect_stdout
+import pytest
+from openquake import qa_tests_data
+from openquake.calculators import tests
 import numba
 
+QA_DIR = os.path.dirname(qa_tests_data.__file__)
 REPO = os.path.dirname(
     os.path.dirname(
         os.path.dirname(
             os.path.dirname(__file__))))
-
 LF = ord('\n')
 CR = ord('\r')
 
@@ -213,3 +216,23 @@ def test_get_basin_term():
             if args != ['C', 'ctx', 'region']:
                 msg = f'{mod.__name__}._get_basin_term has a wrong signature '
                 raise RuntimeError(msg + str(args))
+
+
+@pytest.mark.parametrize('name', ['classical', 'logictree'])
+def test_README(name):
+    clsname = f'{name.capitalize()}TestCase'
+    cases = set()
+    for line in open(os.path.join(QA_DIR, name, 'README.md')):
+        c = line.split('|')[1].replace(r'\_', '_').strip()
+        if c.startswith('case_'):
+            cases.add(c)
+    cases = sorted(cases)
+    cls = getattr(getattr(tests, name + "_test"), clsname)
+    test_cases = sorted(c[5:] for c in dir(cls) if '_case_' in c)
+    if set(cases) - set(test_cases):
+        raise RuntimeError(f'Untested {set(cases) - set(test_cases)}')
+    if set(test_cases) - set(cases):
+        raise RuntimeError(f'Undocumented {set(test_cases) - set(cases)}')
+    for c, tc in zip(cases, test_cases, strict=True):
+        assert c == tc
+    
