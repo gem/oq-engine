@@ -41,7 +41,7 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
-class LogicTreeTestCase(CalculatorTestCase):
+class LogictreeTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
         kind = kw.pop('kind', '')
@@ -151,7 +151,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/curve-mean-bis.csv', fname)
 
     def test_case_06(self):
-        # two source model, use_rates and disagg_by_src
+        # two source models, use_rates and disagg_by_src
         self.assert_curves_ok(
             ['curve-mean.csv', 'curve-rlz0.csv', 'curve-rlz1.csv'],
             case_06.__file__)
@@ -338,7 +338,7 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
-        # test classical with 2 gsims and 1 sample
+        # test classical with 2 gsims and 5 samples
         self.assert_curves_ok(['hazard_curve-mean.csv'],
                               case_18.__file__)
 
