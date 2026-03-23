@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 69.0", "wheel"]
+requires = ["setuptools >= 79.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -63,11 +63,6 @@ exclude = [
     "openquake.engine.bin",
     "openquake.engine.bin.*"
 ]
-
-# If you use specific dev tools like pytest or black
-[tool.pytest.ini_options]
-testpaths = ["openquake/qa_tests"]
-python_files = "*_test.py"
 
 [tool.ruff]
 line-length = 79
