@@ -413,7 +413,7 @@ def add_delta_to_tau_std_scalar(ctx, imt, me, si, ta, ph, delta):
         A delta to be applied to tau across all IMTs (IMT-constant)
     """
     # First check if adjusted tau would be negative
-    new_tau = ta + delta
+    new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
     if np.any(new_tau < 0):
         raise ValueError(
             f"delta={delta} produces a negative tau - "
@@ -433,7 +433,7 @@ def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
         A delta to be applied to phi across all IMTs (IMT-constant)
     """
     # First check if adjusted phi would be negative
-    new_phi = ph + delta
+    new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
     if np.any(new_phi < 0):
         raise ValueError(
             f"delta={delta} produces a negative phi - "
@@ -473,11 +473,12 @@ def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
         a given IMT.
     """
     # First check if adjusted tau would be negative for given IMT
-    new_tau = ta + delta[imt.string]
+    delta = delta[imt.string]
+    new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
     if np.any(new_tau < 0):
         raise ValueError(
-            f"delta={delta[imt.string]} for {imt} produces a negative "
-            f"tau - minimum tau for {imt} would be {new_tau.min():.3f}"
+            f"delta={delta} for {imt} produces a negative tau - "
+            f"minimum tau for {imt} would be {new_tau.min():.3f}"
         )
 
     # Adjust tau for given IMT
@@ -494,11 +495,12 @@ def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
         a given IMT.
     """
     # First check if adjusted phi would be negative for given IMT
-    new_phi = ph + delta[imt.string]
+    delta = delta[imt.string]
+    new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
     if np.any(new_phi < 0):
         raise ValueError(
-            f"delta={delta[imt.string]} for {imt} produces a negative "
-            f"phi - minimum phi for {imt} would be {new_phi.min():.3f}"
+            f"delta={delta} for {imt} produces a negative phi - "
+            f"minimum phi for {imt} would be {new_phi.min():.3f}"
         )
 
     # Adjust phi for given IMT
