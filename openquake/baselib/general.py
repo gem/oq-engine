@@ -222,6 +222,7 @@ class WeightedSequence(MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+
 def find_among(strings, sortedvalues, value):
     """
     >>> find_among('ABCD', [.1, .2, .3], .0)

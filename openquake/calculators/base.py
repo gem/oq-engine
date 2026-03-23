@@ -343,6 +343,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if checksum:
                     # if there are no errors the checksum of this job is good
                     logs.dbcmd("update_job_checksum", calc_id, checksum)
+                parallel.WORKER_POOL_ACTIVE = False
                 self.export(kw.get('exports', ''))
             finally:
                 if shutdown:
