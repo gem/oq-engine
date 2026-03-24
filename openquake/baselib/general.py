@@ -41,13 +41,11 @@ import subprocess
 import collections
 import multiprocessing
 from importlib.metadata import version, PackageNotFoundError
-from contextlib import contextmanager
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
 from decorator import decorator
 from openquake.baselib import __version__, config
-from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -222,6 +220,7 @@ class WeightedSequence(MutableSequence):
         """
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
+
 
 def find_among(strings, sortedvalues, value):
     """
@@ -489,6 +488,51 @@ def check_extension(fnames):
         _, ext = os.path.splitext(fname)
         if ext != extension:
             raise NameError(f'{fname} does not end with {ext}')
+
+
+########################## string utilities ##############################
+
+def encode(val):
+    """
+    Encode a string assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: bytes
+    """
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # encode a sequence of strings
+        return [encode(v) for v in val]
+    elif isinstance(val, str):
+        return val.encode('utf-8')
+    else:
+        # assume it was an already encoded object
+        return val
+
+
+def decode(val):
+    """
+    Decode an object assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: a unicode object
+    """
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        return [decode(v) for v in val]
+    elif hasattr(val, 'decode'):
+        # assume it is an encoded bytes object
+        return val.decode('utf-8')
+    else:
+        return str(val)
+
+
+# NB: using numpy.round would be advisable, but it would break
+# plenty of tests, including the AELO tests, so it is a no go
+def round(x, d=0):
+    """
+    Python2-compatible round function
+    """
+    p = 10 ** d
+    return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
 
 def engine_version():
@@ -1778,21 +1822,6 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
-
-
-# NB: this is present in contextlib in Python 3.11, but
-# we still support Python 3.9, so it cannot be removed yet
-@contextmanager
-def chdir(path):
-    """
-    Context manager to temporarily change the CWD
-    """
-    oldpwd = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(oldpwd)
 
 
 def smart_concat(arrays):

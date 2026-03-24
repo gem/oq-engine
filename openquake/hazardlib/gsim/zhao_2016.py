@@ -28,7 +28,6 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import copy
 import numpy as np
-import pandas as pd
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -37,7 +36,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo import Polygon
-from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
+from openquake.hazardlib.geo import Mesh
+from openquake.hazardlib.geo.geodetic import npoints_between, distance
 
 
 CONSTANTS = {"m_c": 7.1,
@@ -54,6 +54,10 @@ IMF = {1: (1. + 0.8 * 2.73) / 3.5,  # IMF 0.91
        2: 3.07 / 3.0,
        3: (1. + 0.9 * 1.76) / 2.5,
        4: (1. + 0.6 * 2.02) / 3.0}
+
+# For non-ergodic path-effect adjustment
+FIXED_DEPTH = 0.
+N_POINTS = 100
 
 get_magnitude_scaling_term = CallableDict()
 
@@ -246,7 +250,7 @@ def get_depth_term_um(trt, C, ctx):
 
 
 @get_depth_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_depth_term_SInter(trt, C, ctx):
+def get_depth_term_sinter(trt, C, ctx):
     """
     Returns depth term (dependent on top of rupture depth) as given
     in equations 1 and 2
@@ -270,8 +274,7 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                          pgn_per_zone=None):
+def get_distance_term_asc(trt, C, ctx, volc_pgns=None):
     """
     Returns the distance scaling term defined in equation 3
     """
@@ -294,8 +297,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                         pgn_per_zone=None):
+def get_distance_term_um(trt, C, ctx, volc_pgns=None):
     """
     Returns the distance attenuation term
     """
@@ -315,8 +317,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                             pgn_per_zone=None):
+def get_distance_term_SInter(trt, C, ctx, volc_pgns=None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
@@ -338,8 +339,7 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store=None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
-                            pgn_per_zone=None):
+def get_distance_term_sslab(trt, C, ctx, volc_pgns=None):
     """
     Returns the distance scaling term in equation 2a
 
@@ -347,15 +347,14 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     implementation of :class:`ZhaoEtAl2016SSlabPErg`.
     """
     cctx = copy.copy(ctx)
-    # Check if need to apply non-ergodic path effects
-    if volc_arc_str is not None:
+    # Check if need to apply non-ergodic path effect
+    if volc_pgns is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
         # with rvolc capped at 80km if total distance traversed through zones is 
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
-        r_volc = volc_perg.get_rvolcs(ctx, pgn_store, pgn_per_zone)     
-        cctx.rvolc = r_volc
+        cctx.rvolc= get_rvolcs(ctx, volc_pgns)
         
     x_ij = cctx.rrup
     # Get anelastic scaling term in equation 5
@@ -513,41 +512,62 @@ def get_volc_zones(volc_polygons):
     Construct polygons from the vertex coordinates provided for each volcanic
     zone and assign the associated zone id
     """
-    # Get the volc zone polygons
-    with fiona.open(volc_polygons,'r') as inp:
-        zone_id, zone_lons, zone_lats = {}, {}, {}
-        for i, f in enumerate(inp):
-            
-            # Get zone_id
-            zone_id[i] = pd.Series(f['properties']).iloc[0]
-            
-            # Per zone get lat and lon of each polygon vertices
-            for c, coo in enumerate(f['geometry']['coordinates'][0]):
-                zone_lons[zone_id[i], c] = f['geometry']['coordinates'][0][c][0]
-                zone_lats[zone_id[i], c] = f['geometry']['coordinates'][0][c][1]
+    zone_pgn = {}
 
-    # Store all required info in dict
-    pgn_store = {'zone': zone_id,
-                 'zone_lons': zone_lons,
-                 'zone_lats': zone_lats}
+    with fiona.open(volc_polygons, 'r') as inp:
+        for feature in inp:
+            zone_id = feature["properties"]["volc_zone_id"]
+            coords = feature['geometry']['coordinates'][0]
+            points = [Point(lon, lat) for lon, lat in coords]
+            zone_pgn[zone_id] = Polygon(points)
 
-    # Set dict for volcanic zones
-    zone_dict = {pgn_store['zone'][z]: {} for z in pgn_store['zone']}
+    return zone_pgn
 
-    # Get polygon per zone
-    pnts_zone, zone_pgn = zone_dict, zone_dict
-    for zone in pgn_store['zone']:
-        zid = pgn_store['zone'][zone]
-        for c, coo in enumerate(pgn_store['zone_lons']):
-            if pgn_store['zone'][zone] in coo:
-                pnts_zone[zid][c] = Point(pgn_store['zone_lons'][zid, coo[1]],
-                                          pgn_store['zone_lats'][zid, coo[1]])
-        zone_pnts = []
-        for coo in pnts_zone[zid]:
-            zone_pnts.append(pnts_zone[zid][coo])
-        zone_pgn[zid] = Polygon(zone_pnts)
-        
-    return pgn_store, zone_pgn
+
+def get_rvolcs(ctx, volc_pgns):
+    """
+    Get total distance per travel path through anelastically attenuating
+    volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
+    
+    The total rvolc per path is capped at a minimum of 12 km (if any zone
+    is traversed) and a maximum of 80 km.
+    """
+    n_paths = len(ctx.lon)
+    rvolc_per_path = np.zeros(n_paths)
+
+    for idx_path in range(n_paths):
+
+        # Discretize the line
+        dsct_line = npoints_between(
+            # .lon/.lat is the site lon/lat
+            ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
+            # .clon/.clat is the corresponding clst point to rup
+            ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
+            N_POINTS
+        )
+
+        # Create mesh of discretized line
+        mesh = Mesh(dsct_line[0], dsct_line[1])
+
+        # Distance between consecutive discretised points along the path
+        line_spacing = distance(
+            mesh.lons[0], mesh.lats[0], FIXED_DEPTH,
+            mesh.lons[1], mesh.lats[1], FIXED_DEPTH
+        )
+
+        # Sum distance traversed in all volcanic polygons for given path
+        total = 0.0
+        for polygon in volc_pgns.values():
+            # dist traversed in zone = N points intersecting zone * spacing
+            total += np.count_nonzero(polygon.intersects(mesh)) * line_spacing
+        rvolc_per_path[idx_path] = total
+
+    # Apply min/max bounds as per Zhao et al. 2016
+    mask = (rvolc_per_path > 0.0) & (rvolc_per_path <= 12.0)
+    rvolc_per_path[mask] = 12.0
+    rvolc_per_path[rvolc_per_path >= 80.0] = 80.0
+
+    return rvolc_per_path
 
 
 class ZhaoEtAl2016Asc(GMPE):
@@ -594,13 +614,10 @@ class ZhaoEtAl2016Asc(GMPE):
     def __init__(self, volc_arc_file=None):
         if volc_arc_file is not None:
             with open(volc_arc_file, 'rb') as fle:
-                self.volc_arc_str = fle.read().decode('utf-8')
-            self.pgn_store, self.pgn_per_zone = get_volc_zones(
-                self.volc_arc_str)
+                volc_arcs = fle.read().decode('utf-8')
+            self.volc_pgns = get_volc_zones(volc_arcs)
         else:
-            self.volc_arc_str = None
-            self.pgn_store = None
-            self.pgn_per_zone = None
+            self.volc_pgns = None
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -613,14 +630,10 @@ class ZhaoEtAl2016Asc(GMPE):
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             _s_c, idx = _get_site_classification(ctx.vs30)
-            volc_arc_str = self.volc_arc_str
-            pgn_store = self.pgn_store
-            pgn_per_zone = self.pgn_per_zone
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, volc_arc_str, pgn_store,
-                                         pgn_per_zone))
+                       get_distance_term(trt, C, ctx, self.volc_pgns))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
             
             if self.__class__.__name__.endswith('SiteSigma'):
@@ -941,10 +954,6 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
 
     #: Supported tectonic region type is subduction inslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    # Additional rupture parameters required for ray tracing
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth',
-                                   'ztor', 'rake', 'strike', 'dip'}
 
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}

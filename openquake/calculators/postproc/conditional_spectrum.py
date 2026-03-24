@@ -21,7 +21,7 @@ Conditional spectrum post-processor
 import logging
 import numpy
 from openquake.baselib import parallel, hdf5, sap
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import decode
 from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile

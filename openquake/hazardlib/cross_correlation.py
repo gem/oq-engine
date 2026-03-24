@@ -20,7 +20,8 @@ import numpy as np
 from scipy import constants, stats
 from abc import ABC, abstractmethod
 from openquake.hazardlib.imt import IMT
-
+from openquake.hazardlib.truncated_mvn import TruncatedMVN
+from openquake.hazardlib.correlation_utils import corr_clipped
 
 # ############ CrossCorrelation for the conditional spectrum ############ #
 
@@ -101,8 +102,7 @@ class CrossCorrelationBetween(ABC):
         if truncation_level < 1E-9:
             truncation_level = 1E-9
         self.truncation_level = truncation_level
-        self.distribution = stats.truncnorm(-truncation_level,
-                                            truncation_level)
+        self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -116,6 +116,32 @@ class CrossCorrelationBetween(ABC):
     @abstractmethod
     def get_inter_eps(self, imts, num_events, rng):
         pass
+
+    def _get_inter_eps_trunc_mvn(self, corma, num_events, rng):
+        num_imts = len(corma)
+        mu = np.zeros(num_imts)
+        bounds = np.full(num_imts, self.truncation_level)
+        seed = int(rng.integers(0, np.iinfo(np.int32).max))
+        # TruncatedMVN mutates the covariance matrix in-place during factorization:
+        # always work on a copy to avoid corrupting cached correlation matrices.
+        corr = np.array(corma, dtype=float, copy=True)
+        mineig = np.linalg.eigvalsh(corr).min()
+        if not np.isfinite(mineig) or mineig < 1e-8:
+            # TruncatedMVN is numerically unstable for nearly-singular matrices.
+            corr = corr_clipped(corr, threshold=1e-8)
+        try:
+            samp = TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
+                num_events)
+            if np.isfinite(samp).all():
+                return samp
+        except RuntimeError as err:
+            if 'not positive semi-definite' not in str(err):
+                raise
+        # Use the existing PSD regularization available in correlation_utils.py
+        # also in case TruncatedMVN returns non-finite samples.
+        corr = corr_clipped(corr, threshold=1e-6)
+        return TruncatedMVN(mu, corr, -bounds, bounds, seed=seed).sample(
+            num_events)
 
 
 class GodaAtkinson2009(CrossCorrelationBetween):
@@ -160,8 +186,7 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return rng.multivariate_normal(
-            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return self._get_inter_eps_trunc_mvn(corma, num_events, rng)
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods
@@ -238,8 +263,7 @@ class Bradley2012(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return rng.multivariate_normal(
-            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+        return self._get_inter_eps_trunc_mvn(corma, num_events, rng)
 
     def _get_correlation_matrix(self, imts):
         # cached on the periods

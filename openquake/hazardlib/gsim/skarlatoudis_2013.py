@@ -88,7 +88,6 @@ def _get_site_type_dummy_variables(ctx):
 def _compute_forearc_backarc_term(C, ctx):
     """
     Compute back-arc term of Equation 3
-
     """
     # flag 1 (R < 335 & R >= 205)
     flag1 = np.zeros(len(ctx.rhypo))

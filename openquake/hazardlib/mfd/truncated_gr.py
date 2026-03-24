@@ -19,7 +19,7 @@ Gutenberg-Richter MFD.
 """
 import math
 import numpy as np
-from openquake.baselib.python3compat import round
+from openquake.baselib.general import round
 from openquake.hazardlib.mfd.base import BaseMFD
 
 

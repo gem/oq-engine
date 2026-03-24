@@ -21,7 +21,6 @@ Module exports :class:'AtkinsonMacias2009'
 """
 import numpy as np
 from scipy.constants import g
-import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

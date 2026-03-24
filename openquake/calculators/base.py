@@ -221,7 +221,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
+        was_worker_pool_active = parallel.WORKER_POOL_ACTIVE
+        parallel.WORKER_POOL_ACTIVE = False
         self.engine_version = logs.dbcmd('engine_version')
+        parallel.WORKER_POOL_ACTIVE = was_worker_pool_active
         if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
             self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
@@ -326,6 +329,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
                            self.datastore.filename[:-5], calc_id)  # strip .hdf5
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
+                parallel.WORKER_POOL_ACTIVE = False
                 self.export(kw.get('exports', ''))
                 return self.exported
             try:
@@ -343,6 +347,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if checksum:
                     # if there are no errors the checksum of this job is good
                     logs.dbcmd("update_job_checksum", calc_id, checksum)
+                parallel.WORKER_POOL_ACTIVE = False
                 self.export(kw.get('exports', ''))
             finally:
                 if shutdown:
@@ -654,7 +659,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 
-    def import_perils(self):  # called in pre_execute
+    def import_perils(self):  # called in pre_execute, relevant for volcanic
         """
         Read the hazard fields as csv files, associate them to the sites
         and create suitable `gmf_data` and `events`.
@@ -1145,19 +1150,13 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
 
-        # manage secondary perils
-        sec_perils = oq.get_sec_perils()
-        for sp in sec_perils:
-            sp.prepare(self.sitecol)  # add columns as needed
-        if sec_perils:
-            self.datastore['sitecol'] = self.sitecol
-
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
         oq._amplifier = self.amplifier
-        oq._sec_perils = sec_perils
+        self.add_sec_perils(oq)
+
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
@@ -1167,6 +1166,14 @@ class HazardCalculator(BaseCalculator):
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
                                  ).sort_values('return_period')
             self.datastore.create_df('post_loss_amplification', df)
+
+    def add_sec_perils(self, oq):
+        self.sec_perils = oq.get_sec_perils()
+        added = 0
+        for sp in self.sec_perils:
+            added += sp.prepare(self.sitecol) or 0  # add columns as needed
+        if added:
+            self.datastore['sitecol'] = self.sitecol
 
     def store_rlz_info(self, rel_ruptures):
         """

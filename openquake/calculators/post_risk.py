@@ -23,7 +23,7 @@ import itertools
 import numpy
 import pandas
 
-from openquake.baselib import general, parallel, python3compat
+from openquake.baselib import general, parallel
 from openquake.hazardlib.stats import weighted_quantiles
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
@@ -213,7 +213,7 @@ def get_src_loss_table(dstore, loss_id):
     rlz_ids = evs['rlz_id']
     srcidx = dict(ruptures[['id', 'source_id']])
     srcids = [srcidx[rup_id] for rup_id in evs['rup_id']]
-    srcs = python3compat.decode(source_id[srcids])
+    srcs = general.decode(source_id[srcids])
     acc = general.AccumDict(accum=0)
     for src, rlz_id, loss in zip(srcs, rlz_ids, alt.loss.to_numpy()):
         acc[src] += loss * ws[rlz_id]
@@ -660,8 +660,9 @@ class PostRiskCalculator(base.RiskCalculator):
                         'A big variation in the %s losses is expected: try'
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
-        logging.info('Sanity check on avg_losses and aggrisk')
+
         if 'avg_losses-rlzs' in set(self.datastore):
+            logging.info('Sanity check on avg_losses and aggrisk')
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
@@ -689,8 +690,8 @@ class PostRiskCalculator(base.RiskCalculator):
                         'arithmetic, agg_losses != sum(avg_losses) [%s]: '
                         '%s != %s\nsee %s', lt, agg, avg, url)
 
-        # save agg_curves-stats
         if self.R > 1 and 'aggcurves' in self.datastore:
+            logging.info("Saving agg_curves-stats")
             save_curve_stats(self.datastore)
 
         if oq.postrisk_func:
@@ -699,7 +700,6 @@ class PostRiskCalculator(base.RiskCalculator):
             func = getattr(mod, funcname)
             with self._monitor(oq.postrisk_func, measuremem=True):
                 func(self.datastore, **oq.postrisk_args)
-
 
 
 def post_aggregate(calc_id: int, aggregate_by):

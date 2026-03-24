@@ -270,7 +270,7 @@ class CalculatorTestCase(unittest.TestCase):
         res = super().run(result)
         if hasattr(res, 'errors'):
             issues = len(res.errors) + len(res.failures)
-        elif getattr(res, '_excinfo'):  # with pytest
+        elif res._excinfo:  # with pytest
             issues = len(res._excinfo)
         else:
             issues = 0

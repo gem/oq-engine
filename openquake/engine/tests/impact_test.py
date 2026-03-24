@@ -79,22 +79,23 @@ def test_impact(n):
     if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
     calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
-    if n == 1:
-        # test export_aggexp
-        fnames = export(('aggexp_tags', 'csv'), calc.datastore)
-        assert [strip(f) for f in fnames] == [
-            'aggexp_tags-ID_0.csv',
-            'aggexp_tags-ID_2.csv']
+    with log:  # ensures clean worker shutdown for all n
+        if n == 1:
+            # test export_aggexp
+            fnames = export(('aggexp_tags', 'csv'), calc.datastore)
+            assert [strip(f) for f in fnames] == [
+                'aggexp_tags-ID_0.csv',
+                'aggexp_tags-ID_2.csv']
 
-        # [job.ini, exposure.xml, rupture.csv, ...]
-        fnames = check_export_job_zip(calc.datastore)
+            # [job.ini, exposure.xml, rupture.csv, ...]
+            fnames = check_export_job_zip(calc.datastore)
 
-        # repeat the calculation starting from job.zip unzipped
-        calc2, log2 = check(fnames[0])
-        with log, log2:
-            expose_outputs(calc.datastore)
-            expose_outputs(calc2.datastore)
-            compare(calc.datastore, calc2.datastore)
+            # repeat the calculation starting from job.zip unzipped
+            calc2, log2 = check(fnames[0])
+            with log2:
+                expose_outputs(calc.datastore)
+                expose_outputs(calc2.datastore)
+                compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
