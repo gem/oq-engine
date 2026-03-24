@@ -29,6 +29,7 @@ import pickle
 import socket
 import random
 import atexit
+import signal
 import zipfile
 import logging
 import builtins
@@ -536,6 +537,20 @@ def round(x, d=0):
     return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
 
+@contextmanager
+def sighandler(signame, handler):
+    """
+    Temporarily install a signal handler
+    """
+    sig = getattr(signal, signame, None)
+    if sig is not None:
+        orig_handler = signal.signal(sig, handler)
+        try:
+            yield
+        finally:
+            signal.signal(sig, orig_handler)
+
+
 def engine_version():
     """
     :returns: __version__ + `<short git hash>` if Git repository found
@@ -551,11 +566,12 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            with open(os.devnull, 'w') as devnull:
+            with sighandler("SIGCHLD", signal.SIG_DFL), \
+                 open(os.devnull, 'w') as devnull:
                 gh = subprocess.check_output(
                     ['git', 'rev-parse', '--short', 'HEAD'],
                     stderr=devnull, cwd=os.path.dirname(git_path)).strip()
-            gh = "-git" + decode(gh) if gh else ''
+                gh = "-git" + decode(gh) if gh else ''
         except Exception:
             pass
             # trapping everything on purpose; git may not be installed or it

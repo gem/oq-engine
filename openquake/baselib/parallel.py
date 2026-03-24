@@ -218,8 +218,6 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
-WORKER_POOL_ACTIVE = False  # This is used in chldsig_handler in engine.py
-
 
 def calc_dir(job_id_or_fname):
     """
@@ -706,6 +704,30 @@ num_cores = int(os.environ.get('OQ_NUM_CORES') or
                 or tot_cores)
 
 
+class MasterKilled(KeyboardInterrupt):
+    """Exception raised when a job is killed manually"""
+
+
+def kill_master(signum, frame):
+    try:
+        pid, wait_status = os.waitpid(-1, os.WNOHANG)
+    except ChildProcessError:  # no children
+        return
+    else:
+        raise MasterKilled(
+            f'A worker was killed: {pid=}, {wait_status=}')
+
+
+def enable_sigchld():
+    if hasattr(signal, 'SIGCHLD'):
+        signal.signal(signal.SIGCHLD, kill_master)
+
+
+def disable_sigchld():
+    if hasattr(signal, 'SIGCHLD'):
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+
+
 class Starmap(object):
     on = False
     pids = ()
@@ -716,23 +738,16 @@ class Starmap(object):
 
     @classmethod
     def init(cls, distribute=None):
-        global WORKER_POOL_ACTIVE
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
-            # unregister custom handlers before starting the processpool
-            term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
-            int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            # we use spawn here to avoid deadlocks with logging, see
+            # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
-            # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            WORKER_POOL_ACTIVE = True
-            cls.pool = mp_context.Pool(num_cores, init_workers,
-                                       maxtasksperchild=cls.maxtasksperchild)
+            # codewithoutrules.com/2018/09/04/python-multiprocessing/
+            enable_sigchld()
+            cls.pool = mp_context.Pool(
+                num_cores, init_workers,
+                maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
-            # after spawning the processes restore the original handlers
-            # i.e. the ones defined in openquake.engine.engine
-            signal.signal(signal.SIGTERM, term_handler)
-            signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
 
@@ -741,14 +756,11 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
-        global WORKER_POOL_ACTIVE
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
-            # disable signal handler for SIGCHLD to cleanup worker pool
-            # we reinstate later
-            WORKER_POOL_ACTIVE = False
             cls.pool.close()
+            disable_sigchld()
             cls.pool.terminate()
             cls.pool.join()
             del cls.pool

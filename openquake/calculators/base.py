@@ -221,10 +221,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
-        was_worker_pool_active = parallel.WORKER_POOL_ACTIVE
-        parallel.WORKER_POOL_ACTIVE = False
         self.engine_version = logs.dbcmd('engine_version')
-        parallel.WORKER_POOL_ACTIVE = was_worker_pool_active
         if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
             self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
@@ -329,7 +326,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
                            self.datastore.filename[:-5], calc_id)  # strip .hdf5
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
-                parallel.WORKER_POOL_ACTIVE = False
                 self.export(kw.get('exports', ''))
                 return self.exported
             try:
@@ -347,7 +343,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if checksum:
                     # if there are no errors the checksum of this job is good
                     logs.dbcmd("update_job_checksum", calc_id, checksum)
-                parallel.WORKER_POOL_ACTIVE = False
                 self.export(kw.get('exports', ''))
             finally:
                 if shutdown:
