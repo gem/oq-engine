@@ -203,7 +203,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, sighandler
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_gb, init_performance)
@@ -740,13 +740,15 @@ class Starmap(object):
     def init(cls, distribute=None):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
+            enable_sigchld()
+            with sighandler('SIGINT', signal.SIG_IGN):
+                # SIGINT not passed to the workers to reduce traceback
+                cls.pool = mp_context.Pool(
+                    num_cores, init_workers,
+                    maxtasksperchild=cls.maxtasksperchild)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
-            # codewithoutrules.com/2018/09/04/python-multiprocessing/
-            enable_sigchld()
-            cls.pool = mp_context.Pool(
-                num_cores, init_workers,
-                maxtasksperchild=cls.maxtasksperchild)
+            # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
