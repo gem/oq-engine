@@ -41,6 +41,7 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from contextlib import contextmanager
 from importlib.metadata import version, PackageNotFoundError
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy

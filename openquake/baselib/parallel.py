@@ -185,6 +185,7 @@ import re
 import ast
 import sys
 import time
+import atexit
 import socket
 import signal
 import pickle
@@ -723,6 +724,7 @@ def enable_sigchld():
         signal.signal(signal.SIGCHLD, kill_master)
 
 
+@atexit.register
 def disable_sigchld():
     if hasattr(signal, 'SIGCHLD'):
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
