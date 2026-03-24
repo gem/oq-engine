@@ -425,6 +425,7 @@ class TruncatedMVN:
             tl = (self.lb[I_] - L[I_, 0:j] @ z[0:j]) / s
             tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
             pr[I_] = lnNormalProb(tl, tu)
+            breakpoint()
             # find smallest marginal dimension
             k = np.argmin(pr)
 
