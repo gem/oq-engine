@@ -1201,6 +1201,8 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
+    # the default for the truncation_level is 99. (no truncation)
+    # and it is set in contexts.py (FIXME: is it correct?)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     truncation_level_between = valid.Param(
         valid.NoneOr(lambda s: valid.positivefloat(s) or 1E-9), None)
