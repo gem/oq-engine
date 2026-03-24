@@ -298,7 +298,6 @@ IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
                      "set_fixed_total_sigma"]
 
 
-# affects the NWA model
 def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
@@ -469,7 +468,7 @@ def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
 def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        An dictionary of IMT-dependent deltas to be applied to tau for
+        A dictionary of IMT-dependent deltas to be applied to tau for
         a given IMT.
     """
     # First check if adjusted tau would be negative for given IMT
@@ -491,7 +490,7 @@ def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
 def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        An dictionary of IMT-dependent deltas to be applied to phi for
+        A dictionary of IMT-dependent deltas to be applied to phi for
         a given IMT.
     """
     # First check if adjusted phi would be negative for given IMT
