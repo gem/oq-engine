@@ -19,7 +19,6 @@
 import os
 import sys
 import numpy
-from unittest import SkipTest
 from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
@@ -238,7 +237,6 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
-        raise SkipTest('Architecture-dependent results')
         self.assertEqualFiles('gmf-data.csv', fname)
 
         # check that stations are discarded when extracting avg_gmf
@@ -321,7 +319,6 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        raise SkipTest('Architecture-dependent results')
         if sys.platform != 'darwin':
             self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
