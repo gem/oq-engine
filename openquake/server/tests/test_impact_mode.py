@@ -27,10 +27,9 @@ from io import BytesIO
 
 import django
 from django.apps import apps
-from django.test import Client, override_settings
+from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
-from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.logs import dbcmd
@@ -40,27 +39,7 @@ from openquake.server.tests.views_test import get_or_create_user
 CALC_RUN_TIMEOUT = 120
 
 
-def get_email_content(directory, search_string):
-    for root, _dirs, files in os.walk(directory):
-        for filename in files:
-            file_path = os.path.join(root, filename)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-                if search_string in content:
-                    return content
-    raise FileNotFoundError(
-        f'No email was found containing the string {search_string}')
-
-
-def check_email(job_id, expected_error):
-    app_msgs_dir = os.path.join(
-        config.directory.custom_tmp or tempfile.gettempdir(),
-        'app-messages')
-    # NOTE: we should use the overridden EMAIL_FILE_PATH,
-    #       so email_dir would contain only the files
-    #       created to notify about the jobs created in
-    #       the test
-    email_content = get_email_content(app_msgs_dir, f'Job {job_id} ')
+def check_email(job_id, email_content, expected_error):
     if expected_error:
         assert 'failed' in email_content
     else:
@@ -164,46 +143,62 @@ class ImpactModeTestCase(django.test.TestCase):
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
+        # NOTE: We make Django filebased.EmailBackend write each email
+        # notification into a separate directory, so afterwards we can
+        # retrieve a single file from it, corresponding to the tested job
         with tempfile.TemporaryDirectory() as email_dir:
-            with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post(endpoint, data=data)
-                if resp.status_code != 200:
-                    content = json.loads(resp.content)
-                    print(content, file=sys.stderr)
-                    self.assertIsNotNone(expected_error)
-                    self.assertIn(expected_error, content['error_msg'])
-                    return
-                # the job is supposed to start
-                # and, if expected_error is not None, to fail afterwards
-                try:
-                    [job_id] = json.loads(resp.content.decode('utf8'))
-                except Exception:
-                    raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content) from None
-                job_dic = self.wait(job_id)
-                tb = self.get_json('%s/traceback' % job_id)
-                if job_dic is None:
-                    raise TimeoutError()
-                elif job_dic['status'] == 'failed':
-                    if expected_error:
-                        if not tb:
-                            raise Exception('Empty traceback')
-                        self.assertIn(expected_error, '\n'.join(tb))
-                    else:
-                        raise Exception('\n'.join(tb))
-                check_email(job_id, expected_error)
-                if job_dic['status'] == 'failed':
-                    return
-                try:
-                    results = self.get_json('%s/result/list' % job_id)
-                except AssertionError as exc:
-                    print(f'Results for job {job_id} not found yet:')
-                    print(exc)
-                if isinstance(results, HttpResponseNotFound):
-                    print(f'Results for job {job_id} not found yet...')
-                self.assertGreater(
-                    len(results), 0,
-                    'The job produced no outputs!')
+            # NOTE: we can't use Django override_settings to override
+            #       EMAIL_FILE_PATH, because it would work only in the
+            #       current process (subprocess would use the original
+            #       settings). Instead, we explicitly propagate the
+            #       directory to the child process.
+            data['email_file_path'] = email_dir
+            resp = self.post(endpoint, data=data)
+            if resp.status_code != 200:
+                content = json.loads(resp.content)
+                print(content, file=sys.stderr)
+                self.assertIsNotNone(expected_error)
+                self.assertIn(expected_error, content['error_msg'])
+                return
+            # the job is supposed to start
+            # and, if expected_error is not None, to fail afterwards
+            try:
+                [job_id] = json.loads(resp.content.decode('utf8'))
+            except Exception:
+                raise ValueError(
+                    b'Invalid JSON response: %r' % resp.content) from None
+            job_dic = self.wait(job_id)
+            tb = self.get_json('%s/traceback' % job_id)
+            if job_dic is None:
+                raise TimeoutError()
+            elif job_dic['status'] == 'failed':
+                if expected_error:
+                    if not tb:
+                        raise Exception('Empty traceback')
+                    self.assertIn(expected_error, '\n'.join(tb))
+                else:
+                    raise Exception('\n'.join(tb))
+            email_files = os.listdir(email_dir)
+            self.assertEqual(
+                len(email_files), 1,
+                f'Expected exactly one email, found {len(email_files)}'
+                f' in {email_dir}: {email_files}')
+
+            with open(os.path.join(email_dir, email_files[0])) as f:
+                email_content = f.read()
+            check_email(job_id, email_content, expected_error)
+            if job_dic['status'] == 'failed':
+                return
+            try:
+                results = self.get_json('%s/result/list' % job_id)
+            except AssertionError as exc:
+                print(f'Results for job {job_id} not found yet:')
+                print(exc)
+            if isinstance(results, HttpResponseNotFound):
+                print(f'Results for job {job_id} not found yet...')
+            self.assertGreater(
+                len(results), 0,
+                'The job produced no outputs!')
         # Check that the Django views to visualize simplified and advanced outputs
         # pages do not raise any exceptions
         self.c.get(f'/engine/{job_id}/outputs')

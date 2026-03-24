@@ -218,6 +218,8 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
+WORKER_POOL_ACTIVE = False  # This is used in chldsig_handler in engine.py
+
 
 def calc_dir(job_id_or_fname):
     """
@@ -688,6 +690,7 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
+
 # determine the number of cores to use; for instance on a system with
 # 12 threads and 8 GB of RAM, tot_cores = min(12, 8) = 8
 cpu_count = psutil.cpu_count()
@@ -713,6 +716,7 @@ class Starmap(object):
 
     @classmethod
     def init(cls, distribute=None):
+        global WORKER_POOL_ACTIVE
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             # unregister custom handlers before starting the processpool
@@ -721,6 +725,7 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
+            WORKER_POOL_ACTIVE = True
             cls.pool = mp_context.Pool(num_cores, init_workers,
                                        maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
@@ -736,9 +741,13 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
+        global WORKER_POOL_ACTIVE
         # shutting down the pool during the runtime causes mysterious
         # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
+            # disable signal handler for SIGCHLD to cleanup worker pool
+            # we reinstate later
+            WORKER_POOL_ACTIVE = False
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
