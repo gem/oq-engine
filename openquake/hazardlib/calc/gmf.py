@@ -38,7 +38,6 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
-IGNORE_TRUNCATION = False
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -421,7 +420,8 @@ class GmfComputer(object):
         N = len(cov_WY_WY)
         cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
-        if IGNORE_TRUNCATION:
+        if self.cmaker.truncation_level == 99:
+            # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
