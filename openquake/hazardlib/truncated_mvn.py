@@ -426,6 +426,10 @@ class TruncatedMVN:
             tu = (self.ub[I_] - L[I_, 0:j] @ z[0:j]) / s
             pr[I_] = lnNormalProb(tl, tu)
             # find smallest marginal dimension
+            prval = np.sort(pr)
+            if prval[0] == prval[1]:
+                raise RuntimeError('Degenerate pr values, cannot compute '
+                                   'TruncatedMVN')
             k = np.argmin(pr)
 
             # flip dimensions k-->j
