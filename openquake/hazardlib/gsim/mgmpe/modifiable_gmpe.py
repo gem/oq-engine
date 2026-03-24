@@ -450,7 +450,7 @@ def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
 def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
     """ m
     :param delta:
-        An IMT-dependent vector of deltas to be applied to total GMM
+        A dictionary of IMT-dependent deltas to be applied to total GMM
         sigma for a given IMT. 
     """
     # First check if adjusted sigma would be negative for given IMT
@@ -469,7 +469,7 @@ def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
 def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        An IMT-dependent vector of deltas to be applied to tau for
+        An dictionary of IMT-dependent deltas to be applied to tau for
         a given IMT.
     """
     # First check if adjusted tau would be negative for given IMT
@@ -491,7 +491,7 @@ def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
 def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        An IMT-dependent vector of deltas to be applied to phi for
+        An dictionary of IMT-dependent deltas to be applied to phi for
         a given IMT.
     """
     # First check if adjusted phi would be negative for given IMT
