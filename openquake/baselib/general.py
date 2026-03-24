@@ -41,7 +41,6 @@ import subprocess
 import collections
 import multiprocessing
 from importlib.metadata import version, PackageNotFoundError
-from contextlib import contextmanager
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
@@ -221,6 +220,7 @@ class WeightedSequence(MutableSequence):
         """
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
+
 
 def find_among(strings, sortedvalues, value):
     """
@@ -1822,21 +1822,6 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
-
-
-# NB: this is present in contextlib in Python 3.11, but
-# we still support Python 3.9, so it cannot be removed yet
-@contextmanager
-def chdir(path):
-    """
-    Context manager to temporarily change the CWD
-    """
-    oldpwd = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(oldpwd)
 
 
 def smart_concat(arrays):

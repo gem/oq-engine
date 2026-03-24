@@ -1,3 +1,8 @@
+  [Paolo Tormene, Michele Simionato, Paul Henshaw]
+  * If any worker dies before completion, the corresponding master and
+    all its subprocesses are killed and the event causing the
+    interruption is logged
+
   [Christopher Brooks]
   * Added capability to specify an IMT-dependent vector of deltas
     to apply to total sigma, tau and phi within ModifiableGMPE.
