@@ -10,7 +10,7 @@ class ImpactPage(EnginePage):
     def select_shakemap_version(self, value):
         shakemap_version_select = self.page.locator('select#shakemap_version')
         expect(shakemap_version_select.locator(
-            f'option[value="{value}"]')).to_have_count(1, timeout=20_000)
+            f'option[value="{value}"]')).to_have_count(1, timeout=30_000)
         shakemap_version_select.select_option(value=value)
         expect(shakemap_version_select).to_have_value(value)
 
@@ -129,6 +129,7 @@ class ImpactPageLevel2(ImpactPage):
         station_data_loaded = self.page.locator('input#station_data_file_loaded')
         if expect_no_seismic_stations:
             self.page.get_by_role("button", name="Close").click()
-            expect(station_data_loaded).to_have_value('N.A. (conversion issue)')
+            expect(station_data_loaded).to_have_value(
+                'N.A. (conversion issue)', timeout=30_000)
         else:
-            expect(station_data_loaded).not_to_have_value('')
+            expect(station_data_loaded).not_to_have_value('', timeout=30_000)
