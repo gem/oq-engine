@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import numpy
 import pathlib
+import numpy
 
 from openquake.hazardlib import nrml, contexts
 from openquake.hazardlib.calc.stochastic import (
@@ -72,7 +72,7 @@ class ClusterTestCase(unittest.TestCase):
         )
 
     def test_cluster(self):
-        # In this case we use the source also used to test the calculation of
+        # In this test we use the source also used to test the calculation of
         # hazard using the classical approach and a simple cluster source
 
         # Source model file name
