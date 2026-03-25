@@ -1615,6 +1615,7 @@ class OqParam(valid.ParamSet):
                     from_string(imt).name for imt in self.imtls}
                     }} for gmm in gsims
                 }
+        
         if "gsim_logic_tree" in self.inputs:
             branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
             for branch in branches:
@@ -1673,12 +1674,13 @@ class OqParam(valid.ParamSet):
                 bad_wt_imts = [imt for imt in invalid_imts if
                             wt_check_imt[gsim][imt]]
                 if (invalid_imts and not bad_wt_imts and not
-                    wt_check_imt[branch.gsim]["weighted"]): # Skip if IMT-dep
+                    wt_check_imt[gsim]["weighted"]
+                    ): # Skip if IMT-dependent weighting
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' % (
                             ', '.join(invalid_imts), gsim))
-                if bad_wt_imts: # If IMT-dependent and wt greater than zero for
-                                # unsupported IMT then raise
+                if bad_wt_imts: # If IMT-dependent and wt greater than
+                                # zero for unsupported IMT then raise
                     raise ValueError(
                         'Non-zero weights assigned to unsupported IMT(s) '
                         '(%s) for the GSIM %s' % (', '.join(bad_wt_imts), gsim)
