@@ -419,7 +419,8 @@ class GmfComputer(object):
         N = len(cov_WY_WY)
         cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
-        if self.cmaker.truncation_level == 99:
+        if (self.cmaker.oq.truncated_mvn is False or
+                self.cmaker.truncation_level == 99):
             # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
             arr = rng.multivariate_normal(
