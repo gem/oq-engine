@@ -914,7 +914,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
 
     def test_case_81(self):
-        # Tests use of a tabular GMM with a mixture model
+        # Tests use of a tabular GMM and a non-tabular GMM, both with
+        # extra parameters specified, both within mixture models
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv'],
             case_81.__file__)
