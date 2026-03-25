@@ -408,8 +408,12 @@ class GmfComputer(object):
                     [arr[m] for arr in ms], m, imt, gs, within_eps[m],
                     idxs, rng)
             except Exception as exc:
-                raise exc.__class__(
-                    '(%s, %s): %s' % (gs, imt, exc)
+                if exc.__class__ is RuntimeError:
+                    msg = str(exc)
+                else:
+                    msg = f'{exc.__class__.__name__}:{exc}'
+                raise RuntimeError(
+                    '(%s, %s): %s' % (gs, imt, msg)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
