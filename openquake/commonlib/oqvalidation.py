@@ -1596,6 +1596,37 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid("you must set avg_losses=false with "
                                    "post_loss_amplification")
 
+    def get_imts(self):
+        """
+        Return a set of the IMTs within the OqParam object as IMT objects.
+        """
+        imts = set()
+        for imt in self.imtls:
+            im = from_string(imt)
+            if imt.startswith("SA"):
+                imts.add("SA")
+            elif imt.startswith("Sa_avg2"):
+                imts.add("Sa_avg2")
+            elif imt.startswith("Sa_avg3"):
+                imts.add("Sa_avg3")
+            elif imt.startswith("FIV3"):
+                imts.add("FIV3")
+            elif imt.startswith("SDi"):
+                imts.add("SDi")
+            elif imt.startswith("EAS"):
+                imts.add("EAS")
+            elif imt.startswith("FAS"):
+                imts.add("FAS")
+            elif imt.startswith("DRVT"):
+                imts.add("DRVT")
+            elif imt.startswith("AvgSA"):
+                imts.add("AvgSA")
+            else:
+                imts.add(im.string)
+
+        return imts
+
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
@@ -1621,44 +1652,17 @@ class OqParam(valid.ParamSet):
             for branch in branches:
                 if branch.gsim not in wt_check_imt:
                     continue
-                gsim_imts = [cls.__name__ for cls in
-                             branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+                gimts = [cls.__name__ for cls in
+                         branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
                 if isinstance(branch.weight, ImtWeight):
-                    # Flag that the GSIM has IMT-dependent weights in LT
                     wt_check_imt[branch.gsim]["weighted"] = True
                     for imt in self.imtls:
-                        # Use IMT.name to map to the IMT cls supported by GMM
                         imt_key = from_string(imt).name
                         if not wt_check_imt[branch.gsim][imt_key]:
-                            if branch.weight[
-                                imt] > 0 and imt_key not in gsim_imts:
-                                # Non-zero weight for IMT so flag it
+                            if branch.weight[imt] > 0 and imt_key not in gimts:
                                 wt_check_imt[branch.gsim][imt_key] = True
 
-        imts = set()
-        for imt in self.imtls:
-            im = from_string(imt)
-            if imt.startswith("SA"):
-                imts.add("SA")
-            elif imt.startswith("Sa_avg2"):
-                imts.add("Sa_avg2")
-            elif imt.startswith("Sa_avg3"):
-                imts.add("Sa_avg3")
-            elif imt.startswith("FIV3"):
-                imts.add("FIV3")
-            elif imt.startswith("SDi"):
-                imts.add("SDi")
-            elif imt.startswith("EAS"):
-                imts.add("EAS")
-            elif imt.startswith("FAS"):
-                imts.add("FAS")
-            elif imt.startswith("DRVT"):
-                imts.add("DRVT")
-            elif imt.startswith("AvgSA"):
-                imts.add("AvgSA")
-            else:
-                imts.add(im.string)
-
+        imts = self.get_imts()
         for gsim in gsims:
             params = getattr(gsim, 'params', {})
             ok_imts = {cls.__name__ for cls in gsim.
@@ -1670,12 +1674,12 @@ class OqParam(valid.ParamSet):
                            DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
                 invalid_imts = imts - ok_imts
-                # Don't collect IMT if unsupported BUT has zero wt
+                # Don't collect IMT if unsupported buts has zero wt
                 bad_wt_imts = [imt for imt in invalid_imts if
                             wt_check_imt[gsim][imt]]
                 if (invalid_imts and not bad_wt_imts and not
                     wt_check_imt[gsim]["weighted"]
-                    ): # Skip if IMT-dependent weighting
+                    ):
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' % (
                             ', '.join(invalid_imts), gsim))
