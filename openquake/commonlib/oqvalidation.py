@@ -1501,14 +1501,18 @@ class OqParam(valid.ParamSet):
                                self.number_of_logic_tree_samples)
 
         # checks for event_based
-        if 'event_based' in self.calculation_mode:
+        if ('event_based' in self.calculation_mode or
+                'damage' in self.calculation_mode):
             if self.ps_grid_spacing:
-                logging.info('ps_grid_spacing is ignored in event_based '
-                             'calculations')
+                logging.info('ps_grid_spacing is ignored in '
+                             f'{self.calculation_mode} calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
                                    self.ses_per_logic_tree_path)
+        elif self.maximum_rupture_depth:
+            self.raise_invalid('maximum_rupture_depth can be defined only '
+                               'in event_based calculations')
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
