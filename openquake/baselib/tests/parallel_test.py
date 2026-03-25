@@ -242,6 +242,7 @@ class SharedArrayTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.s_array.unlink()
+        parallel.Starmap.shutdown()
 
     def test(self):
         parallel.Starmap(update, [(self.s_array, index, value)
