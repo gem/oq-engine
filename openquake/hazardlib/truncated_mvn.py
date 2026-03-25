@@ -511,6 +511,8 @@ class FastTruncatedMVN:
         self.rng = np.random.default_rng(seed)
 
     def sample(self, n):
+        # NB: we cannot use allow_singular=True, otherwise the numbers
+        # would be CPU-dependent
         samps = stats.multivariate_normal(
             self.mu, self.cov, allow_singular=True, seed=self.rng
         ).rvs(n*2).T
