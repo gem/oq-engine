@@ -856,6 +856,12 @@ total_losses:
   Example: *total_losses = structural+nonstructural*
   Default: None
 
+truncated_mvn:
+  Enabling truncation in the multivariate normal distribution in event based
+  and scenario calculations
+  Example: *truncated_mvn = True*
+  Default: False
+
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
@@ -1201,6 +1207,7 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
+    truncated_mvn = valid.Param(valid.boolean, False)
     # the default for the truncation_level is 99. (no truncation)
     # and it is set in contexts.py (FIXME: is it correct?)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
