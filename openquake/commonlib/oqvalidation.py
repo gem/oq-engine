@@ -1607,7 +1607,7 @@ class OqParam(valid.ParamSet):
         if not has_sites:
             return
         
-        # Check if using IMT-dependent weights per GMM so can flag later
+        # Check if using IMT-dependent weights per GMM so can raise error
         # if not supported and non-zero weight has been assigned to IMT
         wt_check_imt = {
             gmm: {
