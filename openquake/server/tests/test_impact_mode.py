@@ -251,10 +251,10 @@ class ImpactModeTestCase(django.test.TestCase):
         [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
         ret = self.c.get(download_url)
-        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
         # ...and with can_view_exposure they can extract the assetcol
         ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.status_code, 200, 'Unable to download assetcol')
 
         # level 2 users without the show_exposure group can see the exposure
         self.user1.groups.remove(self.users_who_can_view_exposure)
@@ -263,16 +263,23 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
         ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
         ret = self.c.get(exposure_url)
-        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
         # ...and even without can_view_exposure they can extract the assetcol
         ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.status_code, 200, 'Unable to download assetcol')
+        # they can also download the hdf5 datastore and the job.zip
+        ret = self.c.get(f'/v1/calc/{job_id}/datastore')
+        self.assertEqual(ret.status_code, 200, 'Unable to download datastore')
+        ret = self.c.get(f'/v1/calc/{job_id}/job_zip')
+        if ret.status_code != 200:
+            raise Exception(
+                f"Unable to download job_zip:\n{ret.content.decode('utf8')}")
 
         # level 0 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 0
@@ -417,7 +424,7 @@ class ImpactModeTestCase(django.test.TestCase):
             aspect_ratio='2', msr='WC1994')
         resp = self.c.post('/v1/calc/impact_get_rupture_data',
                            data=rup_params)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 200, 'Unable to download rupture data')
         self.assertIn('rupture_png', resp.json())
 
         # Case not covered by any mosaic model
