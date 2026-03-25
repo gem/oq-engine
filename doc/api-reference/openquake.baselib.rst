@@ -41,14 +41,6 @@ performance
     :undoc-members:
     :show-inheritance:
 
-runtests
----------------------------------
-
-.. automodule:: openquake.baselib.runtests
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 sap
 ----------------------------
 
