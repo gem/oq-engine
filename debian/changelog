@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Added `maximum_depth` dictionary (in km per tectonic region type)
+    to the job.ini accepted parameters, used to discard deep ruptures
+    in event based calculations
+
   [Paolo Tormene, Michele Simionato, Paul Henshaw]
   * If any worker dies before completion, the corresponding master and
     all its subprocesses are killed and the event causing the
@@ -10,7 +15,7 @@
     taper model incorrectly fellback to the original BCHydro backarc
     term, causing a missing attribute error for `backarc`. Updated
     classical/case_61 to now test this scenario.
-  * Correct the `_apply_subduction_trench_correction` term in 
+  * Correct the `_apply_subduction_trench_correction` term in
     Si and Midorikawa (1999)'s `NorthEastCorrection` subclasses
     to use `rhypo` instead of `rrup`.
 
