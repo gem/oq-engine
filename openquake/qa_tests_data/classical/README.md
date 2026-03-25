@@ -59,7 +59,7 @@
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
 |case\_80|Tests New Madrid cluster with rup\_mutex|
-|case\_81|Tests mixture model with a Tabular GMM|
+|case\_81|Tests mixture model with a Tabular GMM and a non-tabular GMM both with extra parameters specified|
 |case\_82|tests two mps, only one with reqv that should collapse points|
 |case\_83|Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM|
 |case\_84|Tests reqv\_ignore\_sources |
