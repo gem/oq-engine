@@ -447,7 +447,7 @@ def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
 
 
 def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
-    """ m
+    """
     :param delta:
         A dictionary of IMT-dependent deltas to be applied to total GMM
         sigma for a given IMT. 
