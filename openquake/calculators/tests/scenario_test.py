@@ -235,7 +235,8 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def test_case_21_stations(self):
         # conditioned gmfs
-        self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
+        self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0',
+                      truncated_mvn='true')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
 
@@ -317,7 +318,7 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def test_case_26_stations(self):
         # conditioned GMFs with extreme_gmv
-        self.run_calc(case_26.__file__, 'job.ini')
+        self.run_calc(case_26.__file__, 'job.ini', truncated_mvn='true')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         if sys.platform != 'darwin':
             self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

@@ -340,7 +340,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                               fname, delta=1E-5)
 
     def test_conditioned_stations(self):
-        self.run_calc(conditioned.__file__, 'job.ini', concurrent_tasks='8')
+        self.run_calc(conditioned.__file__, 'job.ini', concurrent_tasks='8',
+                      truncated_mvn='true')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
 

@@ -511,7 +511,9 @@ class FastTruncatedMVN:
         self.rng = np.random.default_rng(seed)
 
     def sample(self, n):
-        samps = stats.multivariate_normal(self.mu, self.cov).rvs(n*2).T
+        samps = stats.multivariate_normal(
+            self.mu, self.cov, allow_singular=True
+        ).rvs(n*2).T
         out = np.zeros((self.dim, n))
         for i, samp in enumerate(samps):
             ok = samp[(samp > self.lb[i]) & (samp < self.ub[i])]
