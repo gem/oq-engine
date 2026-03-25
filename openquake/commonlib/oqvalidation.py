@@ -1598,7 +1598,7 @@ class OqParam(valid.ParamSet):
 
     def get_imts(self):
         """
-        Return a set of the IMTs within the OqParam object as IMT objects.
+        Return a set of the IMTs within the OqParam object.
         """
         imts = set()
         for imt in self.imtls:
