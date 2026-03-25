@@ -45,3 +45,21 @@ class EnginePage:
 
     def to_calculations(self):
         self.page.get_by_text("Back to Calculations").click(timeout=10_000)
+
+    def download_job(self):
+        with self.page.expect_download() as download_info:
+            self.page.get_by_text("Download job.zip").click()
+        download = download_info.value
+        # assert download.suggested_filename.startswith('calc_')
+        assert download.suggested_filename.endswith(".zip")
+        path = download.path()
+        assert path is not None
+
+    def download_datastore(self):
+        with self.page.expect_download() as download_info:
+            self.page.get_by_text("Download hdf5 datastore").click()
+        download = download_info.value
+        assert download.suggested_filename.startswith('calc_')
+        assert download.suggested_filename.endswith(".hdf5")
+        path = download.path()
+        assert path is not None

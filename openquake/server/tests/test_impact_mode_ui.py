@@ -87,7 +87,10 @@ def test_impact_ui_level_2_use_shakemap(
     page.set_no_uncertainty()
     page.run_impact_calc()
     job_id = page.get_job_id_from_new_job()
-    page.abort_job(job_id)
+    page.wait_for_job_completion(job_id)
+    page.to_outputs(job_id)
+    page.download_datastore()
+    page.to_calculations()
     page.remove_job(job_id)
 
 
