@@ -25,11 +25,12 @@
 
 import numpy as np
 import math
-from scipy import special, optimize
+from scipy import special, optimize, stats
 
 EPS = 10e-15
 
 
+# derived from https://github.com/brunzema/truncated-mvn-sampler
 class TruncatedMVN:
     r"""
     Create a normal distribution :math:`X  \sim N ({\mu}, {\Sigma})` subject
@@ -490,3 +491,30 @@ def lnPhi(x):
         special.erfcx(x / np.sqrt(2)) + EPS)
     # divide by zeros error -> add eps
     return out
+
+
+
+class FastTruncatedMVN:
+    def __init__(self, mu, cov, lb, ub, seed):
+        self.dim = len(mu)
+        if cov.shape[0] != cov.shape[1]:
+            raise RuntimeError("Covariance matrix must be of shape DxD!")
+        if not (self.dim == cov.shape[0] and self.dim == len(lb)
+                and self.dim == len(ub)):
+            raise RuntimeError(
+                "Dimensions D of mean (mu), covariance matric (cov), "
+                "lower bound (lb) and upper bound (ub) must be the same!")
+        self.cov = cov
+        self.mu = mu
+        self.lb = lb
+        self.ub = ub
+        self.rng = np.random.default_rng(seed)
+
+    def sample(self, n):
+        samps = stats.multivariate_normal(self.mu, self.cov).rvs(n*2).T
+        out = np.zeros((self.dim, n))
+        for i, samp in enumerate(samps):
+            ok = samp[(samp > self.lb[i]) & (samp < self.ub[i])]
+            assert len(ok) >= n, f"Not enough samples: {len(ok)=} < {n=}"
+            out[i] = ok[:n]
+        return out

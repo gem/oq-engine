@@ -30,7 +30,7 @@ from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.truncated_mvn import TruncatedMVN
+from openquake.hazardlib.truncated_mvn import FastTruncatedMVN
 
 U8 = np.uint8
 U16 = np.uint16
@@ -436,13 +436,13 @@ class GmfComputer(object):
         lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
         seed_w = int(rng.integers(0, np.iinfo(np.int32).max))
 
-        z_w_truncated = TruncatedMVN(
+        z_w_truncated = FastTruncatedMVN(
             np.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
         ).sample(E)
 
         lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
         seed_b = int(rng.integers(0, np.iinfo(np.int32).max))
-        z_b_truncated = TruncatedMVN(
+        z_b_truncated = FastTruncatedMVN(
             np.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
         ).sample(E)
 
