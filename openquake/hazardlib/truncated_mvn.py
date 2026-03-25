@@ -512,7 +512,7 @@ class FastTruncatedMVN:
 
     def sample(self, n):
         samps = stats.multivariate_normal(
-            self.mu, self.cov, allow_singular=True
+            self.mu, self.cov, allow_singular=True, seed=self.rng
         ).rvs(n*2).T
         out = np.zeros((self.dim, n))
         for i, samp in enumerate(samps):
