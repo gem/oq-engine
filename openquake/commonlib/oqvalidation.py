@@ -40,7 +40,7 @@ from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -1606,7 +1606,22 @@ class OqParam(valid.ParamSet):
         has_sites = self.sites or 'site_model' in self.inputs
         if not has_sites:
             return
-
+        
+        # Check if using IMT-dependent weights per GMM so can flag later
+        # if not supported and non-zero weight has been assigned to IMT
+        non_zero_wt_for_imt = {gmm: {
+            imt: False for imt in self.imtls} for gmm in gsims}
+        if "gmfs" not in self.inputs and not isinstance(
+            gsims[0], valid.FromFile): # No GMM logic tree if loading GMFs
+            branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
+            for branch in branches:
+                if branch.gsim not in non_zero_wt_for_imt:
+                    continue
+                if isinstance(branch.weight, ImtWeight):
+                    for imt in self.imtls:
+                        if branch.weight[imt] > 0:
+                            non_zero_wt_for_imt[branch.gsim][imt] = True
+                            
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
@@ -1642,7 +1657,9 @@ class OqParam(valid.ParamSet):
                            DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
                 invalid_imts = ', '.join(imts - ok_imts)
-                if invalid_imts:
+                if invalid_imts and non_zero_wt_for_imt[gsim][imt]:
+                    # Don't raise if IMT not supported but using
+                    # IMT-specific weight of zero
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %
                         (invalid_imts, gsim))
