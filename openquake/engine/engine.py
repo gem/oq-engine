@@ -130,23 +130,6 @@ def manage_signals(job_id, signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
-def sigchld_handler(signum, frame):
-    """
-    Signal handler for SIGCHLD: reap zombie children and propagate
-    unexpected deaths by killing the parent of the offending worker.
-    """
-    if parallel.WORKER_POOL_ACTIVE:
-        try:
-            pid, wait_status = os.waitpid(-1, os.WNOHANG)
-        except ChildProcessError:
-            return
-        else:
-            raise MasterKilled(
-                f'sigchld_handler: some worker was killed: {pid=}, {wait_status=}')
-    else:
-        logging.debug('sigchld_handler: worker pool not active, ignoring.')
-
-
 def register_signals(job_id):
     # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP;
     # when using the Django development server this module is imported by a
@@ -156,14 +139,10 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
-        if hasattr(signal, "SIGCHLD"):
-            # Do not register SIGCHLD handler on Windows
-            signal.signal(signal.SIGCHLD, sigchld_handler)
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
                 signal.signal(signal.SIGHUP, manage)
-        logging.debug('Installed signal handlers')
     except ValueError:
         pass
 
