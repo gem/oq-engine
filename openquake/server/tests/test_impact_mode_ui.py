@@ -54,7 +54,17 @@ def test_impact_ui_level_1(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.wait_for_job_completion(job_id)
+    page.to_outputs(job_id)
+    with page.page.context.expect_page() as report_page_info:
+        page.to_report()
+    report_tab = report_page_info.value
+    report_tab.wait_for_load_state()
+    report_tab.close()
+    page.page.bring_to_front()
+    page.to_calculations()
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -76,7 +86,9 @@ def test_impact_ui_level_2_use_shakemap(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -98,7 +110,9 @@ def test_impact_ui_level_2_use_point_rupture(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -120,9 +134,10 @@ def test_impact_ui_level_2_build_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -143,9 +158,10 @@ def test_impact_ui_level_2_use_shakemap_fault_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -167,7 +183,9 @@ def test_impact_ui_level_2_use_finite_fault(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -184,7 +202,9 @@ def test_impact_ui_level_2_provide_rupture_nrml(
     # expect(page.local_timestamp()).not_to_be_visible(timeout=30_000)
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
@@ -207,4 +227,6 @@ def test_impact_ui_level_2_provide_rupture_params(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)
