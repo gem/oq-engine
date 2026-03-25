@@ -460,7 +460,7 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_39.__file__)
         
         # Check that the GMC XML containing non-zero weights for the
-        # unsupported raises an error
+        # unsupported IMTs raises an error
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_39.__file__, 'job_bad_weights_gmc.ini')
         self.assertIn("Non-zero weights assigned to unsupported IMT(s) "
