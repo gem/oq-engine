@@ -1609,19 +1609,32 @@ class OqParam(valid.ParamSet):
         
         # Check if using IMT-dependent weights per GMM so can flag later
         # if not supported and non-zero weight has been assigned to IMT
-        non_zero_wt_for_imt = {gmm: {
-            imt: False for imt in self.imtls} for gmm in gsims}
-        if "gmfs" not in self.inputs and not isinstance(
-            gsims[0], valid.FromFile): # No GMM logic tree if loading GMFs
+        wt_check_imt = {
+            gmm: {
+                "weighted": False, **{imt: False for imt in {
+                    from_string(imt).name for imt in self.imtls}
+                    }} for gmm in gsims
+                }
+        if "gsim_logic_tree" in self.inputs:
             branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
             for branch in branches:
-                if branch.gsim not in non_zero_wt_for_imt:
+                if branch.gsim not in wt_check_imt:
                     continue
+                gsim_imts = [cls.__name__ for cls in
+                             branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
                 if isinstance(branch.weight, ImtWeight):
+                    # Flag that the GSIM has IMT-dependent weights in LT
+                    wt_check_imt[branch.gsim]["weighted"] = True
                     for imt in self.imtls:
-                        if branch.weight[imt] > 0:
-                            non_zero_wt_for_imt[branch.gsim][imt] = True
-                            
+                        # Use IMT.name to map to the IMT cls supported by GMM
+                        imt_key = from_string(imt).name
+                        if imt_key in wt_check_imt[branch.gsim]:
+                            if not wt_check_imt[branch.gsim][imt_key]:
+                                if branch.weight[
+                                    imt] > 0 and imt_key not in gsim_imts:
+                                    # Non-zero weight for IMT so log it
+                                    wt_check_imt[branch.gsim][imt_key] = True
+
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
@@ -1656,13 +1669,21 @@ class OqParam(valid.ParamSet):
                 ok_imts |= {cls.__name__ for cls in gsim.gmpe.
                            DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
-                invalid_imts = ', '.join(imts - ok_imts)
-                if invalid_imts and non_zero_wt_for_imt[gsim][imt]:
-                    # Don't raise if IMT not supported but using
-                    # IMT-specific weight of zero
+                invalid_imts = imts - ok_imts
+                # Don't collect IMT if unsupported BUT has zero wt
+                bad_wt_imts = [imt for imt in invalid_imts if
+                            wt_check_imt[gsim][imt]]
+                if (invalid_imts and not bad_wt_imts and not
+                    wt_check_imt[branch.gsim]["weighted"]): # Skip if IMT-dep
                     raise ValueError(
-                        'The IMT %s is not accepted by the GSIM %s' %
-                        (invalid_imts, gsim))
+                        'The IMT %s is not accepted by the GSIM %s' % (
+                            ', '.join(invalid_imts), gsim))
+                if bad_wt_imts: # If IMT-dependent and wt greater than zero for
+                                # unsupported IMT then raise
+                    raise ValueError(
+                        'Non-zero weights assigned to unsupported IMT(s) '
+                        '(%s) for the GSIM %s' % (', '.join(bad_wt_imts), gsim)
+                        )
 
             if (self.hazard_calculation_id is None
                     and 'site_model' not in self.inputs):
