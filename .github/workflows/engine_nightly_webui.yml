@@ -48,11 +48,6 @@ jobs:
           else
             python install.py devel --version master
           fi
-      - name: Actualize 'impact' templates for email notifications
-        run: |
-          for file in openquake/server/templates/registration/*.impact.tmpl; do
-              cp -- "$file" "${file%.impact.tmpl}"
-          done
       - name: Server 'IMPACT' mode tests
         run: |
           set -x
@@ -67,7 +62,7 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
-          pytest \
+          pytest -v \
             --browser chromium \
             --capture=no \
             --maxfail=1 \
