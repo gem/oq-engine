@@ -1628,12 +1628,11 @@ class OqParam(valid.ParamSet):
                     for imt in self.imtls:
                         # Use IMT.name to map to the IMT cls supported by GMM
                         imt_key = from_string(imt).name
-                        if imt_key in wt_check_imt[branch.gsim]:
-                            if not wt_check_imt[branch.gsim][imt_key]:
-                                if branch.weight[
-                                    imt] > 0 and imt_key not in gsim_imts:
-                                    # Non-zero weight for IMT so log it
-                                    wt_check_imt[branch.gsim][imt_key] = True
+                        if not wt_check_imt[branch.gsim][imt_key]:
+                            if branch.weight[
+                                imt] > 0 and imt_key not in gsim_imts:
+                                # Non-zero weight for IMT so flag it
+                                wt_check_imt[branch.gsim][imt_key] = True
 
         imts = set()
         for imt in self.imtls:
