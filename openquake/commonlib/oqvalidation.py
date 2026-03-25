@@ -1119,7 +1119,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
-    maximum_depth = valid.Param(valid.floatdict, {})  # km
+    maximum_rupture_depth = valid.Param(valid.floatdict, {})  # km
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
