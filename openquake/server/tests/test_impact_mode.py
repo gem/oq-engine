@@ -416,7 +416,7 @@ class ImpactModeTestCase(django.test.TestCase):
             aspect_ratio='2', msr='WC1994')
         resp = self.c.post('/v1/calc/impact_get_rupture_data',
                            data=rup_params)
-        self.assertEqual(resp.status_code, 200, 'Unable to download rupture data')
+        self.assertEqual(resp.status_code, 200)
         self.assertIn('rupture_png', resp.json())
 
         # Case not covered by any mosaic model
