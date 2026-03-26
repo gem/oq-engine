@@ -524,6 +524,12 @@ maximum_distance_stations:
   Example: *maximum_distance_stations = 100*.
   Default: None
 
+maximum_rupture_depth:
+  A scalar or a dictionary TRT -> scalar used to discard deep ruptures
+  in event based calculations
+  Example: *maximum_rupture_depth = 80*.
+  Default: empty dictionary
+
 mean:
   Flag to enable/disable the calculation of mean curves.
   Example: *mean = false*.
