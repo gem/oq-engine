@@ -73,10 +73,12 @@ class ImpactModeTestCase(django.test.TestCase):
                 content = b"".join(resp.streaming_content)
             else:
                 content = resp.content
+            if hasattr(content, 'decode'):
+                content = content.decode('utf8')
             raise RuntimeError(
                 f"Error calling {url}\n"
                 f"Unexpected status code {resp.status_code} != {expected_status_code}"
-                f"\n{content.decode('utf8')}")
+                f"\n{content}")
         return resp
 
     @classmethod
