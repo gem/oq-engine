@@ -21,7 +21,8 @@ import pathlib
 import unittest
 import pytest
 import numpy
-from openquake.calculators.base import expose_outputs
+from openquake.qa_tests_data.scenario_risk import case_shakemap
+from openquake.calculators.base import run_calc, expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
@@ -112,3 +113,22 @@ def test_impact5():
                                       inp['mmi'], inp['exposure'][0])
     tt = text_table(df, ext='org')
     assert_close(tt, cd / 'impact5/exposure_by_mmi.org')
+
+
+def test_shakemap():
+    cdir = os.path.dirname(case_shakemap.__file__)
+    precalc = run_calc(os.path.join(cdir, 'pre-job.ini'))
+    calc = run_calc(os.path.join(cdir, 'job.ini'),
+                    hazard_calculation_id=precalc.datastore.calc_id)
+    fnames = export(('job', 'zip'), calc.datastore)
+    assert [strip(f) for f in fnames] == [
+        'gmf-data.csv', 'job.ini', 'exposure.xml',
+        'structural_vulnerability.xml', 'taxonomy_mapping.csv',
+        'sites.csv', 'assetcol.csv']
+    try:
+        run_calc(fnames[1])
+    finally:
+        # with open(fnames[1]) as f:
+        #     print(f.read())
+        for fname in fnames:
+            os.remove(fname)

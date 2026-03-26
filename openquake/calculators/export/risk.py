@@ -869,7 +869,7 @@ def export_exposure(ekey, dstore):
             'unit': ct['unit']}))
     conversions.append(costtypes)
     root.append(conversions)
-    root.append(N('occupancyPeriods', {}, 'night'))
+    root.append(N('occupancyPeriods', {}, ''))
     root.append(N('tagNames', {}, tagnames[1:]))  # remove 'taxonomy'
     root.append(N('assets', {}, os.path.basename(assetcol_csv)))
     exposure_xml = dstore.export_path('%s.xml' % ekey[0])
@@ -894,7 +894,7 @@ def export_job_zip(ekey, dstore):
     """
     inputs = {}
     oq = dstore['oqparam']
-    if 'usgs_id' in oq.rupture_dict:
+    if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap
         df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
         ren = {'sid': 'site_id', 'eid': 'event_id'}
         df.rename(columns=ren, inplace=True)
@@ -902,29 +902,32 @@ def export_job_zip(ekey, dstore):
         writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
             df, gmf_fname, comment=dstore.metadata)
         inputs['gmfs'] = gmf_fname
-        oq.shakemap_uri = {'kind': 'usgs_id', 'id': oq.rupture_dict['usgs_id']}
-        oq.rupture_dict.pop('rupture_file', None)
-        oq.rupture_dict.pop('mmi_file', None)
-        oq.inputs.pop('rupture', None)
-        oq.inputs.pop('mmi', None)
+        oq.ground_motion_fields = True
+        if not oq.shakemap_uri:
+            oq.shakemap_uri = {'kind': 'usgs_id',
+                               'id': oq.rupture_dict['usgs_id']}
+            oq.rupture_dict.pop('rupture_file', None)
+            oq.rupture_dict.pop('mmi_file', None)
+            oq.inputs.pop('rupture', None)
+            oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
     else:
         model = dstore['ruptures'][0]['model'].decode('ascii')
         # FIXME: extracts the gsim_lt of the first model only
         [(model, lt)] = base.get_model_lts(dstore, model)
         gsim_lt = lt.gsim_lt
-        gmf_fname = ''
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
     inputs['job_ini'] = job_ini
     [exposure_xml, assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
     inputs['exposure'] = exposure_xml
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-    dest = dstore.export_path('rupture.csv')
-    with open(dest, 'w', encoding='utf8') as out:
-        out.write(csv)
-    inputs['rupture_model'] = dest
-    if 'gsim_logic_tree' in oq.inputs or oq.gsim == '[FromFile]':
+    if len(csv.splitlines()) > 2:  # comment + header + data
+        dest = dstore.export_path('rupture.csv')
+        with open(dest, 'w', encoding='utf8') as out:
+            out.write(csv)
+        inputs['rupture_model'] = dest
+    if gsim_lt:
         dest = dstore.export_path('gsim_logic_tree.xml')
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
@@ -958,6 +961,7 @@ def export_job_zip(ekey, dstore):
     sitecol.make_complete()  # needed for test_impact[1]
     writer.save(sitecol.array, inputs['sites'])
     with open(job_ini, 'w', encoding='utf8') as out:
+        oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
-    return fnames + ([gmf_fname] if gmf_fname else [])
+    return fnames
