@@ -289,6 +289,11 @@ class ImpactModeTestCase(django.test.TestCase):
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
                        expected_status_code=403)
+        # Level 0 users can't download the hdf5 datastore nor the job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
+                       expected_status_code=403)
 
         # level 1 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 1
@@ -303,6 +308,11 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
+                       expected_status_code=403)
+        # Level 1 users can't download the hdf5 datastore nor the job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
                        expected_status_code=403)
 
         ret = self.post('%s/remove' % job_id)
