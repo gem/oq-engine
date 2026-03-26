@@ -115,9 +115,11 @@ def test_impact5():
     assert_close(tt, cd / 'impact5/exposure_by_mmi.org')
 
 
+# NB: there is another test of export_job_zip in scenario_damage/case_22
 def test_shakemap():
     cdir = os.path.dirname(case_shakemap.__file__)
     precalc = run_calc(os.path.join(cdir, 'pre-job.ini'))
+    precalc.datastore.close()
     calc = run_calc(os.path.join(cdir, 'job.ini'),
                     hazard_calculation_id=precalc.datastore.calc_id)
     fnames = export(('job', 'zip'), calc.datastore)
