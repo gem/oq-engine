@@ -77,7 +77,8 @@ class ImpactModeTestCase(django.test.TestCase):
                 content = content.decode('utf8')
             raise RuntimeError(
                 f"Error calling {url}\n"
-                f"Unexpected status code {resp.status_code} != {expected_status_code}"
+                f"Unexpected status code"
+                f" {resp.status_code} != {expected_status_code}"
                 f"\n{content}")
         return resp
 
@@ -120,7 +121,8 @@ class ImpactModeTestCase(django.test.TestCase):
     def get_response_content(cls, response):
         """
         Extract content from either HttpResponse or FileResponse
-        NOTE: the django test client works differently with respect to requests.Session
+        NOTE: the django test client works differently with respect
+        to requests.Session
         """
         if hasattr(response, 'content'):
             return response.content
@@ -208,8 +210,8 @@ class ImpactModeTestCase(django.test.TestCase):
             self.assertGreater(
                 len(results), 0,
                 'The job produced no outputs!')
-        # Check that the Django views to visualize simplified and advanced outputs
-        # pages do not raise any exceptions
+        # Check that the Django views to visualize simplified and advanced
+        # outputs pages do not raise any exceptions
         self.get(f'/engine/{job_id}/outputs', prefix='')
         self.get(f'/engine/{job_id}/outputs_impact', prefix='')
         # NOTE: the get_json utility decodes the json and returns a dict
@@ -240,24 +242,29 @@ class ImpactModeTestCase(django.test.TestCase):
         content = self.get_response_content(ret)
         exposure_by_location = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
-            {item: exposure_by_location[item] for item in exposure_by_location})
+            {item: exposure_by_location[item]
+             for item in exposure_by_location})
 
-        # check that users can download hidden outputs only if their level is at
-        # least 2 or if they have the can_view_exposure permission
+        # check that users can download hidden outputs only if their level
+        # is at least 2 or if they have the can_view_exposure permission
 
-        # level 1 users without the can_view_exposure permission can't see the exposure
+        # level 1 users without the can_view_exposure permission
+        # can't see the exposure
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'{job_id}/extract/assetcol', expected_status_code=403)
 
-        # level 1 users with the can_view_exposure permission can see the exposure
+        # level 1 users with the can_view_exposure permission can see
+        # the exposure
         self.user1.groups.add(self.users_who_can_view_exposure)
         ret = self.get(f'{job_id}/results')
         results = json.loads(ret.content.decode('utf8'))
-        [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        [download_url] = [res['url']
+                          for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
         ret = self.get(download_url, prefix='')
         # ...and with can_view_exposure they can extract the assetcol
@@ -273,7 +280,8 @@ class ImpactModeTestCase(django.test.TestCase):
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        [exposure_url] = [res['url']
+                          for res in results if res['type'] == 'exposure']
         ret = self.get(exposure_url, prefix='')
         # ...and even without can_view_exposure they can extract the assetcol
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
@@ -281,16 +289,19 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
 
-        # level 0 users without the can_view_exposure permission can't see the exposure
+        # level 0 users without the can_view_exposure permission can't
+        # see the exposure
         self.user1.profile.level = 0
         self.user1.profile.save()
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
-        ret = self.get(download_exposure_url, prefix='', expected_status_code=403)
+        ret = self.get(download_exposure_url, prefix='',
+                       expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
@@ -301,16 +312,19 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
                        expected_status_code=403)
 
-        # level 1 users without the can_view_exposure permission can't see the exposure
+        # level 1 users without the can_view_exposure permission can't
+        # see the exposure
         self.user1.profile.level = 1
         self.user1.profile.save()
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
-        ret = self.get(download_exposure_url, prefix='', expected_status_code=403)
+        ret = self.get(download_exposure_url, prefix='',
+                       expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
@@ -327,7 +341,8 @@ class ImpactModeTestCase(django.test.TestCase):
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
     def test_run_by_usgs_id_then_remove_calc_failure(self):
-        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1675824364065'
+        shakemap_version = (
+            'urn:usgs-product:us:shakemap:us6000jllz:1675824364065')
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
                     shakemap_version=shakemap_version,
@@ -348,8 +363,9 @@ class ImpactModeTestCase(django.test.TestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
-        # NOTE: this case tests the extractor for losses_by_site in the case discarding
-        # sites that do not correspond to any assets, e.g. for the JRC script that uses
+        # NOTE: this case tests the extractor for losses_by_site in the
+        # case discarding sites that do not correspond to any assets,
+        # e.g. for the JRC script that uses
         # shakemap_id = 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
         # {
         #     "id": "urn:usgs-product:us:shakemap:us6000phrk:1736792435199",
@@ -384,7 +400,8 @@ class ImpactModeTestCase(django.test.TestCase):
                          'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
                          'local_timestamp', 'time_event', 'dip', 'strike',
                          'maximum_distance', 'truncation_level',
-                         'number_of_ground_motion_fields', 'asset_hazard_distance',
+                         'number_of_ground_motion_fields',
+                         'asset_hazard_distance',
                          'ses_seed', 'station_data_file_from_usgs',
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
@@ -409,7 +426,8 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIn('info', resp)
 
     def test_impact_get_stations_from_usgs(self):
-        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1756920117251'
+        shakemap_version = (
+            'urn:usgs-product:us:shakemap:us6000jllz:1756920117251')
         resp = self.c.post('/v1/impact_get_stations_from_usgs',
                            data={'usgs_id': 'us6000jllz',
                                  'shakemap_version': shakemap_version})
