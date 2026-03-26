@@ -341,9 +341,9 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             for jobctx in jobctxs:
                 run_calc(jobctx)
     except MasterKilled as e:
-        if ('pytest' in sys.argv[0]
-                and str(e) == 'The openquake master process was killed manually'):
-            logging.warning(str(e))
+        if ('pytest' in sys.argv[0] and str(e) ==
+                'The openquake master process was killed manually'):
+            logging.warning(e)
         else:
             raise
     except Exception as e:
