@@ -38,7 +38,7 @@ from openquake.qa_tests_data.classical import (
     case_49, case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
     case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
-    case_77, case_78, case_80, case_82, case_83, case_84, case_85,
+    case_77, case_78, case_80, case_81, case_82, case_83, case_84, case_85,
     case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93,
     case_94)
 
@@ -929,6 +929,13 @@ class ClassicalTestCase(CalculatorTestCase):
         rups = self.calc.datastore['ruptures'][()]
         tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
         self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
+
+    def test_case_81(self):
+        # Tests use of a tabular GMM and a non-tabular GMM, both with
+        # extra parameters specified, both within mixture models
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv'],
+            case_81.__file__)
 
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
