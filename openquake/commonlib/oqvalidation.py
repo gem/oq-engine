@@ -1626,7 +1626,6 @@ class OqParam(valid.ParamSet):
 
         return imts
 
-
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
@@ -1640,45 +1639,43 @@ class OqParam(valid.ParamSet):
         
         # Check if using IMT-dependent weights per GMM so can raise error
         # if not supported and non-zero weight has been assigned to IMT
-        wt_check_imt = {
-            gmm: {
-                "weighted": False, **{imt: False for imt in {
-                    from_string(imt).name for imt in self.imtls}
-                    }} for gmm in gsims
-                }
-        
+        weight = {
+            (gmm, from_string(imt).name): 0.0 for gmm in gsims for imt
+              in self.imtls}
+        imt_weighted = {gmm: False for gmm in gsims}
+            
         if "gsim_logic_tree" in self.inputs:
             branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
             for branch in branches:
-                if branch.gsim not in wt_check_imt:
+                if branch.gsim not in imt_weighted:
                     continue
                 gimts = [cls.__name__ for cls in
-                         branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+                        branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
                 if isinstance(branch.weight, ImtWeight):
-                    wt_check_imt[branch.gsim]["weighted"] = True
+                    imt_weighted[branch.gsim] = True
                     for imt in self.imtls:
                         imt_key = from_string(imt).name
-                        if not wt_check_imt[branch.gsim][imt_key]:
+                        if weight[(branch.gsim, imt_key)] == 0.0:
                             if branch.weight[imt] > 0 and imt_key not in gimts:
-                                wt_check_imt[branch.gsim][imt_key] = True
+                                weight[(branch.gsim, imt_key)] = branch.weight[imt]
 
         imts = self.get_imts()
         for gsim in gsims:
             params = getattr(gsim, 'params', {})
             ok_imts = {cls.__name__ for cls in gsim.
-                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                    DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if 'conditional_gmpe' in params:
                 ok_imts |= set(params['conditional_gmpe'])
             elif hasattr(gsim, 'gmpe'):
                 ok_imts |= {cls.__name__ for cls in gsim.gmpe.
-                           DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                        DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
                 invalid_imts = imts - ok_imts
                 # Don't collect IMT if unsupported buts has zero wt
                 bad_wt_imts = [imt for imt in invalid_imts if
-                            wt_check_imt[gsim][imt]]
+                            weight[(gsim, imt)] > 0]
                 if (invalid_imts and not bad_wt_imts and not
-                    wt_check_imt[gsim]["weighted"]
+                    imt_weighted[gsim]
                     ):
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' % (
@@ -1706,7 +1703,6 @@ class OqParam(valid.ParamSet):
                             raise ValueError(
                                 'Please set a value for %r, this is required '
                                 'by the GSIM %s' % (param_name, gsim))
-
     @property
     def tses(self):
         """
