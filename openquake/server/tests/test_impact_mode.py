@@ -140,19 +140,24 @@ class ImpactModeTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.user, cls.password = get_or_create_user(1)  # level 1
         cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
             name='Users who can view the exposure')
         perm = Permission.objects.get(codename='can_view_exposure')
         cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
-        cls.c.login(username=cls.user1.username, password=cls.password1)
+        cls.c.login(username=cls.user.username, password=cls.password)
         cls.maxDiff = None
 
     @classmethod
     def tearDownClass(cls):
-        cls.user1.delete()
+        cls.user.delete()
         super().tearDownClass()
+
+    def set_user_level(self, level):
+        self.user.profile.level = level
+        self.user.profile.save()
+        self.user.save()
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
@@ -262,7 +267,7 @@ class ImpactModeTestCase(django.test.TestCase):
 
         # level 1 users with the can_view_exposure permission can see
         # the exposure
-        self.user1.groups.add(self.users_who_can_view_exposure)
+        self.user.groups.add(self.users_who_can_view_exposure)
         ret = self.get(f'{job_id}/results')
         results = json.loads(ret.content.decode('utf8'))
         [download_url] = [res['url']
@@ -273,10 +278,9 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
 
         # level 2 users without the show_exposure group can see the exposure
-        self.user1.groups.remove(self.users_who_can_view_exposure)
-        self.user1.profile.level = 2
-        self.user1.profile.save()
-        self.user1.save()
+        self.user.groups.remove(self.users_who_can_view_exposure)
+        self.set_user_level(2)
+
         # try to download the exposure, knowing the corresponding url
         ret = self.get(download_exposure_url, prefix='')
         # check if the exposure is shown in the list of downloadable results
@@ -293,9 +297,8 @@ class ImpactModeTestCase(django.test.TestCase):
 
         # level 0 users without the can_view_exposure permission can't
         # see the exposure
-        self.user1.profile.level = 0
-        self.user1.profile.save()
-        self.user1.save()
+        self.set_user_level(0)
+
         # try to download the exposure, knowing the corresponding url
         ret = self.get(download_exposure_url, prefix='',
                        expected_status_code=403)
@@ -316,9 +319,8 @@ class ImpactModeTestCase(django.test.TestCase):
 
         # level 1 users without the can_view_exposure permission can't
         # see the exposure
-        self.user1.profile.level = 1
-        self.user1.profile.save()
-        self.user1.save()
+        self.set_user_level(1)
+
         # try to download the exposure, knowing the corresponding url
         ret = self.get(download_exposure_url, prefix='',
                        expected_status_code=403)
@@ -343,6 +345,7 @@ class ImpactModeTestCase(django.test.TestCase):
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
     def test_run_by_usgs_id_then_remove_calc_failure(self):
+        self.set_user_level(1)
         shakemap_version = (
             'urn:usgs-product:us:shakemap:us6000jllz:1675824364065')
         data = dict(usgs_id='us6000jllz',
@@ -365,6 +368,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
+        self.set_user_level(1)
         # NOTE: this case tests the extractor for losses_by_site in the
         # case discarding sites that do not correspond to any assets,
         # e.g. for the JRC script that uses
@@ -385,17 +389,20 @@ class ImpactModeTestCase(django.test.TestCase):
 
     # check that the URL 'run' cannot be accessed in IMPACT mode
     def test_can_not_run_normal_calc(self):
+        self.set_user_level(1)
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
     # check that the URL 'validate_zip' cannot be accessed in IMPACT mode
     def test_can_not_validate_zip(self):
+        self.set_user_level(1)
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
     def test_get_impact_form_defaults(self):
+        self.set_user_level(1)
         resp = self.get('/v1/get_impact_form_defaults', prefix='')
         resp = json.loads(resp.content.decode('utf8'))
         expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
@@ -412,6 +419,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(list(resp), expected_list)
 
     def test_impact_get_shakemap_versions(self):
+        self.set_user_level(1)
         resp = self.c.post('/v1/impact_get_shakemap_versions',
                            data={'usgs_id': 'us6000jllz'})
         resp = json.loads(resp.content.decode('utf8'))
@@ -420,6 +428,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIsNone(resp['shakemap_versions_issue'])
 
     def test_impact_get_nodal_planes_and_info(self):
+        self.set_user_level(2)
         resp = self.c.post('/v1/impact_get_nodal_planes_and_info',
                            data={'usgs_id': 'us6000jllz'})
         resp = json.loads(resp.content.decode('utf8'))
@@ -428,6 +437,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIn('info', resp)
 
     def test_impact_get_stations_from_usgs(self):
+        self.set_user_level(2)
         shakemap_version = (
             'urn:usgs-product:us:shakemap:us6000jllz:1756920117251')
         resp = self.c.post('/v1/impact_get_stations_from_usgs',
@@ -439,10 +449,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIsNone(resp['station_data_issue'])
 
     def test_impact_get_rupture_data(self):
-        initial_user_level = self.user1.profile.level
-        self.user1.profile.level = 2
-        self.user1.profile.save()
-        self.user1.save()
+        self.set_user_level(2)
 
         # Case covered by a mosaic model
         rup_params = dict(
@@ -467,7 +474,3 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(
             resp.json()['error_msg'],
             '(-139.0, 35.0) is farther than 5 deg from any mosaic model!')
-
-        self.user1.profile.level = initial_user_level
-        self.user1.profile.save()
-        self.user1.save()
