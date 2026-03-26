@@ -1642,7 +1642,7 @@ class OqParam(valid.ParamSet):
         weight = {
             (gmm, from_string(imt).name): 0.0 for gmm in gsims for imt
               in self.imtls}
-        imt_weighted = {gmm: False for gmm in gsims}
+        imt_weighted = {gmm: False for gmm in gsims} # Req to track if weighted
             
         if "gsim_logic_tree" in self.inputs:
             branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
