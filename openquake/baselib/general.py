@@ -549,6 +549,8 @@ def sighandler(signame, handler):
             yield
         finally:
             signal.signal(sig, orig_handler)
+    else:
+        yield
 
 
 def engine_version():
