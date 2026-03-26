@@ -65,10 +65,14 @@ class ImpactModeTestCase(django.test.TestCase):
         return cls.c.post(f'{prefix}{path}', data)
 
     @classmethod
-    def get(cls, path, **data):
-        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
-        if not resp.status_code == 200:
-            raise RuntimeError(resp.content.decode('utf8'))
+    def get(cls, path, prefix='/v1/calc/', expected_status_code=200, **data):
+        url = f'{prefix}%s' % path
+        resp = cls.c.get(url, data, HTTP_HOST='testserver')
+        if not resp.status_code == expected_status_code:
+            raise RuntimeError(
+                f"Error calling {url}\n"
+                f"Unexpected status code {resp.status_code} != {expected_status_code}"
+                f"\n{resp.content.decode('utf8')}")
         return resp
 
     @classmethod
@@ -200,8 +204,8 @@ class ImpactModeTestCase(django.test.TestCase):
                 'The job produced no outputs!')
         # Check that the Django views to visualize simplified and advanced outputs
         # pages do not raise any exceptions
-        self.c.get(f'/engine/{job_id}/outputs')
-        self.c.get(f'/engine/{job_id}/outputs_impact')
+        self.get(f'/engine/{job_id}/outputs', prefix='')
+        self.get(f'/engine/{job_id}/outputs_impact', prefix='')
         # NOTE: the get_json utility decodes the json and returns a dict
         ret = self.get_json('%s/impact' % job_id)
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
@@ -241,20 +245,17 @@ class ImpactModeTestCase(django.test.TestCase):
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'{job_id}/extract/assetcol', expected_status_code=403)
 
         # level 1 users with the can_view_exposure permission can see the exposure
         self.user1.groups.add(self.users_who_can_view_exposure)
-        ret = self.get('%s/results' % job_id)
+        ret = self.get(f'{job_id}/results')
         results = json.loads(ret.content.decode('utf8'))
         [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
-        ret = self.c.get(download_url)
-        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
+        ret = self.get(download_url, prefix='')
         # ...and with can_view_exposure they can extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200, 'Unable to download assetcol')
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
 
         # level 2 users without the show_exposure group can see the exposure
         self.user1.groups.remove(self.users_who_can_view_exposure)
@@ -262,56 +263,47 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user1.profile.save()
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
+        ret = self.get(download_exposure_url, prefix='')
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
-        ret = self.c.get(exposure_url)
-        self.assertEqual(ret.status_code, 200, 'Unable to download exposure')
+        ret = self.get(exposure_url, prefix='')
         # ...and even without can_view_exposure they can extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200, 'Unable to download assetcol')
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
         # they can also download the hdf5 datastore and the job.zip
-        ret = self.c.get(f'/v1/calc/{job_id}/datastore')
-        self.assertEqual(ret.status_code, 200, 'Unable to download datastore')
-        ret = self.c.get(f'/v1/calc/{job_id}/job_zip')
-        if ret.status_code != 200:
-            raise Exception(
-                f"Unable to download job_zip:\n{ret.content.decode('utf8')}")
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
 
         # level 0 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 0
         self.user1.profile.save()
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(download_exposure_url, prefix='', expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
+                       expected_status_code=403)
 
         # level 1 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 1
         self.user1.profile.save()
         self.user1.save()
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(download_exposure_url, prefix='', expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
+                       expected_status_code=403)
 
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
@@ -370,7 +362,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(resp.status_code, 404, resp)
 
     def test_get_impact_form_defaults(self):
-        resp = self.c.get('/v1/get_impact_form_defaults')
+        resp = self.get('/v1/get_impact_form_defaults', prefix='')
         resp = json.loads(resp.content.decode('utf8'))
         expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
                          'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
