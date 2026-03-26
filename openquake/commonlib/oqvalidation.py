@@ -1655,9 +1655,8 @@ class OqParam(valid.ParamSet):
                     imt_weighted[branch.gsim] = True
                     for imt in self.imtls:
                         imt_key = from_string(imt).name
-                        if weight[(branch.gsim, imt_key)] == 0.0:
-                            if branch.weight[imt] > 0 and imt_key not in gimts:
-                                weight[(branch.gsim, imt_key)] = branch.weight[imt]
+                        if branch.weight[imt] > 0 and imt_key not in gimts:
+                            weight[(branch.gsim, imt_key)] = branch.weight[imt]
 
         imts = self.get_imts()
         for gsim in gsims:
