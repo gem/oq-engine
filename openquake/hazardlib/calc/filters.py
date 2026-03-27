@@ -323,7 +323,7 @@ def split_source(src):
             split.scaling_rate = src.scaling_rate
         if has_grp_id:
             split.grp_id = src.grp_id
-        offset += split._num_ruptures
+        offset += split.num_ruptures
         #split.nsites = src.nsites
     return splits
 

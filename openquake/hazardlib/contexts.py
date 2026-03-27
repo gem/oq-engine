@@ -1301,8 +1301,6 @@ class ContextMaker(object):
         t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
             return EPS
-        # sanity check, preclassical must has set ._num_ruptures
-        assert src._num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -1578,7 +1576,7 @@ class RmapMaker(object):
         self.source_data['src_id'].append(valid.basename(src))
         self.source_data['grp_id'].append(src.grp_id)
         self.source_data['nctxs'].append(nctxs)
-        self.source_data['nrupts'].append(src._num_ruptures)
+        self.source_data['nrupts'].append(src.num_ruptures)
         self.source_data['weight'].append(src.weight)
         self.source_data['ctimes'].append(src.dt)
         self.source_data['taskno'].append(task_no)

@@ -282,8 +282,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        if self._num_ruptures:
-            return self._num_ruptures
         if not hasattr(self, '_nr'):
             self._nr = list(self.iter_ruptures(count=True))[0]
             self._num_ruptures = numpy.sum(self._nr)
