@@ -8,7 +8,7 @@ from openquake.commonlib.readinput import read_mosaic_df
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-OAT OPA'''.split())
+OAT OPA'''.split()) 
 
 TOML = '''\
 [workflow]
