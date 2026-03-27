@@ -203,13 +203,23 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
     trt_smr = -1  # set by the engine
-    num_ruptures = 0  # set by the engine
+    _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
         pass
+
+    @property
+    def num_ruptures(self):
+        """
+        Call count_ruptures() once and cache the result
+        """
+        if self._num_ruptures == 0:
+            self._num_ruptures = self.count_ruptures()
+        return self._num_ruptures
 
     @property
     def trt_smrs(self):

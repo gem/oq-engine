@@ -40,7 +40,7 @@ from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -523,6 +523,12 @@ maximum_distance_stations:
   stations.
   Example: *maximum_distance_stations = 100*.
   Default: None
+
+maximum_rupture_depth:
+  A scalar or a dictionary TRT -> scalar used to discard deep ruptures
+  in event based calculations
+  Example: *maximum_rupture_depth = 80*.
+  Default: empty dictionary
 
 mean:
   Flag to enable/disable the calculation of mean curves.
@@ -1124,6 +1130,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
+    maximum_rupture_depth = valid.Param(valid.floatdict, {})  # km
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
@@ -1506,14 +1513,18 @@ class OqParam(valid.ParamSet):
                                self.number_of_logic_tree_samples)
 
         # checks for event_based
-        if 'event_based' in self.calculation_mode:
+        if ('event_based' in self.calculation_mode or
+                'damage' in self.calculation_mode):
             if self.ps_grid_spacing:
-                logging.info('ps_grid_spacing is ignored in event_based '
-                             'calculations')
+                logging.info('ps_grid_spacing is ignored in '
+                             f'{self.calculation_mode} calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
                                    self.ses_per_logic_tree_path)
+        elif self.maximum_rupture_depth:
+            self.raise_invalid('maximum_rupture_depth can be defined only '
+                               'in event_based calculations')
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
@@ -1597,17 +1608,10 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid("you must set avg_losses=false with "
                                    "post_loss_amplification")
 
-    def check_gsims(self, gsims):
+    def get_imts(self):
         """
-        :param gsims: a sequence of GSIM instances
+        Return a set of the IMTs within the OqParam object.
         """
-        for gsim in gsims:
-            self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
-
-        has_sites = self.sites or 'site_model' in self.inputs
-        if not has_sites:
-            return
-
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
@@ -1632,21 +1636,67 @@ class OqParam(valid.ParamSet):
             else:
                 imts.add(im.string)
 
+        return imts
+
+    def check_gsims(self, gsims):
+        """
+        :param gsims: a sequence of GSIM instances
+        """
+        for gsim in gsims:
+            self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+
+        has_sites = self.sites or 'site_model' in self.inputs
+        if not has_sites:
+            return
+        
+        # Check if using IMT-dependent weights per GMM so can raise error
+        # if not supported and non-zero weight has been assigned to IMT
+        weight = {
+            (gmm, from_string(imt).name): 0.0 for gmm in gsims for imt
+              in self.imtls}
+        imt_weighted = {gmm: False for gmm in gsims} # Req to track if weighted
+            
+        if "gsim_logic_tree" in self.inputs:
+            branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
+            for branch in branches:
+                if branch.gsim not in imt_weighted:
+                    continue
+                gimts = [cls.__name__ for cls in
+                        branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+                if isinstance(branch.weight, ImtWeight):
+                    imt_weighted[branch.gsim] = True
+                    for imt in self.imtls:
+                        imt_key = from_string(imt).name
+                        if branch.weight[imt] > 0 and imt_key not in gimts:
+                            weight[(branch.gsim, imt_key)] = branch.weight[imt]
+
+        imts = self.get_imts()
         for gsim in gsims:
             params = getattr(gsim, 'params', {})
             ok_imts = {cls.__name__ for cls in gsim.
-                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                    DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if 'conditional_gmpe' in params:
                 ok_imts |= set(params['conditional_gmpe'])
             elif hasattr(gsim, 'gmpe'):
                 ok_imts |= {cls.__name__ for cls in gsim.gmpe.
-                           DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                        DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
-                invalid_imts = ', '.join(imts - ok_imts)
-                if invalid_imts:
+                invalid_imts = imts - ok_imts
+                # Don't collect IMT if unsupported buts has zero wt
+                bad_wt_imts = [imt for imt in invalid_imts if
+                            weight[(gsim, imt)] > 0]
+                if (invalid_imts and not bad_wt_imts and not
+                    imt_weighted[gsim]
+                    ):
                     raise ValueError(
-                        'The IMT %s is not accepted by the GSIM %s' %
-                        (invalid_imts, gsim))
+                        'The IMT %s is not accepted by the GSIM %s' % (
+                            ', '.join(invalid_imts), gsim))
+                if bad_wt_imts: # If IMT-dependent and wt greater than
+                                # zero for unsupported IMT then raise
+                    raise ValueError(
+                        'Non-zero weights assigned to unsupported IMT(s) '
+                        '(%s) for the GSIM %s' % (', '.join(bad_wt_imts), gsim)
+                        )
 
             if (self.hazard_calculation_id is None
                     and 'site_model' not in self.inputs):
@@ -1664,7 +1714,6 @@ class OqParam(valid.ParamSet):
                             raise ValueError(
                                 'Please set a value for %r, this is required '
                                 'by the GSIM %s' % (param_name, gsim))
-
     @property
     def tses(self):
         """

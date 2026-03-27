@@ -110,7 +110,7 @@ jobs:
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py
           OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py
           OQ_APPLICATION_MODE=AELO pytest -vx openquake/server/tests/test_aelo_mode.py
-          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{engine,_unc}
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine,_unc}
           OQ_APPLICATION_MODE=AELO pytest \
             --browser chromium \
             --capture=no \

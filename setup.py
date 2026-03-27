@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
-import sys
 from setuptools import setup
 
 def generate_data_files(source_dir):
@@ -30,6 +28,4 @@ def generate_data_files(source_dir):
             data_files_list.append((target_dir, source_files))
     return data_files_list
 
-setup(
-    data_files=generate_data_files('demos'),
-    )
+setup(data_files=generate_data_files('demos'))

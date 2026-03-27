@@ -347,8 +347,13 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     affected = 0
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
+    hypo_deps = filrups['hypo'][:, 2]
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
+        if oq.maximum_rupture_depth:
+            trt = trts[model.decode('ascii')][trt_smr // TWO24]
+            maxdep = getdefault(oq.maximum_rupture_depth, trt)
+            ok &= hypo_deps <= maxdep
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
@@ -570,7 +575,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def counting_ruptures(self):
         """
-        Sets src.num_ruptures and src.offset
+        Sets src._num_ruptures and src.offset
         """
         sources = self.csm.get_sources()
         logging.info('Counting the ruptures in the CompositeSourceModel')
@@ -589,10 +594,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
                 try:
-                    src.num_ruptures = nrups[src.source_id]
+                    src._num_ruptures = nrups[src.source_id]
                 except KeyError:  # light sources
-                    src.num_ruptures = src.count_ruptures()
-                src.weight = src.num_ruptures
+                    src._num_ruptures = src.count_ruptures()
+                src.weight = src._num_ruptures
             self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)

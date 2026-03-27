@@ -221,7 +221,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 12, msg)
+        self.assertEqual(source.num_ruptures, 12, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
@@ -253,7 +253,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                      source.profiles)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 32, msg)
+        self.assertEqual(source.num_ruptures, 32, msg)
 
     def test03(self):
         """ Simplest test - checking when standard floating is used """
@@ -271,7 +271,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                    floating_x_step=0, floating_y_step=0)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 43, msg)
+        self.assertEqual(source.num_ruptures, 43, msg)
 
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]
@@ -316,7 +316,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 4, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 24, msg)
+        self.assertEqual(source.num_ruptures, 24, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
@@ -364,7 +364,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[1], 4, msg)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 77, msg)
+        self.assertEqual(source.num_ruptures, 77, msg)
 
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
