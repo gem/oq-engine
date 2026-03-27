@@ -484,6 +484,45 @@ def get_assetcol(calc_id):
         return assetcol
 
 
+def _resolve_limits(ax, x_limits, y_limits, epicenter=None, buffer_ratio=0.05):
+    """
+    Resolve axis limits ensuring epicenter visibility with a margin.
+    :param buffer_ratio: fraction of axis span to use as padding
+    """
+    # Start from user limits or current limits
+    xmin, xmax = x_limits if x_limits else ax.get_xlim()
+    ymin, ymax = y_limits if y_limits else ax.get_ylim()
+
+    if epicenter is not None:
+        lon, lat = epicenter
+
+        xmin = min(xmin, lon)
+        xmax = max(xmax, lon)
+        ymin = min(ymin, lat)
+        ymax = max(ymax, lat)
+
+        xspan = xmax - xmin
+        yspan = ymax - ymin
+
+        # Handle degenerate spans (e.g. single point)
+        if xspan == 0:
+            xspan = 1e-6
+        if yspan == 0:
+            yspan = 1e-6
+
+        # Apply buffer
+        xpad = xspan * buffer_ratio
+        ypad = yspan * buffer_ratio
+
+        xmin -= xpad
+        xmax += xpad
+        ymin -= ypad
+        ymax += ypad
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+
+
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   country_name=None, plot_title=None, legend_title=None,
                   cities=None, legend_digits=0, x_limits=None, y_limits=None,
@@ -605,10 +644,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
 
-    if x_limits:
-        ax.set_xlim(x_limits)
-    if y_limits:
-        ax.set_ylim(y_limits)
+    _resolve_limits(ax, x_limits, y_limits, epicenter)
 
     city_scatters = []
     if cities:
