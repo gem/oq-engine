@@ -159,6 +159,11 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user.profile.save()
         self.user.groups.remove(self.users_who_can_view_exposure)
         self.user.save()
+        # Clear Django's cached permissions so the new level takes effect
+        if hasattr(self.user, '_perm_cache'):
+            del self.user._perm_cache
+        if hasattr(self.user, '_user_perm_cache'):
+            del self.user._user_perm_cache
         # bypass the authentication backend and signal overhead
         self.c.force_login(self.user)
         self.assertEqual(int(self.c.session['_auth_user_id']), self.user.pk)
