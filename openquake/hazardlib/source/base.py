@@ -81,7 +81,7 @@ def poisson_sample(src, eff_num_ses, seed):
         tom = src.temporal_occurrence_model
     else:  # multifault
         tom = PoissonTOM(src.investigation_time)
-    rupids = src.offset + numpy.arange(src._num_ruptures)
+    rupids = src.offset + numpy.arange(src.num_ruptures)
     if not hasattr(src, 'nodal_plane_distribution'):
         if src.code == b'F':  # multifault
             s = src.get_sections()
@@ -150,7 +150,7 @@ def timedep_sample(src, eff_num_ses, seed):
     :yields: triples (rupture, rup_id, num_occurrences)
     """
     rng = numpy.random.default_rng(seed)
-    rupids = src.offset + numpy.arange(src._num_ruptures)
+    rupids = src.offset + numpy.arange(src.num_ruptures)
     if src.code == b'F':  # time-dependent multifault
         s = src.get_sections()
         for i, probs in enumerate(src.probs_occur):

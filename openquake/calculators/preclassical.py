@@ -56,7 +56,7 @@ def source_data(sources):
     for src in sources:
         data['src_id'].append(src.source_id)
         data['nctxs'].append(src.nctxs)
-        data['nrupts'].append(src._num_ruptures)
+        data['nrupts'].append(src.num_ruptures)
         data['weight'].append(src.weight)
         data['ctimes'].append(src.dt)
     return data
@@ -389,8 +389,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 for src in srcs:
                     if src.code not in b'pP':
                         assert src.weight, src
-                    assert src._num_ruptures, src
-                    acc[src.code] += int(src._num_ruptures)
+                    acc[src.code] += int(src.num_ruptures)
         self.csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__
