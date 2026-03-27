@@ -166,7 +166,9 @@ class ImpactModeTestCase(django.test.TestCase):
         if hasattr(self.user, '_user_perm_cache'):
             del self.user._user_perm_cache
         # Force a completely fresh session so no stale state survives
-        self.c.logout()
+        # Only logout if there is an authenticated user in the current session
+        if self.c.session.get('_auth_user_id'):
+            self.c.logout()
         # Re-fetch the user from DB so the in-memory object is fresh too
         self.user.refresh_from_db()
         self.user.profile.refresh_from_db()
