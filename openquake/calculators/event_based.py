@@ -575,7 +575,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def counting_ruptures(self):
         """
-        Sets src.num_ruptures and src.offset
+        Sets src._num_ruptures and src.offset
         """
         sources = self.csm.get_sources()
         logging.info('Counting the ruptures in the CompositeSourceModel')
@@ -594,10 +594,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
                 try:
-                    src.num_ruptures = nrups[src.source_id]
+                    src._num_ruptures = nrups[src.source_id]
                 except KeyError:  # light sources
-                    src.num_ruptures = src.count_ruptures()
-                src.weight = src.num_ruptures
+                    src._num_ruptures = src.count_ruptures()
+                src.weight = src._num_ruptures
             self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)

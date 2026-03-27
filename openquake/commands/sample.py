@@ -53,7 +53,7 @@ def reduce_source_model(fname, reduction_factor, itime):
     elif any(src.code == b'F' for src in grp):  # multiFault
         for src in grp:
             if src.code == b'F':
-                rids = numpy.arange(src.count_ruptures())
+                rids = numpy.arange(src.num_ruptures)
                 ok = general.random_filter(rids, reduction_factor)
                 src.mags = src.mags[ok]
                 src.rakes = src.rakes[ok]
