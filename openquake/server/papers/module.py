@@ -324,6 +324,7 @@ def get_job_ctx(rup_id,
         'ground_motion_fields': 'true',
         'minimum_intensity': '0.05',
         'quantiles': "[0.05 0.95]",
+        'aggregate_by': "MATERIAL_TYPE;OCCUPANCY",
         'username': username
         }
 
