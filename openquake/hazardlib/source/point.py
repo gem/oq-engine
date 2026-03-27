@@ -456,7 +456,7 @@ class CollapsedPointSource(PointSource):
         """
         :returns: the total number of underlying ruptures
         """
-        return sum(src.count_ruptures()
+        return sum(src.num_ruptures
                    for src in pdata_to_psources(self.pdata))
 
 
@@ -499,7 +499,6 @@ def grid_point_sources(sources, ps_grid_spacing):
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing
-            cps.num_ruptures = cps.count_ruptures()
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])

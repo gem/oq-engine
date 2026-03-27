@@ -29,6 +29,7 @@ import pickle
 import socket
 import random
 import atexit
+import signal
 import zipfile
 import logging
 import builtins
@@ -40,8 +41,8 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
-from importlib.metadata import version, PackageNotFoundError
 from contextlib import contextmanager
+from importlib.metadata import version, PackageNotFoundError
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
@@ -221,6 +222,7 @@ class WeightedSequence(MutableSequence):
         """
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
+
 
 def find_among(strings, sortedvalues, value):
     """
@@ -535,6 +537,22 @@ def round(x, d=0):
     return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
 
+@contextmanager
+def sighandler(signame, handler):
+    """
+    Temporarily install a signal handler
+    """
+    sig = getattr(signal, signame, None)
+    if sig is not None:
+        orig_handler = signal.signal(sig, handler)
+        try:
+            yield
+        finally:
+            signal.signal(sig, orig_handler)
+    else:
+        yield
+
+
 def engine_version():
     """
     :returns: __version__ + `<short git hash>` if Git repository found
@@ -550,11 +568,12 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            with open(os.devnull, 'w') as devnull:
+            with sighandler("SIGCHLD", signal.SIG_DFL), \
+                 open(os.devnull, 'w') as devnull:
                 gh = subprocess.check_output(
                     ['git', 'rev-parse', '--short', 'HEAD'],
                     stderr=devnull, cwd=os.path.dirname(git_path)).strip()
-            gh = "-git" + decode(gh) if gh else ''
+                gh = "-git" + decode(gh) if gh else ''
         except Exception:
             pass
             # trapping everything on purpose; git may not be installed or it
@@ -1822,21 +1841,6 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
-
-
-# NB: this is present in contextlib in Python 3.11, but
-# we still support Python 3.9, so it cannot be removed yet
-@contextmanager
-def chdir(path):
-    """
-    Context manager to temporarily change the CWD
-    """
-    oldpwd = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(oldpwd)
 
 
 def smart_concat(arrays):

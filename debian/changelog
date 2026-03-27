@@ -1,5 +1,32 @@
+  [Michele Simionato]
+  * Saved avg_gmf always in impact mode
+  * Saved relevant_events always when using --hc
+
   [Christopher Brooks]
-  * Correct the `_apply_subduction_trench_correction` term in 
+  * Refactored `check_gsims` to permit unsupported IMTs when a weight
+    of zero is specified for them in an IMT-dependent weighted GMC LT.
+    A test case (classical/case_39) is added which checks this behaviour
+    (permit zero weight for unsupported IMT, and raise error if non-zero
+    for same unsupported IMT).
+
+  [Michele Simionato]
+  * Added `maximum_depth` dictionary (in km per tectonic region type)
+    to the job.ini accepted parameters, used to discard deep ruptures
+    in event based calculations
+
+  [Paolo Tormene, Michele Simionato, Paul Henshaw]
+  * If any worker dies before completion, the corresponding master and
+    all its subprocesses are killed and the event causing the
+    interruption is logged
+
+  [Christopher Brooks]
+  * Added capability to specify an IMT-dependent vector of deltas
+    to apply to total sigma, tau and phi within ModifiableGMPE.
+  * Fix a bug where ESHM20 subclasses of BCHydro without a FABA
+    taper model incorrectly fellback to the original BCHydro backarc
+    term, causing a missing attribute error for `backarc`. Updated
+    classical/case_61 to now test this scenario.
+  * Correct the `_apply_subduction_trench_correction` term in
     Si and Midorikawa (1999)'s `NorthEastCorrection` subclasses
     to use `rhypo` instead of `rrup`.
 

@@ -154,6 +154,8 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
+    if not lst:
+        raise RuntimeError(f'{models} not in {MODELS=}')
     return save(mosaic_dir, 'SES.toml',
                 TOML.format(number_of_logic_tree_samples,
                             ses_per_logic_tree_path,

@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from unittest import skipIf
 import unittest.mock as mock
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, chdir
 import shutil
 import pathlib
 import zipfile
@@ -33,7 +33,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import encode
-from openquake.baselib.general import gettemp, chdir
+from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.tests.flake8_test import check_newlines

@@ -1779,11 +1779,12 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(mosaic_dir=config.directory.mosaic_dir):
+def read_mosaic_df(mosaic_dir=''):
     """
     :param mosaic_dir: directory containing mosaic boundaries
     :returns: a DataFrame of geometries for the mosaic models
     """
+    mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
         mosaic_boundaries_file = os.path.join(mosaic_dir, 'mosaic.gpkg')
