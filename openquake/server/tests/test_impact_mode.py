@@ -164,7 +164,11 @@ class ImpactModeTestCase(django.test.TestCase):
             del self.user._perm_cache
         if hasattr(self.user, '_user_perm_cache'):
             del self.user._user_perm_cache
-        # bypass the authentication backend and signal overhead
+        # Force a completely fresh session so no stale state survives
+        self.c.logout()
+        # Re-fetch the user from DB so the in-memory object is fresh too
+        self.user.refresh_from_db()
+        self.user.profile.refresh_from_db()
         self.c.force_login(self.user)
         self.assertEqual(int(self.c.session['_auth_user_id']), self.user.pk)
 
