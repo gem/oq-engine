@@ -160,23 +160,6 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user.profile.save()
         self.user.groups.remove(self.users_who_can_view_exposure)
         self.user.save()
-        # Clear Django's cached permissions so the new level takes effect
-        if hasattr(self.user, '_perm_cache'):
-            del self.user._perm_cache
-        if hasattr(self.user, '_user_perm_cache'):
-            del self.user._user_perm_cache
-        # Force a completely fresh session so no stale state survives
-        # Only logout if there is an authenticated user in the current session
-        if self.c.session.get('_auth_user_id'):
-            self.c.logout()
-        # Re-fetch the user from DB so the in-memory object is fresh too
-        self.user.refresh_from_db()
-        self.user.profile.refresh_from_db()
-        # Wipe the session directly without triggering the logout signal,
-        # then force-login to get a clean session with the updated user
-        self.c.session.flush()
-        self.c.force_login(self.user)
-        self.assertEqual(int(self.c.session['_auth_user_id']), self.user.pk)
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
