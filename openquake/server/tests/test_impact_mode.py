@@ -77,11 +77,12 @@ class ImpactModeTestCase(django.test.TestCase):
                 content = content.decode('utf8')
             except (AttributeError, UnicodeDecodeError):
                 pass
-            raise RuntimeError(
-                f"Error calling {url}\n"
-                f"Unexpected status code"
-                f" {resp.status_code} != {expected_status_code}"
-                f"\n{content}")
+            err_msg = (f"Error calling {url}\n"
+                       f"Unexpected status code"
+                       f" {resp.status_code} != {expected_status_code}")
+            if expected_status_code == 200:
+                err_msg += f"\n{content}"
+            raise RuntimeError(err_msg)
         return resp
 
     @classmethod
