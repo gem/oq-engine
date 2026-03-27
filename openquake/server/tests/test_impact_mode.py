@@ -172,6 +172,9 @@ class ImpactModeTestCase(django.test.TestCase):
         # Re-fetch the user from DB so the in-memory object is fresh too
         self.user.refresh_from_db()
         self.user.profile.refresh_from_db()
+        # Wipe the session directly without triggering the logout signal,
+        # then force-login to get a clean session with the updated user
+        self.c.session.flush()
         self.c.force_login(self.user)
         self.assertEqual(int(self.c.session['_auth_user_id']), self.user.pk)
 
