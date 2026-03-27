@@ -60,7 +60,7 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
 
 """
 import os
-from openquake.baselib import sap
+from openquake.baselib import sap, config
 from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
 
@@ -73,6 +73,7 @@ def main(mosaic_dir, out, models='ALL', *,
     ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
                             number_of_logic_tree_samples,
                             ses_per_logic_tree_path, minimum_magnitude)
+    config.directory.mosaic_dir = mosaic_dir
     calc_id = engine.run_workflow(ses_toml, {})
     os.remove(ses_toml)
     return calc_id
