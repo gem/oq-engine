@@ -27,7 +27,7 @@ from io import BytesIO
 
 import django
 from django.apps import apps
-from django.test import Client, override_settings
+from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
@@ -312,17 +312,9 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
                        expected_status_code=403)
 
-        # Level 0 impact users can't download the hdf5 datastore unless
-        # the setting ALLOW_DATASTORE_DOWNLOAD is True
-        # (False is the default for the IMPACT application mode)
-        with override_settings(ALLOW_DATASTORE_DOWNLOAD=False):
-            ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
-                           expected_status_code=403)
-        with override_settings(ALLOW_DATASTORE_DOWNLOAD=True):
-            ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
-                           expected_status_code=200)
-
-        # Level 0 users can't download the job.zip
+        # Level 0 impact users can't download hdf5 datastore nor job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
                        expected_status_code=403)
 
@@ -343,17 +335,9 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
                        expected_status_code=403)
 
-        # Level 1 impact users can't download the hdf5 datastore unless
-        # the setting ALLOW_DATASTORE_DOWNLOAD is True
-        # (False is the default for the IMPACT application mode)
-        with override_settings(ALLOW_DATASTORE_DOWNLOAD=False):
-            ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
-                           expected_status_code=403)
-        with override_settings(ALLOW_DATASTORE_DOWNLOAD=True):
-            ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
-                           expected_status_code=200)
-
-        # Level 1 users can't download the job.zip
+        # Level 1 impact users can't download hdf5 datastore nor job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
                        expected_status_code=403)
 
