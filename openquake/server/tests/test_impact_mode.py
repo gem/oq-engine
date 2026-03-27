@@ -161,6 +161,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user.save()
         # bypass the authentication backend and signal overhead
         self.c.force_login(self.user)
+        self.assertEqual(int(self.c.session['_auth_user_id']), self.user.pk)
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
@@ -281,7 +282,6 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
 
         # level 2 users without the show_exposure group can see the exposure
-        self.user.groups.remove(self.users_who_can_view_exposure)
         self.set_user_level_and_remove_groups(2)
 
         # try to download the exposure, knowing the corresponding url
@@ -301,7 +301,6 @@ class ImpactModeTestCase(django.test.TestCase):
         # level 0 users without the can_view_exposure permission can't
         # see the exposure
         self.set_user_level_and_remove_groups(0)
-
         # try to download the exposure, knowing the corresponding url
         ret = self.get(download_exposure_url, prefix='',
                        expected_status_code=403)
