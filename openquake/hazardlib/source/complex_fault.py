@@ -282,12 +282,9 @@ class ComplexFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        if self._num_ruptures:
-            return self._num_ruptures
         if not hasattr(self, '_nr'):
             self._nr = list(self.iter_ruptures(count=True))[0]
-            self._num_ruptures = numpy.sum(self._nr)
-        return self._num_ruptures
+        return numpy.sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
         """
@@ -302,7 +299,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
-        self.count_ruptures()
+        self.num_ruptures  # sets _nr
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])

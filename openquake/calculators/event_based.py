@@ -163,13 +163,6 @@ def build_hcurves(dstore):
 
 # ######################## GMF calculator ############################ #
 
-def count_ruptures(srcs, monitor):
-    """
-    Count the number of ruptures on heavy sources
-    """
-    return {src.source_id: src.count_ruptures() for src in srcs}
-
-
 def get_computer(cmaker, ebr, sites, sec_perils=(),
                  station_data=(), station_sids=()):
     """
@@ -575,30 +568,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def counting_ruptures(self):
         """
-        Sets src._num_ruptures and src.offset
+        Sets src.num_ruptures and src.offset
         """
-        sources = self.csm.get_sources()
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            heavy_sources = [src for src in sources if src.code in b'ASC']
-            if heavy_sources:
-                nrups = parallel.Starmap.apply(  # weighting the heavy sources
-                    count_ruptures, (heavy_sources,),
-                    h5=self.datastore.hdf5,
-                    progress=logging.debug
-                ).reduce()
-            else:
-                nrups = {}
-            # NB: multifault sources must be considered light to avoid a large
-            # data transfer, even if .count_ruptures can be slow
-            for src in sources:
-                try:
-                    src._num_ruptures = nrups[src.source_id]
-                except KeyError:  # light sources
-                    src._num_ruptures = src.count_ruptures()
-                src.weight = src._num_ruptures
-            self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
+            self.csm.fix_src_offset()
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         return maxweight

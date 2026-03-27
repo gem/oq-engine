@@ -224,7 +224,7 @@ class KiteFaultSource(ParametricSeismicSource):
         as the number of magnitude bins admitted by the original source.
         """
         if not hasattr(self, '_rupture_rates'):
-            self.count_ruptures()
+            self.num_ruptures
         if len(self._rupture_rates) == 1:  # not splittable
             yield self
             return
