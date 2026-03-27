@@ -253,7 +253,7 @@ def get_csm(oq, full_lt, dstore=None):
             for src in sg:
                 segments.append(src.source_id.split(':')[1])
                 t = (src.source_id, src.grp_id,
-                     src.count_ruptures(), src.mutex_weight,
+                     src.num_ruptures, src.mutex_weight,
                      sg.rup_interdep == 'mutex')
                 out.append(t)
             probs.append((src.grp_id, sg.grp_probability))

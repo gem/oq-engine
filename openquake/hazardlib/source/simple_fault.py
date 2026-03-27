@@ -206,8 +206,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        if self._num_ruptures:
-            return self._num_ruptures
         try:
             whole_fault_surface = SimpleFaultSurface.from_fault_data(
                 self.fault_trace, self.upper_seismogenic_depth,
@@ -340,7 +338,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
-        self.count_ruptures()
+        self.num_ruptures
         for i, (mag, rate) in enumerate(mag_rates):
             # This is needed in order to reproduce the logic in the
             # `rupture_count` method

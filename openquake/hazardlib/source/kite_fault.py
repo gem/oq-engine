@@ -146,9 +146,6 @@ class KiteFaultSource(ParametricSeismicSource):
         :returns:
             The number of ruptures that this source generates
         """
-        if self._num_ruptures:
-            return self._num_ruptures
-    
         # Counting ruptures and rates
         self._rupture_count = collections.Counter()
         self._rupture_rates = collections.Counter()

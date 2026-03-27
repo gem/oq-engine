@@ -98,7 +98,7 @@ def _filter_mag(srcs, min_mag):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        ss._num_ruptures = ss.count_ruptures()
+        ss.num_ruptures
     return out
 
 
@@ -331,8 +331,6 @@ class PreClassicalCalculator(base.HazardCalculator):
             # do nothing for atomic sources except counting the ruptures
             if sg.atomic:
                 # compute weight sequentially
-                for src in sg:
-                    src._num_ruptures = src.count_ruptures()
                 cmakers[grp_id].set_weight(sg, sf)
                 atomic_sources.extend(sg)
             else:

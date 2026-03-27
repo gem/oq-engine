@@ -82,7 +82,6 @@ class MultiPointSource(ParametricSeismicSource):
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
-            ps._num_ruptures = ps.count_ruptures()
             ps.scaling_rate = getattr(self, 'scaling_rate', 1)
             yield ps
 

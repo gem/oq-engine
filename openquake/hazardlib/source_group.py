@@ -241,16 +241,6 @@ class SourceGroup(collections.abc.Sequence):
         """
         return self.sources[0].trt_smr
 
-    # not used by the engine
-    def count_ruptures(self):
-        """
-        Set src._num_ruptures on each source in the group
-        """
-        for src in self:
-            src.nsites = 1
-            src._num_ruptures = src.count_ruptures()
-        return self
-
     # used only in event_based, where weight = num_ruptures
     def split(self, maxweight):
         """
@@ -450,12 +440,9 @@ class CompositeSourceModel:
 
     def count_ruptures(self):
         """
-        Call src.count_ruptures() on each source. Slow.
+        :returns: total number of ruptures in the CompositeSourceModel
         """
-        n = 0
-        for src in self.get_sources():
-            n += src.count_ruptures()
-        return n
+        return sum(src.num_ruptures for src in self.get_sources())
 
     def fix_src_offset(self):
         """
@@ -469,8 +456,7 @@ class CompositeSourceModel:
             for src in srcs:
                 src.id = src_id
                 src.offset = offset
-                if not src._num_ruptures:
-                    src._num_ruptures = src.count_ruptures()
+                src.num_ruptures
                 offset += src._num_ruptures
                 if src._num_ruptures >= TWO30:
                     raise ValueError(

@@ -213,7 +213,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         pass
 
     @property
-    def nm_ruptures(self):
+    def num_ruptures(self):
         """
         Call count_ruptures() once and cache the result
         """

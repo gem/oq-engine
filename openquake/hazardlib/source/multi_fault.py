@@ -234,7 +234,6 @@ class MultiFaultSource(BaseSeismicSource):
                 self.investigation_time,
                 self.infer_occur_rates)
             src.hdf5path = self.hdf5path
-            src._num_ruptures = src.count_ruptures()
             yield src
 
     def count_ruptures(self):

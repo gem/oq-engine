@@ -127,7 +127,7 @@ def calc_hazard_curves(
         for src in grp:
             tom = getattr(src, 'temporal_occurrence_model', None)
             span = tom.time_span if tom else kwargs['investigation_time']
-            src.weight = src.count_ruptures()
+            src.weight = src.num_ruptures
             src.grp_id = i
             src.id = idx
             idx += 1
