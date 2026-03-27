@@ -128,7 +128,7 @@ def sample_cluster(group, num_ses, ses_seed):
         weights = []
         rupids = []
         for src in group:
-            rupids.extend(src.offset + numpy.arange(src.num_ruptures))
+            rupids.extend(src.offset + numpy.arange(src._num_ruptures))
             weights.extend(src.rup_weights)
             src_seed = src.serial(ses_seed)
             for i, rup in enumerate(src.iter_ruptures()):
@@ -153,9 +153,9 @@ def sample_cluster(group, num_ses, ses_seed):
         for src, src_occ in zip(group, src_occs):
             src_seed = src.serial(ses_seed)
             # random distribute in bins equally
-            n_occs = random_histogram(src_occ, src.num_ruptures, src_seed)
-            rseeds = src_seed + numpy.arange(src.num_ruptures)
-            rupids = src.offset + numpy.arange(src.num_ruptures)
+            n_occs = random_histogram(src_occ, src._num_ruptures, src_seed)
+            rseeds = src_seed + numpy.arange(src._num_ruptures)
+            rupids = src.offset + numpy.arange(src._num_ruptures)
             for rup, rupid, n_occ, rseed in zip(
                     src.iter_ruptures(), rupids, n_occs, rseeds):
                 if n_occ:
@@ -193,17 +193,17 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         dt = time.time() - t0
 
         # populate source_data
-        tot = sum(src.num_ruptures for src in sources)
+        tot = sum(src._num_ruptures for src in sources)
         for src in sources:
             source_data['src_id'].append(src.source_id)
-            source_data['nctxs'].append(src.nsites * src.num_ruptures)
-            source_data['nrups'].append(src.num_ruptures)
-            source_data['ctimes'].append(dt * src.num_ruptures / tot)
+            source_data['nctxs'].append(src.nsites * src._num_ruptures)
+            source_data['nrups'].append(src._num_ruptures)
+            source_data['ctimes'].append(dt * src._num_ruptures / tot)
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
 
         # Yield ruptures
-        er = sum(src.num_ruptures for src in sources)
+        er = sum(src._num_ruptures for src in sources)
         dic = dict(
             rup_array=get_rup_array(eb_ruptures, magdist),
             source_data=source_data, eff_ruptures={grp_id: er})
@@ -213,7 +213,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         eff_ruptures = 0
         source_data = AccumDict(accum=[])
         for src in sources:
-            nr = src.num_ruptures
+            nr = src._num_ruptures
             eff_ruptures += nr
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory

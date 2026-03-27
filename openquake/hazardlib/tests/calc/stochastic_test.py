@@ -34,7 +34,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             src.id = i
             src.grp_id = 0
             src.trt_smr = 0
-            src.num_ruptures = src.count_ruptures()
+            src._num_ruptures = src.count_ruptures()
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])

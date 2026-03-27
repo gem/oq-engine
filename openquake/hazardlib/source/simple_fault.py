@@ -206,8 +206,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        if self.num_ruptures:
-            return self.num_ruptures
+        if self._num_ruptures:
+            return self._num_ruptures
         try:
             whole_fault_surface = SimpleFaultSurface.from_fault_data(
                 self.fault_trace, self.upper_seismogenic_depth,
@@ -348,7 +348,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                 continue
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            src.num_ruptures = self._nr[i]
+            src._num_ruptures = self._nr[i]
             yield src
 
     @property

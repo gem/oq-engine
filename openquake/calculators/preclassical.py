@@ -56,7 +56,7 @@ def source_data(sources):
     for src in sources:
         data['src_id'].append(src.source_id)
         data['nctxs'].append(src.nctxs)
-        data['nrupts'].append(src.num_ruptures)
+        data['nrupts'].append(src._num_ruptures)
         data['weight'].append(src.weight)
         data['ctimes'].append(src.dt)
     return data
@@ -98,7 +98,7 @@ def _filter_mag(srcs, min_mag):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        ss.num_ruptures = ss.count_ruptures()
+        ss._num_ruptures = ss.count_ruptures()
     return out
 
 
@@ -332,7 +332,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # compute weight sequentially
                 for src in sg:
-                    src.num_ruptures = src.count_ruptures()
+                    src._num_ruptures = src.count_ruptures()
                 cmakers[grp_id].set_weight(sg, sf)
                 atomic_sources.extend(sg)
             else:
@@ -391,8 +391,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 for src in srcs:
                     if src.code not in b'pP':
                         assert src.weight, src
-                    assert src.num_ruptures, src
-                    acc[src.code] += int(src.num_ruptures)
+                    assert src._num_ruptures, src
+                    acc[src.code] += int(src._num_ruptures)
         self.csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__

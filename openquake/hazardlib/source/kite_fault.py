@@ -146,8 +146,8 @@ class KiteFaultSource(ParametricSeismicSource):
         :returns:
             The number of ruptures that this source generates
         """
-        if self.num_ruptures:
-            return self.num_ruptures
+        if self._num_ruptures:
+            return self._num_ruptures
     
         # Counting ruptures and rates
         self._rupture_count = collections.Counter()
@@ -237,7 +237,7 @@ class KiteFaultSource(ParametricSeismicSource):
             src = copy.copy(self)
             mag = float(mag_str)
             src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_str]])
-            src.num_ruptures = self._rupture_count[mag_str]
+            src._num_ruptures = self._rupture_count[mag_str]
             yield src
 
     @property

@@ -244,11 +244,11 @@ class SourceGroup(collections.abc.Sequence):
     # not used by the engine
     def count_ruptures(self):
         """
-        Set src.num_ruptures on each source in the group
+        Set src._num_ruptures on each source in the group
         """
         for src in self:
             src.nsites = 1
-            src.num_ruptures = src.count_ruptures()
+            src._num_ruptures = src.count_ruptures()
         return self
 
     # used only in event_based, where weight = num_ruptures
@@ -270,8 +270,8 @@ class SourceGroup(collections.abc.Sequence):
         out = []
         def weight(src):
             if src.code == b'F':  # consider it much heavier
-                return src.num_ruptures * 25
-            return src.num_ruptures
+                return src._num_ruptures * 25
+            return src._num_ruptures
         for block in block_splitter(sources, maxweight, weight):
             sg = copy.copy(self)
             sg.sources = block
@@ -469,10 +469,10 @@ class CompositeSourceModel:
             for src in srcs:
                 src.id = src_id
                 src.offset = offset
-                if not src.num_ruptures:
-                    src.num_ruptures = src.count_ruptures()
-                offset += src.num_ruptures
-                if src.num_ruptures >= TWO30:
+                if not src._num_ruptures:
+                    src._num_ruptures = src.count_ruptures()
+                offset += src._num_ruptures
+                if src._num_ruptures >= TWO30:
                     raise ValueError(
                         '%s contains more than 2**30 ruptures' % src)
                 # print(src, src.offset, offset)
@@ -510,13 +510,13 @@ class CompositeSourceModel:
         tot_weight = 0
         nr = 0
         for src in srcs:
-            nr += src.num_ruptures
+            nr += src._num_ruptures
             tot_weight += src.weight
-            if src.code == b'C' and src.num_ruptures > 20_000:
+            if src.code == b'C' and src._num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
                        'ruptures with complex_fault_mesh_spacing={} km')
                 spc = oq.complex_fault_mesh_spacing
-                logging.info(msg.format(src, src.num_ruptures, spc))
+                logging.info(msg.format(src, src._num_ruptures, spc))
         assert tot_weight
         max_weight = tot_weight / (oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
@@ -590,7 +590,7 @@ class CompositeSourceModel:
             lens.append(len(src.trt_smrs))
             row = [srcid, src.grp_id, src.code,
                    0, 0, 0,  # CALC_TIME, NUM_CTXS, EST_CTXS
-                   sum(s.num_ruptures for s in srcs),
+                   sum(s._num_ruptures for s in srcs),
                    sum(s.weight for s in srcs)]
             data[srcid] = row
         logging.info('There are %d groups and %d sources with '

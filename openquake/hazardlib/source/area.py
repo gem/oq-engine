@@ -114,8 +114,8 @@ class AreaSource(ParametricSeismicSource):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`
         for description of parameters and return value.
         """
-        if self.num_ruptures:
-            return self.num_ruptures
+        if self._num_ruptures:
+            return self._num_ruptures
         polygon_mesh = self.polygon.discretize(self.area_discretization)
         return (len(polygon_mesh) *
                 len(self.get_annual_occurrence_rates()) *
@@ -173,7 +173,7 @@ class AreaSource(ParametricSeismicSource):
                 nodal_plane_distribution=self.nodal_plane_distribution,
                 hypocenter_distribution=self.hypocenter_distribution,
                 temporal_occurrence_model=self.temporal_occurrence_model)
-            pt.num_ruptures = pt.count_ruptures()
+            pt._num_ruptures = pt.count_ruptures()
             yield pt
 
     def wkt(self):

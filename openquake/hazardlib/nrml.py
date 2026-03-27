@@ -142,7 +142,7 @@ class SourceModel(collections.abc.Sequence):
             srcs = []
             for src_id in sorted(grp):
                 src = grp[src_id]
-                src.num_ruptures = src.count_ruptures()
+                src._num_ruptures = src.count_ruptures()
                 srcs.append(src)
             grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
             self.src_groups.append(grp)

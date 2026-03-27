@@ -129,7 +129,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             assert Z, relt  # sanity check
             groups = relt.reduce_groups(csm.src_groups)
             assert groups, 'No groups for %s' % source_id
-            rupts = sum(src.num_ruptures for g in groups for src in g)
+            rupts = sum(src._num_ruptures for g in groups for src in g)
             logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
                          lon, lat, source_id, Z, rupts)
             for args in disagg.gen_disagg_source(

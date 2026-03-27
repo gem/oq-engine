@@ -330,7 +330,7 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
                               case_24.__file__, delta=1E-3)
-        total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
+        total = sum(src._num_ruptures for src in self.calc.csm.get_sources())
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
         # NB: rjb is depth-independent, the hypocenters could be collapsed
