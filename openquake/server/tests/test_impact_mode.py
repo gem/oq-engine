@@ -159,6 +159,8 @@ class ImpactModeTestCase(django.test.TestCase):
         self.user.profile.save()
         self.user.groups.remove(self.users_who_can_view_exposure)
         self.user.save()
+        # bypass the authentication backend and signal overhead
+        self.c.force_login(self.user)
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
