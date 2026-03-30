@@ -47,8 +47,10 @@ def build_ses(dstore, calcs, out_file):
         with hdf5.File(out_file, 'w') as h5:
             logging.info('Importing sites')
             base.import_sites_hdf5(h5, fnames)
+        with hdf5.File(out_file, 'w') as h5:
             logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
+        with hdf5.File(out_file, 'w') as h5:
             save_performance(h5, calcs, ['total sample_ruptures',
                                          'total read_source_model',
                                          'total count_ruptures'])
