@@ -48,13 +48,14 @@ def migrate_before_tests():
     """
     serverdir = pathlib.Path(__file__).parent.parent
     appmode = os.environ.get('OQ_APPLICATION_MODE', '').upper()
-    # Generate the files needed for user registration and email notifications
+    # generate the files needed for user registration and email notifications
     ext = (f'.{appmode.lower()}.tmpl'
            if appmode in ('AELO', 'IMPACT')
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     # check if migrations are needed and run them in case they are
     subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
+    # load cookie-related fixtures when authentication is enabled
     if appmode != 'PUBLIC':
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
