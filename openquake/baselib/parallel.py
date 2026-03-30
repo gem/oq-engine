@@ -714,7 +714,8 @@ def kill_master(signum, frame):
     except ChildProcessError:  # no children
         return
     else:
-        if os.WIFEXITED(wait_status) or os.WIFSTOPPED(wait_status):
+        if os.WIFEXITED(wait_status) or os.WIFSTOPPED(
+                wait_status) or os.WIFCONTINUED(wait_status):
             pass
         else:
             raise MasterKilled(f'A worker was killed: {pid=}, {wait_status=}')
