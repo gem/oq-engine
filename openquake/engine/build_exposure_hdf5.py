@@ -22,14 +22,13 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance
+from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
-from openquake.engine.global_ses import dt
 
 U16 = numpy.uint16
 F32 = numpy.float32
@@ -148,7 +147,9 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
                         rows.append(q)
     smodel = build_site_model(grm_dir)
     dstore['site_model'] = smodel
-    dstore['model_trt_gsim_weight'] = numpy.array(rows, dt)
+    dtlist = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr),
+              ('weight', float)]
+    dstore['model_trt_gsim_weight'] = numpy.array(rows, dtlist)
     return len(smodel)
 
 
