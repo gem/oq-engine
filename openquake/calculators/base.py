@@ -1472,6 +1472,7 @@ def import_ruptures_hdf5(h5, fnames):
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
+            h5.flush()
             rup = f['ruptures'][:]
             rup['id'] += offset
             rup['geom_id'] += offset
