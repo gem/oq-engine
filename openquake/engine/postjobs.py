@@ -49,7 +49,9 @@ def build_ses(dstore, calcs, out_file):
             base.import_sites_hdf5(h5, fnames)
             logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
-            save_performance(h5, calcs, ['total sample_ruptures'])
+            save_performance(h5, calcs, ['total sample_ruptures',
+                                         'total read_source_model',
+                                         'total count_ruptures'])
             h5['oqparam'] = oq
     print(mon)
 
