@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os
 import pytest
 import glob
@@ -54,7 +55,9 @@ def migrate_before_tests():
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     # check if migrations are needed and run them in case they are
-    subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
+    # (prepend sys.executable so Windows knows to run this with Python)
+    manage = [sys.executable, serverdir / 'manage.py']
+    subprocess.run([*manage, 'migrate'], check=True)
     # load cookie-related fixtures when authentication is enabled
     if appmode != 'PUBLIC':
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
