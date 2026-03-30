@@ -43,21 +43,22 @@ def copy_from_templates_if_needed(tmpldir, ext):
 @pytest.fixture(scope="session", autouse=True)
 def migrate_before_tests():
     """
-    Migrate the database (if not already done) and
-    generate the registration files (if not already done)
+    Generate registration files before running migrations (if needed),
+    then load data fixtures
     """
     serverdir = pathlib.Path(__file__).parent.parent
-    appmode = os.environ.get('OQ_APPLICATION_MODE')
-    if appmode in ('AELO', 'IMPACT'):
-        ext = f'.{appmode.lower()}.tmpl'
-        subprocess.run([serverdir/'manage.py', 'migrate'])
-        if appmode == 'AELO':
-            js = (serverdir / 'fixtures/0001_cookie_consent_required_'
-                  'plus_hide_cookie_bar.json')
-            subprocess.run([serverdir/'manage.py', 'loaddata', js])
-    else:
-        ext = '.default.tmpl'
+    appmode = os.environ.get('OQ_APPLICATION_MODE', '').upper()
+    # Generate the files needed for user registration and email notifications
+    ext = (f'.{appmode.lower()}.tmpl'
+           if appmode in ('AELO', 'IMPACT')
+           else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
+    # check if migrations are needed and run them in case they are
+    subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
+    if appmode != 'PUBLIC':
+        js = (serverdir / 'fixtures/0001_cookie_consent_required_'
+                          'plus_hide_cookie_bar.json')
+        subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
     yield
 
 
