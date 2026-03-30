@@ -126,6 +126,10 @@ def test_site_model():  # 5 sites
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == 15875
 
+    op_df = calc.datastore.read_df('operations')
+    ae(op_df.operation.unique(), ['total sample_ruptures'])
+    assert (op_df.time_sec > 0).all()
+
 
 def teardown_module():
     if os.path.exists(RUP_HDF5):

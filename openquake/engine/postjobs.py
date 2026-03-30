@@ -49,6 +49,7 @@ def build_ses(dstore, calcs, out_file):
             base.import_sites_hdf5(h5, fnames)
             logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
+            save_performance(h5, calcs, ['total sample_ruptures'])
             h5['oqparam'] = oq
     print(mon)
 
@@ -110,16 +111,16 @@ def save_performance(dstore, calcs, operations):
     """
     # tested in AreaSourceClassicalPSHA/job.toml
     n = len(calcs)
-    dic = {'calc_id': np.uint32(calcs), 'model': ['???']*n}
-    for op in operations:
-        dic[op.replace(' ', '_')] = np.zeros(n)
+    dic = {'operation': ['']*n, 'calc_id': np.uint32(calcs),
+           'time_sec': [0]*n, 'model': ['???']*n}
     for i, calc_id in enumerate(calcs):
         ds = datastore.read(calc_id)
         dic['model'][i] = ds['oqparam'].mosaic_model or '???'
         pdata = ds['performance_data'][:]
         for op in operations:
-            opdata = pdata[pdata['operation'] == op.encode('ascii')]
-            dic[op.replace(' ', '_')][i] = opdata['time_sec'].sum()
+            dic['operation'][i] = op
+            ok = pdata['operation'] == op.encode('ascii')
+            dic['time_sec'][i] = pdata[ok]['time_sec'].sum()
     df = pd.DataFrame(dic)
     dstore.create_df('operations', df)
     print(views.text_table(df, ext='org'))
