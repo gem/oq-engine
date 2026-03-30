@@ -20,6 +20,7 @@
 import sys
 import logging
 import operator
+import faulthandler
 
 from openquake.baselib import sap, general
 from openquake.calculators import export
@@ -40,6 +41,7 @@ for key in DISPLAY_NAME:
 
 # set logging and warnings
 def oq():
+    faulthandler.enable()
     logging.basicConfig(level=logging.INFO, handlers=[])
     sap.run(commands, prog='oq')
 
