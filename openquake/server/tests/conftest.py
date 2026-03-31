@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
 import pytest
 import glob
@@ -54,12 +53,10 @@ def migrate_before_tests():
            if appmode in ('AELO', 'IMPACT')
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
-    # check if migrations are needed and run them in case they are
-    # (prepend sys.executable so Windows knows to run this with Python)
-    manage = [sys.executable, serverdir / 'manage.py']
-    subprocess.run([*manage, 'migrate'], check=True)
-    # load cookie-related fixtures when authentication is enabled
-    if appmode != 'PUBLIC':
+    if appmode in ['AELO', 'IMPACT']:
+        # run migrations if needed
+        subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
+        # load cookie-related fixtures when authentication is enabled
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
         subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
@@ -118,7 +115,8 @@ def authenticated_session(db, user):
 
 
 @pytest.fixture
-def authenticated_page(page, live_server, authenticated_session, application_mode):
+def authenticated_page(
+        page, live_server, authenticated_session, application_mode):
     page.context.clear_cookies()
     page.context.add_cookies([{
         "name": "sessionid",
@@ -130,7 +128,8 @@ def authenticated_page(page, live_server, authenticated_session, application_mod
 
 
 @pytest.fixture
-def ui_logged_in_page(page, live_server, user, test_credentials, application_mode):
+def ui_logged_in_page(
+        page, live_server, user, test_credentials, application_mode):
     page.context.clear_cookies()
     page.goto(f"{live_server.url}/engine/")
 
