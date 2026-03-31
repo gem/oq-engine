@@ -395,8 +395,10 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
+            path = dstore.filename
+            breakpoint()
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, dstore.filename)
+                    sec_perils, station_data_sites, path)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
