@@ -47,6 +47,7 @@ def main(calc_id: int, rup_id: int):
             dfs.append(pandas.DataFrame(res['gmfdata']))
         gmf_df = pandas.concat(dfs)
         dstore.create_df('gmf_data', gmf_df)
+        dstore['sitecol'] = sites
     print(gmf_df)
 
 
