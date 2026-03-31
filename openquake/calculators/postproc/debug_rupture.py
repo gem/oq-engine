@@ -18,7 +18,6 @@
 import os
 import logging
 from datetime import datetime
-import numpy
 import pandas
 from openquake.baselib import sap
 from openquake.commonlib import datastore, logs
@@ -41,8 +40,6 @@ def main(calc_id: int, rup_id: int):
     rups = frups[frups['id'] == rup_id]
     print('model =', rups[0]['model'].decode('ascii'))
     sites = parent['sitecol']
-    events = parent['events'][:]
-    evs = events[numpy.isin(events['rup_id'], rups['id'])]
     os.environ['OQ_RUPTURE'] = str(rup_id)
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
     with job, dstore:
@@ -53,7 +50,6 @@ def main(calc_id: int, rup_id: int):
         gmf_df = pandas.concat(dfs)
         dstore.create_df('gmf_data', gmf_df)
         dstore['sitecol'] = sites
-        dstore['events'] = evs
         dstore['/'].attrs['date'] = datetime.now().isoformat()[:19]
         dstore['/'].attrs['engine_version'] = logs.dbcmd('engine_version')
         logging.info(f'Created {dstore.filename}')

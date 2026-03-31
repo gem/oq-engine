@@ -463,7 +463,10 @@ def export_gmf_data_csv(ekey, dstore):
     for imt in oq.sec_imts:
         ren[imt] = imt
     df.rename(columns=ren, inplace=True)
-    event_id = dstore['events']['id']
+    try:
+        event_id = dstore['relevant_events']['id']
+    except KeyError:
+        event_id = dstore['events']['id']
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
