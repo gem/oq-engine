@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import logging
 import pandas
 from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.calculators.event_based import (
     starmap_from_rups, event_based)
 
@@ -48,6 +49,8 @@ def main(calc_id: int, rup_id: int):
         gmf_df = pandas.concat(dfs)
         dstore.create_df('gmf_data', gmf_df)
         dstore['sitecol'] = sites
+        dstore['/'].attrs['engine_version'] = logs.dbcmd('engine_version')
+        logging.info(f'Created {dstore.filename}')
     print(gmf_df)
 
 
