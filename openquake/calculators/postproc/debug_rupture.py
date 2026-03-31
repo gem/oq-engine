@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
+from datetime import datetime
 import pandas
 from openquake.baselib import sap
 from openquake.commonlib import datastore, logs
@@ -49,6 +50,7 @@ def main(calc_id: int, rup_id: int):
         gmf_df = pandas.concat(dfs)
         dstore.create_df('gmf_data', gmf_df)
         dstore['sitecol'] = sites
+        dstore['/'].attrs['date'] = datetime.now().isoformat()[:19]
         dstore['/'].attrs['engine_version'] = logs.dbcmd('engine_version')
         logging.info(f'Created {dstore.filename}')
     print(gmf_df)
