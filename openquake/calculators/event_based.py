@@ -263,7 +263,7 @@ def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             try:
                 complete = f['complete']  # the current dstore
             except KeyError:
-                complete = f['sitecol']  # the parent dstore
+                complete = f['sitecol']
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
@@ -395,10 +395,8 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
-            path = dstore.filename
-            breakpoint()
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, path)
+                    sec_perils, station_data_sites, dstore.filename)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
