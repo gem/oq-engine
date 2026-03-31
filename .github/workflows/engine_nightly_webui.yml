@@ -59,7 +59,6 @@ jobs:
           PY_VER=$(echo "${{ matrix.python-version }}" | tr -d '.')
           pip install -r requirements-py${PY_VER}-impact-linux64.txt
           oq engine --upgrade-db
-          ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright

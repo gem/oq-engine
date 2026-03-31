@@ -643,6 +643,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
+    t0 = time.time()
     wfjob, dstore, names, descr = prepare_workflow(params, workflow_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
@@ -699,7 +700,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         sap.run_func(success)
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
-    dt = wfjob.dt / 3600.
+    dt = (time.time() - t0) / 3600.
     with wfjob:
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:
