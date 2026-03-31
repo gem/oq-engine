@@ -257,7 +257,12 @@ def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     cmaker.scenario = 'scenario' in oq.calculation_mode
     cmaker.init_monitoring(monitor)
     with rmon:
-        proxies = get_proxies(hdf5path, rups)
+        try:
+            proxies = get_proxies(hdf5path, rups)
+        except KeyError:  # search in the parent
+            ddir = datastore.get_datadir()
+            path = os.path.join(ddir, 'calc_%d.hdf5' % oq.hazard_calculation_id)
+            proxies = get_proxies(path, rups)
     with smon:
         with hdf5.File(hdf5path) as f:
             try:
