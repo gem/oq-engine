@@ -46,7 +46,7 @@ def main(calc_id: int, rup_id: int):
                 event_based, oq, rups[0], sites, None, (), dstore):
             dfs.append(pandas.DataFrame(res['gmfdata']))
         gmf_df = pandas.concat(dfs)
-        dstore.create_dset('gmf_data', gmf_df)
+        dstore.create_df('gmf_data', gmf_df)
     print(gmf_df)
 
 
