@@ -43,7 +43,7 @@ def main(calc_id: int, rup_id: int):
     with job, dstore:
         dfs = []
         for res in starmap_from_rups(
-                event_based, oq, rups[0], sites, None, (), dstore):
+                event_based, oq, rups[0], sites, None, (), parent):
             dfs.append(pandas.DataFrame(res['gmfdata']))
         gmf_df = pandas.concat(dfs)
     print(gmf_df)
