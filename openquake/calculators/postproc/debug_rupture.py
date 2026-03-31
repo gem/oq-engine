@@ -53,7 +53,6 @@ def main(calc_id: int, rup_id: int):
         dstore['/'].attrs['date'] = datetime.now().isoformat()[:19]
         dstore['/'].attrs['engine_version'] = logs.dbcmd('engine_version')
         logging.info(f'Created {dstore.filename}')
-    print(gmf_df)
 
 
 if __name__ == '__main__':

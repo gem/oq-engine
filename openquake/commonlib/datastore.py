@@ -520,7 +520,7 @@ class DataStore(collections.abc.MutableMapping):
         else:
             return dict(
                 generated_by='OpenQuake engine %s' % a['engine_version'],
-                start_date=a['date'], checksum=a['checksum32'])
+                start_date=a['date'], checksum=a.get('checksum32', ''))
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed
