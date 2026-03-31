@@ -56,7 +56,7 @@ def migrate_before_tests():
     if appmode in ['AELO', 'IMPACT']:
         # run migrations if needed
         subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
-        # load cookie-related fixtures when authentication is enabled
+        # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
         subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
