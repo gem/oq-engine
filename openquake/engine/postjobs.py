@@ -47,8 +47,14 @@ def build_ses(dstore, calcs, out_file):
         with hdf5.File(out_file, 'w') as h5:
             logging.info('Importing sites')
             base.import_sites_hdf5(h5, fnames)
+
             logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
+
+            logging.info('Importing operations')
+            save_performance(h5, calcs, ['total sample_ruptures',
+                                         'total read_source_model',
+                                         'total count_ruptures'])
             h5['oqparam'] = oq
     print(mon)
 
@@ -104,6 +110,10 @@ def post_aelo(dstore, calcs):
         print(f'Stored {fname}')
 
 
+def _fix(operation):
+    return operation.replace(' ', '_').replace('total_', '')
+
+
 def save_performance(dstore, calcs, operations):
     """
     Save the runtimes of the given operations, one entry per calculation
@@ -112,14 +122,14 @@ def save_performance(dstore, calcs, operations):
     n = len(calcs)
     dic = {'calc_id': np.uint32(calcs), 'model': ['???']*n}
     for op in operations:
-        dic[op.replace(' ', '_')] = np.zeros(n)
+        dic[_fix(op)] = ['']*n
     for i, calc_id in enumerate(calcs):
         ds = datastore.read(calc_id)
         dic['model'][i] = ds['oqparam'].mosaic_model or '???'
         pdata = ds['performance_data'][:]
         for op in operations:
-            opdata = pdata[pdata['operation'] == op.encode('ascii')]
-            dic[op.replace(' ', '_')][i] = opdata['time_sec'].sum()
+            ok = pdata['operation'] == op.encode('ascii')
+            dic[_fix(op)][i] = pdata[ok]['time_sec'].sum()
     df = pd.DataFrame(dic)
     dstore.create_df('operations', df)
     print(views.text_table(df, ext='org'))
