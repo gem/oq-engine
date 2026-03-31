@@ -21,7 +21,6 @@ from openquake.baselib import sap
 from openquake.commonlib import datastore
 from openquake.calculators.event_based import (
     starmap_from_rups, event_based)
-from openquake.calculators.views import text_table
 
 
 def main(calc_id: int, rup_id: int):
@@ -29,23 +28,25 @@ def main(calc_id: int, rup_id: int):
     An utility to debug event based calculations
     $ python -m openquake.calculators.postproc.debug <calc_id>
     """
-    dstore = datastore.read(calc_id)  # read the original calculation
-    oq = dstore['oqparam']
+    parent = datastore.read(calc_id)
+    oq = parent['oqparam']
     try:
-        frups = dstore['filtered_ruptures'][:]
+        frups = parent['filtered_ruptures'][:]
     except KeyError:
-        frups = dstore['ruptures'][:]
+        frups = parent['ruptures'][:]
     
     rups = frups[frups['id'] == rup_id]
     print('model =', rups[0]['model'].decode('ascii'))
-    sites = dstore['sitecol']
+    sites = parent['sitecol']
     os.environ['OQ_RUPTURE'] = str(rup_id)
-    dfs = []
-    for res in starmap_from_rups(
-            event_based, oq, rups[0], sites, None, (), dstore):
-        dfs.append(pandas.DataFrame(res['gmfdata']))
-    gmf_df = pandas.concat(dfs)
-    print(text_table(gmf_df, ext='org'))
+    job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
+    with job, dstore:
+        dfs = []
+        for res in starmap_from_rups(
+                event_based, oq, rups[0], sites, None, (), dstore):
+            dfs.append(pandas.DataFrame(res['gmfdata']))
+        gmf_df = pandas.concat(dfs)
+    print(gmf_df)
 
 
 if __name__ == '__main__':
