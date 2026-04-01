@@ -328,8 +328,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
                 self.datastore = datastore.read(old_job_id)
-                logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
-                           self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                logs.dbcmd(
+                    "UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
+                    self.datastore.filename[:-5], calc_id)  # strip .hdf5
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported
@@ -621,8 +622,9 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
-        if ('source_model_logic_tree' in oq.inputs or
-            'source_model' in oq.inputs) and oq.hazard_calculation_id is None:
+        if oq.hazard_calculation_id is None and (
+                'source_model_logic_tree' in oq.inputs
+                or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
@@ -746,7 +748,8 @@ class HazardCalculator(BaseCalculator):
             if oq.impact and 'mmi' in oq.inputs:
                 logging.info('Computing MMI-aggregated values')
                 mmi_df = self.assetcol.get_mmi_values(
-                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
+                    oq.aggregate_by, oq.inputs['mmi'],
+                    oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
                 else:
@@ -936,7 +939,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
                                      'gzip', **attrs)
             if len(self.crmodel.tmap_df):
-                self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
+                self.datastore.create_df(
+                    'taxmap', self.crmodel.tmap_df, 'gzip')
 
     def _plot_assets(self):
         # called by post_risk in IMPACT mode
@@ -966,7 +970,7 @@ class HazardCalculator(BaseCalculator):
         if self.sitecol and oq.imtls:
             logging.info('Read N=%d hazard sites and L=%d hazard levels',
                          len(self.sitecol), oq.imtls.size)
-        manysites = (oq.calculation_mode=='event_based'
+        manysites = (oq.calculation_mode == 'event_based'
                      and oq.ground_motion_fields
                      and len(self.sitecol) > oq.max_sites_disagg)
         if manysites and not oq.minimum_magnitude:
@@ -1087,6 +1091,7 @@ class HazardCalculator(BaseCalculator):
 
     def _read_risk3(self):
         oq = self.oqparam
+        station_sids = set()
         if 'station_data' in oq.inputs:
             logging.info('Reading station data from %s',
                          oq.inputs['station_data'])
@@ -1097,6 +1102,8 @@ class HazardCalculator(BaseCalculator):
                                            duplicates_strategy='avg')
             self.datastore.create_df('station_data', self.station_data)
             oq.observed_imts = self.observed_imts
+            if hasattr(self.station_data, 'site_id'):
+                station_sids = set(self.station_data['site_id'].values)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs or oq.impact:
@@ -1113,10 +1120,12 @@ class HazardCalculator(BaseCalculator):
                     # (only the vs30 counts)
                     mode = ('warn' if oq.region_grid_spacing
                             or oq.siteid else 'strict')
-                    self.sitecol.assoc(sm, assoc_dist, mode)
+                    self.sitecol.assoc(sm, assoc_dist, mode,
+                                       station_sids=station_sids)
                     if 'station_data' in oq.inputs:
                         # the complete sitecol is required
-                        self.sitecol.complete.assoc(sm, assoc_dist, mode)
+                        self.sitecol.complete.assoc(sm, assoc_dist, mode,
+                                                    station_sids=station_sids)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
