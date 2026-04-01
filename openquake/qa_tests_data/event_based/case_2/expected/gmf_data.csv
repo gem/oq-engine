@@ -1,3 +1,0 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.26.0-git31ba39f631', start_date='2026-04-01T05:03:50', checksum=2464175136, kind='mean', investigation_time=1.0, imt='PGA'"
-custom_site_id,lon,lat,depth,poe-0.1000000,poe-0.4000000,poe-0.6000000,poe-1.0000000
-7zzzzzzz,0.00000,0.00000,0.00000,6.644494E-03,1.665279E-03,0.000000E+00,0.000000E+00
