@@ -822,6 +822,7 @@ class Starmap(object):
         self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
+        self.monitor.version = h5['/'].attrs.get('engine_version')
         self.progress = progress
         self.h5 = h5
         self.task_queue = []
