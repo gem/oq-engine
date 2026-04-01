@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
+from unittest.mock import patch
 import pandas
 from openquake.baselib import sap
 from openquake.commonlib import datastore
@@ -25,6 +26,7 @@ from openquake.calculators.event_based import (
     starmap_from_rups, event_based)
 
 
+# tested in event_based test_case_2
 def main(calc_id: int, rup_id: int):
     """
     An utility to debug event based calculations
@@ -40,9 +42,8 @@ def main(calc_id: int, rup_id: int):
     logging.info('model = %s', rups[0]['model'].decode('ascii'))
 
     sites = parent['sitecol']
-    os.environ['OQ_RUPTURE'] = str(rup_id)
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
-    with job, dstore:
+    with job, patch.dict(os.environ, {'OQ_RUPTURE': str(rup_id)}):
         dfs = []
         for res in starmap_from_rups(
                 event_based, oq, rups[0], sites, None, (), dstore):
@@ -52,7 +53,7 @@ def main(calc_id: int, rup_id: int):
         dstore['sitecol'] = sites
         save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
-
+    return gmf_df
 
 if __name__ == '__main__':
     sap.run(main)
