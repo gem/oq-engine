@@ -146,6 +146,8 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         models = MODELS
     for model in models:
         ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+        if not os.path.exists(ini):
+            ini = os.path.join(mosaic_dir, model, 'in', 'job.ini')
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job_vs30.ini"')
