@@ -226,8 +226,7 @@ class LogContext:
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None, workflow_id=None,
-                 pdb=None):
+                 user_name=None, hc_id=None, host=None, pdb=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
             raise RuntimeError('You forgot to run oq engine --upgrade-db')
         self.log_level = log_level
@@ -236,22 +235,24 @@ class LogContext:
         self.params = params
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
-        self.workflow_id = workflow_id
         self.pdb = pdb
         calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
+            # create a new record
+            self.new = True
             datadir = get_datadir()
             self.calc_id = dbcmd(
                 'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
                 user_name, None if isinstance(hc_id, str) else hc_id,
-                host, workflow_id)
+                host)
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
         else:
             # assume the calc_id was alreay created in the db
+            self.new = False
             assert calc_id > 0, calc_id
             self.calc_id = calc_id
 
@@ -322,8 +323,7 @@ class LogContext:
 
 
 def init(job_ini, dummy=None, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None, workflow_id=None,
-         pdb=None):
+         user_name=None, hc_id=None, host=None, pdb=None):
     """
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param dummy: ignored parameter, exists for backward compatibility
@@ -332,7 +332,6 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param workflow_id: workflow ID (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -345,4 +344,4 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     if not isinstance(job_ini, dict):
         job_ini = readinput.get_params(job_ini)
     return LogContext(job_ini, log_level, log_file, user_name, hc_id,
-                      host, workflow_id, pdb)
+                      host, pdb)

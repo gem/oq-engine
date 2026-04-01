@@ -814,7 +814,7 @@ class Starmap(object):
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
             self.calc_id = int(match.group(1))
         else:
-            # TODO: see if we can forbid this case
+            # for instance in get_composite_source_model(oq)
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
@@ -822,6 +822,8 @@ class Starmap(object):
         self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
+        if distribute == 'zmq':
+            self.monitor.version = h5['/'].attrs.get('engine_version')
         self.progress = progress
         self.h5 = h5
         self.task_queue = []

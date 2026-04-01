@@ -220,14 +220,14 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
+    version = None  # set by Starmap
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None, version=None, dbserver_host='127.0.0.1'):
+                 h5=None, dbserver_host='127.0.0.1'):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
         self.h5 = h5
-        self.version = version
         self._mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()

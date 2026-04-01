@@ -6,9 +6,6 @@ DISABLE_VERSION_WARNING = True
 
 IMPACT_DEFAULT_USGS_ID = ''
 
-# Set it to False in IMPACT mode
-# ALLOW_DATASTORE_DOWNLOAD = False
-
 # By default it is 'openquake'
 # WEBUI_USER =
 

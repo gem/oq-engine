@@ -1883,7 +1883,8 @@ def calc_datastore(request, job_id):
     """
     user_level = get_user_level(request)
     if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
-        return HttpResponseForbidden()
+        err_msg = f'{user_level=}, {settings.ALLOW_DATASTORE_DOWNLOAD=}'
+        return HttpResponseForbidden(err_msg)
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
