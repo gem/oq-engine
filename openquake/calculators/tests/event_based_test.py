@@ -221,8 +221,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        gmf_df = debug_rupture.main(self.calc.datastore.calc_id, 56)
-        self.assertEqual(len(gmf_df), 1)
+        dstore = debug_rupture.main(self.calc.datastore.calc_id, 56)
+
+        [gmfs_path, sites_path] = export(('gmf_data', 'csv'), dstore)
+        self.assertEqualFiles('expected/gmf1.csv', gmfs_path)
 
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')

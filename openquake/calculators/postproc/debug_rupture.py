@@ -53,7 +53,7 @@ def main(calc_id: int, rup_id: int):
         dstore['sitecol'] = sites
         save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
-    return gmf_df
+    return dstore
 
 if __name__ == '__main__':
     sap.run(main)
