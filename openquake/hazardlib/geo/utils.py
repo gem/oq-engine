@@ -201,14 +201,16 @@ class _GeographicObjects(object):
         min_dist, idx = self.kdtree.query(xyz)
         return self.objects[idx], min_dist
 
-    def assoc(self, sitecol, assoc_dist, mode):
+    def assoc(self, sitecol, assoc_dist, mode, station_sids=None):
         """
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
+        :param station_sids: set of site ids that are stations
         :returns: filtered site collection, filtered objects, discarded
         """
         assert mode in 'strict warn filter', mode
+        station_sids = station_sids or set()
         dic = {}
         discarded = []
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
@@ -226,9 +228,15 @@ class _GeographicObjects(object):
             elif mode == 'filter':
                 discarded.append(obj)
             elif mode == 'strict':
-                raise SiteAssociationError(
-                    'There is nothing closer than %s km '
-                    'to site (%s %s)' % (assoc_dist, lon, lat))
+                if sid in station_sids:
+                    dic[sid] = obj
+                    logging.warning(
+                        'There is nothing closer than %s km '
+                        'to station (%s %s)' % (assoc_dist, lon, lat))
+                else:
+                    raise SiteAssociationError(
+                        'There is nothing closer than %s km '
+                        'to site (%s %s)' % (assoc_dist, lon, lat))
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
