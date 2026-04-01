@@ -245,7 +245,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
+def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -257,13 +257,16 @@ def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     cmaker.scenario = 'scenario' in oq.calculation_mode
     cmaker.init_monitoring(monitor)
     with rmon:
-        proxies = get_proxies(hdf5path, rups)
+        try:
+            proxies = get_proxies(dstore.filename, rups)
+        except KeyError:  # search in the parent
+            proxies = get_proxies(dstore.parent.filename, rups)
     with smon:
-        with hdf5.File(hdf5path) as f:
+        with dstore as f:
             try:
                 complete = f['complete']  # the current dstore
             except KeyError:
-                complete = f['sitecol']  # the parent dstore
+                complete = f['sitecol']
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
@@ -396,7 +399,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, dstore.filename)
+                    sec_perils, station_data_sites, dstore)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)

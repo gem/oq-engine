@@ -397,7 +397,8 @@ def export_median_spectrum_disagg(ekey, dstore):
             comment['site_id'] = 0
             comment['lon'] = sitecol.lons[0]
             comment['lat'] = sitecol.lats[0]
-            fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            fname = dstore.export_path(
+                f'median_spectrum_disagg-{grp_id}-{imt}.csv')
             arr.sort(order='rup_id')
             writer.save(arr, fname, comment=comment)
             fnames.append(fname)
@@ -462,7 +463,10 @@ def export_gmf_data_csv(ekey, dstore):
     for imt in oq.sec_imts:
         ren[imt] = imt
     df.rename(columns=ren, inplace=True)
-    event_id = dstore['events']['id']
+    try:
+        event_id = dstore['relevant_events']['id']
+    except KeyError:
+        event_id = dstore['events']['id']
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)

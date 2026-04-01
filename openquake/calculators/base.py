@@ -204,6 +204,26 @@ def fix_hc_id(oq):
         raise NotImplementedError(f'hc={path}')
 
 
+def save_version_checksum(oq, dstore):
+    """
+    Store the engine version and other attributes in the root dataset
+    """
+    attrs = dstore['/'].attrs
+    attrs['engine_version'] = logs.dbcmd('engine_version')
+    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+        attrs['aelo_version'] = get_aelo_version()
+    attrs['date'] = datetime.now().isoformat()[:19]
+    if 'checksum32' in attrs:
+        # if save_params has been already called, don't recompute
+        return
+    attrs['input_size'] = size = oq.get_input_size()
+    attrs['checksum32'] = checksum = readinput.get_checksum32(
+        oq, dstore.hdf5)
+    logging.info(f'Checksum of the inputs: {checksum} '
+                 f'(total size {general.humansize(size)})')
+    return checksum
+
+        
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -221,15 +241,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id):
         self.oqparam = oqparam
         self.datastore = datastore.new(calc_id, oqparam)
-        self.engine_version = logs.dbcmd('engine_version')
-        if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
-            self.aelo_version = get_aelo_version()
         # save the version in the monitor, to be used in the version
         # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore, version=self.engine_version
-            if parallel.oq_distribute() == 'zmq' else None)
+            h5=self.datastore)
         self._monitor.filename = self.datastore.filename
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
@@ -256,21 +272,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 kw['hazard_calculation_id'] is None):
             del kw['hazard_calculation_id']
         vars(self.oqparam).update(**kw)
+        checksum = save_version_checksum(self.oqparam, self.datastore)
         if isinstance(self.oqparam.risk_imtls, dict):
             # always except in case_shakemap
             self.datastore['oqparam'] = self.oqparam
-        attrs = self.datastore['/'].attrs
-        attrs['engine_version'] = self.engine_version
-        if hasattr(self, 'aelo_version'):
-            attrs['aelo_version'] = self.aelo_version
-        attrs['date'] = datetime.now().isoformat()[:19]
-        if 'checksum32' not in attrs:
-            # when save_params has been already called, don't recompute
-            attrs['input_size'] = size = self.oqparam.get_input_size()
-            attrs['checksum32'] = checksum = readinput.get_checksum32(
-                self.oqparam, self.datastore.hdf5)
-            logging.info(f'Checksum of the inputs: {checksum} '
-                         f'(total size {general.humansize(size)})')
             old_job = logs.dbcmd('get_job_from_checksum', checksum)
             return old_job.id if old_job else None, checksum
         return None, None

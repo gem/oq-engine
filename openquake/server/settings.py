@@ -334,9 +334,11 @@ if APPLICATION_MODE not in ('PUBLIC',):
 
 if LOCKDOWN:
     if TEST:
-        # NOTE: keep the setting if already specified (e.g. in local_settings.py)
+        # NOTE: keep the setting if already specified
+        #       (e.g. in local_settings.py)
         EMAIL_BACKEND = (
-            EMAIL_BACKEND or 'django.core.mail.backends.filebased.EmailBackend')
+            EMAIL_BACKEND
+            or 'django.core.mail.backends.filebased.EmailBackend')
         # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
         #        We should redefine it to a different directory for each test,
         #        in order to avoid concurrency issues in case tests run in
@@ -345,8 +347,10 @@ if LOCKDOWN:
             config.directory.custom_tmp or tempfile.gettempdir(),
             'app-messages')
     else:
-        EMAIL_BACKEND = EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_BACKEND = (
+            EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend')
     if APPLICATION_MODE == 'IMPACT':
+        ALLOW_DATASTORE_DOWNLOAD = False
         EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
         EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
     elif APPLICATION_MODE == 'AELO':
@@ -369,7 +373,8 @@ if LOCKDOWN:
     if 'openquakeplatform.utils.oq_context_processor' in CONTEXT_PROCESSORS:
         print('WARNING: OpenQuake Tools are not loaded because'
               ' authentication is enabled.')
-        CONTEXT_PROCESSORS.remove('openquakeplatform.utils.oq_context_processor')
+        CONTEXT_PROCESSORS.remove(
+            'openquakeplatform.utils.oq_context_processor')
         TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
     # do not log to file unless running through the webui
