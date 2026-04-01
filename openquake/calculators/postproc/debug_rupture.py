@@ -18,6 +18,7 @@
 import os
 import logging
 from unittest.mock import patch
+import numpy
 import pandas
 from openquake.baselib import sap
 from openquake.commonlib import datastore
@@ -45,10 +46,13 @@ def main(calc_id: int, rup_id: int):
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
     with job, patch.dict(os.environ, {'OQ_RUPTURE': str(rup_id)}):
         dfs = []
+        sig_eps = []
         for res in starmap_from_rups(
                 event_based, oq, rups[0], sites, None, (), dstore):
             dfs.append(pandas.DataFrame(res['gmfdata']))
+            sig_eps.append(res['sig_eps'])
         gmf_df = pandas.concat(dfs)
+        dstore.create_dset('gmf_data/sigma_epsilon', numpy.concatenate(sig_eps))
         dstore.create_df('gmf_data', gmf_df)
         dstore['sitecol'] = sites
         save_version_checksum(oq, dstore)
