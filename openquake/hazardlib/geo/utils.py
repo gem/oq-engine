@@ -230,7 +230,7 @@ class _GeographicObjects(object):
             elif mode == 'strict':
                 if sid in station_sids:
                     dic[sid] = obj
-                    logging.warning(
+                    logging.debug(
                         'There is nothing closer than %s km '
                         'to station (%s %s)' % (assoc_dist, lon, lat))
                 else:
