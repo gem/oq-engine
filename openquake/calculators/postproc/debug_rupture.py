@@ -17,10 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from datetime import datetime
 import pandas
 from openquake.baselib import sap
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import datastore
+from openquake.calculators.base import save_version_checksum
 from openquake.calculators.event_based import (
     starmap_from_rups, event_based)
 
@@ -36,9 +36,9 @@ def main(calc_id: int, rup_id: int):
         frups = parent['filtered_ruptures'][:]
     except KeyError:
         frups = parent['ruptures'][:]
-    
     rups = frups[frups['id'] == rup_id]
-    print('model =', rups[0]['model'].decode('ascii'))
+    logging.info('model = %s', rups[0]['model'].decode('ascii'))
+
     sites = parent['sitecol']
     os.environ['OQ_RUPTURE'] = str(rup_id)
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
@@ -50,8 +50,7 @@ def main(calc_id: int, rup_id: int):
         gmf_df = pandas.concat(dfs)
         dstore.create_df('gmf_data', gmf_df)
         dstore['sitecol'] = sites
-        dstore['/'].attrs['date'] = datetime.now().isoformat()[:19]
-        dstore['/'].attrs['engine_version'] = logs.dbcmd('engine_version')
+        save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
 
 
