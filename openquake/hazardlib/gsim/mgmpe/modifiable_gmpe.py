@@ -396,7 +396,7 @@ def add_delta_to_total_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     # First check if adjusted sigma would be negative
     new_sig = np.sqrt(si**2 + np.sign(delta) * delta**2)
-    if np.any(new_sig < 0):
+    if np.any(np.isnan(new_sig)):
         raise ValueError(
             f"delta={delta} produces a negative GMM (total) sigma - "
             f"minimum GMM sigma would be {new_sig.min():.6f}"
@@ -413,7 +413,7 @@ def add_delta_to_tau_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     # First check if adjusted tau would be negative
     new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
-    if np.any(new_tau < 0):
+    if np.any(np.isnan(new_tau)):
         raise ValueError(
             f"delta={delta} produces a negative tau - "
             f"minimum tau would be {new_tau.min():.3f}"
@@ -433,7 +433,7 @@ def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     # First check if adjusted phi would be negative
     new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
-    if np.any(new_phi < 0):
+    if np.any(np.isnan(new_phi)):
         raise ValueError(
             f"delta={delta} produces a negative phi - "
             f"minimum phi would be {new_phi.min():.3f}"
@@ -455,7 +455,7 @@ def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
     # First check if adjusted sigma would be negative for given IMT
     sig_delta = delta[imt.string]
     new_sig = np.sqrt(si**2 + np.sign(sig_delta) * sig_delta**2)
-    if np.any(new_sig < 0):
+    if np.any(np.isnan(new_sig)):
         raise ValueError(
             f"delta={sig_delta} for {imt} produces a negative total sigma "
             f"- minimum sigma for {imt} would be {new_sig.min():.6f}"
@@ -474,7 +474,7 @@ def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
     # First check if adjusted tau would be negative for given IMT
     delta = delta[imt.string]
     new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
-    if np.any(new_tau < 0):
+    if np.any(np.isnan(new_tau)):
         raise ValueError(
             f"delta={delta} for {imt} produces a negative tau - "
             f"minimum tau for {imt} would be {new_tau.min():.3f}"
@@ -496,7 +496,7 @@ def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
     # First check if adjusted phi would be negative for given IMT
     delta = delta[imt.string]
     new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
-    if np.any(new_phi < 0):
+    if np.any(np.isnan(new_phi)):
         raise ValueError(
             f"delta={delta} for {imt} produces a negative phi - "
             f"minimum phi for {imt} would be {new_phi.min():.3f}"
