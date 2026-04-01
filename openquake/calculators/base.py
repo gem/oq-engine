@@ -245,8 +245,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # check in the workers
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore, version=self.engine_version
-            if parallel.oq_distribute() == 'zmq' else None)
+            h5=self.datastore)
         self._monitor.filename = self.datastore.filename
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
