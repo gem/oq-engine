@@ -94,7 +94,7 @@ class NonParametricSourceTestCase(unittest.TestCase):
 
     def test_count_ruptures(self):
         source, _ = self.make_non_parametric_source()
-        self.assertEqual(source.count_ruptures(), 2)
+        self.assertEqual(source.num_ruptures, 2)
 
 
 class NankaiTest(unittest.TestCase):

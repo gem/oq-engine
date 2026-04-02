@@ -14,7 +14,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.AkkarEtAlRjb2014={}
-			add_delta_std_to_total_std.delta=-0.33
+			add_delta_to_total_std_scalar.delta=-0.33
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -23,7 +23,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.ChiouYoungs2014={}
-			add_delta_std_to_total_std.delta=-0.40
+			add_delta_to_total_std_scalar.delta=-0.40
                     </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -32,7 +32,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.ZhaoEtAl2006Asc={}
-			add_delta_std_to_total_std.delta=-0.41
+			add_delta_to_total_std_scalar.delta=-0.41
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.34</uncertaintyWeight>
                 </logicTreeBranch>
@@ -51,7 +51,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.AbrahamsonEtAl2015SInter={}
-			add_delta_std_to_total_std.delta=-0.28
+			add_delta_to_total_std_scalar.delta=-0.28
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -60,7 +60,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.ZhaoEtAl2006SInter={}
-			add_delta_std_to_total_std.delta=-0.39
+			add_delta_to_total_std_scalar.delta=-0.39
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.34</uncertaintyWeight>
                 </logicTreeBranch>
@@ -69,7 +69,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.AbrahamsonGulerce2020SInter = {}
-			add_delta_std_to_total_std.delta=-0.36
+			add_delta_to_total_std_scalar.delta=-0.36
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -87,7 +87,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.AbrahamsonGulerce2020SSlab = {}
-			add_delta_std_to_total_std.delta=-0.35
+			add_delta_to_total_std_scalar.delta=-0.35
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -96,7 +96,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.AbrahamsonEtAl2015SSlab={}
-			add_delta_std_to_total_std.delta=-0.29	
+			add_delta_to_total_std_scalar.delta=-0.29	
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
@@ -105,7 +105,7 @@
                     <uncertaintyModel>
 			[ModifiableGMPE]
 			gmpe.ZhaoEtAl2006SSlab={}
-			add_delta_std_to_total_std.delta=-0.38
+			add_delta_to_total_std_scalar.delta=-0.38
 		    </uncertaintyModel>
                     <uncertaintyWeight>0.34</uncertaintyWeight>
                 </logicTreeBranch>

@@ -316,7 +316,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )
         actual_ruptures = list(point_source.iter_ruptures())
         self.assertEqual(len(actual_ruptures),
-                         point_source.count_ruptures())
+                         point_source.num_ruptures)
         expected_ruptures = {
             (mag1, nodalplane1.rake, hypocenter1): (
                 # probabilistic rupture's occurrence rate
@@ -451,6 +451,6 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac(cps.location.z, 3.75)
         rates = cps.get_annual_occurrence_rates()
         aac(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
-        aac(ps1.count_ruptures(), 2)
-        aac(ps2.count_ruptures(), 4)
-        aac(cps.count_ruptures(), 6)
+        aac(ps1.num_ruptures, 2)
+        aac(ps2.num_ruptures, 4)
+        aac(cps.num_ruptures, 6)

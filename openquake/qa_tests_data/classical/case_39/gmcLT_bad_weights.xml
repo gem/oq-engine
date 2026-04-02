@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+        <logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="b_00_00">
+                <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight> 
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(0.2)">0.20</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.25</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_01">
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(0.2)">0.2</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.25</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_02">
+                <uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(0.2)">0.2</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.25</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_03">
+                <uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(0.2)">0.2</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.25</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_04">
+                <uncertaintyModel>SiMidorikawa1999Asc</uncertaintyModel>
+                <uncertaintyWeight>0</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">1</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(0.2)">0.2</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0</uncertaintyWeight>
+            </logicTreeBranch>            
+        </logicTreeBranchSet> 
+    </logicTree>
+</nrml>

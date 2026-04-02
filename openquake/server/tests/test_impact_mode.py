@@ -27,10 +27,9 @@ from io import BytesIO
 
 import django
 from django.apps import apps
-from django.test import Client, override_settings
+from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
-from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
@@ -39,27 +38,7 @@ from openquake.server.tests.views_test import get_or_create_user
 CALC_RUN_TIMEOUT = 60
 
 
-def get_email_content(directory, search_string):
-    for root, _dirs, files in os.walk(directory):
-        for filename in files:
-            file_path = os.path.join(root, filename)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-                if search_string in content:
-                    return content
-    raise FileNotFoundError(
-        f'No email was found containing the string {search_string}')
-
-
-def check_email(job_id, expected_error):
-    app_msgs_dir = os.path.join(
-        config.directory.custom_tmp or tempfile.gettempdir(),
-        'app-messages')
-    # NOTE: we should use the overridden EMAIL_FILE_PATH,
-    #       so email_dir would contain only the files
-    #       created to notify about the jobs created in
-    #       the test
-    email_content = get_email_content(app_msgs_dir, f'Job {job_id} ')
+def check_email(job_id, email_content, expected_error):
     if expected_error:
         assert 'failed' in email_content
     else:
@@ -86,10 +65,24 @@ class ImpactModeTestCase(django.test.TestCase):
         return cls.c.post(f'{prefix}{path}', data)
 
     @classmethod
-    def get(cls, path, **data):
-        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
-        if not resp.status_code == 200:
-            raise RuntimeError(resp.content.decode('utf8'))
+    def get(cls, path, prefix='/v1/calc/', expected_status_code=200, **data):
+        url = f'{prefix}%s' % path
+        resp = cls.c.get(url, data, HTTP_HOST='testserver')
+        if not resp.status_code == expected_status_code:
+            if resp.streaming:
+                content = b"".join(resp.streaming_content)
+            else:
+                content = resp.content
+            try:
+                content = content.decode('utf8')
+            except (AttributeError, UnicodeDecodeError):
+                pass
+            err_msg = (f"Error calling {url}\n"
+                       f"Unexpected status code"
+                       f" {resp.status_code} != {expected_status_code}")
+            if expected_status_code == 200:
+                err_msg += f"\n{content}"
+            raise RuntimeError(err_msg)
         return resp
 
     @classmethod
@@ -131,7 +124,8 @@ class ImpactModeTestCase(django.test.TestCase):
     def get_response_content(cls, response):
         """
         Extract content from either HttpResponse or FileResponse
-        NOTE: the django test client works differently with respect to requests.Session
+        NOTE: the django test client works differently with respect
+        to requests.Session
         """
         if hasattr(response, 'content'):
             return response.content
@@ -147,66 +141,88 @@ class ImpactModeTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.user, cls.password = get_or_create_user(1)  # level 1
         cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
             name='Users who can view the exposure')
         perm = Permission.objects.get(codename='can_view_exposure')
         cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
-        cls.c.login(username=cls.user1.username, password=cls.password1)
+        cls.c.login(username=cls.user.username, password=cls.password)
         cls.maxDiff = None
 
     @classmethod
     def tearDownClass(cls):
-        cls.user1.delete()
+        cls.user.delete()
         super().tearDownClass()
+
+    def set_user_level_and_remove_groups(self, level):
+        self.user.profile.level = level
+        self.user.profile.save()
+        self.user.groups.remove(self.users_who_can_view_exposure)
+        self.user.save()
 
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
+        # NOTE: We make Django filebased.EmailBackend write each email
+        # notification into a separate directory, so afterwards we can
+        # retrieve a single file from it, corresponding to the tested job
         with tempfile.TemporaryDirectory() as email_dir:
-            with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post(endpoint, data=data)
-                if resp.status_code != 200:
-                    content = json.loads(resp.content)
-                    print(content, file=sys.stderr)
-                    self.assertIsNotNone(expected_error)
-                    self.assertIn(expected_error, content['error_msg'])
-                    return
-                # the job is supposed to start
-                # and, if expected_error is not None, to fail afterwards
-                try:
-                    [job_id] = json.loads(resp.content.decode('utf8'))
-                except Exception:
-                    raise ValueError(
-                        b'Invalid JSON response: %r' % resp.content) from None
-                job_dic = self.wait(job_id)
-                tb = self.get_json('%s/traceback' % job_id)
-                if job_dic is None:
-                    raise TimeoutError()
-                elif job_dic['status'] == 'failed':
-                    if expected_error:
-                        if not tb:
-                            raise Exception('Empty traceback')
-                        self.assertIn(expected_error, '\n'.join(tb))
-                    else:
-                        raise Exception('\n'.join(tb))
-                check_email(job_id, expected_error)
-                if job_dic['status'] == 'failed':
-                    return
-                try:
-                    results = self.get_json('%s/result/list' % job_id)
-                except AssertionError as exc:
-                    print(f'Results for job {job_id} not found yet:')
-                    print(exc)
-                if isinstance(results, HttpResponseNotFound):
-                    print(f'Results for job {job_id} not found yet...')
-                self.assertGreater(
-                    len(results), 0,
-                    'The job produced no outputs!')
-        # Check that the Django views to visualize simplified and advanced outputs
-        # pages do not raise any exceptions
-        self.c.get(f'/engine/{job_id}/outputs')
-        self.c.get(f'/engine/{job_id}/outputs_impact')
+            # NOTE: we can't use Django override_settings to override
+            #       EMAIL_FILE_PATH, because it would work only in the
+            #       current process (subprocess would use the original
+            #       settings). Instead, we explicitly propagate the
+            #       directory to the child process.
+            data['email_file_path'] = email_dir
+            resp = self.post(endpoint, data=data)
+            if resp.status_code != 200:
+                content = json.loads(resp.content)
+                print(content, file=sys.stderr)
+                self.assertIsNotNone(expected_error)
+                self.assertIn(expected_error, content['error_msg'])
+                return
+            # the job is supposed to start
+            # and, if expected_error is not None, to fail afterwards
+            try:
+                [job_id] = json.loads(resp.content.decode('utf8'))
+            except Exception:
+                raise ValueError(
+                    b'Invalid JSON response: %r' % resp.content) from None
+            job_dic = self.wait(job_id)
+            tb = self.get_json('%s/traceback' % job_id)
+            if job_dic is None:
+                raise TimeoutError()
+            elif job_dic['status'] == 'failed':
+                if expected_error:
+                    if not tb:
+                        raise Exception('Empty traceback')
+                    self.assertIn(expected_error, '\n'.join(tb))
+                else:
+                    raise Exception('\n'.join(tb))
+            email_files = os.listdir(email_dir)
+            self.assertEqual(
+                len(email_files), 1,
+                f'Expected exactly one email, found {len(email_files)}'
+                f' in {email_dir}: {email_files}')
+
+            with open(os.path.join(email_dir, email_files[0])) as f:
+                email_content = f.read()
+            check_email(job_id, email_content, expected_error)
+            if job_dic['status'] == 'failed':
+                return
+            try:
+                results = self.get_json('%s/result/list' % job_id)
+            except AssertionError as exc:
+                print(f'Results for job {job_id} not found yet:')
+                print(exc)
+            if isinstance(results, HttpResponseNotFound):
+                print(f'Results for job {job_id} not found yet...')
+            self.assertGreater(
+                len(results), 0,
+                'The job produced no outputs!')
+        # Check that the Django views to visualize simplified and advanced
+        # outputs pages do not raise any exceptions
+        self.get(f'/engine/{job_id}/outputs', prefix='')
+        self.get(f'/engine/{job_id}/outputs_impact', prefix='')
         # NOTE: the get_json utility decodes the json and returns a dict
         ret = self.get_json('%s/impact' % job_id)
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
@@ -235,81 +251,95 @@ class ImpactModeTestCase(django.test.TestCase):
         content = self.get_response_content(ret)
         exposure_by_location = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
-            {item: exposure_by_location[item] for item in exposure_by_location})
+            {item: exposure_by_location[item]
+             for item in exposure_by_location})
 
-        # check that users can download hidden outputs only if their level is at
-        # least 2 or if they have the can_view_exposure permission
+        # check that users can download hidden outputs only if their level
+        # is at least 2 or if they have the can_view_exposure permission
 
-        # level 1 users without the can_view_exposure permission can't see the exposure
+        # level 1 users without the can_view_exposure permission
+        # can't see the exposure
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'{job_id}/extract/assetcol', expected_status_code=403)
 
-        # level 1 users with the can_view_exposure permission can see the exposure
-        self.user1.groups.add(self.users_who_can_view_exposure)
-        ret = self.get('%s/results' % job_id)
+        # level 1 users with the can_view_exposure permission can see
+        # the exposure
+        self.user.groups.add(self.users_who_can_view_exposure)
+        ret = self.get(f'{job_id}/results')
         results = json.loads(ret.content.decode('utf8'))
-        [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        [download_url] = [res['url']
+                          for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
-        ret = self.c.get(download_url)
-        self.assertEqual(ret.status_code, 200)
+        ret = self.get(download_url, prefix='')
         # ...and with can_view_exposure they can extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
 
         # level 2 users without the show_exposure group can see the exposure
-        self.user1.groups.remove(self.users_who_can_view_exposure)
-        self.user1.profile.level = 2
-        self.user1.profile.save()
-        self.user1.save()
+        self.set_user_level_and_remove_groups(2)
+
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 200)
+        ret = self.get(download_exposure_url, prefix='')
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
-        ret = self.c.get(exposure_url)
-        self.assertEqual(ret.status_code, 200)
+        [exposure_url] = [res['url']
+                          for res in results if res['type'] == 'exposure']
+        ret = self.get(exposure_url, prefix='')
         # ...and even without can_view_exposure they can extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 200)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='')
+        # they can also download the hdf5 datastore and the job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
 
-        # level 0 users without the can_view_exposure permission can't see the exposure
-        self.user1.profile.level = 0
-        self.user1.profile.save()
-        self.user1.save()
+        # level 0 users without the can_view_exposure permission can't
+        # see the exposure
+        self.set_user_level_and_remove_groups(0)
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(download_exposure_url, prefix='',
+                       expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
+                       expected_status_code=403)
 
-        # level 1 users without the can_view_exposure permission can't see the exposure
-        self.user1.profile.level = 1
-        self.user1.profile.save()
-        self.user1.save()
+        # Level 0 impact users can't download hdf5 datastore nor job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
+                       expected_status_code=403)
+
+        # level 1 users without the can_view_exposure permission can't
+        # see the exposure
+        self.set_user_level_and_remove_groups(1)
+
         # try to download the exposure, knowing the corresponding url
-        ret = self.c.get(download_exposure_url)
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(download_exposure_url, prefix='',
+                       expected_status_code=403)
         # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        exposure_urls = [res['url']
+                         for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
-        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
-        self.assertEqual(ret.status_code, 403)
+        ret = self.get(f'/v1/calc/{job_id}/extract/assetcol', prefix='',
+                       expected_status_code=403)
+
+        # Level 1 impact users can't download hdf5 datastore nor job.zip
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='',
+                       expected_status_code=403)
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
+                       expected_status_code=403)
 
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
@@ -317,7 +347,9 @@ class ImpactModeTestCase(django.test.TestCase):
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
     def test_run_by_usgs_id_then_remove_calc_failure(self):
-        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1675824364065'
+        self.set_user_level_and_remove_groups(1)
+        shakemap_version = (
+            'urn:usgs-product:us:shakemap:us6000jllz:1675824364065')
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
                     shakemap_version=shakemap_version,
@@ -338,8 +370,10 @@ class ImpactModeTestCase(django.test.TestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
-        # NOTE: this case tests the extractor for losses_by_site in the case discarding
-        # sites that do not correspond to any assets, e.g. for the JRC script that uses
+        self.set_user_level_and_remove_groups(1)
+        # NOTE: this case tests the extractor for losses_by_site in the
+        # case discarding sites that do not correspond to any assets,
+        # e.g. for the JRC script that uses
         # shakemap_id = 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
         # {
         #     "id": "urn:usgs-product:us:shakemap:us6000phrk:1736792435199",
@@ -357,24 +391,28 @@ class ImpactModeTestCase(django.test.TestCase):
 
     # check that the URL 'run' cannot be accessed in IMPACT mode
     def test_can_not_run_normal_calc(self):
+        self.set_user_level_and_remove_groups(1)
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
             resp = self.post('run', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
     # check that the URL 'validate_zip' cannot be accessed in IMPACT mode
     def test_can_not_validate_zip(self):
+        self.set_user_level_and_remove_groups(1)
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
     def test_get_impact_form_defaults(self):
-        resp = self.c.get('/v1/get_impact_form_defaults')
+        self.set_user_level_and_remove_groups(1)
+        resp = self.get('/v1/get_impact_form_defaults', prefix='')
         resp = json.loads(resp.content.decode('utf8'))
         expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
                          'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
                          'local_timestamp', 'time_event', 'dip', 'strike',
                          'maximum_distance', 'truncation_level',
-                         'number_of_ground_motion_fields', 'asset_hazard_distance',
+                         'number_of_ground_motion_fields',
+                         'asset_hazard_distance',
                          'ses_seed', 'station_data_file_from_usgs',
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
@@ -383,6 +421,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(list(resp), expected_list)
 
     def test_impact_get_shakemap_versions(self):
+        self.set_user_level_and_remove_groups(1)
         resp = self.c.post('/v1/impact_get_shakemap_versions',
                            data={'usgs_id': 'us6000jllz'})
         resp = json.loads(resp.content.decode('utf8'))
@@ -391,6 +430,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIsNone(resp['shakemap_versions_issue'])
 
     def test_impact_get_nodal_planes_and_info(self):
+        self.set_user_level_and_remove_groups(2)
         resp = self.c.post('/v1/impact_get_nodal_planes_and_info',
                            data={'usgs_id': 'us6000jllz'})
         resp = json.loads(resp.content.decode('utf8'))
@@ -399,7 +439,9 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIn('info', resp)
 
     def test_impact_get_stations_from_usgs(self):
-        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1756920117251'
+        self.set_user_level_and_remove_groups(2)
+        shakemap_version = (
+            'urn:usgs-product:us:shakemap:us6000jllz:1756920117251')
         resp = self.c.post('/v1/impact_get_stations_from_usgs',
                            data={'usgs_id': 'us6000jllz',
                                  'shakemap_version': shakemap_version})
@@ -409,10 +451,7 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertIsNone(resp['station_data_issue'])
 
     def test_impact_get_rupture_data(self):
-        initial_user_level = self.user1.profile.level
-        self.user1.profile.level = 2
-        self.user1.profile.save()
-        self.user1.save()
+        self.set_user_level_and_remove_groups(2)
 
         # Case covered by a mosaic model
         rup_params = dict(
@@ -437,7 +476,3 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(
             resp.json()['error_msg'],
             '(-139.0, 35.0) is farther than 5 deg from any mosaic model!')
-
-        self.user1.profile.level = initial_user_level
-        self.user1.profile.save()
-        self.user1.save()

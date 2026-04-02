@@ -397,7 +397,8 @@ def export_median_spectrum_disagg(ekey, dstore):
             comment['site_id'] = 0
             comment['lon'] = sitecol.lons[0]
             comment['lat'] = sitecol.lats[0]
-            fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            fname = dstore.export_path(
+                f'median_spectrum_disagg-{grp_id}-{imt}.csv')
             arr.sort(order='rup_id')
             writer.save(arr, fname, comment=comment)
             fnames.append(fname)
@@ -462,7 +463,10 @@ def export_gmf_data_csv(ekey, dstore):
     for imt in oq.sec_imts:
         ren[imt] = imt
     df.rename(columns=ren, inplace=True)
-    event_id = dstore['events']['id']
+    try:
+        event_id = dstore['relevant_events']['id']
+    except KeyError:
+        event_id = dstore['events']['id']
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
@@ -486,14 +490,16 @@ def export_gmf_data_csv(ekey, dstore):
 def export_site_model_csv(ekey, dstore):
     sitecol = dstore['sitecol']
     if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
-        core_params = ('custom_site_id', 'site_id', 'sids', 'lat', 'lon', 'depth',
-                       'vs30', 'vs30measured', 'z1pt0', 'z2pt5')
-        keep = [name for name in sitecol.array.dtype.names if name in core_params]
+        core_params = ('custom_site_id', 'site_id', 'sids', 'lat', 'lon',
+                       'depth', 'vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+        keep = [name for name in sitecol.array.dtype.names
+                if name in core_params]
         arr = sitecol.array[keep]
     else:
         arr = sitecol.array
     fname = dstore.build_fname(ekey[0], '', ekey[1])
-    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(arr, fname, comment=dstore.metadata)
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        arr, fname, comment=dstore.metadata)
     return [fname]
 
 

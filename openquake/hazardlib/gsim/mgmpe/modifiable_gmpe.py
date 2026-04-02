@@ -298,7 +298,6 @@ IMT_DEPENDENT_ADJ = ["set_scale_median_vector",
                      "set_fixed_total_sigma"]
 
 
-# affects the NWA model
 def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
                            ergodic, tau_model, phi_ss_coetab, tau_coetab):
     """
@@ -389,22 +388,32 @@ def set_fixed_total_sigma(ctx, imt, me, si, ta, ph, total_sigma):
     si[:] = total_sigma[imt]["total_sigma"]
 
 
-def add_delta_std_to_total_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_to_total_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        A delta std e.g. a phi S2S to be removed from total
+        A delta e.g. a phi S2S to be removed from total GMM sigma
+        across all IMTs (IMT-constant)
     """
-    si[:] = (si**2 + np.sign(delta) * delta**2)**0.5
+    # First check if adjusted sigma would be negative
+    new_sig = np.sqrt(si**2 + np.sign(delta) * delta**2)
+    if np.any(np.isnan(new_sig)):
+        raise ValueError(
+            f"delta={delta} produces a negative GMM (total) sigma - "
+            f"minimum GMM sigma would be {new_sig.min():.6f}"
+        )
+
+    # Adjust sigma
+    si[:] = new_sig
 
 
-def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_to_tau_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        A delta std to be applied to tau
+        A delta to be applied to tau across all IMTs (IMT-constant)
     """
     # First check if adjusted tau would be negative
-    new_tau = ta + delta
-    if np.any(new_tau < 0):
+    new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
+    if np.any(np.isnan(new_tau)):
         raise ValueError(
             f"delta={delta} produces a negative tau - "
             f"minimum tau would be {new_tau.min():.3f}"
@@ -417,14 +426,14 @@ def add_delta_std_to_tau_std(ctx, imt, me, si, ta, ph, delta):
     si[:] = np.sqrt(ta**2 + ph**2)
 
 
-def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
+def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
     """
     :param delta:
-        A delta std to be applied to phi
+        A delta to be applied to phi across all IMTs (IMT-constant)
     """
     # First check if adjusted phi would be negative
-    new_phi = ph + delta
-    if np.any(new_phi < 0):
+    new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
+    if np.any(np.isnan(new_phi)):
         raise ValueError(
             f"delta={delta} produces a negative phi - "
             f"minimum phi would be {new_phi.min():.3f}"
@@ -434,6 +443,69 @@ def add_delta_std_to_phi_std(ctx, imt, me, si, ta, ph, delta):
     ph[:] = new_phi
 
     # Need to adjust total sig too after adjusting phi
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
+def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A dictionary of IMT-dependent deltas to be applied to total GMM
+        sigma for a given IMT. 
+    """
+    # First check if adjusted sigma would be negative for given IMT
+    sig_delta = delta[imt.string]
+    new_sig = np.sqrt(si**2 + np.sign(sig_delta) * sig_delta**2)
+    if np.any(np.isnan(new_sig)):
+        raise ValueError(
+            f"delta={sig_delta} for {imt} produces a negative total sigma "
+            f"- minimum sigma for {imt} would be {new_sig.min():.6f}"
+        )
+
+    # Adjust total sigma for given IMT
+    si[:] = new_sig
+
+
+def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A dictionary of IMT-dependent deltas to be applied to tau for
+        a given IMT.
+    """
+    # First check if adjusted tau would be negative for given IMT
+    delta = delta[imt.string]
+    new_tau = np.sqrt(ta**2 + np.sign(delta) * delta**2)
+    if np.any(np.isnan(new_tau)):
+        raise ValueError(
+            f"delta={delta} for {imt} produces a negative tau - "
+            f"minimum tau for {imt} would be {new_tau.min():.3f}"
+        )
+
+    # Adjust tau for given IMT
+    ta[:] = new_tau
+
+    # Need to adjust total sig too after adjusting tau for given IMT
+    si[:] = np.sqrt(ta**2 + ph**2)
+
+
+def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
+    """
+    :param delta:
+        A dictionary of IMT-dependent deltas to be applied to phi for
+        a given IMT.
+    """
+    # First check if adjusted phi would be negative for given IMT
+    delta = delta[imt.string]
+    new_phi = np.sqrt(ph**2 + np.sign(delta) * delta**2)
+    if np.any(np.isnan(new_phi)):
+        raise ValueError(
+            f"delta={delta} for {imt} produces a negative phi - "
+            f"minimum phi for {imt} would be {new_phi.min():.3f}"
+        )
+
+    # Adjust phi for given IMT
+    ph[:] = new_phi
+
+    # Need to adjust total sig too after adjusting phi for given IMT
     si[:] = np.sqrt(ta**2 + ph**2)
 
 

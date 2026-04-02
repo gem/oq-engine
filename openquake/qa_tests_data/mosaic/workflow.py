@@ -147,13 +147,20 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
     for model in models:
         ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
+            ext = '_vs30.ini'
+        else:
+            ext = '.ini'
+            ini = os.path.join(mosaic_dir, model, 'in', 'job.ini')
+        if os.path.exists(ini):
             lst.append(f'\n[{model}]')
-            lst.append(f'ini = "{model}/in/job_vs30.ini"')
+            lst.append(f'ini = "{model}/in/job{ext}"')
             lst.append('postproc_func = "dummy.main"')
             if model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
+    if not lst:
+        raise RuntimeError(f'{models} not in {MODELS=}')
     return save(mosaic_dir, 'SES.toml',
                 TOML.format(number_of_logic_tree_samples,
                             ses_per_logic_tree_path,

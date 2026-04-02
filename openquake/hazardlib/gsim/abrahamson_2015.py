@@ -83,6 +83,7 @@ def get_stress_factor(imt, slab):
     Abrahamson et al. (2018)
     """
     C = BCHYDRO_SIGMA_MU[imt]
+    
     return (C["SIGMA_MU_SSLAB"] if slab else C["SIGMA_MU_SINTER"]) / 1.65
 
 
@@ -95,54 +96,91 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     dmag = C1 + dc1
     f_mag = np.where(
         mag > dmag, theta5 * (mag - dmag), theta4 * (mag - dmag))
+    
     return base + f_mag + theta13 * (10. - mag) ** 2.
 
 
-# theta6_adj used in BCHydro
-def _compute_disterm(trt, C1, theta2, theta14, theta3, ctx, c4, theta9,
-                     theta6_adj, theta6, theta10):
-    if trt == const.TRT.SUBDUCTION_INTERFACE:
-        dists = ctx.rrup
-        assert theta10 == 0., theta10
-    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
-        dists = ctx.rhypo
+def _compute_backarc_term(dists, min_dist, a, b, backarc):
+    """
+    Compute backarc term of original BCHydro GMM.
+    """
+    f_faba = np.zeros_like(dists)
+    fixed_dists = dists[backarc]  # Only applies to backarc sites (f_faba
+                                  # term is zero for the forearc sites)
+    fixed_dists[fixed_dists < min_dist] = min_dist
+    f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
+
+    return f_faba
+
+
+def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
+    """
+    Compute ESHM20 forearc-backarc term. This term is applied when
+    specifying an ESHM20 FABA tapering model. 
+
+    NOTE: Although XVF is still required in the site model, if the user
+    does not specify a FABA model, then the parameter is in effect ignored
+    because we zero-out the FABA term in this case (see below).
+    """
+    # If there is an ESHM20 FABA model apply it
+    if faba_model:
+        fixed_dists = np.copy(dists)
+        fixed_dists[fixed_dists < min_dist] = min_dist
+        f_faba = a + b * np.log(fixed_dists / 40.)
+        return f_faba * faba_model(-1*xvf)
+    
     else:
-        raise NotImplementedError(trt)
-    return (theta2 + theta14 + theta3 * (ctx.mag - C1)) * np.log(
-        dists + c4 * np.exp((ctx.mag - 6.) * theta9)) + (
-        theta6_adj + theta6) * dists + theta10
+        # Apply no xvf-dependent eshm20 faba term
+        return np.zeros_like(xvf)
 
 
-def _compute_forearc_backarc_term(trt, faba_model, C, ctx):
+def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
+    """
+    Apply either the original BCHydro backarc term (uses backarc
+    param in site model) or the ESHM20 frontarc-backarc tapering
+    model (uses distance to volcanic front (xvf) paramter in site
+    model).
+    """
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         dists = ctx.rrup
         a, b = C['theta15'], C['theta16']
         min_dist = 100.
-    elif trt == const.TRT.SUBDUCTION_INTRASLAB:
+    else:
+        assert trt == const.TRT.SUBDUCTION_INTRASLAB
         dists = ctx.rhypo
         a, b = C['theta7'], C['theta8']
         min_dist = 85.
+    
+    if kind != "eshm20":
+       # Apply the default BCHydro backarc term
+       return _compute_backarc_term(dists, min_dist, a, b,
+                                    np.bool_(ctx.backarc)) 
+
     else:
-        raise NotImplementedError(trt)
-    if faba_model is None:
-        backarc = np.bool_(ctx.backarc)
-        f_faba = np.zeros_like(dists)
-        # Only applies to backarc sites (f_faba is zero for forearc sites)
-        fixed_dists = dists[backarc]
-        fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
-        return f_faba
-
-    # Must be a faba model specified
-    fixed_dists = np.copy(dists)
-    fixed_dists[fixed_dists < min_dist] = min_dist
-    f_faba = a + b * np.log(fixed_dists / 40.)
-    return f_faba * faba_model(-ctx.xvf)
+        # Apply ESHM20 FABA tapering
+        assert kind == "eshm20"
+        return _compute_eshm20_faba_term(dists, min_dist, a, b,
+                                         faba_model, ctx.xvf)
 
 
-def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
+def _compute_dist_term(
+        C1, ctx, c4, dists, theta6_adj,
+        theta2, theta3, theta6, theta9, theta10, theta14
+        ):
     """
-    Computes the distance scaling term, as contained within equation (1)
+    Compute distance term.
+    """
+    part1 = theta2 + theta14 + theta3 * (ctx.mag - C1)
+    part2 = np.log(dists + c4 * np.exp((ctx.mag - 6.) * theta9))
+    adj_theta6 = (theta6_adj or 0) + theta6
+    part3 = adj_theta6 * dists
+
+    return part1 * part2 + part3 + theta10
+
+
+def _compute_distance_term(kind, trt, C, ctx, theta6_adj):
+    """
+    Computes the distance scaling term, as contained within equation (1).
     """
     if kind.startswith("montalva"):
         theta3 = C['theta3']
@@ -152,28 +190,35 @@ def _compute_distance_term(kind, trt, theta6_adj, C, ctx):
         C1 = 7.2
     else:
         C1 = 7.8
+
     if trt == const.TRT.SUBDUCTION_INTERFACE:
-        return _compute_disterm(
-            trt, C1, C['theta2'], 0., theta3, ctx, CONSTS['c4'],
-            CONSTS['theta9'], theta6_adj, C['theta6'], theta10=0.)
-    else:  # sslab
-        return _compute_disterm(
-            trt, C1, C['theta2'], C['theta14'], theta3, ctx,
-            CONSTS['c4'], CONSTS['theta9'], theta6_adj, C['theta6'],
-            C["theta10"])
+        dists = ctx.rrup
+        theta14 = 0.
+        theta10 = 0.
+    else:
+        assert trt == const.TRT.SUBDUCTION_INTRASLAB
+        dists = ctx.rhypo
+        theta14 = C['theta14']
+        theta10 = C['theta10']
+
+    return _compute_dist_term(
+        C1, ctx, CONSTS['c4'], dists, theta6_adj,
+        C['theta2'], theta3, C['theta6'], CONSTS['theta9'], theta10, theta14
+        )
 
 
 def _compute_focal_depth_term(trt, C, ctx):
     """
     Computes the hypocentral depth scaling term - as indicated by
     equation (3)
-    For interface events F_EVENT = 0.. so no depth scaling is returned.
-    For SSlab events computes the hypocentral depth scaling term as
-    indicated by equation (3)
     """
+    #  For interface F_EVENT = 0 so no depth scaling returned
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return np.zeros_like(ctx.mag)
+    
+    # For slab events compute hypocentral depth scaling using eq 3
     z_h = np.clip(ctx.hypo_depth, None, 120.)
+
     return C['theta11'] * (z_h - 60.)
 
 
@@ -181,17 +226,19 @@ def _compute_magnitude_term(kind, C, dc1, mag):
     """
     Computes the magnitude scaling term given by equation (2)
     """
-    if kind == "base":
+    if kind in ["base", "eshm20"]:
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], CONSTS['theta4'],
             CONSTS['theta5'], C['theta13'], dc1, mag)
+    
     elif kind == "montalva16":
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], C['theta4'],
             C['theta5'], C['theta13'], dc1, mag)
+    
     elif kind == "montalva17":
-        return _compute_magterm(C1, C['theta1'], C['theta4'],
-                                C['theta5'], 0., dc1, mag)
+        return _compute_magterm(
+            C1, C['theta1'], C['theta4'], C['theta5'], 0., dc1, mag)
 
 
 def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
@@ -200,13 +247,15 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
     (vs30 = 1000 m/s)
     """
     mean = (_compute_magnitude_term(kind, C, dc1, ctx.mag) +
-            _compute_distance_term(kind, trt, theta6_adj, C, ctx) +
+            _compute_distance_term(kind, trt, C, ctx, theta6_adj) +
             _compute_focal_depth_term(trt, C, ctx) +
-            _compute_forearc_backarc_term(trt, faba_model, C, ctx))
+            _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model))
     
     # Apply linear site term
-    site_response = ((C['theta12'] + C['b'] * CONSTS['n']) *
-                     np.log(1000. / C['vlin']))
+    site_response = (
+        (C['theta12'] + C['b'] * CONSTS['n']) * np.log(1000. / C['vlin'])
+        )
+    
     return mean + site_response
 
 
@@ -221,15 +270,18 @@ def _compute_site_response_term(C, ctx, pga1000):
     vs_star[vs_star > 1000.0] = 1000.
     arg = vs_star / C["vlin"]
     site_resp_term = C["theta12"] * np.log(arg)
+    
     # Get linear scaling term
     idx = ctx.vs30 >= C["vlin"]
     site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
+
     # Get nonlinear scaling term
     idx = np.logical_not(idx)
     site_resp_term[idx] += (
         -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
         C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
                         (arg[idx] ** CONSTS["n"])))
+    
     return site_resp_term
 
 
@@ -247,6 +299,22 @@ class AbrahamsonEtAl2015SInter(GMPE):
     in DeltaC1, three models are proposed: a 'central', 'upper' and 'lower'
     model. The current class implements the 'central' model, whilst additional
     classes will implement the 'upper' and 'lower' alternatives.
+
+    :param bool ergodic: Use single-station sigma if False.
+
+    :param float theta6_adjustment:
+        The amount to increase or decrease the theta6 - should be +0.0015 (for
+        slower attenuation) and -0.0015 (for faster attenuation)
+
+    :param float sigma_mu_epsilon:
+        The number of standard deviations above or below the mean to apply the
+        statistical uncertainty sigma_mu term.
+
+    :param faba_model:
+        Choice of ESHM20 model for the forearc/backarc tapering function which
+        can be applied within the ESHM20 subclasses (see eshm20_bchydro.py),
+        can be "Step", "Linear", "SFunc", "Sigmoid", "Gaussian" or None.
+
     """
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = trt = const.TRT.SUBDUCTION_INTERFACE
@@ -281,24 +349,29 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: Reference soil conditions (bottom of page 29)
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
+    # Default has no c1 coeff delta
     delta_c1 = None
-    kind = "base"
-    FABA_ALL_MODELS = {}  # overridden in ESHM20 subclasses of BCHydro
 
-    def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
-                 faba_taper_model=None, **faba_args):
+    kind = "base"
+
+    def __init__(self, ergodic=True,
+                 theta6_adjustment=0, sigma_mu_epsilon=0.,
+                 faba_taper_model=None, **faba_args
+                 ):
+         
         self.ergodic = ergodic
-        self.theta6_adj = theta6_adjustment
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.theta6_adj = theta6_adjustment
+        
+        # ESHM20 FABA model
         if faba_taper_model:
-            if "xvf" not in self.REQUIRES_SITES_PARAMETERS:
-                # Currently only BCHydro subclasses considering XVF
-                # are the ESHM20 subclasses
+            if self.kind != "eshm20":
                 raise ValueError(
-                    "A FABA model can only be used in combination with "
-                    "a GSIM which considers the XVF site parameter.")
-            self.faba_model = self.FABA_ALL_MODELS[
-                faba_taper_model](**faba_args)
+                    "An ESHM20 FABA model can only be used in combination "
+                    "with an ESHM20 subclass of the BCHydro GSIM.")
+            assert "xvf" in self.REQUIRES_SITES_PARAMETERS
+            self.faba_model = self.ESHM20_FABA_MODELS[ # This att is only set
+                faba_taper_model](**faba_args)         # in ESHM20 subclasses
         else:
             self.faba_model = None
 
@@ -322,17 +395,16 @@ class AbrahamsonEtAl2015SInter(GMPE):
                 _compute_magnitude_term(
                     self.kind, C, dc1, ctx.mag) +
                 _compute_distance_term(
-                    self.kind, self.trt, self.theta6_adj, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.theta6_adj,) +
                 _compute_focal_depth_term(
                     self.trt, C, ctx) +
                 _compute_forearc_backarc_term(
-                    self.trt, self.faba_model, C, ctx) +
+                    self.kind, self.trt, C, ctx, self.faba_model) +
                 _compute_site_response_term(
                     C, ctx, pga1000))
             if self.sigma_mu_epsilon:
                 sigma_mu = get_stress_factor(
-                    imt, self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                    const.TRT.SUBDUCTION_INTRASLAB)
+                    imt, self.trt == const.TRT.SUBDUCTION_INTRASLAB)
                 mean[m] += sigma_mu * self.sigma_mu_epsilon
 
             sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]

@@ -245,7 +245,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
+def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -257,13 +257,16 @@ def event_based(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     cmaker.scenario = 'scenario' in oq.calculation_mode
     cmaker.init_monitoring(monitor)
     with rmon:
-        proxies = get_proxies(hdf5path, rups)
+        try:
+            proxies = get_proxies(dstore.filename, rups)
+        except KeyError:  # search in the parent
+            proxies = get_proxies(dstore.parent.filename, rups)
     with smon:
-        with hdf5.File(hdf5path) as f:
+        with dstore as f:
             try:
                 complete = f['complete']  # the current dstore
             except KeyError:
-                complete = f['sitecol']  # the parent dstore
+                complete = f['sitecol']
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
@@ -347,8 +350,13 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     affected = 0
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
+    hypo_deps = filrups['hypo'][:, 2]
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
+        if oq.maximum_rupture_depth:
+            trt = trts[model.decode('ascii')][trt_smr // TWO24]
+            maxdep = getdefault(oq.maximum_rupture_depth, trt)
+            ok &= hypo_deps <= maxdep
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
@@ -362,8 +370,11 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     logging.info(f'{round(maxw)=}')
 
     # store the filtered ruptures for debugging purposes
-    if dstore.hdf5.mode != 'r' and 'ruptures' not in dstore.hdf5:
+    if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
+        events = dstore['events'][:]
+        dstore['relevant_events'] = events[
+            numpy.isin(events['rup_id'], filrups['id'])]
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
@@ -388,7 +399,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, dstore.filename)
+                    sec_perils, station_data_sites, dstore)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
@@ -570,7 +581,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def counting_ruptures(self):
         """
-        Sets src.num_ruptures and src.offset
+        Sets src._num_ruptures and src.offset
         """
         sources = self.csm.get_sources()
         logging.info('Counting the ruptures in the CompositeSourceModel')
@@ -589,10 +600,10 @@ class EventBasedCalculator(base.HazardCalculator):
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
                 try:
-                    src.num_ruptures = nrups[src.source_id]
+                    src._num_ruptures = nrups[src.source_id]
                 except KeyError:  # light sources
-                    src.num_ruptures = src.count_ruptures()
-                src.weight = src.num_ruptures
+                    src._num_ruptures = src.count_ruptures()
+                src.weight = src._num_ruptures
             self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
@@ -866,12 +877,14 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save avg_gmf, unless there are too many GMFs
         """
+        oq = self.oqparam
         N = len(self.sitecol.complete)
         C = len(self.oqparam.all_imts())
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > maxsize:
+        if size > maxsize and not oq.impact:
+            # don't save avg_gmf
             logging.warning(
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
@@ -884,16 +897,10 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = base.get_weights(self.oqparam, self.datastore)[rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        rel_events = gmf_df.eid.unique()
-        e = len(rel_events)
-        all_events = self.datastore['events']
-        if e == 0:
+        if len(gmf_df) == 0:
             raise RuntimeError(
                 'No GMFs were generated, perhaps they were '
                 'all below the minimum_intensity threshold')
-        elif e < len(all_events):
-            self.datastore['relevant_events'] = all_events[:][rel_events]
-            logging.info('Stored {:_d} relevant event IDs'.format(e))
 
         # compute and store the avg_gmf
         M = len(self.oqparam.imtls)
@@ -905,7 +912,7 @@ class EventBasedCalculator(base.HazardCalculator):
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
-        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
+        if oq.impact:
             imts = list(self.oqparam.imtls)
             ex = Extractor(self.datastore.calc_id)
             for imt in imts:

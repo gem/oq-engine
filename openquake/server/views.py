@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import ast
 import csv
 import shutil
@@ -42,6 +43,7 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
+from django.core.mail.backends.filebased import EmailBackend as FileEmailBackend
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -990,7 +992,8 @@ def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
 
 
 def aelo_callback(
-        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
+        job_id, job_owner_email, outputs_uri, inputs,
+        exc=None, warnings=None, email_file_path=None):
     if not job_owner_email:
         return
     from_email = settings.EMAIL_HOST_USER
@@ -1025,11 +1028,19 @@ def aelo_callback(
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+    connection = None
+    if email_file_path:
+        # NOTE: file_path is actually a directory where Django stores each email
+        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        connection = FileEmailBackend(file_path=email_file_path)
+    EmailMessage(subject, body, from_email, to,
+                 reply_to=[reply_to],
+                 connection=connection).send()
 
 
 def impact_callback(
-        job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
+        job_id, params, job_owner_email, outputs_uri,
+        exc=None, warnings=None, email_file_path=None):
     if not job_owner_email:
         return
 
@@ -1095,7 +1106,14 @@ def impact_callback(
     else:
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
-    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+    connection = None
+    if email_file_path:
+        # NOTE: file_path is actually a directory where Django stores each email
+        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        connection = FileEmailBackend(file_path=email_file_path)
+    EmailMessage(subject, body, from_email, to,
+                 reply_to=[reply_to],
+                 connection=connection).send()
 
 
 @csrf_exempt
@@ -1213,7 +1231,7 @@ def get_uploaded_file_path(request, filename):
         return gettemp(open(file.temporary_file_path()).read(), suffix=suffix)
 
 
-def create_impact_job(request, params):
+def create_impact_job(request, params, email_file_path):
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
         user_name=utils.get_username(request))
@@ -1243,15 +1261,13 @@ def create_impact_job(request, params):
             % (outputs_uri_api, traceback_uri))
 
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
-            impact_callback)
-    # if 'pytest' in sys.argv[0]:
-    #     # hack for debugging the tests
-    #     # unfortunately it does not work yet because check_email
-    #     # is meant to work with a subprocess
-    #     impact.main_web(*args)
-    # else:
-    #  spawn the Aristotle main process
-    mp.Process(target=impact.main_web, args=args).start()
+            impact_callback, email_file_path)
+
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        impact.main_web(*args)
+    else:
+        # spawn the Impact main process
+        mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
 
@@ -1297,7 +1313,8 @@ def impact_run(request):
     if station_source is not None:
         params['station_source'] = station_source
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    response_data = create_impact_job(request, params)
+    email_file_path = request.POST.get('email_file_path')
+    response_data = create_impact_job(request, params, email_file_path)
     return JsonResponse(response_data, status=200)
 
 
@@ -1341,7 +1358,8 @@ def impact_run_with_shakemap(request):
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    response_data = create_impact_job(request, params)
+    email_file_path = request.POST.get('email_file_path')
+    response_data = create_impact_job(request, params, email_file_path)
     return JsonResponse(response_data, status=200)
 
 
@@ -1485,11 +1503,17 @@ def aelo_run(request):
             ' accessible at the following link: %s'
             % (outputs_uri_api, traceback_uri))
 
-    # spawn the AELO main process
-    mp.Process(target=aelo.main, args=(
+    email_file_path = request.POST.get('email_file_path')
+    args = (
         lon, lat, vs30, params['siteid'], description, asce_version,
         site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback)).start()
+        config.directory.mosaic_dir, aelo_callback, email_file_path)
+
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        aelo.main(*args)
+    else:
+        # spawn the AELO main process
+        mp.Process(target=aelo.main, args=args).start()
     return JsonResponse(response_data, status=200)
 
 
@@ -1848,7 +1872,8 @@ def calc_datastore(request, job_id):
     """
     user_level = get_user_level(request)
     if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
-        return HttpResponseForbidden()
+        err_msg = f'{user_level=}, {settings.ALLOW_DATASTORE_DOWNLOAD=}'
+        return HttpResponseForbidden(err_msg)
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
