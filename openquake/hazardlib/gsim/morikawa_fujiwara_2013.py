@@ -74,7 +74,7 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     if region == "SW":
-        tmp[hypo_z < 80] += C['PH']
+        tmp[hypo_z < 80] += C['PH'] # Morikawa and Fujiwara (2015)
     return tmp
 
 
