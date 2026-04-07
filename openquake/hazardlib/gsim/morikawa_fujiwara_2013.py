@@ -132,7 +132,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
 
-            if imt.string == "PGA":
+            if imt.string in ["PGA", "SA"]:
                 mean[m] = np.log(10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
             elif imt.string == "PGV":
                 mean[m] = np.log(10**mean[m]) # log10 of cm/s to ln of cm/s
