@@ -45,12 +45,13 @@ def _get_intensity_correction_term(C, region, xvf, focal_depth):
         gamma = C['gNE']
     elif region == 'SW':
         gamma = C['gEW']
+        xvf = np.minimum(xvf, 75.0)
     elif region is None:
-        gamma = 0.
+        return 0.
     else:
         raise ValueError('Unsupported region')
     return (
-        gamma * np.minimum(xvf, 75.0) * np.maximum(focal_depth-30., 0.))
+        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
