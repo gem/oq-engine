@@ -44,13 +44,14 @@ def _get_intensity_correction_term(C, region, xvf, focal_depth):
     if region == 'NE':
         gamma = C['gNE']
     elif region == 'SW':
-        gamma = C['gEW']
+        gamma = C['gSW']
+        xvf = np.minimum(xvf, 75.0)
     elif region is None:
-        gamma = 0.
+        return 0.
     else:
         raise ValueError('Unsupported region')
     return (
-        gamma * np.minimum(xvf, 75.0) * np.maximum(focal_depth-30., 0.))
+        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
@@ -135,7 +136,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
             sig[m] = C['sigma'] * np.log(10)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-  IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gEW      PH   sigma
+  IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gSW      PH   sigma
   jma -0.0321 -0.003736 -0.003320 -0.004195  6.9301  6.9042  7.2975  0.005078  0.032214  320.0 -0.756496  1200.0  350  0.000061  0.000059 -0.2284  0.3493
   pga -0.0321 -0.005315 -0.005042 -0.005605  7.0830  7.1181  7.5035  0.011641 -0.055358   15.0 -0.523212  1950.0  350  0.000076  0.000063 -0.2426  0.3761
   pgv -0.0325 -0.002654 -0.002408 -0.003451  5.6952  5.6026  6.0030  0.002266  0.129142  105.0 -0.693402   850.0  350  0.000047  0.000037 -0.2643  0.3399
