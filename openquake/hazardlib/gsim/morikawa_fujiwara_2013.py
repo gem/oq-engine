@@ -132,7 +132,10 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
 
-            mean[m] = np.log(10**mean[m] / 980.665)
+            if imt.string == "PGA":
+                mean[m] = np.log(10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
+            elif imt.string == "PGV":
+                mean[m] = np.log(10**mean[m]) # log10 of cm/s to ln of cm/s
             sig[m] = C['sigma'] * np.log(10)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
