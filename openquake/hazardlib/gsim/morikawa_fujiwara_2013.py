@@ -40,7 +40,8 @@ def _get_basin_term(C, ctx, region=None):
 
     NOTE: The basin term is set to zero when z1pt4 is unknown (-999).
     Unlike other GMMs, this model does not provide a vs30-to-z1pt4
-    relationship, so we cannot back-calculate z1pt4 from vs30. This is
+    relationship, so we cannot back-calculate z1pt4 from vs30 to still
+    use the basin term with only vs30 being considered. This approach is
     consistent with the NIED approach for regions without a subsurface
     structure model (e.g. Ogasawara Islands).
     See: https://www.j-shis.bosai.go.jp/en/labs/mf2013/
