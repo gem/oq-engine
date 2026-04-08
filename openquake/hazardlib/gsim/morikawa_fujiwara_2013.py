@@ -142,7 +142,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 assert imt.name == "JMA"
                 mean[m] = 2 * mean[m]  # Eq 2 states we initially compute JMA/2
 
-            if imt.string == "JMA":
+            if imt.name == "JMA":
                 sig[m] = 2 * C['sigma'] # Already in JMA units but still JMA/2
             else:
                 sig[m] = C['sigma'] * np.log(10)  # log10 to ln
