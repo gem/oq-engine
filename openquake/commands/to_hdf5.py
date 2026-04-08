@@ -38,7 +38,7 @@ def convert_xml_hdf5(input_file, output_file):
         elif inp['xmlns'].endswith('nrml/0.5'):  # current version
             sm = inp.sourceModel
         else:  # not a NRML
-            raise ValueError('Unknown NRML:' % inp['xmlns'])
+            raise ValueError('Unknown NRML: %s' % inp['xmlns'])
         out.save(node.node_to_dict(sm))
     return output_file
 
