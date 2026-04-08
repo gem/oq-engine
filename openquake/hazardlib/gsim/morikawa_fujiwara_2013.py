@@ -36,8 +36,8 @@ CONSTS = {
 
 def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
-    depth = np.maximum(C['Dlmin'], ctx.z1pt4)
-    return C['pd'] * np.log10(depth / d0)
+    tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
+    return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
 def _get_intensity_correction_term(C, region, xvf, focal_depth):
