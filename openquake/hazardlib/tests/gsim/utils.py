@@ -245,7 +245,7 @@ class BaseGSIMTestCase(unittest.TestCase):
                 discrep = (max_discrep_percentage if out_type == 'MEAN'
                            else std_discrep_percentage)
                 for m, im in enumerate(cmaker.imtls):
-                    if out_type == 'MEAN' and im != 'MMI':
+                    if out_type == 'MEAN' and im not in ('MMI', 'JMA'):
                         out[o, m] = np.exp(out[o, m])
                     expected = getattr(ctx, out_type)[im].to_numpy()
                     msg = dict(out_type=out_type, imt=im)

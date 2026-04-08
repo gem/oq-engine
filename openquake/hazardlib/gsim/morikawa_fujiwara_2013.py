@@ -132,11 +132,18 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
 
-            if imt.string in ["PGA", "SA"]:
+            if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
-            elif imt.string == "PGV":
+            elif imt.name == "PGV":
                 mean[m] = np.log(10**mean[m]) # log10 of cm/s to ln of cm/s
-            sig[m] = C['sigma'] * np.log(10)
+            else:
+                assert imt.name == "JMA"
+                mean[m] = 2 * mean[m]  # pre/2 to JMA intensity
+
+            if imt.string == "JMA":
+                sig[m] = 2 * C['sigma']  # sigma in JMA intensity units
+            else:
+                sig[m] = C['sigma'] * np.log(10)  # log10 to ln
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gSW      PH   sigma
