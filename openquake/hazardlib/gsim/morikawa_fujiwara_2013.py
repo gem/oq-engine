@@ -126,22 +126,24 @@ class MorikawaFujiwara2013Crustal(GMPE):
             C = self.COEFFS[imt]
 
             mean[m] = (
-                _get_magnitude_term(
-                    trt, self.region, C, ctx.rrup, mw1prime, mw1, ctx.hypo_depth) +
+                _get_magnitude_term(trt, self.region, C,ctx.rrup,
+                                    mw1prime, mw1, ctx.hypo_depth) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
-                _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
+                _get_intensity_correction_term(
+                    C, self.region, ctx.xvf, ctx.hypo_depth))
 
             if imt.name in ["PGA", "SA"]:
-                mean[m] = np.log(10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
+                mean[m] = np.log(
+                    10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
             elif imt.name == "PGV":
                 mean[m] = np.log(10**mean[m]) # log10 of cm/s to ln of cm/s
             else:
                 assert imt.name == "JMA"
-                mean[m] = 2 * mean[m]  # pre/2 to JMA intensity
+                mean[m] = 2 * mean[m]  # Eq 2 states we initially compute JMA/2
 
             if imt.string == "JMA":
-                sig[m] = 2 * C['sigma']  # sigma in JMA intensity units
+                sig[m] = 2 * C['sigma'] # Already in JMA units but still JMA/2
             else:
                 sig[m] = C['sigma'] * np.log(10)  # log10 to ln
 
