@@ -35,23 +35,9 @@ CONSTS = {
 
 
 def _get_basin_term(C, ctx, region=None):
-    """
-    Compute basin term.
-
-    NOTE: The basin term is set to zero when z1pt4 is unknown (-999).
-    Unlike other GMMs, this model does not provide a vs30-to-z1pt4
-    relationship, so we cannot back-calculate z1pt4 from vs30 to still
-    use the basin term with only vs30 being considered. This approach is
-    consistent with the NIED approach for regions without a subsurface
-    structure model (e.g. Ogasawara Islands).
-    See: https://www.j-shis.bosai.go.jp/en/labs/mf2013/
-    """
     d0 = CONSTS["D0"]
-    fb = np.zeros_like(ctx.z1pt4)
-    known = ctx.z1pt4 != -999
-    depth = np.maximum(C['Dlmin'], ctx.z1pt4[known])
-    fb[known] = C['pd'] * np.log10(depth / d0)
-    return fb
+    depth = np.maximum(C['Dlmin'], ctx.z1pt4)
+    return C['pd'] * np.log10(depth / d0)
 
 
 def _get_intensity_correction_term(C, region, xvf, focal_depth):
