@@ -306,7 +306,7 @@ def get_job_ctx(rup_id,
             'taxonomy_mapping': taxonomy_model_csv,
             'fragility': fragility_csv,
             'consequence': consequence_csv
-                  },
+        },
         'description': f'rupture_id = {rup_id}',
         'calculation_mode': calc_mode,
         'rupture_mesh_spacing': '5',
@@ -315,18 +315,21 @@ def get_job_ctx(rup_id,
         'maximum_distance': str(hdist),
         'asset_hazard_distance': '5',
         'number_of_ground_motion_fields': str(num_gmfs),
-        'cross_correlation': 'GodaAtkinson2009',
-        'ground_motion_correlation_model': 'JB2009',
-        'ground_motion_correlation_params': '{"vs30_clustering":True}',
+        # NOTE: correlation disabled to avoid too big
+        #       calculations and suppression of avg_gmf outputs
+        # 'cross_correlation': 'GodaAtkinson2009',
+        # 'ground_motion_correlation_model': 'JB2009',
+        # 'ground_motion_correlation_params': '{"vs30_clustering":True}',
         'horiz_comp_to_geom_mean': 'true',
         # 'time_event': day_or_night,
         'export_dir': '/tmp',
         'ground_motion_fields': 'true',
+        'gmf_max_gb': '100.0',
         'minimum_intensity': '0.05',
-        'quantiles': "[0.05 0.95]",
-        'aggregate_by': "MATERIAL_TYPE;OCCUPANCY",
+        'quantiles': '[0.05 0.95]',
+        'aggregate_by': 'MATERIAL_TYPE;OCCUPANCY',
         'username': username
-        }
+    }
 
     # If only want a scenario hazard calculation remove the risk inputs/parameters    
     if hazard_only is True:
