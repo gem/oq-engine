@@ -208,7 +208,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('gmf_data', 'hdf5'), self.calc.datastore)
         self.assertIn('gmf-data_', fname)
 
-    def test_case_2(self):
+    def test_case_02(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             concurrent_tasks='4')
 
@@ -221,7 +221,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        dstore = debug_rupture.main(self.calc.datastore.calc_id, 56)
+        dstore = debug_rupture.main(self.calc.datastore.calc_id, '56,169')
 
         fnames = export(('gmf_data', 'csv'), dstore)  # gmfs, sigeps, sites
         self.assertEqualFiles('expected/sig_eps1.csv', fnames[1])

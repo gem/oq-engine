@@ -3,6 +3,7 @@
     the job keeps running instead of raising a SiteAssociationError
 
   [Michele Simionato]
+  * Internal: added postproc.debug_rupture
   * Saved avg_gmf always in impact mode
   * Saved relevant_events always when using --hc
 
