@@ -116,8 +116,8 @@ def get_ebrup(dstore, rup_id):
                 if trt in check:
                     raise ValueError("debug - trt is not being assigned correctly")
                 check.append(trt)
-    
-    return get_ebr(rec, geom, trt)            
+
+    return get_ebr(rec, geom, trt)
 
 
 def get_scenario_rup_csv(fname, rup_id):
@@ -203,7 +203,7 @@ def get_filt_sites(sites_fname, rup, hdist):
 
         # Make site obj
         pnt = Site(Point(site.lon, site.lat), site.vs30, site.z1pt0, site.z2pt5, **extras)
-    
+
         # Add to the list of points
         sites_points.append(pnt)
 
@@ -223,7 +223,7 @@ def get_filt_sites(sites_fname, rup, hdist):
 
         # And return the new sites in a tmp csv
         return get_filt_sites_csv(new_sites)
-    
+
 
 def get_filt_sites_csv(filt_sites):
     """
@@ -260,7 +260,7 @@ def get_filt_sites_csv(filt_sites):
     tmp = tempfile.mkdtemp()
     filt_sites_csv = os.path.join(tmp, 'sites_around_rup.csv')
 
-    # Write to tmp csv        
+    # Write to tmp csv
     filt_sites_df.to_csv(filt_sites_csv, index=False)
 
     return filt_sites_csv
@@ -331,13 +331,13 @@ def get_job_ctx(rup_id,
         'username': username
     }
 
-    # If only want a scenario hazard calculation remove the risk inputs/parameters    
+    # If only want a scenario hazard calculation remove the risk inputs/parameters
     if hazard_only is True:
 
         # First remove input file keys
         for key in ["exposure", "taxonomy_mapping", "fragility", "consequence"]:
             del job_dict["inputs"][key]
-        
+
         # Then remove other parameters only needed for risk
         for key in ["asset_hazard_distance", "quantiles"]:
             del job_dict[key]
@@ -351,7 +351,7 @@ def get_job_ctx(rup_id,
 
     [job] = engine.create_jobs([job_dict], config.distribution.log_level, None,
                                username, None)
-    
+
     return job
 
 
@@ -367,7 +367,7 @@ def export_rup_to_geojson(rup, rup_id):
             surfaces.append(bounds)
     else:
         surfaces = [[rup.surface.get_surface_boundaries()]]
-        
+
     # Make a geojson of the rupture surface
     features = []
     for surf in surfaces:
@@ -381,7 +381,7 @@ def export_rup_to_geojson(rup, rup_id):
                 },
                 "properties": {"fillColor": "#FFA500"}
                 })
-        
+
     rup_geojson = {
         "type": "FeatureCollection",
         "crs": {
@@ -443,7 +443,7 @@ def run_scenario_calc_from_ses_rupture_ext(
         :param fname: Path to the hdf5 file containing the ruptures.
 
         :param rup_id: id attribute of the rupture to retrieve from the dstore
-        
+
         :param gmm_lt: Path to the ground-motion characterisation. If the user
                        specifies an alternative ground-motion characterisation
                        it will be used instead of the default one. Remember that
@@ -542,10 +542,6 @@ def run_scenario_calc_from_ses_rupture_ext(
         response_data = get_job_info(job_ctx.calc_id)
         status = 200
     return JsonResponse(response_data, status=status)
-
-    #     dstore = os.path.join(OQDATA, f"calc_{job_ctx.calc_id}.hdf5")
-    # 
-    #     return dstore, rup_geojson
 
 
 def run_scenario_calc_from_ses_rupture(
