@@ -33,7 +33,7 @@ def main(calc_id: int, rup_id: str):
     An utility to debug event based calculations
     $ python -m openquake.calculators.postproc.debug <calc_id> <rup1>,<rup2>
     """
-    rup_ids = numpy.uint32(rup_id.split(','))
+    rup_ids = numpy.uint64(rup_id.split(','))
     parent = datastore.read(calc_id)
     oq = parent['oqparam']
     try:
