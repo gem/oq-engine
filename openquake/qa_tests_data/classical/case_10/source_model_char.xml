@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="Example Source Model Containing a Simple Fault Source with an alternative characteristic MFD">
+        <sourceGroup name="group1" tectonicRegion="Active Shallow Crust">
+            <characteristicFaultSource id="001" name="PEER Simple Fault Source with AC MFD" tectonicRegion="Active Shallow Crust">
+                <surface>
+                    <planarSurface
+                    dip="90.0"
+                    strike="0.0"
+                    >
+                        <topLeft depth="0.0" lat="-0.11240" lon="-65.0"/>
+                        <topRight depth="0.0" lat="0.11240" lon="-65.0"/>
+                        <bottomLeft depth="12.0" lat="-0.11240" lon="-65.0"/>
+                        <bottomRight depth="12.0" lat="0.11240" lon="-65.0"/>
+                    </planarSurface>
+                </surface>
+                <alternativeCharacteristicMFD
+                    minMag="4.0"
+                    maxMag="7.5"
+                    bGR="0.8"
+                    bAC="0.3"
+                    gamma="0.96"
+                    deltaMagAC="1.0"
+                    totalRate="5.0"
+                />
+                <rake>0.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

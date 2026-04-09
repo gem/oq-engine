@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+
+    <logicTreeBranch branchID="total_sig_scalar">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_to_total_std_scalar.delta = 0.15
+      </uncertaintyModel>
+      <uncertaintyWeight>0.10</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="tau_scalar">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_to_tau_std_scalar.delta = 0.1
+      </uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="phi_scalar">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        add_delta_to_phi_std_scalar.delta = -0.2
+      </uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+
+      <logicTreeBranch branchID="total_sig_vector">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        [ModifiableGMPE.add_delta_to_total_std_vector.delta]
+        "PGA" = 0.1
+        "SA(0.5)" = -0.1
+      </uncertaintyModel>
+      <uncertaintyWeight>0.10</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="tau_vector">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        [ModifiableGMPE.add_delta_to_tau_std_vector.delta]
+        "PGA" = 0.1
+        "SA(0.5)" = -0.1
+      </uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <logicTreeBranch branchID="phi_vector">
+      <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        [ModifiableGMPE.add_delta_to_phi_std_vector.delta]
+        "PGA" = 0.2
+        "SA(0.5)" = -0.15
+      </uncertaintyModel>
+      <uncertaintyWeight>0.20</uncertaintyWeight>
+    </logicTreeBranch>
+
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
