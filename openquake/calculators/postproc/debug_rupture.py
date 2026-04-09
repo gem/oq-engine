@@ -61,7 +61,7 @@ def main(calc_id: int, rup_id: str):
     return dstore
 
 main.calc_id = 'Calculation ID'
-main.rup_id = 'Rupture IDs'
+main.rup_id = 'Comma-separated rupture IDs'
 
 if __name__ == '__main__':
     sap.run(main)
