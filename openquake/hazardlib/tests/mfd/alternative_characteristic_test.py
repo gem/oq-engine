@@ -21,15 +21,16 @@ from openquake.hazardlib.mfd.alternative_characteristic_mfd import (
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
 
 
-# Test inputs are taken from BC Hydro AC memo
-TEST_MFD_INPUTS = dict(min_mag=4.0,
-                       max_mag=7.5,
-                       bin_width=0.1,
+# AC specific params are taken from BC Hydro AC memo (pp. 2 bottom of page)
+TEST_MFD_INPUTS = dict(min_mag=4.0, # Generic testing value
+                       max_mag=7.5, # Generic testing value
+                       bin_width=0.1, # Generic testing value
                        b_GR=0.8,
                        b_AC=0.3,
                        gamma=0.96,
                        delta_m_AC=1.0,
-                       total_rate=5.0)
+                       total_rate=5.0 # Generic testing value not from report
+                       )
 
 
 class AlternativeCharacteristicMFDConstraintsTestCase(BaseMFDTestCase):
