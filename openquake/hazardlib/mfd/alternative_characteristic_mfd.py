@@ -31,9 +31,11 @@ class AlternativeCharacteristicMFD(BaseMFD):
     "back-to-back":
 
     1. GR zone: (min_mag to max_mag - delta_m_AC): a standard
-       truncated Gutenberg-Richter with b-value of b_GR
+       truncated Gutenberg-Richter with b-value of b_GR.
     2. AC zone (max_mag - delta_m_AC to max_mag): a second
-       truncated exponential with its own b-value of b_AC
+       truncated exponential with its own b-value of b_AC.
+
+    delta_m_AC is the width of the AC zone in magnitude units.
 
     The two zones are linked by the gamma value which is the fraction
     of the total seismic moment rate assigned to the AC zone according

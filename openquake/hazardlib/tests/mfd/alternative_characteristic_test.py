@@ -46,8 +46,7 @@ class AlternativeCharacteristicMFDConstraintsTestCase(BaseMFDTestCase):
         # Min mag must be non-negative
         exc = self.assert_mfd_error(AlternativeCharacteristicMFD,
                                     **{**TEST_MFD_INPUTS, 'min_mag': -1})
-        self.assertEqual(str(exc),
-                         'minimum magnitude -1 must be non-negative')
+        self.assertEqual(str(exc), 'minimum magnitude -1 must be non-negative')
 
     def test_max_mag_too_low(self):
         # Max mag must exceed min_mag
@@ -239,11 +238,11 @@ class AlternativeCharacteristicMFDRoundingTestCase(BaseMFDTestCase):
     Tests that non-round magnitude bounds snap correctly.
     """
     def test(self):
-        # Non-round min/max values snap to correct bin centres
+        # Non-round min/max values assigned to correct bin centres
         acmfd = AlternativeCharacteristicMFD(
             **{**TEST_MFD_INPUTS, 'min_mag': 4.01, 'max_mag': 7.49})
         min_mag, num_bins = acmfd._get_min_mag_and_num_bins()
-        self.assertAlmostEqual(min_mag, 4.05)
+        self.assertAlmostEqual(min_mag, 4.05) # First bin centre is Mw 4.05
         self.assertEqual(num_bins, 35)
 
 
