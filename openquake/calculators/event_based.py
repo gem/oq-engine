@@ -335,7 +335,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     logging.info(f'Read {len(allrups):_d} ruptures')
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
-        rup_id = U32(rup_id.split(','))
+        rup_id = I64(rup_id.split(','))
         allrups = allrups[numpy.isin(allrups['id'], rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
