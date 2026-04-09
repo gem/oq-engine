@@ -76,8 +76,7 @@ class AlternativeCharacteristicMFDConstraintsTestCase(BaseMFDTestCase):
         # b_AC == c (1.5) causes the moment rate integral in the
         # AC zone to diverge (division by zero in the TMR formula)
         exc = self.assert_mfd_error(
-            AlternativeCharacteristicMFD,
-            **{**TEST_MFD_INPUTS, 'b_AC': 1.5})
+            AlternativeCharacteristicMFD, **{**TEST_MFD_INPUTS, 'b_AC': 1.5})
         self.assertIn('b_AC cannot equal c_val', str(exc))
 
     def test_gamma_out_of_range(self):
@@ -141,8 +140,8 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_b_GR', {'value': 0.1})
         self.assertAlmostEqual(acmfd.b_GR, 0.9)
-        self.assertAlmostEqual(acmfd._get_total_moment_rate(), old_tmr,
-                               delta=old_tmr * 1e-10)
+        self.assertAlmostEqual(
+            acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1e-10) #TODO
 
     def test_increment_b_AC(self):
         # Incrementing b_AC preserves total moment rate
@@ -150,14 +149,13 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_b_AC', {'value': 0.1})
         self.assertAlmostEqual(acmfd.b_AC, 0.4)
-        self.assertAlmostEqual(acmfd._get_total_moment_rate(), old_tmr,
-                               delta=old_tmr * 1e-10)
+        self.assertAlmostEqual(
+            acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1e-10) #TODO
 
     def test_increment_b_AC_check_constraints(self):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         # b_AC = 0.3 + 1.2 = 1.5 should fail (equals c_val)
-        self.assert_mfd_error(acmfd.modify, 'increment_b_AC',
-                              {'value': 1.2})
+        self.assert_mfd_error(acmfd.modify, 'increment_b_AC', {'value': 1.2})
 
     def test_increment_max_mag(self):
         # Incrementing max_mag preserves total moment rate
@@ -165,8 +163,8 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_max_mag', {'value': 0.5})
         self.assertAlmostEqual(acmfd.max_mag, 8.0)
-        self.assertAlmostEqual(acmfd._get_total_moment_rate(), old_tmr,
-                               delta=old_tmr * 1e-10)
+        self.assertAlmostEqual(
+            acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1e-10)
 
     def test_increment_max_mag_check_constraints(self):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
@@ -191,8 +189,8 @@ class AlternativeCharacteristicMFDZoneRatesTestCase(unittest.TestCase):
         # GR + AC zone rates must equal the total rate
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         n_GR, n_AC = acmfd._compute_zone_rates()
-        self.assertAlmostEqual(n_GR + n_AC, TEST_MFD_INPUTS['total_rate'],
-                               places=10)
+        self.assertAlmostEqual(
+            n_GR + n_AC, TEST_MFD_INPUTS['total_rate'], places=10)
 
     def test_rates_are_positive(self):
         # Both zone rates must be positive
@@ -212,8 +210,8 @@ class AlternativeCharacteristicMFDGetRatesTestCase(BaseMFDTestCase):
         rates = acmfd.get_annual_occurrence_rates()
         self.assertGreater(len(rates), 0)
         for mag, rate in rates:
-            self.assertGreater(rate, 0,
-                               'rate at mag %g should be positive' % mag)
+            self.assertGreater(
+                rate, 0, 'rate at mag %g should be positive' % mag)
 
     def test_magnitudes_are_ascending(self):
         # Magnitude bins must be in increasing order
@@ -229,8 +227,8 @@ class AlternativeCharacteristicMFDGetRatesTestCase(BaseMFDTestCase):
         rates = acmfd.get_annual_occurrence_rates()
         mags = [mag for mag, _ in rates]
         for i in range(1, len(mags)):
-            self.assertAlmostEqual(mags[i] - mags[i - 1],
-                                   TEST_MFD_INPUTS['bin_width'], places=10)
+            self.assertAlmostEqual(
+                mags[i] - mags[i - 1], TEST_MFD_INPUTS['bin_width'], places=10)
 
     def test_get_min_max_mag(self):
         # Min/max mag must match the first/last bin centres
@@ -272,8 +270,8 @@ class AlternativeCharacteristicMFDTotalMomentRateTestCase(unittest.TestCase):
         acmfd2 = AlternativeCharacteristicMFD(**{**TEST_MFD_INPUTS, 'total_rate': 10.0})
         tmr1 = acmfd1._get_total_moment_rate()
         tmr2 = acmfd2._get_total_moment_rate()
-        self.assertAlmostEqual(tmr2 / tmr1, 10.0 / TEST_MFD_INPUTS['total_rate'],
-                               places=10)
+        self.assertAlmostEqual(
+            tmr2 / tmr1, 10.0 / TEST_MFD_INPUTS['total_rate'], places=10)
 
 
 class AlternativeCharacteristicMFDFromMomentTestCase(unittest.TestCase):
@@ -283,20 +281,19 @@ class AlternativeCharacteristicMFDFromMomentTestCase(unittest.TestCase):
     def test_moment_rate_preserved(self):
         # Constructed TMR must match the target moment_rate
         moment_rate = 1.0e18
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('total_rate') # Need to remove total_rate
         acmfd = AlternativeCharacteristicMFD.from_moment(
-            **{k: v for k, v in TEST_MFD_INPUTS.items()
-               if k != 'total_rate'},
-            moment_rate=moment_rate)
+            **inputs, moment_rate=moment_rate)
         computed_tmr = acmfd._get_total_moment_rate()
-        self.assertAlmostEqual(computed_tmr, moment_rate,
-                               delta=moment_rate * 1e-8)
+        self.assertAlmostEqual(computed_tmr, moment_rate, delta=moment_rate * 1e-8)
 
     def test_from_moment_returns_correct_type(self):
         # Class method must return an AlternativeCharacteristicMFD instance
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('total_rate') # Need to remove total_rate
         acmfd = AlternativeCharacteristicMFD.from_moment(
-            **{k: v for k, v in TEST_MFD_INPUTS.items()
-               if k != 'total_rate'},
-            moment_rate=1.0e18)
+            **inputs, moment_rate=1.0e18)
         self.assertIsInstance(acmfd, AlternativeCharacteristicMFD)
 
 
@@ -310,9 +307,10 @@ class AlternativeCharacteristicMFDFromSlipRateTestCase(unittest.TestCase):
         rigidity = 30.0  # GPa
         area = 500.0  # km^2
         expected_moment = (slip_rate * 1e-3) * (rigidity * 1e9) * (area * 1e6)
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('total_rate')
         acmfd = AlternativeCharacteristicMFD.from_slip_rate(
-            **{k: v for k, v in TEST_MFD_INPUTS.items()
-               if k != 'total_rate'},
+            **inputs,
             slip_rate=slip_rate, rigidity=rigidity, area=area)
         computed_tmr = acmfd._get_total_moment_rate()
         self.assertAlmostEqual(computed_tmr, expected_moment,
@@ -320,17 +318,17 @@ class AlternativeCharacteristicMFDFromSlipRateTestCase(unittest.TestCase):
 
     def test_slip_rate_attributes(self):
         # slip_rate and rigidity are stored as attributes
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('total_rate')
         acmfd = AlternativeCharacteristicMFD.from_slip_rate(
-            **{k: v for k, v in TEST_MFD_INPUTS.items()
-               if k != 'total_rate'},
-            slip_rate=2.0, rigidity=30.0, area=500.0)
+            **inputs, slip_rate=2.0, rigidity=30.0, area=500.0)
         self.assertEqual(acmfd.slip_rate, 2.0)
         self.assertEqual(acmfd.rigidity, 30.0)
 
     def test_from_slip_rate_returns_correct_type(self):
         # Class method must return an AlternativeCharacteristicMFD instance
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('total_rate')
         acmfd = AlternativeCharacteristicMFD.from_slip_rate(
-            **{k: v for k, v in TEST_MFD_INPUTS.items()
-               if k != 'total_rate'},
-            slip_rate=2.0, rigidity=30.0, area=500.0)
+            **inputs, slip_rate=2.0, rigidity=30.0, area=500.0)
         self.assertIsInstance(acmfd, AlternativeCharacteristicMFD)

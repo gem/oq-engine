@@ -294,7 +294,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
                 # In AC zone
                 rate = _bin_rate(a_AC, self.b_AC, mag_lo, mag_hi)
             else:
-                # Bin straddles boundary — split at m_c and sum rates
+                # Bin straddles boundary so split at m_c and sum rates
                 rate = _bin_rate(a_GR, self.b_GR, mag_lo, m_c
                                  ) + _bin_rate(a_AC, self.b_AC, m_c, mag_hi)
 
@@ -337,7 +337,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
             if bi == 0:
                 # Avoid a division by zero in the integral
                 return (10.0 ** ai) * np.log(10.0) * (m_hi - m_lo)
-            
+                
             return ((10.0 ** ai) / bi) * (
                 10.0 ** (bi * m_hi) - 10.0 ** (bi * m_lo))
         
