@@ -356,7 +356,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         if oq.maximum_rupture_depth:
             amodel = model.decode('ascii')
-            trt_array = trts.get(amodel) or trts.get('???')
+            trt_array = trts.get(amodel, trts.get('???'))
             trt = trt_array[trt_smr // TWO24]
             maxdep = getdefault(oq.maximum_rupture_depth, trt)
             ok &= hypo_deps <= maxdep
