@@ -38,7 +38,8 @@ source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
               'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
-              'taperedGutenbergRichterMFD')
+              'taperedGutenbergRichterMFD',
+              'alternativeCharacteristicMFD')
 
 EXCLUDE_FROM_GEOM_PROPS = (
     'Polygon', 'Point', 'MultiPoint', 'LineString', '3D MultiLineString',
@@ -592,6 +593,16 @@ class SourceConverter(RuptureConverter):
                     mfd_node['minMag'], mfd_node['maxMag'],
                     mfd_node['cornerMag'], self.width_of_mfd_bin,
                     mfd_node['aValue'], mfd_node['bValue'])
+            elif mfd_node.tag.endswith('alternativeCharacteristicMFD'):
+                return mfd.AlternativeCharacteristicMFD(
+                    min_mag=mfd_node['minMag'],
+                    max_mag=mfd_node['maxMag'],
+                    bin_width=self.width_of_mfd_bin,
+                    b_GR=mfd_node['bGR'],
+                    b_AC=mfd_node['bAC'],
+                    gamma=mfd_node['gamma'],
+                    delta_m_AC=mfd_node['deltaMagAC'],
+                    total_rate=mfd_node['totalRate'])
 
     def convert_npdist(self, node):
         """
