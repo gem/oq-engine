@@ -30,9 +30,9 @@ class AlternativeCharacteristicMFD(BaseMFD):
     Composed of two double-truncated exponential distributions
     "back-to-back":
 
-    1. GR zone: (min_mag to max_mag - delta_m_AC): a standard
+    1. GR zone (min_mag to max_mag minus delta_m_AC): a standard
        truncated Gutenberg-Richter with b-value of b_GR.
-    2. AC zone (max_mag - delta_m_AC to max_mag): a second
+    2. AC zone (delta_m_AC wide, up to max_mag): a second
        truncated exponential with its own b-value of b_AC.
 
     delta_m_AC is the width of the AC zone in magnitude units.
