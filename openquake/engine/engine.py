@@ -130,23 +130,6 @@ def manage_signals(job_id, signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
-def sigchld_handler(signum, frame):
-    """
-    Signal handler for SIGCHLD: reap zombie children and propagate
-    unexpected deaths by killing the parent of the offending worker.
-    """
-    if parallel.WORKER_POOL_ACTIVE:
-        try:
-            pid, wait_status = os.waitpid(-1, os.WNOHANG)
-        except ChildProcessError:
-            return
-        else:
-            raise MasterKilled(
-                f'sigchld_handler: some worker was killed: {pid=}, {wait_status=}')
-    else:
-        logging.debug('sigchld_handler: worker pool not active, ignoring.')
-
-
 def register_signals(job_id):
     # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP;
     # when using the Django development server this module is imported by a
@@ -156,14 +139,10 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
-        if hasattr(signal, "SIGCHLD"):
-            # Do not register SIGCHLD handler on Windows
-            signal.signal(signal.SIGCHLD, sigchld_handler)
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
                 signal.signal(signal.SIGHUP, manage)
-        logging.debug('Installed signal handlers')
     except ValueError:
         pass
 
@@ -235,7 +214,8 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        set_concurrent_tasks_default(calc, 1 if log.workflow_id else 2)
+        workflow = oqparam.calculation_mode == 'workflow'
+        set_concurrent_tasks_default(calc, 1 if workflow else 2)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -276,7 +256,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
         job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
-                        host, workflow_id, pdb)
+                        host, pdb)
         jobs.append(job)
 
     return jobs
@@ -361,6 +341,12 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
+    except MasterKilled as e:
+        if ('pytest' in sys.argv[0] and str(e) ==
+                'The openquake master process was killed manually'):
+            logging.warning(e)
+        else:
+            raise
     except Exception as e:
         exc = e
         raise
@@ -604,36 +590,42 @@ def prepare_workflow(params, workflow_toml, pdb):
     Create or retrieve a workflow record and create or update
     the workflow database
     """
-    workflows = read_many(workflow_toml, params)
-    names = numpy.concatenate([wf.names for wf in workflows])
-    n = len(names)
-    check_unique(names, workflow_toml)
-    wfdic = dict(base_path=os.path.dirname(workflow_toml),
-                 calculation_mode='workflow')
     try:
+        # retrieve an old workflow
         workflow_id = params.pop('workflow_id')
     except KeyError:
         # create a new workflow
-        descr = workflows[0].description
-        [wfjob] = create_jobs([wfdic], pdb=pdb)
+        [wfjob] = create_jobs([{'calculation_mode': 'workflow'}], pdb=pdb)
         workflow_id = wfjob.calc_id
-        dstore = datastore.read(workflow_id, 'w')
-        wf_df = pandas.DataFrame(
-            dict(name=names,
-                 calc_id=[0] * n,
-                 status=['created'] * n,
-                 size_mb=[0.0] * n)
-        ).set_index('name')
-        dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
-        dstore.create_df('workflow', wf_df.reset_index())
-        dstore.create_dset('success', hdf5.vstr, len(workflows))
+        new = True
     else:
-        # continue an existing workflow
-        wfdic['job_id'] = workflow_id
-        dstore = datastore.read(workflow_id, 'r+')
-        wfjob = logs.init(wfdic)
-        descr = wfjob.get_job().description
-    wfjob.workflows = workflows
+        wfjob = logs.init({'job_id': workflow_id})
+        new = False
+    with wfjob:
+        workflows = read_many(workflow_toml, params)
+        names = numpy.concatenate([wf.names for wf in workflows])
+        n = len(names)
+        check_unique(names, workflow_toml)
+        wfdic = dict(base_path=os.path.dirname(workflow_toml),
+                     calculation_mode='workflow')
+        if new:
+            descr = workflows[0].description
+            dstore = datastore.read(workflow_id, 'w')
+            wf_df = pandas.DataFrame(
+                dict(name=names,
+                     calc_id=[0] * n,
+                     status=['created'] * n,
+                     size_mb=[0.0] * n)
+            ).set_index('name')
+            dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
+            dstore.create_df('workflow', wf_df.reset_index())
+            dstore.create_dset('success', hdf5.vstr, len(workflows))
+        else:
+            # continue an existing workflow
+            wfdic['job_id'] = workflow_id
+            dstore = datastore.read(workflow_id, 'r+')
+            descr = wfjob.get_job().description
+        wfjob.workflows = workflows
     return wfjob, dstore, names, descr
 
 
@@ -658,6 +650,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
+    t0 = time.time()
     wfjob, dstore, names, descr = prepare_workflow(params, workflow_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
@@ -714,7 +707,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         sap.run_func(success)
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
-    dt = wfjob.dt / 3600.
+    dt = (time.time() - t0) / 3600.
     with wfjob:
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:

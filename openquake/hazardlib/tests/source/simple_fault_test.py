@@ -72,7 +72,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             self.assertIs(rupture.temporal_occurrence_model, self.TOM)
             self.assertIs(rupture.tectonic_region_type, self.TRT)
             self.assertEqual(rupture.rake, self.RAKE)
-        self.assertEqual(len(expected_ruptures), source.count_ruptures())
+        self.assertEqual(len(expected_ruptures), source.num_ruptures)
         for i in range(len(expected_ruptures)):
             expected_rupture, rupture = expected_ruptures[i], ruptures[i]
             self.assertAlmostEqual(rupture.mag, expected_rupture['mag'])

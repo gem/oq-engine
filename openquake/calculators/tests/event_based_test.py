@@ -33,6 +33,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
+from openquake.calculators.postproc import debug_rupture
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
@@ -195,7 +196,6 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1_from_ses(self):
         self.run_calc(case_1.__file__, 'job_from_ses.ini')
         self.assertEqual(len(self.calc.datastore['events']), 4906)
-
         
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
@@ -208,7 +208,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('gmf_data', 'hdf5'), self.calc.datastore)
         self.assertIn('gmf-data_', fname)
 
-    def test_case_2(self):
+    def test_case_02(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             concurrent_tasks='4')
 
@@ -220,6 +220,12 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
+
+        dstore = debug_rupture.main(self.calc.datastore.calc_id, '56,169')
+
+        fnames = export(('gmf_data', 'csv'), dstore)  # gmfs, sigeps, sites
+        self.assertEqualFiles('expected/sig_eps1.csv', fnames[1])
+        self.assertEqualFiles('expected/gmf1.csv', fnames[0])
 
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
@@ -441,7 +447,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertLess(e, E)
+        self.assertEqual(e, E)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)

@@ -119,7 +119,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         dic = dict(loadnpz(resp.streaming_content))
         for gsim, eids in dic.items():
             numpy.testing.assert_equal(eids, numpy.sort(eids)), gsim
-        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 5)
+        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 33)
 
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'

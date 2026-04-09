@@ -92,11 +92,14 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     if 'vs30' not in sites_df.keys():
         sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
+    models_in_dir = os.listdir(mosaic_dir)
     for vs30, dvf in sites_df.groupby('vs30'):
         # vs30 is a string and can contain multiple values, like '260 365 530'
         # it is used to set override_vs30 in `get_params_from` and then
         # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
+            if model not in models_in_dir:
+                continue
             if model in ('???', 'USA', 'GLD'):
                 continue
             if exclude_models and model in exclude_models.split(','):

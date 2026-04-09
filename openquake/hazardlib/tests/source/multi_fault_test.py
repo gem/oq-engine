@@ -126,7 +126,7 @@ class MultiFaultTestCase(unittest.TestCase):
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'])
         ctx = cmaker.from_srcs([src], sitecol)
-        assert len(ctx) == src.count_ruptures()
+        assert len(ctx) == src.num_ruptures
 
         if PLOTTING:
             # plotting the 3 sections and then the multisurface

@@ -25,6 +25,7 @@
 |case\_35|Test cluster feature|
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
+|case\_39|Test checking of IMT-dependent weights with unsupported IMTs|
 |case\_40|NGAEast GMPEs|
 |case\_41|SERA Site Amplification Models including EC8 Site Classes and Geology|
 |case\_42|Split/filter a long complex fault source with maxdist=1000 km|
@@ -59,6 +60,7 @@
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
 |case\_80|Tests New Madrid cluster with rup\_mutex|
+|case\_81|Tests a Tabular GMM and a non-tabular GMM both with extra parameters specified within mixture models|
 |case\_82|tests two mps, only one with reqv that should collapse points|
 |case\_83|Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM|
 |case\_84|Tests reqv\_ignore\_sources |
@@ -71,4 +73,4 @@
 |case\_91|Check SA and AvgSA with the same ordinal within indirect approach AvgSA are not overwritting each other in dstore|
 |case\_92|Tests use of correlation models using EmpiricalAvgSACorrelationModel|
 |case\_93|Tests use of GMPE Tables with indirect AvgSA correlation models|
-|case\_94|Tests application of delta values to total, tau and phi using modifiable gmpe
+|case\_94|Tests application of deltas to total, tau and phi using mgmpe (both scalar and IMT-dependent)

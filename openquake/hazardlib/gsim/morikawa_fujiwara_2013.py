@@ -44,13 +44,14 @@ def _get_intensity_correction_term(C, region, xvf, focal_depth):
     if region == 'NE':
         gamma = C['gNE']
     elif region == 'SW':
-        gamma = C['gEW']
+        gamma = C['gSW']
+        xvf = np.minimum(xvf, 75.0)
     elif region is None:
-        gamma = 0.
+        return 0.
     else:
         raise ValueError('Unsupported region')
     return (
-        gamma * np.minimum(xvf, 75.0) * np.maximum(focal_depth-30., 0.))
+        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
@@ -73,7 +74,7 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     if region == "SW":
-        tmp[hypo_z < 80] += C['PH']
+        tmp[hypo_z < 80] += C['PH'] # Morikawa and Fujiwara (2015)
     return tmp
 
 
@@ -125,17 +126,29 @@ class MorikawaFujiwara2013Crustal(GMPE):
             C = self.COEFFS[imt]
 
             mean[m] = (
-                _get_magnitude_term(
-                    trt, self.region, C, ctx.rrup, mw1prime, mw1, ctx.hypo_depth) +
+                _get_magnitude_term(trt, self.region, C,ctx.rrup,
+                                    mw1prime, mw1, ctx.hypo_depth) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
-                _get_intensity_correction_term(C, self.region, ctx.xvf, ctx.hypo_depth))
+                _get_intensity_correction_term(
+                    C, self.region, ctx.xvf, ctx.hypo_depth))
 
-            mean[m] = np.log(10**mean[m] / 980.665)
-            sig[m] = C['sigma'] * np.log(10)
+            if imt.name in ["PGA", "SA"]:
+                mean[m] = np.log(
+                    10**mean[m] / 980.665) # log10 of cm/^2 to ln of g
+            elif imt.name == "PGV":
+                mean[m] = np.log(10**mean[m]) # log10 of cm/s to ln of cm/s
+            else:
+                assert imt.name == "JMA"
+                mean[m] = 2 * mean[m]  # Eq 2 states we initially compute JMA/2
+
+            if imt.name == "JMA":
+                sig[m] = 2 * C['sigma'] # Already in JMA units but still JMA/2
+            else:
+                sig[m] = C['sigma'] * np.log(10)  # log10 to ln
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-  IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gEW      PH   sigma
+  IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gSW      PH   sigma
   jma -0.0321 -0.003736 -0.003320 -0.004195  6.9301  6.9042  7.2975  0.005078  0.032214  320.0 -0.756496  1200.0  350  0.000061  0.000059 -0.2284  0.3493
   pga -0.0321 -0.005315 -0.005042 -0.005605  7.0830  7.1181  7.5035  0.011641 -0.055358   15.0 -0.523212  1950.0  350  0.000076  0.000063 -0.2426  0.3761
   pgv -0.0325 -0.002654 -0.002408 -0.003451  5.6952  5.6026  6.0030  0.002266  0.129142  105.0 -0.693402   850.0  350  0.000047  0.000037 -0.2643  0.3399
