@@ -292,7 +292,7 @@ class AlternativeCharacteristicMFDFromMomentTestCase(unittest.TestCase):
                                delta=moment_rate * 1e-8)
 
     def test_from_moment_returns_correct_type(self):
-        # Factory must return an AlternativeCharacteristicMFD instance
+        # Class method must return an AlternativeCharacteristicMFD instance
         acmfd = AlternativeCharacteristicMFD.from_moment(
             **{k: v for k, v in TEST_MFD_INPUTS.items()
                if k != 'total_rate'},
@@ -328,7 +328,7 @@ class AlternativeCharacteristicMFDFromSlipRateTestCase(unittest.TestCase):
         self.assertEqual(acmfd.rigidity, 30.0)
 
     def test_from_slip_rate_returns_correct_type(self):
-        # Factory must return an AlternativeCharacteristicMFD instance
+        # Class method must return an AlternativeCharacteristicMFD instance
         acmfd = AlternativeCharacteristicMFD.from_slip_rate(
             **{k: v for k, v in TEST_MFD_INPUTS.items()
                if k != 'total_rate'},
