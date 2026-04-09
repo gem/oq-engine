@@ -500,7 +500,7 @@ def run_scenario_calc_from_ses_rupture_ext(
     rup_csv, eb_rup = get_scenario_rup_csv(fname, rup_id)
 
     # Export the rupture as a geojson
-    rup_geojson = export_rup_to_geojson(eb_rup.rupture, rup_id)
+    export_rup_to_geojson(eb_rup.rupture, rup_id)
 
     # Write the GMM LT to an OQ XML
     gsim_lt_xml = get_truncated_gmc_xml(eb_rup.rupture.tectonic_region_type, gmm_lt)
