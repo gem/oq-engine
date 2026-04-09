@@ -1,5 +1,5 @@
   [Christopher Brooks]
-  * Added the `AlternativeCharacteristicMFD` class (unit tests and als
+  * Added the `AlternativeCharacteristicMFD` class (unit tests and also
     a QA test in classical/case_10)
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
     also a bug where the `xvf` cap of 75 km was being applied incorrectly
