@@ -39,7 +39,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
 
     The two zones are linked by the gamma value which is the fraction
     of the total seismic moment rate assigned to the AC zone according
-    to equation 1.2 of the BC Hydro memo on AC MFDs:
+    to equation 1.2 of the BC Hydro memo on AC MFDs::
 
         N_GR = ((1-gamma)/gamma) * N_AC
                * b_AC * (f_AC - g_AC) * (c - b_GR) * (1 - f_GR)
@@ -51,7 +51,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         f_AC = 10 ** (-b_AC * delta_m_AC)
         delta_m_GR = max_mag - delta_m_AC - min_mag
         g_AC = 10 ** (-c * delta_m_AC)
-        c = magnitude-moment relation exponent
+        c = magnitude-moment relation exponent (1.5)
 
     Within each zone the annual occurrence rate for a magnitude bin
     [mag_lo, mag_hi] follows the truncated-GR form:
