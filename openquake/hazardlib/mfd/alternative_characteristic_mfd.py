@@ -527,7 +527,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Get AC boundary
         m_c = max_mag - delta_m_AC
 
-        # Back-compute zone activity rates from reference rates and mags
+        # Backcompute zone activity rates from reference rates and mags
         n_GR = _zone_rate_from_ref(rate_ref_GR, b_GR,
                                    ref_mag_GR, min_mag, m_c)
         n_AC = _zone_rate_from_ref(rate_ref_AC, b_AC,
