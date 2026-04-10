@@ -90,8 +90,8 @@ class AlternativeCharacteristicMFD(BaseMFD):
     """
     MODIFICATIONS = {'set_max_mag',
                      'set_bGR',
-                     'set_bAC',        
-                     'increment_b_GR', 
+                     'set_bAC',
+                     'increment_b',
                      'increment_b_AC', 
                      'increment_max_mag',
                      'increment_max_mag_no_mo_balance'}
@@ -376,7 +376,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         """
         self.b_AC = b_val
 
-    def modify_increment_b_GR(self, value):
+    def modify_increment_b(self, value):
         """
         Apply relative b_GR modification, preserving total moment rate.
 

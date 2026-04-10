@@ -130,11 +130,11 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd.modify('set_bAC', {'b_val': 0.5})
         self.assertEqual(acmfd.b_AC, 0.5)
 
-    def test_increment_b_GR(self):
+    def test_increment_b(self):
         # Incrementing b_GR preserves total moment rate
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_tmr = acmfd._get_total_moment_rate()
-        acmfd.modify('increment_b_GR', {'value': 0.1})
+        acmfd.modify('increment_b', {'value': 0.1})
         self.assertAlmostEqual(acmfd.b_GR, 0.9)
         self.assertAlmostEqual(
             acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8) 

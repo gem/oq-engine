@@ -316,9 +316,20 @@ def _bGR_absolute(utype, source, value):
     source.mfd.modify('set_bGR', dict(b_val=b_val))
 
 
+@apply_uncertainty.add('bACAbsolute')
+def _bAC_absolute(utype, source, value):
+    b_val = float(value)
+    source.mfd.modify('set_bAC', dict(b_val=b_val))
+
+
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
+
+
+@apply_uncertainty.add('bGRRelative_AC')
+def _bGR_relative_AC(utype, source, value):
+    source.mfd.modify('increment_b_AC', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelative')
