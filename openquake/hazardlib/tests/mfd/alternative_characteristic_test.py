@@ -76,8 +76,7 @@ class AlternativeCharacteristicMFDConstraintsTestCase(BaseMFDTestCase):
         self.assertIn('b_AC cannot equal c_val', str(exc))
 
     def test_gamma_out_of_range(self):
-        # Gamma must be strictly between 0 and 1; at the boundaries
-        # the moment-rate partitioning ratio becomes undefined
+        # Gamma must be strictly between 0 and 1
         for gamma in [0.0, 1.0, -0.1, 1.5]:
             exc = self.assert_mfd_error(
                 AlternativeCharacteristicMFD,
@@ -86,7 +85,7 @@ class AlternativeCharacteristicMFDConstraintsTestCase(BaseMFDTestCase):
 
     def test_negative_delta_m_AC(self):
         # delta_m_AC defines the width of the AC zone and must
-        # be positive for the two-zone decomposition to be valid
+        # be positive
         exc = self.assert_mfd_error(
             AlternativeCharacteristicMFD,
             **{**TEST_MFD_INPUTS, 'delta_m_AC': -0.5})
