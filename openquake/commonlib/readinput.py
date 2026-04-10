@@ -1255,7 +1255,7 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
         uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
     else:
         uridict = oq.shakemap_uri
-    sitecol, shakemap, discarded, _ = get_sitecol_shakemap(
+    sitecol, shakemap, discarded, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
     assetcol.reduce_also(sitecol)
