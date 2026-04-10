@@ -135,7 +135,7 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_b', {'value': 0.1})
-        self.assertAlmostEqual(acmfd.b_GR, 0.9)
+        self.assertAlmostEqual(acmfd.b_GR, TEST_MFD_INPUTS["b_GR"] + 0.1)
         self.assertAlmostEqual(
             acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8) 
 
@@ -144,12 +144,12 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_b_AC', {'value': 0.1})
-        self.assertAlmostEqual(acmfd.b_AC, 0.4)
+        self.assertAlmostEqual(acmfd.b_AC, TEST_MFD_INPUTS["b_AC"] + 0.1)
         self.assertAlmostEqual(
             acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8) 
 
     def test_increment_b_AC_check_constraints(self):
-        # b_AC = 0.3 + 1.2 = 1.5 should fail (equals c_val)
+        # b_AC + 1.2 = 1.5 should fail (equals c_val)
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         self.assert_mfd_error(acmfd.modify, 'increment_b_AC', {'value': 1.2})
 
@@ -158,7 +158,7 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_tmr = acmfd._get_total_moment_rate()
         acmfd.modify('increment_max_mag', {'value': 0.5})
-        self.assertAlmostEqual(acmfd.max_mag, 8.0)
+        self.assertAlmostEqual(acmfd.max_mag, TEST_MFD_INPUTS["max_mag"] + 0.5)
         self.assertAlmostEqual(
             acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
 
@@ -172,7 +172,7 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_rate = acmfd.total_rate
         acmfd.modify('increment_max_mag_no_mo_balance', {'value': 0.5})
-        self.assertAlmostEqual(acmfd.max_mag, 8.0)
+        self.assertAlmostEqual(acmfd.max_mag, TEST_MFD_INPUTS["max_mag"] + 0.5)
         self.assertEqual(acmfd.total_rate, old_rate)
 
 
