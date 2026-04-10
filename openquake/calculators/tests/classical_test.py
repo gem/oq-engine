@@ -243,6 +243,12 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
             case_10.__file__)
+        # Check that from_reference_rates method gives identical
+        # hazard curves to the regular method
+        hcurves1 = self.calc.datastore['hcurves-stats'][:]
+        self.run_calc(case_10.__file__, 'job_refrates.ini')
+        hcurves2 = self.calc.datastore['hcurves-stats'][:]
+        aac(hcurves1, hcurves2)
         
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):

@@ -594,6 +594,21 @@ class SourceConverter(RuptureConverter):
                     mfd_node['cornerMag'], self.width_of_mfd_bin,
                     mfd_node['aValue'], mfd_node['bValue'])
             elif mfd_node.tag.endswith('alternativeCharacteristicMFD'):
+                ref_mag_GR = mfd_node.get('refMagGR')
+                if ref_mag_GR is not None:
+                    # Ref mag only provided in the from_reference_rates method
+                    return mfd.AlternativeCharacteristicMFD.from_reference_rates(
+                        min_mag=mfd_node['minMag'],
+                        max_mag=mfd_node['maxMag'],
+                        bin_width=self.width_of_mfd_bin,
+                        b_GR=mfd_node['bGR'],
+                        b_AC=mfd_node['bAC'],
+                        delta_m_AC=mfd_node['deltaMagAC'],
+                        ref_mag_GR=mfd_node['refMagGR'],
+                        rate_ref_GR=mfd_node['rateRefGR'],
+                        ref_mag_AC=mfd_node['refMagAC'],
+                        rate_ref_AC=mfd_node['rateRefAC'])
+                # Otherwise use the regular approach
                 return mfd.AlternativeCharacteristicMFD(
                     min_mag=mfd_node['minMag'],
                     max_mag=mfd_node['maxMag'],
