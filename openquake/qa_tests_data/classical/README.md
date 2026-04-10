@@ -10,7 +10,7 @@
 |case\_07|Test DummyGMPE in event_based|
 |case\_08|Test override_vs30 with two values and disagg_by_src|
 |case\_09|Test ConditionalGMPE Macedo2019|
-|case\_10|Test use of alternative characterstic MFD|
+|case\_10|Test use of alternative characteristic MFD|
 |case\_12|Two TRTs, 1 rlz|
 |case\_18|3 GMPETables|
 |case\_22|Test tiling and International Date Line|
