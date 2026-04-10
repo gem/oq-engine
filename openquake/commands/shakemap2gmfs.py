@@ -58,7 +58,7 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
             sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, sites)
         except RuntimeError as err:
             assert str(err).startswith('The IMT SA(0.6) is required'), err
-            imts = ['PGA', 'SA(0.3)', 'SA(1.0)', 'MMI']
+            imts = ['PGA', 'SA(0.3)', 'SA(1.0)']
             sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, sites)
         if not os.path.exists(fname):
             numpy.save(fname, shakemap)
