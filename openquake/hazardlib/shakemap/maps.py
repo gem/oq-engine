@@ -65,7 +65,9 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
             site.SiteCollection.from_usgs_shakemap(shakemap),
             shakemap, [], filtered_imts)
 
-    return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, assoc_mode)
+    return (
+        *geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, assoc_mode),
+        filtered_imts)
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
@@ -95,7 +97,8 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
         return (site.SiteCollection.from_usgs_shakemap(shakemap),
                 shakemap, [], filtered_imts)
 
-    return geo.utils.assoc(shakemap, sitecol, assoc_dist, assoc_mode)
+    return (*geo.utils.assoc(shakemap, sitecol, assoc_dist, assoc_mode),
+            filtered_imts)
 
 
 def filter_unused_imts(shakemap, required_imts,
@@ -132,9 +135,10 @@ def check_required_imts(required_imts, available_imts, mode='strict'):
     :returns: set of filtered imts (depending on mode)
     :raises RuntimeError: if required imts are missing and mode is 'strict'
     """
-    required_imts = set(required_imts)
-    missing = required_imts - available_imts
-    filtered_imts = required_imts - missing
+    available_imts = set(available_imts)
+    missing = set(required_imts) - available_imts
+    # preserving the original order of the required imts
+    filtered_imts = [imt for imt in required_imts if imt in available_imts]
     if missing:
         msg = ('The imts %s are required but not in the available set %s, '
                'please change the risk model otherwise you will have '
