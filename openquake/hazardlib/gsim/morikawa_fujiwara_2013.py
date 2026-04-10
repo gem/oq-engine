@@ -45,11 +45,12 @@ def _get_intensity_correction_term(C, region, xvf, focal_depth):
         gamma = C['gNE']
     elif region == 'SW':
         gamma = C['gSW']
-        xvf = np.minimum(xvf, 75.0)
     elif region is None:
         return 0.
     else:
         raise ValueError('Unsupported region')
+    xvf = np.clip(xvf, -75.0, 75.0) # Assume the abs xvf cap should be applied 
+                                    # to both SW AND NE to prevent extreme corr 
     return (
         gamma * xvf * np.maximum(focal_depth-30., 0.))
 

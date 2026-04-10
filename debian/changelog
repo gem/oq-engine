@@ -1,7 +1,6 @@
   [Christopher Brooks]
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
-    also a bug where the `xvf` cap of 75 km was being applied incorrectly
-    to the northeast region too (should only be applied to SW region).
+    also a bug where the `xvf` cap of 75 km was being applied incorrectly.
   * Modify `openquake/hazardlib/tests/gsim/utils.py` to support checking
     of JMA values too (supported IMT for MF13 GSIM).
 
