@@ -24,9 +24,9 @@
                     bAC="0.3"
                     deltaMagAC="1.0"
                     refMagGR="5.0"
-                    rateRefGR="7.230290911177027e-01"
+                    rateRefGR="0.72302909"
                     refMagAC="7.0"
-                    rateRefAC="7.438613577410125e-02"
+                    rateRefAC="0.074386136"
                 />
                 <rake>0.0</rake>
             </characteristicFaultSource>
