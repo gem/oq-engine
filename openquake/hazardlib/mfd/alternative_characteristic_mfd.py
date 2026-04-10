@@ -612,8 +612,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Sum to get the total rate as required
         total_rate = n_GR + n_AC
 
-        # Need to still get gamma too by inverting equation 1.2 of the
-        # BCHydro AC memo
+        # Get gamma by inverting equation 1.2 of the BCHydro AC memo
         c = 1.5
         delta_m_GR = m_c - min_mag
         f_GR = 10.0 ** (-b_GR * delta_m_GR)
