@@ -84,8 +84,8 @@ def sanitize(value):
     elif isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
-    elif isinstance(value, int) and value > sys.maxsize:
-        return float(value)
+    elif isinstance(value, int) and value > sys.maxsize:  # ~9E18
+        return str(value)
     return value
 
 
