@@ -54,12 +54,11 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         oq = log.get_oqparam()
         calc = calculators(oq, log.calc_id)
         sites = get_site_collection(oq) if site_model else None
-        try:
-            sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, sites)
-        except RuntimeError as err:
-            assert str(err).startswith('The IMT SA(0.6) is required'), err
-            imts = ['PGA', 'SA(0.3)', 'SA(1.0)']
-            sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, sites)
+        sitecol, shakemap, disc, filtered_imts = get_sitecol_shakemap(
+            dic, imts, sites, imt_mode='warn')
+        if set(imts) != set(filtered_imts):
+            print(f"Considering only imts: {filtered_imts}")
+            imts = filtered_imts
         if not os.path.exists(fname):
             numpy.save(fname, shakemap)
             print(f'Saved {fname}')
