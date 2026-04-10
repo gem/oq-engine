@@ -27,7 +27,7 @@ from openquake.calculators.base import calculators, store_gmfs
 # see qa_tests_data/scenario/case_21
 def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
          trunclevel: float = 3, spatialcorr='yes', crosscorr='yes',
-         cholesky_limit: int = 10_000):
+         cholesky_limit: int = 10_000, imt_mode='warn'):
     """
     Given a shakemap ID and a path to a site_model.csv file build a
     GMFs array corresponding to num_gmfs events. The user can pass
@@ -55,7 +55,7 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         calc = calculators(oq, log.calc_id)
         sites = get_site_collection(oq) if site_model else None
         sitecol, shakemap, disc, filtered_imts = get_sitecol_shakemap(
-            dic, imts, sites, imt_mode='warn')
+            dic, imts, sites, imt_mode=imt_mode)
         if set(imts) != set(filtered_imts):
             print(f"Considering only imts: {filtered_imts}")
             imts = filtered_imts
@@ -85,3 +85,4 @@ main.trunclevel = 'Truncation level'
 main.spatialcorr = 'Spatial correlation'
 main.crosscorr = 'Cross correlation among IMTs'
 main.cholesky_limit = 'Cholesky Limit'
+main.imt_mode = 'if "strict", raise an error in case expected imts are missing'
