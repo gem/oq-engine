@@ -190,4 +190,4 @@ class ShakemapTestCase(unittest.TestCase):
         uridict = dict(kind='usgs_xml', grid_url=f, uncertainty_url=None)
         with self.assertRaises(RuntimeError) as ctx:
             get_sitecol_shakemap(uridict, ['PGA', 'SA(0.6)', 'SA(1.0)'])
-        self.assertIn("The IMT SA(0.6) is required", str(ctx.exception))
+        self.assertIn("The imts {'SA(0.6)'} are required", str(ctx.exception))

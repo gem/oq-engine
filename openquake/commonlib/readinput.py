@@ -51,7 +51,8 @@ from shapely.validation import make_valid, explain_validity
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
+    random_filter, countby, get_duplicates, check_extension, gettemp,
+    AccumDict)
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -1096,10 +1097,10 @@ def read_consdict(oqparam, limit_states, perils):
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
             consdict['%s_by_%s' % (consequence, by)] = df[
-                    df.consequence==consequence]
+                df.consequence == consequence]
     return consdict
 
-    
+
 def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
@@ -1197,7 +1198,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
-    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
+    :param duplicates_strategy:
+        either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
@@ -1258,7 +1260,7 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
         uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
     else:
         uridict = oq.shakemap_uri
-    sitecol, shakemap, discarded = get_sitecol_shakemap(
+    sitecol, shakemap, discarded, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
     assetcol.reduce_also(sitecol)
@@ -1826,7 +1828,8 @@ def read_source_models(fnames, hdf5path='', **converterparams):
     """
     :param fnames: a list of source model files
     :param hdf5path: auxiliary .hdf5 file used to store the multifault sources
-    :param converterparams: a dictionary of parameters like rupture_mesh_spacing
+    :param converterparams:
+        a dictionary of parameters like rupture_mesh_spacing
     :returns: a list of SourceModel instances
     """
     converter = sourceconverter.SourceConverter()
