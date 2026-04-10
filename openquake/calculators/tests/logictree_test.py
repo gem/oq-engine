@@ -524,11 +524,10 @@ hazard_uhs-std.csv
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
 
-    def test_case_30_sampling(self):
-        # IMT-dependent weights with sampling by cheating
-        self.assert_curves_ok(
-            ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10')
+        # IMT-dependent weights with sampling
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_30.__file__, 'job.ini',
+                          number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
