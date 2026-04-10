@@ -1723,7 +1723,11 @@ def get_checksum32(oqparam, h5=None):
     :param oqparam: an OqParam instance
     """
     ini = oqparam.to_ini().encode('utf8')
-    checksum = zlib.adler32(ini, _checksum(oqparam._input_files))
+    ifiles = oqparam._input_files
+    gpkg = os.path.join(config.directory.mosaic_dir, 'mosaic.gpkg')
+    if os.path.exists(gpkg):
+        ifiles.append(gpkg)
+    checksum = zlib.adler32(ini, _checksum(ifiles))
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
