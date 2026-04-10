@@ -25,7 +25,7 @@
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl3">
-            <logicTreeBranchSet uncertaintyType="bGRRelative_AC"
+            <logicTreeBranchSet uncertaintyType="bACRelative"
                                 branchSetID="bs3">
                 <logicTreeBranch branchID="b31">
                     <uncertaintyModel>-0.1</uncertaintyModel>

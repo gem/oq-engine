@@ -327,8 +327,8 @@ def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
 
 
-@apply_uncertainty.add('bGRRelative_AC')
-def _bGR_relative_AC(utype, source, value):
+@apply_uncertainty.add('bACRelative')
+def _bAC_relative(utype, source, value):
     source.mfd.modify('increment_b_AC', dict(value=value))
 
 

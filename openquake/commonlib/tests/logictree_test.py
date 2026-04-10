@@ -1421,13 +1421,13 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         # b_GR should be unchanged
         self.assertEqual(source.mfd.b_GR, 0.8)
 
-    def test_ac_mfd_bGRRelative_AC(self):
+    def test_ac_mfd_bACRelative(self):
         # Make point source with the MFD
         source = self._make_ac_point_source()
         # Get original TMR
         old_tmr = source.mfd._get_total_moment_rate()
         # Apply the relative b_C uncertainty
-        lt.apply_uncertainty('bGRRelative_AC', source, 0.1)
+        lt.apply_uncertainty('bACRelative', source, 0.1)
         self.assertAlmostEqual(source.mfd.b_AC, 0.4)
         # TMR should be preserved
         self.assertAlmostEqual(
