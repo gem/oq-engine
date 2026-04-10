@@ -67,7 +67,8 @@ from openquake.engine import engine
 
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
-         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5,
+         cache:str='false'):
     """
     Storing global SES
     """
@@ -75,7 +76,7 @@ def main(mosaic_dir, out, models='ALL', *,
                             number_of_logic_tree_samples,
                             ses_per_logic_tree_path, minimum_magnitude)
     with patch.dict(config.directory, {'mosaic_dir': mosaic_dir}):
-        calc_id = engine.run_workflow(ses_toml, {})
+        calc_id = engine.run_workflow(ses_toml, {'cache': cache})
     os.remove(ses_toml)
     return calc_id
 
@@ -85,6 +86,7 @@ main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Discard ruptures below this magnitude'
+main.cache = 'Use the cache to avoid repeating correct calculations'
 
 if __name__ == '__main__':
     sap.run(main)
