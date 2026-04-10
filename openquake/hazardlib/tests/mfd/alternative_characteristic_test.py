@@ -331,3 +331,69 @@ class AlternativeCharacteristicMFDFromSlipRateTestCase(unittest.TestCase):
         acmfd = AlternativeCharacteristicMFD.from_slip_rate(
             **inputs, slip_rate=2.0, rigidity=30.0, area=500.0)
         self.assertIsInstance(acmfd, AlternativeCharacteristicMFD)
+
+
+class AlternativeCharacteristicMFDFromReferenceRatesTestCase(
+        unittest.TestCase):
+    """
+    Tests for the from_reference_rates class method.
+    """
+    def test_equivalent_rates(self):
+        # Build AC MFD as usual
+        acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
+
+        # Get the zone rates
+        m_c = acmfd.max_mag - acmfd.delta_m_AC
+        n_GR, n_AC = acmfd._compute_zone_rates()
+
+        # Pick reference magnitudes inside each zone
+        ref_mag_GR = 5.0
+        ref_mag_AC = 7.0
+
+        def _calc_exceedance_rate(n, b, ref_mag, m_lo, m_hi):
+            return n * (10.0 ** (-b * ref_mag) - 10.0 ** (-b * m_hi)) / (
+                10.0 ** (-b * m_lo) - 10.0 ** (-b * m_hi))
+
+        # Compute exceedance rates at ref mags
+        rate_ref_GR = _calc_exceedance_rate(
+            n_GR, acmfd.b_GR, ref_mag_GR, acmfd.min_mag, m_c)
+        rate_ref_AC = _calc_exceedance_rate(
+            n_AC, acmfd.b_AC, ref_mag_AC, m_c, acmfd.max_mag)
+
+        # Reconstruct from reference rates
+        acmfd2 = AlternativeCharacteristicMFD.from_reference_rates(
+            min_mag=acmfd.min_mag, max_mag=acmfd.max_mag,
+            bin_width=acmfd.bin_width,
+            b_GR=acmfd.b_GR, b_AC=acmfd.b_AC,
+            delta_m_AC=acmfd.delta_m_AC,
+            ref_mag_GR=ref_mag_GR, rate_ref_GR=rate_ref_GR,
+            ref_mag_AC=ref_mag_AC, rate_ref_AC=rate_ref_AC)
+
+        # Get that the total rates and gamma are the same using both methods
+        self.assertAlmostEqual(acmfd2.total_rate, acmfd.total_rate, places=8)
+        self.assertAlmostEqual(acmfd2.gamma, acmfd.gamma, places=8)
+
+    def test_returns_correct_type(self):
+        # Class method must return an AlternativeCharacteristicMFD instance
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('gamma')
+        inputs.pop('total_rate')
+        acmfd = AlternativeCharacteristicMFD.from_reference_rates(
+            **inputs,
+            ref_mag_GR=5.0, rate_ref_GR=0.5,
+            ref_mag_AC=7.0, rate_ref_AC=0.01)
+        self.assertIsInstance(acmfd, AlternativeCharacteristicMFD)
+
+    def test_rates_are_positive(self):
+         # Every bin must have a positive occurrence rate
+        inputs = {**TEST_MFD_INPUTS}
+        inputs.pop('gamma')
+        inputs.pop('total_rate')
+        acmfd = AlternativeCharacteristicMFD.from_reference_rates(
+            **inputs,
+            ref_mag_GR=5.0, rate_ref_GR=0.5,
+            ref_mag_AC=7.0, rate_ref_AC=0.01)
+        rates = acmfd.get_annual_occurrence_rates()
+        for mag, rate in rates:
+            self.assertGreater(
+                rate, 0, 'rate at mag %g should be positive' % mag)

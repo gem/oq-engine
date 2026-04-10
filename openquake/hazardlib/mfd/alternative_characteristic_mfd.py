@@ -96,7 +96,8 @@ class AlternativeCharacteristicMFD(BaseMFD):
                      'increment_max_mag',
                      'increment_max_mag_no_mo_balance'}
 
-    def __init__(self, min_mag, max_mag, bin_width, b_GR, b_AC,
+    def __init__(self, min_mag, max_mag, bin_width,
+                 b_GR, b_AC,
                  gamma, delta_m_AC, total_rate):
         self.min_mag = min_mag
         self.max_mag = max_mag
@@ -308,6 +309,29 @@ class AlternativeCharacteristicMFD(BaseMFD):
 
         return rates
 
+    @staticmethod
+    def _get_zone_tmr(a, b, m_lo, m_hi):
+        """
+        Compute the total moment rate for a single truncated-GR zone.
+
+        :param a:
+            a-value of the zone.
+        :param b:
+            b-value of the zone.
+        :param m_lo:
+            Lower magnitude bound.
+        :param m_hi:
+            Upper magnitude bound.
+        :returns:
+            Zone moment rate in N * m / year.
+        """
+        ai = 9.05 + a + np.log10(b)
+        bi = 1.5 - b
+        if bi == 0:
+            return (10.0 ** ai) * np.log(10.0) * (m_hi - m_lo)
+        return ((10.0 ** ai) / bi) * (
+            10.0 ** (bi * m_hi) - 10.0 ** (bi * m_lo))
+
     def _get_total_moment_rate(self):
         """
         Calculate total moment rate (total energy released per
@@ -333,18 +357,8 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Get the boundary magnitude of the zones
         m_c = self.max_mag - self.delta_m_AC
 
-        def _zone_tmr(a, b, m_lo, m_hi):
-            ai = 9.05 + a + np.log10(b)
-            bi = 1.5 - b
-            if bi == 0:
-                # Avoid a division by zero in the integral
-                return (10.0 ** ai) * np.log(10.0) * (m_hi - m_lo)
-                
-            return ((10.0 ** ai) / bi) * (
-                10.0 ** (bi * m_hi) - 10.0 ** (bi * m_lo))
-        
-        return (_zone_tmr(a_GR, self.b_GR, self.min_mag, m_c)
-                + _zone_tmr(a_AC, self.b_AC, m_c, self.max_mag))
+        return (self._get_zone_tmr(a_GR, self.b_GR, self.min_mag, m_c)
+                + self._get_zone_tmr(a_AC, self.b_AC, m_c, self.max_mag))
 
     def modify_set_max_mag(self, value):
         """
@@ -465,7 +479,8 @@ class AlternativeCharacteristicMFD(BaseMFD):
         self.max_mag += value
 
     @classmethod
-    def from_moment(cls, min_mag, max_mag, bin_width, b_GR, b_AC,
+    def from_moment(cls, min_mag, max_mag, bin_width,
+                    b_GR, b_AC,
                     gamma, delta_m_AC, moment_rate):
         """
         :param min_mag:
@@ -499,8 +514,10 @@ class AlternativeCharacteristicMFD(BaseMFD):
                    b_GR, b_AC, gamma, delta_m_AC, total_rate)
 
     @classmethod
-    def from_slip_rate(cls, min_mag, max_mag, bin_width, b_GR, b_AC,
-                       gamma, delta_m_AC, slip_rate, rigidity, area):
+    def from_slip_rate(cls, min_mag, max_mag, bin_width,
+                       b_GR, b_AC,
+                       gamma, delta_m_AC,
+                       slip_rate, rigidity, area):
         """
         Calls .from_moment with moment = slip_rate * rigidity * area
 
@@ -537,3 +554,76 @@ class AlternativeCharacteristicMFD(BaseMFD):
         obj.slip_rate = slip_rate
         obj.rigidity = rigidity
         return obj
+
+    @classmethod
+    def from_reference_rates(cls, min_mag, max_mag, bin_width,
+                             b_GR, b_AC, delta_m_AC,
+                             ref_mag_GR, rate_ref_GR,
+                             ref_mag_AC, rate_ref_AC):
+        """
+        Construct an AC MFD from reference exceedance rates at specified
+        magnitudes for each zone, instead of from total_rate and gamma.
+
+        The exceedance rate at a reference magnitude m within a truncated-GR
+        zone [m_lo, m_hi] with activity rate N and b-value b is::
+
+            N(m) = N * [10^(-b*m) - 10^(-b*m_hi)] / [10^(-b*m_lo) - 10^(-b*m_hi)]
+
+        which is inverted in this class method to recover the zone activity
+        rate N from the given reference rate.
+
+        :param min_mag:
+            Minimum magnitude (m0).
+        :param max_mag:
+            Maximum magnitude (mu).
+        :param bin_width:
+            Width of a single histogram bin.
+        :param b_GR:
+            b-value for the GR zone.
+        :param b_AC:
+            b-value for the AC zone.
+        :param delta_m_AC:
+            Width of the AC zone in magnitude units.
+        :param ref_mag_GR:
+            Reference magnitude within the GR zone at which rate_ref_GR
+            is specified.
+        :param rate_ref_GR:
+            Annual exceedance rate at ref_mag_GR for the GR zone.
+        :param ref_mag_AC:
+            Reference magnitude within the AC zone at which rate_ref_AC
+            is specified.
+        :param rate_ref_AC:
+            Annual exceedance rate at ref_mag_AC for the AC zone.
+        """
+        def _zone_rate_from_ref(rate_ref, b, ref_mag, m_lo, m_hi):
+            denom = 10.0 ** (-b * ref_mag) - 10.0 ** (-b * m_hi)
+            numer = 10.0 ** (-b * m_lo) - 10.0 ** (-b * m_hi)
+            return rate_ref * numer / denom
+
+        # Get AC boundary
+        m_c = max_mag - delta_m_AC
+
+        # Back-compute zone activity rates from reference rates and mags
+        n_GR = _zone_rate_from_ref(rate_ref_GR, b_GR,
+                                   ref_mag_GR, min_mag, m_c)
+        n_AC = _zone_rate_from_ref(rate_ref_AC, b_AC,
+                                   ref_mag_AC, m_c, max_mag)
+
+        # Sum to get the total rate as required
+        total_rate = n_GR + n_AC
+
+        # Need to still get gamma too by inverting equation 1.2 of the
+        # BCHydro AC memo
+        c = 1.5
+        delta_m_GR = m_c - min_mag
+        f_GR = 10.0 ** (-b_GR * delta_m_GR)
+        f_AC = 10.0 ** (-b_AC * delta_m_AC)
+        g_AC = 10.0 ** (-c * delta_m_AC)
+
+        K = (b_AC * (f_AC - g_AC) * (c - b_GR) * (1.0 - f_GR)
+             / (b_GR * (c - b_AC) * g_AC * f_GR * (1.0 - f_AC)))
+        gamma = K * n_AC / (K * n_AC + n_GR)
+
+        return cls(min_mag, max_mag, bin_width,
+                   b_GR, b_AC, gamma, delta_m_AC, total_rate)
+    
