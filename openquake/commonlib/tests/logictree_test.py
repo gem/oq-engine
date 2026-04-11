@@ -35,6 +35,7 @@ from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.mfd import AlternativeCharacteristicMFD
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -1399,6 +1400,54 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.01)
+
+    ### AC MFD UNCERTAINTIES ### 
+    def _make_ac_point_source(self):
+        # Make point source with the AC MFD
+        source = deepcopy(self.point_source)
+        source.mfd = AlternativeCharacteristicMFD(
+            min_mag=4.0, max_mag=7.5, bin_width=0.2,
+            b_GR=0.8, b_AC=0.3, gamma=0.96,
+            delta_m_AC=1.0, total_rate=5.0)
+        return source
+
+    def test_ac_mfd_bACAbsolute(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        # Apply the absolute b_AC uncertainty
+        lt.apply_uncertainty('bACAbsolute', source, 0.5)
+        # b_GR should now be 0.5
+        self.assertEqual(source.mfd.b_AC, 0.5)
+        # b_GR should be unchanged
+        self.assertEqual(source.mfd.b_GR, 0.8)
+
+    def test_ac_mfd_bACRelative(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        # Get original TMR
+        old_tmr = source.mfd._get_total_moment_rate()
+        # Apply the relative b_C uncertainty
+        lt.apply_uncertainty('bACRelative', source, 0.1)
+        self.assertAlmostEqual(source.mfd.b_AC, 0.4)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            source.mfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
+        # b_GR should be unchanged
+        self.assertEqual(source.mfd.b_GR, 0.8)
+
+    def test_ac_mfd_bGRRelative(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        # Get original TMR
+        old_tmr = source.mfd._get_total_moment_rate()
+        # Apply relative b_GR uncertainty
+        lt.apply_uncertainty('bGRRelative', source, -0.1)
+        self.assertAlmostEqual(source.mfd.b_GR, 0.7)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            source.mfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
+        # b_AC should be unchanged
+        self.assertEqual(source.mfd.b_AC, 0.3)
 
 
 class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
