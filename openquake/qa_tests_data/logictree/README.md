@@ -29,7 +29,6 @@
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_30           | IMT-dependent weights, International Date Line                             |
-| case\_30\_sampling | IMT-dependent weights, sampling                                            |
 | case\_31           | Source Specific Logic Tree                                                 |
 | case\_36           | Advanced applyToSources                                                    |
 | case\_39           | 0-IMT-weights, pointsource distance=0 and ruptures collapsing              |

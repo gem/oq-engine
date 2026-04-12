@@ -827,10 +827,15 @@ def get_gsim_lt(oqparam, trts=('*',)):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
-        logging.error('IMT-dependent weights in the logic tree cannot work '
-                      'with sampling, because they would produce different '
-                      'GMPE paths for each IMT that cannot be combined, so '
-                      'I am using the default weights')
+        if oqparam.calculation_mode.startswith(('classical', 'disaggregation')):
+            raise InvalidFile(
+                f'{oqparam.inputs["gsim_logic_tree"]}: IMT-dependent weights '
+                'in the GMM logic tree require full enumeration')
+        else:
+            logging.error('IMT-dependent weights in the logic tree cannot work '
+                          'with sampling, because they would produce different '
+                          'GMPE paths for each IMT that cannot be combined; '
+                          'using the default weights')
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
@@ -1718,7 +1723,11 @@ def get_checksum32(oqparam, h5=None):
     :param oqparam: an OqParam instance
     """
     ini = oqparam.to_ini().encode('utf8')
-    checksum = zlib.adler32(ini, _checksum(oqparam._input_files))
+    ifiles = oqparam._input_files
+    gpkg = os.path.join(config.directory.mosaic_dir, 'mosaic.gpkg')
+    if os.path.exists(gpkg):
+        ifiles.append(gpkg)
+    checksum = zlib.adler32(ini, _checksum(ifiles))
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
