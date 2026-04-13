@@ -335,7 +335,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     logging.info(f'Read {len(allrups):_d} ruptures')
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
-        rup_id = U32(rup_id.split(','))
+        rup_id = I64(rup_id.split(','))
         allrups = allrups[numpy.isin(allrups['id'], rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
@@ -355,7 +355,9 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         if oq.maximum_rupture_depth:
-            trt = trts[model.decode('ascii')][trt_smr // TWO24]
+            amodel = model.decode('ascii')
+            trt_array = trts.get(amodel, trts.get('???'))
+            trt = trt_array[trt_smr // TWO24]
             maxdep = getdefault(oq.maximum_rupture_depth, trt)
             ok &= hypo_deps <= maxdep
         rups = filrups[ok]
