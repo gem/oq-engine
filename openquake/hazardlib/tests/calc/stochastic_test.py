@@ -16,18 +16,20 @@
 import os
 import unittest
 import numpy
+import pathlib
 from openquake.hazardlib import nrml
 from openquake.hazardlib.calc.filters import magdepdist
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 
 aae = numpy.testing.assert_almost_equal
+HERE = pathlib.Path(__file__).parent
 
 
 class StochasticEventSetTestCase(unittest.TestCase):
 
     def test_nankai(self):
         # source model for the Nankai region provided by M. Pagani
-        source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        source_model = HERE / 'data' / 'nankai' / 'nankai.xml'
         # it has a single group containing 15 mutex sources
         [group] = nrml.to_python(source_model)
         for i, src in enumerate(group):
