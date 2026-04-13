@@ -1299,6 +1299,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
     sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
+    if oqparam.rupture_dict or oqparam.rupture_xml:
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        sitecol.array = RuptureFilter(rup, dist)(sitecol)
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
