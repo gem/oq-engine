@@ -1,3 +1,8 @@
+  [Matteo Nastasi]
+  * Integrate Christopher Brooks PAPERS script to run calculation
+    starting from hypothetical ruptures into engine as new API
+    entry-point
+
   [Christopher Brooks]
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
     also a bug where the `xvf` cap of 75 km was being applied incorrectly
