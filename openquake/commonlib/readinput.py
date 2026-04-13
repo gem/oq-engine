@@ -1723,7 +1723,7 @@ def get_checksum32(oqparam, h5=None):
     :param oqparam: an OqParam instance
     """
     ini = oqparam.to_ini().encode('utf8')
-    ifiles = oqparam._input_files
+    ifiles = list(oqparam._input_files)
     gpkg = os.path.join(config.directory.mosaic_dir, 'mosaic.gpkg')
     if os.path.exists(gpkg):
         ifiles.append(gpkg)
