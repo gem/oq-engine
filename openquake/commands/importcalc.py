@@ -20,6 +20,7 @@ import os
 import sys
 import pprint
 import logging
+import getpass
 from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
 from openquake.calculators.base import expose_outputs
@@ -45,20 +46,31 @@ def main(calc_id):
     else:
         remote = True
     job = logs.dbcmd('get_job', calc_id)
-    if job is not None:
+    if job:
         sys.exit('There is already a job #%d in the local db' % calc_id)
+
+    new_id = logs.dbcmd(
+            'create_job', datadir,
+            'custom',
+            f'Imported {calc_id}',
+            getpass.getuser(),
+            None,
+            'localhost')
+    ds_calc = os.path.join(datadir, f'calc_{calc_id}.hdf5')
+    ds_new = os.path.join(datadir, f'calc_{new_id}.hdf5')
     if remote:
         webex = WebExtractor(calc_id)
         hc_id = webex.oqparam.hazard_calculation_id
         if hc_id:
             sys.exit('The job has a parent (#%d) and cannot be '
                      'downloaded' % hc_id)
-        webex.dump('%s/calc_%d.hdf5' % (datadir, calc_id))
+        webex.dump(ds_calc)
         webex.close()
-    with datastore.read(calc_id) as dstore:
+    os.rename(ds_calc, ds_new)
+    with datastore.read(new_id) as dstore:
         pprint.pprint(dstore.get_attrs('/'))
         expose_outputs(dstore, status='complete')
-    logging.info('Imported calculation %s successfully', calc_id)
+    logging.info(f'Imported calculation {calc_id}->{new_id} successfully')
 
 
 main.calc_id = 'calculation ID or pathname ~/oqdata/calc_XXX.hdf5'

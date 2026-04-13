@@ -395,6 +395,10 @@ class CompositeSourceModel:
         mags = AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
+                if src.code == b'M':
+                    # fast lane for MultiPointSources, assuming thet have
+                    # all the same magstrs
+                    src = next(iter(src))
                 mags[sg.trt].update(src.get_magstrs())
         out = {}
         for trt in mags:
