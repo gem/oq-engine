@@ -15,7 +15,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from .module import run_scenario_calc_from_ses_rupture
-
-__all__ = ['run_scenario_calc_from_ses_rupture' ]
