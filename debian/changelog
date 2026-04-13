@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Filtering the sites around the rupture also in scenario_damage
   * Forbidded IMT-dependent weights for classical calculations with sampling
   * Extended `oq shakemap2gmfs` to work without a site model file
 

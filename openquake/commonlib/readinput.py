@@ -63,7 +63,8 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
+from openquake.hazardlib.source.rupture import (
+    build_planar_rupture_from_dict)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -1301,6 +1302,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
     sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
+    if oqparam.rupture_dict or oqparam.rupture_xml:
+        # ScenarioDamageTestCase::test_case_12
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        sitecol.array = RuptureFilter(rup, dist)(sitecol.array)
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
