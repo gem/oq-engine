@@ -166,7 +166,7 @@ def get_ebr(rec, geom, trt):
     else:
         # fault surface, strike and dip will be computed
         surface.strike = surface.dip = None
-        surface.__init__(RectangularMesh(*mesh))
+        surface.__init__(RectangularMesh(F32(mesh[0]), F32(mesh[1]), F32(mesh[2])))
 
     # build rupture
     rupture = object.__new__(rupture_cls)

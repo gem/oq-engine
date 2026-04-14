@@ -64,7 +64,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import (
-    build_planar_rupture_from_dict)
+    build_planar_rupture_from_dict, get_ruptures)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -862,16 +862,21 @@ def get_rupture(oqparam):
     """
     rupture_model = oqparam.inputs.get('rupture_model')
     rup = None
-
     if rupture_model and rupture_model.endswith('.json'):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
-    if rupture_model and rupture_model.endswith('.xml'):
+    elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
-    if rup is None:  # assume rupture_dict
+    elif rupture_model and rupture_model.endswith('.csv'):
+        fname = oqparam.inputs['rupture_model']
+        rups = get_ruptures(fname)
+        if len(rups) == 1:
+            # ScenarioDamageTestCase::test_case_12
+            rup = rups[0]
+    elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
@@ -1116,9 +1121,10 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_dict:
+    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
+        # tested in scenario_damage/case_12
         rupfilter = RuptureFilter(rup, dist)
     else:
         rupfilter = None
@@ -1302,12 +1308,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
     sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
-    if oqparam.rupture_dict or oqparam.rupture_xml:
-        # ScenarioDamageTestCase::test_case_12
-        rup = get_rupture(oqparam)
-        dist = oqparam.maximum_distance('*')(rup.mag)
-        sitecol.array = RuptureFilter(rup, dist)(sitecol.array)
-
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
     if oqparam.aggregate_exposure:
