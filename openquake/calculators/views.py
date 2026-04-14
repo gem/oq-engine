@@ -967,7 +967,10 @@ def view_extreme_gmvs(token, dstore):
         msg += ('Your results are expected to have a large dependency '
                 'from the rupture seed: %d%%' % (err * 100))
     if imt0 == 'PGA':
-        rups = dstore['ruptures'][:]
+        try:
+            rups = dstore['filtered_ruptures'][:]
+        except KeyError:
+            rups = dstore['ruptures'][:]
         rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'imt': gmvs, 'sid': sids}, eids)
