@@ -38,7 +38,7 @@ def load_residual_grids(hdf5_path):
     
     * res_terms: dict mapping each term name to a sub-dict with location
       (hypo or site), sig_comp_modified (tau, phi, or sig), and
-      add_or_sub_sigma_delta (sub or add, default sub)
+      sigma_adjustment (sub, add, or none; default none)
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
@@ -161,10 +161,13 @@ def _apply_grid_corrections(grid_data, ctx, imt,
         # Apply adjustment to mean prediction
         mean += delta_mean
 
+        # Skip sigma adjustment if configured as "none"
+        sig_action = cfg.get("sigma_adjustment", "none")
+        if sig_action == "none":
+            continue
+
         # Apply adjustment to required component of GMM sigma
-        sign = -1 if cfg.get(
-            "add_or_sub_sigma_delta",
-            "sub") == "sub" else 1 # By default reduce sigma with sigma adj
+        sign = -1 if sig_action == "sub" else 1
         sig_comp = cfg["sig_comp_modified"]
         if sig_comp == "tau":
             # Adjust tau and recompute total sigma too accordingly
@@ -208,8 +211,10 @@ class GridAdjustedGMPE(GMPE):
         
         * sig = Adjust total std dev
 
-      * add_or_sub_sigma_delta (optional, default "sub"): Whether
-        to add or subtract the spatially-resolved std-dev delta:
+      * sigma_adjustment (optional, default "none"): Whether to subtract or add
+        the std-dev delta, or skip the sigma adjustment entirely:
+
+        * none = Skip sigma adjustment (only apply mean correction)
 
         * sub = Subtract variance (reduce sigma)
 
@@ -262,6 +267,7 @@ class GridAdjustedGMPE(GMPE):
 
         # Ensure inter/intra-event std devs are computed by the base GSIM
         if any(cfg["sig_comp_modified"] in ("tau", "phi")
+               and cfg.get("sigma_adjustment", "none") != "none"
                for cfg in self.grid_data["res_terms"].values()):
             required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
             # Raise error if not a random-effects GSIM
