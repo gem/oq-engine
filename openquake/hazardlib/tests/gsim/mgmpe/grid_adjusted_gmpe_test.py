@@ -51,7 +51,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def _get_mean_stds(self, imts):
         # Instantiate GMMs
         base = valid.gsim(BASE_GSIM) # Original GMM
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5=GRID_HDF5)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
         # Make ctx
         cmaker = simple_cmaker([base, adj], imts)
         ctx = cmaker.new_ctx(len(LATS))
@@ -118,7 +118,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
     ### Check presence of required ctx attributes ###
     def test_hypo_loc_is_available(self):
         # Instantiate adjusted GMM
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5=GRID_HDF5)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
         # dL2L correction uses hypo location
         self.assertIn("hypo_lat", adj.REQUIRES_RUPTURE_PARAMETERS)
         self.assertIn("hypo_lon", adj.REQUIRES_RUPTURE_PARAMETERS)
@@ -129,4 +129,4 @@ class GridAdjustedGMPETest(unittest.TestCase):
     ### Error cases ###
     def test_error_non_random_effects_base_gsim(self):
         with self.assertRaises(ValueError): # GSIM is not random-effects
-            GridAdjustedGMPE(gmpe_name="Campbell2003", grid_hdf5=GRID_HDF5)
+            GridAdjustedGMPE(gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)

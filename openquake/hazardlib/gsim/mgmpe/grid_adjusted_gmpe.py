@@ -77,9 +77,9 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
     :param std_dict:
         {cell_id: std_value} for a single correction term and given imt
     :param lats:
-        Array of latitudes (either hypo or site, depending on term)
+        Array of latitudes (either hypo or site lats, depending on term)
     :param lons:
-        Array of longitudes (either hypo or site, depending on term)
+        Array of longitudes (either hypo or site lons, depending on term)
     :param h3_res:
         Sorted list of h3 resolution levels (coarse to fine)
     :returns:
@@ -219,9 +219,12 @@ class GridAdjustedGMPE(GMPE):
     associated with this mgmpe module:
     oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
 
+    A use case (from XML) can be found in the classical QA tests:
+    oq-engine\openquake\qa_tests_data\classical\case_11\grid_adjustments.hdf5
+
     :param gmpe_name:
         The underlying GMM to apply the grid-based adjustments too.
-    :param grid_hdf5:
+    :param grid_hdf5_file:
         Path to the hdf5 file with gridded adjustments.
     """
     # Req Params — set from underlying GMM via set_parameters()
@@ -234,14 +237,14 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, grid_hdf5, **kwargs):
+    def __init__(self, gmpe_name, grid_hdf5_file, **kwargs):
         
         # Instantiate the underlying GMM
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
         # Load grid-based corrections from the hdf5
-        self.grid_data = load_residual_grids(grid_hdf5)
+        self.grid_data = load_residual_grids(grid_hdf5_file)
 
         # Add hypo lon/lat to required GSIM params to retain it in ctx
         if any(cfg["location"] == "hypo"
