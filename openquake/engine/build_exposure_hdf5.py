@@ -33,7 +33,6 @@ from openquake.commonlib import expo_to_hdf5
 U16 = numpy.uint16
 F32 = numpy.float32
 
-
 def collect_exposures(grm_dir):
     """
     Collect the files of kind Exposure_<Country>.xml.
@@ -42,13 +41,14 @@ def collect_exposures(grm_dir):
     """
     out = []
     for region in os.listdir(grm_dir):
-        expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
+        expodir = os.path.join(grm_dir, region, 'Exposure')
         if not os.path.exists(expodir):
             continue
-        for fname in os.listdir(expodir):
-            if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
-                fullname = os.path.join(expodir, fname)
-                out.append(fullname)
+        for country in os.listdir(expodir):
+            for fname in os.listdir(country):
+                if fname.startswith('Exposure_') and fname.endswith('.xml'):  # i.e. Exposure_ZMB.xml
+                    fullname = os.path.join(expodir, country, fname)
+                    out.append(fullname)
     return out
 
 
