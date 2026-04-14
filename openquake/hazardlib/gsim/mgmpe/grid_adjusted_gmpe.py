@@ -237,6 +237,8 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
+    experimental = True # It's not extensively tested yet
+
     def __init__(self, gmpe_name, grid_hdf5_file, **kwargs):
         
         # Instantiate the underlying GMM
