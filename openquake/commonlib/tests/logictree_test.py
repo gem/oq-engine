@@ -1411,7 +1411,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
             delta_m_AC=1.0, total_rate=5.0)
         return source
 
-    def test_ac_mfd_bACAbsolute(self):
+    def test_ac_mfd_b_ac_absolute(self):
         # Make point source with the MFD
         source = self._make_ac_point_source()
         # Apply the absolute b_AC uncertainty
@@ -1421,7 +1421,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         # b_GR should be unchanged
         self.assertEqual(source.mfd.b_GR, 0.8)
 
-    def test_ac_mfd_bACRelative(self):
+    def test_ac_mfd_b_ac_relative(self):
         # Make point source with the MFD
         source = self._make_ac_point_source()
         # Get original TMR
@@ -1435,7 +1435,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         # b_GR should be unchanged
         self.assertEqual(source.mfd.b_GR, 0.8)
 
-    def test_ac_mfd_bGRRelative(self):
+    def test_ac_mfd_b_gr_relative(self):
         # Make point source with the MFD
         source = self._make_ac_point_source()
         # Get original TMR
@@ -1447,6 +1447,49 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             source.mfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
         # b_AC should be unchanged
+        self.assertEqual(source.mfd.b_AC, 0.3)
+
+    def test_ac_mfd_max_max_gr_absolute(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        # Apply absolute max_mag uncertainty
+        lt.apply_uncertainty('maxMagGRAbsolute', source, 8.0)
+        self.assertEqual(source.mfd.max_mag, 8.0)
+        # Other parameters should be unchanged
+        self.assertEqual(source.mfd.b_GR, 0.8)
+        self.assertEqual(source.mfd.b_AC, 0.3)
+        self.assertEqual(source.mfd.delta_m_AC, 1.0)
+
+    def test_ac_mfd_max_mag_and_delta_mag_ac_relative(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        # Get original TMR
+        old_tmr = source.mfd._get_total_moment_rate()
+        # Apply relative max_mag and delta_m_AC uncertainty
+        lt.apply_uncertainty(
+            'maxMagAndDeltaMagACRelative', source, (0.5, 0.2))
+        self.assertAlmostEqual(source.mfd.max_mag, 8.0)
+        self.assertAlmostEqual(source.mfd.delta_m_AC, 1.2)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            source.mfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
+        # b-values should be unchanged
+        self.assertEqual(source.mfd.b_GR, 0.8)
+        self.assertEqual(source.mfd.b_AC, 0.3)
+
+    def test_ac_mfd_max_mag_and_delta_mag_ac_relative_no_balance(self):
+        # Make point source with the MFD
+        source = self._make_ac_point_source()
+        old_total_rate = source.mfd.total_rate
+        # Apply relative max_mag and delta_m_AC without moment balance
+        lt.apply_uncertainty(
+            'maxMagAndDeltaMagACRelativeNoMoBalance', source, (0.5, 0.2))
+        self.assertAlmostEqual(source.mfd.max_mag, 8.0)
+        self.assertAlmostEqual(source.mfd.delta_m_AC, 1.2)
+        # total_rate should NOT have been rescaled
+        self.assertEqual(source.mfd.total_rate, old_total_rate)
+        # b-values should be unchanged
+        self.assertEqual(source.mfd.b_GR, 0.8)
         self.assertEqual(source.mfd.b_AC, 0.3)
 
 
