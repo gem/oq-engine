@@ -33,17 +33,19 @@ def load_residual_grids(hdf5_path):
 
     * grids: nested dict of {imt_str: {term: {cell_id: val}, ...}}
     
-    * h3_res: sorted (coarsest to finest) list of h3 resolutions
+    * h3_res: sorted (coarsest to finest) list of h3 resolutions,
+      derived automatically from the cell IDs in the grids
     
     * res_terms: dict mapping each term name to a sub-dict with location
-      (hypo or site) and sig_comp_modified (tau, phi, or sig)
+      (hypo or site), sig_comp_modified (tau, phi, or sig), and
+      add_or_sub_sigma_delta (sub or add, default sub)
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
     """
     grids = {}
+    resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
-        h3_res = sorted(hf.attrs["h3_res"].tolist())
         res_terms = json.loads(hf.attrs["res_terms"])
         for term in res_terms:
             for imt_str in hf[term]:
@@ -51,13 +53,15 @@ def load_residual_grids(hdf5_path):
                     grids[imt_str] = {} # No adjustment for given IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
+                resolutions.update(
+                    h3.get_resolution(c) for c in cell_ids)
                 grids[imt_str][term] = dict(zip(
                     cell_ids, grp[term][:]))
                 grids[imt_str][f"{term}_std"] = dict(zip(
                     cell_ids, grp[f"{term}_std"][:]))
                 
     return {"grids": grids,
-            "h3_res": h3_res,
+            "h3_res": sorted(resolutions),
             "res_terms": res_terms}
 
 
@@ -107,7 +111,8 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
 def _apply_grid_corrections(grid_data, ctx, imt,
                             mean, sig, tau, phi):
     """
-    Look up and apply corrections defined in the hdf5
+    Look up and apply corrections defined in the hdf5. The mean
+    adjustment is always added.
 
     :param grid_data:
         Dict returned by load_residual_grids
@@ -180,11 +185,8 @@ class GridAdjustedGMPE(GMPE):
     A GSIM class that applies spatially-varying corrections stored in
     a hdf5 file of h3-gridded residual terms to the underlying GMM.
 
-    The hdf5 file contains two root-level attributes that configure the
-    lookup behaviour:
-
-    * h3_res: Sorted list of h3 resolution levels used
-      by the adaptive grid (e.g. [2, 3, 4]).
+    The hdf5 file contains a root-level attribute that configures the
+    adjustment behaviour:
 
     * res_terms: A JSON-encoded dict mapping each top-level group name
       to a sub-dict with two keys:
@@ -206,8 +208,8 @@ class GridAdjustedGMPE(GMPE):
         
         * sig = Adjust total std dev
 
-      * add_or_sub_sigma_delta (optional, default "sub"): Whether to add
-        or subtract the spatially-resolved std-dev delta in quadrature:
+      * add_or_sub_sigma_delta (optional, default "sub"): Whether
+        to add or subtract the spatially-resolved std-dev delta:
 
         * sub = Subtract variance (reduce sigma)
 
@@ -215,7 +217,7 @@ class GridAdjustedGMPE(GMPE):
 
     A "real" example of this hdf5 can be found in the unit tests
     associated with this mgmpe module:
-    oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\grid_adjustments.hdf5
+    oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
 
     :param gmpe_name:
         The underlying GMM to apply the grid-based adjustments too.
