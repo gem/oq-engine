@@ -431,7 +431,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Set the new total_rate to preserve the original TMR
         self.total_rate = tmr / tmr_unit
 
-    ### max mag and/or delta_m_AC modification ###
+    ### Max-mag and/or delta_m_AC modification ###
     def modify_set_max_mag(self, value):
         """
         Apply absolute maximum magnitude modification.
@@ -496,7 +496,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         self.max_mag += delta_max_mag
         self.delta_m_AC += delta_m_AC
 
-    ### class methods ###
+    ### Class methods ###
     @classmethod
     def from_reference_rates(cls, min_mag, max_mag, bin_width,
                              b_GR, b_AC, delta_m_AC,
