@@ -220,6 +220,8 @@ class GridAdjustedGMPE(GMPE):
 
         * add = Add variance (inflate sigma)
 
+    The h3 grid cell resolution can vary (i.e., densify) or be constant.
+
     A "real" example of this hdf5 can be found in the unit tests
     associated with this mgmpe module:
     oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
