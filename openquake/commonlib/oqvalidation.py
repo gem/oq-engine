@@ -447,6 +447,11 @@ job_id:
    Example: *job_id = 42*.
    Default: 0 (meaning create a new job)
 
+keep_trt:
+   Tectonic region type to consider in the gsim logic tree
+   Example: *keep_trt = Active Shallow Crust*.
+   Default: '' (meaning consider all TRTs)
+
 limit_states:
    Limit states used in damage calculations.
    Example: *limit_states = moderate, complete*
@@ -1120,6 +1125,7 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
+    keep_trt = valid.Param(valid.utf8, '')
     limit_states = valid.Param(valid.namelist, [])
     local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
@@ -1406,13 +1412,18 @@ class OqParam(valid.ParamSet):
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = GsimLogicTree(path, ['*'])
+            # find the TRTs to consider
+            if self.keep_trt:
+                assert not self.discard_trts
+                trts = {self.keep_trt}
+            else:
+                discard = {trt.strip() for trt in self.discard_trts.split(',')}
+                trts = set(gsim_lt.values) - discard
             # check the GSIMs
-            self._trts = set()
-            discard = {trt.strip() for trt in self.discard_trts.split(',')}
-            for trt, gsims in gsim_lt.values.items():
-                if trt not in discard:
-                    self.check_gsims(gsims)
-                    self._trts.add(trt)
+            for trt in trts:
+                self.check_gsims(gsim_lt.values[trt])
+            self._trts = trts
+
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:

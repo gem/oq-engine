@@ -800,7 +800,7 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
-def get_gsim_lt(oqparam, trts=('*',)):
+def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -818,7 +818,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
-    gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:

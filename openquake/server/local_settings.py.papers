@@ -1,0 +1,9 @@
+# In production for security reasons a RESTRICTED access
+# is required
+# APPLICATION_MODE = 'RESTRICTED'
+
+PAPERS_BASEPATH = '<basepath of PAPERS private repository>'
+
+# Override of INTEGRATION_DISTANCE for hypotetical ruptures
+# to speedup calculations
+# PAPERS_HYPO_RUPT_INTEGRATION_DISTANCE = 10
