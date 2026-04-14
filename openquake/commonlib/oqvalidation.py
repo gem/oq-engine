@@ -1418,7 +1418,7 @@ class OqParam(valid.ParamSet):
                 trts = {self.keep_trt}
             else:
                 discard = {trt.strip() for trt in self.discard_trts.split(',')}
-                trts = {trt for trt in gsim_lt.values if trt not in discard}
+                trts = set(gsim_lt.values) - discard
             # check the GSIMs
             for trt in trts:
                 self.check_gsims(gsim_lt.values[trt])
