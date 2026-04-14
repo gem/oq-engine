@@ -64,7 +64,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import (
-    build_planar_rupture_from_dict)
+    build_planar_rupture_from_dict, get_ruptures)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -866,12 +866,20 @@ def get_rupture(oqparam):
     if rupture_model and rupture_model.endswith('.json'):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
-    if rupture_model and rupture_model.endswith('.xml'):
+    elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
-    if rup is None:  # assume rupture_dict
+    elif rupture_model and rupture_model.endswith('.csv'):
+        fname = oqparam.inputs['rupture_model']
+        rups = get_ruptures(fname)
+        if len(rups) == 1:
+            # ScenarioDamageTestCase::test_case_12
+            rup = rups[0]
+        else:
+            return
+    elif rup is None:  # assume rupture_dict
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
