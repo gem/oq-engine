@@ -1,3 +1,8 @@
+  [Matteo Nastasi]
+  * Integrate Christopher Brooks PAPERS script to run calculation
+    starting from hypothetical ruptures into engine as new API
+    entry-point
+
   [Michele Simionato]
   * Filtering the sites around the rupture also in scenario_damage
   * Forbidded IMT-dependent weights for classical calculations with sampling
