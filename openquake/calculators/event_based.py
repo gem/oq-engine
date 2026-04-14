@@ -943,6 +943,7 @@ class EventBasedCalculator(base.HazardCalculator):
         imt0 = list(oq.imtls)[0]
         size = self.datastore.getsize(f'gmf_data/{imt0}')
         if ('gmf_data' in self.datastore and size < 4E6 and
+                # not event based from parent, i.e. global SES
                 'filtered_ruptures' not in self.datastore):
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
