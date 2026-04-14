@@ -1,3 +1,9 @@
+  [Christopher Brooks]
+  * Add `GridAdjustedGMPE` - a utility GSIM class allowing the
+    adjustment of a GMPE using h3-gridded adjustments already
+    defined within a hdf5 file. Examples of the hdf5 file structure
+    are available in classical/case_11 and the associated unit tests.
+
   [Matteo Nastasi]
   * Integrate Christopher Brooks PAPERS script to run calculation
     starting from hypothetical ruptures into engine as new API
