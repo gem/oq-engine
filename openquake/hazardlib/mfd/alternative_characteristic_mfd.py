@@ -88,13 +88,15 @@ class AlternativeCharacteristicMFD(BaseMFD):
     both are divisible by ``bin_width`` just before converting a function
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
-    MODIFICATIONS = {'set_bGR',
+    MODIFICATIONS = {# b-values
+                     'set_bGR',
                      'set_bAC',
                      'increment_b',
                      'increment_b_AC', 
+                     # Max mag and delta_m_AC
                      'set_max_mag',
-                     'increment_max_mag',
-                     'increment_max_mag_no_mo_balance'}
+                     'increment_max_mag_and_delta_m_AC',
+                     'increment_max_mag_and_delta_m_AC_no_mo_balance'}
 
     def __init__(self, min_mag, max_mag, bin_width,
                  b_GR, b_AC,
@@ -360,6 +362,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         return (self._get_zone_tmr(a_GR, self.b_GR, self.min_mag, m_c)
                 + self._get_zone_tmr(a_AC, self.b_AC, m_c, self.max_mag))
 
+    ### b-value modification ###
     def modify_set_bGR(self, b_val: float):
         """
         Update the b-value of the GR zone.
@@ -428,6 +431,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Set the new total_rate to preserve the original TMR
         self.total_rate = tmr / tmr_unit
 
+    ### max mag and/or delta_m_AC modification ###
     def modify_set_max_mag(self, value):
         """
         Apply absolute maximum magnitude modification.
@@ -440,27 +444,31 @@ class AlternativeCharacteristicMFD(BaseMFD):
         """
         self.max_mag = value
 
-    def modify_increment_max_mag(self, value):
+    def modify_increment_max_mag_and_delta_m_AC(
+            self, delta_max_mag, delta_m_AC):
         """
-        Apply relative maximum magnitude modification, preserving
-        total moment rate.
+        Apply relative maximum magnitude and delta_m_AC modification,
+        preserving total moment rate by rescaling the total_rate.
 
-        :param value:
+        :param delta_max_mag:
             A float value to add to max_mag.
+        :param delta_m_AC:
+            A float value to add to delta_m_AC.
 
-        After changing max_mag, total_rate is rescaled so that
-        the total moment rate is unchanged
-        
-        NOTE: because delta_m_AC is not changed, the GR zone
-        inherently absorbs the change.
+        NOTE: If the user wishes to simply modify the max_mag or the
+        delta_m_AC, they can of course set the delta for the other
+        parameter to zero to obtain this behaviour.
         """
         # Get the TMR
         tmr = self._get_total_moment_rate()
 
         # Apply max_mag delta
-        self.max_mag += value
+        self.max_mag += delta_max_mag
 
-        # Check it's ok to apply the given delta
+        # Apply delta_m_AC delta
+        self.delta_m_AC += delta_m_AC
+
+        # Check it's ok to apply the given deltas
         self.check_constraints()
 
         # Rescale - TMR is linearly proportional to total_rate
@@ -469,14 +477,24 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Set the new total_rate to preserve the original TMR
         self.total_rate = tmr / tmr_unit
 
-    def modify_increment_max_mag_no_mo_balance(self, value):
+    def modify_increment_max_mag_and_delta_m_AC_no_mo_balance(
+            self, delta_max_mag, delta_m_AC):
         """
-        Apply relative maximum magnitude modification.
+        Apply relative maximum magnitude and delta_m_AC modification,
+        WITHOUT any rescaling of the total rate to preserve the total
+        moment rate.
 
-        :param value:
+        :param delta_max_mag:
             A float value to add to ``max_mag``.
+        :param delta_m_AC:
+            A float value to add to delta_m_AC.
+
+        NOTE: If the user wishes to simply modify the max_mag or the
+        delta_m_AC, they can of course set the delta for the other
+        parameter to zero to obtain this behaviour.
         """
-        self.max_mag += value
+        self.max_mag += delta_max_mag
+        self.delta_m_AC += delta_m_AC
 
     @classmethod
     def from_reference_rates(cls, min_mag, max_mag, bin_width,

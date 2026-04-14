@@ -152,26 +152,33 @@ class AlternativeCharacteristicMFDModificationsTestCase(BaseMFDTestCase):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         self.assert_mfd_error(acmfd.modify, 'increment_b_AC', {'value': 1.2})
 
-    def test_increment_max_mag(self):
-        # Incrementing max_mag preserves total moment rate
+    def test_increment_max_mag_and_delta_m_AC(self):
+        # Incrementing max_mag and delta_m_AC preserves total moment rate
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_tmr = acmfd._get_total_moment_rate()
-        acmfd.modify('increment_max_mag', {'value': 0.5})
+        acmfd.modify('increment_max_mag_and_delta_m_AC',
+                     {'delta_max_mag': 0.5, 'delta_m_AC': 0.2})
         self.assertAlmostEqual(acmfd.max_mag, TEST_MFD_INPUTS["max_mag"] + 0.5)
+        self.assertAlmostEqual(
+            acmfd.delta_m_AC, TEST_MFD_INPUTS["delta_m_AC"] + 0.2)
         self.assertAlmostEqual(
             acmfd._get_total_moment_rate(), old_tmr, delta=old_tmr * 1E-8)
 
-    def test_increment_max_mag_check_constraints(self):
+    def test_increment_max_mag_and_delta_m_AC_check_constraints(self):
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
-        # Decrease max_mag so m_c <= min_mag
-        self.assert_mfd_error(acmfd.modify, 'increment_max_mag', {'value': -3.0})
+        # Increase delta_m_AC so AC zone boundary now less than min_mag (error)
+        self.assert_mfd_error(acmfd.modify, 'increment_max_mag_and_delta_m_AC',
+                              {'delta_max_mag': 0, 'delta_m_AC': 3.0})
 
-    def test_increment_max_mag_no_mo_balance(self):
-        # Shifts max_mag without rebalancing total_rate
+    def test_increment_max_mag_and_delta_m_AC_no_mo_balance(self):
+        # Shifts max_mag and delta_m_AC without rebalancing total_rate
         acmfd = AlternativeCharacteristicMFD(**TEST_MFD_INPUTS)
         old_rate = acmfd.total_rate
-        acmfd.modify('increment_max_mag_no_mo_balance', {'value': 0.5})
+        acmfd.modify('increment_max_mag_and_delta_m_AC_no_mo_balance',
+                     {'delta_max_mag': 0.5, 'delta_m_AC': 0.2})
         self.assertAlmostEqual(acmfd.max_mag, TEST_MFD_INPUTS["max_mag"] + 0.5)
+        self.assertAlmostEqual(
+            acmfd.delta_m_AC, TEST_MFD_INPUTS["delta_m_AC"] + 0.2)
         self.assertEqual(acmfd.total_rate, old_rate)
 
 

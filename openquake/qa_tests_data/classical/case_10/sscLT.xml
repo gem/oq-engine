@@ -63,5 +63,31 @@
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="maxMagAndDeltaMagACRelative"
+                                branchSetID="bs6">
+                <logicTreeBranch branchID="b61">
+                    <uncertaintyModel>0.5 0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b62">
+                    <uncertaintyModel>-0.5 -0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="maxMagAndDeltaMagACRelativeNoMoBalance"
+                                branchSetID="bs7">
+                <logicTreeBranch branchID="b71">
+                    <uncertaintyModel>0.5 0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b72">
+                    <uncertaintyModel>-0.5 -0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
     </logicTree>
 </nrml>
