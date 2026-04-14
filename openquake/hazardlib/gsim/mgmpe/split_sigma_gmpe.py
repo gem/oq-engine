@@ -79,9 +79,9 @@ class SplitSigmaGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, within_absolute=None, between_absolute=None):
+    def __init__(self, gmpe_name, within_absolute=None, between_absolute=None, **kwargs):
         # Create the original GMPE
-        self.gmpe = registry[gmpe_name]()
+        self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
         # Set options for obtaining within and between stds
