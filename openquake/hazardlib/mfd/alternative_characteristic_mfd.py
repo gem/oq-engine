@@ -485,7 +485,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         moment rate.
 
         :param delta_max_mag:
-            A float value to add to ``max_mag``.
+            A float value to add to max_mag.
         :param delta_m_AC:
             A float value to add to delta_m_AC.
 
