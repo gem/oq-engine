@@ -88,11 +88,11 @@ class AlternativeCharacteristicMFD(BaseMFD):
     both are divisible by ``bin_width`` just before converting a function
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
-    MODIFICATIONS = {'set_max_mag',
-                     'set_bGR',
+    MODIFICATIONS = {'set_bGR',
                      'set_bAC',
                      'increment_b',
                      'increment_b_AC', 
+                     'set_max_mag',
                      'increment_max_mag',
                      'increment_max_mag_no_mo_balance'}
 
@@ -360,18 +360,6 @@ class AlternativeCharacteristicMFD(BaseMFD):
         return (self._get_zone_tmr(a_GR, self.b_GR, self.min_mag, m_c)
                 + self._get_zone_tmr(a_AC, self.b_AC, m_c, self.max_mag))
 
-    def modify_set_max_mag(self, value):
-        """
-        Apply absolute maximum magnitude modification.
-
-        :param value:
-            A float value to assign to ``max_mag``.
-
-        No recalculation of other parameters is done after
-        assigning a new value to ``max_mag``.
-        """
-        self.max_mag = value
-
     def modify_set_bGR(self, b_val: float):
         """
         Update the b-value of the GR zone.
@@ -440,6 +428,18 @@ class AlternativeCharacteristicMFD(BaseMFD):
         # Set the new total_rate to preserve the original TMR
         self.total_rate = tmr / tmr_unit
 
+    def modify_set_max_mag(self, value):
+        """
+        Apply absolute maximum magnitude modification.
+
+        :param value:
+            A float value to assign to ``max_mag``.
+
+        No recalculation of other parameters is done after
+        assigning a new value to ``max_mag``.
+        """
+        self.max_mag = value
+
     def modify_increment_max_mag(self, value):
         """
         Apply relative maximum magnitude modification, preserving
@@ -477,7 +477,6 @@ class AlternativeCharacteristicMFD(BaseMFD):
             A float value to add to ``max_mag``.
         """
         self.max_mag += value
-
 
     @classmethod
     def from_reference_rates(cls, min_mag, max_mag, bin_width,
@@ -533,7 +532,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         n_AC = _zone_rate_from_ref(rate_ref_AC, b_AC,
                                    ref_mag_AC, m_c, max_mag)
 
-        # Sum to get the total rate as required
+        # Sum to get the total rate
         total_rate = n_GR + n_AC
 
         # Get gamma by inverting equation 1.2 of the BCHydro AC memo
