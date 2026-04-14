@@ -45,7 +45,7 @@ def collect_exposures(grm_dir):
         if not os.path.exists(expodir):
             continue
         for country in os.listdir(expodir):
-            for fname in os.listdir(country):
+            for fname in os.listdir(os.path.join(expodir, country)):
                 if fname.startswith('Exposure_') and fname.endswith('.xml'):  # i.e. Exposure_ZMB.xml
                     fullname = os.path.join(expodir, country, fname)
                     out.append(fullname)
