@@ -237,7 +237,6 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    breakpoint()
     files = hdf5.sniff(csvfiles, ',', IGNORE,
                        keep=keep_wfp if wfp else lambda csvfile: True)
     if wfp:
