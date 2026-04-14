@@ -317,20 +317,7 @@ def get_args(dstore):
     return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
 
 
-def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
-    """
-    :returns: list of starmap arguments
-    """
-    trts = {}
-    rlzs_by_gsim = {}
-    for model, full_lt in get_model_lts(dstore):
-        trts[model] = full_lt.trts
-        if model == '???':
-            logging.info('Building rlzs_by_gsim')
-        else:
-            logging.info('Building rlzs_by_gsim for %s', model)
-        for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
-            rlzs_by_gsim[model, trt_smr] = rbg
+def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
     rup_id = os.environ.get('OQ_RUPTURE')
@@ -371,7 +358,25 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
+    return filrups, maxw, acc
 
+
+def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
+    """
+    :returns: list of starmap arguments
+    """
+    trts = {}
+    rlzs_by_gsim = {}
+    for model, full_lt in get_model_lts(dstore):
+        trts[model] = full_lt.trts
+        if model == '???':
+            logging.info('Building rlzs_by_gsim')
+        else:
+            logging.info('Building rlzs_by_gsim for %s', model)
+        for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
+            rlzs_by_gsim[model, trt_smr] = rbg
+
+    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     # store the filtered ruptures for debugging purposes
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
@@ -773,6 +778,10 @@ class EventBasedCalculator(base.HazardCalculator):
             aw = get_ruptures_aw(oq.inputs['rupture_model'])
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
+            elif aw.trts != list(gsim_lt.values):
+                raise InvalidFile(f'The TRTs in the rupture.csv file {aw.trts}'
+                                  f'are inconsistent with the ones in the gsim_lt'
+                                  f' {list(gsim_lt.values)}')
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
