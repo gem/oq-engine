@@ -192,7 +192,7 @@ class GridAdjustedGMPE(GMPE):
     adjustment behaviour:
 
     * res_terms: A JSON-encoded dict mapping each top-level group name
-      to a sub-dict with two keys:
+      to a sub-dict with two three keys:
 
       * location: How to resolve the correction spatially, with each look-up
          resolving the location to a h3 cell, searching from coarse to fine. If
