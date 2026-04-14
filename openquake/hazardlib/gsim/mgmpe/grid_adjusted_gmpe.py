@@ -53,7 +53,7 @@ def load_residual_grids(hdf5_path):
                     grids[imt_str] = {} # No adjustment for given IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
-                resolutions.update(
+                resolutions.update( # Get h3 resolution
                     h3.get_resolution(c) for c in cell_ids)
                 grids[imt_str][term] = dict(zip(
                     cell_ids, grp[term][:]))
@@ -61,7 +61,7 @@ def load_residual_grids(hdf5_path):
                     cell_ids, grp[f"{term}_std"][:]))
                 
     return {"grids": grids,
-            "h3_res": sorted(resolutions),
+            "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
 
@@ -102,7 +102,7 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
             if cell in mean_dict:
                 # Assign mean and std dev of given term to the cell
                 mean_vals[i] = mean_dict[cell]
-                std_vals[i] = std_dict.get(cell, 0.0)
+                std_vals[i] = std_dict[cell]
                 found[i] = True
 
     return mean_vals, std_vals
@@ -248,6 +248,12 @@ class GridAdjustedGMPE(GMPE):
                for cfg in self.grid_data["res_terms"].values()):
             self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
                 self.REQUIRES_RUPTURE_PARAMETERS | {'hypo_lat', 'hypo_lon'})
+
+        # Add lat/lon to required site params for site-based lookups
+        if any(cfg["location"] == "site"
+               for cfg in self.grid_data["res_terms"].values()):
+            self.REQUIRES_SITES_PARAMETERS = frozenset(
+                self.REQUIRES_SITES_PARAMETERS | {'lat', 'lon'})
 
         # Ensure inter/intra-event std devs are computed by the base GSIM
         if any(cfg["sig_comp_modified"] in ("tau", "phi")
