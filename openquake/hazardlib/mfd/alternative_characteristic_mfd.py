@@ -496,6 +496,7 @@ class AlternativeCharacteristicMFD(BaseMFD):
         self.max_mag += delta_max_mag
         self.delta_m_AC += delta_m_AC
 
+    ### class methods ###
     @classmethod
     def from_reference_rates(cls, min_mag, max_mag, bin_width,
                              b_GR, b_AC, delta_m_AC,
