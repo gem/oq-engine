@@ -23,9 +23,8 @@ Module :mod:`openquake.hazardlib.geo.surface.base` implements
 import abc
 import numpy
 import math
-from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
-    RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo import geodetic, utils, Point, Line
 
 TWO16 = 2**16
 F32 = numpy.float32
