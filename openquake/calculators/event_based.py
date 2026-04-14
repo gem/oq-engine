@@ -942,7 +942,8 @@ class EventBasedCalculator(base.HazardCalculator):
         # check seed dependency unless the number of GMFs is huge
         imt0 = list(oq.imtls)[0]
         size = self.datastore.getsize(f'gmf_data/{imt0}')
-        if 'gmf_data' in self.datastore and size < 4E9:
+        if ('gmf_data' in self.datastore and size < 4E6 and
+                'filtered_ruptures' not in self.datastore):
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.info(msg)
