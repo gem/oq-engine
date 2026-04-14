@@ -73,8 +73,8 @@ class M9BasinTerm(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, **kwargs):
-        self.gmpe = registry[gmpe_name]()
-        self.set_parameters()    
+        self.gmpe = registry[gmpe_name](**kwargs)
+        self.set_parameters()
         
         # Need z2pt5 in req site params to ensure in ctx site col 
         if 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
