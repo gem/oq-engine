@@ -452,7 +452,7 @@ class NZNSHM2022_ParkerEtAl2020SSlabB(NZNSHM2022_ParkerEtAl2020SSlab):
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
 
-    REQUIRES_SITES_PARAMETERS = {"vs30", "z2pt5"}
+    REQUIRES_SITES_PARAMETERS = {"vs30", "z2pt5", "backarc"}
 
 
 add_alias(
