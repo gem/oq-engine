@@ -34,7 +34,7 @@ import itertools
 from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
-    DictArray, AccumDict, cached_property, engine_version)
+    DictArray, AccumDict, cached_property, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -2049,6 +2049,15 @@ class OqParam(valid.ParamSet):
     def rupture_xml(self):
         return ('rupture_model' in self.inputs and
                 self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
+    def rupture_csv(self):
+        """
+        :returns: True if there is a single rupture in the CSV file
+        """
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.csv')
+                and count_lines(self.inputs['rupture_model']) == 3)
 
     @property
     def impact(self):
