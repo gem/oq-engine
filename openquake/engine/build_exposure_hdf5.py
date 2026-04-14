@@ -59,13 +59,16 @@ def read_world_vulnerability(grm_dir, dstore):
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
              'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
-    for kind in kinds:
-        name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
-        fname = os.path.join(grm_dir, name)
-        for vf in nrml.to_python(fname).values():
-            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
-            vf.kind = 'vulnerability'
-            vfuncs.append(vf)
+    for cwd, dirs, files in os.walk(os.path.join(grm_dir, 'Vulnerability', 'Global', 'vulnerability')):
+        for name in files:
+            for kind in kinds:
+                if kind in name:
+                    fname = os.path.join(cwd, name)
+                    logging.info(f'Reading {fname}')
+                    for vf in nrml.to_python(fname).values():
+                        vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+                        vf.kind = 'vulnerability'
+                        vfuncs.append(vf)
     oq = OqParam(calculation_mode='custom')
     crmodel = CompositeRiskModel(oq, vfuncs)
     dstore.create_df('crm', crmodel.to_dframe(),
