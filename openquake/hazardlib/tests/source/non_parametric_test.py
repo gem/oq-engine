@@ -103,7 +103,6 @@ class NankaiTest(unittest.TestCase):
 
     def test_bounding_box(self):
         """ Test calculation of bounding box for gridded source """
-        path = os.path.join(os.path.dirname(__file__), '..', 'calc')
         fname = os.path.join(DATA, 'nankai', 'nankai.xml')
         sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
         groups = nrml.to_python(fname, sc)

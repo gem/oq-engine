@@ -13,10 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import os
 import unittest
-import numpy
 import pathlib
+import numpy
 from openquake.hazardlib import nrml
 from openquake.hazardlib.calc.filters import magdepdist
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -35,7 +34,7 @@ def _get_model_nankai():
         src.id = i
         src.grp_id = 0
         src.trt_smr = 0
-        src.num_ruptures = src.count_ruptures()
+        # src.num_ruptures = src.count_ruptures()
     aae([src.mutex_weight for src in group],
         [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
          0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
@@ -79,6 +78,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # Test no filtering
         ruptures = sum(sample_ruptures(group, param), {})['rup_array']
+        breakpoint()
+        self.assertEqual(len(ruptures), 8)
 
 
     def test_nankai_b(self):
