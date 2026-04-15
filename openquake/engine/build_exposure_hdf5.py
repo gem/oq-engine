@@ -59,32 +59,26 @@ def collect_exposures(grm_dir, redfactor=1):
     return general.random_filter(out, redfactor), country_region
 
 
-def read_world_vulnerability(grm_dir, dstore):
+def read_world_vulnerability(grm_dir, region, dstore):
     """
     Store the world CompositeRiskModel
     """
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
              'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
-    for cwd, dirs, files in os.walk(
-            os.path.join(grm_dir, 'Vulnerability', 'Global', 'vulnerability')):
-        for name in files:
-            for kind in kinds:
-                if kind in name:
-                    fname = os.path.join(cwd, name)
-                    if 'North_America' not in fname:
-                        continue
-                    logging.info(f'Reading {fname}')
-                    for vf in nrml.to_python(fname).values():
-                        vf.loss_type = ('occupants' if kind == 'fatalities'
-                                        else kind)
-                        vf.kind = 'vulnerability'
-                        vfuncs.append(vf)
-    oq = OqParam(calculation_mode='custom')
-    crmodel = CompositeRiskModel(oq, vfuncs)
-    dstore.create_df('crm', crmodel.to_dframe(),
-                     'gzip', **crmodel.get_attrs())
-    return len(vfuncs)
+    regionpath = os.path.join(
+        grm_dir, 'Vulnerability', 'Global', 'vulnerability', region)
+    for name in os.listdir(regionpath):
+        for kind in kinds:
+            if kind in name:
+                fname = os.path.join(regionpath, name)
+                logging.info(f'Reading {fname}')
+                for vf in nrml.to_python(fname).values():
+                    vf.loss_type = ('occupants' if kind == 'fatalities'
+                                    else kind)
+                    vf.kind = 'vulnerability'
+                    vfuncs.append(vf)
+    return vfuncs
 
 
 def get_gsim_lt(cwd):
@@ -247,8 +241,13 @@ def main(grm_dir, wfp=False, action='build'):
         with mon:
             n = build_site_model_gsims(grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n))
-            n = read_world_vulnerability(grm_dir, dstore)
-            logging.info('Read %d vulnerability functions', n)
+            for region in REGIONS:
+                vfuncs = read_world_vulnerability(grm_dir, region, dstore)
+                logging.info(f'{region}: read {len(vfuncs)} vfuncs')
+                oq = OqParam(calculation_mode='custom')
+                crmodel = CompositeRiskModel(oq, vfuncs)
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
             fnames, country_region = collect_exposures(grm_dir, redfactor)
             countries, regions = zip(*country_region)
             dstore['countries'] = numpy.array(countries)
