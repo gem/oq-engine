@@ -286,7 +286,7 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
 
     dt = time.time() - t0
     logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
-        n, dstore.filename, int(dt)))
+        num_assets, dstore.filename, int(dt)))
 
     if sanity_check:
         for name in commonfields:
