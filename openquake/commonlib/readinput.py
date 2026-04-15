@@ -1047,9 +1047,13 @@ def get_crmodel(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.impact:
+        hypo = get_rupture(oqparam).hypocenter
+        # NB: the country can be unknown, i.e. '???'
+        [country] = site.get_countries([hypo.x], [hypo.y])
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
-                crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
+                crm = riskmodels.CompositeRiskModel.read(
+                    exp, oqparam, str(country))
             except KeyError:
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:

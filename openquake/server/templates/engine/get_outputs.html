@@ -111,11 +111,17 @@
               {% endif %} {# end if AELO #}
             </div>
             <div class="outputs-general-btns-right">
+              {% if user_level >= 2 %}
               <div id="my-datastore">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
+              <div id="my-job" class="bottom-right-btns">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/job_zip" class="btn btn-sm">
+                  Download job.zip</a>
+              </div>
+              {% endif %} {# end if user_level >= 2 #}
             </div>
           </div>
         </div>
