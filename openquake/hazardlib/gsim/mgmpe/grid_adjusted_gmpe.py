@@ -51,7 +51,7 @@ def load_residual_grids(hdf5_path):
         for term in res_terms: # e.g. dS2S
             for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
-                    grids[imt_str] = {} # No adjustment for given IMT
+                    grids[imt_str] = {} # Set an empty dict for given IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update( # Get h3 resolution
@@ -60,8 +60,14 @@ def load_residual_grids(hdf5_path):
                     cell_ids, grp[term][:]))
                 if res_terms[term].get(
                         "sig_adjustment", "none") != "none":
+                    std_vals = grp[f"{term}_std"][:]
+                    if (std_vals < 0).any():
+                        # Cannot be negative if std dev of a term
+                        raise ValueError(
+                            f"Negative _std values found for term "
+                            f"'{term}' and IMT '{imt_str}'")
                     grids[imt_str][f"{term}_std"] = dict(zip(
-                        cell_ids, grp[f"{term}_std"][:]))
+                        cell_ids, std_vals))
                 
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
@@ -288,8 +294,8 @@ class GridAdjustedGMPE(GMPE):
                 self.REQUIRES_SITES_PARAMETERS | {'lat', 'lon'})
 
         # Ensure inter/intra-event std devs are computed by the base GSIM
-        if any(cfg["sig_comp_modified"] in ("tau", "phi")
-               and cfg.get("sig_adjustment", "none") != "none"
+        if any(cfg.get("sig_adjustment", "none") != "none"
+               and cfg.get("sig_comp_modified") in ("tau", "phi")
                for cfg in self.grid_data["res_terms"].values()):
             required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
             # Raise error if not a random-effects GSIM
