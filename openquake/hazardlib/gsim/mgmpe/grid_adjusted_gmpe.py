@@ -248,6 +248,9 @@ class GridAdjustedGMPE(GMPE):
 
     NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
 
+    NOTE: The h3 cell IDs (i.e. the grids) are on an IMT-by-IMT basis because the
+    availability of data used to derive the corrections might vary with period.
+
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
     oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
