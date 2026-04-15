@@ -6,9 +6,9 @@ from openquake.risklib.countries import REGIONS, country2code
 from openquake.commonlib.readinput import read_mosaic_df
 
 MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-OAT OPA'''.split())
+ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX
+MIE NAF NEA NWA NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM
+USA WAF ZAF PAN PAR'''.split())
 
 TOML = '''\
 [workflow]
