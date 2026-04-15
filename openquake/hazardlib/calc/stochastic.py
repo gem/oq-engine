@@ -120,7 +120,7 @@ def sample_cluster(group, num_ses, ses_seed):
     if rate is None:  # time dependent cluster
         if hasattr(group, 'grp_probability'):
             grp_p = getattr(group, 'grp_probability')
-            tot_num_occ = rng.poisson(grp_p * samples * num_ses)
+            tot_num_occ = numpy.sum(rng.random(samples * num_ses) < grp_p)
         else:
             msg = 'Rate or Cluster probability of occurrence not defined. '
             msg += 'Currently, we support only a Poisson TOM'
@@ -134,9 +134,11 @@ def sample_cluster(group, num_ses, ses_seed):
         return eb_ruptures
 
     # Now process the sources included in the cluster. Possible cases:
-    # * Traditional cluster = all the sources occur
-    # * Sources are indepedent
-    # * Sources are mutually exclusive.
+    # * Traditional cluster -> all the sources occur
+    # * Sources in the cluster are indepedent and the cluster TOM controls
+    #   the occurrence
+    # * Sources are mutually exclusive and the cluster TOM controls the
+    #   occurrence
     if group.src_interdep is None:
 
         allrups = []
@@ -145,7 +147,7 @@ def sample_cluster(group, num_ses, ses_seed):
         # Loop over the sources in the cluster and add them to 'allrups'
         for src in group:
             cnt = 0
-            for i, rup in enumerate(src.iter_ruptures()):
+            for rup in src.iter_ruptures():
                 rup.src_id = src.id
                 allrups.append(rup)
                 cnt += 1
@@ -159,7 +161,7 @@ def sample_cluster(group, num_ses, ses_seed):
 
     elif group.src_interdep == 'indep':
 
-        eb_ruptures = _get_src_indep_rups(
+        eb_ruptures = _get_rups_from_indep_src(
             group, tot_num_occ, trt_smr, seed, ses_seed)
 
     elif group.src_interdep == 'mutex':
@@ -169,7 +171,7 @@ def sample_cluster(group, num_ses, ses_seed):
             raise NotImplementedError(
                 f'{group.src_interdep=}, {group.rup_interdep=}')
 
-        eb_ruptures = _get_src_mutex_rups(
+        eb_ruptures = _get_rups_from_mutex_src(
             group, tot_num_occ, trt_smr, seed, ses_seed)
 
     else:
@@ -179,7 +181,7 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
+def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
 
     eb_ruptures = []
 
@@ -190,17 +192,24 @@ def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
     ws = [src.mutex_weight for src in group]
     src_noccs = random_histogram(tot_num_occ, ws, seed)
 
+    msg = 'Src number of occurrences does not match the initial total number'
+    if numpy.sum(src_noccs) != tot_num_occ:
+        raise ValueError(msg)
+
     # Find the index of the ruptures generated at each occurrence of
     # a source and create the EBRuptures
-    for i_src, (src, src_nocc) in enumerate(zip(group, src_noccs)):
+    for src, src_nocc in zip(group, src_noccs):
+
+        if src_nocc < 1:
+            continue
 
         # Source seed
         src_seed = src.serial(ses_seed)
         rng = numpy.random.default_rng(src_seed)
 
-        # For each rlz, find the number ruptures produced by each source.
-        # For each realization this is a number comprised between 1 and the
-        # number of ruptures admitted by that source.
+        # For each rlz, find the number ruptures produced by each source. This
+        # is a number comprised between 1 and the number of ruptures admitted
+        # by that source.
         idxs = numpy.arange(1, src.num_ruptures + 1)
         n_rups_rlz = rng.choice(idxs, src_nocc)
         ids = numpy.empty((src_nocc, src.num_ruptures))
@@ -217,7 +226,7 @@ def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
             # Find the number of occurrences per rupture
             n_occ = int(numpy.sum(ids == i_rup))
 
-            # Update the list with the ruptures per LT branch
+            # Update the list with the ruptures
             if n_occ:
                 ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
                 ebr.seed = ebr.id + ses_seed
@@ -226,7 +235,7 @@ def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
     return eb_ruptures
 
 
-def _get_src_indep_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
+def _get_rups_from_indep_src(group, tot_num_occ, trt_smr, seed, ses_seed):
 
     eb_ruptures = []
 
