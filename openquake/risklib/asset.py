@@ -982,9 +982,9 @@ def impact_read_assets(h5, start, stop, rupfilter):
         if field in dic and len(dic[field]) == 0:
             dic.pop(field)
     df = pandas.DataFrame(dic)
-    df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
-                           df.OCCUPANTS_PER_ASSET_NIGHT +
-                           df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
+    df['occupants_avg'] = (df.OCCUPANTS_DAY +
+                           df.OCCUPANTS_NIGHT +
+                           df.OCCUPANTS_TRANSIT) / 3
     return rupfilter(df) if rupfilter else df
 
 

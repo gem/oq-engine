@@ -131,10 +131,6 @@ def group_by_lt(funclist, duplicates='error'):
             dic[lt] = vf
         elif duplicates == 'first' and all(
                 rf.kind == 'vulnerability' for rf in lst):
-            logging.warning(
-                f'Duplicate vulnerability function "{lst[0].id}" for'
-                f' loss type "{lt}" found {len(lst)} times. Keeping the'
-                f' first occurrence')
             dic[lt] = lst[0]
         else:
             raise RuntimeError(lst)

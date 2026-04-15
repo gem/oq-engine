@@ -26,6 +26,7 @@ from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
+from openquake.risklib.countries import country2code
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
@@ -40,19 +41,21 @@ def collect_exposures(grm_dir, redfactor=1):
 
     :returns: xmlfiles
     """
+    country_region = []
     out = []
     for region in os.listdir(grm_dir):
         expodir = os.path.join(grm_dir, region, 'Exposure')
         if not os.path.exists(expodir):
             continue
         for country in os.listdir(expodir):
-            fullcountry = os.path.join(expodir, country)
-            if os.path.isdir(fullcountry):
+            if country in country2code:
+                country_region.append((country2code[country], region))
+                fullcountry = os.path.join(expodir, country)
                 for fname in os.listdir(fullcountry):
                     if fname.startswith('Exposure_') and fname.endswith('.xml'):  # i.e. Exposure_ZMB.xml
                         fullname = os.path.join(expodir, country, fname)
                         out.append(fullname)
-    return out
+    return general.random_filter(out, redfactor), country_region
 
 
 def read_world_vulnerability(grm_dir, dstore):
@@ -67,6 +70,8 @@ def read_world_vulnerability(grm_dir, dstore):
             for kind in kinds:
                 if kind in name:
                     fname = os.path.join(cwd, name)
+                    if 'North_America' not in fname:
+                        continue
                     logging.info(f'Reading {fname}')
                     for vf in nrml.to_python(fname).values():
                         vf.loss_type = 'occupants' if kind == 'fatalities' else kind
@@ -203,7 +208,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
     if action.startswith('find_long'):  # i.e. find_long_NAME_2
         fieldname = action[10:]
-        exposures_xml = collect_exposures(grm_dir)
+        exposures_xml, _ = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
             exposure, _ = _get_exposure(xml, stop='asset')
@@ -213,7 +218,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         return
     elif action == 'zip':
         tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
-        exposures_xml = collect_exposures(grm_dir)
+        exposures_xml, _ = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
             print(f'Reading {xml}')
@@ -239,7 +244,10 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
             logging.info('Stored {:_d} sites'.format(n))
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
-            fnames = collect_exposures(grm_dir, redfactor)
+            fnames, country_region = collect_exposures(grm_dir, redfactor)
+            countries, regions = zip(*country_region)
+            dstore['countries'] = numpy.array(countries)
+            dstore['regions'] = numpy.array(regions)
             expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
         logging.info(mon)
 
