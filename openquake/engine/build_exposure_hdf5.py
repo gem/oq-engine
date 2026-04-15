@@ -51,9 +51,10 @@ def collect_exposures(grm_dir, redfactor=1):
             if country in country2code:
                 country_region.append((country2code[country], region))
                 fullcountry = os.path.join(expodir, country)
-                for fname in os.listdir(fullcountry):
-                    if fname.startswith('Exposure_') and fname.endswith('.xml'):  # i.e. Exposure_ZMB.xml
-                        fullname = os.path.join(expodir, country, fname)
+                for f in os.listdir(fullcountry):
+                    if f.startswith('Exposure_') and f.endswith('.xml'):
+                        # i.e. Exposure_ZMB.xml
+                        fullname = os.path.join(expodir, country, f)
                         out.append(fullname)
     return general.random_filter(out, redfactor), country_region
 
@@ -65,7 +66,8 @@ def read_world_vulnerability(grm_dir, dstore):
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
              'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
-    for cwd, dirs, files in os.walk(os.path.join(grm_dir, 'Vulnerability', 'Global', 'vulnerability')):
+    for cwd, dirs, files in os.walk(
+            os.path.join(grm_dir, 'Vulnerability', 'Global', 'vulnerability')):
         for name in files:
             for kind in kinds:
                 if kind in name:
@@ -74,7 +76,8 @@ def read_world_vulnerability(grm_dir, dstore):
                         continue
                     logging.info(f'Reading {fname}')
                     for vf in nrml.to_python(fname).values():
-                        vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+                        vf.loss_type = ('occupants' if kind == 'fatalities'
+                                        else kind)
                         vf.kind = 'vulnerability'
                         vfuncs.append(vf)
     oq = OqParam(calculation_mode='custom')
