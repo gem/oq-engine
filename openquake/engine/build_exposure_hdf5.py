@@ -100,6 +100,7 @@ def get_gsim_lt(cwd):
 
 def discard_dupl(records):
     # discard duplicate sites
+    assert len(records)
     acc = {}
     for rec in records:
         lonlat = rec['lon'], rec['lat']

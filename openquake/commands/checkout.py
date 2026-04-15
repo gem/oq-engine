@@ -29,7 +29,7 @@ def main(workflow_toml, hard=False):
             repo_dir = os.path.join(workflow.workflow_dir, repo)
             if hard:
                 git(repo_dir, ['config', '--global', '--add',
-                               'safe.directory', '.'])
+                               'safe.directory', repo_dir])
                 git(repo_dir, ['fetch'])
                 git(repo_dir, ['clean', '-f'])
                 git(repo_dir, ['reset', '--hard', f'origin/{tag}'])
