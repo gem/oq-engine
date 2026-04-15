@@ -835,7 +835,7 @@ class HazardCalculator(BaseCalculator):
             return 1
         return len(get_weights(self.oqparam, self.datastore))
 
-    def read_exposure(self, haz_sitecol):  # after load_risk_model
+    def read_exposure(self, haz_sitecol):  # after load_crmodel
         """
         Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
@@ -996,11 +996,6 @@ class HazardCalculator(BaseCalculator):
             else:
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
-            if hasattr(self, 'rup'):
-                # for scenario we reduce the site collection to the sites
-                # within the maximum distance from the rupture
-                haz_sitecol, _dctx = self.cmaker.filter(haz_sitecol, self.rup)
-                haz_sitecol.make_complete()
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)

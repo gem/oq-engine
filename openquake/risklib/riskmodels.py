@@ -549,7 +549,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam):
+    def read(cls, dstore, oqparam, rup=None):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance

@@ -1049,7 +1049,8 @@ def get_crmodel(oqparam):
     if oqparam.impact:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
-                crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
+                crm = riskmodels.CompositeRiskModel.read(
+                    exp, oqparam, get_rupture(oqparam))
             except KeyError:
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
