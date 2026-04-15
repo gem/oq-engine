@@ -37,8 +37,9 @@ def load_residual_grids(hdf5_path):
       derived automatically from the cell IDs in the grids
     
     * res_terms: dict mapping each term name to a sub-dict with location
-      (hypo or site), sig_comp_modified (tau, phi, or sig), and
-      sigma_adjustment (sub, add, or none; default none)
+      (hypo or site), and optionally sig_adjustment (sub, add, or none;
+      default none) and sig_comp_modified (tau, phi, or sig; only required
+      when sig_adjustment is not none)
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
@@ -47,18 +48,20 @@ def load_residual_grids(hdf5_path):
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
-        for term in res_terms:
-            for imt_str in hf[term]:
+        for term in res_terms: # e.g. dS2S
+            for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
                     grids[imt_str] = {} # No adjustment for given IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update( # Get h3 resolution
                     h3.get_resolution(c) for c in cell_ids)
-                grids[imt_str][term] = dict(zip(
+                grids[imt_str][term] = dict(zip( # e.g. dS2S
                     cell_ids, grp[term][:]))
-                grids[imt_str][f"{term}_std"] = dict(zip(
-                    cell_ids, grp[f"{term}_std"][:]))
+                if res_terms[term].get(
+                        "sig_adjustment", "none") != "none":
+                    grids[imt_str][f"{term}_std"] = dict(zip(
+                        cell_ids, grp[f"{term}_std"][:]))
                 
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
@@ -75,7 +78,8 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
     :param mean_dict:
         {cell_id: adjustment_value} for a single correction term and given imt
     :param std_dict:
-        {cell_id: std_value} for a single correction term and given imt
+        {cell_id: std_value} for a single correction term and given imt,
+        or None if no sigma adjustment is needed
     :param lats:
         Array of latitudes (either hypo or site lats, depending on term)
     :param lons:
@@ -102,7 +106,9 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
             if cell in mean_dict:
                 # Assign mean and std dev of given term to the cell
                 mean_vals[i] = mean_dict[cell]
-                std_vals[i] = std_dict[cell]
+                if std_dict is not None:
+                    # Std dev based corr only req if sig_action not "none"
+                    std_vals[i] = std_dict[cell] 
                 found[i] = True
 
     return mean_vals, std_vals
@@ -151,19 +157,22 @@ def _apply_grid_corrections(grid_data, ctx, imt,
             # Site location-based
             lats, lons = ctx.lat, ctx.lon
 
-        # Get the adjustments
+        # Check sigma adjustment configuration
+        sig_action = cfg.get("sig_adjustment", "none")
+
+        # Get the adjustments (std only if sigma adjustment is needed)
         delta_mean, delta_std =\
               grid_lookup(
-                  entry[term], entry[f"{term}_std"],
+                  entry[term],
+                  entry[f"{term}_std"] if sig_action != "none" else None,
                   lats, lons, grid_data["h3_res"]
                   )
         
         # Apply adjustment to mean prediction
         mean += delta_mean
 
-        # Skip sigma adjustment if configured as "none"
-        sig_action = cfg.get("sigma_adjustment", "none")
-        if sig_action == "none":
+        # Skip sigma adjustment if no std corrections were loaded
+        if not delta_std.any():
             continue
 
         # Apply adjustment to required component of GMM sigma
@@ -192,7 +201,7 @@ class GridAdjustedGMPE(GMPE):
     adjustment behaviour:
 
     * res_terms: A JSON-encoded dict mapping each top-level group name (each key
-      is a corrective term e.g. dL2L) to a sub-dict with two mandatory keys:
+      is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
 
       * location: How to resolve the correction spatially, with each look-up
          resolving the location to a h3 cell, searching from coarse to fine. If
@@ -202,16 +211,7 @@ class GridAdjustedGMPE(GMPE):
 
         * site - Use the site location (ctx.lat, ctx.lon)
 
-      * sig_comp_modified: Which std-dev component to adjust for the given
-        residual term:
-        
-        * tau = Adjust inter-event std dev
-
-        * phi = Adjust intra-event std dev
-        
-        * sig = Adjust total std dev
-
-      * sigma_adjustment (optional, default "none"): Whether to subtract or add
+      * sig_adjustment (optional, default "none"): Whether to subtract or add
         the std-dev delta, or skip the sigma adjustment entirely:
 
         * none = Skip sigma adjustment (only apply mean correction)
@@ -219,6 +219,15 @@ class GridAdjustedGMPE(GMPE):
         * sub = Subtract variance (reduce sigma)
 
         * add = Add variance (inflate sigma)
+
+      * sig_comp_modified (required when sig_adjustment is not "none"): Which
+        std-dev component to adjust for the given residual term:
+        
+        * tau = Adjust inter-event std dev
+
+        * phi = Adjust intra-event std dev
+        
+        * sig = Adjust total std dev
 
     The corrective terms (each key in the res_terms dict) are not fixed - the user
     can specify as they wish (e.g. they may wish to only include dS2S. The h3 grid
@@ -273,7 +282,7 @@ class GridAdjustedGMPE(GMPE):
 
         # Ensure inter/intra-event std devs are computed by the base GSIM
         if any(cfg["sig_comp_modified"] in ("tau", "phi")
-               and cfg.get("sigma_adjustment", "none") != "none"
+               and cfg.get("sig_adjustment", "none") != "none"
                for cfg in self.grid_data["res_terms"].values()):
             required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
             # Raise error if not a random-effects GSIM
