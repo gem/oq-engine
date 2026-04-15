@@ -26,7 +26,7 @@ from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
-from openquake.risklib.countries import country2code
+from openquake.risklib.countries import country2code, REGIONS
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
@@ -146,20 +146,21 @@ def build_site_model(grm_dir):
     return discard_dupl(sm)
 
 
-def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
+def build_site_model_gsims(grm_dir, dstore):
     """
     Storing the global site_model and gsim table
     """
     rows = []
-    for cwd, dirs, files in os.walk(mosaic_dir):
-        for f in files:
-            if f == 'job_vs30.ini':
-                model = cwd.split('/')[-2]
-                gsim_lt = get_gsim_lt(cwd)
-                for trt, gsims in gsim_lt.values.items():
-                    for gsim in gsims:
-                        q = (model, trt, str(gsim), gsim.weight['default'])
-                        rows.append(q)
+    for region in REGIONS:
+        for cwd, dirs, files in os.walk(os.path.join(grm_dir, region)):
+            for f in files:
+                if f == 'job_vs30.ini':
+                    model = cwd.split('/')[-2]
+                    gsim_lt = get_gsim_lt(cwd)
+                    for trt, gsims in gsim_lt.values.items():
+                        for gsim in gsims:
+                            q = (model, trt, str(gsim), gsim.weight['default'])
+                            rows.append(q)
     smodel = build_site_model(grm_dir)
     dstore['site_model'] = smodel
     dtlist = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr),
@@ -204,7 +205,7 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
         print("No strings longer than {} characters found.".format(min_length))
 
 
-def main(mosaic_dir, grm_dir, wfp=False, action='build'):
+def main(grm_dir, wfp=False, action='build'):
     """
     If action='build' (the default) stores the global exposure and tmap.
     If action='zip' zips the global exposure in a single file exposures.zip
@@ -244,7 +245,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     job, dstore = create_job_dstore(description=description)
     with dstore, job:
         with mon:
-            n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
+            n = build_site_model_gsims(grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n))
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
@@ -256,7 +257,6 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         logging.info(mon)
 
 
-main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
 main.action = 'Perform an action (build, debug, zip, find_long_<FIELD>)'
