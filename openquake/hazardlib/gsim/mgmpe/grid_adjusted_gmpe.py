@@ -222,7 +222,9 @@ class GridAdjustedGMPE(GMPE):
 
     The corrective terms (each key in the res_terms dict) are not fixed - the user
     can specify as they wish (e.g. they may wish to only include dS2S. The h3 grid
-    cell resolution can vary (i.e., densify) or be constant.
+    cell resolution can vary (i.e., densify) or be constant. The IMTs currently must
+    be IMT-dependent. If an IMT column is missing for a given corrective term then
+    it is SKIPPED (no correction is applied instead of an error being raised).
 
     A "real" example of this hdf5 can be found in the unit tests
     associated with this mgmpe module:
