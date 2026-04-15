@@ -23,12 +23,13 @@ import getpass
 import os.path
 import zipfile
 import sqlite3
+import hashlib
 import requests
 from openquake.baselib.general import safeprint
 from openquake.commonlib.dbapi import Db
 
 
-def main(archive, oqdata):
+def main(archive, oqdata, archive_sha256=''):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
@@ -36,12 +37,27 @@ def main(archive, oqdata):
         sys.exit('%s is not empty' % oqdata)
     if '://' in archive:
         # get the zip archive from an URL
-        resp = requests.get(archive)
+        if not archive.startswith('https://'):
+            sys.exit('Only HTTPS URLs are supported: %s' % archive)
+        if not archive_sha256:
+            sys.exit('Missing required SHA256 digest for remote archive')
+        try:
+            resp = requests.get(archive, timeout=(5, 30))
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            sys.exit(str(exc))
         _, archive = archive.rsplit('/', 1)
         with open(archive, 'wb') as f:
             f.write(resp.content)
     if not os.path.exists(archive):
         sys.exit('%s does not exist' % archive)
+    if archive_sha256:
+        digest = hashlib.sha256()
+        with open(archive, 'rb') as f:
+            for chunk in iter(lambda: f.read(65536), b''):
+                digest.update(chunk)
+        if digest.hexdigest().lower() != archive_sha256.lower():
+            sys.exit('SHA256 mismatch for %s' % archive)
     t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
@@ -68,3 +84,4 @@ def main(archive, oqdata):
 
 main.archive = 'path to a zip file'
 main.oqdata = 'path to an oqdata directory'
+main.archive_sha256 = 'expected SHA256 digest (required for remote archives)'
