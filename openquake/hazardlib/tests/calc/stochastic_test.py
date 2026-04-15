@@ -78,7 +78,6 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # Test no filtering
         ruptures = sum(sample_ruptures(group, param), {})['rup_array']
-        breakpoint()
         self.assertEqual(len(ruptures), 8)
 
 

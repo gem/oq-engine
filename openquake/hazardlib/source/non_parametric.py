@@ -66,18 +66,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
 
-    """
-    @property
-    def num_ruptures(self):
-        if not hasattr(self, '_num_ruptures'):
-            self._num_ruptures = len(self.data)
-        return self._num_ruptures
-
-    @num_ruptures.setter
-    def num_ruptures(self, value):
-        self._num_ruptures = value
-    """
-
     @property
     def rup_weights(self):
         return [rup.weight for rup, pmf in self.data]
