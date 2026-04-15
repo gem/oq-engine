@@ -99,11 +99,14 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
     n = len(lats)
     mean_vals = np.zeros(n, dtype=np.float32)
     std_vals = np.zeros(n, dtype=np.float32)
+    found = np.zeros(n, dtype=bool)
 
-    # Go over the h3 resolutions from coarsest to finest,
-    # allowing finer resolutions to overwrite coarser ones
-    for res in h3_res:
-        for i in range(n):
+    # Go over the h3 resolutions from finest to coarsest,
+    # skipping locations already resolved at a finer level
+    for res in reversed(h3_res):
+        if found.all():
+            break
+        for i in np.where(~found)[0]:
             # Make a h3 cell
             cell = h3.latlng_to_cell(float(lats[i]), float(lons[i]), res)
             if cell in mean_dict:
@@ -112,6 +115,7 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
                 if std_dict is not None:
                     # Std dev based corr only req if sig_action not "none"
                     std_vals[i] = std_dict[cell]
+                found[i] = True
 
     return mean_vals, std_vals
 
