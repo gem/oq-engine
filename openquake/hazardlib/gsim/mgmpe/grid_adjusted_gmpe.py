@@ -204,17 +204,21 @@ class GridAdjustedGMPE(GMPE):
       is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
 
       * location: How to resolve the correction spatially, with each look-up
-         resolving the location to a h3 cell, searching from coarse to fine. If
-         a location falls outside all grid cells the correction is zero:
+                  resolving the location to a h3 cell, searching from coarse
+                  to fine. If a location falls outside all grid cells then a
+                  correction of zero is applied:
 
-        * hypo - Use the rupture hypocentre (ctx.hypo_lat, ctx.hypo_lon)
+        * hypo = Use the rupture hypocentre (ctx.hypo_lat, ctx.hypo_lon)
 
-        * site - Use the site location (ctx.lat, ctx.lon)
+        * site = Use the site location (ctx.lat, ctx.lon)
 
-      * sig_adjustment (optional, default "none"): Whether to subtract or add
-        the std-dev delta, or skip the sigma adjustment entirely:
+      * sig_adjustment (optional, default "none"): Whether to adjust the
+        corresponding GMM sigma component using the "_std" values of the
+        correction term (e.g. for dS2S correction to mean the correction
+        to phi (mapped below) would use the dS2S_std value for given IMT):
 
-        * none = Skip sigma adjustment (only apply mean correction)
+        * none = Skip sigma adjustment (only apply mean correction - in
+                 this case no "_std" values need be specified in the hdf5)
 
         * sub = Subtract variance (reduce sigma)
 
@@ -229,13 +233,16 @@ class GridAdjustedGMPE(GMPE):
         
         * sig = Adjust total std dev
 
-    The corrective terms (each key in the res_terms dict) are not fixed - the user
-    can specify as they wish (e.g. they may wish to only include dS2S. The h3 grid
-    cell resolution can vary (i.e., densify) or be constant. The IMTs currently must
-    be IMT-dependent. If an IMT column is missing for a given corrective term then
-    it is SKIPPED (no correction is applied instead of an error being raised).
+    NOTE: The corrective terms (each key in the res_terms dict) are not fixed - the
+    user can specify as they wish (e.g. they may wish to only include dS2S).
+    
+    NOTE: The corrective terms must be IMT-dependent. If an IMT column is missing for
+    a given corrective term then it is SKIPPED (no correction is applied instead of an
+    error being raised).
 
-    A "real" example of this hdf5 can be found in the unit tests
+    NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
+
+    A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
     oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
 
