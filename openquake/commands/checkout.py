@@ -26,7 +26,8 @@ def main(workflow_toml, hard=False):
     """
     for workflow in engine.read_many(workflow_toml, validate=False):
         for repo, tag in workflow.checkout.items():
-            repo_dir = os.path.join(workflow.workflow_dir, repo)
+            repo_dir = os.path.abspath(
+                os.path.join(workflow.workflow_dir, repo))
             if hard:
                 git(repo_dir, ['config', '--global', '--add',
                                'safe.directory', repo_dir])
