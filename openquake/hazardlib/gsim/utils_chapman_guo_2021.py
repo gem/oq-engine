@@ -89,9 +89,13 @@ def get_zscale(z_sed):
     :param z_sed: Depth to sediment site parameter considered in the
                   Chapman and Guo (2021) Coastal Plains site amplification
                   model as part of the 2023 Conterminous US NSHMP.
+                  NOTE: Sites with z_sed == -999 are treated as having no
+                  sediment depth information and return a scaling of 0.
     """
-    Z_CUT = 2.
-    s = 1. - np.exp((-1 * z_sed) / Z_CUT)
+    z_cut = 2.
+    z = np.array(z_sed, dtype=float, copy=True)
+    z[z == -999] = 0.  # Handle sentinel values
+    s = 1. - np.exp(-z / z_cut)
     return s ** 4
 
 
@@ -190,5 +194,10 @@ def get_psa_ratio(ctx, imt, psa_df):
 
     # Final interpolation
     psa_ratios = interpolate(z1, z2, zf)
+
+    # If no z_sed set the psa_ratios to 1 (necessary because even without
+    # zscaling because cpa_term = f_cpa - amp_cpa * z_scale so even with
+    # zscaling of zero the f_cpa term would still be applied)
+    psa_ratios[ctx.z_sed == -999] = 1.0
 
     return np.log(psa_ratios)  # Return in log space
