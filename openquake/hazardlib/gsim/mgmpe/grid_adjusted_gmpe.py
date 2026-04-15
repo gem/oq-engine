@@ -40,6 +40,8 @@ def load_residual_grids(hdf5_path):
       (hypo or site), and optionally sig_adjustment (sub, add, or none;
       default none) and sig_comp_modified (tau, phi, or sig; only required
       when sig_adjustment is not none)
+      NOTE: when sig_adjustment is not none, the hdf5 must contain a
+      dataset named "{term}_sig" alongside the main "{term}" dataset
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
@@ -52,29 +54,36 @@ def load_residual_grids(hdf5_path):
             for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
                     grids[imt_str] = {} # Set an empty dict for given IMT
+                
+                # Get the data for given term and IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
-                resolutions.update( # Get h3 resolution
-                    h3.get_resolution(c) for c in cell_ids)
-                grids[imt_str][term] = dict(zip( # e.g. dS2S
-                    cell_ids, grp[term][:]))
-                if res_terms[term].get(
-                        "sig_adjustment", "none") != "none":
-                    std_vals = grp[f"{term}_std"][:]
-                    if (std_vals < 0).any():
-                        # Cannot be negative if std dev of a term
+                
+                # Get h3 resolution
+                resolutions.update(h3.get_resolution(c) for c in cell_ids)
+                
+                # Store mean adjustments
+                grids[imt_str][term] = dict(zip(cell_ids, grp[term][:]))
+
+                # Get sigma adjustments if required
+                if res_terms[term].get("sig_adjustment", "none") != "none":
+                    sig_vals = grp[f"{term}_sig"][:]
+                    if (sig_vals < 0).any():
+                        # Negative values are not permitted given if modifying
+                        # sigma it should technically be another variance to be
+                        # combined in quadrature
                         raise ValueError(
-                            f"Negative _std values found for term "
+                            f"Negative _sig values found for term "
                             f"'{term}' and IMT '{imt_str}'")
-                    grids[imt_str][f"{term}_std"] = dict(zip(
-                        cell_ids, std_vals))
+                    # Store sigma adjustment
+                    grids[imt_str][f"{term}_sig"] = dict(zip(cell_ids, sig_vals))
                 
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
 
-def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
+def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
     """
     For each (lat, lon) pair resolve the h3 cell at successively finer
     resolutions and return the gridded adjustment and its uncertainty
@@ -83,8 +92,8 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
 
     :param mean_dict:
         {cell_id: adjustment_value} for a single correction term and given imt
-    :param std_dict:
-        {cell_id: std_value} for a single correction term and given imt,
+    :param sig_dict:
+        {cell_id: sig_value} for a single correction term and given imt,
         or None if no sigma adjustment is needed
     :param lats:
         Array of latitudes (either hypo or site lats, depending on term)
@@ -93,12 +102,12 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
     :param h3_res:
         Sorted list of h3 resolution levels (coarse to fine)
     :returns:
-        (adjustment_vals, std_vals) arrays of shape (len(lats),)
+        (adjustment_vals, sig_vals) arrays of shape (len(lats),)
     """
     # Set arrays
     n = len(lats)
     mean_vals = np.zeros(n, dtype=np.float32)
-    std_vals = np.zeros(n, dtype=np.float32)
+    sig_vals = np.zeros(n, dtype=np.float32)
     found = np.zeros(n, dtype=bool)
 
     # Go over the h3 resolutions from finest to coarsest,
@@ -112,12 +121,12 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
             if cell in mean_dict:
                 # Assign mean and std dev of given term to the cell
                 mean_vals[i] = mean_dict[cell]
-                if std_dict is not None:
-                    # Std dev based corr only req if sig_action not "none"
-                    std_vals[i] = std_dict[cell]
+                if sig_dict is not None:
+                    # Sig based corr only req if sig_action not "none"
+                    sig_vals[i] = sig_dict[cell]
                 found[i] = True
 
-    return mean_vals, std_vals
+    return mean_vals, sig_vals
 
 
 def _apply_grid_corrections(grid_data, ctx, imt,
@@ -166,19 +175,19 @@ def _apply_grid_corrections(grid_data, ctx, imt,
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
 
-        # Get the adjustments (std only if sigma adjustment is needed)
-        delta_mean, delta_std =\
+        # Get the adjustments (sig only if sigma adjustment is needed)
+        delta_mean, delta_sig =\
               grid_lookup(
                   entry[term],
-                  entry[f"{term}_std"] if sig_action != "none" else None,
+                  entry[f"{term}_sig"] if sig_action != "none" else None,
                   lats, lons, grid_data["h3_res"]
                   )
         
         # Apply adjustment to mean prediction
         mean += delta_mean
 
-        # Skip sigma adjustment if no std corrections were loaded
-        if not delta_std.any():
+        # Skip sigma adjustment if no sig corrections were loaded
+        if not delta_sig.any():
             continue
 
         # Apply adjustment to required component of GMM sigma
@@ -186,16 +195,16 @@ def _apply_grid_corrections(grid_data, ctx, imt,
         sig_comp = cfg["sig_comp_modified"]
         if sig_comp == "tau":
             # Adjust tau and recompute total sigma too accordingly
-            tau[:] = np.sqrt(tau ** 2 + sign * delta_std ** 2)
+            tau[:] = np.sqrt(tau ** 2 + sign * delta_sig ** 2)
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         elif sig_comp == "phi":
             # Adjust phi and recompute total sigma too accordingly
-            phi[:] = np.sqrt(phi ** 2 + sign * delta_std ** 2)
+            phi[:] = np.sqrt(phi ** 2 + sign * delta_sig ** 2)
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
             assert sig_comp == "sig"
-            sig[:] = np.sqrt(sig ** 2 + sign * delta_std ** 2)
+            sig[:] = np.sqrt(sig ** 2 + sign * delta_sig ** 2)
 
 
 class GridAdjustedGMPE(GMPE):
@@ -219,12 +228,12 @@ class GridAdjustedGMPE(GMPE):
         * site = Use the site location (ctx.lat, ctx.lon)
 
       * sig_adjustment (optional, default "none"): Whether to adjust the
-        corresponding GMM sigma component using the "_std" values of the
+        corresponding GMM sigma component using the "_sig" values of the
         correction term (e.g. for dS2S correction to mean the correction
-        to phi (mapped below) would use the dS2S_std value for given IMT):
+        to phi (mapped below) would use the dS2S_sig value for given IMT):
 
         * none = Skip sigma adjustment (only apply mean correction - in
-                 this case no "_std" values need be specified in the hdf5)
+                 this case no "_sig" values need be specified in the hdf5)
 
         * sub = Subtract variance (reduce sigma)
 

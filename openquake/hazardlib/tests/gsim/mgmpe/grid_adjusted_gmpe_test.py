@@ -75,7 +75,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # Known locations return per-cell values
         mu, sd = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
-            gd["grids"]["PGA"]["dL2L_std"],
+            gd["grids"]["PGA"]["dL2L_sig"],
             LATS, LONS, gd["h3_res"]
             )
         aae(mu, DL2L_MEAN, decimal=DP)
@@ -83,7 +83,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # Location outside all grid cells returns zero
         mu, sd = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
-            gd["grids"]["PGA"]["dL2L_std"],
+            gd["grids"]["PGA"]["dL2L_sig"],
             np.array([-80.0]), np.array([170.0]), gd["h3_res"])
         aae(mu, 0.0)
         aae(sd, 0.0)
