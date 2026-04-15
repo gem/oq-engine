@@ -107,7 +107,7 @@ def grid_lookup(mean_dict, std_dict, lats, lons, h3_res):
         if found.all():
             break
         for i in np.where(~found)[0]:
-            # Make a h3 cell
+            # Make a h3 cell for given hypo or site
             cell = h3.latlng_to_cell(float(lats[i]), float(lons[i]), res)
             if cell in mean_dict:
                 # Assign mean and std dev of given term to the cell
