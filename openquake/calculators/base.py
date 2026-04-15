@@ -209,7 +209,7 @@ def save_version_checksum(oq, dstore):
     Store the engine version and other attributes in the root dataset
     """
     attrs = dstore['/'].attrs
-    attrs['engine_version'] = logs.dbcmd('engine_version')
+    attrs['engine_version'] = general.engine_version()
     if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
         attrs['aelo_version'] = get_aelo_version()
     attrs['date'] = datetime.now().isoformat()[:19]
