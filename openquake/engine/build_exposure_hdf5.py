@@ -33,7 +33,8 @@ from openquake.commonlib import expo_to_hdf5
 U16 = numpy.uint16
 F32 = numpy.float32
 
-def collect_exposures(grm_dir):
+
+def collect_exposures(grm_dir, redfactor=1):
     """
     Collect the files of kind Exposure_<Country>.xml.
 
@@ -223,7 +224,10 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
-
+    elif action == 'debug':
+        redfactor = .01  # sample 1 file each 100
+    else:
+        redfactor = 1
     mon = performance.Monitor(measuremem=True)
     description = 'Storing global exposure to hdf5'
     if wfp:
@@ -235,7 +239,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
             logging.info('Stored {:_d} sites'.format(n))
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
-            fnames = collect_exposures(grm_dir)
+            fnames = collect_exposures(grm_dir, redfactor)
             expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
         logging.info(mon)
 
@@ -243,7 +247,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
-main.action = 'Perform an action (build, zip, find_long_<FIELD>)'
+main.action = 'Perform an action (build, debug, zip, find_long_<FIELD>)'
 
 if __name__ == '__main__':
     sap.run(main)
