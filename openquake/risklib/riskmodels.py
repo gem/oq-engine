@@ -22,7 +22,6 @@ import functools
 import collections
 import numpy
 import pandas
-import logging
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
@@ -114,7 +113,7 @@ def group_by_lt(funclist, duplicates='error'):
     :param duplicates: 'error' (default) to raise an error on duplicate
         vulnerability functions, or 'first' to keep the first one
     """
-    dic = AccumDict(accum = [])  # peril -> lt -> rf
+    dic = AccumDict(accum=[])  # peril -> lt -> rf
     for rf in funclist:
         dic[rf.loss_type].append(rf)
     for lt, lst in dic.items():
@@ -663,7 +662,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                         risk_ids = self.tmap_df.risk_id
                     else:
                         risk_ids = self.tmap_df[
-                            self.tmap_df.peril==peril].risk_id
+                            self.tmap_df.peril == peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -695,7 +694,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         limit_states = self.damage_states[1:]
-            
+
         for byname, cdf in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(cdf):
@@ -864,7 +863,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             lst.append(array5d[pi, a, r, li, di])
                 arr[a, r] = tuple(lst)
         return arr
-        
+
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
