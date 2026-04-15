@@ -136,8 +136,8 @@ def _apply_grid_corrections(grid_data, ctx, imt,
     if entry is None:
         return 
     
-    # Apply each correction
-    for term, cfg in grid_data["res_terms"].items():
+    # Apply each correction 
+    for term, cfg in grid_data["res_terms"].items(): # e.g. dL2L, mapping dict
 
         # Skip if this term has no data for the given IMT
         if term not in entry:
@@ -191,8 +191,8 @@ class GridAdjustedGMPE(GMPE):
     The hdf5 file contains a root-level attribute that configures the
     adjustment behaviour:
 
-    * res_terms: A JSON-encoded dict mapping each top-level group name
-      to a sub-dict with two three keys:
+    * res_terms: A JSON-encoded dict mapping each top-level group name (each key
+      is a corrective term e.g. dL2L) to a sub-dict with two mandatory keys:
 
       * location: How to resolve the correction spatially, with each look-up
          resolving the location to a h3 cell, searching from coarse to fine. If
@@ -220,7 +220,9 @@ class GridAdjustedGMPE(GMPE):
 
         * add = Add variance (inflate sigma)
 
-    The h3 grid cell resolution can vary (i.e., densify) or be constant.
+    The corrective terms (each key in the res_terms dict) are not fixed - the user
+    can specify as they wish (e.g. they may wish to only include dS2S. The h3 grid
+    cell resolution can vary (i.e., densify) or be constant.
 
     A "real" example of this hdf5 can be found in the unit tests
     associated with this mgmpe module:
