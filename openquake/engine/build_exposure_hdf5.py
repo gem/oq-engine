@@ -61,7 +61,7 @@ def collect_exposures(grm_dir, redfactor=1):
 
 
 # tested in crmodel_test.py
-def read_crmodel(vulndir, monitor):
+def read_crmodel(vulndir, monitor=performance.Monitor()):
     """
     Read the vulnerability files of kind vulnerability_<KIND>.xml
     """
