@@ -64,6 +64,18 @@ def collect_exposures(grm_dir, redfactor=1):
 def read_crmodel(vulndir, monitor=performance.Monitor()):
     """
     Read the vulnerability files of kind vulnerability_<KIND>.xml
+    The association with the loss types is given by the following
+    mapping:
+
+occupants_vulnerability_file = vulnerability_fatalities.xml
+structural_vulnerability_file = vulnerability_building.xml
+contents_vulnerability_file = vulnerability_contents.xml
+number_vulnerability_file = vulnerability_number.xml
+area_vulnerability_file = vulnerability_area.xml
+residents_vulnerability_file = vulnerability_residents.xml
+injured_vulnerability_file = vulnerability_injuries.xml
+affectedpop_vulnerability_file = vulnerability_affectedpop.xml
+embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
     """
     vfuncs = RiskFuncList()
     L = len('vulnerability_')
@@ -71,6 +83,8 @@ def read_crmodel(vulndir, monitor=performance.Monitor()):
         ltype = name[L:].split('.')[0]
         if ltype in ('total', 'nonstructural'):  # not used by OQImpact
             continue
+        elif ltype == 'building':
+            ltype = 'structural'
         elif ltype == 'injuries':
             ltype = 'injured'
         elif ltype == 'fatalities':

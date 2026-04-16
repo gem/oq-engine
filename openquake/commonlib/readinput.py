@@ -1329,6 +1329,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
 
     # check on missing fields in the exposure
     if 'risk' in oqparam.calculation_mode:
+        breakpoint()
         for exp_type in inp_types:
             if not any(exp_type in name
                        for name in assetcol.array.dtype.names):
