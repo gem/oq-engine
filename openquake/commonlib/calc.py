@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, geo
+from openquake.hazardlib import map_array, geo, nrml
 from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util, readinput, datastore
 
@@ -122,6 +122,14 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for event_based calculators ################ #
 
+def check_duplicates(rup_array, source_info):
+  rupids, counts = numpy.unique(rup_array['id'], return_counts=1)
+  rupid = rupids[counts > 1][0]
+  dupl = rup_array[rup_array['id'] == rupid][['id', 'mag', 'source_id']]
+  _source_ids = source_info['id'][dupl['source_id']]
+  breakpoint()
+  return
+            
 def get_model_lts(h5):
     """
     :returns: (model, full_lt) pairs
@@ -233,7 +241,11 @@ class RuptureImporter(object):
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
-        assert len(rupids) == nr, 'rup_id not unique!'
+        if len(rupids) < nr:
+            # rup_id not unique
+            check_duplicates(rup_array, self.datastore['source_info'][:])
+            raise nrml.DuplicatedID
+
         rup_array['geom_id'] = geom_id
         n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events
