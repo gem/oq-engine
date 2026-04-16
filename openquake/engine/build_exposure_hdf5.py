@@ -22,6 +22,7 @@ import os
 import logging
 import pandas
 import numpy
+import h5py
 from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
@@ -59,28 +60,27 @@ def collect_exposures(grm_dir, redfactor=1):
     return general.random_filter(out, redfactor), country_region
 
 
-def read_world_vulnerability(grm_dir, region, dstore):
+# tested in crmodel_test.py
+def read_crmodel(vulndir):
     """
-    Store the world CompositeRiskModel
+    Read the vulnerability files of kind vulnerability_<KIND>.xml
     """
-    kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
-             'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
-    regionpath = os.path.join(
-        grm_dir, 'Vulnerability', 'Global', 'vulnerability', region)
-    for name in os.listdir(regionpath):
-        for kind in kinds:
-            if kind in name:
-                fname = os.path.join(regionpath, name)
-                logging.info(f'Reading {fname}')
-                for vf in nrml.to_python(fname).values():
-                    vf.loss_type = ('occupants' if kind == 'fatalities'
-                                    else kind)
-                    vf.kind = 'vulnerability'
-                    vfuncs.append(vf)
-    return vfuncs
+    L = len('vulnerability_')
+    for name in os.listdir(vulndir):
+        kind = name[L:].split('.')[0]
+        # vulnerability_area.xml -> area
+        fname = os.path.join(vulndir, name)
+        logging.info(f'Reading {fname}')
+        for vf in nrml.to_python(fname).values():
+            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+            vf.kind = 'vulnerability'
+            vfuncs.append(vf)
+    logging.info(f'Read {len(vfuncs)} functions')
+    oq = OqParam(calculation_mode='custom')
+    return CompositeRiskModel(oq, vfuncs)
 
-
+    
 def get_gsim_lt(cwd):
     """
     :returns: a GsimLogicTree instance
@@ -237,17 +237,22 @@ def main(grm_dir, wfp=False, action='build'):
     if wfp:
         description += ' (only for WFP countries)'
     job, dstore = create_job_dstore(description=description)
+    sample = os.environ.get('OQ_SAMPLE_ASSETS')
     with dstore, job:
         with mon:
             n = build_site_model_gsims(grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n))
-            for region in REGIONS:
-                vfuncs = read_world_vulnerability(grm_dir, region, dstore)
-                logging.info(f'{region}: read {len(vfuncs)} vfuncs')
-                oq = OqParam(calculation_mode='custom')
-                crmodel = CompositeRiskModel(oq, vfuncs)
-                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
-                                 'gzip', **crmodel.get_attrs())
+            vulndir = os.path.join(
+                grm_dir, 'Vulnerability', 'Global', 'vulnerability')
+            for i, region in enumerate(REGIONS):
+                crmodel = read_crmodel(os.path.join(vulndir, region))
+                logging.info(f'Creating crm{region}')
+                if sample and i > 0:
+                    # make a soft link to the first region to save space
+                    dstore[f'crm{region}'] = h5py.SoftLink(f'crm{REGIONS[0]}')
+                else:
+                    dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                     'gzip', **crmodel.get_attrs())
             fnames, country_region = collect_exposures(grm_dir, redfactor)
             countries, regions = zip(*country_region)
             dstore['countries'] = numpy.array(countries)

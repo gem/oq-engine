@@ -105,13 +105,10 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def group_by_lt(funclist, duplicates='error'):
+def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type into a dictionary
     peril -> loss_type -> risk_function
-
-    :param duplicates: 'error' (default) to raise an error on duplicate
-        vulnerability functions, or 'first' to keep the first one
     """
     dic = AccumDict(accum=[])  # peril -> lt -> rf
     for rf in funclist:
@@ -128,9 +125,6 @@ def group_by_lt(funclist, duplicates='error'):
             vf, retro = lst
             vf.retro = retro
             dic[lt] = vf
-        elif duplicates == 'first' and all(
-                rf.kind == 'vulnerability' for rf in lst):
-            dic[lt] = lst[0]
         else:
             raise RuntimeError(lst)
     return dic
@@ -140,7 +134,7 @@ class RiskFuncList(list):
     """
     A list of risk functions with attributes .id, .loss_type, .kind
     """
-    def groupby_id(self, duplicates='error'):
+    def groupby_id(self):
         """
         :param duplicates: use 'first' to keep the first occurrence of
             duplicate vulnerability functions instead of raising an error
@@ -151,7 +145,7 @@ class RiskFuncList(list):
         for rf in self:
             dic[rf.id, getattr(rf, 'peril', 'groundshaking')].append(rf)
         for (riskid, peril), rfs in dic.items():
-            ddic[riskid][peril] = group_by_lt(rfs, duplicates=duplicates)
+            ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
         if len(set(num_perils.values())) > 1:
              raise ValueError(f'{num_perils=}')
@@ -479,7 +473,8 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
-    return RiskModel(oqparam.calculation_mode, taxonomy, risk_functions, **extra)
+    rm = RiskModel(oqparam.calculation_mode, taxonomy, risk_functions, **extra)
+    return rm
 
 
 # used only in riskmodels_test
@@ -563,6 +558,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
+        if country:  # reading from exposure.hdf5 in OQImpact mode
+            dic = dict(zip(dstore['countries'], dstore['regions']))
+            region = dic[country]
+            print(region)
         risklist = RiskFuncList()
         if hasattr(dstore, 'get_attr'):
             # missing only in Aristotle mode, where dstore is an hdf5.File
@@ -726,10 +725,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             self.perils = oq.set_risk_imts(self.risklist)
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
-        duplicates = 'first'  # FIXME: or 'error' depending from a given param
         if oq.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for riskid, risk_functions in self.risklist.groupby_id(duplicates).items():
+            for riskid, risk_functions in self.risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions)
         elif (any(rf.kind == 'fragility' for rf in self.risklist) or
@@ -745,11 +743,11 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             self.damage_states = ['no_damage'] + list(
                 self.risklist.limit_states)
-            for riskid, ffs_by_lt in self.risklist.groupby_id(duplicates).items():
+            for riskid, ffs_by_lt in self.risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(riskid, oq, ffs_by_lt)
         else:
             # classical, event based and scenario calculators
-            for riskid, vfs in self.risklist.groupby_id(duplicates).items():
+            for riskid, vfs in self.risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(riskid, oq, vfs)
         self.imtls = oq.imtls
         self.lti = {}  # loss_type -> idx
