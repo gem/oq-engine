@@ -1610,6 +1610,15 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+@extract.add('rupids')
+def extract_rupids(dstore, what):
+    try:
+        rups = dstore['filtered_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
+    return rups[['id', 'mag', 'n_occ']]
+
+
 @extract.add('ebruptures')
 def extract_ebruptures(dstore, what):
     """
