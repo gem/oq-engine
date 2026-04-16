@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property
+from openquake.baselib.general import AccumDict, cached_property, decode
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.sep.classes import corresponds
@@ -559,14 +559,18 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a :class:`CompositeRiskModel` instance
         """
         if country:  # reading from exposure.hdf5 in OQImpact mode
-            dic = dict(zip(dstore['countries'], dstore['regions']))
+            dic = dict(zip(decode(dstore['countries'][:]),
+                           decode(dstore['regions'][:])))
             region = dic[country]
-            print(region)
+        else:
+            region = ''
+
         risklist = RiskFuncList()
         if hasattr(dstore, 'get_attr'):
             # missing only in Aristotle mode, where dstore is an hdf5.File
-            risklist.limit_states = dstore.get_attr('crm', 'limit_states')
-        df = dstore.read_df('crm')
+            risklist.limit_states = dstore.get_attr(
+                f'crm{region}', 'limit_states')
+        df = dstore.read_df(f'crm{region}')
         for i, rf_json in enumerate(df.riskfunc):
             rf = hdf5.json_to_obj(rf_json)
             try:
