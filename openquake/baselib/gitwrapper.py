@@ -26,13 +26,19 @@ def git(repodir, cmd):
     enough for the purpose of fetching and checking out specific tags.
     """
     print(f"{repodir}: git {' '.join(cmd)}")
-    try:
-        proc = subprocess.run(['git'] + cmd, cwd=repodir, check=True)
-    except subprocess.CalledProcessError as exc:
-        print(exc)
-        breakpoint()
-    if proc.returncode:
-        sys.exit('Error in {}: git {}'.format(repodir, ' '.join(cmd)))
+    proc = subprocess.run(['git'] + cmd, cwd=repodir, capture_output=True, text=True)
+    rc = proc.returncode
+    if rc:
+        if 'safe.directory' in proc.stderr:
+            subprocess.run(['git', 'config', '--global', '--add',
+                            'safe.directory', repodir], cwd=repodir)
+            proc = subprocess.run(['git'] + cmd, cwd=repodir, capture_output=True,
+                                  text=True)
+            rc = proc.returncode
+        if rc:
+            sys.exit(f'Error {proc.stderr} in {repodir}: git {" ".join(cmd)}')
+    else:
+        print(proc.stdout)
 
 git.repodir = 'git repository'
 git.cmd = dict(help='git subcommand', nargs='+')
