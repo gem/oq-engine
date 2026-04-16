@@ -36,6 +36,15 @@ truncated_gr
     :undoc-members:
     :show-inheritance:
 
+alternative_characteristic_mdf
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.mfd.alternative_characteristic_mfd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 youngs_coppersmith_1985
 ------------------------------------------------------
 

@@ -83,6 +83,17 @@ def abGR(utype, node, filename):
             node, filename, 'expected a pair of floats separated by space')
 
 
+@parse_uncertainty.add('maxMagAndDeltaMagACRelative',
+                       'maxMagAndDeltaMagACRelativeNoMoBalance')
+def maxMagAndDeltaMagAC(utype, node, filename):
+    try:
+        [delta_max_mag, delta_m_AC] = node.text.split()
+        return float(delta_max_mag), float(delta_m_AC)
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a pair of floats separated by space')
+
+
 @parse_uncertainty.add('abMaxMagAbsolute')
 def abMMax(utype, node, filename):
     try:
@@ -316,9 +327,20 @@ def _bGR_absolute(utype, source, value):
     source.mfd.modify('set_bGR', dict(b_val=b_val))
 
 
+@apply_uncertainty.add('bACAbsolute')
+def _bAC_absolute(utype, source, value):
+    b_val = float(value)
+    source.mfd.modify('set_bAC', dict(b_val=b_val))
+
+
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
     source.mfd.modify('increment_b', dict(value=value))
+
+
+@apply_uncertainty.add('bACRelative')
+def _bAC_relative(utype, source, value):
+    source.mfd.modify('increment_b_AC', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelative')
@@ -329,6 +351,22 @@ def _maxmagGR_relative(utype, source, value):
 @apply_uncertainty.add('maxMagGRRelativeNoMoBalance')
 def _maxmagGRnoMoBalance_relative(utype, source, value):
     source.mfd.modify('increment_max_mag_no_mo_balance', dict(value=value))
+
+
+@apply_uncertainty.add('maxMagAndDeltaMagACRelative')
+def _maxmagAndDeltaMagAC_relative(utype, source, value):
+    delta_max_mag, delta_m_AC = value
+    source.mfd.modify('increment_max_mag_and_delta_m_AC',
+                      dict(delta_max_mag=delta_max_mag,
+                           delta_m_AC=delta_m_AC))
+
+
+@apply_uncertainty.add('maxMagAndDeltaMagACRelativeNoMoBalance')
+def _maxmagAndDeltaMagACnoMoBalance_relative(utype, source, value):
+    delta_max_mag, delta_m_AC = value
+    source.mfd.modify('increment_max_mag_and_delta_m_AC_no_mo_balance',
+                      dict(delta_max_mag=delta_max_mag,
+                           delta_m_AC=delta_m_AC))
 
 
 @apply_uncertainty.add('maxMagGRAbsolute')
@@ -588,6 +626,12 @@ class BranchSet(object):
             the values provided
         truncatedGRFromSlipAbsolute
             Updates a TruncatedGR using a slip rate and a rigidity
+        maxMagAndDeltaMagACRelative
+            Different values to add to maximum magnitude and delta_m_AC.
+            Value should be a pair of floats separated by space.
+        maxMagAndDeltaMagACRelativeNoMoBalance
+            Same as maxMagAndDeltaMagACRelative but without rebalancing
+            the total rate to preserve total moment rate.
 
     :param filters:
         Dictionary, a set of filters to specify which sources should

@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Logging and storing the engine version and not the DbServer version
+
   [Matteo Nastasi]
   * Integrate Christopher Brooks PAPERS script to run calculation
     starting from hypothetical ruptures into engine as new API
@@ -10,6 +13,8 @@
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]
+  * Added the `AlternativeCharacteristicMFD` class (unit tests and also
+    a QA test in classical/case_10)
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
     also a bug where the `xvf` cap of 75 km was being applied incorrectly.
   * Modify `openquake/hazardlib/tests/gsim/utils.py` to support checking
