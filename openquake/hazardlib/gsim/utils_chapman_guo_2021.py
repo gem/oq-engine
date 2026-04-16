@@ -195,10 +195,10 @@ def get_psa_ratio(ctx, imt, psa_df):
     # Final interpolation
     psa_ratios = interpolate(z1, z2, zf)
 
-    # Set psa_ratios to 1 for sentinel z_sed sites (no coastal plains
-    # adjustment). This is necessary independently of z_scale being 0
-    # because cpa_term = f_cpa - amp_cpa * z_scale, so a nonzero f_cpa
-    # would still be applied even when z_scale is zero.
+    # Set psa_ratios to 1 (zero when in log space) for sentinel z_sed sites
+    # sites (no coastal plains adjustment). This is necessary independently
+    # of z_scale being 0 because cpa_term = f_cpa - amp_cpa * z_scale, so a
+    # nonzero f_cpa would still be applied even when z_scale is zero.
     psa_ratios[ctx.z_sed == -999] = 1.0
 
     return np.log(psa_ratios)  # Return in log space
