@@ -1055,6 +1055,7 @@ def get_crmodel(oqparam):
                 crm = riskmodels.CompositeRiskModel.read(
                     exp, oqparam, str(country))
             except KeyError:
+                raise
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
                 return crm
