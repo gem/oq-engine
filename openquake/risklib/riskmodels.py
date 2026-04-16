@@ -136,8 +136,6 @@ class RiskFuncList(list):
     """
     def groupby_id(self):
         """
-        :param duplicates: use 'first' to keep the first occurrence of
-            duplicate vulnerability functions instead of raising an error
         :returns: dictionary id -> peril -> loss_type -> risk_function
         """
         ddic = AccumDict(accum=AccumDict(accum=[]))

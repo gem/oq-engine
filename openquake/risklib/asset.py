@@ -163,7 +163,7 @@ class CostCalculator(object):
         :param: a list of loss types
         :returns: a string of space-separated units
         """
-        lst = []    
+        lst = []
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]  # rstrip _ins
