@@ -68,6 +68,8 @@ def read_crmodel(vulndir, monitor=performance.Monitor()):
     vfuncs = RiskFuncList()
     L = len('vulnerability_')
     for name in os.listdir(vulndir):
+        if 'total' in name:  # not used by OQImpact
+            continue     
         kind = name[L:].split('.')[0]
         # vulnerability_area.xml -> area
         fname = os.path.join(vulndir, name)
