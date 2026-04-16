@@ -249,21 +249,23 @@ def main(grm_dir, wfp=False, action='build'):
             region = REGIONS[0]
             crmodel = read_crmodel(os.path.join(vulndir, region))
             logging.info(f'Creating crm{region}')
-            dstore.create_df(f'crm{region}', crmodel.to_dframe(),
-                             'gzip', **crmodel.get_attrs())
             if sample:
-                for region in REGIONS[1:]:
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for reg in REGIONS[1:]:
                     # make a soft link to the first region to save space
-                    dstore[f'crm{region}'] = h5py.SoftLink(f'crm{REGIONS[0]}')
+                    dstore[f'crm{reg}'] = h5py.SoftLink(f'crm{region}')
             else:
+                # creating the big file
                 smap = parallel.Starmap(read_crmodel, h5=dstore)
-                for region in REGIONS[1:]:
-                    smap.submit(os.path.join(vulndir, region))
-                for crmodel in smap:
-                    region = crmodel.region
-                    logging.info(f'Creating crm{region}')
-                    dstore.create_df(f'crm{region}', crmodel.to_dframe(),
-                                     'gzip', **crmodel.get_attrs())
+                for reg in REGIONS[1:]:
+                    smap.submit((os.path.join(vulndir, reg),))
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for crm in smap:
+                    logging.info(f'Creating crm{crm.region}')
+                    dstore.create_df(f'crm{crm.region}', crm.to_dframe(),
+                                     'gzip', **crm.get_attrs())
             fnames, country_region = collect_exposures(grm_dir, redfactor)
             countries, regions = zip(*country_region)
             dstore['countries'] = numpy.array(countries)
