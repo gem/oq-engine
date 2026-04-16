@@ -23,7 +23,7 @@ import logging
 import pandas
 import numpy
 import h5py
-from openquake.baselib import sap, general, performance, hdf5
+from openquake.baselib import sap, general, performance, parallel, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
@@ -61,7 +61,7 @@ def collect_exposures(grm_dir, redfactor=1):
 
 
 # tested in crmodel_test.py
-def read_crmodel(vulndir):
+def read_crmodel(vulndir, monitor=performance.Monitor()):
     """
     Read the vulnerability files of kind vulnerability_<KIND>.xml
     """
@@ -78,7 +78,9 @@ def read_crmodel(vulndir):
             vfuncs.append(vf)
     logging.info(f'Read {len(vfuncs)} functions')
     oq = OqParam(calculation_mode='custom')
-    return CompositeRiskModel(oq, vfuncs)
+    crm = CompositeRiskModel(oq, vfuncs)
+    crm.region = os.path.basename(vulndir)
+    return crm
 
     
 def get_gsim_lt(cwd):
@@ -244,15 +246,26 @@ def main(grm_dir, wfp=False, action='build'):
             logging.info('Stored {:_d} sites'.format(n))
             vulndir = os.path.join(
                 grm_dir, 'Vulnerability', 'Global', 'vulnerability')
-            for i, region in enumerate(REGIONS):
-                if sample and i > 0:
+            region = REGIONS[0]
+            crmodel = read_crmodel(os.path.join(vulndir, region))
+            logging.info(f'Creating crm{region}')
+            if sample:
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for reg in REGIONS[1:]:
                     # make a soft link to the first region to save space
-                    dstore[f'crm{region}'] = h5py.SoftLink(f'crm{REGIONS[0]}')
-                else:
-                    crmodel = read_crmodel(os.path.join(vulndir, region))
-                    logging.info(f'Creating crm{region}')
-                    dstore.create_df(f'crm{region}', crmodel.to_dframe(),
-                                     'gzip', **crmodel.get_attrs())
+                    dstore[f'crm{reg}'] = h5py.SoftLink(f'crm{region}')
+            else:
+                # creating the big file
+                smap = parallel.Starmap(read_crmodel, h5=dstore)
+                for reg in REGIONS[1:]:
+                    smap.submit((os.path.join(vulndir, reg),))
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for crm in smap:
+                    logging.info(f'Creating crm{crm.region}')
+                    dstore.create_df(f'crm{crm.region}', crm.to_dframe(),
+                                     'gzip', **crm.get_attrs())
             fnames, country_region = collect_exposures(grm_dir, redfactor)
             countries, regions = zip(*country_region)
             dstore['countries'] = numpy.array(countries)
