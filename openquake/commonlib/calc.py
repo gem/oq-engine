@@ -129,7 +129,7 @@ def get_first_duplicate(rup_array, source_info):
     rupids, counts = numpy.unique(rup_array['id'], return_counts=1)
     rupid = rupids[counts > 1][0]
     dupl = rup_array[rup_array['id'] == rupid][
-       ['id', 'seed', 'source_id', 'trt_smr', 'code', 'n_occ', 'mag',
+       ['id', 'source_id', 'trt_smr', 'code', 'n_occ', 'mag',
         'occurrence_rate', 'model']]
     source_id = source_info['source_id'][dupl['source_id'][0]]
     return dupl, source_id
