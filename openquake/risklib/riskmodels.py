@@ -152,9 +152,9 @@ class RiskFuncList(list):
             dic[rf.id, getattr(rf, 'peril', 'groundshaking')].append(rf)
         for (riskid, peril), rfs in dic.items():
             ddic[riskid][peril] = group_by_lt(rfs, duplicates=duplicates)
-        # num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
-        # if len(set(num_perils.values())) > 1:
-        #     raise ValueError(f'{num_perils=}')
+        num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
+        if len(set(num_perils.values())) > 1:
+             raise ValueError(f'{num_perils=}')
         return ddic
 
 
@@ -168,7 +168,8 @@ def get_risk_functions(oqparam):
     job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        peril, kind, loss_type = key.split('/')  # ex. groundshaking/vulnerability/structural
+        peril, kind, loss_type = key.split('/')
+        # ex. groundshaking/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
@@ -181,7 +182,7 @@ def get_risk_functions(oqparam):
         if not rmodel_kind.lower().startswith(kind_):
             raise ValueError(
                 f'Error in the file "{key}_file={fname}": is '
-                f'of kind {rmodel_kind}, expected {kind.capitalize() + "Model"}')
+                f'of kind {rmodel_kind}, expected {kind.capitalize()}Model')
         if cost_type != loss_type:
             raise ValueError(
                 f'Error in the file "{key}_file={fname}": lossCategory is of '
