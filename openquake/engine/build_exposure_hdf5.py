@@ -69,7 +69,7 @@ def read_crmodel(vulndir, monitor=performance.Monitor()):
     L = len('vulnerability_')
     for name in os.listdir(vulndir):
         ltype = name[L:].split('.')[0]
-        if ltype == 'total':  # not used by OQImpact
+        if ltype in ('total', 'nonstructural'):  # not used by OQImpact
             continue
         elif ltype == 'injuries':
             ltype = 'injured'
