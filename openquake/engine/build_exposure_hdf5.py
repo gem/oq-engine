@@ -81,7 +81,8 @@ embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
     L = len('vulnerability_')
     for name in os.listdir(vulndir):
         ltype = name[L:].split('.')[0]
-        if ltype in ('total', 'nonstructural'):  # not used by OQImpact
+        if ltype in ('total', 'structural', 'nonstructural'):
+            # not used by OQImpact
             continue
         elif ltype == 'building':
             ltype = 'structural'
