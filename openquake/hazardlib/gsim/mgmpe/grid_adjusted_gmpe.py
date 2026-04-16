@@ -262,10 +262,10 @@ class GridAdjustedGMPE(GMPE):
 
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
-    oq-engine\openquake\hazardlib\tests\gsim\mgmpe\data\test_grid_adjustments.hdf5
+    oq-engine/openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
 
     A use case (from XML) can be found in the classical QA tests:
-    oq-engine\openquake\qa_tests_data\classical\case_11\grid_adjustments.hdf5
+    oq-engine/openquake/qa_tests_data/classical/case_11/grid_adjustments.hdf5
 
     :param gmpe_name:
         The underlying GMM to apply the grid-based adjustments too.

@@ -565,9 +565,8 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     is added to the collapsed site epi. uncertainty adjusted mean in
     the compute meth of the NGAEastUSGSGMPE class (usgs_ceus_2019.py).
 
-    :param u_adj: Array containing the period-dependent bias
-                  adjustment as required for the 2023 Conterminous
-                  US NSHMP.
+    :param u_adj: Array containing the period-dependent bias adjustment
+                  as required for the 2023 Conterminous US NSHMP.
 
     :param cstl: Dictionary containing parameters required for the
                  computation of the Coastal Plains site amplification
