@@ -245,12 +245,12 @@ def main(grm_dir, wfp=False, action='build'):
             vulndir = os.path.join(
                 grm_dir, 'Vulnerability', 'Global', 'vulnerability')
             for i, region in enumerate(REGIONS):
-                crmodel = read_crmodel(os.path.join(vulndir, region))
-                logging.info(f'Creating crm{region}')
                 if sample and i > 0:
                     # make a soft link to the first region to save space
                     dstore[f'crm{region}'] = h5py.SoftLink(f'crm{REGIONS[0]}')
                 else:
+                    crmodel = read_crmodel(os.path.join(vulndir, region))
+                    logging.info(f'Creating crm{region}')
                     dstore.create_df(f'crm{region}', crmodel.to_dframe(),
                                      'gzip', **crmodel.get_attrs())
             fnames, country_region = collect_exposures(grm_dir, redfactor)
