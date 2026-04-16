@@ -68,14 +68,18 @@ def read_crmodel(vulndir, monitor=performance.Monitor()):
     vfuncs = RiskFuncList()
     L = len('vulnerability_')
     for name in os.listdir(vulndir):
-        if 'total' in name:  # not used by OQImpact
-            continue     
-        kind = name[L:].split('.')[0]
+        ltype = name[L:].split('.')[0]
+        if ltype == 'total':  # not used by OQImpact
+            continue
+        elif ltype == 'injuries':
+            ltype = 'injured'
+        elif ltype == 'fatalities':
+            ltype = 'occupants'
         # vulnerability_area.xml -> area
         fname = os.path.join(vulndir, name)
         logging.info(f'Reading {fname}')
         for vf in nrml.to_python(fname).values():
-            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+            vf.loss_type = ltype
             vf.kind = 'vulnerability'
             vfuncs.append(vf)
     logging.info(f'Read {len(vfuncs)} functions')
