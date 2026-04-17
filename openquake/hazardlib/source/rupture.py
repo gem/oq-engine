@@ -27,7 +27,6 @@ import logging
 import itertools
 import json
 from openquake.baselib import general, hdf5
-from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib import geo, site, scalerel
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -95,20 +94,6 @@ rupture_dt = numpy.dtype([
     ('model', '<S3')])
 
 code2cls = {}
-
-IMODEL = {'???': 0}
-for i, model in enumerate(MODELS, 1):
-    IMODEL[model] = I64(i)
-IMODEL['CAN'] = IMODEL['CND']
-assert i <= 256, i
-
-
-def rupid64(model, source_id, id30):
-    """
-    :returns: an int64 identifier for mosaic model, source ID and rupture ID
-    """
-    imodel = IMODEL[model] * TWO60
-    return imodel + I64(source_id) * TWO30 + id30
 
 
 def to_csv_array(ebruptures):
@@ -200,10 +185,9 @@ def get_ebr(rec, geom, trt):
     rupture.multiplicity = rec['n_occ']
 
     # build EBRupture
-    short_id = (rec['id'] % TWO60) % TWO30
     model = rec['model'].decode('ascii')
     ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], short_id, rec['e0'], model)
+                    rec['n_occ'], rec['id'], rec['e0'], model)
     ebr.seed = rec['seed']
     return ebr
 
@@ -743,21 +727,20 @@ class EBRupture(object):
     :param str source_id: ID of the source that generated the rupture
     :param int trt_smr: an integer describing TRT and source model realization
     :param int n_occ: number of occurrences of the rupture
+    :param uint64 id: rupture ID
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
     seed = 'NA'  # set by the engine
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
-                 e0=0, model='???', seed=42):
-        assert id < TWO30, id
+                 e0=0, model='???'):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = rupid64(model, source_id, id)
+        self.id = id  # initially small, then increased in stochastic
         self.e0 = e0
-        self.seed = seed
 
     @property
     def tectonic_region_type(self):
