@@ -52,7 +52,7 @@ def main(job_ini):
         csm = readinput.get_composite_source_model(oq, dstore)
         sitecol = readinput.get_site_collection(oq)
         logging.info(sitecol)
-        cmakers = csm.get_cmakers(oq)
+        cmakers = csm.get_cmakers()
         logging.info('Storing performance info in %s', pstat)
         prof.runctx('build_ctxs(cmakers, csm.src_groups, sitecol)',
                     globals(), locals())
