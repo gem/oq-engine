@@ -2,12 +2,8 @@ import os
 import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import geolocate
-from openquake.risklib.countries import REGIONS, country2code
+from openquake.hazardlib.countries import MODELS, REGIONS, country2code
 from openquake.commonlib.readinput import read_mosaic_df
-
-MODELS = sorted('''
-ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
-NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM USA WAF ZAF PAN PAR'''.split())
 
 TOML = '''\
 [workflow]

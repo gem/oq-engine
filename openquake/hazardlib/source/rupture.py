@@ -27,6 +27,7 @@ import logging
 import itertools
 import json
 from openquake.baselib import general, hdf5
+from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib import geo, site, scalerel
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -46,6 +47,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO30 = 2 ** 30
+TWO60 = 2 ** 60
 TWO32 = 2 ** 32
 
 MSR = scalerel._get_available_class(scalerel.BaseMSR)
@@ -93,6 +95,19 @@ rupture_dt = numpy.dtype([
     ('model', '<S3')])
 
 code2cls = {}
+
+IMODEL = {'???': 0}
+for i, model in enumerate(MODELS, 1):
+    IMODEL[model] = I64(i)
+assert i <= 256, i
+
+
+def rupid64(model, source_id, id30):
+    """
+    :returns: an int64 identifier for mosaic model, source ID and rupture ID
+    """
+    imodel = IMODEL[model] * TWO60
+    return imodel + I64(source_id) * TWO30 + id30
 
 
 def to_csv_array(ebruptures):
@@ -184,8 +199,10 @@ def get_ebr(rec, geom, trt):
     rupture.multiplicity = rec['n_occ']
 
     # build EBRupture
+    short_id = (rec['id'] % TWO60) % TWO30
+    model = rec['model'].decode('ascii')
     ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], rec['id'] % TWO30, rec['e0'])
+                    rec['n_occ'], short_id, rec['e0'], model)
     ebr.seed = rec['seed']
     return ebr
 
@@ -731,13 +748,13 @@ class EBRupture(object):
     seed = 'NA'  # set by the engine
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
-                 e0=0, seed=42):
+                 e0=0, model='???', seed=42):
         assert id < TWO30, id
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = numpy.int64(source_id) * TWO30 + id
+        self.id = rupid64(model, source_id, id)
         self.e0 = e0
         self.seed = seed
 

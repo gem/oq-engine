@@ -1,5 +1,9 @@
 import re
 
+MODELS = sorted('''
+ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
+NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM USA WAF ZAF PAN PAR'''.split())
+
 REGIONS = """\
 Africa
 Caribbean_Central_America

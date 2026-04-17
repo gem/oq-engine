@@ -27,6 +27,7 @@ import traceback
 from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
+from openquake.hazardlib.countries import country2code
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -212,7 +213,6 @@ def get_country(job_ini):
     If the path to job_ini contains a recognized country, returns the
     country code, else the empty string
     """
-    from openquake.risklib.countries import country2code
     for name, cc in country2code.items():
         if name in job_ini:
             return cc
