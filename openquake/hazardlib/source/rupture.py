@@ -99,6 +99,7 @@ code2cls = {}
 IMODEL = {'???': 0}
 for i, model in enumerate(MODELS, 1):
     IMODEL[model] = I64(i)
+IMODEL['CAN'] = IMODEL['CND']
 assert i <= 256, i
 
 

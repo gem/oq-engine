@@ -587,11 +587,13 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
         if 'geometry' in oq.inputs:
+            # tested in event_based/case_32
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
         elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
+            # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
             self.mosaic_df = ()
