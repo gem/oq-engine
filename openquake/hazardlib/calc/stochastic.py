@@ -33,9 +33,9 @@ from openquake.hazardlib.countries import MODELS
 
 I64 = numpy.int64
 TWO16 = 2 ** 16  # 65,536
-TWO30 = I64(2 ** 30)  # 1,073,741,824
+TWO30 = 2 ** 30  # 1,073,741,824
 TWO32 = 2 ** 32  # 4,294,967,296
-TWO60 = I64(2 ** 60)
+TWO60 = 2 ** 60
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -45,8 +45,9 @@ F32 = numpy.float32
 MAX_RUPTURES = 2000
 IMODEL = {'???': 0}
 for i, model in enumerate(MODELS, 1):
-    IMODEL[model] = I64(i)
+    IMODEL[model] = i
 IMODEL['CAN'] = IMODEL['CND']
+IMODEL['JPA'] = IMODEL['JPN']
 assert i <= 256, i
 
 
@@ -83,8 +84,8 @@ def get_rup_array(ebruptures, magdist, mosaic_df):
             model = str(model)  # numpy.str_ -> str
         else:
             model = '???'
-        rupid = ebrupture.id + IMODEL[model] * TWO60 + \
-            I64(ebrupture.source_id) * TWO30
+        rupid = ebrupture.id + I64(
+            IMODEL[model] * TWO60 + ebrupture.source_id * TWO30)
         tup = (rupid, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
                rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, model)
