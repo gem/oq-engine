@@ -35,7 +35,7 @@ I64 = numpy.int64
 TWO16 = 2 ** 16  # 65,536
 TWO30 = 2 ** 30  # 1,073,741,824
 TWO32 = 2 ** 32  # 4,294,967,296
-TWO60 = 2 ** 60
+TWO54 = 2 ** 54
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -84,8 +84,8 @@ def get_rup_array(ebruptures, magdist, mosaic_df):
             model = str(model)  # numpy.str_ -> str
         else:
             model = '???'
-        rupid = ebrupture.id + I64(
-            IMODEL[model] * TWO60 + ebrupture.source_id * TWO30)
+        rupid = ebrupture.id + I64(  # up to 2**24 sources are OK
+            IMODEL[model] * TWO54 + ebrupture.source_id * TWO30)
         tup = (rupid, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
                rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, model)
