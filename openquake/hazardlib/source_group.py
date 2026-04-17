@@ -22,6 +22,7 @@ import zlib
 import pickle
 import logging
 import operator
+import functools
 import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
@@ -338,6 +339,10 @@ class CompositeSourceModel:
         self.gsim_lt = full_lt.gsim_lt
         self.source_model_lt = full_lt.source_model_lt
         self.sm_rlzs = full_lt.sm_rlzs
+        if self.oq.calculation_mode.startswith('event_based'):
+            self.basename = functools.partial(basename, splitchars='.')
+        else:
+            self.basename = basename
 
         # initialize the code dictionary
         self.code = {}  # srcid -> code
@@ -346,7 +351,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = basename(src)
+                    source_id = self.basename(src)
                     self.code[source_id] = src.code
 
     def get_sources(self, smr=None):
@@ -385,7 +390,7 @@ class CompositeSourceModel:
         """
         sources = set()
         for src in self.get_sources():
-            sources.add(basename(src, ';:.').split('!')[0])
+            sources.add(self.basename(src, ';:.').split('!')[0])
         return sorted(sources)
 
     def get_mags_by_trt(self, maximum_distance):
@@ -435,7 +440,7 @@ class CompositeSourceModel:
                 source_data['src_id'],
                 source_data['nctxs'],
                 source_data['ctimes']):
-            baseid = basename(src_id)
+            baseid = self.basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             if preclassical:
@@ -454,7 +459,7 @@ class CompositeSourceModel:
         Set the src.offset field for each source
         """
         src_id = 0
-        for srcs in groupby(self.get_sources(), basename).values():
+        for srcs in groupby(self.get_sources(), self.basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
@@ -575,7 +580,7 @@ class CompositeSourceModel:
         """
         data = {}  # src_id -> row
         lens = []
-        for srcid, srcs in groupby(self.get_sources(), basename).items():
+        for srcid, srcs in groupby(self.get_sources(), self.basename).items():
             src = srcs[0]
             lens.append(len(src.trt_smrs))
             row = [srcid, src.grp_id, src.code,
