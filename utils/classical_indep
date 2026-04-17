@@ -71,7 +71,7 @@ def classical_indep(calc_id: int):
         smap = parallel.Starmap(classical, h5=dstore)
         pmap.shared = smap.create_shared((N, L, G), value=1.)
         csm = dstore['_csm']
-        maxw = csm.get_max_weight(oq)
+        maxw = csm.get_max_weight()
         for grp_id, sg in enumerate(csm.src_groups):
             logging.info('Sending group #%d', grp_id)
             for block in general.block_splitter(
@@ -116,7 +116,7 @@ def classical_indep(calc_id: int):
         dstore.swmr_on()
         smap = parallel.Starmap(classical, h5=dstore)
         csm = dstore['_csm']
-        maxw = csm.get_max_weight(oq)
+        maxw = csm.get_max_weight()
         for grp_id, sg in enumerate(csm.src_groups):
             for block in general.block_splitter(
                     sg, maxw, operator.attrgetter('weight'), sort=True):

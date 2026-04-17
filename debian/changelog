@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * In event based calculation do not collect together sources following
+    the colon convention to avoid duplicated rupture IDs
+
   [Christopher Brooks]
   * Add `GridAdjustedGMPE` - a utility GSIM class allowing the
     adjustment of a GMPE using h3-gridded adjustments already
