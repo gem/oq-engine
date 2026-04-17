@@ -591,7 +591,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model or logs.get_country(oq.inputs['job_ini']):
+        elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
             self.mosaic_df = readinput.read_mosaic_df()
         else:
             self.mosaic_df = ()

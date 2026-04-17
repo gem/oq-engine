@@ -27,7 +27,7 @@ import traceback
 from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
-from openquake.hazardlib.countries import country2code
+from openquake.hazardlib.countries import country2code, MODELS
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -208,15 +208,19 @@ class LogDatabaseHandler(logging.Handler):
               record.getMessage())
 
 
-def get_country(job_ini):
+def get_country_or_model(job_ini):
     """
     If the path to job_ini contains a recognized country, returns the
-    country code, else the empty string
+    country code or the mosaic code, else the empty string.
     """
     for name, cc in country2code.items():
         if name in job_ini:
             return cc
+    for model in MODELS:
+        if model in job_ini:
+            return cc
     return ''
+
 
 
 class LogContext:
@@ -276,7 +280,7 @@ class LogContext:
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
         tag = (self.params.get('mosaic_model') or
-               get_country(self.params.get('job_ini', '')))
+               get_country_or_model(self.params.get('job_ini', '')))
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, tag + ' ' if tag else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)]
