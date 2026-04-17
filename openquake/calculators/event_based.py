@@ -28,7 +28,6 @@ from openquake.baselib import (
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -649,7 +648,7 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, param))
+                allargs.append((src_group, param, mosaic_df))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -673,8 +672,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
-                if len(mosaic_df):
-                    rup_array['model'] = geolocate(rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
