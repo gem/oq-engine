@@ -2,8 +2,9 @@
   * Introduce explicit handling of sentinel z_sed values (-999) within
     the Conterminous US 2023 NSHM's Coastal Plains site amplification
     adjustment model to turn of this correction for such sites.
-  
+
   [Michele Simionato]
+  * Fixing event based with duplicated rupture IDs
   * Logging and storing the engine version and not the DbServer version
 
   [Matteo Nastasi]
