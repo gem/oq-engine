@@ -576,15 +576,25 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'event_based_risk']
 
     def init(self):
+        oq = self.oqparam
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        if hasattr(self.oqparam, 'maximum_distance'):
+        if hasattr(oq, 'maximum_distance'):
             self.srcfilter = self.src_filter()
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+        if 'geometry' in oq.inputs:
+            fname = oq.inputs['geometry']
+            with fiona.open(fname) as f:
+                geom = geometry.shape(f[0].geometry)
+            self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
+        elif oq.mosaic_model:  # 3-letter mosaic model
+            self.mosaic_df = readinput.read_mosaic_df()
+        else:
+            self.mosaic_df = ()
 
     def counting_ruptures(self):
         """
@@ -625,15 +635,6 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if 'geometry' in oq.inputs:
-            fname = oq.inputs['geometry']
-            with fiona.open(fname) as f:
-                geom = geometry.shape(f[0].geometry)
-            mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df()
-        else:
-            mosaic_df = ()
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -648,7 +649,7 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, param, mosaic_df))
+                allargs.append((src_group, param, self.mosaic_df))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -766,7 +767,7 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
                 ebrs[0].seed = oq.ses_seed
-            aw = get_rup_array(ebrs, oq.maximum_distance(trt))
+            aw = get_rup_array(ebrs, oq.maximum_distance(trt), self.mosaic_df)
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
