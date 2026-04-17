@@ -218,7 +218,7 @@ def get_country_or_model(job_ini):
             return cc
     for model in MODELS:
         if model in job_ini:
-            return cc
+            return model
     return ''
 
 
