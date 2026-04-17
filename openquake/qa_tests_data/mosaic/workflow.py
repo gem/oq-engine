@@ -140,12 +140,14 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
     if models == ['ALL']:
         models = MODELS
     for model in models:
-        ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+        base = os.path.abspath(os.path.join(mosaic_dir, model))
+        assert os.path.exists(base), base
+        ini = os.path.join(base, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             ext = '_vs30.ini'
         else:
             ext = '.ini'
-            ini = os.path.join(mosaic_dir, model, 'in', 'job.ini')
+            ini = os.path.join(base, 'in', 'job.ini')
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job{ext}"')
