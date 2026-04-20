@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openquake.engine"
-dynamic = ["readme", "version"]
+readme = "README.md"
+dynamic = ["version"]
 description = "OpenQuake Engine: A software for Seismic Hazard and Risk Analysis"
 requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
@@ -47,7 +48,6 @@ oq = "openquake.commands.__main__:oq"
 include-package-data = true
 
 [tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
 version = {attr = "openquake.baselib.__version__"}
 
 [tool.setuptools.package-data]
