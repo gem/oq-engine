@@ -114,8 +114,8 @@ class Karimzadeh2023Azores(GMPE):
     Machine-learning Ground-Motion Model for Azores Islands
     (Karimzadeh et al., 2023).
 
-    Citation
-    --------
+    Reference
+    ---------
     Karimzadeh S, Mohammadi A, Salahuddin U, Carvalho A, Lourenço PB.
     Backbone ground motion model through simulated records and XGBoost
     machine learning algorithm: An application for the Azores plateau
