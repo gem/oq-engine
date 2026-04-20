@@ -1,4 +1,3 @@
-import os
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.karimzadeh_azores_islands_2023 import Karimzadeh2023Azores
 
