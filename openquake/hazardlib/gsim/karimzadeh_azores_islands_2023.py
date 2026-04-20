@@ -53,7 +53,8 @@ def _predict_im(sess: PicklableInferenceSession, X: np.ndarray) -> np.ndarray:
     (shape: N x 16).
     """
     input_name = sess.get_inputs()[0].name
-    out_name = sess.get_outputs()[0].name
+    # Access underlying session to get outputs
+    out_name = sess.inference_session.get_outputs()[0].name
     out = sess.run([out_name], {input_name: X.astype(np.float32)})[0]
     return np.asarray(out, dtype=float)
 
