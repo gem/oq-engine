@@ -321,6 +321,24 @@ def read_world_tmap(grm_dir):
     return out
 
 
+def read_world_tmap(grm_dir):
+    """
+    :returns: dict {pathname: country_iso3}
+    """
+    out = {}
+    seen = set()
+    for cwd, _, files in os.walk(grm_dir):
+        for f in files:
+            if not f.startswith("Vulnerability_mapping_") or not f.endswith(".csv"):
+                continue
+            iso3 = f[len("Vulnerability_mapping_"):-4]
+            if iso3 in seen:
+                raise ValueError(f"Duplicate mapping file for {iso3}")
+            seen.add(iso3)
+            out[os.path.join(cwd, f)] = iso3
+    return out
+
+
 def store_world_tmap(grm_dir, dstore):
     """
     Store the world taxonomy mapping
@@ -328,6 +346,9 @@ def store_world_tmap(grm_dir, dstore):
     dic = read_world_tmap(grm_dir)
     for f, name in dic.items():
         df = pandas.read_csv(f)
+        # FIXME: changing risk_id to conversion for backward-compatibility
+        # We may change the code that reads it instead
+        df.rename(columns={'risk_id': 'conversion'}, inplace=True)
         try:
             dstore.create_df('tmap/' + name, df)
         except ValueError:  # exists already

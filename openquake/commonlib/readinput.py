@@ -829,15 +829,17 @@ def get_gsim_lt(oqparam, trts=()):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
-        if oqparam.calculation_mode.startswith(('classical', 'disaggregation')):
+        if oqparam.calculation_mode.startswith(('classical',
+                                                'disaggregation')):
             raise InvalidFile(
                 f'{oqparam.inputs["gsim_logic_tree"]}: IMT-dependent weights '
                 'in the GMM logic tree require full enumeration')
         else:
-            logging.error('IMT-dependent weights in the logic tree cannot work '
-                          'with sampling, because they would produce different '
-                          'GMPE paths for each IMT that cannot be combined; '
-                          'using the default weights')
+            logging.error(
+                'IMT-dependent weights in the logic tree cannot work '
+                'with sampling, because they would produce different '
+                'GMPE paths for each IMT that cannot be combined; '
+                'using the default weights')
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
