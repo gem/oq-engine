@@ -59,7 +59,6 @@ def _predict_im(sess: PicklableInferenceSession, X: np.ndarray) -> np.ndarray:
     return np.asarray(out, dtype=float)
 
 def _mean_and_std_from_ctx(gsim, ctx, imt):
-    N = len(ctx)
     Mw = np.asarray(ctx.mag, dtype=float)
     RJB = np.asarray(ctx.rjb, dtype=float)
     hypo_depth = np.asarray(ctx.hypo_depth, dtype=float)
