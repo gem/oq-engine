@@ -120,7 +120,8 @@ def sample_cluster(group, num_ses, ses_seed):
     if rate is None:  # time dependent cluster
         if hasattr(group, 'grp_probability'):
             grp_p = getattr(group, 'grp_probability')
-            tot_num_occ = numpy.sum(rng.random(samples * num_ses) < grp_p)
+            tmp = rng.random(samples * num_ses)
+            tot_num_occ = numpy.sum(tmp < grp_p)
         else:
             msg = 'Rate or Cluster probability of occurrence not defined. '
             msg += 'Currently, we support only a Poisson TOM'
