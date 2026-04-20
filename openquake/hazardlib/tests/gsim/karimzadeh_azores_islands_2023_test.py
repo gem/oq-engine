@@ -12,8 +12,6 @@ class Karimzadeh2023AzoresTestCase(BaseGSIMTestCase):
             max_discrep_percentage=0.1,
         )
 
-
-
     def test_std_total(self):
         self.check(
             "KARIMZADEH2023AZORES/KARIMZADEH2023AZORES_STD_TOTAL.csv",

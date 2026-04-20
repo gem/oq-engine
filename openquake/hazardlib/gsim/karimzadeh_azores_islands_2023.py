@@ -1,12 +1,31 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2024-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
-Karimzadeh et al. (2023) Azores Islands ML-based Ground-Motion Model
+Module exports :class:`Karimzadeh2023Azores`
 """
 
 import os
 import csv
 import gzip
+
 import numpy as np
+
 from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
@@ -93,11 +112,16 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
 
 class Karimzadeh2023Azores(GMPE):
     """
-    Machine-learning Ground-Motion Model for Azores Islands (Karimzadeh et al., 2023).
+    Machine-learning Ground-Motion Model for Azores Islands
+    (Karimzadeh et al., 2023).
 
     Reference
     ---------
-    Karimzadeh S, Mohammadi A, Salahuddin U, Carvalho A, Lourenço PB. Backbone ground motion model through simulated records and XGBoost machine learning algorithm: An application for the Azores plateau (Portugal). Earthquake Engineering & Structural Dynamics. 2024 Feb;53(2):668-93.
+    Karimzadeh S, Mohammadi A, Salahuddin U, Carvalho A, Lourenço PB.
+    Backbone ground motion model through simulated records and XGBoost
+    machine learning algorithm: An application for the Azores plateau
+    (Portugal). Earthquake Engineering & Structural Dynamics. 2024 Feb;
+    53(2):668-93.
 
     https://doi.org/10.1002/eqe.4040
     """
