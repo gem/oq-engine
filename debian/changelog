@@ -1,8 +1,33 @@
   [Michele Simionato]
+  * In event based calculation do not collect together sources following
+    the colon convention to avoid duplicated rupture IDs
+
+  [Christopher Brooks]
+  * Add `GridAdjustedGMPE` - a utility GSIM class allowing the
+    adjustment of a GMPE using h3-gridded adjustments already
+    defined within a hdf5 file. Examples of the hdf5 file structure
+    are available in classical/case_11 and the associated unit tests.
+  * Introduce explicit handling of sentinel z_sed values (-999) within
+    the Conterminous US 2023 NSHM's Coastal Plains site amplification
+    adjustment model to turn off this correction for such sites.
+
+  [Michele Simionato]
+  * Logging and storing the engine version and not the DbServer version
+
+  [Matteo Nastasi]
+  * Integrate Christopher Brooks PAPERS script to run calculation
+    starting from hypothetical ruptures into engine as new API
+    entry-point
+
+  [Michele Simionato]
+  * Added variable `keep_trt` to select a branchset in the gsim logic tree
+  * Filtering the sites around the rupture also in scenario_damage
   * Forbidded IMT-dependent weights for classical calculations with sampling
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]
+  * Added the `AlternativeCharacteristicMFD` class (unit tests and also
+    a QA test in classical/case_10)
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
     also a bug where the `xvf` cap of 75 km was being applied incorrectly.
   * Modify `openquake/hazardlib/tests/gsim/utils.py` to support checking

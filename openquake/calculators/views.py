@@ -46,7 +46,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, MapGetter, get_rmap_gb)
-from openquake.calculators.base import get_model_lts, get_weights
+from openquake.calculators.base import get_weights
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -935,7 +935,7 @@ def binning_error(values, eids, nbins=10):
 
 class GmpeExtractor(object):
     def __init__(self, dstore):
-        _, full_lt = get_model_lts(dstore)[-1]
+        full_lt = dstore['full_lt']
         self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
@@ -967,7 +967,10 @@ def view_extreme_gmvs(token, dstore):
         msg += ('Your results are expected to have a large dependency '
                 'from the rupture seed: %d%%' % (err * 100))
     if imt0 == 'PGA':
-        rups = dstore['ruptures'][:]
+        try:
+            rups = dstore['filtered_ruptures'][:]
+        except KeyError:
+            rups = dstore['ruptures'][:]
         rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'imt': gmvs, 'sid': sids}, eids)

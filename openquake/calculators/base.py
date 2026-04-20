@@ -209,7 +209,7 @@ def save_version_checksum(oq, dstore):
     Store the engine version and other attributes in the root dataset
     """
     attrs = dstore['/'].attrs
-    attrs['engine_version'] = logs.dbcmd('engine_version')
+    attrs['engine_version'] = general.engine_version()
     if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
         attrs['aelo_version'] = get_aelo_version()
     attrs['date'] = datetime.now().isoformat()[:19]
@@ -835,7 +835,7 @@ class HazardCalculator(BaseCalculator):
             return 1
         return len(get_weights(self.oqparam, self.datastore))
 
-    def read_exposure(self, haz_sitecol):  # after load_risk_model
+    def read_exposure(self, haz_sitecol):  # after load_crmodel
         """
         Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
@@ -996,11 +996,6 @@ class HazardCalculator(BaseCalculator):
             else:
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
-            if hasattr(self, 'rup'):
-                # for scenario we reduce the site collection to the sites
-                # within the maximum distance from the rupture
-                haz_sitecol, _dctx = self.cmaker.filter(haz_sitecol, self.rup)
-                haz_sitecol.make_complete()
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)

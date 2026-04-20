@@ -51,7 +51,8 @@ from shapely.validation import make_valid, explain_validity
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    random_filter, countby, get_duplicates, check_extension, gettemp, AccumDict)
+    random_filter, countby, get_duplicates, check_extension, gettemp,
+    AccumDict)
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -62,7 +63,8 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
-from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
+from openquake.hazardlib.source.rupture import (
+    build_planar_rupture_from_dict, get_ruptures)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -798,7 +800,7 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
-def get_gsim_lt(oqparam, trts=('*',)):
+def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -816,7 +818,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
-    gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
@@ -860,16 +862,21 @@ def get_rupture(oqparam):
     """
     rupture_model = oqparam.inputs.get('rupture_model')
     rup = None
-
     if rupture_model and rupture_model.endswith('.json'):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
-    if rupture_model and rupture_model.endswith('.xml'):
+    elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
-    if rup is None:  # assume rupture_dict
+    elif rupture_model and rupture_model.endswith('.csv'):
+        fname = oqparam.inputs['rupture_model']
+        rups = get_ruptures(fname)
+        if len(rups) == 1:
+            # ScenarioDamageTestCase::test_case_12
+            rup = rups[0]
+    elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
@@ -1040,9 +1047,13 @@ def get_crmodel(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.impact:
+        hypo = get_rupture(oqparam).hypocenter
+        # NB: the country can be unknown, i.e. '???'
+        [country] = site.get_countries([hypo.x], [hypo.y])
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
-                crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
+                crm = riskmodels.CompositeRiskModel.read(
+                    exp, oqparam, str(country))
             except KeyError:
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
@@ -1096,10 +1107,10 @@ def read_consdict(oqparam, limit_states, perils):
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
             consdict['%s_by_%s' % (consequence, by)] = df[
-                    df.consequence==consequence]
+                df.consequence == consequence]
     return consdict
 
-    
+
 def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
@@ -1114,9 +1125,10 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_dict:
+    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
+        # tested in scenario_damage/case_12
         rupfilter = RuptureFilter(rup, dist)
     else:
         rupfilter = None
@@ -1197,7 +1209,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
-    :param duplicates_strategy: either 'error', 'keep_first', 'keep_last', 'avg'
+    :param duplicates_strategy:
+        either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
     if parallel.oq_distribute() == 'zmq':
@@ -1258,7 +1271,7 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
         uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
     else:
         uridict = oq.shakemap_uri
-    sitecol, shakemap, discarded = get_sitecol_shakemap(
+    sitecol, shakemap, discarded, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
     assetcol.reduce_also(sitecol)
@@ -1299,7 +1312,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
     sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
-
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
     if oqparam.aggregate_exposure:
@@ -1723,7 +1735,7 @@ def get_checksum32(oqparam, h5=None):
     :param oqparam: an OqParam instance
     """
     ini = oqparam.to_ini().encode('utf8')
-    ifiles = oqparam._input_files
+    ifiles = list(oqparam._input_files)
     gpkg = os.path.join(config.directory.mosaic_dir, 'mosaic.gpkg')
     if os.path.exists(gpkg):
         ifiles.append(gpkg)
@@ -1830,7 +1842,8 @@ def read_source_models(fnames, hdf5path='', **converterparams):
     """
     :param fnames: a list of source model files
     :param hdf5path: auxiliary .hdf5 file used to store the multifault sources
-    :param converterparams: a dictionary of parameters like rupture_mesh_spacing
+    :param converterparams:
+        a dictionary of parameters like rupture_mesh_spacing
     :returns: a list of SourceModel instances
     """
     converter = sourceconverter.SourceConverter()

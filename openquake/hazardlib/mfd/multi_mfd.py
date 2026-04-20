@@ -24,6 +24,8 @@ from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD)
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
+from openquake.hazardlib.mfd.alternative_characteristic_mfd import (
+    AlternativeCharacteristicMFD)
 
 U16 = numpy.uint16
 F32 = numpy.float32
@@ -37,7 +39,10 @@ ASSOC = {
         TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
     'YoungsCoppersmithMFD': (
         YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'b_val',
-        'char_mag', 'char_rate', 'bin_width', 'total_moment_rate')}
+        'char_mag', 'char_rate', 'bin_width', 'total_moment_rate'),
+    'alternativeCharacteristicMFD': (
+        AlternativeCharacteristicMFD, 'min_mag', 'max_mag', 'bin_width',
+        'b_GR', 'b_AC', 'gamma', 'delta_m_AC', 'total_rate')}
 
 ALIAS = dict(min_mag='minMag', max_mag='maxMag',
              a_val='aValue', b_val='bValue', bin_width='binWidth',

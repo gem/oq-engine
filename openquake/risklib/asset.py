@@ -1098,8 +1098,10 @@ class Exposure(object):
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         assets_df = pandas.concat(dfs)
-        if rupfilter and len(assets_df) == 0:
-            raise FilteredAway('No assets within %r' % rupfilter)
+        if rupfilter:
+            if len(assets_df) == 0:
+                raise FilteredAway(f'No assets within {rupfilter}')
+            logging.info(f'Filtered the exposure around {rupfilter}')
         del dfs  # save memory
         exp.build_mesh(assets_df)
         return exp

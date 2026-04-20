@@ -33,6 +33,8 @@ from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (  # noqa
     YoungsCoppersmith1985MFD)
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD  # noqa
 from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD  # noqa
+from openquake.hazardlib.mfd.alternative_characteristic_mfd import (  # noqa
+    AlternativeCharacteristicMFD)
 from openquake.hazardlib.mfd import multi_mfd  # noqa
 
 
