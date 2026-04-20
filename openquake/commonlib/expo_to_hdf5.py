@@ -302,34 +302,14 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
 
 def read_world_tmap(grm_dir):
     """
-    :returns: a dict pathname -> longname
-    """
-    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
-    tmap_df = pandas.read_csv(summary, index_col=['country'])
-    dic = {}
-    for fname, df in tmap_df.groupby('fname'):
-        dic[fname] = '_'.join(sorted(df.index))
-    n = len(dic)
-    out = {}
-    assert len(set(dic.values())) == n, sorted(dic.values())
-    for cwd, dirs, files in os.walk(grm_dir):
-        for f in files:
-            if f in dic:
-                out[os.path.join(cwd, f)] = dic[f]
-            elif f.startswith('taxonomy_mapping'):
-                raise NameError(f'{f} is not listed in {summary}')
-    return out
-
-
-def read_world_tmap(grm_dir):
-    """
     :returns: dict {pathname: country_iso3}
     """
     out = {}
     seen = set()
     for cwd, _, files in os.walk(grm_dir):
         for f in files:
-            if not f.startswith("Vulnerability_mapping_") or not f.endswith(".csv"):
+            if (not f.startswith("Vulnerability_mapping_")
+                    or not f.endswith(".csv")):
                 continue
             iso3 = f[len("Vulnerability_mapping_"):-4]
             if iso3 in seen:
