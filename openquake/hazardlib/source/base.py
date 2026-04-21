@@ -34,6 +34,8 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 F64 = numpy.float64
+I64 = numpy.int64
+TWO30 = I64(2**30)
 
 @dataclass
 class SourceParam:
@@ -276,8 +278,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
-            ebr.seed = ebr.id + ses_seed
+            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
+                            seed=rupid + TWO30 * self.id + ses_seed)
             yield ebr
 
     def get_mags(self):

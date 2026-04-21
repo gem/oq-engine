@@ -577,15 +577,27 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'event_based_risk']
 
     def init(self):
+        oq = self.oqparam
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        if hasattr(self.oqparam, 'maximum_distance'):
+        if hasattr(oq, 'maximum_distance'):
             self.srcfilter = self.src_filter()
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+        if 'geometry' in oq.inputs:
+            # tested in event_based/case_32
+            fname = oq.inputs['geometry']
+            with fiona.open(fname) as f:
+                geom = geometry.shape(f[0].geometry)
+            self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
+        elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
+            # tested in event_based/case_30
+            self.mosaic_df = readinput.read_mosaic_df()
+        else:
+            self.mosaic_df = ()
 
     def counting_ruptures(self):
         """
@@ -626,15 +638,6 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if 'geometry' in oq.inputs:
-            fname = oq.inputs['geometry']
-            with fiona.open(fname) as f:
-                geom = geometry.shape(f[0].geometry)
-            mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df()
-        else:
-            mosaic_df = ()
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -673,8 +676,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
-                if len(mosaic_df):
-                    rup_array['model'] = geolocate(rup_array['hypo'], mosaic_df)
+                if len(self.mosaic_df):
+                    rup_array['model'] = geolocate(
+                        rup_array['hypo'], self.mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
@@ -779,9 +783,10 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
             elif aw.trts != list(gsim_lt.values):
-                raise InvalidFile(f'The TRTs in the rupture.csv file {aw.trts}'
-                                  f'are inconsistent with the ones in the gsim_lt'
-                                  f' {list(gsim_lt.values)}')
+                raise InvalidFile(
+                    f'The TRTs in the rupture.csv file {aw.trts}'
+                    f'are inconsistent with the ones in the gsim_lt'
+                    f' {list(gsim_lt.values)}')
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
