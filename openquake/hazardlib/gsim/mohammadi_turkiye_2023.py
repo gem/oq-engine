@@ -181,8 +181,8 @@ class Mohammadi2023Turkiye(GMPE):
     """
     Machine-learning Ground-Motion Model for Turkiye (Mohammadi et al., 2023).
 
-    Reference
-    ---------
+    Citation
+    --------
     Mohammadi A, Karimzadeh S, Banimahd SA, Ozsarac V, Lourenço PB (2023).
     "The potential of region-specific machine-learning-based ground motion models:
     application to Turkiye."

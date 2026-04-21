@@ -1,3 +1,7 @@
+  [Amirhossein Mohammadi]
+  * Add Karimzadeh 2023 Azores Islands GSIM implementation with
+    verification tests.
+
   [Michele Simionato]
   * In event based calculation do not collect together sources following
     the colon convention to avoid duplicated rupture IDs
