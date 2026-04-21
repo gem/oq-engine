@@ -178,7 +178,7 @@ def build_site_model_gsims(grm_dir, dstore):
                         for gsim in gsims:
                             key = model, trt, str(gsim)
                             if key in records:  # MIE is duplicated
-                                pass
+                                assert model == 'MIE', model
                             else:
                                 records[key] = key + (gsim.weight['default'], )
     smodel = build_site_model(grm_dir)
