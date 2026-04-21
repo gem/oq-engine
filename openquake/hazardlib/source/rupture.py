@@ -737,7 +737,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = id  # initially small, then increased in stochastic
+        self.id = id
         self.e0 = e0
         self.seed = seed
 
