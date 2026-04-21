@@ -22,6 +22,7 @@ import zlib
 import pickle
 import logging
 import operator
+import functools
 import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
@@ -321,7 +322,8 @@ class CompositeSourceModel:
     :param event_based:
         a flag True for event based calculations, flag otherwise
     """
-    def __init__(self, full_lt, src_groups):
+    def __init__(self, oqparam, full_lt, src_groups):
+        self.oq = oqparam
         self.src_groups = src_groups
         trts = {sg.trt for sg in src_groups}
         gsim_trts = set(full_lt.gsim_lt.bsetdict)
@@ -337,6 +339,10 @@ class CompositeSourceModel:
         self.gsim_lt = full_lt.gsim_lt
         self.source_model_lt = full_lt.source_model_lt
         self.sm_rlzs = full_lt.sm_rlzs
+        if self.oq.calculation_mode.startswith('event_based'):
+            self.basename = functools.partial(basename, splitchars='.')
+        else:
+            self.basename = basename
 
         # initialize the code dictionary
         self.code = {}  # srcid -> code
@@ -345,7 +351,7 @@ class CompositeSourceModel:
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
-                    source_id = basename(src)
+                    source_id = self.basename(src)
                     self.code[source_id] = src.code
 
     def get_sources(self, smr=None):
@@ -371,12 +377,12 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
-    def get_cmakers(self, oq):
+    def get_cmakers(self):
         """
         :param oq: the OqParam used to build the CompositeSourceModel
         :returns: a ContextMakerSequence instance
         """
-        return get_cmakers(self.get_trt_smrs(), self.full_lt, oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq)
 
     def get_basenames(self):
         """
@@ -384,7 +390,7 @@ class CompositeSourceModel:
         """
         sources = set()
         for src in self.get_sources():
-            sources.add(basename(src, ';:.').split('!')[0])
+            sources.add(self.basename(src, ';:.').split('!')[0])
         return sorted(sources)
 
     def get_mags_by_trt(self, maximum_distance):
@@ -434,7 +440,7 @@ class CompositeSourceModel:
                 source_data['src_id'],
                 source_data['nctxs'],
                 source_data['ctimes']):
-            baseid = basename(src_id)
+            baseid = self.basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
             if preclassical:
@@ -453,7 +459,7 @@ class CompositeSourceModel:
         Set the src.offset field for each source
         """
         src_id = 0
-        for srcs in groupby(self.get_sources(), basename).values():
+        for srcs in groupby(self.get_sources(), self.basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
@@ -490,7 +496,7 @@ class CompositeSourceModel:
                 acc[grp_id].add(msr_name(src))
         return {grp_id: ' '.join(sorted(acc[grp_id])) for grp_id in acc}
 
-    def get_max_weight(self, oq):  # used in preclassical
+    def get_max_weight(self):  # used in preclassical
         """
         :param oq: an OqParam instance
         :returns: total weight and max weight of the sources
@@ -504,10 +510,10 @@ class CompositeSourceModel:
             if src.code == b'C' and src.num_ruptures > 20_000:
                 msg = ('{} is suspiciously large, containing {:_d} '
                        'ruptures with complex_fault_mesh_spacing={} km')
-                spc = oq.complex_fault_mesh_spacing
+                spc = self.oq.complex_fault_mesh_spacing
                 logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        max_weight = tot_weight / (oq.concurrent_tasks or 1)
+        max_weight = tot_weight / (self.oq.concurrent_tasks or 1)
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
@@ -574,7 +580,7 @@ class CompositeSourceModel:
         """
         data = {}  # src_id -> row
         lens = []
-        for srcid, srcs in groupby(self.get_sources(), basename).items():
+        for srcid, srcs in groupby(self.get_sources(), self.basename).items():
             src = srcs[0]
             lens.append(len(src.trt_smrs))
             row = [srcid, src.grp_id, src.code,
@@ -703,4 +709,8 @@ def read_csm(hdf5, full_lt=None):
         else:  # atomic
             dic[grp.grp_id] = grp
     src_groups = [dic[grp_id] for grp_id in sorted(dic)]
-    return CompositeSourceModel(full_lt or hdf5['full_lt'].init(), src_groups)
+    csm = CompositeSourceModel(
+        hdf5['oqparam'],
+        full_lt or hdf5['full_lt'].init(),
+        src_groups)
+    return csm

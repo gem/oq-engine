@@ -393,7 +393,7 @@ compute mean hazard curves, in a few lines of code:
           csm = readinput.get_composite_source_model(oq, dstore)
           csm.set_msparams()
           sitecol = readinput.get_site_collection(oq, dstore)
-          cmakers = csm.get_cmakers(oq)
+          cmakers = csm.get_cmakers()
           N, L = len(sitecol), oq.imtls.size
           mean_rates = numpy.zeros((N, L))
           for cmaker, src_group in zip(cmakers.to_array(), csm.src_groups):
