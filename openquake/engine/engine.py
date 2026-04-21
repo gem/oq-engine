@@ -495,6 +495,7 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
+        assert len(self.inis), self
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
