@@ -566,6 +566,11 @@ def read_many(workflow_toml, params={}, validate=True):
 
             # regular case
             for prefix, ddic in wfdict.items():
+                key, dic = next(iter(ddic.items()))
+                if 'ini' not in dic:
+                    raise SyntaxError(
+                        f'{workflow_toml}: missing ini in {prefix}.{key}')
+
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
                 if validate:
