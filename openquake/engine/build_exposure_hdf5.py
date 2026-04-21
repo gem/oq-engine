@@ -185,7 +185,7 @@ def build_site_model_gsims(grm_dir, dstore):
     dstore['site_model'] = smodel
     dtlist = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr),
               ('weight', float)]
-    dstore['model_trt_gsim_weight'] = numpy.array(records.values(), dtlist)
+    dstore['model_trt_gsim_weight'] = numpy.array(list(records.values()), dtlist)
     return len(smodel)
 
 
