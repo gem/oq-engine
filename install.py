@@ -43,7 +43,7 @@ import tempfile
 import argparse
 import platform
 import subprocess
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 try:
     import ensurepip  # noqa
@@ -370,8 +370,15 @@ def before_checks(inst, args, usage):
 
 # this is only called for user or server installations
 def latest_commit(branch):
+    # Get the token from the environment variable provided by GitHub Actions
+    # (if available)
+    token = os.getenv('GITHUB_TOKEN')
     url = "https://api.github.com/repos/GEM/oq-engine/commits/" + branch
-    with urlopen(url) as f:
+    # Create a request object and add the header (if present)
+    req = Request(url)
+    if token:
+        req.add_header('Authorization', f'token {token}')
+    with urlopen(req) as f:
         js = json.loads(f.read())
     return js["sha"]
 
