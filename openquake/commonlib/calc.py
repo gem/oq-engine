@@ -23,9 +23,9 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, geo, nrml
+from openquake.hazardlib import map_array, nrml
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, readinput, datastore
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -513,28 +513,3 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     if oq.calculation_mode == 'event_based_risk':
         smap.expected_outputs = expected_outputs
     return smap
-
-
-def get_close_mosaic_models(lon, lat, buffer_radius):
-    """
-    :param lon: longitude
-    :param lat: latitude
-    :param buffer_radius: radius of the buffer around the point.
-        This distance is in the same units as the point's
-        coordinates (i.e. degrees), and it defines how far from
-        the point the buffer should extend in all directions,
-        creating a circular buffer region around the point
-    :returns: list of mosaic models intersecting the circle
-        centered on the given coordinates having the specified radius
-    """
-    mosaic_df = readinput.read_mosaic_df()
-    close_mosaic_models = geo.utils.geolocate_within_buffer(
-        lon, lat, buffer_radius, mosaic_df)
-    if not close_mosaic_models:
-        raise ValueError(
-            f'({lon}, {lat}) is farther than {buffer_radius} deg'
-            f' from any mosaic model!')
-    elif len(close_mosaic_models) > 1:
-        logging.info('(%s, %s) is close to the following mosaic models: %s',
-                     lon, lat, close_mosaic_models)
-    return close_mosaic_models

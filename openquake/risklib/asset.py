@@ -163,7 +163,7 @@ class CostCalculator(object):
         :param: a list of loss types
         :returns: a string of space-separated units
         """
-        lst = []    
+        lst = []
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]  # rstrip _ins
@@ -686,7 +686,7 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
 # The fields in the exposure are complicated. For the global
 # risk model you will have things like the following:
 # fields = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
-#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'BLDG_REPL_COST_USD', 'LATITUDE',
 #           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM',
 #           'area', 'business_interruption', 'contents', 'day', 'night',
 #           'nonstructural', 'number', 'residents', 'structural', 'transit'}
@@ -695,7 +695,7 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
 # VAL_FIELDS = {'structural', 'business_interruption', 'nonstructural',
 #               'contents'}
 # others = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
-#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'BLDG_REPL_COST_USD', 'LATITUDE',
 #           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM'}
 def get_other_fields(fields):
     others = (set(fields) - set(ANR_FIELDS) - set(OCC_FIELDS) - set(VAL_FIELDS)
@@ -982,9 +982,12 @@ def impact_read_assets(h5, start, stop, rupfilter):
         if field in dic and len(dic[field]) == 0:
             dic.pop(field)
     df = pandas.DataFrame(dic)
-    df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
-                           df.OCCUPANTS_PER_ASSET_NIGHT +
-                           df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
+    if 'OCCUPANTS_AVERAGE' in df.columns:
+        df['occupants_avg'] = df.OCCUPANTS_AVERAGE
+    else:
+        df['occupants_avg'] = (df.OCCUPANTS_DAY +
+                               df.OCCUPANTS_NIGHT +
+                               df.OCCUPANTS_TRANSIT) / 3
     return rupfilter(df) if rupfilter else df
 
 

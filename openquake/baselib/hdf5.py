@@ -179,8 +179,13 @@ def get_nbytes(dset):
         is actually a group.
     """
     if hasattr(dset, 'dtype'):
-        # else extract nbytes from the underlying array
-        return dset.size * numpy.zeros(1, dset.dtype).nbytes
+        if dset.dtype == 'O':  # array of strings or bytes
+            try:
+                return dset.size * len(dset[0])
+            except ValueError:  # scalar dataspace (i.e. 'oqparam')
+                return len(dset[()])
+        else:
+            return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
 
 class ByteCounter(object):
