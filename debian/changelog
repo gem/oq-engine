@@ -3,7 +3,7 @@
     verification tests.
 
   [Michele Simionato]
-  * In event based calculation do not collect together sources following
+  * In event based calculations do not collect together sources following
     the colon convention to avoid duplicated rupture IDs
 
   [Christopher Brooks]
