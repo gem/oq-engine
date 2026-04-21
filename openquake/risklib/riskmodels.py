@@ -551,12 +551,12 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam, country=None):
+    def read(cls, dstore, oqparam, country='???'):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
-        if country:  # reading from exposure.hdf5 in OQImpact mode
+        if country != '???':  # reading from exposure.hdf5 in OQImpact mode
             dic = dict(zip(decode(dstore['countries'][:]),
                            decode(dstore['regions'][:])))
             region = dic[country]

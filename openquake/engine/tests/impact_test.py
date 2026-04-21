@@ -82,9 +82,6 @@ def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
     if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
-    if n == 3:
-        # FIXME: rupture outside Portugal
-        return
     calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     with log:  # ensures clean worker shutdown for all n
         if n == 1:
