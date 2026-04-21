@@ -25,9 +25,9 @@ import numpy
 import h5py
 from openquake.baselib import sap, general, performance, parallel, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
+from openquake.hazardlib.countries import country2code, REGIONS
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
-from openquake.risklib.countries import country2code, REGIONS
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
