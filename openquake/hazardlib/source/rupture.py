@@ -46,7 +46,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO30 = 2 ** 30
-TWO60 = 2 ** 60
 TWO32 = 2 ** 32
 
 MSR = scalerel._get_available_class(scalerel.BaseMSR)
@@ -728,7 +727,7 @@ class EBRupture(object):
     :param str source_id: ID of the source that generated the rupture
     :param int trt_smr: an integer describing TRT and source model realization
     :param int n_occ: number of occurrences of the rupture
-    :param uint64 id: rupture ID
+    :param int64 id: rupture ID
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """

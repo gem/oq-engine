@@ -67,7 +67,7 @@ def setup_module():
         evs = parent['events'][:]
         ae(evs['id'], numpy.arange(33967))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [23786, 23787, 23788])  # large enough e0
+        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
@@ -122,7 +122,7 @@ def test_site_model():  # 5 sites
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
     assert len(rdf) == 15875
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16592
+    assert len(edf) == 16595
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == 15875
 

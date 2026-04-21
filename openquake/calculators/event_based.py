@@ -28,6 +28,7 @@ from openquake.baselib import (
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -651,7 +652,7 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, param, self.mosaic_df))
+                allargs.append((src_group, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -675,6 +676,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
+                if len(self.mosaic_df):
+                    rup_array['model'] = geolocate(
+                        rup_array['hypo'], self.mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
@@ -769,7 +773,7 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
                 ebrs[0].seed = oq.ses_seed
-            aw = get_rup_array(ebrs, oq.maximum_distance(trt), self.mosaic_df)
+            aw = get_rup_array(ebrs, oq.maximum_distance(trt))
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '
@@ -779,9 +783,10 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
             elif aw.trts != list(gsim_lt.values):
-                raise InvalidFile(f'The TRTs in the rupture.csv file {aw.trts}'
-                                  f'are inconsistent with the ones in the gsim_lt'
-                                  f' {list(gsim_lt.values)}')
+                raise InvalidFile(
+                    f'The TRTs in the rupture.csv file {aw.trts}'
+                    f'are inconsistent with the ones in the gsim_lt'
+                    f' {list(gsim_lt.values)}')
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
