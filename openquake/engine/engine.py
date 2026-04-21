@@ -495,6 +495,7 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
+        assert len(self.inis), self
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
@@ -565,6 +566,11 @@ def read_many(workflow_toml, params={}, validate=True):
 
             # regular case
             for prefix, ddic in wfdict.items():
+                key, dic = next(iter(ddic.items()))
+                if 'ini' not in dic:
+                    raise SyntaxError(
+                        f'{workflow_toml}: missing ini in {prefix}.{key}')
+
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
                 if validate:

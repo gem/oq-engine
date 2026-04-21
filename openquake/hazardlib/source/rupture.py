@@ -45,7 +45,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
-TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 
 MSR = scalerel._get_available_class(scalerel.BaseMSR)
@@ -166,7 +165,8 @@ def get_ebr(rec, geom, trt):
     else:
         # fault surface, strike and dip will be computed
         surface.strike = surface.dip = None
-        surface.__init__(RectangularMesh(F32(mesh[0]), F32(mesh[1]), F32(mesh[2])))
+        surface.__init__(
+            RectangularMesh(F32(mesh[0]), F32(mesh[1]), F32(mesh[2])))
 
     # build rupture
     rupture = object.__new__(rupture_cls)
@@ -184,8 +184,9 @@ def get_ebr(rec, geom, trt):
     rupture.multiplicity = rec['n_occ']
 
     # build EBRupture
+    model = rec['model'].decode('ascii')
     ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], rec['id'] % TWO30, rec['e0'])
+                    rec['n_occ'], rec['id'], rec['e0'], model)
     ebr.seed = rec['seed']
     return ebr
 
@@ -725,19 +726,18 @@ class EBRupture(object):
     :param str source_id: ID of the source that generated the rupture
     :param int trt_smr: an integer describing TRT and source model realization
     :param int n_occ: number of occurrences of the rupture
+    :param int64 id: rupture ID
     :param int e0: initial event ID (default 0)
-    :param bool scenario: True for scenario ruptures, default False
+    :param seed: rupture seed to be set (default "NA")
     """
-    seed = 'NA'  # set by the engine
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
-                 e0=0, seed=42):
-        assert id < TWO30, id
+                 e0=0, seed='NA'):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = numpy.int64(source_id) * TWO30 + id
+        self.id = id
         self.e0 = e0
         self.seed = seed
 

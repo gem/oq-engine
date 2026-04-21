@@ -1517,8 +1517,10 @@ class OqParam(valid.ParamSet):
             self.raise_invalid('number_of_logic_tree_samples too big: %d' %
                                self.number_of_logic_tree_samples)
 
-        # checks for event_based
-        if ('event_based' in self.calculation_mode or
+        # checks for calculation_mode
+        if self.calculation_mode == 'workflow':
+            pass  # no particular checks
+        elif ('event_based' in self.calculation_mode or
                 'damage' in self.calculation_mode):
             if self.ps_grid_spacing:
                 logging.info('ps_grid_spacing is ignored in '
