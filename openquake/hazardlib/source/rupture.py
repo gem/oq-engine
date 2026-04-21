@@ -45,7 +45,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
-TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 
 MSR = scalerel._get_available_class(scalerel.BaseMSR)
@@ -729,18 +728,18 @@ class EBRupture(object):
     :param int n_occ: number of occurrences of the rupture
     :param int64 id: rupture ID
     :param int e0: initial event ID (default 0)
-    :param bool scenario: True for scenario ruptures, default False
+    :param seed: rupture seed to be set (default "NA")
     """
-    seed = 'NA'  # set by the engine
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
-                 e0=0, model='???'):
+                 e0=0, seed='NA'):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = id  # initially small, then increased in stochastic
         self.e0 = e0
+        self.seed = seed
 
     @property
     def tectonic_region_type(self):

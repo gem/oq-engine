@@ -440,8 +440,7 @@ occurrences of the rupture and a random seed, i.e. you need to convert the
 hazardlib rupture into an EBRupture:
 
 >>> from openquake.hazardlib.source.rupture import EBRupture
->>> ebr = EBRupture(rup, n_occ=2)
->>> ebr.seed = 42
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
 
 Then you can use the GmfComputer class to perform the calculation:
 
@@ -465,8 +464,7 @@ It is also possible to perform calculations with point-like ruptures
 >>> from openquake.hazardlib.source.rupture import PointRupture
 >>> occ_rate = None  # not used in the GmfComputer
 >>> rup =  PointRupture(mag, cmaker.trt, site.location, occ_rate, cmaker.tom)
->>> ebr = EBRupture(rup, n_occ=2)
->>> ebr.seed = 42
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
 >>> GmfComputer(ebr, sitecol, cmaker).compute_all()
         PGA  eid  sid  rlz
 0  0.541180    0    0    0
