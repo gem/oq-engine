@@ -34,7 +34,7 @@ import itertools
 from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
-    DictArray, AccumDict, cached_property, engine_version)
+    DictArray, AccumDict, cached_property, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -446,6 +446,11 @@ job_id:
    ID of a job in the database
    Example: *job_id = 42*.
    Default: 0 (meaning create a new job)
+
+keep_trt:
+   Tectonic region type to consider in the gsim logic tree
+   Example: *keep_trt = Active Shallow Crust*.
+   Default: '' (meaning consider all TRTs)
 
 limit_states:
    Limit states used in damage calculations.
@@ -1125,6 +1130,7 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
+    keep_trt = valid.Param(valid.utf8, '')
     limit_states = valid.Param(valid.namelist, [])
     local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
@@ -1412,13 +1418,18 @@ class OqParam(valid.ParamSet):
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = GsimLogicTree(path, ['*'])
+            # find the TRTs to consider
+            if self.keep_trt:
+                assert not self.discard_trts
+                trts = {self.keep_trt}
+            else:
+                discard = {trt.strip() for trt in self.discard_trts.split(',')}
+                trts = set(gsim_lt.values) - discard
             # check the GSIMs
-            self._trts = set()
-            discard = {trt.strip() for trt in self.discard_trts.split(',')}
-            for trt, gsims in gsim_lt.values.items():
-                if trt not in discard:
-                    self.check_gsims(gsims)
-                    self._trts.add(trt)
+            for trt in trts:
+                self.check_gsims(gsim_lt.values[trt])
+            self._trts = trts
+
         elif self.gsim:
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
@@ -1512,8 +1523,10 @@ class OqParam(valid.ParamSet):
             self.raise_invalid('number_of_logic_tree_samples too big: %d' %
                                self.number_of_logic_tree_samples)
 
-        # checks for event_based
-        if ('event_based' in self.calculation_mode or
+        # checks for calculation_mode
+        if self.calculation_mode == 'workflow':
+            pass  # no particular checks
+        elif ('event_based' in self.calculation_mode or
                 'damage' in self.calculation_mode):
             if self.ps_grid_spacing:
                 logging.info('ps_grid_spacing is ignored in '
@@ -2055,6 +2068,15 @@ class OqParam(valid.ParamSet):
     def rupture_xml(self):
         return ('rupture_model' in self.inputs and
                 self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
+    def rupture_csv(self):
+        """
+        :returns: True if there is a single rupture in the CSV file
+        """
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.csv')
+                and count_lines(self.inputs['rupture_model']) == 3)
 
     @property
     def impact(self):

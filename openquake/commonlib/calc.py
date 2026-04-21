@@ -23,9 +23,9 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, geo
+from openquake.hazardlib import map_array, nrml
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, readinput, datastore
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -122,6 +122,19 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for event_based calculators ################ #
 
+def get_first_duplicate(rup_array, source_info):
+    """
+    :returns: (duplicate rup_array, source_id)
+    """
+    rupids, counts = numpy.unique(rup_array['id'], return_counts=1)
+    rupid = rupids[counts > 1][0]
+    dupl = rup_array[rup_array['id'] == rupid][
+       ['id', 'source_id', 'trt_smr', 'code', 'n_occ', 'mag',
+        'occurrence_rate', 'model']]
+    source_id = source_info['source_id'][dupl['source_id'][0]]
+    return dupl, source_id
+
+
 def get_model_lts(h5):
     """
     :returns: (model, full_lt) pairs
@@ -196,17 +209,13 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
             recs = h5['ruptures'][rup_array]
         else:
             recs = rup_array
-        if len(recs) == 0:
-            return []
-        # gmin, gmax = recs['geom_id'].min(), recs['geom_id'].max()
-        gmin = 0
-        rupgeoms = h5['rupgeoms'][:]
+        rupgeoms = h5['rupgeoms']
         for rec in recs:
             proxy = rupture.RuptureProxy(rec)
-            if rec['mag'] < min_mag:
+            if proxy['mag'] < min_mag:
                 # discard small magnitudes
                 continue
-            proxy.geom = rupgeoms[rec['geom_id'] - gmin]
+            proxy.geom = rupgeoms[proxy['geom_id']]
             proxies.append(proxy)
     return proxies
 
@@ -237,7 +246,14 @@ class RuptureImporter(object):
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
-        assert len(rupids) == nr, 'rup_id not unique!'
+        if len(rupids) < nr:
+            # rup_id not unique
+            from openquake.calculators.views import text_table
+            dupl, source_id = get_first_duplicate(
+                rup_array, self.datastore['source_info'][:])
+            msg = f'{source_id=}\n{text_table(dupl, ext="org")}'
+            raise nrml.DuplicatedID(msg)
+
         rup_array['geom_id'] = geom_id
         n_occ = rup_array['n_occ']
         self.check_overflow(n_occ.sum())  # check the number of events

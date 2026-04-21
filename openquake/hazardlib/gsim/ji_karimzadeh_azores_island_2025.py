@@ -29,7 +29,8 @@ class JiEtAl2025Azores(GMPE):
     developed by Ji et al. (2025) based on Simulated Scenario Earthquake Records.
     The model is formulated for shallow seismic events on bedrock sites 
     (Vs30=760 m/s to 1000 m/s). 
-    Reference:
+    Citation
+    --------
     Ji Kun, Shaghayegh Karimzadeh, Saman Yaghmaei Sabegh, Ruibin Hou,
     Carvalho Alexandra, & Lourenço Paulo B.. (2025).
     Ground motion model using simulated scenario earthquake records in Azores

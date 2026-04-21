@@ -375,7 +375,7 @@ class ImpactModeTestCase(django.test.TestCase):
                     maximum_distance_stations='', msr='WC1994',
                     description=('us6000jllz: M 7.8 - Pazarcik earthquake,'
                                  ' Kahramanmaras earthquake sequence'))
-        expected_error = 'IMT SA(0.6) is required'
+        expected_error = "The imts {'SA(0.6)'} are required"
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):

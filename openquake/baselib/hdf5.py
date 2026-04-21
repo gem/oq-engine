@@ -84,8 +84,8 @@ def sanitize(value):
     elif isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
-    elif isinstance(value, int) and value > sys.maxsize:
-        return float(value)
+    elif isinstance(value, int) and value > sys.maxsize:  # ~9E18
+        return str(value)
     return value
 
 
@@ -179,8 +179,13 @@ def get_nbytes(dset):
         is actually a group.
     """
     if hasattr(dset, 'dtype'):
-        # else extract nbytes from the underlying array
-        return dset.size * numpy.zeros(1, dset.dtype).nbytes
+        if dset.dtype == 'O':  # array of strings or bytes
+            try:
+                return dset.size * len(dset[0])
+            except ValueError:  # scalar dataspace (i.e. 'oqparam')
+                return len(dset[()])
+        else:
+            return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
 
 class ByteCounter(object):

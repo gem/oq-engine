@@ -2,13 +2,8 @@ import os
 import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import geolocate
-from openquake.risklib.countries import REGIONS, country2code
+from openquake.hazardlib.countries import MODELS, REGIONS, country2code
 from openquake.commonlib.readinput import read_mosaic_df
-
-MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-OAT OPA'''.split())
 
 TOML = '''\
 [workflow]
@@ -145,12 +140,14 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
     if models == ['ALL']:
         models = MODELS
     for model in models:
-        ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+        base = os.path.abspath(os.path.join(mosaic_dir, model))
+        assert os.path.exists(base), base
+        ini = os.path.join(base, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             ext = '_vs30.ini'
         else:
             ext = '.ini'
-            ini = os.path.join(mosaic_dir, model, 'in', 'job.ini')
+            ini = os.path.join(base, 'in', 'job.ini')
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job{ext}"')

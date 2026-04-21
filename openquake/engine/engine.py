@@ -390,7 +390,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
                 job = logs.dbcmd('get_job', hc_id)
                 ppath = job.ds_calc_dir + '.hdf5'
                 if os.path.exists(ppath):
-                    version = logs.dbcmd('engine_version')
+                    version = general.engine_version()
                     with h5py.File(ppath, 'r') as f:
                         prev_version = f.attrs['engine_version']
                         if prev_version != version:
@@ -495,6 +495,7 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
+        assert len(self.inis), self
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
@@ -565,6 +566,11 @@ def read_many(workflow_toml, params={}, validate=True):
 
             # regular case
             for prefix, ddic in wfdict.items():
+                key, dic = next(iter(ddic.items()))
+                if 'ini' not in dic:
+                    raise SyntaxError(
+                        f'{workflow_toml}: missing ini in {prefix}.{key}')
+
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
                 if validate:
@@ -743,7 +749,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # avoid flooding our API server with requests from CI systems
         return
 
-    version = logs.dbcmd('engine_version')
+    version = general.engine_version()
     logging.info('Using engine version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
                (version, calculation_mode, platform.platform(),

@@ -104,6 +104,17 @@ def duplicated(items):
     return [key for key, counts in counter.items() if counts > 1]
 
 
+def count_lines(fname):
+    """
+    Count the number of lines in a text file
+    """
+    lines = 0
+    with open(fname, 'rt') as f:
+        for line in f:
+            lines += 1
+    return lines
+
+
 def cached_property(method):
     """
     :param method: a method without arguments except self

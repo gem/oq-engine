@@ -317,25 +317,13 @@ def get_args(dstore):
     return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
 
 
-def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
-    """
-    :returns: list of starmap arguments
-    """
-    trts = {}
-    rlzs_by_gsim = {}
-    for model, full_lt in get_model_lts(dstore):
-        trts[model] = full_lt.trts
-        if model == '???':
-            logging.info('Building rlzs_by_gsim')
-        else:
-            logging.info('Building rlzs_by_gsim for %s', model)
-        for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
-            rlzs_by_gsim[model, trt_smr] = rbg
+def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
-        allrups = allrups[allrups['id'] == int(rup_id)]
+        rup_id = I64(rup_id.split(','))
+        allrups = allrups[numpy.isin(allrups['id'], rup_id)]
 
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
@@ -354,7 +342,9 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         if oq.maximum_rupture_depth:
-            trt = trts[model.decode('ascii')][trt_smr // TWO24]
+            amodel = model.decode('ascii')
+            trt_array = trts.get(amodel, trts.get('???'))
+            trt = trt_array[trt_smr // TWO24]
             maxdep = getdefault(oq.maximum_rupture_depth, trt)
             ok &= hypo_deps <= maxdep
         rups = filrups[ok]
@@ -368,7 +358,25 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
+    return filrups, maxw, acc
 
+
+def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
+    """
+    :returns: list of starmap arguments
+    """
+    trts = {}
+    rlzs_by_gsim = {}
+    for model, full_lt in get_model_lts(dstore):
+        trts[model] = full_lt.trts
+        if model == '???':
+            logging.info('Building rlzs_by_gsim')
+        else:
+            logging.info('Building rlzs_by_gsim for %s', model)
+        for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
+            rlzs_by_gsim[model, trt_smr] = rbg
+
+    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     # store the filtered ruptures for debugging purposes
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
@@ -533,7 +541,8 @@ def read_gsim_lt(oq):
             elif oq.rupture_xml:
                 hypo = readinput.get_rupture(oq).hypocenter
                 lon, lat = [hypo.x, hypo.y]
-            mosaic_models = get_close_regions(lon, lat, 5, region_kind='mosaic_model')
+            mosaic_models = get_close_regions(
+                lon, lat, 5, region_kind='mosaic_model')
             # NOTE: using the first mosaic model
             oq.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
@@ -569,15 +578,27 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'event_based_risk']
 
     def init(self):
+        oq = self.oqparam
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
-        if hasattr(self.oqparam, 'maximum_distance'):
+        if hasattr(oq, 'maximum_distance'):
             self.srcfilter = self.src_filter()
         else:
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+        if 'geometry' in oq.inputs:
+            # tested in event_based/case_32
+            fname = oq.inputs['geometry']
+            with fiona.open(fname) as f:
+                geom = geometry.shape(f[0].geometry)
+            self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
+        elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
+            # tested in event_based/case_30
+            self.mosaic_df = readinput.read_mosaic_df()
+        else:
+            self.mosaic_df = ()
 
     def counting_ruptures(self):
         """
@@ -618,15 +639,6 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        if 'geometry' in oq.inputs:
-            fname = oq.inputs['geometry']
-            with fiona.open(fname) as f:
-                geom = geometry.shape(f[0].geometry)
-            mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df()
-        else:
-            mosaic_df = ()
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -665,8 +677,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
-                if len(mosaic_df):
-                    rup_array['model'] = geolocate(rup_array['hypo'], mosaic_df)
+                if len(self.mosaic_df):
+                    rup_array['model'] = geolocate(
+                        rup_array['hypo'], self.mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
@@ -770,6 +783,11 @@ class EventBasedCalculator(base.HazardCalculator):
             aw = get_ruptures_aw(oq.inputs['rupture_model'])
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
+            elif aw.trts != list(gsim_lt.values):
+                raise InvalidFile(
+                    f'The TRTs in the rupture.csv file {aw.trts}'
+                    f'are inconsistent with the ones in the gsim_lt'
+                    f' {list(gsim_lt.values)}')
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
@@ -930,7 +948,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # check seed dependency unless the number of GMFs is huge
         imt0 = list(oq.imtls)[0]
         size = self.datastore.getsize(f'gmf_data/{imt0}')
-        if 'gmf_data' in self.datastore and size < 4E9:
+        if ('gmf_data' in self.datastore and size < 4E6 and
+                # not event based from parent, i.e. global SES
+                'filtered_ruptures' not in self.datastore):
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.info(msg)

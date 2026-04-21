@@ -52,6 +52,18 @@ param = dict(
     xvf='xvf')
 
 
+def get_countries(lons, lats):
+    """
+    :returns: array of 3-letter country codes
+    """
+    from openquake.commonlib import readinput
+    geom_df = readinput.read_countries_df()
+    lonlats = numpy.zeros((len(lons), 2), numpy.float32)
+    lonlats[:, 0] = lons
+    lonlats[:, 1] = lats
+    return geolocate(lonlats, geom_df)
+
+
 # TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
 # are inside some GSIM implementations, we should avoid duplication
 def calculate_z1pt0(vs30, country):
@@ -917,12 +929,7 @@ class SiteCollection(object):
         The boundaries of the countries are defined as in the file
         geoBoundariesCGAZ_ADM0.gpkg
         """
-        from openquake.commonlib import readinput
-        geom_df = readinput.read_countries_df(0.)
-        lonlats = numpy.zeros((len(self), 2), numpy.float32)
-        lonlats[:, 0] = self.lons
-        lonlats[:, 1] = self.lats
-        return geolocate(lonlats, geom_df)
+        return get_countries(self.lons, self.lats)
 
     def by_country(self):
         """

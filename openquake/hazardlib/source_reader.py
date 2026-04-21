@@ -244,7 +244,7 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    csm = _get_csm(full_lt, groups, is_event_based)
+    csm = _get_csm(oq, full_lt, groups, is_event_based)
     out = []
     probs = []
     for sg in csm.src_groups:
@@ -471,7 +471,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _get_csm(full_lt, groups, event_based):
+def _get_csm(oq, full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
@@ -500,4 +500,4 @@ def _get_csm(full_lt, groups, event_based):
     # sort by source_id
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
-    return CompositeSourceModel(full_lt, src_groups)
+    return CompositeSourceModel(oq, full_lt, src_groups)

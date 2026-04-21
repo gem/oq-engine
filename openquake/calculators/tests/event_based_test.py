@@ -208,7 +208,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('gmf_data', 'hdf5'), self.calc.datastore)
         self.assertIn('gmf-data_', fname)
 
-    def test_case_2(self):
+    def test_case_02(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             concurrent_tasks='4')
 
@@ -221,10 +221,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        dstore = debug_rupture.main(self.calc.datastore.calc_id, 56)
+        dstore = debug_rupture.main(self.calc.datastore.calc_id, '56,169')
 
-        [gmfs_path, sites_path] = export(('gmf_data', 'csv'), dstore)
-        self.assertEqualFiles('expected/gmf1.csv', gmfs_path)
+        fnames = export(('gmf_data', 'csv'), dstore)  # gmfs, sigeps, sites
+        self.assertEqualFiles('expected/sig_eps1.csv', fnames[1])
+        self.assertEqualFiles('expected/gmf1.csv', fnames[0])
 
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
@@ -618,13 +619,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_30(self):
         # build the ruptures, then the GMFs
-        out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_30.__file__, 'job_CND.ini', exports='csv')
         hc_id = self.calc.datastore.calc_id
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
         # make sure starting from ruptures without logic tree is possible
-        self.run_calc(case_30.__file__, 'job.ini', sites='-124 51',
+        self.run_calc(case_30.__file__, 'job_CND.ini', sites='-124 51',
                       ground_motion_fields='true',
                       intensity_measure_types='PGA',
                       gsim_logic_tree_file='',

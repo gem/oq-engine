@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import logging
 import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.commonlib import logs
@@ -26,50 +25,54 @@ from openquake.calculators.base import calculators, store_gmfs
 
 
 # see qa_tests_data/scenario/case_21
-def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
+def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
          trunclevel: float = 3, spatialcorr='yes', crosscorr='yes',
-         cholesky_limit: int = 10_000):
+         cholesky_limit: int = 10_000, imt_mode='warn'):
     """
     Given a shakemap ID and a path to a site_model.csv file build a
     GMFs array corresponding to num_gmfs events. The user can pass
     other parameters, see the --help message.
     Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10
     """
-    assert os.path.exists(site_model)
     fname = '%s.npy' % id
     if os.path.exists(fname):
         dic = {'kind': 'file_npy', 'fname': fname}
     else:
         dic = {'kind': 'usgs_id', 'id': id}
-    imts = ['PGA', 'SA(0.3)', 'SA(1.0)']
+    imts = ['PGA', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)', 'MMI']
     param = dict(number_of_ground_motion_fields=str(num_gmfs),
                  description='Converting ShakeMap->GMFs',
                  truncation_level=str(trunclevel),
                  calculation_mode='scenario',
                  random_seed=str(random_seed),
-                 inputs={'job_ini': '<memory>',
-                         'site_model': [os.path.abspath(site_model)]})
+                 inputs={'job_ini': '<memory>'})
+    if site_model:
+        param['inputs']['site_model'] = [os.path.abspath(site_model)]
+    else:
+        param['sites'] = '0 0'
     with logs.init(param) as log:
         oq = log.get_oqparam()
         calc = calculators(oq, log.calc_id)
-        haz_sitecol = get_site_collection(oq)
-        sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, haz_sitecol)
+        sites = get_site_collection(oq) if site_model else None
+        sitecol, shakemap, disc, filtered_imts = get_sitecol_shakemap(
+            dic, imts, sites, imt_mode=imt_mode)
+        if set(imts) != set(filtered_imts):
+            print(f"Considering only imts: {filtered_imts}")
+            imts = filtered_imts
         if not os.path.exists(fname):
             numpy.save(fname, shakemap)
-            logging.info('Saved %s', fname)
-        logging.info('Got %s', sitecol)
+            print(f'Saved {fname}')
+        print(f'Got {sitecol}')
         if len(disc):
-            logging.warning('%d sites discarded', len(disc))
+            print(f'{len(disc)} sites discarded')
         calc.datastore['sitecol'] = sitecol
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
-        if num_gmfs:
-            gmfdic = {'kind': 'Silva&Horspool',
-                      'spatialcorr': spatialcorr,
-                      'crosscorr': crosscorr,
-                      'cholesky_limit': cholesky_limit}
-            store_gmfs(calc, sitecol, shakemap, gmfdic)
-    imt0 = list(oq.imtls)[0]
-    gmv = float(calc.datastore.read_df('gmf_data')[imt0].max())
+        gmfdic = {'kind': 'Silva&Horspool',
+                  'spatialcorr': spatialcorr,
+                  'crosscorr': crosscorr,
+                  'cholesky_limit': cholesky_limit}
+        store_gmfs(calc, sitecol, shakemap, gmfdic)
+    gmv = float(calc.datastore.read_df('gmf_data')[imts[0]].max())
     print(f'Maximum {gmv=}')
     print('See the output with silx view %s' % calc.datastore.filename)
 
@@ -82,3 +85,4 @@ main.trunclevel = 'Truncation level'
 main.spatialcorr = 'Spatial correlation'
 main.crosscorr = 'Cross correlation among IMTs'
 main.cholesky_limit = 'Cholesky Limit'
+main.imt_mode = 'if "strict", raise an error in case expected imts are missing'

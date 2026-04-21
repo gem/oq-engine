@@ -135,5 +135,17 @@
         </uncertaintyWeight>
       </logicTreeBranch>
       </logicTreeBranchSet>
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Active Shallow Crust"
+        branchSetID="bs2"
+        uncertaintyType="gmpeModel"
+        >
+      <logicTreeBranch>
+        <uncertaintyModel>
+          NZNSHM2022_ParkerEtAl2020SSlabB
+        </uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+      </logicTreeBranchSet>
     </logicTree>
 </nrml>

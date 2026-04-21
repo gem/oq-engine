@@ -223,14 +223,16 @@ IMPACT_APPROACHES = {
     'use_shakemap_from_usgs': 'Use ShakeMap from the USGS',
     'use_pnt_rup_from_usgs': 'Use point rupture from the USGS',
     'build_rup_from_usgs': 'Build rupture from USGS nodal plane solutions',
-    'use_shakemap_fault_rup_from_usgs': 'Use ShakeMap fault rupture from the USGS',
+    'use_shakemap_fault_rup_from_usgs': (
+        'Use ShakeMap fault rupture from the USGS'),
     'use_finite_fault_model_from_usgs': 'Use finite fault model from the USGS',
     'provide_rup': 'Provide earthquake rupture in OpenQuake NRML format',
     'provide_rup_params': 'Provide earthquake rupture parameters',
 }
 
 
-msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
+msr_choices = [msr.__class__.__name__
+               for msr in get_available_magnitude_scalerel()]
 
 validators = {
     'approach': valid.Choice(*IMPACT_APPROACHES),
@@ -369,7 +371,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         try:
             mosaic_models = get_close_regions(rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
-            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
+            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model'
             err = {"status": "failed", "error_msg": str(exc)}
             return rup, rupdic, params, err
     for mosaic_model in mosaic_models:
