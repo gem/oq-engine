@@ -1136,10 +1136,12 @@ def get_exposure(oqparam, h5=None):
             hexes = [h.encode('ascii') for h in hexes]
             exposure = asset.Exposure.read_around(fnames[0], hexes, rupfilter)
             with hdf5.File(fnames[0]) as f:
-                if 'crm' in f:
-                    loss_types = f['crm'].attrs['loss_types']
-                    oq.all_cost_types = loss_types
-                    oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
+                # NB: the loss_types are the same for all regions in the world
+                # Africa is the first region and is present in the short file
+                # used in the tests
+                loss_types = f['crmAfrica'].attrs['loss_types']
+                oq.all_cost_types = loss_types
+                oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,

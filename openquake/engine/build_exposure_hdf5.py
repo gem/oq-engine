@@ -167,7 +167,7 @@ def build_site_model_gsims(grm_dir, dstore):
     """
     Storing the global site_model and gsim table
     """
-    rows = []
+    records = {}  # (model, trt, gsim) -> row
     for region in REGIONS:
         for cwd, dirs, files in os.walk(os.path.join(grm_dir, region)):
             for f in files:
@@ -176,13 +176,16 @@ def build_site_model_gsims(grm_dir, dstore):
                     gsim_lt = get_gsim_lt(cwd)
                     for trt, gsims in gsim_lt.values.items():
                         for gsim in gsims:
-                            q = (model, trt, str(gsim), gsim.weight['default'])
-                            rows.append(q)
+                            key = model, trt, str(gsim)
+                            if key in records:  # MIE is duplicated
+                                pass
+                            else:
+                                records[key] = key + (gsim.weight['default'], )
     smodel = build_site_model(grm_dir)
     dstore['site_model'] = smodel
     dtlist = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr),
               ('weight', float)]
-    dstore['model_trt_gsim_weight'] = numpy.array(rows, dtlist)
+    dstore['model_trt_gsim_weight'] = numpy.array(records.values(), dtlist)
     return len(smodel)
 
 
