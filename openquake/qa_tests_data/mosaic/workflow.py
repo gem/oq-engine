@@ -156,7 +156,7 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
-            elif model in ("PAC", "NZL", "ZAF"):
+            elif model in ("PAC", "NZL", "TEM", "ZAF"):
                 lst.append('ses_per_logic_tree_path='
                            f'{ses_per_logic_tree_path*10}')
                 lst.append('number_of_logic_tree_samples='
