@@ -79,7 +79,7 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
-from openquake.server.papers.base import run_scenario_calc_from_ses_rupture
+from openquake.server.papers import base as papers
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -162,8 +162,8 @@ EXTRACTABLE_RESOURCES = [
     'uhs',
 ]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
-#       datastore, and the can_view_exposure permission gives access both to the
-#       'exposure' output and to the 'assetcol' item in the datastore
+# datastore, and the can_view_exposure permission gives access both to the
+# 'exposure' output and to the 'assetcol' item in the datastore
 MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -259,9 +259,10 @@ def stream_response(fname, content_type, exportname=''):
 
 
 def infer_site_class(asce_version, vs30):
-    # used for old jobs for which the site class was not saved into the datastore
-    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES[asce_version].items()
-                          if v['vs30'] == vs30]
+    # used for old jobs for which the site class was not saved
+    # into the datastore
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES[
+        asce_version].items() if v['vs30'] == vs30]
     if site_class_matches:
         site_class = site_class_matches[0]
     else:
@@ -402,8 +403,8 @@ def get_impact_form_defaults(request):
 @require_http_methods(['GET'])
 def aelo_site_classes(request):
     """
-    Return a json string with a dictionary of ASCE site classes, with corresponding
-    display names and Vs30 values
+    Return a json string with a dictionary of ASCE site classes, with
+    corresponding display names and Vs30 values
     """
     return JsonResponse(oqvalidation.SITE_CLASSES)
 
@@ -579,8 +580,8 @@ def calc_list(request, id=None):
     can be accessed. This is called several times by the Javascript.
     If 'preferred_only' is specified in the GET parameters, only jobs set as
     preferred for a tag are listed.
-    If 'filter_by_tag' is specified in the GET parameters, only jobs associated to the
-    given tag are listed.
+    If 'filter_by_tag' is specified in the GET parameters, only jobs associated
+    to the given tag are listed.
 
     Responses are in JSON.
     """
@@ -727,7 +728,8 @@ def check_db_response(resp):
         logging.error(resp['error'])
         return JsonResponse(resp, status=403)
     else:
-        return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
+        return JsonResponse({'error': f'Unexpected response: {resp}'},
+                            status=500)
 
 
 def create_tag(user_level, tag_name):
@@ -882,10 +884,10 @@ def check_callback(request):
 @require_http_methods(['POST'])
 def calc_run(request):
     """
-    This endpoint accepts a POST request containing the configuration and input files
-    required to perform a calculation. It can also optionally reuse results from a
-    previous hazard calculation, assign a custom job owner, and specify a callback URL
-    for job completion notifications.
+    This endpoint accepts a POST request containing the configuration and input
+    files required to perform a calculation. It can also optionally reuse
+    results from a previous hazard calculation, assign a custom job owner,
+    and specify a callback URL for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
@@ -934,18 +936,19 @@ def calc_run(request):
 @require_http_methods(['POST'])
 def calc_run_ini(request):
     """
-    This endpoint accepts a POST request containing the configuration .ini file that
-    defines the parameters needed to perform a calculation. It can optionally reuse
-    results from a previous hazard job, assign a custom job owner, and specify
-    a callback URL for job completion notifications.
+    This endpoint accepts a POST request containing the configuration .ini
+    file that defines the parameters needed to perform a calculation. It can
+    optionally reuse results from a previous hazard job, assign a custom job
+    owner, and specify a callback URL for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
         The request must contain the full path to a job.ini file
         If the request has the attribute `notify_to`, and it starts with
         'http[s]://', the engine will send a notification to the given url.
-        If the request has the attribute `job_owner`, the owner of the job will be set
-        to that string instead of the name of the user performing the request.
+        If the request has the attribute `job_owner`, the owner of the job
+        will be set to that string instead of the name of the user performing
+        the request.
 
     :returns:
         A `django.http.JsonResponse` object containing:
@@ -974,21 +977,40 @@ def calc_run_ini(request):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
+# used in PAPERS
+def calc_run_scenario_from_ses(request, rup_id):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
-    exposure_filepath = request.POST.get('exposure_filepath', None)
-    fragility_curves_filepath = request.POST.get('fragility_curves', None)
-    consequence_model_filepath = request.POST.get('consequence_model', None)
-    if consequence_model_filepath:
-        consequence_model_filepath = json.loads(consequence_model_filepath)
-    mapping_filepath = request.POST.get('mapping', None)
-    return run_scenario_calc_from_ses_rupture(
-        int(rup_id), notify_to=notify_to, username=username,
-        exposure_filepath=exposure_filepath,
-        fragility_curves_filepath=fragility_curves_filepath,
-        consequence_model_filepath=consequence_model_filepath,
-        mapping_filepath=mapping_filepath)
+    exposure_filepath = request.POST.get(
+        'exposure_filepath', papers.EXPOSURE)
+    fragility_curves_filepath = request.POST.get(
+        'fragility_curves', papers.FRAGILITY)
+    consequence_model = request.POST.get('consequence_model', None)
+    # NB: build consequence_model_dic as {'taxonomy': list of paths}
+    if consequence_model:
+        consequence_model_dic = {
+            'taxonomy': json.loads(consequence_model)}
+    else:
+        consequence_model_dic = papers.CONSEQUENCE
+    mapping_filepath = request.POST.get('mapping', papers.MAPPING)
+
+    return papers.run_scenario_from_ses_ext(
+        fname=papers.FNAME,
+        rup_id=int(rup_id),
+        gmm_lt=papers.GMM_LT,
+        site_model=papers.SITE_MODEL,
+        imts=papers.IMTS_RISK,
+        hdist=papers.INTEGRATION_DISTANCE,
+        eps=papers.TRUNCATION,
+        ngmfs=papers.NGMFS,
+        exposure=exposure_filepath,
+        taxonomy=mapping_filepath,
+        fragility=fragility_curves_filepath,
+        consequence=consequence_model_dic,
+        # day_or_night=TOD,
+        hazard_only=papers.HAZARD_ONLY,
+        notify_to=notify_to,
+        username=username)
 
 
 def aelo_callback(
@@ -1188,7 +1210,8 @@ def impact_get_shakemap_versions(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
+    shakemap_versions, usgs_preferred_version, err = (
+        get_shakemap_versions(usgs_id))
     if err:
         shakemap_versions_issue = err['error_msg']
     else:
@@ -1416,12 +1439,12 @@ def aelo_validate(request):
     if site_class is not None and site_class != 'custom':
         valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
-            expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
+            expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
         else:
             expected_vs30 = str(float(valid_vs30))
         if vs30 != expected_vs30:
-            # NOTE: this should never happen when using the web form, but it could
-            # happen calling the 'aelo_run' API endpoint programmatically
+            # NOTE: this should never happen when using the web form, but it
+            # could happen calling the 'aelo_run' API endpoint programmatically
             err_msg = (f'For site class {site_class} the expected Vs30 is'
                        f' {expected_vs30} instead of {vs30}')
             validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
@@ -1648,13 +1671,14 @@ def calc_results(request, calc_id):
             continue
         path = f'v1/calc/result/{result.id}'
         url = urljoin(base_url, path)
-        # NOTE: in case of multiple available export types, we provide only the url to
-        # download the data in the first of the types. We may want to expose multiple
-        # urls, one per export type, or a single url with the "preferred" type, that
-        # may depend from the kind of output
+        # NOTE: in case of multiple available export types, we provide only
+        # the url to download the data in the first of the types. We may want
+        # to expose multiple urls, one per export type, or a single url with
+        # the "preferred" type, that may depend from the kind of output
         query_params = {'export_type': outtypes[0]}
         parsed_url = urlparse(url)
-        url_with_query = urlunparse(parsed_url._replace(query=urlencode(query_params)))
+        url_with_query = urlunparse(parsed_url._replace(
+            query=urlencode(query_params)))
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
@@ -1708,8 +1732,8 @@ def calc_result(request, result_id):
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
-        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
-        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to
+        # users with level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
         if (settings.LOCKDOWN
                 and ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
@@ -2017,8 +2041,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 
 
 def is_model_preliminary(ds):
-    # NOTE: recently the mosaic_model has been added as an attribute of oqparam, but we
-    # are getting it from base_path for backwards compatibility
+    # NOTE: recently the mosaic_model has been added as an attribute of
+    # oqparam, but we are getting it from base_path for backwards compatibility
     model = ds['oqparam'].base_path.split(os.path.sep)[-2]
     if model in PRELIMINARY_MODELS:
         return True
@@ -2046,9 +2070,10 @@ def group_keys_by_value(d):
     If a value is shared by multiple keys, those keys are grouped into a tuple.
     Otherwise, the key is kept as-is.
 
-    :param d: a dictionary with hashable keys and values.
-    :returns: a dictionary where keys are either individual keys or tuples of keys
-              that shared the same value, and values are the original values.
+    :param d: a dictionary with hashable keys and values
+    :returns: a dictionary where keys are either individual keys or tuples
+              of keys that shared the same value, and values are the original
+              values
 
     Example:
         >>> group_keys_by_value({0: 'a', 1: 'b', 2: 'a'})
@@ -2084,7 +2109,8 @@ def get_aelo_notes_and_warnings(ds):
         notifications = numpy.concatenate((notifications, ds['notifications']))
         sitecol = ds['sitecol']
         # NOTE: the variable name 'site' is already used
-        sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
+        sid_to_vs30.update({site_item.id: site_item.vs30
+                            for site_item in sitecol})
         for notification in notifications:
             vs30 = sid_to_vs30[notification['sid']]
             if notification['level'] == b'info':
@@ -2093,8 +2119,8 @@ def get_aelo_notes_and_warnings(ds):
                 warnings[vs30] = notification['description'].decode('utf8')
         notes = group_keys_by_value(notes)
         warnings = group_keys_by_value(warnings)
-        # NOTE: we decided to avoid specifying which vs30 values are relevant with
-        # respect to the notifications (either for notes and warnings)
+        # NOTE: we decided to avoid specifying which vs30 values are relevant
+        # with respect to the notifications (either for notes and warnings)
     notes_str = '\n'.join([note for note in notes.values()])
     warnings_str = '\n'.join([warning for warning in warnings.values()])
     return notes_str, warnings_str
@@ -2132,7 +2158,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 asce07_key_mapping = {
                     'PGA': 'PGAm',
                 }
-            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
+            asce07_m = {asce07_key_mapping.get(k, k): v
+                        for k, v in asce07.items()}
             for key, value in asce07_m.items():
                 if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
@@ -2201,7 +2228,8 @@ def format_time_delta(td):
 
 def determine_precision(weights):
     """
-    Determine the minimum decimal places needed to represent the weights accurately
+    Determine the minimum decimal places needed to represent the
+    weights accurately
     """
     max_decimal_places = 0
     for weight in weights:
@@ -2366,7 +2394,8 @@ def extract_html_table(request, calc_id, name):
             display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
         else:
             display_name = ''
-        # avoiding to show the internal short names when showing the summary table
+        # avoiding to show the internal short names when showing
+        # the summary table
         if summarize and name == 'aggrisk_tags':
             table_header.append(display_name)
         else:
@@ -2374,14 +2403,16 @@ def extract_html_table(request, calc_id, name):
     table_contents = table.to_numpy()
     if summarize and name == 'aggrisk_tags':  # the impact table
         table_header = table_header[1:-1]
-        # keep only rows with '*total*' and discard first and last columns (ID and
-        # NAME)
-        table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
+        # keep only rows with '*total*' and discard first and last columns
+        # (ID and NAME)
+        table_contents = table_contents[table_contents[:, 0] == '*total*'][
+            :, 1:-1]
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
         mask = numpy.isin(table_contents[:, 0], rows_to_sum)
         summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
-        economic_loss_row = numpy.concatenate(([numpy.str_('economic')], summed))
+        economic_loss_row = numpy.concatenate(
+            ([numpy.str_('economic')], summed))
         remaining = table_contents[~mask]
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
@@ -2470,7 +2501,8 @@ def calc_remove_tag(request, calc_id, tag_name):
 @require_http_methods(['GET'])
 def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
     """
-    Set the calculation of given `calc_id` as the preferred one for tag `tag_name`
+    Set the calculation of given `calc_id` as the preferred one for tag
+    `tag_name`
     """
     user_level = get_user_level(request)
     return set_preferred_job_for_tag(user_level, calc_id, tag_name)
@@ -2492,7 +2524,8 @@ def calc_unset_preferred_job_for_tag(request, tag_name):
 @require_http_methods(['GET'])
 def calc_get_preferred_job_for_tag(request, tag_name):
     """
-    Get the id of the calculation marked as the preferred one for the given `tag_name`
+    Get the id of the calculation marked as the preferred one for the
+    given `tag_name`
     """
     return get_preferred_job_for_tag(tag_name)
 
