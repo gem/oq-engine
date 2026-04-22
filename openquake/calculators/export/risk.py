@@ -965,4 +965,20 @@ def export_job_zip(ekey, dstore):
             oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
-    return fnames
+    return flatten(fnames)
+
+
+def flatten(list_of_paths):
+    """
+    :param list_of_paths: pathnames or dictionaries key->paths
+    :returns: a flattened list of path names
+    """
+    out = []
+    for obj in list_of_paths:
+        if isinstance(obj, str):
+            out.append(obj)
+        elif isinstance(obj, dict):
+            out.extend(obj.values())
+        else:
+            raise ValueError(f'Unexpected {obj!r}')
+    return out
