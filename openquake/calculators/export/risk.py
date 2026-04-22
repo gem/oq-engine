@@ -937,7 +937,7 @@ def export_job_zip(ekey, dstore):
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
         for peril, dic in ddic.items():
-            inputs[f'{peril}_fragility'] = sorted(dic.values())
+            inputs[f'{peril}_fragility'] = dic
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
@@ -955,7 +955,7 @@ def export_job_zip(ekey, dstore):
             dest = dstore.export_path(f'consequence_by_{key}.csv')
             writer.save(df, dest)
             dic[key] = dest
-        inputs['consequence'] = sorted(dic.values())
+        inputs['consequence'] = dic
     inputs['sites'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]
@@ -973,7 +973,6 @@ def _flatten(list_of_strings):
     for obj in list_of_strings:
         if isinstance(obj, str):
             out.append(obj)
-        else:
-            # assume obj is a list of strings
-            out.extend(obj)
+        elif isinstance(obj, dict):
+            out.extend(obj.values())
     return out
