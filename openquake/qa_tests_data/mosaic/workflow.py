@@ -136,7 +136,6 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         number_of_logic_tree_samples: int = 2000,
         ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5):
     "Build SES.toml"
-    breakpoint()
     lst = []
     if models == ['ALL']:
         models = MODELS
