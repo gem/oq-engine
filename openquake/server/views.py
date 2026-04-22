@@ -79,7 +79,7 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
-from openquake.server.papers.base import run_scenario_from_ses
+from openquake.server.papers import base as papers
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -981,18 +981,36 @@ def calc_run_ini(request):
 def calc_run_scenario_from_ses(request, rup_id):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
-    exposure_filepath = request.POST.get('exposure_filepath', None)
-    fragility_curves_filepath = request.POST.get('fragility_curves', None)
-    consequence_model_filepath = request.POST.get('consequence_model', None)
+    exposure_filepath = request.POST.get(
+        'exposure_filepath', papers.EXPOSURE)
+    fragility_curves_filepath = request.POST.get(
+        'fragility_curves', papers.FRAGILITY)
+    consequence_model_filepath = request.POST.get(
+        'consequence_model', None)
     if consequence_model_filepath:
-        consequence_model_filepath = json.loads(consequence_model_filepath)
-    mapping_filepath = request.POST.get('mapping', None)
-    return run_scenario_from_ses(
-        int(rup_id), notify_to=notify_to, username=username,
-        exposure_filepath=exposure_filepath,
-        fragility_curves_filepath=fragility_curves_filepath,
-        consequence_model_filepath=consequence_model_filepath,
-        mapping_filepath=mapping_filepath)
+        consequence_model_filepath = {
+            'taxonomy': consequence_model_filepath}
+    else:
+        consequence_model_filepath = papers.CONSEQUENCE
+    mapping_filepath = request.POST.get('mapping', papers.MAPPING)
+
+    return papers.run_scenario_from_ses_ext(
+        fname=papers.FNAME,
+        rup_id=int(rup_id),
+        gmm_lt=papers.GMM_LT,
+        site_model=papers.SITE_MODEL,
+        imts=papers.IMTS_RISK,
+        hdist=papers.INTEGRATION_DISTANCE,
+        eps=papers.TRUNCATION,
+        ngmfs=papers.NGMFS,
+        exposure=exposure_filepath,
+        taxonomy=mapping_filepath,
+        fragility=fragility_curves_filepath,
+        consequence=consequence_model_filepath,
+        # day_or_night=TOD,
+        hazard_only=papers.HAZARD_ONLY,
+        notify_to=notify_to,
+        username=username)
 
 
 def aelo_callback(
