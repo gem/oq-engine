@@ -985,13 +985,13 @@ def calc_run_scenario_from_ses(request, rup_id):
         'exposure_filepath', papers.EXPOSURE)
     fragility_curves_filepath = request.POST.get(
         'fragility_curves', papers.FRAGILITY)
-    consequence_model_filepath = request.POST.get(
-        'consequence_model', None)
-    if consequence_model_filepath:
-        consequence_model_filepath = {
-            'taxonomy': consequence_model_filepath}
+    consequence_model = request.POST.get('consequence_model', None)
+    # NB: build consequence_model_dic as {'taxonomy': list of paths}
+    if consequence_model:
+        consequence_model_dic = {
+            'taxonomy': json.loads(consequence_model)}
     else:
-        consequence_model_filepath = papers.CONSEQUENCE
+        consequence_model_dic = papers.CONSEQUENCE
     mapping_filepath = request.POST.get('mapping', papers.MAPPING)
 
     return papers.run_scenario_from_ses_ext(
@@ -1006,7 +1006,7 @@ def calc_run_scenario_from_ses(request, rup_id):
         exposure=exposure_filepath,
         taxonomy=mapping_filepath,
         fragility=fragility_curves_filepath,
-        consequence=consequence_model_filepath,
+        consequence=consequence_model_dic,
         # day_or_night=TOD,
         hazard_only=papers.HAZARD_ONLY,
         notify_to=notify_to,
