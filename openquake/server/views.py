@@ -79,7 +79,7 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
-from openquake.server.papers.base import run_scenario_calc_from_ses_rupture
+from openquake.server.papers.base import run_scenario_from_ses
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -978,7 +978,7 @@ def calc_run_ini(request):
 @cross_domain_ajax
 @require_http_methods(['POST'])
 # used in PAPERS
-def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
+def calc_run_scenario_from_ses(request, rup_id):
     notify_to = request.POST.get('notify_to')
     username = request.POST.get('job_owner') or utils.get_username(request)
     exposure_filepath = request.POST.get('exposure_filepath', None)
@@ -987,7 +987,7 @@ def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
     if consequence_model_filepath:
         consequence_model_filepath = json.loads(consequence_model_filepath)
     mapping_filepath = request.POST.get('mapping', None)
-    return run_scenario_calc_from_ses_rupture(
+    return run_scenario_from_ses(
         int(rup_id), notify_to=notify_to, username=username,
         exposure_filepath=exposure_filepath,
         fragility_curves_filepath=fragility_curves_filepath,

@@ -415,7 +415,7 @@ def export_rup_to_geojson(rup, rup_id):
     return rup_fname
 
 
-def run_scenario_calc_from_ses_rupture_ext(
+def run_scenario_from_ses_ext(
         fname,
         rup_id,
         gmm_lt,
@@ -555,7 +555,7 @@ def run_scenario_calc_from_ses_rupture_ext(
     return JsonResponse(response_data, status=status)
 
 
-def run_scenario_calc_from_ses_rupture(
+def run_scenario_from_ses(
         rup_id, notify_to=None, username=None, exposure_filepath=None,
         fragility_curves_filepath=None, consequence_model_filepath=None,
         mapping_filepath=None):
@@ -573,7 +573,7 @@ def run_scenario_calc_from_ses_rupture(
     if mapping_filepath is None:
         mapping_filepath = MAPPING
 
-    return run_scenario_calc_from_ses_rupture_ext(
+    return run_scenario_from_ses_ext(
         fname=FNAME,
         rup_id=rup_id,
         gmm_lt=GMM_LT,
