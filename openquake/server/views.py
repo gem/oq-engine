@@ -2074,6 +2074,7 @@ def group_keys_by_value(d):
     :returns: a dictionary where keys are either individual keys or tuples
               of keys that shared the same value, and values are the original
               values
+
     Example:
         >>> group_keys_by_value({0: 'a', 1: 'b', 2: 'a'})
         {(0, 2): 'a', 1: 'b'}
