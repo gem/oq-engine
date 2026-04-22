@@ -569,13 +569,13 @@ class CompositeRiskModel(collections.abc.Mapping):
             risklist.limit_states = dstore.get_attr(
                 f'crm{region}', 'limit_states')
         df = dstore.read_df(f'crm{region}')
-        for i, rf_json in enumerate(df.riskfunc):
+        for i, (rf_json, lt) in enumerate(
+                zip(df.riskfunc, df.loss_type)):
             rf = hdf5.json_to_obj(rf_json)
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
                 rf.peril = 'groundshaking'
-            lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
             else:  # rf is a vulnerability function

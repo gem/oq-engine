@@ -39,10 +39,6 @@ from openquake.hazardlib.site import Site, SiteCollection
 from django.http import JsonResponse
 from django.conf import settings
 
-# (
-#    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-#    HttpResponseForbidden, )
-
 
 # Base path
 BASE = os.path.abspath(
@@ -53,33 +49,42 @@ BASE = os.path.abspath(
 # oqdata path
 OQDATA = get_datadir()
 
-"""DEFAULT INPUTS - ANY OF THESE COULD BE OVERWRITTEN IF THE USER WISHES THROUGH THE DASHBOARD"""
-# unused from engine
-# RUP_ID = 6667936727154 # ID attribute of the rupture in the ses hdf5 - will be obtained from the dashboard
+# DEFAULT INPUTS - ANY OF THESE COULD BE OVERWRITTEN IF THE USER WISHES
+# THROUGH THE DASHBOARD
+# RUP_ID = 6667936727154 # ID attribute of the rupture in the ses hdf5 -
+# will be obtained from the dashboard
 
 # Hazard inputs
 HAZARD_ONLY = False # Median hazard only if True
 GMM_LT = os.path.join(BASE, "Hypothetical_Events", "inputs", "PAPERS_gmc.xml")
 SITE_MODEL = os.path.join(BASE, "Vs30", "site_model_ITA_025.csv")
 IMTS_RISK = 'PGA, SA(0.3), SA(0.6), SA(1.0)'
-INTEGRATION_DISTANCE = getattr(settings, 'PAPERS_HYPO_RUPT_INTEGRATION_DISTANCE', 150)
+INTEGRATION_DISTANCE = getattr(
+    settings, 'PAPERS_HYPO_RUPT_INTEGRATION_DISTANCE', 150)
 TRUNCATION = 3
 NGMFS = 250
 
 # Risk inputs
-EXPOSURE = os.path.join(BASE, "Building_National_Exposure", "Exposure_ITA.xml")
-MAPPING = os.path.join(BASE,  "Building_National_Exposure", "Vulnerability_mapping_ITA.csv")
-FRAGILITY = os.path.join(BASE, "Building_Fragility_Consequences", "fragility_structural.xml")
+EXPOSURE = os.path.join(BASE, "Building_National_Exposure",
+                        "Exposure_ITA.xml")
+MAPPING = os.path.join(BASE,  "Building_National_Exposure",
+                       "Vulnerability_mapping_ITA.csv")
+FRAGILITY = os.path.join(BASE, "Building_Fragility_Consequences",
+                         "fragility_structural.xml")
 CONSEQUENCE = {
     'taxonomy': [
-        os.path.join(BASE, "Building_Fragility_Consequences", "consequence_fatalities.csv"),
-        os.path.join(BASE, "Building_Fragility_Consequences", "consequence_losses.csv")
+        os.path.join(BASE, "Building_Fragility_Consequences",
+                     "consequence_fatalities.csv"),
+        os.path.join(BASE, "Building_Fragility_Consequences",
+                     "consequence_losses.csv")
     ]
 }
 # TOD = "day"
 
 # Fixed inputs/constants
-FNAME = os.path.join(BASE, "Hypothetical_Events", "inputs", "rups_eur_branch_faults.hdf5") # Datastore (the hdf5 containing the SES ruptures)
+FNAME = os.path.join(BASE, "Hypothetical_Events", "inputs",
+                     "rups_eur_branch_faults.hdf5")
+# Datastore (the hdf5 containing the SES ruptures)
 TWO24 = 2 ** 24
 
 
@@ -114,7 +119,8 @@ def get_ebrup(dstore, rup_id):
             if trt_smr == rec['trt_smr']:
                 trt = trts[model][trt_smr // TWO24]
                 if trt in check:
-                    raise ValueError("debug - trt is not being assigned correctly")
+                    raise ValueError(
+                        "debug - trt is not being assigned correctly")
                 check.append(trt)
 
     return get_ebr(rec, geom, trt)
@@ -135,7 +141,8 @@ def get_scenario_rup_csv(fname, rup_id):
     arr = rupture.to_csv_array([eb_rup])
     trts=[eb_rup.tectonic_region_type]
     rup_csv = os.path.join(tempfile.mkdtemp(), f'rup_{eb_rup.id}.csv')
-    writers.write_csv(rup_csv, arr, sep=',', comment=dict(trts=trts, ses_seed=42))
+    writers.write_csv(
+        rup_csv, arr, sep=',', comment=dict(trts=trts, ses_seed=42))
 
     return rup_csv, eb_rup
 
@@ -168,7 +175,8 @@ def get_hdist(trt):
     around the rupture.
     """
     # Path to EUR Vs30 job which contains TRT-dependent hdist
-    job_file = os.path.join(BASE, "Hypothetical_Events", "inputs", "job_vs30.ini")
+    job_file = os.path.join(
+        BASE, "Hypothetical_Events", "inputs", "job_vs30.ini")
 
     # Get into oqparam
     oq = get_oqparam(job_file)
@@ -331,7 +339,8 @@ def get_job_ctx(rup_id,
         'username': username
     }
 
-    # If only want a scenario hazard calculation remove the risk inputs/parameters
+    # If only want a scenario hazard calculation remove the risk
+    # inputs/parameters
     if hazard_only is True:
 
         # First remove input file keys
@@ -406,7 +415,7 @@ def export_rup_to_geojson(rup, rup_id):
     return rup_fname
 
 
-def run_scenario_calc_from_ses_rupture_ext(
+def run_scenario_from_ses_ext(
         fname,
         rup_id,
         gmm_lt,
@@ -440,61 +449,61 @@ def run_scenario_calc_from_ses_rupture_ext(
 
     NOTE: we use a modified GMC logic tree for the ASCR TRT.
 
-        :param fname: Path to the hdf5 file containing the ruptures.
+    :param fname: Path to the hdf5 file containing the ruptures.
 
-        :param rup_id: id attribute of the rupture to retrieve from the dstore
+    :param rup_id: id attribute of the rupture to retrieve from the dstore
 
-        :param gmm_lt: Path to the ground-motion characterisation. If the user
-                       specifies an alternative ground-motion characterisation
-                       it will be used instead of the default one. Remember that
-                       the TRTs in the alternative gmm LT will need to correspond
-                       to those in the EUR seismic source model.
+    :param gmm_lt: Path to the ground-motion characterisation. If the user
+                   specifies an alternative ground-motion characterisation
+                   it will be used instead of the default one. Remember that
+                   the TRTs in the alternative gmm LT will need to
+                   correspond to those in the EUR seismic source model.
 
-        :param site_model: Path to the site model. If the user specifies an
-                           alternative site model it will be used instead of the
-                           default one (the default is 2.5 km spacing).
+    :param site_model: Path to the site model. If the user specifies an
+                       alternative site model it will be used instead of the
+                       default one (the default is 2.5 km spacing).
 
-        :param imts: The IMTs the user wishes to consider. By default uses the
-                     risk mosaic IMTs. See the IMTS_RISK variable at the top
-                     of this script for how the IMTs must be specified.
+    :param imts: The IMTs the user wishes to consider. By default uses the
+                 risk mosaic IMTs. See the IMTS_RISK variable at the top
+                 of this script for how the IMTs must be specified.
 
-        :param hdist: Hazard integration distance, which is used to filter sites
-                      around the selected rupture. If set to None, then it is
-                      determined by the TRT of the rupture based on the information
-                      in the EUR Vs30 ini file.
+    :param hdist: Hazard integration distance, which is used to filter sites
+                  around the selected rupture. If set to None, then it is
+                  determined by the TRT of the rupture based on the
+                  information in the EUR Vs30 ini file.
 
-        :param eps: Number of standard deviations to sample from mean (i.e. the
-                    truncation level input parameter).
+    :param eps: Number of standard deviations to sample from mean (i.e. the
+                truncation level input parameter).
 
-        :param ngmfs: Number of ground-motion fields to generate.
+    :param ngmfs: Number of ground-motion fields to generate.
 
-        :param exposure: Path to the exposure file. If the user specifies an
-                         alternative exposure file for this parameter, it will
-                         be used instead of the default one.
+    :param exposure: Path to the exposure file. If the user specifies an
+                     alternative exposure file for this parameter, it will
+                     be used instead of the default one.
 
-        :param taxonomy: Path to the taxonomy file. If the user specifies an
-                         alternative taxonomy file for this parameter, it will
-                         be used instead of the default one.
+    :param taxonomy: Path to the taxonomy file. If the user specifies an
+                     alternative taxonomy file for this parameter, it will
+                     be used instead of the default one.
 
-        :param fragility: Path to the fragility file. If the user specifies an
-                          alternative fragility file for this parameter, it will
-                          be used instead of the default one.
+    :param fragility: Path to the fragility file. If the user specifies an
+                      alternative fragility file for this parameter, it will
+                      be used instead of the default one.
 
-        :param consequence: Dictionary containing the paths to the consequences
-                            input files. If the user specifies an alternative
-                            file for this parameter, it will be used instead of
-                            the default one.
+    :param consequence: Dictionary containing the paths to the consequences
+                        input files. If the user specifies an alternative
+                        file for this parameter, it will be used instead of
+                        the default one.
 
-        :param day_or_night: Determines if the calculation is ran assuming day
-                             or night conditions. Must be set to either "day" or
-                             "night".
+    :param day_or_night: Determines if the calculation is ran assuming day
+                         or night conditions. Must be set to either "day" or
+                         "night".
 
-        :param hazard_only: Boolean where if set to True will only generate
-                            a hazard calculation using the median ground-motion
-                            (the risk parameters will not be added to the dictionary
-                            used to create the job file and the ngmfs and truncation
-                            level will be set to 1 and 0 respectively).
-
+    :param hazard_only: Boolean where if set to True will only generate
+                        a hazard calculation using the median ground-motion
+                        (the risk parameters will not be added to the
+                        dictionary used to create the job file and the
+                        ngmfs and truncation level will be set to 1 and 0
+                        respectively).
     """
     # Extract the EBrupture into a tmp CSV usable in a scenario calculation
     rup_csv, eb_rup = get_scenario_rup_csv(fname, rup_id)
@@ -503,9 +512,11 @@ def run_scenario_calc_from_ses_rupture_ext(
     export_rup_to_geojson(eb_rup.rupture, rup_id)
 
     # Write the GMM LT to an OQ XML
-    gsim_lt_xml = get_truncated_gmc_xml(eb_rup.rupture.tectonic_region_type, gmm_lt)
+    gsim_lt_xml = get_truncated_gmc_xml(
+        eb_rup.rupture.tectonic_region_type, gmm_lt)
 
-    # Get the TRT-dependent maximum distance if an integration distance is not specified
+    # Get the TRT-dependent maximum distance if an integration distance
+    # is not specified
     if hdist is None:
         hdist = get_hdist(eb_rup.rupture.tectonic_region_type)
 
@@ -542,40 +553,3 @@ def run_scenario_calc_from_ses_rupture_ext(
         response_data = get_job_info(job_ctx.calc_id)
         status = 200
     return JsonResponse(response_data, status=status)
-
-
-def run_scenario_calc_from_ses_rupture(
-        rup_id, notify_to=None, username=None, exposure_filepath=None,
-        fragility_curves_filepath=None, consequence_model_filepath=None,
-        mapping_filepath=None):
-
-    if exposure_filepath is None:
-        exposure_filepath = EXPOSURE
-    if fragility_curves_filepath is None:
-        fragility_curves_filepath = FRAGILITY
-    if consequence_model_filepath is None:
-        consequence_model_filepath = CONSEQUENCE
-    else:
-        consequence_model_filepath = {
-            'taxonomy': consequence_model_filepath
-        }
-    if mapping_filepath is None:
-        mapping_filepath = MAPPING
-
-    return run_scenario_calc_from_ses_rupture_ext(
-        fname=FNAME,
-        rup_id=rup_id,
-        gmm_lt=GMM_LT,
-        site_model=SITE_MODEL,
-        imts=IMTS_RISK,
-        hdist=INTEGRATION_DISTANCE,
-        eps=TRUNCATION,
-        ngmfs=NGMFS,
-        exposure=exposure_filepath,
-        taxonomy=mapping_filepath,
-        fragility=fragility_curves_filepath,
-        consequence=consequence_model_filepath,
-        # day_or_night=TOD,
-        hazard_only=HAZARD_ONLY,
-        notify_to=notify_to,
-        username=username)
