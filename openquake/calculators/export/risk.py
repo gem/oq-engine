@@ -937,7 +937,7 @@ def export_job_zip(ekey, dstore):
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
         for peril, dic in ddic.items():
-            inputs[f'{peril}_fragility'] = dic
+            inputs[f'{peril}_fragility'] = sorted(dic.values())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
@@ -955,7 +955,7 @@ def export_job_zip(ekey, dstore):
             dest = dstore.export_path(f'consequence_by_{key}.csv')
             writer.save(df, dest)
             dic[key] = dest
-        inputs['consequence'] = dic
+        inputs['consequence'] = sorted(dic.values())
     inputs['sites'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]
@@ -965,4 +965,15 @@ def export_job_zip(ekey, dstore):
             oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
-    return fnames
+    return _flatten(fnames)
+
+
+def _flatten(list_of_strings):
+    out = []
+    for obj in list_of_strings:
+        if isinstance(obj, str):
+            out.append(obj)
+        else:
+            # assume obj is a list of strings
+            out.extend(obj)
+    return out
