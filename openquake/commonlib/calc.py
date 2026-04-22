@@ -23,9 +23,9 @@ import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, nrml
+from openquake.hazardlib import map_array, nrml, geo
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, datastore
+from openquake.commonlib import util, datastore, readinput
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -289,7 +289,8 @@ class RuptureImporter(object):
             for trt_smr, start, stop in idx_start_stop:
                 rlzs = numpy.concatenate(
                     list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
-                records = get_events(rup_array[start:stop], rlzs, self.scenario)
+                records = get_events(
+                    rup_array[start:stop], rlzs, self.scenario)
                 nr = len(records)
                 events[i:i + nr] = records  # (id, rup_id, rlz_id)
                 i += nr
