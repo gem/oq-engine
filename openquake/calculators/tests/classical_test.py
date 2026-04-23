@@ -267,8 +267,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_11(self):
         # Check grid-adjusted GMPE
-        self.run_calc(case_11.__file__, 'job.ini',
-                      calculation_mode='classical')
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.5).csv',

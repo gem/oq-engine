@@ -1,3 +1,10 @@
+ 
+  [Christopher Brooks]
+  * Added new epistemic uncertainties in the source model logic tree
+    for the rupture aspect ratio (`setAspectRatioAbsolute` and
+    `setAspectRatioRelative`). Unit tests added and a QA test in
+    logictree/case_32.
+
   [Michele Simionato, Paolo Tormene]
   * Updated build_exposure_hdf5 to work with the 2026 Global Risk Model
 
