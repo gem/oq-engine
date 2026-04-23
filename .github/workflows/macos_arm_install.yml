@@ -1,4 +1,4 @@
-name: MacOS M1
+name: MacOS Arm64 Test and Install
 "on":
   workflow_dispatch:
     inputs:
@@ -140,7 +140,9 @@ jobs:
         run: |
           curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
+          cd openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+          cd ..
 
 
       - name: Run tests for the engine server in public mode to test installation
