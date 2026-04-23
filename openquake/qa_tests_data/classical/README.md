@@ -58,6 +58,7 @@
 |case\_72|Test calculation with a subset of the 2014 US model|
 |case\_74|Tests EAS-based calculation|
 |case\_75|Tests calculation with multi-fault source|
+|case\_75\_pre|Tests preclassical without sitecol for Hamlet|
 |case\_76|Tests for Canada SHM6|
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
