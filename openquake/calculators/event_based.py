@@ -797,6 +797,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with hdf5.File(oq.inputs['rupture_model']) as f:
                 ebr = get_ebrupture(f, oq.rupture_id, trts)
             trt = ebr.rupture.tectonic_region_type
+            gsim_lt = readinput.get_gsim_lt(oq, [trt])
             aw = get_rup_array([ebr], oq.maximum_distance(trt))
             aw['trt_smr'] = 0  # a single TRT
             if oq.calculation_mode.startswith('scenario'):
@@ -814,8 +815,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type)(rup.mag))
 
-        glt = readinput.get_gsim_lt(oq, [trt]) if trt else gsim_lt
-        fake = logictree.FullLogicTree.fake(glt)
+        fake = logictree.FullLogicTree.fake(gsim_lt)
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
