@@ -1607,9 +1607,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
-    if R is None and 'full_lt' not in dstore:  # from shakemap
+    if 'full_lt' not in dstore:  # from shakemap
         dstore['full_lt'] = logictree.FullLogicTree.fake()
-        store_events(dstore, E)
     R = R or dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     if data is None:

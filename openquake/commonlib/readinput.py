@@ -64,7 +64,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import (
-    build_planar_rupture_from_dict, get_ruptures)
+    build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -922,6 +922,10 @@ def get_rupture(oqparam):
         if len(rups) == 1:
             # ScenarioDamageTestCase::test_case_12
             rup = rups[0]
+    elif rupture_model and rupture_model.endswith('.hdf5'):
+        trts = list(get_gsim_lt(oqparam).values)
+        with hdf5.File(rupture_model) as ses:
+            rup = get_ebrupture(ses, oqparam.rupture_id, trts).rupture
     elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -1168,7 +1172,8 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
+    if (oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict
+            or oqparam.rupture_id):
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
         # tested in scenario_damage/case_12
