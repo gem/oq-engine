@@ -936,8 +936,12 @@ def export_job_zip(ekey, dstore):
         inputs.update(export_vulnerability_xml(dstore))
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
-        for peril, dic in ddic.items():
-            inputs[f'{peril}_fragility'] = dic
+        for peril, ltype_by_path in ddic.items():
+            inputs[f'{peril}_fragility'] = ltype_by_path
+            for ltype in ltype_by_path:
+                # needed for PAPERS
+                oq.inputs.pop(f'{ltype}_fragility', None)
+
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
