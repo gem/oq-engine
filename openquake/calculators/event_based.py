@@ -339,6 +339,7 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
     hypo_deps = filrups['hypo'][:, 2]
+    nrups = len(filrups)
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         if oq.maximum_rupture_depth:
@@ -349,6 +350,8 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             ok &= hypo_deps <= maxdep
         rups = filrups[ok]
         if len(rups):
+            if 'scenario' in oq.calculation_mode and nrups == 1:
+                trt_smr = 0  # scenario from SES
             acc[model, trt_smr] = rups
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
@@ -366,17 +369,20 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     :returns: list of starmap arguments
     """
     trts = {}
-    rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
+    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
+    rlzs_by_gsim = {}
+    for model, full_lt in get_model_lts(dstore):
         if model == '???':
             logging.info('Building rlzs_by_gsim')
         else:
             logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
+            if 'scenario' in oq.calculation_mode and len(filrups) == 1:
+                trt_smr = 0  # scenario from SES
             rlzs_by_gsim[model, trt_smr] = rbg
 
-    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     # store the filtered ruptures for debugging purposes
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
@@ -748,6 +754,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
+        trt = None
         if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
@@ -808,7 +815,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 ' of %s km from the rupture' % oq.maximum_distance(
                     rup.tectonic_region_type)(rup.mag))
 
-        fake = logictree.FullLogicTree.fake(gsim_lt)
+        glt = readinput.get_gsim_lt(oq, [trt]) if trt else gsim_lt
+        fake = logictree.FullLogicTree.fake(glt)
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
@@ -861,8 +869,7 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore['weights'] = [1.]
             return {}
         else:  # scenario
-            if ('rupture_model' in oq.inputs and not oq.rupture_id
-                    or oq.rupture_dict):
+            if 'rupture_model' in oq.inputs or oq.rupture_dict:
                 self._read_scenario_ruptures()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):

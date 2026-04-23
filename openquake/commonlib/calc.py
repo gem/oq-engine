@@ -288,6 +288,8 @@ class RuptureImporter(object):
         for model, lt in self.model_lts:
             rlzs_by_gsim = lt.get_rlzs_by_gsim_dic()
             for trt_smr, start, stop in idx_start_stop:
+                if self.scenario:
+                    trt_smr = 0
                 rlzs = numpy.concatenate(
                     list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
                 records = get_events(rup_array[start:stop], rlzs, self.scenario)

@@ -25,7 +25,8 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
-from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
+from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
 from openquake.commonlib.calc import get_proxies
 
 U16 = numpy.uint16
@@ -52,7 +53,7 @@ def build_stat_curve(hcurve, imtls, stat, wget, use_rates=False):
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
-    
+
     if weights.shape[1] > 1:  # IMT-dependent weights
         # this is slower since the arrays are shorter
         for imt in imtls:
@@ -255,7 +256,7 @@ class CurveGetter(object):
         dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
         for sid in rates:
             dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
-        return dic                
+        return dic
 
     def __init__(self, sid, rates, trt_rlzs, R):
         self.sid = sid
@@ -387,23 +388,6 @@ def get_ebruptures(dstore):
     for proxy in get_proxies(dstore.filename):
         ebrs.append(proxy.to_ebr(trts[0]))
     return ebrs
-
-
-def get_ebrupture(dstore, rup_id, trts=()):  # used in show rupture
-    """
-    This is EXTREMELY inefficient, since it reads all ruptures.
-    NB: it assumes rup_is is unique
-    """
-    rups = dstore['ruptures'][:]  # read everything in memory
-    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
-    idxs, = numpy.where(rups['id'] == rup_id)
-    if len(idxs) == 0:
-        raise ValueError(f"Missing {rup_id=} in {dstore}")
-    [rec] = rups[idxs]
-    trts = trts or dstore.getitem('full_lt').attrs['trts']
-    trt = trts[rec['trt_smr'] // TWO24]
-    geom = rupgeoms[rec['geom_id']]
-    return get_ebr(rec, geom, trt)
 
 
 def line(points):
