@@ -791,7 +791,7 @@ def convert_df_to_fragility(peril, loss_type, limit_states, df):
     for riskfunc in df.riskfunc:
         rfunc = json.loads(riskfunc)[
             'openquake.risklib.scientific.FragilityFunctionList']
-        ffunc = N('FragilityFunction',
+        ffunc = N('fragilityFunction',
                   {'id': rfunc['id'], 'format': rfunc['format']})
         attr = {'imt': rfunc['imt'], 'noDamageLimit': rfunc['nodamage']}
         imls = N('imls', attr, rfunc['imls'])
