@@ -952,9 +952,9 @@ def export_job_zip(ekey, dstore):
         for name_by_key, df in consdict.items():
             name, key = name_by_key.split('_by_')
             df['consequence'] = name
-            dest = dstore.export_path(f'consequence_by_{key}.csv')
+            dest = dstore.export_path(f'consequence_by_{name_by_key}.csv')
             writer.save(df, dest)
-            dic[key] = dest
+            dic[name_by_key] = dest
         inputs['consequence'] = dic
     inputs['site_model'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
