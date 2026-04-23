@@ -956,10 +956,10 @@ def export_job_zip(ekey, dstore):
             writer.save(df, dest)
             dic[key] = dest
         inputs['consequence'] = dic
-    inputs['sites'] = dstore.export_path('sites.csv')
+    inputs['site_model'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['sites'])
+    writer.save(sitecol.array, inputs['site_model'])
     with open(job_ini, 'w', encoding='utf8') as out:
         if 'gmfs' in inputs:
             oq.hazard_calculation_id = None
