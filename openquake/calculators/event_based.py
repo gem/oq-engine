@@ -339,7 +339,6 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
     hypo_deps = filrups['hypo'][:, 2]
-    nrups = len(filrups)
     for model, trt_smr in pairs:
         ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         if oq.maximum_rupture_depth:
@@ -350,8 +349,6 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             ok &= hypo_deps <= maxdep
         rups = filrups[ok]
         if len(rups):
-            if 'scenario' in oq.calculation_mode and nrups == 1:
-                trt_smr = 0  # scenario from SES
             acc[model, trt_smr] = rups
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
@@ -379,8 +376,6 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
         else:
             logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
-            if 'scenario' in oq.calculation_mode and len(filrups) == 1:
-                trt_smr = 0  # scenario from SES
             rlzs_by_gsim[model, trt_smr] = rbg
 
     # store the filtered ruptures for debugging purposes
@@ -803,6 +798,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 ebr = get_ebrupture(f, oq.rupture_id, trts)
             trt = ebr.rupture.tectonic_region_type
             aw = get_rup_array([ebr], oq.maximum_distance(trt))
+            aw['trt_smr'] = 0  # a single TRT
+            if oq.calculation_mode.startswith('scenario'):
+                # rescale n_occ by ngmfs and nrlzs
+                aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         else:
             # should never arrive here
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
