@@ -674,6 +674,12 @@ reference_depth_to_2pt5km_per_sec:
   Example: *reference_depth_to_2pt5km_per_sec = 5*.
   Default: no default
 
+reference_depth_to_1pt4km_per_sec:
+  Used when there is no site model to specify a global z1pt4 parameter,
+  used in some GMPEs.
+  Example: *reference_depth_to_1pt4km_per_sec = 50*.
+  Default: no default
+
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
@@ -1176,6 +1182,9 @@ class OqParam(valid.ParamSet):
         # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
+    reference_depth_to_1pt4km_per_sec = valid.Param(
         # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(

@@ -13,6 +13,7 @@
 |case\_11|Test GridAdjustedGMPE|
 |case\_10|Test use of alternative characterstic MFD|
 |case\_12|Two TRTs, 1 rlz|
+|case\_13|Test specification of a reference z1pt4 in the job file|
 |case\_18|3 GMPETables|
 |case\_22|Test tiling and International Date Line|
 |case\_23|Filtering away a TRT|
@@ -57,7 +58,7 @@
 |case\_72|Test calculation with a subset of the 2014 US model|
 |case\_74|Tests EAS-based calculation|
 |case\_75|Tests calculation with multi-fault source|
-|case\_75\_pre|Tests preclassical without sitecol for Hamlet|
+|case\_75|Tests preclassical without sitecol for Hamlet|
 |case\_76|Tests for Canada SHM6|
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|

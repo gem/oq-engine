@@ -588,7 +588,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                     z[name] = valid.latitudes(coos)
                 else:
                     z[name] = valid.longitudes(coos)
-            elif name in ["vs30", "z1pt0", "z2pt5"]:
+            elif name in ["vs30", "z1pt0", "z2pt5", "z1pt4"]:
                 pars = ' '.join(str(x) for x in vals)
                 if name == 'vs30' and not oqparam.override_vs30:
                     # if override_vs30 is set, then we can have vs30=-999
