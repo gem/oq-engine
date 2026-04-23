@@ -93,8 +93,6 @@ jobs:
       - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
         if: always()
         run: |
-          pwd
-          sleep 1
           source ~/openquake/bin/activate
           pytest openquake/baselib/tests/pyproj_wheel_test.py
           pytest openquake/hazardlib/tests/pyproj_wheel_test.py
