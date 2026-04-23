@@ -50,6 +50,7 @@ jobs:
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $need_to_run = 0
           @"

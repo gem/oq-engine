@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [m1]
+        os: [macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -65,6 +65,7 @@ jobs:
       - name: Install oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           export PIP_DEFAULT_TIMEOUT=100
