@@ -1146,8 +1146,11 @@ def read_consdict(oqparam, limit_states, perils):
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
-            consdict['%s_by_%s' % (consequence, by)] = df[
-                df.consequence == consequence]
+            if by == 'risk_id':  # by is risk_id or taxonomy
+                key = f'{consequence}_by_{by}'
+            else:
+                key = by
+            consdict[key] = df[df.consequence == consequence]
     return consdict
 
 
