@@ -463,6 +463,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :param float aspect_ratio:
             New value of the rupture aspect ratio (must be positive)
         """
+        if not aspect_ratio > 0:
+            raise ValueError('rupture aspect ratio must be positive, got %s'
+                             % aspect_ratio)
         self.rupture_aspect_ratio = aspect_ratio
 
     def modify_adjust_aspect_ratio(self, increment):
@@ -472,7 +475,12 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :param float increment:
             Value by which to increase or decrease the rupture aspect ratio
         """
-        self.rupture_aspect_ratio += increment
+        new_ratio = self.rupture_aspect_ratio + increment
+        if not new_ratio > 0:
+            raise ValueError(
+                'increment %s would result in a non-positive rupture aspect '
+                'ratio (%s)' % (increment, new_ratio))
+        self.rupture_aspect_ratio = new_ratio
 
     def modify_set_slip_rate(self, slip_rate: float):
         """
