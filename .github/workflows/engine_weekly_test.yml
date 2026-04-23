@@ -43,6 +43,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -164,6 +165,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -208,6 +210,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -260,6 +263,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -314,6 +318,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -359,6 +364,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -414,6 +420,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools

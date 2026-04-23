@@ -47,7 +47,7 @@ from openquake.commonlib.calc import (
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import sig_eps_dt
+from openquake.calculators.getters import sig_eps_dt, get_ebrupture
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -366,9 +366,11 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     :returns: list of starmap arguments
     """
     trts = {}
-    rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
+    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
+    rlzs_by_gsim = {}
+    for model, full_lt in get_model_lts(dstore):
         if model == '???':
             logging.info('Building rlzs_by_gsim')
         else:
@@ -376,7 +378,6 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
 
-    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     # store the filtered ruptures for debugging purposes
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
@@ -748,6 +749,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
+        trt = None
         if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
@@ -791,9 +793,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         elif oq.inputs['rupture_model'].endswith('.hdf5'):
-            raise InvalidFile(f"{oq.inputs['job_ini']}: obsolete syntax for "
-                              "rupture_model_file, use hazard_calculation_id "
-                              "instead")
+            # extract single rupture from SES, tested in oq-risk-tests PAPERS
+            with hdf5.File(oq.inputs['rupture_model']) as f:
+                ebr = get_ebrupture(f, oq.rupture_id, trts)
+            trt = ebr.rupture.tectonic_region_type
+            gsim_lt = readinput.get_gsim_lt(oq, [trt])
+            aw = get_rup_array([ebr], oq.maximum_distance(trt))
+            aw['trt_smr'] = 0  # a single TRT
+            if oq.calculation_mode.startswith('scenario'):
+                # rescale n_occ by ngmfs and nrlzs
+                aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         else:
             # should never arrive here
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])

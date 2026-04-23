@@ -23,10 +23,13 @@ import numpy as np
 import pandas as pd
 import json
 
+from django.http import JsonResponse
+from django.conf import settings
+
 from openquake.engine import engine
 from openquake.baselib import writers, hdf5, config
 from openquake.baselib.general import group_array, mp
-from openquake.commonlib.logs import get_datadir, get_job_info
+from openquake.commonlib.logs import get_job_info
 from openquake.commonlib.readinput import get_oqparam
 from openquake.hazardlib.source.rupture import get_ebr
 from openquake.hazardlib import nrml
@@ -36,18 +39,12 @@ from openquake.hazardlib.calc.filters import filter_site_array_around
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 
-from django.http import JsonResponse
-from django.conf import settings
-
 
 # Base path
 BASE = os.path.abspath(
     os.path.join(
         getattr(settings, 'PAPERS_BASEPATH', '/opt/openquake'),
         'Earthquake_Scenarios'))
-
-# oqdata path
-OQDATA = get_datadir()
 
 # DEFAULT INPUTS - ANY OF THESE COULD BE OVERWRITTEN IF THE USER WISHES
 # THROUGH THE DASHBOARD
@@ -139,7 +136,7 @@ def get_scenario_rup_csv(fname, rup_id):
 
     # Write to tmp csv in scenario format
     arr = rupture.to_csv_array([eb_rup])
-    trts=[eb_rup.tectonic_region_type]
+    trts = [eb_rup.tectonic_region_type]
     rup_csv = os.path.join(tempfile.mkdtemp(), f'rup_{eb_rup.id}.csv')
     writers.write_csv(
         rup_csv, arr, sep=',', comment=dict(trts=trts, ses_seed=42))
@@ -210,7 +207,8 @@ def get_filt_sites(sites_fname, rup, hdist):
         setattr(site, 'z2pt5', -999)
 
         # Make site obj
-        pnt = Site(Point(site.lon, site.lat), site.vs30, site.z1pt0, site.z2pt5, **extras)
+        pnt = Site(Point(site.lon, site.lat),
+                   site.vs30, site.z1pt0, site.z2pt5, **extras)
 
         # Add to the list of points
         sites_points.append(pnt)

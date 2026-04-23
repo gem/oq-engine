@@ -38,6 +38,8 @@ jobs:
           export PIP_DEFAULT_TIMEOUT=100
           pip install --default-timeout=100 -U pip
       - name: Install OpenQuake engine
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           if ${{ github.event_name == 'pull_request' }}
