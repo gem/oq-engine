@@ -21,6 +21,7 @@ jobs:
     env:
       # Current LTS version on PyPI (TODO: keep the LTS version updated)
       OQ_LTS_PYPI_VERSION: 3.23
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +32,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install OQ 
+      - name: Install OQ
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |

@@ -1,4 +1,4 @@
-name: MacOS M1
+name: MacOS Arm64 Test and Install
 "on":
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [m1]
+        os: [macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -65,6 +65,7 @@ jobs:
       - name: Install oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           export PIP_DEFAULT_TIMEOUT=100
@@ -93,9 +94,8 @@ jobs:
         if: always()
         run: |
           source ~/openquake/bin/activate
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake
-          pytest baselib/tests/pyproj_wheel_test.py
-          pytest hazardlib/tests/pyproj_wheel_test.py
+          pytest openquake/baselib/tests/pyproj_wheel_test.py
+          pytest openquake/hazardlib/tests/pyproj_wheel_test.py
 
       - name: Run test to start OQ-WebUI in public mode to test installation
         if: always()
@@ -126,13 +126,11 @@ jobs:
           source ~/openquake/bin/activate
           oq info venv
           oq info cfg
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine
           bin/run-demos.sh demos/ openquake/qa_tests_data/
       - name: Run tests for calculators to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
 
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
@@ -140,15 +138,15 @@ jobs:
         run: |
           curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
+          cd openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+          cd ..
 
 
       - name: Run tests for the engine server in public mode to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           OQ_APPLICATION_MODE=PUBLIC pytest -v openquake/server/tests/test_public_mode.py
 
@@ -156,6 +154,5 @@ jobs:
         if: always()
         run: |
           source ~/openquake/bin/activate
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py
