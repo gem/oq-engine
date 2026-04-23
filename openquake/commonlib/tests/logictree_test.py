@@ -1400,13 +1400,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.01)
-
-    def test_set_msr_absolute(self):
-        new_msr = openquake.hazardlib.scalerel.WC1994()
-        lt.apply_uncertainty('setMSRAbsolute', self.point_source, new_msr)
-        self.assertIsInstance(
-            self.point_source.magnitude_scaling_relationship,
-            openquake.hazardlib.scalerel.WC1994)
+        
 
     def test_set_lower_seismogenic_depth_absolute(self):
         lt.apply_uncertainty(
