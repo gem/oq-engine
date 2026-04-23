@@ -389,7 +389,7 @@ def get_ebruptures(dstore):
     return ebrs
 
 
-def get_ebrupture(dstore, rup_id):  # used in show rupture
+def get_ebrupture(dstore, rup_id, trts=()):  # used in show rupture
     """
     This is EXTREMELY inefficient, since it reads all ruptures.
     NB: it assumes rup_is is unique
@@ -398,9 +398,9 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     rupgeoms = dstore['rupgeoms']  # do not read everything in memory
     idxs, = numpy.where(rups['id'] == rup_id)
     if len(idxs) == 0:
-        raise ValueError(f"Missing {rup_id=}")
+        raise ValueError(f"Missing {rup_id=} in {dstore}")
     [rec] = rups[idxs]
-    trts = dstore.getitem('full_lt').attrs['trts']
+    trts = trts or dstore.getitem('full_lt').attrs['trts']
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
     return get_ebr(rec, geom, trt)

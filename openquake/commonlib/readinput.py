@@ -922,6 +922,17 @@ def get_rupture(oqparam):
         if len(rups) == 1:
             # ScenarioDamageTestCase::test_case_12
             rup = rups[0]
+    elif rupture_model and rupture_model.endswith('.hdf5'):
+        with hdf5.File(rupture_model) as f:
+            rups = f['ruptures'][:]
+            recs = rups[rups['id'] == oqparam.rupture_id]
+            if len(recs) == 0:
+                raise KeyError(f'{oqparam.rupture_id} not in {rupture_model}')
+            dic = {k: v for k, v in zip(recs.dtype.names, recs[0])}
+            dic['lon'] = dic['hypo'][0]
+            dic['lat'] = dic['hypo'][1]
+            dic['dep'] = dic['hypo'][2]
+            rup = build_planar_rupture_from_dict(dic)
     elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -1168,7 +1179,8 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
+    if (oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict
+            or oqparam.rupture_id):
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
         # tested in scenario_damage/case_12

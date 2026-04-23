@@ -47,7 +47,7 @@ from openquake.commonlib.calc import (
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
 from openquake.calculators import base, views
-from openquake.calculators.getters import sig_eps_dt
+from openquake.calculators.getters import sig_eps_dt, get_ebrupture
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
 from openquake.calculators.postproc.plots import plot_avg_gmf
@@ -791,9 +791,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         elif oq.inputs['rupture_model'].endswith('.hdf5'):
-            raise InvalidFile(f"{oq.inputs['job_ini']}: obsolete syntax for "
-                              "rupture_model_file, use hazard_calculation_id "
-                              "instead")
+            # extract single rupture from SES, tested in oq-risk-tests PAPERS
+            with hdf5.File(oq.inputs['rupture_model']) as f:
+                ebr = get_ebrupture(f, oq.rupture_id, trts)
+            trt = ebr.rupture.tectonic_region_type
+            aw = get_rup_array([ebr], oq.maximum_distance(trt))
         else:
             # should never arrive here
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
@@ -859,7 +861,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore['weights'] = [1.]
             return {}
         else:  # scenario
-            if 'rupture_model' in oq.inputs or oq.rupture_dict:
+            if ('rupture_model' in oq.inputs and not oq.rupture_id
+                    or oq.rupture_dict):
                 self._read_scenario_ruptures()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):

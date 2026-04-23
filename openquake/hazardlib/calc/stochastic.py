@@ -70,7 +70,7 @@ def get_rup_array(ebruptures, magdist):
             continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        rupid = ebrupture.id + I64(ebrupture.source_id * TWO30)
+        rupid = ebrupture.id + I64(int(ebrupture.source_id) * TWO30)
         tup = (rupid, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
                rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, '???')

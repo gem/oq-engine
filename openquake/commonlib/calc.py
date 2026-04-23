@@ -146,7 +146,8 @@ def get_model_lts(h5):
     else:
         # full_lt is a h5py group
         for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
+            flt = h5[f'full_lt/{model}']
+            out.append((model, flt))
     return out
 
 
