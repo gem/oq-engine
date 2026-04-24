@@ -310,11 +310,14 @@ class MorikawaFujiwara2013CrustalNIED(MorikawaFujiwara2013Crustal):
     sigma model that is described at:
 
     https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 7)
+
+    The distance type used is rrup.
     """
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # Compute the underlying mean
         super().compute(ctx, imts, mean, sig, tau, phi)
-        # Get the NIED sigma and overwrite the original model's sigma
+        
+        # Apply the NIED sigma which is rrup-dependent
         _apply_nied_sigma(
             imts, sig, _get_nied_sigma_crustal(ctx.rrup))
 
@@ -331,10 +334,11 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
     This is the interface variant.
     """
-    # Compute the underlying mean
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        # Compute the underlying mean
         super().compute(ctx, imts, mean, sig, tau, phi)
-        # Apply the NIED sigma
+        
+        # Apply the NIED sigma which is PGV dependent
         _apply_nied_sigma(
             imts, sig, _get_nied_sigma_subduction(ctx, -0.02))
 
@@ -360,9 +364,11 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
     This is the inslab variant.
     """
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+
         # Compute the underlying mean
         super().compute(ctx, imts, mean, sig, tau, phi)
-        # Apply the NIED sigma
+        
+        # Apply the NIED sigma which is PGV-dependent
         _apply_nied_sigma(
             imts, sig, _get_nied_sigma_subduction(ctx, 0.12))
 
