@@ -1424,6 +1424,9 @@ def random_filter(objects, reduction_factor, seed=42):
             col: random_filter(objects[col], reduction_factor, seed)
             for col in objects.columns})
         return df
+    elif isinstance(objects, numpy.ndarray):
+        mask = numpy.random.rand(*objects.shape) < reduction_factor
+        return objects[mask]
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
