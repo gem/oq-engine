@@ -31,15 +31,15 @@ jobs:
 
     steps:
     - name: Clone Repository (Latest)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.12"
     - name: Setup debugging session
