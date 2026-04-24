@@ -13,6 +13,7 @@
 |case\_11|Test GridAdjustedGMPE|
 |case\_10|Test use of alternative characterstic MFD|
 |case\_12|Two TRTs, 1 rlz|
+|case\_13|Test specification of a reference z1pt4 in the job file|
 |case\_18|3 GMPETables|
 |case\_22|Test tiling and International Date Line|
 |case\_23|Filtering away a TRT|

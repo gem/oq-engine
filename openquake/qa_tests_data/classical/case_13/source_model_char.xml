@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="Example Source Model">
+        <sourceGroup name="group1" tectonicRegion="Subduction IntraSlab">
+            <characteristicFaultSource id="001" name="Test source" tectonicRegion="Subduction IntraSlab">
+                <surface>
+                    <planarSurface
+                    dip="0.0"
+                    strike="0.0"
+                    >
+                        <topLeft depth="50.0" lat="-0.11240" lon="-65.0"/>
+                        <topRight depth="50.0" lat="0.11240" lon="-65.0"/>
+                        <bottomLeft depth="80.0" lat="-0.11240" lon="-65.0"/>
+                        <bottomRight depth="80.0" lat="0.11240" lon="-65.0"/>
+                    </planarSurface>
+                </surface>
+                <truncGutenbergRichterMFD aValue="3.2000000E+00" bValue="9.0000000E-01" maxMag="6.5000000E+00" minMag="5.5000000E+00"/>
+                <rake>-90.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
