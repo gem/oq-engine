@@ -66,9 +66,12 @@ class CaseConsistencyTestCase(unittest.TestCase):
             os.path.dirname(__file__))))
         fnames = []
         for cwd, dirs, files in os.walk(repodir):
+            if cwd.endswith('.git'):
+                continue
             for f in files:
                 fnames.append(os.path.join(cwd, f))
-        cnt = collections.Counter([f.lower() for f in fnames])
+        cnt = collections.Counter([f.lower() for f in fnames
+                                   if '.git' not in f])
         for key, counts in cnt.items():
             if counts > 1:
                 raise RuntimeError('There are case-inconsistent files %s' %
