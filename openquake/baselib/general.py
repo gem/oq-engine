@@ -1417,6 +1417,7 @@ def random_filter(objects, reduction_factor, seed=42):
 
     >>> random_filter(numpy.arange(100), .05)
     array([27, 51, 68, 84])
+
     """
     assert 0 < reduction_factor <= 1, reduction_factor
     if reduction_factor == 1:  # do not reduce
