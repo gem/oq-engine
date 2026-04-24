@@ -22,7 +22,7 @@ import operator
 import itertools
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE183, int_to_base183
+from openquake.baselib.general import CallableDict, BASE183
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
@@ -902,10 +902,10 @@ class Realization(object):
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
     base = BASE183
-    if brno + len(bset.branches) >= len(BASE183) ** 2:
+    if brno + len(bset.branches) >= len(BASE183):
         brno = 0
     for br in bset.branches:
-        br.short_id = int_to_base183(brno, base)
+        br.short_id = base[brno]
         path = ['*'] * tot
         path[bsno] = br.id
         paths.append(''.join(path))
