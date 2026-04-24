@@ -40,12 +40,12 @@ class AreaSource(ParametricSeismicSource):
     code = b'A'
     MODIFICATIONS = {
         'adjust_aspect_ratio',
-        'adjust_lower_seismogenic_depth',
-        'adjust_upper_seismogenic_depth',
         'set_aspect_ratio',
         'set_geometry',
         'set_lower_seismogenic_depth',
         'set_upper_seismogenic_depth',
+        'adjust_lower_seismogenic_depth',
+        'adjust_upper_seismogenic_depth',
         'set_msr',
     }
 

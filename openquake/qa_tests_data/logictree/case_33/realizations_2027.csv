@@ -1,0 +1,11 @@
+#,,"generated_by='OpenQuake engine 3.26.0-git9d0f6184f1', start_date='2026-04-24T12:17:05', checksum=927507297"
+rlz_id,branch_path,weight
+0,AAA~A,1.1108889e-01
+1,AAB~A,1.1112222e-01
+2,AAC~A,1.1108889e-01
+3,ABA~A,1.1112222e-01
+4,ABB~A,1.1115556e-01
+5,ABC~A,1.1112222e-01
+6,ACA~A,1.1108889e-01
+7,ACB~A,1.1112222e-01
+8,ACC~A,1.1108889e-01

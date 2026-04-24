@@ -1420,6 +1420,18 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             self.point_source.upper_seismogenic_depth, 5.0)
 
+    def test_set_lower_seismogenic_depth_relative(self):
+        lt.apply_uncertainty(
+            'setLowerSeismDepthRelative', self.point_source, 3.0)
+        self.assertAlmostEqual(
+            self.point_source.lower_seismogenic_depth, 13.0)
+
+    def test_set_upper_seismogenic_depth_relative(self):
+        lt.apply_uncertainty(
+            'setUpperSeismDepthRelative', self.point_source, 2.0)
+        self.assertAlmostEqual(
+            self.point_source.upper_seismogenic_depth, 2.0)
+
     def test_aspect_ratio_absolute_uncertainty(self):
         lt.apply_uncertainty(
             'setAspectRatioAbsolute', self.point_source, 2.0)

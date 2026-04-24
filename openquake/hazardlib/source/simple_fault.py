@@ -84,7 +84,6 @@ class SimpleFaultSource(ParametricSeismicSource):
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'adjust_dip',
-        'adjust_lower_seismogenic_depth',
         'adjust_mfd_from_slip',
         'recompute_mmax',
         'set_aspect_ratio',
@@ -92,6 +91,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_dip',
         'set_geometry',
         'set_lower_seismogenic_depth',
+        'adjust_lower_seismogenic_depth',
         'set_mmax_truncatedGR',
         'set_msr',
         'set_slip_rate',
