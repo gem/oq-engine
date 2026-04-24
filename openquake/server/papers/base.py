@@ -99,7 +99,6 @@ def get_job_ctx(rup_id,
     job_dict = {
         'base_path': os.path.join(BASE, 'Hypothetical_Events'),
         'inputs':{
-            'rupture_id': rup_id,
             'rupture_model': rup_hdf5,
             'gsim_logic_tree': gsim_lt_xml,
             'site_model': [site_model_csv],
@@ -109,6 +108,7 @@ def get_job_ctx(rup_id,
             'consequence': consequence_csv
         },
         'description': f'rupture_id = {rup_id}',
+        'rupture_id': rup_id,
         'calculation_mode': calc_mode,
         'rupture_mesh_spacing': '5',
         'intensity_measure_types': imts,
