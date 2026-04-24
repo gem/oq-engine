@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute"
+                                branchSetID="bs2">
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>10.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b22">
+                    <uncertaintyModel>15.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3334</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b23">
+                    <uncertaintyModel>20.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="setLowerSeismDepthRelative"
+                                branchSetID="bs3">
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>-5.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b32">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3334</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b33">
+                    <uncertaintyModel>5.0</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

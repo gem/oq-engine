@@ -51,6 +51,8 @@ class MultiPointSource(ParametricSeismicSource):
         'set_aspect_ratio',
         'set_lower_seismogenic_depth',
         'set_upper_seismogenic_depth',
+        'adjust_lower_seismogenic_depth',
+        'adjust_upper_seismogenic_depth',
         'set_msr',
     }
 
@@ -119,12 +121,32 @@ class MultiPointSource(ParametricSeismicSource):
         """
         self.lower_seismogenic_depth = lsd
 
+    def modify_adjust_lower_seismogenic_depth(self, increment):
+        """
+        Modifies the lower seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the lower
+            seismogenic depth
+        """
+        self.lower_seismogenic_depth += increment
+
     def modify_set_upper_seismogenic_depth(self, usd):
         """
         Modifies the current source geometry by replacing the original
         upper seismogenic depth with the passed depth
         """
         self.upper_seismogenic_depth = usd
+
+    def modify_adjust_upper_seismogenic_depth(self, increment):
+        """
+        Modifies the upper seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the upper
+            seismogenic depth
+        """
+        self.upper_seismogenic_depth += increment
 
     def get_bounding_box(self, maxdist):
         """

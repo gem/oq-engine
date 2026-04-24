@@ -1,4 +1,7 @@
   [Christopher Brooks]
+  * Add a relative epistemic uncertainty for seismogenic depths in the
+    source model logic tree. Some unit tests added and a QA test in
+    logictree/case_33.
   * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
     the job file.
   

@@ -91,6 +91,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_dip',
         'set_geometry',
         'set_lower_seismogenic_depth',
+        'adjust_lower_seismogenic_depth',
         'set_mmax_truncatedGR',
         'set_msr',
         'set_slip_rate',
@@ -325,6 +326,20 @@ class SimpleFaultSource(ParametricSeismicSource):
         :param float lsd:
             New value of the lsd [km]
         """
+        SimpleFaultSurface.check_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth, lsd,
+            self.dip, self.rupture_mesh_spacing)
+        self.lower_seismogenic_depth = lsd
+
+    def modify_adjust_lower_seismogenic_depth(self, increment):
+        """
+        Modifies the lower seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the lower
+            seismogenic depth
+        """
+        lsd = self.lower_seismogenic_depth + increment
         SimpleFaultSurface.check_fault_data(
             self.fault_trace, self.upper_seismogenic_depth, lsd,
             self.dip, self.rupture_mesh_spacing)
