@@ -999,6 +999,7 @@ def calc_run_scenario_from_ses(request, rup_id):
         rup_id,
         papers.FNAME,
         papers.GMM_LT,
+        papers.SITE_MODEL,
         papers.IMTS_RISK,
         papers.INTEGRATION_DISTANCE,
         papers.TRUNCATION,
@@ -1019,7 +1020,7 @@ def calc_run_scenario_from_ses(request, rup_id):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = papers.get_job_info(job_ctx.calc_id)
+        response_data = logs.get_job_info(job_ctx.calc_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
