@@ -1414,18 +1414,21 @@ def random_filter(objects, reduction_factor, seed=42):
     Given a list of objects, returns a sublist by extracting randomly
     some elements. The reduction factor (< 1) tells how small is the extracted
     list compared to the original list.
+
+    >>> random_filter(numpy.arange(100), .05)
+    array([27, 51, 68, 84])
     """
     assert 0 < reduction_factor <= 1, reduction_factor
     if reduction_factor == 1:  # do not reduce
         return objects
-    rnd = random.Random(seed)
+    rnd = numpy.random.default_rng(seed)
     if isinstance(objects, pandas.DataFrame):
         df = pandas.DataFrame({
             col: random_filter(objects[col], reduction_factor, seed)
             for col in objects.columns})
         return df
     elif isinstance(objects, numpy.ndarray):
-        mask = numpy.random.rand(*objects.shape) < reduction_factor
+        mask = rnd.random(objects.shape) < reduction_factor
         return objects[mask]
     out = []
     for obj in objects:
