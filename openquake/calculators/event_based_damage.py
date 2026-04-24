@@ -105,7 +105,8 @@ def event_based_damage(df, oq, dstore, monitor):
             A = len(aids)
             with mon:
                 rc = scientific.RiskComputer(crmodel, taxo)
-                dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
+                dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)
+                # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[:, aids, 0] += dd5.sum(axis=2)
             else:
