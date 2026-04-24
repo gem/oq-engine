@@ -25,15 +25,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup debugging session
@@ -151,15 +151,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
@@ -196,15 +196,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
@@ -249,15 +249,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
@@ -304,15 +304,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
@@ -350,15 +350,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
@@ -406,15 +406,15 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
