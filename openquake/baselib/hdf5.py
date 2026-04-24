@@ -37,7 +37,7 @@ with warnings.catch_warnings():
     import pandas
 import numpy
 import h5py
-from openquake.baselib import InvalidFile, general
+from openquake.baselib import InvalidFile, general, sap
 from openquake.baselib.general import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
@@ -567,6 +567,42 @@ class File(h5py.File):
         return h5py.File.__getitem__(self, name)
 
 
+def reduce_file(orig_hdf5, redfactor):
+    """
+    Reduce a large HDF5 file, by renaming the original file as .bak.
+
+    :param str orig_hdf5: path to the originale file
+    :param dict redfactor: dataset name -> reduction factor
+
+    $ reduce_file ses.hdf5 ruptures=.001 rupgeoms=.001
+    """
+    red = {}
+    for namefactor in redfactor:
+        name, factor = namefactor.split('=')
+        red[name] = float(factor)
+    os.rename(orig_hdf5, orig_hdf5 + '.bak')
+    with (h5py.File(orig_hdf5 + '.bak', 'r') as src,
+          h5py.File(orig_hdf5, 'w') as dst):
+        def visitor(name, obj):
+            print(f'processing {name}')
+            if isinstance(obj, h5py.Group):
+                if name not in dst:
+                    # i.e. "full_lt/EUR/gsim_lt"
+                    dst.create_group(name)
+            elif isinstance(obj, h5py.Dataset):
+                data = obj[()]
+                if name in red:
+                    data = general.random_filter(data, red[name])
+                if isinstance(data, list):
+                    File.save_vlen(dst, name, data)
+                else:
+                    dst.create_dataset(name, data=data,
+                                       compression=obj.compression)
+            for attr_name, attr_value in obj.attrs.items():
+                    dst[name].attrs[attr_name] = attr_value
+        src.visititems(visitor)
+    
+    
 def array_of_vstr(lst):
     """
     :param lst: a list of strings or bytes
@@ -1134,3 +1170,8 @@ def json_to_obj(js):
     obj = cls.__new__(cls)
     vars(obj).update(attrs)
     return obj
+
+
+if __name__ == '__main__':
+    reduce_file.redfactor = dict(help='reduction factors', nargs='+')
+    sap.run(reduce_file)

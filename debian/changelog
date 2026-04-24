@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
+  * Added parameter `rupture_id` to be used with `rupture_model_file`
+    to run scenarios starting from a SES.hdf5 file
+
   [Michele Simionato, Paolo Tormene]
   * Updated build_exposure_hdf5 to work with the 2026 Global Risk Model
 
