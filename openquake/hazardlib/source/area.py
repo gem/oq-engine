@@ -40,6 +40,8 @@ class AreaSource(ParametricSeismicSource):
     code = b'A'
     MODIFICATIONS = {
         'adjust_aspect_ratio',
+        'adjust_lower_seismogenic_depth',
+        'adjust_upper_seismogenic_depth',
         'set_aspect_ratio',
         'set_geometry',
         'set_lower_seismogenic_depth',
@@ -82,12 +84,32 @@ class AreaSource(ParametricSeismicSource):
         """
         self.lower_seismogenic_depth = lsd
 
+    def modify_adjust_lower_seismogenic_depth(self, increment):
+        """
+        Modifies the lower seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the lower
+            seismogenic depth
+        """
+        self.lower_seismogenic_depth += increment
+
     def modify_set_upper_seismogenic_depth(self, usd):
         """
         Modifies the current source geometry by replacing the original
         upper seismogenic depth with the passed depth
         """
         self.upper_seismogenic_depth = usd
+
+    def modify_adjust_upper_seismogenic_depth(self, increment):
+        """
+        Modifies the upper seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the upper
+            seismogenic depth
+        """
+        self.upper_seismogenic_depth += increment
 
     def iter_ruptures(self, **kwargs):
         """
