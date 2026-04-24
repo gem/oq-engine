@@ -38,8 +38,14 @@ class AreaSource(ParametricSeismicSource):
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
     code = b'A'
-    MODIFICATIONS = {'set_geometry', 'set_lower_seismogenic_depth',
-                     'set_upper_seismogenic_depth'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'set_aspect_ratio',
+        'set_geometry',
+        'set_lower_seismogenic_depth',
+        'set_upper_seismogenic_depth',
+        'set_msr',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

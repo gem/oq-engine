@@ -30,6 +30,7 @@
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_30           | IMT-dependent weights, International Date Line                             |
 | case\_31           | Source Specific Logic Tree                                                 |
+| case\_32           | Tests setAspectRatioAbsolute and setAspectRatioRelative                    |
 | case\_36           | Advanced applyToSources                                                    |
 | case\_39           | 0-IMT-weights, pointsource distance=0 and ruptures collapsing              |
 | case\_45           | MMI with disagg\_by\_src and sampling                                      |

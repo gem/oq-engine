@@ -112,8 +112,13 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = {'set_lower_seismogenic_depth',
-                     'set_upper_seismogenic_depth'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'set_aspect_ratio',
+        'set_lower_seismogenic_depth',
+        'set_upper_seismogenic_depth',
+        'set_msr',
+    }
     ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,

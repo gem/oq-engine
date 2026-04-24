@@ -46,8 +46,13 @@ class MultiPointSource(ParametricSeismicSource):
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
     code = b'M'
-    MODIFICATIONS = {'set_lower_seismogenic_depth',
-                     'set_upper_seismogenic_depth'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'set_aspect_ratio',
+        'set_lower_seismogenic_depth',
+        'set_upper_seismogenic_depth',
+        'set_msr',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
