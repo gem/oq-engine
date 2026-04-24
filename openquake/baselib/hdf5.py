@@ -571,9 +571,8 @@ def reduce_file(orig_hdf5, redfactor):
     """
     Reduce a large HDF5 file, by renaming the original file as .bak.
 
-    :param orig_hdf5: path to the originale file
+    :param str orig_hdf5: path to the originale file
     :param dict redfactor: dataset name -> reduction factor
-    Example:
 
     $ reduce_file ses.hdf5 ruptures=.001 rupgeoms=.001
     """
