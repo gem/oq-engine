@@ -48,6 +48,7 @@ CONSTS = {
     "Mw1": 16.0}
 
 
+### NIED sigma model functions ###
 def _get_nied_sigma_crustal(rrup):
     """
     Distance-dependent total sigma in log10 units for shallow
@@ -108,6 +109,7 @@ def _apply_nied_sigma(imts, sig, sigma_log10):
             sig[m] = sigma_log10 * np.log(10)
 
 
+### Original GMM ###
 def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
     tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
@@ -324,7 +326,7 @@ class MorikawaFujiwara2013CrustalNIED(MorikawaFujiwara2013Crustal):
 
 class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
     """
-    2025 NSHM variant that uses an amplitude-dependent sigma model that
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
     is described in:
     
     https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
@@ -353,7 +355,7 @@ class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIE
 
 class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
     """
-    2025 NSHM variant that uses an amplitude-dependent sigma model that
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
     is described in:
     
     https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
