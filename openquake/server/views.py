@@ -995,22 +995,22 @@ def calc_run_scenario_from_ses(request, rup_id):
     mapping_filepath = request.POST.get('mapping', papers.MAPPING)
 
     # Build the job for the extracted rupture
-    job_ctx = papers.get_job_ctx(
-        rup_id,
-        papers.FNAME,
-        papers.GMM_LT,
-        papers.SITE_MODEL,
-        papers.IMTS_RISK,
-        papers.INTEGRATION_DISTANCE,
-        papers.TRUNCATION,
-        papers.NGMFS,
-        exposure_filepath,
-        mapping_filepath,
-        fragility_curves_filepath,
-        consequence_model_dic,
-        papers.HAZARD_ONLY,
-        username)
     try:
+        job_ctx = papers.get_job_ctx(
+            rup_id,
+            papers.FNAME,
+            papers.GMM_LT,
+            papers.SITE_MODEL,
+            papers.IMTS_RISK,
+            papers.INTEGRATION_DISTANCE,
+            papers.TRUNCATION,
+            papers.NGMFS,
+            exposure_filepath,
+            mapping_filepath,
+            fragility_curves_filepath,
+            consequence_model_dic,
+            papers.HAZARD_ONLY,
+            username)
         mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
             'notify_to': notify_to}).start()
     except Exception as exc:
