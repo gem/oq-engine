@@ -544,7 +544,7 @@ hazard_uhs-std.csv
         # Test seismogenic depth epistemic uncertainties
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv'], 
-             case_32.__file__)    
+             case_33.__file__)    
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
