@@ -55,6 +55,8 @@ def _get_nied_sigma_crustal(rrup):
     crustal earthquakes as described in equation 7 of:
 
     https://www.j-shis.bosai.go.jp/en/labs/mf2013/
+
+    The distance type used is rupture dist
     """
     # Select distance dependent sigma
     return np.where(
