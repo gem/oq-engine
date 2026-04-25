@@ -123,8 +123,7 @@ def sample_cluster(group, num_ses, ses_seed):
             tmp = rng.random(samples * num_ses)
             tot_num_occ = numpy.sum(tmp < grp_p)
         else:
-            msg = 'Rate or Cluster probability of occurrence not defined. '
-            msg += 'Currently, we support only a Poisson TOM'
+            msg = 'Rate or Cluster probability of occurrence not defined'
             raise ValueError(msg)
     else:  # poissonian sources with ClusterPoissonTOM
         tmp = rng.poisson(rate * tom.time_span * samples, num_ses)
@@ -230,7 +229,7 @@ def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
 
             # Check if the rupture has a probability of occurrence
             if hasattr(rup, 'probs_occur'):
-                msg = 'We support only len(probs_occur) == 2O'
+                msg = 'We support only len(probs_occur) == 2'
                 assert len(rup.probs_occur) == 2
                 n_occ = numpy.min([
                             int(numpy.round(n_occ * rup.probs_occur[1])),
