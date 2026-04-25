@@ -193,7 +193,7 @@ main.vs30_csv = dict(help='files with lon,lat,vs30 and no header', nargs='+')
 main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
-main.sentinel_z = dict(help='assign dummy -999 to z1pt0/z2pt5', abbrev='-D')
+main.sentinel_z = dict(help='assign dummy -999 to z1pt0/z2pt5', abbrev='-999')
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
 main.sites_csv = dict(help='sites in CSV format (filenames)', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'

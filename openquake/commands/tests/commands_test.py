@@ -699,7 +699,7 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sentinel_z: z1pt0 and z2pt5 should be -999 for all sites
         sc = sap.runline( # NOTE: -D is sentinel_z
             'openquake.commands prepare_site_model '
-            f'{vs30_csv} -s{vs30_csv} -12 -D -a5 -o {output}') 
+            f'{vs30_csv} -s{vs30_csv} -12 -999 -a5 -o {output}') 
         sm = read_csv(output, {None: float})
         self.assertTrue((sm['z1pt0'] == -999).all())
         self.assertTrue((sm['z2pt5'] == -999).all())
