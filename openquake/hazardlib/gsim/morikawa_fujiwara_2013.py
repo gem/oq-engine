@@ -76,10 +76,13 @@ def _get_nied_sigma_subduction(ctx, d_pgv):
     https://www.j-shis.bosai.go.jp/en/labs/mf2013/
     
     PGV at Vs30=600 m/s is required here and obtained from Si and
-    Midorikawa (1999).
+    Midorikawa (1999). NOTE: Given we need PGV for Vs30 of 600 m/s
+    the _apply_amplification_factor part of SM99's compute method
+    is intentionally skipped here (it's not needed).
 
     d_pgv: coefficient for PGV in Si & Midorikawa (1999) which is
            -0.02 for interface and 0.12 for intraslab
+    
     """
     # Get the PGA for vs30 of 600 m/s in SM99
     pgv_log10 = np.zeros(len(ctx.rrup))
