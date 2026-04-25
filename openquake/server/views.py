@@ -994,23 +994,35 @@ def calc_run_scenario_from_ses(request, rup_id):
         consequence_model_dic = papers.CONSEQUENCE
     mapping_filepath = request.POST.get('mapping', papers.MAPPING)
 
-    return papers.run_scenario_from_ses_ext(
-        fname=papers.FNAME,
-        rup_id=int(rup_id),
-        gmm_lt=papers.GMM_LT,
-        site_model=papers.SITE_MODEL,
-        imts=papers.IMTS_RISK,
-        hdist=papers.INTEGRATION_DISTANCE,
-        eps=papers.TRUNCATION,
-        ngmfs=papers.NGMFS,
-        exposure=exposure_filepath,
-        taxonomy=mapping_filepath,
-        fragility=fragility_curves_filepath,
-        consequence=consequence_model_dic,
-        # day_or_night=TOD,
-        hazard_only=papers.HAZARD_ONLY,
-        notify_to=notify_to,
-        username=username)
+    # Build the job for the extracted rupture
+    try:
+        job_ctx = papers.get_job_ctx(
+            rup_id,
+            papers.FNAME,
+            papers.GMM_LT,
+            papers.SITE_MODEL,
+            papers.IMTS_RISK,
+            papers.INTEGRATION_DISTANCE,
+            papers.TRUNCATION,
+            papers.NGMFS,
+            exposure_filepath,
+            mapping_filepath,
+            fragility_curves_filepath,
+            consequence_model_dic,
+            papers.HAZARD_ONLY,
+            username)
+        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
+            'notify_to': notify_to}).start()
+    except Exception as exc:
+        # get the exception message
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
+        status = 500
+    else:
+        response_data = logs.get_job_info(job_ctx.calc_id)
+        status = 200
+    return JsonResponse(response_data, status=status)
 
 
 def aelo_callback(
