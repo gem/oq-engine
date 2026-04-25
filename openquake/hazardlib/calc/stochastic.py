@@ -213,6 +213,7 @@ def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
         # by that source.
         idxs = numpy.arange(1, src.num_ruptures + 1)
         n_rups_rlz = rng.choice(idxs, src_nocc)
+
         ids = numpy.empty((src_nocc, src.num_ruptures))
         ids[:] = numpy.nan
         _set_ids(n_rups_rlz, ids, src_seed, weights=None)
@@ -226,6 +227,15 @@ def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
 
             # Find the number of occurrences per rupture
             n_occ = int(numpy.sum(ids == i_rup))
+
+            # Check if the rupture has a probability of occurrence
+            if hasattr(rup, 'probs_occur'):
+                msg = 'We support only len(probs_occur) == 2O'
+                assert len(rup.probs_occur) == 2
+                n_occ = numpy.min([
+                            int(numpy.round(n_occ * rup.probs_occur[1])),
+                            n_occ
+                            ])
 
             # Update the list with the ruptures
             if n_occ:
