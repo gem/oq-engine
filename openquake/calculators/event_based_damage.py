@@ -59,34 +59,33 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
         dstore.parent.open('r')
     dfs = []
     with dstore, monitor('reading data', measuremem=True):
-        for gmfslice in gmfslices:
-            slc = slice(gmfslice[0], gmfslice[1])
-            dfs.append(dstore.read_df('gmf_data', slc=slc))
-        df = pandas.concat(dfs)
-    return event_based_damage(df, oqparam, dstore, monitor)
-
-
-def event_based_damage(df, oq, dstore, monitor):
-    """
-    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
-    :param oq: parameters coming from the job.ini
-    :param dstore: a DataStore instance
-    :param monitor: a Monitor instance
-    :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
-    """
-    mon = monitor('computing dds', measuremem=False)
-    with monitor('reading gmf_data'):
-        if oq.parentdir:
-            dstore = datastore.read(oq.hdf5path, parentdir=oq.parentdir)
+        if oqparam.parentdir:
+            dstore = datastore.read(
+                oqparam.hdf5path, parentdir=oqparam.parentdir)
         else:
             dstore.open('r')
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
+        rlzs = dstore['events']['rlz_id']
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        df = pandas.concat(dfs)
+    return calc_damage(df, oqparam, assetcol, crmodel, aggids, rlzs, monitor)
+
+
+def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs, monitor):
+    """
+    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
+    :param oq: parameters coming from the job.ini
+    :param monitor: a Monitor instance
+    :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
+    """
+    mon = monitor('computing dds', measuremem=False)
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
-    rlzs = dstore['events']['rlz_id']
     dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
         # working one site at the time
@@ -152,7 +151,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
     """
-    core_task = event_based_damage
+    core_task = damage_from_gmfs
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based',
