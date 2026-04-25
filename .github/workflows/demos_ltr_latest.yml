@@ -23,14 +23,14 @@ jobs:
     steps:
       - name: Check out the codebase (Master)
         if: github.event.inputs.git-ref == ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Check out the codebase (Custom Ref)
         if: github.event.inputs.git-ref != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Upgrade pip
@@ -38,6 +38,8 @@ jobs:
           export PIP_DEFAULT_TIMEOUT=100
           pip install --default-timeout=100 -U pip
       - name: Install OpenQuake engine
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           if ${{ github.event_name == 'pull_request' }}

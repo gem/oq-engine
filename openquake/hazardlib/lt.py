@@ -395,6 +395,16 @@ def _setMSR(utype, source, value):
     source.modify('set_msr', dict(new_msr=msr))
 
 
+@apply_uncertainty.add('setAspectRatioAbsolute')
+def _set_aspect_ratio_absolute(utype, source, value):
+    source.modify('set_aspect_ratio', dict(aspect_ratio=value))
+
+
+@apply_uncertainty.add('setAspectRatioRelative')
+def _set_aspect_ratio_relative(utype, source, value):
+    source.modify('adjust_aspect_ratio', dict(increment=value))
+
+
 @apply_uncertainty.add('recomputeMmax')
 def _recompute_mmax_absolute(utype, source, value):
     epsilon = value
@@ -408,7 +418,17 @@ def _setLSD(utype, source, value):
 
 @apply_uncertainty.add('setUpperSeismDepthAbsolute')
 def _setUSD(utype, source, value):
-    source.modify('set_upper_seismogenic_depth', dict(lsd=float(value)))
+    source.modify('set_upper_seismogenic_depth', dict(usd=float(value)))
+
+
+@apply_uncertainty.add('setLowerSeismDepthRelative')
+def _setLSDRelative(utype, source, value):
+    source.modify('adjust_lower_seismogenic_depth', dict(increment=float(value)))
+
+
+@apply_uncertainty.add('setUpperSeismDepthRelative')
+def _setUSDRelative(utype, source, value):
+    source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
 
 
 @apply_uncertainty.add('dummy')  # do nothing

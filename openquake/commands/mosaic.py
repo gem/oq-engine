@@ -307,8 +307,7 @@ def impact(exposure_hdf5='', *,
     """
     Run OQImpact calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
-    a directory containing two files site_model.hdf5 and exposure.hdf5
-    with a well defined structure.
+    a directory containing a file exposure.hdf5 with a well defined structure.
     """
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')

@@ -48,6 +48,7 @@ param = dict(
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
+    z1pt4='reference_depth_to_1pt4km_per_sec',
     region='region',
     xvf='xvf')
 
@@ -180,7 +181,7 @@ class Site(object):
     :raises ValueError:
         If ``vs30`` is zero or negative
         OR
-        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        ``z1pt0`` or ``z2pt5`` is zero, or negative AND not -999 (a value of
         -999 informs basin param using GMMs to estimate values for such sites
         with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
@@ -511,8 +512,8 @@ class SiteCollection(object):
 
     def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5')):
         """
-        Set the global site parameters
-        (vs30, vs30measured, z1pt0, z2pt5)
+        Set the global site parameters (i.e. those specifiable in the job
+        file as reference values).
         """
         self._set('vs30', oq.reference_vs30_value)
         self._set('vs30measured',
@@ -521,6 +522,8 @@ class SiteCollection(object):
             self._set('z1pt0', oq.reference_depth_to_1pt0km_per_sec)
         if 'z2pt5' in req_site_params:
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
+        if 'z1pt4' in req_site_params:
+            self._set('z1pt4', oq.reference_depth_to_1pt4km_per_sec)
 
     def filtered(self, indices):
         """

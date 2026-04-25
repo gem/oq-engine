@@ -236,7 +236,10 @@ class GsimLogicTree(object):
                          'branchSetID': 'bs1',
                          'uncertaintyType': 'gmpeModel'},
                         nodes=ltbranches)])
-        return cls('fake', [trt], ltnode=lt)
+        try:
+            return cls('fake', [trt], ltnode=lt)
+        except Exception as exc:
+            raise exc.__class__(f"{mosaic_model}: {exc}") from None
 
     @classmethod
     def read_dict(cls, fname, tectonic_region_types=['*']):

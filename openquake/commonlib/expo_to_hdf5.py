@@ -35,10 +35,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 B32 = (numpy.bytes_, 32)
 CONV = {n: F32 for n in '''
-BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
-COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
-OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
-OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
+BUILDINGS COST_CONTENTS_USD BLDG_REPL_COST_USD CARBON_BUILDINGS_TON
+LATITUDE LONGITUDE OCCUPANTS_TOTAL
+OCCUPANTS_AVERAGE OCCUPANTS_DAY
+OCCUPANTS_NIGHT OCCUPANTS_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B32
 for f in (None, 'ID_1', 'ID_2', 'ID_3', 'ID_4', 'BARRIO_ID', 'PARROQUIA_ID',
@@ -46,20 +46,22 @@ for f in (None, 'ID_1', 'ID_2', 'ID_3', 'ID_4', 'BARRIO_ID', 'PARROQUIA_ID',
     CONV[f] = B32
 TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
-FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
+FIELDS = {'TAXONOMY', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
-          'OCCUPANTS_PER_ASSET', 'OCCUPANTS_PER_ASSET_AVERAGE',
-          'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
-          'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
-          'BUILDINGS', 'COST_STRUCTURAL_USD', 'NAME_1', 'NAME_2',
+          'OCCUPANTS_TOTAL', 'OCCUPANTS_AVERAGE',
+          'OCCUPANTS_DAY', 'OCCUPANTS_NIGHT',
+          'OCCUPANTS_TRANSIT', 'TOTAL_AREA_SQM',
+          'BUILDINGS', 'BLDG_REPL_COST_USD',
+          'CARBON_BUILDINGS_TON', 'NAME_1', 'NAME_2',
           'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 HEX6 = (numpy.bytes_, 6)
+
 
 class Indexer(object):
     """
     Class fine-tuned for our current world exposure containing ~72M assets
     """
-    def __init__(self, name, maxsize=99_000_000):
+    def __init__(self, name, maxsize=199_000_000):
         self.name = name
         self.maxsize = maxsize
         self.dic = {}
@@ -279,14 +281,14 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
     store_tagcol(dstore, indexer)
     save_by_country(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
-    # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
-    # truncation to 32 bytes will be ignored
+    # NOTE: with errors='ignore' encoding errors in the NAME_2 values
+    # due to the truncation to 32 bytes will be ignored
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8', errors='ignore') for id2 in ID2s]
 
     dt = time.time() - t0
     logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
-        n, dstore.filename, int(dt)))
+        num_assets, dstore.filename, int(dt)))
 
     if sanity_check:
         for name in commonfields:
@@ -300,22 +302,20 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
 
 def read_world_tmap(grm_dir):
     """
-    :returns: a dict pathname -> longname
+    :returns: dict {pathname: country_iso3}
     """
-    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
-    tmap_df = pandas.read_csv(summary, index_col=['country'])
-    dic = {}
-    for fname, df in tmap_df.groupby('fname'):
-        dic[fname] = '_'.join(sorted(df.index))
-    n = len(dic)
     out = {}
-    assert len(set(dic.values())) == n, sorted(dic.values())
-    for cwd, dirs, files in os.walk(grm_dir):
+    seen = set()
+    for cwd, _, files in os.walk(grm_dir):
         for f in files:
-            if f in dic:
-                out[os.path.join(cwd, f)] = dic[f]
-            elif f.startswith('taxonomy_mapping'):
-                raise NameError(f'{f} is not listed in {summary}')
+            if (not f.startswith("Vulnerability_mapping_")
+                    or not f.endswith(".csv")):
+                continue
+            iso3 = f[len("Vulnerability_mapping_"):-4]
+            if iso3 in seen:
+                raise ValueError(f"Duplicate mapping file for {iso3}")
+            seen.add(iso3)
+            out[os.path.join(cwd, f)] = iso3
     return out
 
 
@@ -326,6 +326,9 @@ def store_world_tmap(grm_dir, dstore):
     dic = read_world_tmap(grm_dir)
     for f, name in dic.items():
         df = pandas.read_csv(f)
+        # FIXME: changing risk_id to conversion for backward-compatibility
+        # We may change the code that reads it instead
+        df.rename(columns={'risk_id': 'conversion'}, inplace=True)
         try:
             dstore.create_df('tmap/' + name, df)
         except ValueError:  # exists already

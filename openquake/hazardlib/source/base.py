@@ -34,6 +34,8 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 F64 = numpy.float64
+I64 = numpy.int64
+TWO30 = I64(2**30)
 
 @dataclass
 class SourceParam:
@@ -276,8 +278,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
-            ebr.seed = ebr.id + ses_seed
+            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
+                            seed=rupid + TWO30 * self.id + ses_seed)
             yield ebr
 
     def get_mags(self):
@@ -454,6 +456,32 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.magnitude_scaling_relationship = new_msr
 
+    def modify_set_aspect_ratio(self, aspect_ratio):
+        """
+        Replaces the rupture aspect ratio with the given value
+
+        :param float aspect_ratio:
+            New value of the rupture aspect ratio (must be positive)
+        """
+        if not aspect_ratio > 0:
+            raise ValueError('rupture aspect ratio must be positive, got %s'
+                             % aspect_ratio)
+        self.rupture_aspect_ratio = aspect_ratio
+
+    def modify_adjust_aspect_ratio(self, increment):
+        """
+        Adjusts the rupture aspect ratio by an incremental value
+
+        :param float increment:
+            Value by which to increase or decrease the rupture aspect ratio
+        """
+        new_ratio = self.rupture_aspect_ratio + increment
+        if not new_ratio > 0:
+            raise ValueError(
+                'increment %s would result in a non-positive rupture aspect '
+                'ratio (%s)' % (increment, new_ratio))
+        self.rupture_aspect_ratio = new_ratio
+
     def modify_set_slip_rate(self, slip_rate: float):
         """
         Updates the slip rate assigned to the source
@@ -465,7 +493,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def modify_set_mmax_truncatedGR(self, mmax: float):
         """
-        Updates the mmax assigned. This works on for parametric MFDs.s
+        Updates the mmax assigned. This works on for parametric MFDs.
 
         :param mmax:
             The value of the new maximum magnitude

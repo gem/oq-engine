@@ -64,7 +64,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import (
-    build_planar_rupture_from_dict, get_ruptures)
+    build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -87,6 +87,50 @@ class DuplicatedPoint(Exception):
     """
     Raised when reading a CSV file with duplicated (lon, lat) pairs
     """
+
+
+def get_close_mosaic_models(lon, lat, buffer_radius):
+    """
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: list of mosaic models intersecting the circle
+        centered on the given coordinates having the specified radius
+    """
+    mosaic_df = read_mosaic_df()
+    close_mosaic_models = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, mosaic_df)
+    if not close_mosaic_models:
+        raise ValueError(
+            f'({lon}, {lat}) is farther than {buffer_radius} deg'
+            f' from any mosaic model!')
+    elif len(close_mosaic_models) > 1:
+        logging.info('(%s, %s) is close to the following mosaic models: %s',
+                     lon, lat, close_mosaic_models)
+    return close_mosaic_models
+
+
+def get_closest_country(lon, lat, buffer_radius):
+    """
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: the closest country or '???'
+    """
+    countries_df = read_countries_df()
+    close_countries = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, countries_df)
+    if not close_countries:
+        return '???'
+    return close_countries[0]
 
 
 # used in extract_fom_zip
@@ -544,7 +588,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                     z[name] = valid.latitudes(coos)
                 else:
                     z[name] = valid.longitudes(coos)
-            elif name in ["vs30", "z1pt0", "z2pt5"]:
+            elif name in ["vs30", "z1pt0", "z2pt5", "z1pt4"]:
                 pars = ' '.join(str(x) for x in vals)
                 if name == 'vs30' and not oqparam.override_vs30:
                     # if override_vs30 is set, then we can have vs30=-999
@@ -829,15 +873,17 @@ def get_gsim_lt(oqparam, trts=()):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
-        if oqparam.calculation_mode.startswith(('classical', 'disaggregation')):
+        if oqparam.calculation_mode.startswith(('classical',
+                                                'disaggregation')):
             raise InvalidFile(
                 f'{oqparam.inputs["gsim_logic_tree"]}: IMT-dependent weights '
                 'in the GMM logic tree require full enumeration')
         else:
-            logging.error('IMT-dependent weights in the logic tree cannot work '
-                          'with sampling, because they would produce different '
-                          'GMPE paths for each IMT that cannot be combined; '
-                          'using the default weights')
+            logging.error(
+                'IMT-dependent weights in the logic tree cannot work '
+                'with sampling, because they would produce different '
+                'GMPE paths for each IMT that cannot be combined; '
+                'using the default weights')
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
@@ -876,6 +922,10 @@ def get_rupture(oqparam):
         if len(rups) == 1:
             # ScenarioDamageTestCase::test_case_12
             rup = rups[0]
+    elif rupture_model and rupture_model.endswith('.hdf5'):
+        trts = list(get_gsim_lt(oqparam).values)
+        with hdf5.File(rupture_model) as ses:
+            rup = get_ebrupture(ses, oqparam.rupture_id, trts).rupture
     elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -937,18 +987,12 @@ def get_full_lt(oqparam):
         logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
-    else:  # full enumeration
+    elif 'classical' in oqparam.calculation_mode:  # full enumeration
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'raise `max_potential_paths`, use sampling instead of '
                 'full enumeration, or set use_rates=true ' % p)
-        elif (oqparam.is_event_based() and
-              (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
-                and p > oqparam.max_potential_paths / 100):
-            logging.warning(
-                'There are many potential logic tree paths (%d): '
-                'try to use sampling or reduce the source model' % p)
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt
@@ -1048,13 +1092,13 @@ def get_crmodel(oqparam):
     """
     if oqparam.impact:
         hypo = get_rupture(oqparam).hypocenter
-        # NB: the country can be unknown, i.e. '???'
-        [country] = site.get_countries([hypo.x], [hypo.y])
+        country = get_closest_country(hypo.x, hypo.y, 5)
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
                 crm = riskmodels.CompositeRiskModel.read(
-                    exp, oqparam, str(country))
+                    exp, oqparam, country)
             except KeyError:
+                raise
                 pass  # missing crm in exposure.hdf5 in mosaic/case_01
             else:
                 return crm
@@ -1106,8 +1150,11 @@ def read_consdict(oqparam, limit_states, perils):
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
-            consdict['%s_by_%s' % (consequence, by)] = df[
-                df.consequence == consequence]
+            if by == 'risk_id':  # by is risk_id or taxonomy
+                key = f'{consequence}_by_{by}'
+            else:
+                key = by
+            consdict[key] = df[df.consequence == consequence]
     return consdict
 
 
@@ -1125,7 +1172,8 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
+    if (oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict
+            or oqparam.rupture_id):
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
         # tested in scenario_damage/case_12
@@ -1139,10 +1187,12 @@ def get_exposure(oqparam, h5=None):
             hexes = [h.encode('ascii') for h in hexes]
             exposure = asset.Exposure.read_around(fnames[0], hexes, rupfilter)
             with hdf5.File(fnames[0]) as f:
-                if 'crm' in f:
-                    loss_types = f['crm'].attrs['loss_types']
-                    oq.all_cost_types = loss_types
-                    oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
+                # NB: the loss_types are the same for all regions in the world
+                # Africa is the first region and is present in the short file
+                # used in the tests
+                loss_types = f['crmAfrica'].attrs['loss_types']
+                oq.all_cost_types = loss_types
+                oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,

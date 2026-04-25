@@ -1616,7 +1616,7 @@ def extract_rupids(dstore, what):
         rups = dstore['filtered_ruptures'][:]
     except KeyError:
         rups = dstore['ruptures'][:]
-    return rups[['id', 'mag', 'n_occ']]
+    return rups[['id', 'mag', 'n_occ', 'model']]
 
 
 @extract.add('ebruptures')
