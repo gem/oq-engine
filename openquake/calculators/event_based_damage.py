@@ -67,26 +67,36 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
-        rlzs = dstore['events']['rlz_id']
+        if oqparam.R > 1:
+            # i.e. case_9 in scenario_damage
+            rlzs = dstore['events']['rlz_id']
+        else:
+            rlzs = None
         for gmfslice in gmfslices:
             slc = slice(gmfslice[0], gmfslice[1])
             dfs.append(dstore.read_df('gmf_data', slc=slc))
         df = pandas.concat(dfs)
-    return calc_damage(df, oqparam, assetcol, crmodel, aggids, rlzs, monitor)
+    with monitor('calc_damage', measuremem=True):
+        dd_dict, dmgcsq = calc_damage(
+            df, oqparam, assetcol, crmodel, aggids, rlzs)
+    csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
+    return _dframe(dd_dict, csqidx, oqparam.loss_types), dmgcsq
 
 
-def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs, monitor):
+def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs=None):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
     :param oq: parameters coming from the job.ini
-    :param monitor: a Monitor instance
-    :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
+    :param assetcol: AssetCollection instance
+    :param crmodel: CompositeRiskModel instance
+    :param aggids: array of aggregation indices
+    :param rlzs: array of realization indices (or None for single rlz)
+    :returns: (damages (eid, kid) -> LDc, dmgcsq)
     """
-    mon = monitor('computing dds', measuremem=False)
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
-    dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
+    dd_dict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
         # working one site at the time
         gmf_df = df[df.sid == sid]
@@ -102,10 +112,8 @@ def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs, monitor):
         for taxo, adf in asset_df.groupby('taxonomy'):
             aids = adf.index.to_numpy()
             A = len(aids)
-            with mon:
-                rc = scientific.RiskComputer(crmodel, taxo)
-                dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)
-                # (A, E, L, Dc)
+            rc = scientific.RiskComputer(crmodel, taxo)
+            dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[:, aids, 0] += dd5.sum(axis=2)
             else:
@@ -123,19 +131,18 @@ def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs, monitor):
                 dd4 = dd5[0]
             tot = dd4.sum(axis=0)  # (E, L, Dc)
             for e, eid in enumerate(eids):
-                dddict[eid, oq.K] += tot[e]
+                dd_dict[eid, oq.K] += tot[e]
                 if oq.K:
                     for kids in aggids:
                         for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]] += dd4[a, e]
-    csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
-    return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
+                            dd_dict[eid, kids[aid]] += dd4[a, e]
+    return dd_dict, dmgcsq
 
 
-def _dframe(dddic, csqidx, loss_types):
+def _dframe(dd_dic, csqidx, loss_types):
     # convert {(eid, kid): dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in sorted(dddic.items()):
+    for (eid, kid), dd in sorted(dd_dic.items()):
         for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)
