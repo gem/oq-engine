@@ -46,10 +46,10 @@ def zero_dmgcsq(A, R, L, crmodel):
     return numpy.zeros((P, A, R, L, Dc), F32)
 
 
-def damage_from_gmfs(gmf_df, oqparam, dstore, monitor):
+def damage_from_gmfs(df, oq, dstore, monitor):
     """
-    :param gmf_df: a DataFrame of GMFs
-    :param oqparam: OqParam instance
+    :param df: a DataFrame of GMFs
+    :param oq: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays, the output of event_based_damage
@@ -58,28 +58,12 @@ def damage_from_gmfs(gmf_df, oqparam, dstore, monitor):
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
-        if oqparam.R > 1:
+        if oq.R > 1:
             # i.e. case_9 in scenario_damage
             rlzs = dstore['events']['rlz_id']
         else:
             rlzs = None
-    with monitor('calc_damage', measuremem=True):
-        dd_dict, dmgcsq = calc_damage(
-            gmf_df, oqparam, assetcol, crmodel, aggids, rlzs)
-    csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
-    return _dframe(dd_dict, csqidx, oqparam.loss_types), dmgcsq
 
-
-def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs=None):
-    """
-    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
-    :param oq: parameters coming from the job.ini
-    :param assetcol: AssetCollection instance
-    :param crmodel: CompositeRiskModel instance
-    :param aggids: array of aggregation indices
-    :param rlzs: array of realization indices (or None for single rlz)
-    :returns: (damages (eid, kid) -> LDc, dmgcsq)
-    """
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
@@ -184,7 +168,9 @@ class DamageCalculator(EventBasedRiskCalculator):
         smap.monitor.save('crmodel', self.crmodel)
         for gmf_df in gmf_dfs:
             smap.submit((gmf_df, oq, self.datastore))
-        for df, dmgcsq in smap:
+        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
+        for dd_dict, dmgcsq in smap:
+            df = _dframe(dd_dict, csqidx, oq.loss_types)
             self.dmgcsq += dmgcsq
             with self.monitor('saving risk_by_event', measuremem=True):
                 for name in df.columns:
