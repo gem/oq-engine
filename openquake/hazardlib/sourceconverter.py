@@ -70,7 +70,7 @@ def get_aspect_ratio(node):
             raise ValueError(
                 f"aspectRatioFunction points must be in ascending magnitude "
                 f"order: mag[0]={points[0][0]} >= mag[1]={points[1][0]}")
-        return {"function": points, "type": "linear"}
+        return {"function": points, "type": "linear_piecewise"}
 
     raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
 

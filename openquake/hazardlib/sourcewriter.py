@@ -341,6 +341,29 @@ def build_hypo_depth_dist(hdd):
     return Node("hypoDepthDist", nodes=hdds)
 
 
+def build_aspect_ratio_node(rar):
+    """
+    Build the aspect ratio XML node, supporting both scalar and
+    magnitude-dependent (aspectRatioFunction) forms.
+    """
+    if not isinstance(rar, dict):
+        # Regular scalar aspect ratio
+        return Node("ruptAspectRatio", text=rar)
+    
+    # Get the type of expression used to compute aspect ratio
+    func_type =  rar["type"]
+
+    if func_type == "linear_piecewise":
+        # Simple linear interp between mmin and mmax and clamp otherwise
+        point_nodes = [Node("point", {"mag": m, "aratio": a})
+                    for m, a in rar["function"]]
+        points_node = Node("points", nodes=point_nodes)
+        type_node = Node("type", text="linear_piecewise")
+        return Node("aspectRatioFunction", nodes=[type_node, points_node])
+
+    raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
+
+
 def get_distributed_seismicity_source_nodes(source):
     """
     Returns list of nodes of attributes common to all distributed seismicity
@@ -359,8 +382,7 @@ def get_distributed_seismicity_source_nodes(source):
         Node("magScaleRel",
              text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
-    source_nodes.append(
-        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
+    source_nodes.append(build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse nodal plane distribution
@@ -419,8 +441,7 @@ def get_fault_source_nodes(source):
             "magScaleRel",
             text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
-    source_nodes.append(
-        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
+    source_nodes.append(build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake

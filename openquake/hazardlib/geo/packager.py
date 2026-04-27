@@ -38,7 +38,7 @@ def geodict(row):
     for f in row.__class__.__annotations__:
         if f not in ('geom', 'coords'):
             val = getattr(row, f)
-            prop[f] = json.dumps(val) if isinstance(val, list) else val
+            prop[f] = json.dumps(val) if isinstance(val, (list, dict)) else val
     return {'geometry': {'type': row.geom.replace('3D ', ''),
                          'coordinates': row.coords},
             'properties': prop}
@@ -93,8 +93,12 @@ def build_nodes(props):
     mfd_subnodes = [Node(tag, {}, scientificformat(dic[tag]))
                     for tag in dic.keys() if not tag.startswith('_')]
     msr = Node('magScaleRel', text=props['magscalerel'])
-    rar = Node('ruptAspectRatio',
-               text=scientificformat(props['ruptaspectratio']))
+    raw_rar = props['ruptaspectratio']
+    if isinstance(raw_rar, str) and raw_rar.startswith('{'):
+        from openquake.hazardlib.sourcewriter import build_aspect_ratio_node
+        rar = build_aspect_ratio_node(json.loads(raw_rar))
+    else:
+        rar = Node('ruptAspectRatio', text=scientificformat(raw_rar))
     mfd = Node(mfd, mfd_attrs, nodes=mfd_subnodes)
     nodes = [msr, rar, mfd]
     npd = ast.literal_eval(props['nodalplanedist'])

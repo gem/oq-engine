@@ -492,7 +492,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         if not isinstance(rar, dict):
             return rar
         rar_type = rar["type"]
-        if rar_type == "linear":
+        if rar_type == "linear_piecewise":
             return linear_piecewise_aratio(mag, rar["function"])
         raise ValueError(f"Unsupported aspectRatioFunction type: {rar_type}")
 

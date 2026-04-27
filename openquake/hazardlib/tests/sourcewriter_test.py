@@ -26,7 +26,8 @@ import unittest
 import tempfile
 
 from openquake.baselib import general
-from openquake.hazardlib.sourcewriter import write_source_model, tomldump
+from openquake.hazardlib.sourcewriter import (
+    write_source_model, tomldump, build_aspect_ratio_node)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib import nrml
 
@@ -129,6 +130,36 @@ class SourceWriterTestCase(unittest.TestCase):
         os.remove(self.saved + '.toml')
         
     # NB: UCERF-like sources are also tested in multi_fault_test.py
+
+
+class BuildAspectRatioNodeTestCase(unittest.TestCase):
+    """Tests for build_aspect_ratio_node, which serialises rupture aspect ratio
+    to an XML Node for both the legacy scalar form and the new
+    magnitude-dependent aspectRatioFunction form."""
+
+    def test_scalar_produces_rupt_aspect_ratio_node(self):
+        # A regular float should work as usual
+        node = build_aspect_ratio_node(1.5)
+        self.assertEqual(node.tag, 'ruptAspectRatio')
+        self.assertEqual(node.text, 1.5)
+
+    def test_dict_produces_aspect_ratio_function_node(self):
+        # Round trip from dict as produced in sourceconverter into
+        # build_aspect_ratio_node and back to identical same dict
+        rar = {"function": [(4.0, 1.0), (7.0, 2.0)], "type": "linear_piecewise"}
+        node = build_aspect_ratio_node(rar)
+        self.assertEqual(node.tag, 'aspectRatioFunction')
+        repr_tags = [n.tag for n in node.nodes]
+        self.assertIn('type', repr_tags)
+        self.assertIn('points', repr_tags)
+        # The dict type key and the XML type text are both "linear_piecewise"
+        type_node = next(n for n in node.nodes if n.tag == 'type')
+        self.assertEqual(type_node.text, 'linear_piecewise')
+        # Check the (mag, aratio) pairs
+        points_node = next(n for n in node.nodes if n.tag == 'points')
+        self.assertEqual(len(points_node.nodes), 2)
+        self.assertEqual(points_node.nodes[0].attrib['mag'], 4.0)
+        self.assertEqual(points_node.nodes[1].attrib['aratio'], 2.0)
 
 
 class TOMLTestCase(unittest.TestCase):
