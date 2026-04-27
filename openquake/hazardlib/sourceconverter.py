@@ -652,6 +652,32 @@ class SourceConverter(RuptureConverter):
             fix_dupl(hddist, self.fname, hdnode.lineno)
             return pmf.PMF(hddist)
 
+    def _get_aspect_ratio(self, node):
+        """
+        Get the aspect ratio. It can be either a single float value or a
+        piecewise function which is evaluated during rupture generation.
+        """
+        # Try get aspect ratio function node
+        arf = node.find('aspectRatioFunction')
+
+        if arf is None:
+            # Must be a regular aspect ratio
+            return ~node.ruptAspectRatio
+
+        # Not a regular aspect ratio - get the type of it
+        func_type = arf.findtext('type')
+        
+        if func_type == 'linear_piecewise':
+            # Collect the linear aspect ratio function
+            linear_piecewise = [
+                (float(p.get('mag')), float(p.get('aratio')))
+                for p in arf.find('points')
+            ]
+            breakpoint()
+            return linear_piecewise
+
+        raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
+
     def convert_areaSource(self, node):
         """
         Convert the given node into an area source object.
@@ -678,7 +704,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=~node.ruptAspectRatio,
+            rupture_aspect_ratio=self._get_aspect_ratio(node),
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
@@ -704,7 +730,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=~node.ruptAspectRatio,
+            rupture_aspect_ratio=self._get_aspect_ratio(node),
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             location=geo.Point(*lon_lat),
@@ -728,7 +754,7 @@ class SourceConverter(RuptureConverter):
             tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=~node.ruptAspectRatio,
+            rupture_aspect_ratio=self._get_aspect_ratio(node),
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
@@ -761,7 +787,7 @@ class SourceConverter(RuptureConverter):
                 node['id'], node['name'],
                 node.attrib.get('tectonicRegion'),
                 mfd, self.rupture_mesh_spacing,
-                msr, ~node.ruptAspectRatio, self.get_tom(node),
+                msr, self._get_aspect_ratio(node), self.get_tom(node),
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
                 [hypo_list, slip_list])
@@ -800,7 +826,7 @@ class SourceConverter(RuptureConverter):
                     mfd=mfd,
                     rupture_mesh_spacing=self.rupture_mesh_spacing,
                     magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=~node.ruptAspectRatio,
+                    rupture_aspect_ratio=self._get_aspect_ratio(node),
                     temporal_occurrence_model=self.get_tom(node),
                     profiles=profiles,
                     floating_x_step=xstep,
@@ -813,7 +839,7 @@ class SourceConverter(RuptureConverter):
                     node['id'], node['name'],
                     node.attrib.get('tectonicRegion'),
                     mfd, self.rupture_mesh_spacing,
-                    msr, ~node.ruptAspectRatio, self.get_tom(node))
+                    msr, self._get_aspect_ratio(node), self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
                     param,
                     ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
@@ -843,7 +869,7 @@ class SourceConverter(RuptureConverter):
                 mfd=mfd,
                 rupture_mesh_spacing=self.complex_fault_mesh_spacing,
                 magnitude_scaling_relationship=msr,
-                rupture_aspect_ratio=~node.ruptAspectRatio,
+                rupture_aspect_ratio=self._get_aspect_ratio(node),
                 edges=edges,
                 rake=~node.rake,
                 temporal_occurrence_model=self.get_tom(node))
@@ -1173,7 +1199,7 @@ class RowConverter(SourceConverter):
             node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
-            ~node.ruptAspectRatio,
+            self._get_aspect_ratio(node),
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
@@ -1194,7 +1220,7 @@ class RowConverter(SourceConverter):
             node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
-            ~node.ruptAspectRatio,
+            self._get_aspect_ratio(node),
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
@@ -1216,7 +1242,7 @@ class RowConverter(SourceConverter):
             node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
-            ~node.ruptAspectRatio,
+            self._get_aspect_ratio(node),
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
             self.convert_npdist(node),
@@ -1237,7 +1263,7 @@ class RowConverter(SourceConverter):
             node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
-            ~node.ruptAspectRatio,
+            self._get_aspect_ratio(node),
             ~geom.upperSeismoDepth,
             ~geom.lowerSeismoDepth,
             [],
@@ -1261,7 +1287,7 @@ class RowConverter(SourceConverter):
             node.get('tectonicRegion', ''),
             self.convert_mfdist(node),
             str(~node.magScaleRel),
-            ~node.ruptAspectRatio,
+            self._get_aspect_ratio(node),
             numpy.nan,
             numpy.nan,
             [],
@@ -1321,6 +1347,7 @@ class RowConverter(SourceConverter):
         return NPRow(node['id'], node['name'], 'F',
                      node.get('tectonicRegion', ''), 'Polygon', mfs, '')
 
+
 # ################### MultiPointSource conversion ######################## #
 
 
@@ -1335,7 +1362,7 @@ def multikey(node):
         for node in node.nodalPlaneDist)
     geom = node.pointGeometry
     return (round(~geom.upperSeismoDepth, 1), round(~geom.lowerSeismoDepth, 1),
-            ~node.ruptAspectRatio, hd, npd, str(~node.magScaleRel))
+            self._get_aspect_ratio(node), hd, npd, str(~node.magScaleRel))
 
 
 def collapse(array):
