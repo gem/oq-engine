@@ -59,12 +59,13 @@ def _get_nied_sigma_crustal(rrup):
     The distance type used is rupture dist
     """
     # Select distance dependent sigma
-    return np.where(
-        rrup <= 20., 0.23,    # rrup <= 20
-        np.where(rrup <= 30., # 20 < rrup <= 30
-            0.23 - 0.03 * np.log10(rrup / 20.) / np.log10(30. / 20.),
-            0.20              # rrup >= 30
-        )
+    return np.piecewise(
+        rrup.astype(float),
+        [rrup <= 20., (rrup > 20.) & (rrup <= 30.)],
+        [0.23,                                                  # rrup <= 20
+         lambda x:
+         0.23 - 0.03 * np.log10(x / 20.) / np.log10(30. / 20.), # 20 < rrup <= 30
+         0.20]                                                  # rrup > 30
     )
 
 
@@ -92,12 +93,12 @@ def _get_nied_sigma_subduction(ctx, d_pgv):
     pgv = 10. ** pgv_log10  # From log 10 into linear (cm/s)
 
     # Now select based on the PGV in linear space
-    return np.where(
-        pgv <= 25., 0.20,                            # PGV <= 25
-        np.where(
-        pgv <= 50., 0.20 - 0.05 * (pgv - 25.) / 25., # 25 < PGV <= 50 
-        0.15                                         # PGV > 50 
-        )
+    return np.piecewise(
+        pgv,
+        [pgv <= 25., (pgv > 25.) & (pgv <= 50.)],
+        [0.20,                                    # PGV <= 25
+         lambda x: 0.20 - 0.05 * (x - 25.) / 25., # 25 < PGV <= 50
+         0.15]                                    # PGV > 50
     )
 
 
