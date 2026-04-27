@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import logging
 import numpy
 import pandas
@@ -48,17 +47,14 @@ def zero_dmgcsq(A, R, L, crmodel):
 
 def calc_damage(gmf_tile, assetcol, oq, dstore, monitor):
     """
-    :param gmf_df: DataFrame of GMFs with fields sid, eid, imt, ...
-    :param assetcol: AssetCollection instance
+    :param gmf_tile: DataFrame of GMFs with fields sid, eid, imt, ...
+    :param assetcol: AssetCollection tile
     :param oq: OqParam instance
     :param dstore: DataStore instance
     :param monitor: Monitor instance
-    :returns: ((eid, kid) -> LDc, dmgcsq, taskno)
+    :returns: ((eid, kid) -> LDc, dmgcsq, ordinals, taskno)
     """
     with dstore, monitor('reading data', measuremem=True):
-        #if oq.parentdir:
-        #    dstore = datastore.read(
-        #        oq.hdf5path, parentdir=oq.parentdir)
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
         if oq.R > 1:
@@ -162,8 +158,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
-        if oq.hazard_calculation_id:
-            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), oq.R, oq.L, self.crmodel)
