@@ -465,7 +465,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_36.__file__)
 
         # Check that epistemic uncertainty on aratio is rejected when the
-        # source uses an aspectRatioFunction
+        # source uses aspectRatioFunction
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
                 case_36.__file__, 'job.ini',
