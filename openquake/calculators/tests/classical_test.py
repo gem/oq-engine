@@ -473,6 +473,15 @@ class ClassicalTestCase(CalculatorTestCase):
                     'source_model_logic_tree_error.xml'))
         self.assertIn('aspectRatioFunction', str(ctx.exception))
 
+        # Check that aspectRatioFunction is rejected for kiteFaultSource
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_kite_error.xml'))
+        self.assertIn('kiteFaultSource', str(ctx.exception))
+        self.assertIn('aspectRatioFunction', str(ctx.exception))
+
     def test_case_37(self):
         # Christchurch
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",

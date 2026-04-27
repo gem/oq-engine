@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Kite fault with aspectRatioFunction (invalid)">
+        <kiteFaultSource id="kf1" name="Kite Fault Source"
+                         tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        1.0 -0.5 1.4 0.0 1.4 0.3
+                    </gml:posList>
+                </gml:LineString>
+                <dip>30.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>15.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <aspectRatioFunction>
+                <type>linear_piecewise</type>
+                <points>
+                    <point mag="4.0" aratio="1.0"/>
+                    <point mag="7.0" aratio="2.0"/>
+                </points>
+            </aspectRatioFunction>
+            <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
+                                      minMag="6.5" maxMag="7.5"/>
+            <rake>90.0</rake>
+        </kiteFaultSource>
+    </sourceModel>
+</nrml>
