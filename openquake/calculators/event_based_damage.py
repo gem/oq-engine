@@ -99,15 +99,15 @@ def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs=None):
         else:
             rng = None
         for taxo, adf in asset_df.groupby('taxonomy'):
-            aids = adf.index.to_numpy()
-            A = len(aids)
+            ords = adf.ordinal.to_numpy()
+            A = len(ords)
             rc = scientific.RiskComputer(crmodel, taxo)
             dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
-                dmgcsq[:, aids, 0] += dd5.sum(axis=2)
+                dmgcsq[:, ords, 0] += dd5.sum(axis=2)
             else:
                 for e, rlz in enumerate(rlzs[eids]):
-                    dmgcsq[:, aids, rlz] += dd5[:, :, e]
+                    dmgcsq[:, ords, rlz] += dd5[:, :, e]
             if P > 1:
                 dd4 = numpy.empty(dd5.shape[1:])
                 for li in range(L):
@@ -123,8 +123,8 @@ def calc_damage(df, oq, assetcol, crmodel, aggids, rlzs=None):
                 dd_dict[eid, oq.K] += tot[e]
                 if oq.K:
                     for kids in aggids:
-                        for a, aid in enumerate(aids):
-                            dd_dict[eid, kids[aid]] += dd4[a, e]
+                        for a, o in enumerate(ords):
+                            dd_dict[eid, kids[o]] += dd4[a, e]
     return dd_dict, dmgcsq
 
 
