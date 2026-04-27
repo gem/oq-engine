@@ -1,4 +1,6 @@
   [Christopher Brooks]
+  * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
+    and some unit tests.
   * Add ability to specify sentinel (-999) z_ref values when using the
     `prepare_site_model` command.
   * Add a relative epistemic uncertainty for seismogenic depths in the
