@@ -504,7 +504,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
 
-    maxw = slices['weight'].sum() // (ct or 1)
+    maxw = slices['weight'].sum() // ct or 1
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
     if oq.calculation_mode == 'event_based_risk':
