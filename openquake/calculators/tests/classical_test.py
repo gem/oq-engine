@@ -461,7 +461,7 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_35.__file__)
     
     def test_case_36(self):
-        # Test mag-dependent aspect ratios using the linear_piecewise type
+        # Test mag-dependent aratio using the linear_piecewise expression type
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_36.__file__)
 
     def test_case_37(self):
