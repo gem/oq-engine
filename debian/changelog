@@ -1,6 +1,4 @@
   [Christopher Brooks]
-  * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
-    and some unit tests.
   * Add a relative epistemic uncertainty for seismogenic depths in the
     source model logic tree. Some unit tests added and a QA test in
     logictree/case_33.
@@ -12,6 +10,7 @@
   * Added parameter `rupture_id` to be used with `rupture_model_file`
     to run scenarios starting from a SES.hdf5 file
 
+ 
   [Christopher Brooks]
   * Added new epistemic uncertainties in the source model logic tree
     for the rupture aspect ratio (`setAspectRatioAbsolute` and
