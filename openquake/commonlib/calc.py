@@ -511,7 +511,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         expected_outputs = count_outputs(data['eid'], slices, maxw, w)
         logging.info('Expected outputs = %d', expected_outputs)
     gmf_dfs = []
-    for gmfslices in general.block_splitter(slices, maxw, w):
+    for gmfslices in general.block_splitter(slices, 2*maxw, w):
         dfs = []
         for gmfslice in gmfslices:
             slc = slice(gmfslice[0], gmfslice[1])
