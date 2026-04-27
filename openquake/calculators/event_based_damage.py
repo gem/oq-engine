@@ -180,29 +180,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         smap, gmf_dfs = calc.starmap_from_gmfs(
             damage_from_gmfs, oq, self.datastore, self._monitor)
         smap.monitor.save('aggids', aggids)
-        smap.monitor.save('assets', self.assetcol.to_dframe('id'))
+        smap.monitor.save('assets', self.assetcol.to_dframe('ordinal'))
         smap.monitor.save('crmodel', self.crmodel)
         for gmf_df in gmf_dfs:
             smap.submit((gmf_df, oq, self.datastore))
-        return smap.reduce(self.combine)
-
-    def combine(self, acc, res):
-        """
-        :param acc:
-            unused
-        :param res:
-            DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
-            plus array with damages and consequences of shape (A, Dc)
-
-        Combine the results and grows risk_by_event with fields
-        (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
-        """
-        df, dmgcsq = res
-        self.dmgcsq += dmgcsq
-        with self.monitor('saving risk_by_event', measuremem=True):
-            for name in df.columns:
-                dset = self.datastore['risk_by_event/' + name]
-                hdf5.extend(dset, df[name].to_numpy())
+        for df, dmgcsq in smap:
+            self.dmgcsq += dmgcsq
+            with self.monitor('saving risk_by_event', measuremem=True):
+                for name in df.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, df[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
