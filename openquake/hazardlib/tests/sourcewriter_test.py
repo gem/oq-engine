@@ -133,9 +133,11 @@ class SourceWriterTestCase(unittest.TestCase):
 
 
 class BuildAspectRatioNodeTestCase(unittest.TestCase):
-    """Tests for build_aspect_ratio_node, which serialises rupture aspect ratio
-    to an XML Node for both the legacy scalar form and the new
-    magnitude-dependent aspectRatioFunction form."""
+    """
+    Tests for build_aspect_ratio_node, which serialises rupture aspect ratio
+    to an XML Node. It considers regular scalar aspect ratio and also the
+    aspectRatioFunction capability.
+    """
 
     def test_scalar_produces_rupt_aspect_ratio_node(self):
         # A regular float should work as usual
