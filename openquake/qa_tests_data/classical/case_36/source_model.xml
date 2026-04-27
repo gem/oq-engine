@@ -19,8 +19,8 @@
             <aspectRatioFunction>
                 <type>linear_piecewise</type> <!-- If 4 <= Mw <= 7 linear interp for aratio -->
                 <points>
-                    <point mag="4.0" aratio="1.0"/>  <!-- Below Mw 4 use aratio of 1 -->
-                    <point mag="7.0" aratio="2.0"/>  <!-- Above Mw 7 use aratio of 2 -->
+                    <point mag="4.0" aratio="1.0"/>  <!-- Below or equal to Mw 4 use aratio of 1 -->
+                    <point mag="7.0" aratio="2.0"/>  <!-- Above or equal to Mw 7 use aratio of 2 -->
                 </points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
