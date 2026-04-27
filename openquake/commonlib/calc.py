@@ -20,6 +20,7 @@ import logging
 import operator
 import functools
 import numpy
+import pandas
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
@@ -503,16 +504,20 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
 
-    maxw = slices['weight'].sum() // ct or 1.
+    maxw = slices['weight'].sum() // ct or 1
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
     if oq.calculation_mode == 'event_based_risk':
         expected_outputs = count_outputs(data['eid'], slices, maxw, w)
         logging.info('Expected outputs = %d', expected_outputs)
+    gmf_dfs = []
+    for gmfslices in general.block_splitter(slices, 2.1*maxw, w):
+        dfs = []
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        gmf_dfs.append(pandas.concat(dfs))
+
     dstore.swmr_on()
-    smap = parallel.Starmap.apply(
-        task_func, (slices, oq, ds),
-        maxweight=maxw, weight=w, h5=dstore.hdf5)
-    if oq.calculation_mode == 'event_based_risk':
-        smap.expected_outputs = expected_outputs
-    return smap
+    smap = parallel.Starmap(task_func, h5=dstore.hdf5)
+    return smap, gmf_dfs

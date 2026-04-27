@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import logging
 import numpy
 import pandas
@@ -24,7 +23,7 @@ import pandas
 from openquake.baselib import hdf5, general
 from openquake.hazardlib.stats import compute_stats2, mean_curve
 from openquake.risklib import scientific, connectivity
-from openquake.commonlib import datastore, calc
+from openquake.commonlib import calc
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
@@ -47,47 +46,28 @@ def zero_dmgcsq(A, R, L, crmodel):
     return numpy.zeros((P, A, R, L, Dc), F32)
 
 
-def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
+def damage_from_gmfs(df, oq, dstore, monitor):
     """
-    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
-    :param oqparam: OqParam instance
+    :param df: a DataFrame of GMFs
+    :param oq: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays, the output of event_based_damage
     """
-    if dstore.parent:
-        dstore.parent.open('r')
-    dfs = []
     with dstore, monitor('reading data', measuremem=True):
-        for gmfslice in gmfslices:
-            slc = slice(gmfslice[0], gmfslice[1])
-            dfs.append(dstore.read_df('gmf_data', slc=slc))
-        df = pandas.concat(dfs)
-    return event_based_damage(df, oqparam, dstore, monitor)
-
-
-def event_based_damage(df, oq, dstore, monitor):
-    """
-    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
-    :param oq: parameters coming from the job.ini
-    :param dstore: a DataStore instance
-    :param monitor: a Monitor instance
-    :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
-    """
-    mon = monitor('computing dds', measuremem=False)
-    with monitor('reading gmf_data'):
-        if oq.parentdir:
-            dstore = datastore.read(oq.hdf5path, parentdir=oq.parentdir)
-        else:
-            dstore.open('r')
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
+        if oq.R > 1:
+            # i.e. case_9 in scenario_damage
+            rlzs = dstore['events']['rlz_id']
+        else:
+            rlzs = None
+
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
-    rlzs = dstore['events']['rlz_id']
-    dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
+    dd_dict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
         # working one site at the time
         gmf_df = df[df.sid == sid]
@@ -101,17 +81,15 @@ def event_based_damage(df, oq, dstore, monitor):
         else:
             rng = None
         for taxo, adf in asset_df.groupby('taxonomy'):
-            aids = adf.index.to_numpy()
-            A = len(aids)
-            with mon:
-                rc = scientific.RiskComputer(crmodel, taxo)
-                dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)
-                # (A, E, L, Dc)
+            ords = adf.ordinal.to_numpy()
+            A = len(ords)
+            rc = scientific.RiskComputer(crmodel, taxo)
+            dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
-                dmgcsq[:, aids, 0] += dd5.sum(axis=2)
+                dmgcsq[:, ords, 0] += dd5.sum(axis=2)
             else:
                 for e, rlz in enumerate(rlzs[eids]):
-                    dmgcsq[:, aids, rlz] += dd5[:, :, e]
+                    dmgcsq[:, ords, rlz] += dd5[:, :, e]
             if P > 1:
                 dd4 = numpy.empty(dd5.shape[1:])
                 for li in range(L):
@@ -124,19 +102,18 @@ def event_based_damage(df, oq, dstore, monitor):
                 dd4 = dd5[0]
             tot = dd4.sum(axis=0)  # (E, L, Dc)
             for e, eid in enumerate(eids):
-                dddict[eid, oq.K] += tot[e]
+                dd_dict[eid, oq.K] += tot[e]
                 if oq.K:
                     for kids in aggids:
-                        for a, aid in enumerate(aids):
-                            dddict[eid, kids[aid]] += dd4[a, e]
-    csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
-    return _dframe(dddict, csqidx, oq.loss_types), dmgcsq
+                        for a, o in enumerate(ords):
+                            dd_dict[eid, kids[o]] += dd4[a, e]
+    return dd_dict, dmgcsq
 
 
-def _dframe(dddic, csqidx, loss_types):
+def _dframe(dd_dic, csqidx, loss_types):
     # convert {(eid, kid): dd} into a DataFrame (agg_id, event_id, loss_id)
     dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in sorted(dddic.items()):
+    for (eid, kid), dd in sorted(dd_dic.items()):
         for li, lt in enumerate(loss_types):
             dic['agg_id'].append(kid)
             dic['event_id'].append(eid)
@@ -152,7 +129,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
     """
-    core_task = event_based_damage
+    core_task = damage_from_gmfs
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based',
@@ -176,8 +153,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
-        if oq.hazard_calculation_id:
-            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(
@@ -186,26 +161,19 @@ class DamageCalculator(EventBasedRiskCalculator):
             aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = 0
-        smap = calc.starmap_from_gmfs(
+        smap, gmf_dfs = calc.starmap_from_gmfs(
             damage_from_gmfs, oq, self.datastore, self._monitor)
         smap.monitor.save('aggids', aggids)
-        smap.monitor.save('assets', self.assetcol.to_dframe('id'))
+        smap.monitor.save('assets', self.assetcol.to_dframe('ordinal'))
         smap.monitor.save('crmodel', self.crmodel)
-        return smap.reduce(self.combine)
-
-    def combine(self, acc, res):
-        """
-        :param acc:
-            unused
-        :param res:
-            DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
-            plus array with damages and consequences of shape (A, Dc)
-
-        Combine the results and grows risk_by_event with fields
-        (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
-        """
-        df, dmgcsq = res
-        self.dmgcsq += dmgcsq
+        for gmf_df in gmf_dfs:
+            smap.submit((gmf_df, oq, self.datastore))
+        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
+        dd_dict = general.AccumDict(accum=0)
+        for dd, dmgcsq in smap:
+            dd_dict += dd
+            self.dmgcsq += dmgcsq
+        df = _dframe(dd_dict, csqidx, oq.loss_types)
         with self.monitor('saving risk_by_event', measuremem=True):
             for name in df.columns:
                 dset = self.datastore['risk_by_event/' + name]
