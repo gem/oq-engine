@@ -464,6 +464,15 @@ class ClassicalTestCase(CalculatorTestCase):
         # Test mag-dependent aratio using the linear_piecewise expression type
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_36.__file__)
 
+        # Check that epistemic uncertainty on aratio is rejected when the
+        # source uses an aspectRatioFunction
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_error.xml'))
+        self.assertIn('aspectRatioFunction', str(ctx.exception))
+
     def test_case_37(self):
         # Christchurch
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
