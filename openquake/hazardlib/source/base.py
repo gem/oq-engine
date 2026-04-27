@@ -489,6 +489,15 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
                 
         raise ValueError(f"Unsupported aspectRatioFunction type: {rar_type}")
 
+    def _check_scalar_aspect_ratio(self, modification):
+        if isinstance(self.rupture_aspect_ratio, dict):
+            # Prevent use of aratio epistemic uncertainties when also
+            # using a non-scalar value for aspect ratio in the src XML
+            raise ValueError(
+                'Cannot apply %s to source %r: epistemic uncertainties on '
+                'aspect ratio are not compatible with aspectRatioFunction'
+                % (modification, self.source_id))
+
     def modify_set_aspect_ratio(self, aspect_ratio):
         """
         Replaces the rupture aspect ratio with the given value
@@ -496,6 +505,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :param float aspect_ratio:
             New value of the rupture aspect ratio (must be positive)
         """
+        self._check_scalar_aspect_ratio('set_aspect_ratio')
         if not aspect_ratio > 0:
             raise ValueError('rupture aspect ratio must be positive, got %s'
                              % aspect_ratio)
@@ -508,6 +518,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         :param float increment:
             Value by which to increase or decrease the rupture aspect ratio
         """
+        self._check_scalar_aspect_ratio('adjust_aspect_ratio')
         new_ratio = self.rupture_aspect_ratio + increment
         if not new_ratio > 0:
             raise ValueError(
