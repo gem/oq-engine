@@ -1,4 +1,6 @@
   [Christopher Brooks]
+  * Add the magnitude-scaling relationship used in the Northern
+    Volcanic Arc (NVA) source zone of the BC Hydro SSC logic tree.
   * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
     and some unit tests.
   * Add ability to specify sentinel (-999) z_ref values when using the
@@ -14,7 +16,7 @@
   * Added parameter `rupture_id` to be used with `rupture_model_file`
     to run scenarios starting from a SES.hdf5 file
 
- 
+
   [Christopher Brooks]
   * Added new epistemic uncertainties in the source model logic tree
     for the rupture aspect ratio (`setAspectRatioAbsolute` and
