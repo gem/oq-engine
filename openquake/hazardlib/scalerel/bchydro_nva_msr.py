@@ -26,9 +26,9 @@ from openquake.hazardlib.scalerel.base import BaseMSR
 class BCHydroNVAMSR(BaseMSR):
     """
     Magnitude-area scaling relationship for the BC Hydro Northern
-    Volcanic Arc (NVA) source zone.
+    Volcanic Arc (NVA) source zone:
 
-    Formula: A = exp(2.095 * Mw - 7.883)
+    A = exp(2.095 * Mw - 7.883)
 
     where A is rupture area in km^2.
     """
