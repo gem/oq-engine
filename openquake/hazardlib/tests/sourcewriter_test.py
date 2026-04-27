@@ -134,7 +134,7 @@ class SourceWriterTestCase(unittest.TestCase):
 
 class BuildAspectRatioNodeTestCase(unittest.TestCase):
     """
-    Tests for build_aspect_ratio_node, which serialises rupture aspect ratio
+    Tests for build_aspect_ratio_node, which writes rupture aspect ratio
     to an XML Node. It considers regular scalar aspect ratio and also the
     aspectRatioFunction capability.
     """
