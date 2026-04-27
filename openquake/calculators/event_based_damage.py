@@ -169,13 +169,15 @@ class DamageCalculator(EventBasedRiskCalculator):
         for gmf_df in gmf_dfs:
             smap.submit((gmf_df, oq, self.datastore))
         csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
-        for dd_dict, dmgcsq in smap:
-            df = _dframe(dd_dict, csqidx, oq.loss_types)
+        dd_dict = general.AccumDict(accum=0)
+        for dd, dmgcsq in smap:
+            dd_dict += dd
             self.dmgcsq += dmgcsq
-            with self.monitor('saving risk_by_event', measuremem=True):
-                for name in df.columns:
-                    dset = self.datastore['risk_by_event/' + name]
-                    hdf5.extend(dset, df[name].to_numpy())
+        df = _dframe(dd_dict, csqidx, oq.loss_types)
+        with self.monitor('saving risk_by_event', measuremem=True):
+            for name in df.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, df[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
