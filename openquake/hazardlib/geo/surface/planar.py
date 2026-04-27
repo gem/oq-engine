@@ -194,7 +194,7 @@ def build_corners(usd, lsd, rar, area, mag, strike,
     # 5: hypo
     for m in range(M):
         for n in range(N):
-            corners[:, m, n]  = _build_corners(
+            corners[:, m, n] = _build_corners(
                 usd, lsd, rar, area[m, n], mag[m, n], strike[m, n],
                 dip[m, n], rake[m, n], lon, lat, hdd[:, 1])
     return corners
@@ -212,9 +212,19 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
     :return:
         an array of shape (M, N, D, 3)
     """
-    corners = build_corners(
-        usd, lsd, rar, planin.area, planin.mag,
-        planin.strike, planin.dip, planin.rake, hdd, lon, lat)
+    if isinstance(rar, numpy.ndarray):
+        M, N = planin.mag.shape
+        corners = numpy.zeros((6, M, N, len(hdd), 3))
+        for m in range(M):
+            for n in range(N):
+                corners[:, m, n] = _build_corners(
+                    usd, lsd, rar[m, n], planin.area[m, n], planin.mag[m, n],
+                    planin.strike[m, n], planin.dip[m, n], planin.rake[m, n],
+                    lon, lat, hdd[:, 1])
+    else:
+        corners = build_corners(
+            usd, lsd, rar, planin.area, planin.mag,
+            planin.strike, planin.dip, planin.rake, hdd, lon, lat)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
