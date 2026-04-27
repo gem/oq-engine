@@ -96,7 +96,7 @@ def get_rupdims(usd, lsd, rar, area, dip):
 
 
 # From the rupture center we can compute the coordinates of the
-# four coorners by moving along the diagonals of the plane. This seems
+# four corners by moving along the diagonals of the plane. This seems
 # to be better then moving along the perimeter, because in this case
 # errors are accumulated that induce distorsions in the shape with
 # consequent raise of exceptions when creating PlanarSurface objects;
@@ -213,6 +213,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
         an array of shape (M, N, D, 3)
     """
     if isinstance(rar, numpy.ndarray):
+        # per-magnitude aspect ratio from aspectRatioFunction
         M, N = planin.mag.shape
         corners = numpy.zeros((6, M, N, len(hdd), 3))
         for m in range(M):
@@ -222,6 +223,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
                     planin.strike[m, n], planin.dip[m, n], planin.rake[m, n],
                     lon, lat, hdd[:, 1])
     else:
+        # Regular scalar aratio
         corners = build_corners(
             usd, lsd, rar, planin.area, planin.mag,
             planin.strike, planin.dip, planin.rake, hdd, lon, lat)
