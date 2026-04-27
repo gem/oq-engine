@@ -657,24 +657,19 @@ class SourceConverter(RuptureConverter):
         Get the aspect ratio. It can be either a single float value or a
         piecewise function which is evaluated during rupture generation.
         """
-        # Try get aspect ratio function node
-        arf = node.find('aspectRatioFunction')
-
-        if arf is None:
-            # Must be a regular aspect ratio
+        try:
+            arf = node.aspectRatioFunction
+        except AttributeError:
             return ~node.ruptAspectRatio
 
-        # Not a regular aspect ratio - get the type of it
-        func_type = arf.findtext('type')
-        
+        func_type = ~arf.type
+
         if func_type == 'linear_piecewise':
-            # Collect the linear aspect ratio function
-            linear_piecewise = [
-                (float(p.get('mag')), float(p.get('aratio')))
-                for p in arf.find('points')
-            ]
-            breakpoint()
-            return linear_piecewise
+            return {
+                "function": [(float(p['mag']), float(p['aratio'])) 
+                             for p in arf.points],
+                "type": "linear"
+                }
 
         raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
 
