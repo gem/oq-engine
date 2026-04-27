@@ -470,7 +470,7 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
-                    'source_model_logic_tree_error.xml'))
+                    'source_model_logic_tree_epistemic_error.xml'))
         self.assertIn('aspectRatioFunction', str(ctx.exception))
 
         # Check that aspectRatioFunction is rejected for kiteFaultSource
