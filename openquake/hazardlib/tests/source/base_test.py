@@ -121,9 +121,9 @@ class LinearPiecewiseAratioTestCase(unittest.TestCase):
     POINTS = [(4.0, 1.0), (7.0, 2.0)]
 
     def test_interpolation_and_clamping(self):
-        # Below min, midpoint, non-midpoint interp (t=0.75 -> 1.75), above max
-        mags     = [3.0, 5.5, 6.25, 8.0]
+        # Below min, midpoint, non-midpoint interp, above max
+        mags = [3.0, 5.5, 6.25, 8.0]
         expected = [1.0, 1.5, 1.75, 2.0]
         for m, exp in zip(mags, expected):
-            self.assertAlmostEqual(linear_piecewise_aratio(m, self.POINTS), exp,
-                                   msg=f"mag={m}")
+            self.assertAlmostEqual(
+                linear_piecewise_aratio(m, self.POINTS), exp, msg=f"mag={m}")
