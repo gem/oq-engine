@@ -808,6 +808,12 @@ class SourceConverter(RuptureConverter):
         msr = ~node.magScaleRel
         mfd = self.convert_mfdist(node)
 
+        rar = self.get_aspect_ratio(node)
+        if isinstance(rar, dict):
+            raise InvalidFile(
+                '%s: aspectRatioFunction is not supported for '
+                'kiteFaultSource (id=%s)' % (self.fname, node['id']))
+
         # get rupture floating steps
         xstep = self.floating_x_step
         ystep = self.floating_y_step
@@ -821,7 +827,7 @@ class SourceConverter(RuptureConverter):
                     mfd=mfd,
                     rupture_mesh_spacing=self.rupture_mesh_spacing,
                     magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=self.get_aspect_ratio(node),
+                    rupture_aspect_ratio=rar,
                     temporal_occurrence_model=self.get_tom(node),
                     profiles=profiles,
                     floating_x_step=xstep,
@@ -834,7 +840,7 @@ class SourceConverter(RuptureConverter):
                     node['id'], node['name'],
                     node.attrib.get('tectonicRegion'),
                     mfd, self.rupture_mesh_spacing,
-                    msr, self.get_aspect_ratio(node), self.get_tom(node))
+                    msr, rar, self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
                     param,
                     ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
