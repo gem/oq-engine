@@ -66,6 +66,10 @@ def get_aspect_ratio(node):
                 f"Should be two elements [(MinAR, MinMmin), (MaxAR, Mmax)] "
                 f"in linear_piecewise kind of ruptAspectRatio ({npoints})")
         points = [(float(p['mag']), float(p['aratio'])) for p in arf.points]
+        if any(m <= 0 for m, _ in points):
+            raise ValueError(
+                f"aspectRatioFunction magnitudes must be positive: "
+                f"{[m for m, _ in points]}")
         if points[0][0] >= points[1][0]:
             raise ValueError(
                 f"aspectRatioFunction points must be in ascending magnitude "
