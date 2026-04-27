@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import logging
 import numpy
 import pandas
@@ -24,7 +23,7 @@ import pandas
 from openquake.baselib import hdf5, general
 from openquake.hazardlib.stats import compute_stats2, mean_curve
 from openquake.risklib import scientific, connectivity
-from openquake.commonlib import datastore, calc
+from openquake.commonlib import calc
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
@@ -47,9 +46,9 @@ def zero_dmgcsq(A, R, L, crmodel):
     return numpy.zeros((P, A, R, L, Dc), F32)
 
 
-def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
+def damage_from_gmfs(gmf_df, oqparam, dstore, monitor):
     """
-    :param gmfslices: an array (S, 3) with S slices (start, stop, weight)
+    :param gmf_df: a DataFrame of GMFs
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -57,13 +56,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    dfs = []
     with dstore, monitor('reading data', measuremem=True):
-        if oqparam.parentdir:
-            dstore = datastore.read(
-                oqparam.hdf5path, parentdir=oqparam.parentdir)
-        else:
-            dstore.open('r')
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
         aggids = monitor.read('aggids')
@@ -72,13 +65,9 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
             rlzs = dstore['events']['rlz_id']
         else:
             rlzs = None
-        for gmfslice in gmfslices:
-            slc = slice(gmfslice[0], gmfslice[1])
-            dfs.append(dstore.read_df('gmf_data', slc=slc))
-        df = pandas.concat(dfs)
     with monitor('calc_damage', measuremem=True):
         dd_dict, dmgcsq = calc_damage(
-            df, oqparam, assetcol, crmodel, aggids, rlzs)
+            gmf_df, oqparam, assetcol, crmodel, aggids, rlzs)
     csqidx = {dc: i + 1 for i, dc in enumerate(crmodel.get_dmg_csq())}
     return _dframe(dd_dict, csqidx, oqparam.loss_types), dmgcsq
 
@@ -182,8 +171,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                 'you cannot use dicrete_damage_distribution=true' % num_floats)
         oq.R = self.R  # 1 if collect_rlzs
         oq.float_dmg_dist = not oq.discrete_damage_distribution
-        if oq.hazard_calculation_id:
-            oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(
@@ -192,11 +179,13 @@ class DamageCalculator(EventBasedRiskCalculator):
             aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = 0
-        smap = calc.starmap_from_gmfs(
+        smap, gmf_dfs = calc.starmap_from_gmfs(
             damage_from_gmfs, oq, self.datastore, self._monitor)
         smap.monitor.save('aggids', aggids)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
+        for gmf_df in gmf_dfs:
+            smap.submit((gmf_df, oq, self.datastore))
         return smap.reduce(self.combine)
 
     def combine(self, acc, res):
