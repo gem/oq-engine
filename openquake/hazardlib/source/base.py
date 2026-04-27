@@ -459,11 +459,11 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def get_aspect_ratio(self, mag):
         """
-        Return the rupture aspect ratio for the given magnitude.
+        Return the rupture aspect ratio, which is either a float (the
+        "regular" version OR an expression of a PREDEFINED type which
+        is evaluated here).
 
-        This function handles non-float aspect ratios (i.e. expressions
-        that the user wishes to evaluate to dynamically compute the
-        aspect ratios on the fly).
+        More expressions can be added here in the future as required.
         """
         rar = self.rupture_aspect_ratio
         if not isinstance(rar, dict):
