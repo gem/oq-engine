@@ -411,7 +411,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
 
-        if rupture_aspect_ratio is not None and not rupture_aspect_ratio > 0:
+        if (rupture_aspect_ratio is not None
+                and isinstance(rupture_aspect_ratio, (int, float))
+                and not rupture_aspect_ratio > 0):
             raise ValueError('rupture aspect ratio must be positive')
 
         self.mfd = mfd
@@ -455,6 +457,38 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
             An instance of the :class:`openquake.hazardlib.scalerel.BaseMSR`
         """
         self.magnitude_scaling_relationship = new_msr
+
+    def get_aspect_ratio(self, mag):
+        """
+        Return the rupture aspect ratio for the given magnitude.
+
+        This function handles non-float aspect ratios (i.e. expressions
+        that the user wishes to evaluate to dynamically compute the
+        aspect ratios on the fly).
+        """
+        rar = self.rupture_aspect_ratio
+        if not isinstance(rar, dict):
+            # Regular float aspect ratio
+            return rar
+        
+        # Otherwise we can use different types
+        rar_type = rar["type"]
+        if rar_type == "linear":
+            # Linear interpolation between two bounds
+            evaluate = rar["function"]
+            mags = [m for m, _ in evaluate]
+            aratios = [a for _, a in evaluate]
+            if mag <= mags[0]:
+                return aratios[0]  # Below min mag point
+            if mag >= mags[-1]:
+                return aratios[-1] # Above max mag point 
+            for i in range(len(mags) - 1):
+                # Interpolate linearly between min and max mag points
+                if mags[i] <= mag <= mags[i + 1]:
+                    t = (mag - mags[i]) / (mags[i + 1] - mags[i])
+                    return aratios[i] + t * (aratios[i + 1] - aratios[i])
+                
+        raise ValueError(f"Unsupported aspectRatioFunction type: {rar_type}")
 
     def modify_set_aspect_ratio(self, aspect_ratio):
         """
