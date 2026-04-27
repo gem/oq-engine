@@ -37,6 +37,29 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
 
+
+def linear_piecewise_aratio(mag, points):
+    """
+    Clamped piecewise-linear interpolation of aspect ratio from magnitude.
+
+    :param mag: Rupture magnitude (float)
+
+    :param points: List of (mag, aratio) pairs in ascending magnitude order
+
+    :returns: Interpolated (or clamped) aspect ratio
+    """
+    mags = [m for m, _ in points]
+    aratios = [a for _, a in points]
+    if mag <= mags[0]:
+        return aratios[0]
+    if mag >= mags[-1]:
+        return aratios[-1]
+    for i in range(len(mags) - 1):
+        if mags[i] <= mag <= mags[i + 1]:
+            t = (mag - mags[i]) / (mags[i + 1] - mags[i])
+            return aratios[i] + t * (aratios[i + 1] - aratios[i])
+
+
 @dataclass
 class SourceParam:
     source_id: str
@@ -467,26 +490,10 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         rar = self.rupture_aspect_ratio
         if not isinstance(rar, dict):
-            # Regular float aspect ratio
             return rar
-        
-        # Otherwise we can use different types
         rar_type = rar["type"]
         if rar_type == "linear":
-            # Linear interpolation between two bounds
-            evaluate = rar["function"]
-            mags = [m for m, _ in evaluate]
-            aratios = [a for _, a in evaluate]
-            if mag <= mags[0]:
-                return aratios[0]  # Below min mag point
-            if mag >= mags[-1]:
-                return aratios[-1] # Above max mag point 
-            for i in range(len(mags) - 1):
-                # Interpolate linearly between min and max mag points
-                if mags[i] <= mag <= mags[i + 1]:
-                    t = (mag - mags[i]) / (mags[i + 1] - mags[i])
-                    return aratios[i] + t * (aratios[i + 1] - aratios[i])
-                
+            return linear_piecewise_aratio(mag, rar["function"])
         raise ValueError(f"Unsupported aspectRatioFunction type: {rar_type}")
 
     def _check_scalar_aspect_ratio(self, modification):
