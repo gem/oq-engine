@@ -54,8 +54,6 @@ def damage_from_gmfs(gmf_df, oqparam, dstore, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays, the output of event_based_damage
     """
-    if dstore.parent:
-        dstore.parent.open('r')
     with dstore, monitor('reading data', measuremem=True):
         assetcol = dstore['assetcol']
         crmodel = monitor.read('crmodel')
