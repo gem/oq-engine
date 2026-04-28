@@ -55,12 +55,15 @@ def get_aspect_ratio(node):
     MagDepAspectRatio for the magnitude-dependent form.
     """
     try:
+        # check if mag-dependent aratio
         arf = node.aspectRatioFunction
     except AttributeError:
+        # Regular
         return ~node.ruptAspectRatio
 
+    # Get the function type
     func_type = ~arf.type
-
+    
     if func_type == 'linear_piecewise':
         npoints = len(arf.mag_points)
         if npoints != 2:
@@ -81,13 +84,21 @@ def get_aspect_ratio(node):
     raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
 
 
-def build_aspect_ratio_node(rar):
+def build_aspect_ratio_node(rar): # Used in sourcewriter and geopackager
+    """
+    Build an aspect ratio node from either a regular float or a
+    MagDepAspectRatio class instance.
+    """
     if not isinstance(rar, MagDepAspectRatio):
+        # Regular aspect ratio as float
         return Node("ruptAspectRatio", text=rar)
+    
+    # Must be MagDepAspectRatio
     if rar.func_type == "linear_piecewise":
         point_nodes = [Node("mag_point", {"mag": m, "aratio": a})
                        for m, a in rar.mag_points]
         return Node("aspectRatioFunction", nodes=[
             Node("type", text="linear_piecewise"),
             Node("mag_points", nodes=point_nodes)])
+    
     raise ValueError(f"Unsupported aspectRatioFunction type: {rar.func_type}")
