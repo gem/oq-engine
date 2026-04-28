@@ -17,12 +17,31 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
 from openquake.hazardlib.aspect_ratio import (MagDepAspectRatio,
                                               build_aspect_ratio_node)
 
+class MagDepAratioTestCase(unittest.TestCase):
+    """
+    Check that each expression type available in MagDepAratio
+    provides the expected results.
+    """
+    def test_linear_piecewise(self):
+        # Two-point function: Mw4->1.0, Mw7->2.0
+        points = [(4.0, 1.0), (7.0, 2.0)]
+        # Below min, midpoint, non-midpoint interp, above max
+        mags = [3.0, 5.5, 6.25, 8.0]
+        expected = [1.0, 1.5, 1.75, 2.0]
+        for m, exp in zip(mags, expected):
+            self.assertAlmostEqual(
+                MagDepAspectRatio("linear_piecewise", points).get(m),
+                exp, msg=f"mag={m}")
+
 
 class BuildAspectRatioNodeTestCase(unittest.TestCase):
-
+    """
+    Check that aspect ratios can be written back to XML nodes.
+    """
     def test_scalar_produces_rupt_aspect_ratio_node(self):
         # A regular float should work as usual
         node = build_aspect_ratio_node(1.5)
@@ -45,17 +64,3 @@ class BuildAspectRatioNodeTestCase(unittest.TestCase):
         self.assertEqual(len(points_node.nodes), 2)
         self.assertEqual(points_node.nodes[0].attrib['mag'], 4.0)
         self.assertEqual(points_node.nodes[1].attrib['aratio'], 2.0)
-
-
-class LinearPiecewiseAratioTestCase(unittest.TestCase):
-    # Two-point function: Mw4->1.0, Mw7->2.0
-    POINTS = [(4.0, 1.0), (7.0, 2.0)]
-
-    def test_interpolation_and_clamping(self):
-        # Below min, midpoint, non-midpoint interp, above max
-        mags = [3.0, 5.5, 6.25, 8.0]
-        expected = [1.0, 1.5, 1.75, 2.0]
-        for m, exp in zip(mags, expected):
-            self.assertAlmostEqual(
-                MagDepAspectRatio("linear_piecewise", self.POINTS).get(m),
-                exp, msg=f"mag={m}")
