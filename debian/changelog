@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Fixing the calculation of ruptures with clusters and mutually exclusive 
+    sources
+ 
   [Michele Simionato]
   * Changed the distribution in damage calculations to split in blocks
     of assets, with a huge performance benefit for large scenarios
