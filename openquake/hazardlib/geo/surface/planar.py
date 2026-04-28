@@ -213,7 +213,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
         an array of shape (M, N, D, 3)
     """
     if isinstance(rar, numpy.ndarray):
-        # Per mag aratio from MagDepAratio
+        # Compute aratio per mag
         M, N = planin.mag.shape
         corners = numpy.zeros((6, M, N, len(hdd), 3))
         for m in range(M):
