@@ -257,7 +257,7 @@ class ChiouYoungs2008(GMPE):
 
 class ChiouYoungs2008BCHydro(ChiouYoungs2008):
     """
-    CY2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    CY08 with BCHydro (IMT-dependent) sigma-mu scaling and
     single station sigma.
     """
     experimental = True

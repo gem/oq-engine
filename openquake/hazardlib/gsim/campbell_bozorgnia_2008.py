@@ -401,7 +401,7 @@ class CampbellBozorgnia2008Arbitrary(CampbellBozorgnia2008):
 
 class CampbellBozorgnia2008BCHydro(CampbellBozorgnia2008):
     """
-    CB2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    CB08 with BCHydro (IMT-dependent) sigma-mu scaling and
     single station sigma.
     """
     experimental = True

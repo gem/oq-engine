@@ -521,7 +521,7 @@ class AbrahamsonSilva2008(GMPE):
 
 class AbrahamsonSilva2008BCHydro(AbrahamsonSilva2008):
     """
-    AS2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    AS08 with BCHydro (IMT-dependent) sigma-mu scaling and
     single station sigma.
     """
     experimental = True

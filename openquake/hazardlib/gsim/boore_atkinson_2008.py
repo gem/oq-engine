@@ -236,7 +236,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
 class BooreAtkinson2008BCHydro(BooreAtkinson2008):
     """
-    BA2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    BA08 with BCHydro (IMT-dependent) sigma-mu scaling and
     single station sigma.
     """
     experimental = True
