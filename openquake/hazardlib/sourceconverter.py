@@ -792,7 +792,7 @@ class SourceConverter(RuptureConverter):
         rar = get_aspect_ratio(node)
         if isinstance(rar, MagDepAspectRatio):
             raise InvalidFile(
-                '%s: aspectRatioFunction is not supported for '
+                '%s: aspectRatioFunction is not supported for a '
                 'kiteFaultSource (id=%s)' % (self.fname, node['id']))
 
         # get rupture floating steps

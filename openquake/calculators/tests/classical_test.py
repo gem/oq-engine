@@ -484,7 +484,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_kite_error.xml'))
         self.assertIn(
-            'aspectRatioFunction is not supported for kiteFaultSource (id=kf1)',
+            'aspectRatioFunction is not supported for a kiteFaultSource (id=kf1)',
             str(ctx.exception))
 
         # Check that specifying both ruptAspectRatio and aspectRatioFunction
@@ -495,7 +495,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_both_aratio_error.xml'))
         self.assertIn(
-            "source '1' specifies both ruptAspectRatio and aspectRatioFunction",
+            "Source '1' specifies both ruptAspectRatio and aspectRatioFunction",
             str(ctx.exception))
 
     def test_case_37(self):
