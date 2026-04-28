@@ -532,13 +532,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
-        if 'alt' in dic:
-            with self.monitor('saving risk_by_event'):
-                alt = dic.pop('alt')
-                for name in alt.columns:
-                    dset = self.datastore['risk_by_event/' + name]
-                    hdf5.extend(dset, alt[name].to_numpy())
-        if self.oqparam.avg_losses and 'avg' in dic:
+        with self.monitor('saving risk_by_event'):
+            alt = dic.pop('alt')
+            for name in alt.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, alt[name].to_numpy())
+        if self.oqparam.avg_losses:
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
