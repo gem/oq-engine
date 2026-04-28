@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy as np
 from openquake.baselib.node import Node
 
 
@@ -36,14 +37,7 @@ class MagDepAspectRatio:
         if self.func_type == "linear_piecewise":
             mags = [m for m, _ in self.mag_points]
             aratios = [a for _, a in self.mag_points]
-            if mag <= mags[0]:
-                return aratios[0]
-            if mag >= mags[-1]:
-                return aratios[-1]
-            for i in range(len(mags) - 1):
-                if mags[i] <= mag <= mags[i + 1]:
-                    t = (mag - mags[i]) / (mags[i + 1] - mags[i])
-                    return aratios[i] + t * (aratios[i + 1] - aratios[i])
+            return np.interp(mag, mags, aratios)
         raise ValueError(
             f"Unsupported aspectRatioFunction type: {self.func_type}")
 
