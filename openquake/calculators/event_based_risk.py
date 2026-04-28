@@ -171,7 +171,7 @@ def _event_based_risk(df, loss2, loss3, crmodel, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=True)
     sids = df.sid.to_numpy()
     try:
         countries = monitor.read('countries')
