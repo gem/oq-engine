@@ -766,15 +766,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rup, _warn = adjust_hypocenter(rup)
             oq.mags_by_trt = {trt: [magstr(rup.mag)]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-            if self.N > oq.max_sites_disagg:  # many sites, split rupture
-                ebrs = []
-                for i in range(ngmfs):
-                    ebr = EBRupture(rup, 0, 0, G, i, e0=i * G)
-                    ebr.seed = oq.ses_seed + i
-                    ebrs.append(ebr)
-            else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
-                ebrs[0].seed = oq.ses_seed
+            ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
+            ebrs[0].seed = oq.ses_seed
             aw = get_rup_array(ebrs, oq.maximum_distance(trt))
             if len(aw) == 0:
                 raise RuntimeError(
