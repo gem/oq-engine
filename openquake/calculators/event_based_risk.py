@@ -133,16 +133,13 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(gmf_df, oqparam, dstore, monitor):
+def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
     :param gmf_df: DataFrame of GMFs
     :param oqparam: OqParam instance
-    :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
     :yields: dictionary of arrays, the output of event_based_risk
     """
-    if dstore.parent:
-        dstore.parent.open('r')
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
         R = 1 if oqparam.collect_rlzs else len(monitor.read('weights'))
@@ -509,7 +506,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 ebr_from_gmfs, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, oq, self.datastore))
+                smap.submit((gmf_df, oq))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:
@@ -535,13 +532,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
-        if 'alt' in dic:
-            with self.monitor('saving risk_by_event'):
-                alt = dic.pop('alt')
-                for name in alt.columns:
-                    dset = self.datastore['risk_by_event/' + name]
-                    hdf5.extend(dset, alt[name].to_numpy())
-        if self.oqparam.avg_losses and 'avg' in dic:
+        with self.monitor('saving risk_by_event'):
+            alt = dic.pop('alt')
+            for name in alt.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, alt[name].to_numpy())
+        if self.oqparam.avg_losses:
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
