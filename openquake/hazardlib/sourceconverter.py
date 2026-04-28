@@ -27,6 +27,7 @@ from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source_group import SourceGroup
+from openquake.hazardlib.source.base import MagDepAspectRatio
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32
@@ -73,9 +74,21 @@ def get_aspect_ratio(node):
             raise ValueError(
                 f"aspectRatioFunction points must be in ascending magnitude "
                 f"order: mag[0]={points[0][0]} >= mag[1]={points[1][0]}")
-        return {"function": points, "type": "linear_piecewise"}
+        return MagDepAspectRatio("linear_piecewise", points)
 
     raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")
+
+
+def build_aspect_ratio_node(rar):
+    if not isinstance(rar, MagDepAspectRatio):
+        return Node("ruptAspectRatio", text=rar)
+    if rar.func_type == "linear_piecewise":
+        point_nodes = [Node("mag_point", {"mag": m, "aratio": a})
+                       for m, a in rar.mag_points]
+        return Node("aspectRatioFunction", nodes=[
+            Node("type", text="linear_piecewise"),
+            Node("mag_points", nodes=point_nodes)])
+    raise ValueError(f"Unsupported aspectRatioFunction type: {rar.func_type}")
 
 
 def extract_dupl(values):
@@ -820,7 +833,7 @@ class SourceConverter(RuptureConverter):
         mfd = self.convert_mfdist(node)
 
         rar = get_aspect_ratio(node)
-        if isinstance(rar, dict):
+        if isinstance(rar, MagDepAspectRatio):
             raise InvalidFile(
                 '%s: aspectRatioFunction is not supported for '
                 'kiteFaultSource (id=%s)' % (self.fname, node['id']))

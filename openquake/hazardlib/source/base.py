@@ -38,27 +38,36 @@ I64 = numpy.int64
 TWO30 = I64(2**30)
 
 
-def linear_piecewise_aratio(mag, points):
+class MagDepAspectRatio:
     """
-    Clamped piecewise-linear interpolation of aspect ratio from magnitude.
-
-    :param mag: Rupture magnitude (float)
-
-    :param points: List of (mag, aratio) pairs in ascending magnitude order
-
-    :returns: Interpolated (or clamped) aspect ratio
+    Class to handle magnitude-dependent aspect ratios described by
+    PREDEFINED expressions which are evaluated during rup generation.
     """
-    mags = [m for m, _ in points]
-    aratios = [a for _, a in points]
-    if mag <= mags[0]:
-        return aratios[0]
-    if mag >= mags[-1]:
-        return aratios[-1]
-    for i in range(len(mags) - 1):
-        if mags[i] <= mag <= mags[i + 1]:
-            t = (mag - mags[i]) / (mags[i + 1] - mags[i])
-            return aratios[i] + t * (aratios[i + 1] - aratios[i])
+    def __init__(self, func_type, mag_points):
+        self.func_type = func_type    # Type of expression to evaluate
+        self.mag_points = mag_points  # list of (mag, aratio), ascending mag
 
+    @classmethod
+    def from_dict(cls, d): # Used in geopackager currently
+        return cls(d["type"], d["function"])
+
+    def get(self, mag):
+        # We can add more functions here as required
+        if self.func_type == "linear_piecewise":
+            # Clamped piecewise-linear interpolation of aratio from mag
+            mags = [m for m, _ in self.mag_points]
+            aratios = [a for _, a in self.mag_points]
+            if mag <= mags[0]:
+                return aratios[0]
+            if mag >= mags[-1]:
+                return aratios[-1]
+            for i in range(len(mags) - 1):
+                if mags[i] <= mag <= mags[i + 1]:
+                    t = (mag - mags[i]) / (mags[i + 1] - mags[i])
+                    return aratios[i] + t * (aratios[i + 1] - aratios[i])
+
+        raise ValueError(
+            f"Unsupported aspectRatioFunction type: {self.func_type}")
 
 @dataclass
 class SourceParam:
@@ -483,21 +492,18 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     def get_aspect_ratio(self, mag):
         """
         Return the rupture aspect ratio, which is either a float (the
-        "regular" version OR an expression of a PREDEFINED type which
-        is evaluated here).
+        "regular" version) OR anexpression of a PREDEFINED type which
+        is evaluated here (stored in a MagDepAspectRatio class).
 
         More expressions can be added here in the future as required.
         """
         rar = self.rupture_aspect_ratio
-        if not isinstance(rar, dict):
+        if not isinstance(rar, MagDepAspectRatio):
             return rar
-        rar_type = rar["type"]
-        if rar_type == "linear_piecewise":
-            return linear_piecewise_aratio(mag, rar["function"])
-        raise ValueError(f"Unsupported aspectRatioFunction type: {rar_type}")
+        return rar.get(mag)
 
     def _check_scalar_aspect_ratio(self, modification):
-        if isinstance(self.rupture_aspect_ratio, dict):
+        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
             # Prevent use of aratio epistemic uncertainties when also
             # using a non-scalar value for aspect ratio in the src XML
             raise ValueError(

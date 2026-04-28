@@ -26,7 +26,8 @@ from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt, get_rupdims)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import (ParametricSeismicSource,
+                                             MagDepAspectRatio)
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
@@ -75,7 +76,8 @@ def calc_average(pointsources):
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key == 'dep':
             acc[key] = numpy.average(acc[key], weights=dep_w)
-        elif key == 'rupture_aspect_ratio' and isinstance(acc[key][0], dict):
+        elif key == 'rupture_aspect_ratio' and isinstance(
+            acc[key][0], MagDepAspectRatio):
             # Mag-dep aratio
             acc[key] = acc[key][0]
         else:
@@ -251,7 +253,7 @@ class PointSource(ParametricSeismicSource):
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         planin = self.get_planin()
-        if isinstance(self.rupture_aspect_ratio, dict):
+        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
             # Get the mag-dependent aratio for each rup
             rar = numpy.array([[self.get_aspect_ratio(planin.mag[m, n])
                                 for n in range(planin.shape[1])]

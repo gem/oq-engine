@@ -95,8 +95,10 @@ def build_nodes(props):
     msr = Node('magScaleRel', text=props['magscalerel'])
     raw_rar = props['ruptaspectratio']
     if isinstance(raw_rar, str) and raw_rar.startswith('{'):
-        from openquake.hazardlib.sourcewriter import build_aspect_ratio_node
-        rar = build_aspect_ratio_node(json.loads(raw_rar))
+        from openquake.hazardlib import sourceconverter
+        from openquake.hazardlib.source.base import MagDepAspectRatio
+        rar = sourceconverter.build_aspect_ratio_node(
+            MagDepAspectRatio.from_dict(json.loads(raw_rar)))
     else:
         rar = Node('ruptAspectRatio', text=scientificformat(raw_rar))
     mfd = Node(mfd, mfd_attrs, nodes=mfd_subnodes)

@@ -26,9 +26,10 @@ import unittest
 import tempfile
 
 from openquake.baselib import general
-from openquake.hazardlib.sourcewriter import (
-    write_source_model, tomldump, build_aspect_ratio_node)
-from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.sourcewriter import write_source_model, tomldump
+from openquake.hazardlib.sourceconverter import (SourceConverter,
+                                                 build_aspect_ratio_node)
+from openquake.hazardlib.source.base import MagDepAspectRatio
 from openquake.hazardlib import nrml
 
 from openquake.hazardlib.geo import Point
@@ -145,10 +146,9 @@ class BuildAspectRatioNodeTestCase(unittest.TestCase):
         self.assertEqual(node.tag, 'ruptAspectRatio')
         self.assertEqual(node.text, 1.5)
 
-    def test_dict_produces_aspect_ratio_function_node(self):
-        # Round trip from dict as produced in sourceconverter into
-        # build_aspect_ratio_node and back to identical same dict
-        rar = {"function": [(4.0, 1.0), (7.0, 2.0)], "type": "linear_piecewise"}
+    def test_mag_dep_produces_aspect_ratio_function_node(self):
+        # MagDepAspectRatio instance produces an aspectRatioFunction XML node
+        rar = MagDepAspectRatio("linear_piecewise", [(4.0, 1.0), (7.0, 2.0)])
         node = build_aspect_ratio_node(rar)
         self.assertEqual(node.tag, 'aspectRatioFunction')
         repr_tags = [n.tag for n in node.nodes]
