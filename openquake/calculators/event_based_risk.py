@@ -148,16 +148,15 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     xtypes = oqparam.ext_loss_types
     if oqparam.ideduc:
         xtypes.append('claim')
-    assdf = monitor.read('assets')
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    dic = _event_based_risk(gmf_df, assdf, loss2, loss3, crmodel, monitor)
+    dic = _event_based_risk(gmf_df, loss2, loss3, crmodel, monitor)
     dic['alt'] = build_alt(loss2, xtypes)
     dic['avg'] = build_avg(loss3, oqparam.A, R*X)
     return dic
 
 
-def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
+def _event_based_risk(df, loss2, loss3, crmodel, monitor):
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
@@ -179,14 +178,10 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if assdf is None:  # i.e. case_01
-            # read the assets for a single country, taxonomy (ebrisk)
-            with ass_mon:
-                adf = monitor.read(
-                    'assets', slc=slice(s0, s1)).set_index('ordinal')
-        else:
-            # filter the assets (event_based_risk)
-            adf = assdf[s0:s1].set_index('ordinal')
+        # read the assets for a single country, taxonomy (ebrisk)
+        with ass_mon:
+            adf = monitor.read(
+                'assets', slc=slice(s0, s1)).set_index('ordinal')
 
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
@@ -316,7 +311,6 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdf = None
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
@@ -327,7 +321,7 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             loss3 = {'aids': [], 'bids': [], 'loss': []}
             loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
             dic = _event_based_risk(
-                gmf_df, assdf, loss2, loss3, crmodel, monitor)
+                gmf_df, loss2, loss3, crmodel, monitor)
             if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)
