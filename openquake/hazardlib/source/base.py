@@ -41,18 +41,18 @@ TWO30 = I64(2**30)
 class MagDepAspectRatio:
     """
     Class to handle magnitude-dependent aspect ratios described by
-    PREDEFINED expressions which are evaluated during rup generation.
+    piecewise expressions which are evaluated during rup generation.
     """
     def __init__(self, func_type, mag_points):
         self.func_type = func_type    # Type of expression to evaluate
-        self.mag_points = mag_points  # list of (mag, aratio), ascending mag
+        self.mag_points = mag_points  # List of (mag, aratio), ascending mag
 
     @classmethod
     def from_dict(cls, d): # Used in geopackager currently
         return cls(d["type"], d["function"])
 
     def get(self, mag):
-        # We can add more functions here as required
+        # NOTE: We can add more expression types here as required
         if self.func_type == "linear_piecewise":
             # Clamped piecewise-linear interpolation of aratio from mag
             mags = [m for m, _ in self.mag_points]
@@ -491,15 +491,12 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def get_aspect_ratio(self, mag):
         """
-        Return the rupture aspect ratio, which is either a float (the
-        "regular" version) OR anexpression of a PREDEFINED type which
-        is evaluated here (stored in a MagDepAspectRatio class).
-
-        More expressions can be added here in the future as required.
+        Return the rupture aspect ratio
         """
         rar = self.rupture_aspect_ratio
         if not isinstance(rar, MagDepAspectRatio):
             return rar
+        # Must be MagDepAspectRatio so get the expression to be eval
         return rar.get(mag)
 
     def _check_scalar_aspect_ratio(self, modification):
