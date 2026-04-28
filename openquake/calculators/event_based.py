@@ -793,6 +793,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         elif oq.inputs['rupture_model'].endswith('.hdf5'):
+            assert oq.calculation_mode.startswith('scenario')
             # extract single rupture from SES, tested in oq-risk-tests PAPERS
             with hdf5.File(oq.inputs['rupture_model']) as f:
                 ebr = get_ebrupture(f, oq.rupture_id, trts)
@@ -800,9 +801,7 @@ class EventBasedCalculator(base.HazardCalculator):
             gsim_lt = readinput.get_gsim_lt(oq, [trt])
             aw = get_rup_array([ebr], oq.maximum_distance(trt))
             aw['trt_smr'] = 0  # a single TRT
-            if oq.calculation_mode.startswith('scenario'):
-                # rescale n_occ by ngmfs and nrlzs
-                aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
+            aw['n_occ'] = ngmfs * gsim_lt.get_num_paths()
         else:
             # should never arrive here
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
