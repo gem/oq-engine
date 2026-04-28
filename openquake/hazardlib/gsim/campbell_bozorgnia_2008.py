@@ -401,7 +401,7 @@ class CampbellBozorgnia2008Arbitrary(CampbellBozorgnia2008):
 
 class CampbellBozorgnia2008BCHydro(CampbellBozorgnia2008):
     """
-    CB2008 with BCHydro sigma-mu scaling and site-specific sigma.
+    CB2008 with BCHydro sigma-mu scaling and single station sigma.
     """
     def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
         super().__init__(**kwargs)
