@@ -28,7 +28,7 @@ from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.aspect_ratio import (
-    MagDepAspectRatio, get_aspect_ratio, build_aspect_ratio_node)
+    MagDepAspectRatio, get_aspect_ratio)
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32

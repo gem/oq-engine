@@ -4,8 +4,8 @@
 
   [Christopher Brooks]
   * Add ability to specify a magnitude-dependent aspect ratio which
-    is evaluated using a predefined expression. Support initially is
-    limited to piecewise linear-interpolation.
+    is evaluated using a predefined expression via a `MagDepAratio`
+    class.
   * Add the magnitude-scaling relationship used in the Northern
     Volcanic Arc (NVA) source zone of the BC Hydro SSC logic tree.
   * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
