@@ -62,13 +62,11 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
     P, _A, R, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     dd_dict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-    ordinals = []
     idx = {o: i for i, o in enumerate(assetcol['ordinal'])}
     for sid, asset_df in assetcol.to_dframe().groupby('site_id'):
         # working one site at the time
         gmf_df = df[df.sid == sid]
         if len(gmf_df) == 0:
-            ordinals.append(asset_df.ordinal.to_numpy())
             continue
         eids = gmf_df.eid.to_numpy()
         E = len(eids)
@@ -81,7 +79,6 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
             A = len(adf)
             ords = adf.ordinal.to_numpy()
             idxs = [idx[o] for o in ords]
-            ordinals.append(ords)
             rc = scientific.RiskComputer(crmodel, taxo)
             dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
             if R == 1:  # possibly because of collect_rlzs
@@ -106,7 +103,7 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
                     for kids in aggids:
                         for a, o in enumerate(ords):
                             dd_dict[eid, kids[o]] += dd4[a, e]
-    return dd_dict, dmgcsq, numpy.concatenate(ordinals, dtype=U32)
+    return dd_dict, dmgcsq, assetcol['ordinal']
 
 
 def _dframe(dd_dic, csqidx, loss_types):
