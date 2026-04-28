@@ -18,10 +18,10 @@
             <magScaleRel>WC1994</magScaleRel>
             <aspectRatioFunction>
                 <type>linear_piecewise</type> <!-- If 4 < Mw < 7 linear interp for aratio -->
-                <points>
-                    <point mag="4.0" aratio="1.0"/>  <!-- Below or equal to Mw 4 use aratio of 1 -->
-                    <point mag="7.0" aratio="2.0"/>  <!-- Above or equal to Mw 7 use aratio of 2 -->
-                </points>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>  <!-- Below or equal to Mw 4 use aratio of 1 -->
+                    <mag_point mag="7.0" aratio="2.0"/>  <!-- Above or equal to Mw 7 use aratio of 2 -->
+                </mag_points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
@@ -49,10 +49,10 @@
             <magScaleRel>WC1994</magScaleRel>
             <aspectRatioFunction>
                 <type>linear_piecewise</type>
-                <points>
-                    <point mag="4.0" aratio="1.0"/>
-                    <point mag="7.0" aratio="2.0"/>
-                </points>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
@@ -71,10 +71,10 @@
             <magScaleRel>WC1994</magScaleRel>
             <aspectRatioFunction>
                 <type>linear_piecewise</type>
-                <points>
-                    <point mag="4.0" aratio="1.0"/>
-                    <point mag="7.0" aratio="2.0"/>
-                </points>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
@@ -104,10 +104,10 @@
             <magScaleRel>WC1994</magScaleRel>
             <aspectRatioFunction>
                 <type>linear_piecewise</type>
-                <points>
-                    <point mag="4.0" aratio="1.0"/>
-                    <point mag="7.0" aratio="2.0"/>
-                </points>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>

@@ -153,12 +153,12 @@ class BuildAspectRatioNodeTestCase(unittest.TestCase):
         self.assertEqual(node.tag, 'aspectRatioFunction')
         repr_tags = [n.tag for n in node.nodes]
         self.assertIn('type', repr_tags)
-        self.assertIn('points', repr_tags)
+        self.assertIn('mag_points', repr_tags)
         # The dict type key and the XML type text are both "linear_piecewise"
         type_node = next(n for n in node.nodes if n.tag == 'type')
         self.assertEqual(type_node.text, 'linear_piecewise')
         # Check the (mag, aratio) pairs
-        points_node = next(n for n in node.nodes if n.tag == 'points')
+        points_node = next(n for n in node.nodes if n.tag == 'mag_points')
         self.assertEqual(len(points_node.nodes), 2)
         self.assertEqual(points_node.nodes[0].attrib['mag'], 4.0)
         self.assertEqual(points_node.nodes[1].attrib['aratio'], 2.0)

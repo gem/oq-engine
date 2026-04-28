@@ -355,9 +355,9 @@ def build_aspect_ratio_node(rar):
 
     if func_type == "linear_piecewise":
         # Simple linear interp between mmin and mmax and clamp otherwise
-        point_nodes = [Node("point", {"mag": m, "aratio": a})
+        point_nodes = [Node("mag_point", {"mag": m, "aratio": a})
                     for m, a in rar["function"]]
-        points_node = Node("points", nodes=point_nodes)
+        points_node = Node("mag_points", nodes=point_nodes)
         type_node = Node("type", text="linear_piecewise")
         return Node("aspectRatioFunction", nodes=[type_node, points_node])
 

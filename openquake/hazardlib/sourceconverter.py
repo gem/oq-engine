@@ -59,13 +59,12 @@ def get_aspect_ratio(node):
     func_type = ~arf.type
 
     if func_type == 'linear_piecewise':
-        npoints = len(arf.points)
+        npoints = len(arf.mag_points)
         if npoints != 2:
-            # Check not too many "points" descrbing this expression
             raise ValueError(
                 f"Should be two elements [(MinAR, MinMmin), (MaxAR, Mmax)] "
                 f"in linear_piecewise kind of ruptAspectRatio ({npoints})")
-        points = [(float(p['mag']), float(p['aratio'])) for p in arf.points]
+        points = [(float(p['mag']), float(p['aratio'])) for p in arf.mag_points]
         if any(m <= 0 for m, _ in points):
             raise ValueError(
                 f"aspectRatioFunction magnitudes must be positive: "

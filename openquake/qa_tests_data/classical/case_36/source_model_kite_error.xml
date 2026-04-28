@@ -17,10 +17,10 @@
             <magScaleRel>WC1994</magScaleRel>
             <aspectRatioFunction>
                 <type>linear_piecewise</type>
-                <points>
-                    <point mag="4.0" aratio="1.0"/>
-                    <point mag="7.0" aratio="2.0"/>
-                </points>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
             </aspectRatioFunction>
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
