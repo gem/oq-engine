@@ -23,6 +23,7 @@ from dataclasses import dataclass
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
+from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import magstr, split_source
@@ -37,37 +38,6 @@ F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
 
-
-class MagDepAspectRatio:
-    """
-    Class to handle magnitude-dependent aspect ratios described by
-    piecewise expressions which are evaluated during rup generation.
-    """
-    def __init__(self, func_type, mag_points):
-        self.func_type = func_type    # Type of expression to evaluate
-        self.mag_points = mag_points  # List of (mag, aratio), ascending mag
-
-    @classmethod
-    def from_dict(cls, d): # Used in geopackager currently
-        return cls(d["type"], d["function"])
-
-    def get(self, mag):
-        # NOTE: We can add more expression types here as required
-        if self.func_type == "linear_piecewise":
-            # Clamped piecewise-linear interpolation of aratio from mag
-            mags = [m for m, _ in self.mag_points]
-            aratios = [a for _, a in self.mag_points]
-            if mag <= mags[0]:
-                return aratios[0]
-            if mag >= mags[-1]:
-                return aratios[-1]
-            for i in range(len(mags) - 1):
-                if mags[i] <= mag <= mags[i + 1]:
-                    t = (mag - mags[i]) / (mags[i + 1] - mags[i])
-                    return aratios[i] + t * (aratios[i + 1] - aratios[i])
-
-        raise ValueError(
-            f"Unsupported aspectRatioFunction type: {self.func_type}")
 
 @dataclass
 class SourceParam:

@@ -27,6 +27,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf, valid
+from openquake.hazardlib.aspect_ratio import build_aspect_ratio_node
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import NegativeBinomialTOM
@@ -362,7 +363,7 @@ def get_distributed_seismicity_source_nodes(source):
              text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        sourceconverter.build_aspect_ratio_node(source.rupture_aspect_ratio))
+        build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse nodal plane distribution
@@ -422,7 +423,7 @@ def get_fault_source_nodes(source):
             text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        sourceconverter.build_aspect_ratio_node(source.rupture_aspect_ratio))
+        build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake

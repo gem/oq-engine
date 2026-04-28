@@ -28,6 +28,8 @@ except ImportError:
                       'Only the GEM wheels are tested and guaranteed to work')
 from openquake.baselib.node import Node, scientificformat
 from openquake.hazardlib import nrml
+from openquake.hazardlib.aspect_ratio import (
+    MagDepAspectRatio, build_aspect_ratio_node)
 
 
 def geodict(row):
@@ -95,9 +97,7 @@ def build_nodes(props):
     msr = Node('magScaleRel', text=props['magscalerel'])
     raw_rar = props['ruptaspectratio']
     if isinstance(raw_rar, str) and raw_rar.startswith('{'):
-        from openquake.hazardlib import sourceconverter
-        from openquake.hazardlib.source.base import MagDepAspectRatio
-        rar = sourceconverter.build_aspect_ratio_node(
+        rar = build_aspect_ratio_node(
             MagDepAspectRatio.from_dict(json.loads(raw_rar)))
     else:
         rar = Node('ruptAspectRatio', text=scientificformat(raw_rar))

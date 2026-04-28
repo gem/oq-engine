@@ -27,9 +27,9 @@ import tempfile
 
 from openquake.baselib import general
 from openquake.hazardlib.sourcewriter import write_source_model, tomldump
-from openquake.hazardlib.sourceconverter import (SourceConverter,
-                                                 build_aspect_ratio_node)
-from openquake.hazardlib.source.base import MagDepAspectRatio
+from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.aspect_ratio import (
+    MagDepAspectRatio, build_aspect_ratio_node)
 from openquake.hazardlib import nrml
 
 from openquake.hazardlib.geo import Point
