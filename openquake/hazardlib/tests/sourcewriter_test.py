@@ -154,7 +154,7 @@ class BuildAspectRatioNodeTestCase(unittest.TestCase):
         repr_tags = [n.tag for n in node.nodes]
         self.assertIn('type', repr_tags)
         self.assertIn('mag_points', repr_tags)
-        # The dict type key and the XML type text are both "linear_piecewise"
+        # Check func type
         type_node = next(n for n in node.nodes if n.tag == 'type')
         self.assertEqual(type_node.text, 'linear_piecewise')
         # Check the (mag, aratio) pairs
