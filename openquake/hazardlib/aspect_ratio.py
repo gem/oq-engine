@@ -55,11 +55,18 @@ def get_aspect_ratio(node):
     MagDepAspectRatio for the magnitude-dependent form.
     """
     try:
-        # check if mag-dependent aratio
         arf = node.aspectRatioFunction
     except AttributeError:
-        # Regular
         return ~node.ruptAspectRatio
+
+    try:
+        node.ruptAspectRatio
+    except AttributeError:
+        pass
+    else:
+        raise ValueError(
+            "source %r specifies both ruptAspectRatio and "
+            "aspectRatioFunction" % node.get('id', '?'))
 
     # Get the function type
     func_type = ~arf.type

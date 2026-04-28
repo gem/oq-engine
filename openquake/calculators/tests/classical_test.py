@@ -471,7 +471,11 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_epistemic_error.xml'))
-        self.assertIn('aspectRatioFunction', str(ctx.exception))
+        self.assertEqual(
+            str(ctx.exception),
+            "Cannot apply set_aspect_ratio to source '1': epistemic "
+            "uncertainties on aspect ratio are not compatible with "
+            "aspectRatioFunction")
 
         # Check that aspectRatioFunction is rejected for kiteFaultSource
         with self.assertRaises(InvalidFile) as ctx:
@@ -479,8 +483,20 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_kite_error.xml'))
-        self.assertIn('kiteFaultSource', str(ctx.exception))
-        self.assertIn('aspectRatioFunction', str(ctx.exception))
+        self.assertIn(
+            'aspectRatioFunction is not supported for kiteFaultSource (id=kf1)',
+            str(ctx.exception))
+
+        # Check that specifying both ruptAspectRatio and aspectRatioFunction
+        # in the same source is rejected
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_both_aratio_error.xml'))
+        self.assertIn(
+            "source '1' specifies both ruptAspectRatio and aspectRatioFunction",
+            str(ctx.exception))
 
     def test_case_37(self):
         # Christchurch
