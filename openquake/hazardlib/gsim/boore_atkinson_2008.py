@@ -236,7 +236,8 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
 class BooreAtkinson2008BCHydro(BooreAtkinson2008):
     """
-    BA2008 with BCHydro sigma-mu scaling and single station sigma.
+    BA2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    single station sigma.
     """
     def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
         super().__init__(**kwargs)

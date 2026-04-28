@@ -257,7 +257,8 @@ class ChiouYoungs2008(GMPE):
 
 class ChiouYoungs2008BCHydro(ChiouYoungs2008):
     """
-    CY2008 with BCHydro sigma-mu scaling and single station sigma.
+    CY2008 with BCHydro (IMT-dependent) sigma-mu scaling and
+    single station sigma.
     """
     def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
         super().__init__(**kwargs)
