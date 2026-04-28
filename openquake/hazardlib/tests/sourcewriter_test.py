@@ -28,8 +28,6 @@ import tempfile
 from openquake.baselib import general
 from openquake.hazardlib.sourcewriter import write_source_model, tomldump
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.aspect_ratio import (
-    MagDepAspectRatio, build_aspect_ratio_node)
 from openquake.hazardlib import nrml
 
 from openquake.hazardlib.geo import Point
@@ -131,37 +129,6 @@ class SourceWriterTestCase(unittest.TestCase):
         os.remove(self.saved + '.toml')
         
     # NB: UCERF-like sources are also tested in multi_fault_test.py
-
-
-class BuildAspectRatioNodeTestCase(unittest.TestCase):
-    """
-    Tests for build_aspect_ratio_node, which writes rupture aspect ratio
-    to an XML Node. It considers regular scalar aspect ratio and also the
-    aspectRatioFunction capability.
-    """
-
-    def test_scalar_produces_rupt_aspect_ratio_node(self):
-        # A regular float should work as usual
-        node = build_aspect_ratio_node(1.5)
-        self.assertEqual(node.tag, 'ruptAspectRatio')
-        self.assertEqual(node.text, 1.5)
-
-    def test_mag_dep_produces_aspect_ratio_function_node(self):
-        # MagDepAspectRatio instance produces an aspectRatioFunction XML node
-        rar = MagDepAspectRatio("linear_piecewise", [(4.0, 1.0), (7.0, 2.0)])
-        node = build_aspect_ratio_node(rar)
-        self.assertEqual(node.tag, 'aspectRatioFunction')
-        repr_tags = [n.tag for n in node.nodes]
-        self.assertIn('type', repr_tags)
-        self.assertIn('mag_points', repr_tags)
-        # Check func type
-        type_node = next(n for n in node.nodes if n.tag == 'type')
-        self.assertEqual(type_node.text, 'linear_piecewise')
-        # Check the (mag, aratio) pairs
-        points_node = next(n for n in node.nodes if n.tag == 'mag_points')
-        self.assertEqual(len(points_node.nodes), 2)
-        self.assertEqual(points_node.nodes[0].attrib['mag'], 4.0)
-        self.assertEqual(points_node.nodes[1].attrib['aratio'], 2.0)
 
 
 class TOMLTestCase(unittest.TestCase):

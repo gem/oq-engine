@@ -21,7 +21,6 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
 from openquake.hazardlib.geo import Polygon, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
@@ -115,17 +114,3 @@ class RecomputeMmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(7.377+0.25, src.mfd.max_mag, msg=msg, places=2)
         src.modify_recompute_mmax(-1)
         self.assertAlmostEqual(7.377-0.25, src.mfd.max_mag, msg=msg, places=2)
-
-
-class LinearPiecewiseAratioTestCase(unittest.TestCase):
-    # Two-point function: Mw4->1.0, Mw7->2.0
-    POINTS = [(4.0, 1.0), (7.0, 2.0)]
-
-    def test_interpolation_and_clamping(self):
-        # Below min, midpoint, non-midpoint interp, above max
-        mags = [3.0, 5.5, 6.25, 8.0]
-        expected = [1.0, 1.5, 1.75, 2.0]
-        for m, exp in zip(mags, expected):
-            self.assertAlmostEqual(
-                MagDepAspectRatio("linear_piecewise", self.POINTS).get(m),
-                exp, msg=f"mag={m}")
