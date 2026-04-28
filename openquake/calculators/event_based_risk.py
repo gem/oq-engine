@@ -179,7 +179,7 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if assdf is None:
+        if assdf is None:  # i.e. case_01
             # read the assets for a single country, taxonomy (ebrisk)
             with ass_mon:
                 adf = monitor.read(
@@ -341,6 +341,28 @@ def fast_add(avg_losses, row, col, data, X):
         avg_losses[r, lti, rlz] += d
 
 
+def get_assetdf_startstop(assetcol):
+    """
+    :param assetcol: an AssetCollection
+    :returns: (dataframe of assets, idx_start_stop array)
+    """
+    adf = assetcol.to_dframe()
+    del adf['id']
+    if 'ID_0' not in adf.columns:
+        adf['ID_0'] = U32(0)
+    adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+    # NB: this is subtle! without the ordering by 'ordinal'
+    # the asset dataframe will be ordered differently on AMD machines
+    # with respect to Intel machines, depending on the machine, thus
+    # causing different losses
+    id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
+    max_assets = int(config.memory.max_assets_chunk)
+    iss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
+    # building start-stop indices, so that the assets are
+    # read from the workers by taxonomy
+    return adf, iss
+
+
 @base.calculators.add('scenario_risk', 'event_based_risk')
 class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
@@ -357,27 +379,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe()
-        del adf['id']
-        if 'ID_0' not in adf.columns:
-            adf['ID_0'] = U32(0)
-        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
-        # NB: this is subtle! without the ordering by 'ordinal'
-        # the asset dataframe will be ordered differently on AMD machines
-        # with respect to Intel machines, depending on the machine, thus
-        # causing different losses
+        adf, iss = get_assetdf_startstop(self.assetcol)
         monitor.save('assets', adf)
+        monitor.save('start-stop', iss)
 
         # crucial for impact_test
         if 'ID_0' in self.assetcol.tagnames:
             monitor.save('countries', self.assetcol.tagcol.ID_0)
 
-        # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers by taxonomy
-        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
-        max_assets = int(config.memory.max_assets_chunk)
-        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
-        monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         try:
