@@ -27,6 +27,7 @@ import openquake.hazardlib.tom as tom
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.sourcewriter import build_hypo_depth_dist_simple_fault
 
 
 from openquake.hazardlib.tests import assert_angles_equal, assert_pickleable
@@ -707,3 +708,11 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertAlmostEqual(result[0][0], 2 / 3, places=10)
         self.assertAlmostEqual(result[0][1], 1.0, places=10)
+
+    def test_hypo_depth_dist_xml_roundtrip(self):
+        # fixedDipFrac is written to XML when set and omitted when None
+        node = build_hypo_depth_dist_simple_fault(
+            [(0.5, 5.0, 2 / 3), (0.5, 10.0, None)])
+        entries = list(node)
+        self.assertAlmostEqual(entries[0].attrib['fixedDipFrac'], 2 / 3)
+        self.assertNotIn('fixedDipFrac', entries[1].attrib)
