@@ -90,11 +90,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         Alternative approach 2 is described by hypo_depth_list:
 
             :param hypo_depth_list:
-                List of (probability, depth) describing a hypocentre depth
-                distribution. All depths must lie within seismogenic depth range
-                or an error is raised. Also, it cannot be combined with
-                hypo_list or slip_list argument with an error being raised if
-                so.
+                List of (probability, depth, fixed_dip_frac) describing a
+                hypocentre depth distribution. fixed_dip_frac is optional
+                (None if not set) and overrides the computed down-dip fraction
+                for that depth if provided. All depths must lie within the
+                seismogenic depth range or an error is raised. Cannot be
+                combined with hypo_list or slip_list.
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -151,7 +152,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         if hypo_data is not None:
             self.hypo_list = hypo_data.hypo_list
             self.slip_list = hypo_data.slip_list
-            self.hypo_depth_list = tuple(hypo_data.depth_list)
+            self.hypo_depth_list = tuple(
+                e if len(e) == 3 else (e[0], e[1], None)
+                for e in hypo_data.depth_list)
         else:
             self.hypo_list = ()
             self.slip_list = ()
@@ -167,16 +170,20 @@ class SimpleFaultSource(ParametricSeismicSource):
                 'hypo_depth_list and hypo_list/slip_list cannot be used together'
                 )
         if self.hypo_depth_list:
-            total = sum(p for p, _ in self.hypo_depth_list)
+            total = sum(wei for wei, _depth, _fdf in self.hypo_depth_list)
             if abs(total - 1.0) > 1e-7:
                 raise ValueError(
                     f'hypo_depth_list probabilities sum to {total}, expected 1.0')
-        for _, depth in self.hypo_depth_list:
+        for _wei, depth, fdf in self.hypo_depth_list:
             if not (upper_seismogenic_depth <= depth <= lower_seismogenic_depth):
                 raise ValueError(
                     f'hypo_depth_list entry {depth} km is outside the '
                     f'seismogenic zone [{upper_seismogenic_depth}, '
                     f'{lower_seismogenic_depth}] km')
+            if fdf is not None and not (0.0 < fdf <= 1.0):
+                raise ValueError(
+                    f'hypo_depth_list fixedDipFrac {fdf} for depth {depth} km'
+                    f' must be in the range (0, 1]')
 
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
@@ -188,9 +195,14 @@ class SimpleFaultSource(ParametricSeismicSource):
         Convert the hypo depth distribution to (dip_frac, weight) pairs
         for a given floating rupture.
 
-        Depths outside [rup_top_depth, rup_bot_depth] are discarded
-        and the remaining weights are renormalised to sum to 1.
-        
+        Depths outside [rup_top_depth, rup_bot_depth] are discarded and
+        the remaining weights are renormalised to sum to 1. Where a
+        fixedDipFrac is set on an entry it is used directly; otherwise
+        the fraction is computed from the depth position within the
+        rupture. Entries sharing the same dip_frac are collapsed into one
+        pair so that a uniform fixedDipFrac yields a single hypocentre
+        per floating rupture.
+
         An error is raised if none of the hypo depths are within the
         depth range of a given floating rup.
         """
@@ -205,21 +217,23 @@ class SimpleFaultSource(ParametricSeismicSource):
             (first_row + rup_rows - 1) * down_dip_delta)
         rup_depth_delta = bot_depth - top_depth
 
-        # Only keep the hypocentres inside this depth range
-        hypos = []
-        for prob, depth in self.hypo_depth_list:
+        # Only keep hypocentres inside this depth range; resolve dip_frac
+        weight_by_frac = {}
+        for prob, depth, fdf in self.hypo_depth_list:
             if top_depth <= depth <= bot_depth:
-                dip_frac = (depth - top_depth) / rup_depth_delta
-                hypos.append((dip_frac, prob))
-                
-        if not hypos:
+                dip_frac = (fdf if fdf is not None
+                            else (depth - top_depth) / rup_depth_delta)
+                weight_by_frac[dip_frac] = (
+                    weight_by_frac.get(dip_frac, 0.0) + prob)
+
+        if not weight_by_frac:
             raise ValueError(
                 f'No hypo_depth_list depths fall in depth range of floated '
                 f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
 
-        total = sum(h[1] for h in hypos)
-
-        return [(h[0], h[1] / total) for h in hypos]  # Renormalise weights
+        total = sum(weight_by_frac.values())
+        return [(frac, w / total)
+                for frac, w in weight_by_frac.items()]
 
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
                                    first_row, rup_rows):

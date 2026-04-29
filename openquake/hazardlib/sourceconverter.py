@@ -760,8 +760,14 @@ class SourceConverter(RuptureConverter):
             except AttributeError:
                 slip_list = ()
             try:
-                hypo_depth_list = [(hd['probability'], hd['depth'])
-                                   for hd in node.hypoDepthDist]
+                hypo_depth_list = [
+                    (hd['probability'], hd['depth'],
+                     # Optional override of dip frac computed on
+                     # floating rup by floating rup basis within
+                     # in SimpleFaultSource._hypo_list_from_depths
+                     float(hd.attrib['fixedDipFrac'])
+                     if 'fixedDipFrac' in hd.attrib else None)
+                    for hd in node.hypoDepthDist]
             except AttributeError:
                 hypo_depth_list = ()
             simple = source.SimpleFaultSource(

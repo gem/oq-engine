@@ -407,12 +407,19 @@ class ClassicalTestCase(CalculatorTestCase):
         # Simple fault with hypoDepthDist
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_28.__file__)
 
+        # Same depth distribution but hypocentre fixed at 2/3 downdip
+        self.assert_curves_ok(
+            ["hazard_curve-mean-PGA_fixed_dip_frac.csv"],
+            case_28.__file__,
+            source_model_logic_tree_file=(
+                'source_model_logic_tree_fixed_dip_frac.xml'))
+
         # Depth outside seismogenic zone must be rejected
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_28.__file__, 'job.ini',
                           source_model_logic_tree_file=(
                               'source_model_logic_tree_depth_error.xml'))
-            
+
         self.assertIn('hypo_depth_list entry 25.0 km is outside the '
                       'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
 
