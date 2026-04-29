@@ -143,7 +143,9 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdf = monitor.read('assets')
-    dic = _event_based_risk(gmf_df,gen_adf(monitor, assdf), crmodel, monitor)
+    items = ((id0taxo, assdf[s0:s1].set_index('ordinal'))
+             for id0taxo, s0, s1 in monitor.read('start-stop'))
+    dic = _event_based_risk(gmf_df, items, crmodel, monitor)
     return dic
 
 
