@@ -198,7 +198,15 @@ class SimpleFaultSource(ParametricSeismicSource):
         Depths outside [rup_top_depth, rup_bot_depth] are discarded and
         the remaining weights are renormalised to sum to 1. 
 
-        An error is raised if none of the hypo depths are within the
+        If fixedDipFrac is specified in the hypoDepthDist then it is
+        assigned to the corresponding depth instead of a fraction computed
+        using the floating rupture's depth range.
+
+        NOTE: Depths that resolve to the same dip_frac (whether from
+        fixedDipFrac or coincidental computed equality) are collapsed into
+        one pair with their weights summed.
+
+        NOTE: An error is raised if none of the hypo depths are within the
         depth range of a given floating rup.
         """
         # Compute top and bottom depth of this floating rupture
@@ -228,9 +236,10 @@ class SimpleFaultSource(ParametricSeismicSource):
                 f'No hypo_depth_list depths fall in depth range of floated '
                 f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
 
-        total = sum(weight_by_frac.values())
-        return [(frac, w / total)
-                for frac, w in weight_by_frac.items()]
+        total = sum(weight_by_frac.values()) # Sum weights of retained deps
+
+        return [(frac, w / total # Return retained depths situated in given rup
+                 ) for frac, w in weight_by_frac.items()]
 
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
                                    first_row, rup_rows):
