@@ -702,7 +702,7 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(result[0][0], 2 / 3, places=10)
 
     def test_same_fixed_dip_frac_collapses(self):
-        # Depths sharing a fixedDipFrac collapse to one pair; weights summed.
+        # Depths sharing a fixedDipFrac collapse to 1 pair with weights summed
         src = self._make_source([(0.3, 5.0, 2 / 3), (0.7, 10.0, 2 / 3)])
         result = src._hypo_list_from_depths(first_row=0, rup_rows=24)
         self.assertEqual(len(result), 1)
