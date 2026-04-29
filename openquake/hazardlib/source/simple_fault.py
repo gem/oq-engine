@@ -264,7 +264,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         area = self.magnitude_scaling_relationship.get_median_area(
             mag, self.rake)
-        rup_length = math.sqrt(area * self.rupture_aspect_ratio)
+        rup_length = math.sqrt(area * self.get_aspect_ratio(mag))
         rup_width = area / rup_length
 
         # clip rupture's length and width to fault's length and width

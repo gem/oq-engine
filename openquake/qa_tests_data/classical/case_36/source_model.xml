@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Use linear interp mag-dep aratios on each supported src typology">
+
+        <simpleFaultSource id="1" name="Simple Fault Source"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        1.0 -0.5 1.4 0.0 1.4 0.3
+                    </gml:posList>
+                </gml:LineString>
+                <dip>30.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>15.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <aspectRatioFunction>
+                <type>linear_piecewise</type> <!-- If 4 < Mw < 7 linear interp for aratio -->
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>  <!-- Below or equal to Mw 4 use aratio of 1 -->
+                    <mag_point mag="7.0" aratio="2.0"/>  <!-- Above or equal to Mw 7 use aratio of 2 -->
+                </mag_points>
+            </aspectRatioFunction>
+            <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
+                                      minMag="6.5" maxMag="7.5"/>
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <complexFaultSource id="2" name="Complex Fault Source"
+                            tectonicRegion="Active Shallow Crust">
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.6 -0.8 5.0 1.0 -0.4 5.0 1.0 0.2 5.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.8 -0.8 20.0 1.2 -0.4 20.0 1.2 0.2 20.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <aspectRatioFunction>
+                <type>linear_piecewise</type>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
+            </aspectRatioFunction>
+            <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
+                                      minMag="6.5" maxMag="7.5"/>
+            <rake>90.0</rake>
+        </complexFaultSource>
+
+        <pointSource id="3" name="Point Source"
+                     tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>0.5 -0.5</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>15.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <aspectRatioFunction>
+                <type>linear_piecewise</type>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
+            </aspectRatioFunction>
+            <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
+                                      minMag="6.5" maxMag="7.5"/>
+            <nodalPlaneDist>
+                <nodalPlane strike="0.0" dip="90.0" rake="0.0" probability="1.0"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="7.5" probability="1.0"/>
+            </hypoDepthDist>
+        </pointSource>
+
+        <areaSource id="4" name="Area Source"
+                    tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                -0.5 -1.5 1.5 -1.5 1.5 0.5 -0.5 0.5 -0.5 -1.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>15.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <aspectRatioFunction>
+                <type>linear_piecewise</type>
+                <mag_points>
+                    <mag_point mag="4.0" aratio="1.0"/>
+                    <mag_point mag="7.0" aratio="2.0"/>
+                </mag_points>
+            </aspectRatioFunction>
+            <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
+                                      minMag="6.5" maxMag="7.5"/>
+            <nodalPlaneDist>
+                <nodalPlane strike="0.0" dip="90.0" rake="0.0" probability="1.0"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="7.5" probability="1.0"/>
+            </hypoDepthDist>
+        </areaSource>
+
+    </sourceModel>
+</nrml>
