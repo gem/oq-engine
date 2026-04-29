@@ -433,7 +433,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
         if (oq.aggregate_by and (
-                self.E * A > int(config.memory.max_potential_gmfs) and
+                self.E * A > float(config.memory.max_potential_gmfs) and
                 all(val == 0 for val in oq.minimum_asset_loss.values()))):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
