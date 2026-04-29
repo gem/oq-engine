@@ -26,6 +26,7 @@
 |case\_33|Directivity|
 |case\_34|AvgSA|
 |case\_35|Test cluster feature|
+|case\_36|Test magnitude-dependent aspect ratios|
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
 |case\_39|Test checking of IMT-dependent weights with unsupported IMTs|

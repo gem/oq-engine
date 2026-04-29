@@ -221,7 +221,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                     msr, mag, eps_ar_low, eps_ar_upp, num_bins, rupture_area)
             else:
                 rup_lens = [numpy.sqrt(
-                    rupture_area * self.rupture_aspect_ratio)]
+                    rupture_area * self.get_aspect_ratio(mag))]
                 pmf = [1.0]
 
             # Internal check on the MFD
