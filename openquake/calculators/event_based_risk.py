@@ -172,21 +172,14 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if assdf is None:
-            # read the assets for a single country, taxonomy (ebrisk)
-            with ass_mon:
-                adf = monitor.read(
-                    'assets', slc=slice(s0, s1)).set_index('ordinal')
-        else:
-            # filter the assets (event_based_risk)
-            adf = assdf[s0:s1].set_index('ordinal')
+        # filter the assets (event_based_risk)
+        adf = assdf[s0:s1].set_index('ordinal')
 
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
@@ -316,7 +309,8 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdf = None
+    assdf = monitor.read('assets')
+
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
