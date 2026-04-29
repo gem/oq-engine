@@ -95,7 +95,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                 (None if not set) and overrides the computed down-dip fraction
                 for that depth if provided. All depths must lie within the
                 seismogenic depth range or an error is raised. Cannot be
-                combined with hypo_list or slip_list.
+                combined with alternative approach 1 (hypo_list/slip_list).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
