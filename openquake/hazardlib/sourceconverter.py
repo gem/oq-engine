@@ -759,6 +759,11 @@ class SourceConverter(RuptureConverter):
                 slip_list = valid.slip_list(node.slipList)
             except AttributeError:
                 slip_list = ()
+            try:
+                hypo_depth_list = [(hd['probability'], hd['depth'])
+                                   for hd in node.hypoDepthDist]
+            except AttributeError:
+                hypo_depth_list = ()
             simple = source.SimpleFaultSource(
                 node['id'], node['name'],
                 node.attrib.get('tectonicRegion'),
@@ -766,7 +771,8 @@ class SourceConverter(RuptureConverter):
                 msr, get_aspect_ratio(node), self.get_tom(node),
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
-                [hypo_list, slip_list])
+                [hypo_list, slip_list],
+                hypo_depth_list=hypo_depth_list)
         return simple
 
     def convert_kiteFaultSource(self, node):
