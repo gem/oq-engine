@@ -19,12 +19,18 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
+from collections import namedtuple
 from openquake.baselib.general import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+
+
+# Grouping all the "extra" hypo depth options to reduce num args in class
+HypoData = namedtuple('HypoData', ['hypo_list', 'slip_list', 'depth_list'],
+                      defaults=[(), (), ()])
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -46,36 +52,48 @@ class SimpleFaultSource(ParametricSeismicSource):
         the direction of hanging wall relative to the foot wall.
     :param rupture_slip_direction:
         Angle describing rupture propagation direction in decimal degrees.
-    :param hypo_list:
-        Array describing the relative position of the hypocentre on the rupture
-        surface. Each line represents a hypocentral position defined in terms
-        of the relative distance along strike and dip (from the upper, left
-        corner of the fault surface i.e. the corner which results from the
-        projection at depth of the first vertex of the fault trace) and the
-        corresponding weight. Example 1: one single hypocentral position at the
-        center of the rupture will be described by the following
-        array[(0.5, 0.5, 1.0)]. Example 2: two possible hypocenters are
-        admitted for a rupture. One hypocentre is located along the strike at
-        1/4 of the fault length and at 1/4 of the fault width along the dip and
-        occurs with a weight of 0.3, the other one is at 3/4 of fault length
-        along strike and at 3/4 of fault width along strike with a weight of
-        0.7. The numpy array would be entered as
-        numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]).
-    :param slip_list:
-        Array describing the rupture slip direction, which desribes the rupture
-        propagation direction on the rupture surface. Each line represents a
-        rupture slip direction and the corresponding weight. Example 1: one
-        single rupture slip direction with angle 90 degree will be described
-        by the following array[(90, 1.0)]. Example 2: two possible rupture slip
-        directions are admitted for a rupture. One slip direction is at 90
-        degree with a weight of 0.7, the other one is at 135 degree with a
-        weight of 0.3. The numpy array would be entered as numpy.array(
-        [[90, 0.7], [135, 0.3]]).
-    :param hypo_depth_list:
-        List of (probability, depth) describing a hypocentre depth distribution.
-        All depths must lie within seismogenic depth range or an error is raised.
-        Also, it cannot be combined with hypo_list or slip_list argument with an
-        error being raised if so.
+    :param HypoData:
+        Instance used to group the input arguments for the two alternative ways
+        of specifying the hypocentres within a SimpleFaultSource.
+
+        Alternative approach 1 is described by hypo_list and slip_list:
+    
+            :param hypo_list:
+                Array describing the relative position of the hypocentre on the
+                rupture surface. Each line represents a hypocentral position
+                defined in terms of the relative distance along strike and dip
+                (from the upper, left corner of the fault surface i.e. the
+                corner which results from the projection at depth of the first
+                vertex of the fault trace) and the corresponding weight.
+                Example 1: one single hypocentral position at the center of the
+                rupture will be described by the following array[(0.5, 0.5,
+                1.0)]. Example 2: two possible hypocenters are admitted for a
+                rupture. One hypocentre is located along the strike at 1/4 of
+                the fault length and at 1/4 of the fault width along the dip and
+                occurs with a weight of 0.3, the other one is at 3/4 of fault
+                length along strike and at 3/4 of fault width along strike with
+                a weight of 0.7. The numpy array would be entered as
+                numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]).
+
+            :param slip_list:
+                Array describing the rupture slip direction, which desribes the
+                rupture propagation direction on the rupture surface. Each line
+                represents a rupture slip direction and the corresponding weight.
+                Example 1: one single rupture slip direction with angle 90 degree
+                will be described by the following array[(90, 1.0)]. Example 2:
+                two possible rupture slip directions are admitted for a rupture.
+                One slip direction is at 90 degree with a weight of 0.7, the
+                other one is at 135 degree with a weight of 0.3. The numpy array
+                would be entered as numpy.array([[90, 0.7], [135, 0.3]]).
+
+        Alternative approach 2 is described by hypo_depth_list:
+
+            :param hypo_depth_list:
+                List of (probability, depth) describing a hypocentre depth
+                distribution. All depths must lie within seismogenic depth range
+                or an error is raised. Also, it cannot be combined with
+                hypo_list or slip_list argument with an error being raised if
+                so.
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -110,8 +128,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  fault_trace, dip, rake,
-                 hypo_slip_list=(),
-                 hypo_depth_list=()):
+                 hypo_data=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -130,24 +147,24 @@ class SimpleFaultSource(ParametricSeismicSource):
         min_mag, _max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
-        if hypo_slip_list:
-            self.hypo_list = hypo_slip_list[0]
-            self.slip_list = hypo_slip_list[1]
+        if hypo_data is not None:
+            self.hypo_list = hypo_data.hypo_list
+            self.slip_list = hypo_data.slip_list
+            self.hypo_depth_list = tuple(hypo_data.depth_list)
         else:
             self.hypo_list = ()
             self.slip_list = ()
+            self.hypo_depth_list = ()
 
         if (len(self.hypo_list) and not len(self.slip_list) or
            not len(self.hypo_list) and len(self.slip_list)):
             raise ValueError('hypo_list and slip_list have to be both given '
                              'or neither given')
 
-        if hypo_depth_list and (len(self.hypo_list) or len(self.slip_list)):
+        if self.hypo_depth_list and (len(self.hypo_list) or len(self.slip_list)):
             raise ValueError(
                 'hypo_depth_list and hypo_list/slip_list cannot be used together'
                 )
-        
-        self.hypo_depth_list = tuple(hypo_depth_list)
         if self.hypo_depth_list:
             total = sum(p for p, _ in self.hypo_depth_list)
             if abs(total - 1.0) > 1e-7:
@@ -193,7 +210,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             if top_depth <= depth <= bot_depth:
                 dip_frac = (depth - top_depth) / rup_depth_delta
                 hypos.append((dip_frac, prob))
-
+                
         if not hypos:
             raise ValueError(
                 f'No hypo_depth_list depths fall in depth range of floated '

@@ -771,8 +771,7 @@ class SourceConverter(RuptureConverter):
                 msr, get_aspect_ratio(node), self.get_tom(node),
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
-                [hypo_list, slip_list],
-                hypo_depth_list=hypo_depth_list)
+                source.HypoData(hypo_list, slip_list, hypo_depth_list))
         return simple
 
     def convert_kiteFaultSource(self, node):

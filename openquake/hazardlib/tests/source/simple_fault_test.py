@@ -18,7 +18,7 @@ import unittest
 import numpy
 from copy import deepcopy
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource, HypoData
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 import openquake.hazardlib.mfd.evenly_discretized as mfdeven
@@ -467,7 +467,8 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip,
-                                self.rake, [hypo_list, slip_list])
+                                self.rake,
+                                HypoData(hypo_list=hypo_list, slip_list=slip_list))
 
         for rup, i in zip(src.iter_ruptures(), range(1000)):
             self.assertAlmostEqual(
@@ -488,7 +489,7 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 1., self.src_tom, self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, dip, self.rake,
-                                [hypo_list, slip_list])
+                                HypoData(hypo_list=hypo_list, slip_list=slip_list))
         for rup, i in zip(src.iter_ruptures(), range(1000)):
             self.assertAlmostEqual(rup.hypocenter.longitude, LON2[i], delta=0.1)
             self.assertAlmostEqual(rup.hypocenter.latitude, LAT2[i], delta=0.1)
@@ -550,7 +551,8 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip,
-                                self.rake, [hypo_list, slip_list])
+                                self.rake,
+                                HypoData(hypo_list=hypo_list, slip_list=slip_list))
 
         slip = [90., 0., 90., 0.]
         rate = [0.1, 0.3, 0.15, 0.45]
@@ -644,8 +646,7 @@ class HypoDepthListTestCase(unittest.TestCase):
             self.upper_seismogenic_depth,
             self.lower_seismogenic_depth,
             self.fault_trace, self.dip, self.rake,
-            hypo_depth_list=hypo_depth_list
-            )
+            HypoData(depth_list=hypo_depth_list))
 
     def test_valid_hypo_depth_list(self):
         src = self._make_source([(0.5, 5.0), (0.5, 15.0)])
@@ -683,8 +684,8 @@ class HypoDepthListTestCase(unittest.TestCase):
                 self.src_mfd, self.mesh_spacing, WC1994(), 1.5, self.src_tom,
                 self.upper_seismogenic_depth, self.lower_seismogenic_depth,
                 self.fault_trace, self.dip, self.rake,
-                hypo_slip_list=[hypo_list, slip_list],
-                hypo_depth_list=[(1.0, 10.0)])
+                HypoData(hypo_list=hypo_list, slip_list=slip_list,
+                         depth_list=[(1.0, 10.0)]))
         self.assertEqual(
             str(ar.exception),
             'hypo_depth_list and hypo_list/slip_list cannot be used together')
