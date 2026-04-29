@@ -424,6 +424,7 @@ OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'cache',
     'concurrent_tasks',
+    'discard_assets',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
