@@ -397,3 +397,53 @@ class CampbellBozorgnia2008Arbitrary(CampbellBozorgnia2008):
     #: Supported intensity measure component is arbitrary horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+
+
+class CampbellBozorgnia2008BCHydro(CampbellBozorgnia2008):
+    """
+    CB08 with BCHydro (IMT-dependent) sigma-mu scaling and
+    single station sigma.
+    """
+    experimental = True
+
+    def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
+        super().__init__(**kwargs)
+        self.single_stat_sigma = single_stat_sigma
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_BCHYDRO[imt]
+            mean[m] += self.sigma_mu_epsilon * C['fe']
+            if self.single_stat_sigma:
+                sig[m] *= C['s2sss']
+
+    COEFFS_BCHYDRO = CoeffsTable(sa_damping=5, table="""\
+    imt     s2sss   fe
+    pga     0.8530  0.2500
+    pgv     0.8700  0.2500
+    pgd     0.8700  0.2500
+    cav     0.8700  0.2500
+    0.010   0.8530  0.2500
+    0.020   0.8555  0.2500
+    0.030   0.8570  0.2500
+    0.050   0.8589  0.2500
+    0.075   0.8604  0.2500
+    0.100   0.8615  0.2500
+    0.150   0.8630  0.2500
+    0.200   0.8640  0.2500
+    0.250   0.8649  0.2500
+    0.300   0.8655  0.2500
+    0.400   0.8666  0.2500
+    0.500   0.8674  0.2500
+    0.750   0.8689  0.2500
+    1.000   0.8700  0.2500
+    1.500   0.8715  0.2813
+    2.000   0.8726  0.3125
+    3.000   0.8741  0.3750
+    4.000   0.8751  0.4375
+    5.000   0.8760  0.5000
+    7.500   0.8775  0.5000
+    10.00   0.8785  0.5000
+    """)
