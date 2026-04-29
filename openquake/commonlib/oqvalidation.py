@@ -2068,8 +2068,7 @@ class OqParam(valid.ParamSet):
         if issubclass(cls, cross_correlation.CrossCorrelationBetween):
             tlb = self.truncation_level_between
             if tlb is None:
-                tlb = (self.truncation_level
-                       if self.truncation_level is not None else 99.)
+                tlb = getattr(self, 'truncation_level', None) or 99.
             return cls(tlb)
         return cls()
 
