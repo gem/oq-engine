@@ -511,7 +511,7 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip, self.rake,
-                                [hypo_list, slip_list])
+                                HypoData(hypo_list=hypo_list, slip_list=slip_list))
 
         lon = [0.0954, 0.2544, 0.1272, 0.2862, 0.159, 0.3279, 0.1908, 0.3696,
                0.2226, 0.4114, 0.2544, 0.4531, 0.2862, 0.4949, 0.3279, 0.5366,
