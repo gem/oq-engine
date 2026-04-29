@@ -147,6 +147,21 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     return dic
 
 
+def gen_adf(assdf, monitor):
+    ass_mon = monitor('reading assets', measuremem=False)
+    for id0taxo, s0, s1 in monitor.read('start-stop'):
+        if assdf is None:
+            # read the assets for a single country, taxonomy (ebrisk)
+            # NB: this is CRUCIAL for running India without going OOM
+            with ass_mon:
+                adf = monitor.read(
+                    'assets', slc=slice(s0, s1)).set_index('ordinal')
+        else:
+            # filter the assets (event_based_risk)
+            adf = assdf[s0:s1].set_index('ordinal')
+        yield id0taxo, adf
+
+
 def _event_based_risk(df, assdf, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
@@ -166,23 +181,12 @@ def _event_based_risk(df, assdf, crmodel, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if assdf is None:
-            # read the assets for a single country, taxonomy (ebrisk)
-            # NB: this is CRUCIAL for running India without going OOM
-            with ass_mon:
-                adf = monitor.read(
-                    'assets', slc=slice(s0, s1)).set_index('ordinal')
-        else:
-            # filter the assets (event_based_risk)
-            adf = assdf[s0:s1].set_index('ordinal')
-
+    for id0taxo, adf in gen_adf(assdf, monitor):
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
         country = countries[id0taxo // TWO24]
