@@ -626,9 +626,6 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
 
 
 class HypoDepthListTestCase(unittest.TestCase):
-    # dip=60°, mesh_spacing=1 km, USD=0, LSD=20 km.
-    # At M=7.5 the rupture spans the full seismogenic depth (one floating
-    # position along width), so first_row=0, rup_rows=24 covers all depths.
 
     def setUp(self):
         self.src_mfd = mfdeven.EvenlyDiscretizedMFD(7.5, 1., [1.])
