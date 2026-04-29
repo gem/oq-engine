@@ -149,21 +149,6 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     return dic
 
 
-def gen_adf(monitor, assdf=None):
-    ass_mon = monitor('reading assets', measuremem=False)
-    for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if assdf is None:
-            # read the assets for a single country, taxonomy (ebrisk)
-            # NB: this is CRUCIAL for running India without going OOM
-            with ass_mon:
-                adf = monitor.read(
-                    'assets', slc=slice(s0, s1)).set_index('ordinal')
-        else:
-            # filter the assets (event_based_risk)
-            adf = assdf[s0:s1].set_index('ordinal')
-        yield id0taxo, adf
-
-
 def _event_based_risk(df, gen_adf, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
@@ -324,7 +309,10 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             rups, cmaker, sids, secperils, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
-            yield _event_based_risk(gmf_df, gen_adf(monitor), crmodel, monitor)
+            items = ((id0taxo, monitor.read(
+                'assets', slc=slice(s0, s1)).set_index('ordinal'))
+                     for id0taxo, s0, s1 in monitor.read('start-stop'))
+            yield _event_based_risk(gmf_df, items, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
