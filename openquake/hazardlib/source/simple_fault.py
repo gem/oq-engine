@@ -161,44 +161,40 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def _hypo_list_from_depths(self, first_row, rup_rows):
         """
-        Convert the hypo depth distribution to rupture-relative
-        (along_strike, down_dip, weight)for a given floating
-        rupture position on the fault plane.
+        Convert the hypo depth distribution to (dip_frac, weight) pairs
+        for a given floating rupture. Along-strike fraction is always 0.5.
 
         Depths outside [rup_top_depth, rup_bot_depth] are discarded
         and the remaining weights are renormalised to sum to 1.
         
         An error is raised if none of the hypo depths are within the
-        rupture depth range.
+        depth range of a given floating rup.
         """
-        # Get down-dip seismo depth range for given floating position
+        # Get down-dip seismo depth range for given floated rup
         sin_dip = math.sin(math.radians(self.dip))
         down_dip_delta = self.rupture_mesh_spacing * sin_dip
-        
-        top_depth_dd = (
-            self.upper_seismogenic_depth + first_row * down_dip_delta)
-        
-        bot_depth_dd = (
+        top_depth = (
             self.upper_seismogenic_depth +
-            (first_row + rup_rows - 1) * down_dip_delta) # Down dips
-        
-        rup_depth_dd = bot_depth_dd - top_depth_dd
+            first_row * down_dip_delta)
+        bot_depth = (
+            self.upper_seismogenic_depth +
+            (first_row + rup_rows - 1) * down_dip_delta)
+        rup_depth_delta = bot_depth - top_depth
 
-        # Check
+        # Only keep the hypocentres inside this depth range
         hypos = []
         for prob, depth in self.hypo_depth_list:
-            if top_depth_dd <= depth <= bot_depth_dd:
-                dip_frac = ((depth - top_depth_dd) / rup_depth_dd
-                            if rup_depth_dd > 0 else 0.5)
-                hypos.append((0.5, dip_frac, prob))
+            if top_depth <= depth <= bot_depth:
+                dip_frac = (depth - top_depth) / rup_depth_delta
+                hypos.append((dip_frac, prob))
 
         if not hypos:
             raise ValueError(
-                f'No hypo_depth_list entries fall within the floating rupture '
-                f'depth range [{top_depth_dd:.2f}, {bot_depth_dd:.2f}] km')
+                f'No hypo_depth_list depths fall in depth range of floated '
+                f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
 
-        total = sum(h[2] for h in hypos)
-        return [(h[0], h[1], h[2] / total) for h in hypos]
+        total = sum(h[1] for h in hypos)
+        return [(h[0], h[1] / total) for h in hypos]  # Renormalise weights
 
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
                                    first_row, rup_rows):
@@ -206,10 +202,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         Yield ruptures for given floating position on fault surface using
         the absolute depth distribution in hypo_depth_list.
         """
-        for strike_frac, dip_frac, w in self._hypo_list_from_depths(
-                first_row, rup_rows):
+        # Iter over the depths in the hypo depth dist
+        for dip_frac, w in self._hypo_list_from_depths(first_row, rup_rows):
+            # Use the down-dip fraction to get the hypo on given floating rup
             hypo = surface.get_hypo_location(
-                self.rupture_mesh_spacing, (strike_frac, dip_frac))
+                self.rupture_mesh_spacing, (0.5, dip_frac))
+            # Make the rup
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type,
                 hypo, surface, occurrence_rate * w,
