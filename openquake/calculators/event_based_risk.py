@@ -432,8 +432,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
-        if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
-                all(val == 0 for val in oq.minimum_asset_loss.values())):
+        if (oq.aggregate_by and (
+                self.E * A > int(config.memory.max_potential_gmfs) and
+                all(val == 0 for val in oq.minimum_asset_loss.values()))):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
