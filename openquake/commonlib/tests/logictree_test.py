@@ -35,6 +35,7 @@ from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.mfd import AlternativeCharacteristicMFD
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -1399,6 +1400,139 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.01)
+
+    def test_set_msr_absolute(self):
+        new_msr = openquake.hazardlib.scalerel.WC1994()
+        lt.apply_uncertainty('setMSRAbsolute', self.point_source, new_msr)
+        self.assertIsInstance(
+            self.point_source.magnitude_scaling_relationship,
+            openquake.hazardlib.scalerel.WC1994)
+
+    def test_set_lower_seismogenic_depth_absolute(self):
+        lt.apply_uncertainty(
+            'setLowerSeismDepthAbsolute', self.point_source, 15.0)
+        self.assertAlmostEqual(
+            self.point_source.lower_seismogenic_depth, 15.0)
+
+    def test_set_upper_seismogenic_depth_absolute(self):
+        lt.apply_uncertainty(
+            'setUpperSeismDepthAbsolute', self.point_source, 5.0)
+        self.assertAlmostEqual(
+            self.point_source.upper_seismogenic_depth, 5.0)
+
+    def test_set_lower_seismogenic_depth_relative(self):
+        lt.apply_uncertainty(
+            'setLowerSeismDepthRelative', self.point_source, 3.0)
+        self.assertAlmostEqual(
+            self.point_source.lower_seismogenic_depth, 13.0)
+
+    def test_set_upper_seismogenic_depth_relative(self):
+        lt.apply_uncertainty(
+            'setUpperSeismDepthRelative', self.point_source, 2.0)
+        self.assertAlmostEqual(
+            self.point_source.upper_seismogenic_depth, 2.0)
+
+    def test_aspect_ratio_absolute_uncertainty(self):
+        lt.apply_uncertainty(
+            'setAspectRatioAbsolute', self.point_source, 2.0)
+        self.assertAlmostEqual(self.point_source.rupture_aspect_ratio, 2.0)
+
+    def test_aspect_ratio_relative_uncertainty(self):
+        lt.apply_uncertainty(
+            'setAspectRatioRelative', self.point_source, 0.5)
+        self.assertAlmostEqual(self.point_source.rupture_aspect_ratio, 1.5)
+
+
+class BranchSetApplyACMFDUncertaintyTestCase(unittest.TestCase):
+    def setUp(self):
+        self.source = openquake.hazardlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=
+            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=AlternativeCharacteristicMFD(
+                min_mag=4.0, max_mag=7.5, bin_width=0.2,
+                b_GR=0.8, b_AC=0.3, gamma=0.96,
+                delta_m_AC=1.0, total_rate=5.0),
+            nodal_plane_distribution=PMF(
+                [(1, openquake.hazardlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
+                5, 6),
+            rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.)
+        )
+
+    def test_ac_mfd_b_ac_absolute(self):
+        lt.apply_uncertainty('bACAbsolute', self.source, 0.5)
+        self.assertEqual(self.source.mfd.b_AC, 0.5)
+        # b_GR should be unchanged
+        self.assertEqual(self.source.mfd.b_GR, 0.8)
+
+    def test_ac_mfd_b_ac_relative(self):
+        old_tmr = self.source.mfd._get_total_moment_rate()
+        lt.apply_uncertainty('bACRelative', self.source, 0.1)
+        self.assertAlmostEqual(self.source.mfd.b_AC, 0.4)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            self.source.mfd._get_total_moment_rate(), old_tmr,
+            delta=old_tmr * 1E-8)
+        # b_GR should be unchanged
+        self.assertEqual(self.source.mfd.b_GR, 0.8)
+
+    def test_ac_mfd_b_gr_absolute(self):
+        lt.apply_uncertainty('bGRAbsolute', self.source, 1.0)
+        self.assertEqual(self.source.mfd.b_GR, 1.0)
+        # b_AC should be unchanged
+        self.assertEqual(self.source.mfd.b_AC, 0.3)
+
+    def test_ac_mfd_b_gr_relative(self):
+        old_tmr = self.source.mfd._get_total_moment_rate()
+        lt.apply_uncertainty('bGRRelative', self.source, -0.1)
+        self.assertAlmostEqual(self.source.mfd.b_GR, 0.7)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            self.source.mfd._get_total_moment_rate(), old_tmr,
+            delta=old_tmr * 1E-8)
+        # b_AC should be unchanged
+        self.assertEqual(self.source.mfd.b_AC, 0.3)
+
+    def test_ac_mfd_max_mag_gr_absolute(self):
+        lt.apply_uncertainty('maxMagGRAbsolute', self.source, 8.0)
+        self.assertEqual(self.source.mfd.max_mag, 8.0)
+        # Other parameters should be unchanged
+        self.assertEqual(self.source.mfd.b_GR, 0.8)
+        self.assertEqual(self.source.mfd.b_AC, 0.3)
+        self.assertEqual(self.source.mfd.delta_m_AC, 1.0)
+
+    def test_ac_mfd_max_mag_and_delta_mag_ac_relative(self):
+        old_tmr = self.source.mfd._get_total_moment_rate()
+        lt.apply_uncertainty(
+            'maxMagAndDeltaMagACRelative', self.source, (0.5, 0.2))
+        self.assertAlmostEqual(self.source.mfd.max_mag, 8.0)
+        self.assertAlmostEqual(self.source.mfd.delta_m_AC, 1.2)
+        # TMR should be preserved
+        self.assertAlmostEqual(
+            self.source.mfd._get_total_moment_rate(), old_tmr,
+            delta=old_tmr * 1E-8)
+        # b-values should be unchanged
+        self.assertEqual(self.source.mfd.b_GR, 0.8)
+        self.assertEqual(self.source.mfd.b_AC, 0.3)
+
+    def test_ac_mfd_max_mag_and_delta_mag_ac_relative_no_balance(self):
+        old_total_rate = self.source.mfd.total_rate
+        lt.apply_uncertainty(
+            'maxMagAndDeltaMagACRelativeNoMoBalance', self.source, (0.5, 0.2))
+        self.assertAlmostEqual(self.source.mfd.max_mag, 8.0)
+        self.assertAlmostEqual(self.source.mfd.delta_m_AC, 1.2)
+        # total_rate should NOT have been rescaled
+        self.assertEqual(self.source.mfd.total_rate, old_total_rate)
+        # b-values should be unchanged
+        self.assertEqual(self.source.mfd.b_GR, 0.8)
+        self.assertEqual(self.source.mfd.b_AC, 0.3)
 
 
 class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):

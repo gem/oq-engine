@@ -24,7 +24,6 @@ import numpy
 from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
-from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
@@ -362,7 +361,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_mosaic_models'):
         try:
-            mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
+            mosaic_models = readinput.get_close_mosaic_models(
+                rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
             # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
             err = {"status": "failed", "error_msg": str(exc)}

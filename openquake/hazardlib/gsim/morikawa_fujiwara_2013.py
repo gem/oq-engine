@@ -17,7 +17,20 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports class:`MorikawaFujiwara2013`
+Module exports :class:`MorikawaFujiwara2013Crustal`,
+:class:`MorikawaFujiwara2013CrustalNIED`,
+:class:`MorikawaFujiwara2013SubInterface`,
+:class:`MorikawaFujiwara2013SubInterfaceNE`,
+:class:`MorikawaFujiwara2013SubInterfaceSW`,
+:class:`MorikawaFujiwara2013SubInterfaceNIED`,
+:class:`MorikawaFujiwara2013SubInterfaceNENIED`,
+:class:`MorikawaFujiwara2013SubInterfaceSWNIED`,
+:class:`MorikawaFujiwara2013SubSlab`,
+:class:`MorikawaFujiwara2013SubSlabNE`,
+:class:`MorikawaFujiwara2013SubSlabSW`,
+:class:`MorikawaFujiwara2013SubSlabNIED`,
+:class:`MorikawaFujiwara2013SubSlabNENIED`,
+:class:`MorikawaFujiwara2013SubSlabSWNIED`.
 """
 import numpy as np
 
@@ -25,6 +38,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
+from openquake.hazardlib.gsim.si_midorikawa_1999 import set_mean as _sm1999_set_mean
 
 
 CONSTS = {
@@ -34,6 +48,74 @@ CONSTS = {
     "Mw1": 16.0}
 
 
+### NIED sigma model functions ###
+def _get_nied_sigma_crustal(rrup):
+    """
+    Distance-dependent total sigma in log10 units for shallow
+    crustal earthquakes as described in equation 7 of:
+
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/
+
+    The distance type used is rupture dist
+    """
+    # Select distance dependent sigma
+    return np.piecewise(
+        rrup.astype(float),
+        [rrup <= 20., (rrup > 20.) & (rrup <= 30.)],
+        [0.23,                                                  # rrup <= 20
+         lambda x:
+         0.23 - 0.03 * np.log10(x / 20.) / np.log10(30. / 20.), # 20 < rrup <= 30
+         0.20]                                                  # rrup > 30
+    )
+
+
+def _get_nied_sigma_subduction(ctx, d_pgv):
+    """
+    Amplitude-dependent total sigma in log10 units for subduction
+    earthquakes as described in equation 8 of:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/
+    
+    PGV at Vs30=600 m/s is required here and obtained from Si and
+    Midorikawa (1999). NOTE: Given we need PGV for Vs30 of 600 m/s
+    the _apply_amplification_factor part of SM99's compute method
+    is intentionally skipped here (it's not needed).
+
+    d_pgv: coefficient for PGV in Si & Midorikawa (1999) which is
+           -0.02 for interface and 0.12 for intraslab
+    
+    """
+    # Get the PGA for vs30 of 600 m/s in SM99
+    pgv_log10 = np.zeros(len(ctx.rrup))
+    _sm1999_set_mean(
+        PGV(), ctx.mag, ctx.hypo_depth, ctx.rrup, d_pgv, pgv_log10
+        )
+    pgv = 10. ** pgv_log10  # From log 10 into linear (cm/s)
+
+    # Now select based on the PGV in linear space
+    return np.piecewise(
+        pgv,
+        [pgv <= 25., (pgv > 25.) & (pgv <= 50.)],
+        [0.20,                                    # PGV <= 25
+         lambda x: 0.20 - 0.05 * (x - 25.) / 25., # 25 < PGV <= 50
+         0.15]                                    # PGV > 50
+    )
+
+
+def _apply_nied_sigma(imts, sig, sigma_log10):
+    """
+    Assign the NIED sigma which is supplied in log10 and
+    apply the same unit conversion used in the underlying
+    compute method
+    """
+    for m, imt in enumerate(imts):
+        if imt.name == 'JMA':
+            sig[m] = 2 * sigma_log10
+        else:
+            sig[m] = sigma_log10 * np.log(10)
+
+
+### Original GMM ###
 def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
     tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
@@ -226,4 +308,82 @@ class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
 
 
 class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlab):
+    region = 'SW'
+
+
+### NIED 2025 Japan NSHM Variants ###
+class MorikawaFujiwara2013CrustalNIED(MorikawaFujiwara2013Crustal):
+    """
+    2025 NSHM variant that uses an alternative distance-dependent
+    sigma model that is described at:
+
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 7)
+
+    The distance type used is rrup.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is rrup-dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_crustal(ctx.rrup))
+
+
+class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
+    """
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
+    is described in:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
+
+    PGV at Vs30=600 m/s as computed with Si and Midorikawa (1999) is required
+    as an input parameter.
+
+    This is the interface variant.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is PGV dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_subduction(ctx, -0.02))
+
+
+class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
+    region = 'NE'
+
+
+class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
+    region = 'SW'
+
+
+class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
+    """
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
+    is described in:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
+
+    PGV at Vs30=600 m/s as computed with Si and Midorikawa (1999) is required
+    as an input parameter.
+
+    This is the inslab variant.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is PGV-dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_subduction(ctx, 0.12))
+
+
+class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
+    region = 'NE'
+
+
+class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
     region = 'SW'

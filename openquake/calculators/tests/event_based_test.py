@@ -196,7 +196,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1_from_ses(self):
         self.run_calc(case_1.__file__, 'job_from_ses.ini')
         self.assertEqual(len(self.calc.datastore['events']), 4906)
-        
+
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
@@ -595,7 +595,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       infer_occur_rates='true', ground_motion_fields='false')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures2.csv', f, delta=1E-5)
-        
+
         # check the full_ruptures can be imported in a scenario
         self.run_calc(case_29.__file__, 'scenario.ini')
 
@@ -619,13 +619,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_30(self):
         # build the ruptures, then the GMFs
-        out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_30.__file__, 'job_CND.ini', exports='csv')
         hc_id = self.calc.datastore.calc_id
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
         # make sure starting from ruptures without logic tree is possible
-        self.run_calc(case_30.__file__, 'job.ini', sites='-124 51',
+        self.run_calc(case_30.__file__, 'job_CND.ini', sites='-124 51',
                       ground_motion_fields='true',
                       intensity_measure_types='PGA',
                       gsim_logic_tree_file='',
@@ -638,7 +638,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       hazard_calculation_id='job_rup.ini',  exports='csv')
 
     def test_32(self):
-        # test discarting ruptures with geojson file
+        # test discarding ruptures with geojson file
         self.run_calc(case_32.__file__, 'job.ini', exports='csv')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)

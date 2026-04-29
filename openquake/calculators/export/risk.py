@@ -791,7 +791,7 @@ def convert_df_to_fragility(peril, loss_type, limit_states, df):
     for riskfunc in df.riskfunc:
         rfunc = json.loads(riskfunc)[
             'openquake.risklib.scientific.FragilityFunctionList']
-        ffunc = N('FragilityFunction',
+        ffunc = N('fragilityFunction',
                   {'id': rfunc['id'], 'format': rfunc['format']})
         attr = {'imt': rfunc['imt'], 'noDamageLimit': rfunc['nodamage']}
         imls = N('imls', attr, rfunc['imls'])
@@ -936,8 +936,12 @@ def export_job_zip(ekey, dstore):
         inputs.update(export_vulnerability_xml(dstore))
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
-        for peril, dic in ddic.items():
-            inputs[f'{peril}_fragility'] = dic
+        for peril, ltype_by_path in ddic.items():
+            inputs[f'{peril}_fragility'] = ltype_by_path
+            for ltype in ltype_by_path:
+                # needed for PAPERS
+                oq.inputs.pop(f'{ltype}_fragility', None)
+
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
@@ -952,17 +956,33 @@ def export_job_zip(ekey, dstore):
         for name_by_key, df in consdict.items():
             name, key = name_by_key.split('_by_')
             df['consequence'] = name
-            dest = dstore.export_path(f'consequence_by_{key}.csv')
+            dest = dstore.export_path(f'consequence_{name_by_key}.csv')
             writer.save(df, dest)
-            dic[key] = dest
+            dic[name_by_key] = dest
         inputs['consequence'] = dic
-    inputs['sites'] = dstore.export_path('sites.csv')
+    inputs['site_model'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
     sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['sites'])
+    writer.save(sitecol.array, inputs['site_model'])
     with open(job_ini, 'w', encoding='utf8') as out:
         if 'gmfs' in inputs:
             oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
-    return fnames
+    return flatten(fnames)
+
+
+def flatten(list_of_paths):
+    """
+    :param list_of_paths: pathnames or dictionaries key->paths
+    :returns: a flattened list of path names
+    """
+    out = []
+    for obj in list_of_paths:
+        if isinstance(obj, str):
+            out.append(obj)
+        elif isinstance(obj, dict):
+            out.extend(obj.values())
+        else:
+            raise ValueError(f'Unexpected {obj!r}')
+    return out

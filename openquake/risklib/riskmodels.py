@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property
+from openquake.baselib.general import AccumDict, cached_property, decode
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.sep.classes import corresponds
@@ -110,7 +110,7 @@ def group_by_lt(funclist):
     Converts a list of objects with attribute .loss_type into a dictionary
     peril -> loss_type -> risk_function
     """
-    dic = AccumDict(accum = []) # peril -> lt -> rf
+    dic = AccumDict(accum=[])  # peril -> lt -> rf
     for rf in funclist:
         dic[rf.loss_type].append(rf)
     for lt, lst in dic.items():
@@ -146,7 +146,7 @@ class RiskFuncList(list):
             ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
         if len(set(num_perils.values())) > 1:
-            raise ValueError(f'{num_perils=}')
+             raise ValueError(f'{num_perils=}')
         return ddic
 
 
@@ -160,7 +160,8 @@ def get_risk_functions(oqparam):
     job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        peril, kind, loss_type = key.split('/')  # ex. groundshaking/vulnerability/structural
+        peril, kind, loss_type = key.split('/')
+        # ex. groundshaking/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
@@ -173,7 +174,7 @@ def get_risk_functions(oqparam):
         if not rmodel_kind.lower().startswith(kind_):
             raise ValueError(
                 f'Error in the file "{key}_file={fname}": is '
-                f'of kind {rmodel_kind}, expected {kind.capitalize() + "Model"}')
+                f'of kind {rmodel_kind}, expected {kind.capitalize()}Model')
         if cost_type != loss_type:
             raise ValueError(
                 f'Error in the file "{key}_file={fname}": lossCategory is of '
@@ -470,7 +471,8 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
-    return RiskModel(oqparam.calculation_mode, taxonomy, risk_functions, **extra)
+    rm = RiskModel(oqparam.calculation_mode, taxonomy, risk_functions, **extra)
+    return rm
 
 
 # used only in riskmodels_test
@@ -549,23 +551,31 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore, oqparam, country=None):
+    def read(cls, dstore, oqparam, country='???'):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
+        if country != '???':  # reading from exposure.hdf5 in OQImpact mode
+            dic = dict(zip(decode(dstore['countries'][:]),
+                           decode(dstore['regions'][:])))
+            region = dic[country]
+        else:
+            region = ''
+
         risklist = RiskFuncList()
         if hasattr(dstore, 'get_attr'):
             # missing only in Aristotle mode, where dstore is an hdf5.File
-            risklist.limit_states = dstore.get_attr('crm', 'limit_states')
-        df = dstore.read_df('crm')
-        for i, rf_json in enumerate(df.riskfunc):
+            risklist.limit_states = dstore.get_attr(
+                f'crm{region}', 'limit_states')
+        df = dstore.read_df(f'crm{region}')
+        for i, (rf_json, lt) in enumerate(
+                zip(df.riskfunc, df.loss_type)):
             rf = hdf5.json_to_obj(rf_json)
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
                 rf.peril = 'groundshaking'
-            lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
             else:  # rf is a vulnerability function
@@ -654,7 +664,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                         risk_ids = self.tmap_df.risk_id
                     else:
                         risk_ids = self.tmap_df[
-                            self.tmap_df.peril==peril].risk_id
+                            self.tmap_df.peril == peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -686,7 +696,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         limit_states = self.damage_states[1:]
-            
+
         for byname, cdf in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(cdf):
@@ -854,7 +864,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             lst.append(array5d[pi, a, r, li, di])
                 arr[a, r] = tuple(lst)
         return arr
-        
+
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too

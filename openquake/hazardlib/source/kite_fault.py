@@ -86,7 +86,12 @@ class KiteFaultSource(ParametricSeismicSource):
     Kite fault source
     """
     code = b'K'
-    MODIFICATIONS = {'adjust_mfd_from_slip'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'adjust_mfd_from_slip',
+        'set_aspect_ratio',
+        'set_msr',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,

@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="Example Source Model using an alternative characteristic MFD using from_reference_rates method">
+        <sourceGroup name="group1" tectonicRegion="Active Shallow Crust">
+            <characteristicFaultSource id="001" name="AC MFD using from_reference_rates method" tectonicRegion="Active Shallow Crust">
+                <surface>
+                    <planarSurface
+                    dip="90.0"
+                    strike="0.0"
+                    >
+                        <topLeft depth="0.0" lat="-0.11240" lon="-65.0"/>
+                        <topRight depth="0.0" lat="0.11240" lon="-65.0"/>
+                        <bottomLeft depth="12.0" lat="-0.11240" lon="-65.0"/>
+                        <bottomRight depth="12.0" lat="0.11240" lon="-65.0"/>
+                    </planarSurface>
+                </surface>
+                <!-- Uses from_reference_rates method instead here with backcalculated params to get same AC MFDs as regular approach-->
+                <alternativeCharacteristicMFD
+                    minMag="4.0"
+                    maxMag="7.5"
+                    bGR="0.8"
+                    bAC="0.3"
+                    deltaMagAC="1.0"
+                    refMagGR="5.0"
+                    rateRefGR="0.72302909"
+                    refMagAC="7.0"
+                    rateRefAC="0.074386136"
+                />
+                <rake>0.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

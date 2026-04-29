@@ -840,6 +840,14 @@ ji_karimzadeh_azores_island_2025
     :undoc-members:
     :show-inheritance:
 
+karimzadeh_azores_islands_2023
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.karimzadeh_azores_islands_2023
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 kale_2015
 -----------------------------------------
 

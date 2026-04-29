@@ -21,6 +21,7 @@ import sys
 import collections
 import numpy
 import pandas
+from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -529,6 +530,25 @@ def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     sys.exit(err)
 
 
+def compare_vfuncs(file1: str, file2: str, atol: float=1E-3, rtol: float=1E-3):
+    """
+    compare_vfuncs('v1_structural.xml', 'v2_structural.xml') exits with 0
+    if all vulnerability functions are equal within the tolerance,
+    otherwise with 1.
+    """
+    dic1 = nrml.to_python(file1)
+    dic2 = nrml.to_python(file2)
+    s1 = sorted(dic1)
+    s2 = sorted(dic2)
+    if s1 != s2:
+        print(s1)
+        print(s2)
+        sys.exit('Different risk IDs')
+    for key in s1:
+        print(key)
+        aac(dic1[key].mean_loss_ratios, dic2[key].mean_loss_ratios, rtol, atol)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -543,7 +563,8 @@ main = dict(rups=compare_rups,
             assetcol=compare_assetcol,
             sitecol=compare_sitecol,
             oqparam=compare_oqparam,
-            asce=compare_asce)
+            asce=compare_asce,
+            vfuncs=compare_vfuncs)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,

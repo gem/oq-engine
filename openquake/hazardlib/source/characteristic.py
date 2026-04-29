@@ -52,7 +52,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     as a LiteralNode object.
     """
     code = b'X'
-    MODIFICATIONS = {'set_geometry', 'adjust_mfd_from_slip'}
+    MODIFICATIONS = {
+        'adjust_mfd_from_slip',
+        'set_geometry',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,

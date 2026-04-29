@@ -1,3 +1,61 @@
+  [Marco Pagani]
+  * Fixing the calculation of ruptures with clusters and mutually exclusive
+    sources
+
+  [Michele Simionato]
+   * Computing the GMFs with a single core in scenario risk calculations,
+     changing a bit the numbers (akin to a change of seed), but saving a
+     lot of memory, especially in conditioned computations
+   * Changed the distribution in damage calculations to split in blocks
+     of assets, with a huge performance benefit for large scenarios
+
+  [Christopher Brooks]
+  * Add ability to specify a magnitude-dependent aspect ratio which
+    is evaluated using a predefined expression via a `MagDepAratio`
+    class.
+  * Add the magnitude-scaling relationship used in the Northern
+    Volcanic Arc (NVA) source zone of the BC Hydro SSC logic tree.
+  * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
+    and some unit tests.
+  * Add ability to specify sentinel (-999) z_ref values when using the
+    `prepare_site_model` command.
+  * Add a relative epistemic uncertainty for seismogenic depths in the
+    source model logic tree. Some unit tests added and a QA test in
+    logictree/case_33.
+  * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
+    the job file.
+
+  [Michele Simionato]
+  * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
+  * Added parameter `rupture_id` to be used with `rupture_model_file`
+    to run scenarios starting from a SES.hdf5 file
+
+  [Christopher Brooks]
+  * Added new epistemic uncertainties in the source model logic tree
+    for the rupture aspect ratio (`setAspectRatioAbsolute` and
+    `setAspectRatioRelative`). Unit tests added and a QA test in
+    logictree/case_32.
+
+  [Michele Simionato, Paolo Tormene]
+  * Updated build_exposure_hdf5 to work with the 2026 Global Risk Model
+
+  [Amirhossein Mohammadi]
+  * Add Karimzadeh 2023 Azores Islands GSIM implementation with
+    verification tests.
+
+  [Michele Simionato]
+  * In event based calculations do not collect together sources following
+    the colon convention to avoid duplicated rupture IDs
+
+  [Christopher Brooks]
+  * Add `GridAdjustedGMPE` - a utility GSIM class allowing the
+    adjustment of a GMPE using h3-gridded adjustments already
+    defined within a hdf5 file. Examples of the hdf5 file structure
+    are available in classical/case_11 and the associated unit tests.
+  * Introduce explicit handling of sentinel z_sed values (-999) within
+    the Conterminous US 2023 NSHM's Coastal Plains site amplification
+    adjustment model to turn off this correction for such sites.
+
   [Michele Simionato]
   * Logging and storing the engine version and not the DbServer version
 
@@ -13,6 +71,8 @@
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]
+  * Added the `AlternativeCharacteristicMFD` class (unit tests and also
+    a QA test in classical/case_10)
   * Fix some unit conversion bugs in the `MorikawaFujiwara2013` and
     also a bug where the `xvf` cap of 75 km was being applied incorrectly.
   * Modify `openquake/hazardlib/tests/gsim/utils.py` to support checking

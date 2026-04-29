@@ -89,6 +89,7 @@ def main(
         z1pt0=False,
         z2pt5=False,
         vs30measured=False,
+        sentinel_z=False, # Set to -999 z1pt0 or z2pt5 if True
         *,
         exposure_xml=None,
         sites_csv=(),
@@ -167,9 +168,19 @@ def main(
                 raise RuntimeError('Missing exposures or missing sites')
             associate(haz_sitecol, vs30_csv, assoc_distance)
             if z1pt0:
-                haz_sitecol.calculate_z1pt0()
+                if sentinel_z:
+                    # Use vs30 - z1pt0 relationship in each GMM if -999
+                    haz_sitecol.array['z1pt0'] = -999
+                else:
+                    # Compute from an NGAWest2 Vs30 to z1pt0 (CY14)
+                    haz_sitecol.calculate_z1pt0()
             if z2pt5:
-                haz_sitecol.calculate_z2pt5()
+                if sentinel_z:
+                    # Use vs30 - z1pt0 relationship in each GMM if -999
+                    haz_sitecol.array['z2pt5'] = -999
+                else:
+                    # Compute from an NGAWest2 Vs30 to z2pt5 (CB14)
+                    haz_sitecol.calculate_z2pt5()
             hdf5['sitecol'] = haz_sitecol
             if output:
                 writers.write_csv(output, haz_sitecol.array[fields])
@@ -182,6 +193,7 @@ main.vs30_csv = dict(help='files with lon,lat,vs30 and no header', nargs='+')
 main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
+main.sentinel_z = dict(help='assign dummy -999 to z1pt0/z2pt5', abbrev='-999')
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
 main.sites_csv = dict(help='sites in CSV format (filenames)', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
