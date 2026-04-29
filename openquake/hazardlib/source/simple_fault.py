@@ -78,13 +78,14 @@ class SimpleFaultSource(ParametricSeismicSource):
             :param slip_list:
                 Array describing the rupture slip direction, which desribes the
                 rupture propagation direction on the rupture surface. Each line
-                represents a rupture slip direction and the corresponding weight.
-                Example 1: one single rupture slip direction with angle 90 degree
-                will be described by the following array[(90, 1.0)]. Example 2:
-                two possible rupture slip directions are admitted for a rupture.
-                One slip direction is at 90 degree with a weight of 0.7, the
-                other one is at 135 degree with a weight of 0.3. The numpy array
-                would be entered as numpy.array([[90, 0.7], [135, 0.3]]).
+                represents a rupture slip direction and the corresponding
+                weight. Example 1: one single rupture slip direction with
+                angle 90 degree will be described by the following array[(90,
+                1.0)]. Example 2: two possible rupture slip directions are
+                admitted for a rupture. One slip direction is at 90 degree
+                with a weight of 0.7, the other one is at 135 degree with a
+                weight of 0.3. The numpy array would be entered as
+                numpy.array([[90, 0.7], [135, 0.3]]).
 
         Alternative approach 2 is described by hypo_depth_list:
 
