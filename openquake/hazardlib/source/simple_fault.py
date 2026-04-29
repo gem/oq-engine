@@ -175,14 +175,16 @@ class SimpleFaultSource(ParametricSeismicSource):
         sin_dip = math.sin(math.radians(self.dip))
         down_dip_delta = self.rupture_mesh_spacing * sin_dip
         
-        top_depth_dd = (self.upper_seismogenic_depth
-                         + first_row * down_dip_delta) # Down dip
+        top_depth_dd = (
+            self.upper_seismogenic_depth + first_row * down_dip_delta)
         
-        bot_depth_dd = (self.upper_seismogenic_depth
-                         + (first_row + rup_rows - 1) * down_dip_delta) # Down dips
+        bot_depth_dd = (
+            self.upper_seismogenic_depth +
+            (first_row + rup_rows - 1) * down_dip_delta) # Down dips
         
         rup_depth_dd = bot_depth_dd - top_depth_dd
 
+        # Check
         hypos = []
         for prob, depth in self.hypo_depth_list:
             if top_depth_dd <= depth <= bot_depth_dd:
