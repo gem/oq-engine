@@ -72,9 +72,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         weight of 0.3. The numpy array would be entered as numpy.array(
         [[90, 0.7], [135, 0.3]]).
     :param hypo_depth_list:
-        List of (probability, depth_km) describing a hypocentre depth distribution.
-        All depths must lie within [upper_seismogenic_depth, lower_seismogenic_depth]
-        or an error is raised. Cannot be combined with hypo_list or slip_list.
+        List of (probability, depth) describing a hypocentre depth distribution.
+        All depths must lie within seismogenic depth range or an error is raised.
+        Also, it cannot be combined with hypo_list or slip_list argument with an
+        error being raised if so.
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -160,33 +161,39 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def _hypo_list_from_depths(self, first_row, rup_rows):
         """
-        Convert the absolute depth distribution to rupture-relative
-        (along_strike, down_dip, weight) triples for a specific floating
+        Convert the hypo depth distribution to rupture-relative
+        (along_strike, down_dip, weight)for a given floating
         rupture position on the fault plane.
 
-        Depths outside [rup_top_depth, rup_bot_depth] are discarded and the
-        remaining weights are renormalised to sum to 1. Raises ValueError if
-        no depths land within the rupture.
+        Depths outside [rup_top_depth, rup_bot_depth] are discarded
+        and the remaining weights are renormalised to sum to 1.
+        
+        An error is raised if none of the hypo depths are within the
+        rupture depth range.
         """
+        # Get down-dip seismo depth range for given floating position
         sin_dip = math.sin(math.radians(self.dip))
-        rup_top_depth = (self.upper_seismogenic_depth
-                         + first_row * self.rupture_mesh_spacing * sin_dip)
-        rup_bot_depth = (self.upper_seismogenic_depth
-                         + (first_row + rup_rows - 1)
-                         * self.rupture_mesh_spacing * sin_dip)
-        rup_depth_width = rup_bot_depth - rup_top_depth
+        down_dip_delta = self.rupture_mesh_spacing * sin_dip
+        
+        top_depth_dd = (self.upper_seismogenic_depth
+                         + first_row * down_dip_delta) # Down dip
+        
+        bot_depth_dd = (self.upper_seismogenic_depth
+                         + (first_row + rup_rows - 1) * down_dip_delta) # Down dips
+        
+        rup_depth_dd = bot_depth_dd - top_depth_dd
 
         hypos = []
         for prob, depth in self.hypo_depth_list:
-            if rup_top_depth <= depth <= rup_bot_depth:
-                dip_frac = ((depth - rup_top_depth) / rup_depth_width
-                            if rup_depth_width > 0 else 0.5)
+            if top_depth_dd <= depth <= bot_depth_dd:
+                dip_frac = ((depth - top_depth_dd) / rup_depth_dd
+                            if rup_depth_dd > 0 else 0.5)
                 hypos.append((0.5, dip_frac, prob))
 
         if not hypos:
             raise ValueError(
                 f'No hypo_depth_list entries fall within the floating rupture '
-                f'depth range [{rup_top_depth:.2f}, {rup_bot_depth:.2f}] km')
+                f'depth range [{top_depth_dd:.2f}, {bot_depth_dd:.2f}] km')
 
         total = sum(h[2] for h in hypos)
         return [(h[0], h[1], h[2] / total) for h in hypos]
@@ -194,8 +201,8 @@ class SimpleFaultSource(ParametricSeismicSource):
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
                                    first_row, rup_rows):
         """
-        Yield ruptures for one floating position using the absolute depth
-        distribution in hypo_depth_list.
+        Yield ruptures for given floating position on fault surface using
+        the absolute depth distribution in hypo_depth_list.
         """
         for strike_frac, dip_frac, w in self._hypo_list_from_depths(
                 first_row, rup_rows):
@@ -208,7 +215,8 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def _iter_ruptures_hypo_slip(self, surface, occurrence_rate, mag):
         """
-        Yield ruptures for one floating position using hypo_list and slip_list.
+        Yield ruptures for given floating position on fault surface using
+        hypo_list and slip_list.
         """
         for hypo in self.hypo_list:
             for slip in self.slip_list:
@@ -262,6 +270,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                             surface, occurrence_rate, mag)
                         
                     else:
+                        # Regular version using surf centroid
                         yield ParametricProbabilisticRupture(
                             mag, self.rake, self.tectonic_region_type,
                             mesh.get_middle_point(), surface, occurrence_rate,
