@@ -1,6 +1,13 @@
+  [Marco Pagani]
+  * Fixing the calculation of ruptures with clusters and mutually exclusive
+    sources
+
   [Michele Simionato]
-  * Changed the distribution in damage calculations to split in blocks
-    of assets, with a huge performance benefit for large scenarios
+   * Computing the GMFs with a single core in scenario risk calculations,
+     changing a bit the numbers (akin to a change of seed), but saving a
+     lot of memory, especially in conditioned computations
+   * Changed the distribution in damage calculations to split in blocks
+     of assets, with a huge performance benefit for large scenarios
 
   [Christopher Brooks]
   * Add the magnitude-scaling relationship used in the Northern

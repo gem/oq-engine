@@ -211,9 +211,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('agg_keys.org', gettemp(tbl))
 
     def test_case_18(self):
-        # 1 rupture with KiteSurfaces, number_of_ground_motion_fields=10
+        # 1 rupture with KiteSurfaces, number_of_ground_motion_fields=10,
+        # 3 GSIMs
         self.run_calc(case_18.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['rupgeoms']), 10)
+        self.assertEqual(len(self.calc.datastore['rupgeoms']), 1)
+        self.assertEqual(self.calc.datastore['ruptures'][0]['n_occ'], 30)
 
     def test_case_19(self):
         # reading CSV ruptures with missing TRTs

@@ -1,4 +1,4 @@
-#,"generated_by='OpenQuake engine 3.18.0-git438342e123', start_date='2023-07-14T12:29:33', checksum=4057845558"
+#,"generated_by='OpenQuake engine 3.26.0-git07d12480a5', start_date='2026-04-28T10:00:01', checksum=154822657"
 event_id,WCL
-0.00000E+00,0.00000E+00
-1.00000E+00,1.55556E-01
+0,0.00000E+00
+1,1.55556E-01
