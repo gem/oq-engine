@@ -420,7 +420,7 @@ class ClassicalTestCase(CalculatorTestCase):
                           source_model_logic_tree_file=(
                               'source_model_logic_tree_depth_error.xml'))
 
-        self.assertIn('hypo_depth_list entry 25.0 km is outside the '
+        self.assertIn('hypo_depth_list 25.0 km is outside the '
                       'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces

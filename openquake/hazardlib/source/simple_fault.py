@@ -177,13 +177,13 @@ class SimpleFaultSource(ParametricSeismicSource):
         for _wei, depth, fdf in self.hypo_depth_list:
             if not (upper_seismogenic_depth <= depth <= lower_seismogenic_depth):
                 raise ValueError(
-                    f'hypo_depth_list entry {depth} km is outside the '
+                    f'hypo_depth_list {depth} km is outside the '
                     f'seismogenic zone [{upper_seismogenic_depth}, '
                     f'{lower_seismogenic_depth}] km')
             if fdf is not None and not (0.0 < fdf <= 1.0):
                 raise ValueError(
-                    f'hypo_depth_list fixedDipFrac {fdf} for depth {depth} km'
-                    f' must be in the range (0, 1]')
+                    f'hypo_depth_list fixedDipFrac {fdf} for depth {depth} km '
+                    f'must be in the range [0, 1]')
 
         if 1 in cols_rows:
             raise ValueError('mesh spacing %s is too high to represent '
@@ -196,12 +196,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         for a given floating rupture.
 
         Depths outside [rup_top_depth, rup_bot_depth] are discarded and
-        the remaining weights are renormalised to sum to 1. Where a
-        fixedDipFrac is set on an entry it is used directly; otherwise
-        the fraction is computed from the depth position within the
-        rupture. Entries sharing the same dip_frac are collapsed into one
-        pair so that a uniform fixedDipFrac yields a single hypocentre
-        per floating rupture.
+        the remaining weights are renormalised to sum to 1. 
 
         An error is raised if none of the hypo depths are within the
         depth range of a given floating rup.
