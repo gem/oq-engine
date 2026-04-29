@@ -660,13 +660,13 @@ class HypoDepthListTestCase(unittest.TestCase):
             'hypo_depth_list probabilities sum to 0.8, expected 1.0')
 
     def test_depth_outside_seismogenic_zone(self):
-        for depth, label in [(-1.0, '-1.0'), (25.0, '25.0')]:
+        for depth in (-1.0, 25.0):
             with self.assertRaises(ValueError) as ar:
                 self._make_source([(1.0, depth)])
-            self.assertIn(
-                f'hypo_depth_list {label} km is outside the '
-                'seismogenic zone [0.0, 20.0] km',
-                str(ar.exception))
+            self.assertEqual(
+                str(ar.exception),
+                f'hypo_depth_list {depth} km is outside the '
+                f'seismogenic zone [0.0, 20.0] km')
 
     def test_combined_with_hypo_list_raises(self):
         hypo_list = numpy.array([[0.5, 0.5, 1.0]])
@@ -687,7 +687,10 @@ class HypoDepthListTestCase(unittest.TestCase):
         for bad_fdf in (0.0, 1.5):
             with self.assertRaises(ValueError) as ar:
                 self._make_source([(1.0, 10.0, bad_fdf)])
-            self.assertIn('must be in the range [0, 1]', str(ar.exception))
+            self.assertEqual(
+                str(ar.exception),
+                f'hypo_depth_list fixedDipFrac {bad_fdf} for depth 10.0 km '
+                f'must be in the range [0, 1]')
 
     def test_fixed_dip_frac_overrides_computed_fraction(self):
         # depth=10 without fixedDipFrac maps to ~0.502 for this rupture;
