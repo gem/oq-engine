@@ -142,26 +142,20 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        R = 1 if oqparam.collect_rlzs else len(monitor.read('weights'))
-        X = len(oqparam.ext_loss_types) + oqparam.ideduc
-
-    xtypes = oqparam.ext_loss_types
-    if oqparam.ideduc:
-        xtypes.append('claim')
     assdf = monitor.read('assets')
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    dic = _event_based_risk(gmf_df, assdf, loss2, loss3, crmodel, monitor)
-    dic['alt'] = build_alt(loss2, xtypes)
-    dic['avg'] = build_avg(loss3, oqparam.A, R*X)
+    dic = _event_based_risk(gmf_df, assdf, crmodel, monitor)
     return dic
 
 
-def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
+def _event_based_risk(df, assdf, crmodel, monitor):
+    oq = crmodel.oqparam
+    R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
+    X = len(oq.ext_loss_types) + oq.ideduc
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
-    oq = crmodel.oqparam
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     if oq.ignore_master_seed or oq.ignore_covs:
@@ -203,7 +197,13 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
         with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
-    return dict(gmf_bytes=df.memory_usage().sum())
+    dic = dict(gmf_bytes=df.memory_usage().sum())
+    xtypes = oq.ext_loss_types
+    if oq.ideduc:
+        xtypes.append('claim')
+    dic['alt'] = build_alt(loss2, xtypes)
+    dic['avg'] = build_avg(loss3, oq.A, R*X)
+    return dic
 
 
 def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
@@ -309,15 +309,8 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     """
     oq = cmaker.oq
     oq.ground_motion_fields = True
-    weights = [1] if oq.collect_rlzs else monitor.read('weights')
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
-    X = len(xtypes)
-    R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdf = None
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
@@ -325,15 +318,8 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             rups, cmaker, sids, secperils, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
-            loss3 = {'aids': [], 'bids': [], 'loss': []}
-            loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
-            dic = _event_based_risk(
-                gmf_df, assdf, loss2, loss3, crmodel, monitor)
-            if loss2:  # has been populated
-                dic['avg'] = build_avg(loss3, oq.A, R*X)
-                dic['alt'] = build_alt(loss2, xtypes)
-                yield dic
-
+            yield _event_based_risk(gmf_df, None, crmodel, monitor)
+            
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
 def fast_add(avg_losses, row, col, data, X):
