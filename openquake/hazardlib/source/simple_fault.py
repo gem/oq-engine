@@ -217,10 +217,12 @@ class SimpleFaultSource(ParametricSeismicSource):
             (first_row + rup_rows - 1) * down_dip_delta)
         rup_depth_delta = bot_depth - top_depth
 
-        # Only keep hypocentres inside this depth range; resolve dip_frac
+        # Only keep hypocentres inside this depth range
         weight_by_frac = {}
         for prob, depth, fdf in self.hypo_depth_list:
             if top_depth <= depth <= bot_depth:
+                # Either assign the fixedDepFrac or compute it
+                # using the depth delta for given floating rup
                 dip_frac = (fdf if fdf is not None
                             else (depth - top_depth) / rup_depth_delta)
                 weight_by_frac[dip_frac] = (

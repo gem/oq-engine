@@ -626,6 +626,9 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
 
 
 class HypoDepthListTestCase(unittest.TestCase):
+    # dip=60°, mesh_spacing=1 km, USD=0, LSD=20 km.
+    # At M=7.5 the rupture spans the full seismogenic depth (one floating
+    # position along width), so first_row=0, rup_rows=24 covers all depths.
 
     def setUp(self):
         self.src_mfd = mfdeven.EvenlyDiscretizedMFD(7.5, 1., [1.])
@@ -659,21 +662,14 @@ class HypoDepthListTestCase(unittest.TestCase):
             str(ar.exception),
             'hypo_depth_list probabilities sum to 0.8, expected 1.0')
 
-    def test_depth_above_upper_seismogenic_depth(self):
-        with self.assertRaises(ValueError) as ar:
-            self._make_source([(1.0, -1.0)])
-        self.assertEqual(
-            str(ar.exception),
-            'hypo_depth_list entry -1.0 km is outside the '
-            'seismogenic zone [0.0, 20.0] km')
-
-    def test_depth_below_lower_seismogenic_depth(self):
-        with self.assertRaises(ValueError) as ar:
-            self._make_source([(1.0, 25.0)])
-        self.assertEqual(
-            str(ar.exception),
-            'hypo_depth_list entry 25.0 km is outside the '
-            'seismogenic zone [0.0, 20.0] km')
+    def test_depth_outside_seismogenic_zone(self):
+        for depth, label in [(-1.0, '-1.0'), (25.0, '25.0')]:
+            with self.assertRaises(ValueError) as ar:
+                self._make_source([(1.0, depth)])
+            self.assertIn(
+                f'hypo_depth_list entry {label} km is outside the '
+                'seismogenic zone [0.0, 20.0] km',
+                str(ar.exception))
 
     def test_combined_with_hypo_list_raises(self):
         hypo_list = numpy.array([[0.5, 0.5, 1.0]])
@@ -689,3 +685,25 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertEqual(
             str(ar.exception),
             'hypo_depth_list and hypo_list/slip_list cannot be used together')
+
+    def test_fixed_dip_frac_out_of_range_raises(self):
+        for bad_fdf in (0.0, 1.5):
+            with self.assertRaises(ValueError) as ar:
+                self._make_source([(1.0, 10.0, bad_fdf)])
+            self.assertIn('must be in the range (0, 1]', str(ar.exception))
+
+    def test_fixed_dip_frac_overrides_computed_fraction(self):
+        # depth=10 without fixedDipFrac maps to ~0.502 for this rupture;
+        # with fixedDipFrac=2/3 the returned fraction must be exactly 2/3.
+        src = self._make_source([(1.0, 10.0, 2 / 3)])
+        result = src._hypo_list_from_depths(first_row=0, rup_rows=24)
+        self.assertEqual(len(result), 1)
+        self.assertAlmostEqual(result[0][0], 2 / 3, places=10)
+
+    def test_same_fixed_dip_frac_collapses(self):
+        # Depths sharing a fixedDipFrac collapse to one pair; weights summed.
+        src = self._make_source([(0.3, 5.0, 2 / 3), (0.7, 10.0, 2 / 3)])
+        result = src._hypo_list_from_depths(first_row=0, rup_rows=24)
+        self.assertEqual(len(result), 1)
+        self.assertAlmostEqual(result[0][0], 2 / 3, places=10)
+        self.assertAlmostEqual(result[0][1], 1.0, places=10)

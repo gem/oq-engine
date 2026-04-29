@@ -20,8 +20,10 @@
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
             <rake>90.0</rake>
-            <hypoDepthDist>
-                <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.6667"/>
+            <hypoDepthDist>,
+                <!-- The fixedDipFrac is optional and here tells the engine -->
+                <!-- to use this fraction instead of computing it --> 
+                <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.6667"/> 
                 <hypoDepth depth="10.0" probability="0.50" fixedDipFrac="0.6667"/>
                 <hypoDepth depth="15.0" probability="0.25" fixedDipFrac="0.6667"/>
             </hypoDepthDist>
