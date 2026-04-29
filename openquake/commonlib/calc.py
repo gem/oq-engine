@@ -337,7 +337,7 @@ class RuptureImporter(object):
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
         num_['sites'] = self.N
         if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if self.N * E > int(config.memory.max_potential_gmfs):
+            if self.N * E > float(config.memory.max_potential_gmfs):
                 raise ValueError(
                     'A GMF calculation with {:_d} sites and {:_d} events is '
                     'forbidden with the current `max_potential_gmfs` < {:_d}'.

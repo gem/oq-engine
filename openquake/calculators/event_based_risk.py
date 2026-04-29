@@ -181,6 +181,7 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
             # read the assets for a single country, taxonomy (ebrisk)
+            # NB: this is CRUCIAL for running India without going OOM
             with ass_mon:
                 adf = monitor.read(
                     'assets', slc=slice(s0, s1)).set_index('ordinal')
@@ -433,7 +434,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
         if (oq.aggregate_by and (
-                self.E * A > int(config.memory.max_potential_gmfs) and
+                self.E * A > float(config.memory.max_potential_gmfs) and
                 all(val == 0 for val in oq.minimum_asset_loss.values()))):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
