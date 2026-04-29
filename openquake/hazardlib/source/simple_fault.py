@@ -162,7 +162,7 @@ class SimpleFaultSource(ParametricSeismicSource):
     def _hypo_list_from_depths(self, first_row, rup_rows):
         """
         Convert the hypo depth distribution to (dip_frac, weight) pairs
-        for a given floating rupture. Along-strike fraction is always 0.5.
+        for a given floating rupture.
 
         Depths outside [rup_top_depth, rup_bot_depth] are discarded
         and the remaining weights are renormalised to sum to 1.
@@ -194,6 +194,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                 f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
 
         total = sum(h[1] for h in hypos)
+
         return [(h[0], h[1] / total) for h in hypos]  # Renormalise weights
 
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
@@ -204,9 +205,11 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         # Iter over the depths in the hypo depth dist
         for dip_frac, w in self._hypo_list_from_depths(first_row, rup_rows):
+
             # Use the down-dip fraction to get the hypo on given floating rup
             hypo = surface.get_hypo_location(
                 self.rupture_mesh_spacing, (0.5, dip_frac))
+            
             # Make the rup
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type,
