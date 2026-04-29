@@ -146,7 +146,13 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError(
                 'hypo_depth_list and hypo_list/slip_list cannot be used together'
                 )
+        
         self.hypo_depth_list = tuple(hypo_depth_list)
+        if self.hypo_depth_list:
+            total = sum(p for p, _ in self.hypo_depth_list)
+            if abs(total - 1.0) > 1e-7:
+                raise ValueError(
+                    f'hypo_depth_list probabilities sum to {total}, expected 1.0')
         for _, depth in self.hypo_depth_list:
             if not (upper_seismogenic_depth <= depth <= lower_seismogenic_depth):
                 raise ValueError(
