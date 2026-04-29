@@ -143,11 +143,11 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdf = monitor.read('assets')
-    dic = _event_based_risk(gmf_df, assdf, crmodel, monitor)
+    dic = _event_based_risk(gmf_df,gen_adf(monitor, assdf), crmodel, monitor)
     return dic
 
 
-def gen_adf(assdf, monitor):
+def gen_adf(monitor, assdf=None):
     ass_mon = monitor('reading assets', measuremem=False)
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
@@ -162,7 +162,7 @@ def gen_adf(assdf, monitor):
         yield id0taxo, adf
 
 
-def _event_based_risk(df, assdf, crmodel, monitor):
+def _event_based_risk(df, gen_adf, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
@@ -186,7 +186,7 @@ def _event_based_risk(df, assdf, crmodel, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, adf in gen_adf(assdf, monitor):
+    for id0taxo, adf in gen_adf:
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
         country = countries[id0taxo // TWO24]
@@ -322,8 +322,8 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             rups, cmaker, sids, secperils, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
-            yield _event_based_risk(gmf_df, None, crmodel, monitor)
-            
+            yield _event_based_risk(gmf_df, gen_adf(monitor), crmodel, monitor)
+
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
 def fast_add(avg_losses, row, col, data, X):
