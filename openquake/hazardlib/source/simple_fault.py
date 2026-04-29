@@ -218,16 +218,16 @@ class SimpleFaultSource(ParametricSeismicSource):
         bot_depth = (
             self.upper_seismogenic_depth +
             (first_row + rup_rows - 1) * down_dip_delta)
-        rup_depth_delta = bot_depth - top_depth
+        rup_depth_range = bot_depth - top_depth
 
-        # Only keep hypocentres inside this depth range
+        # Keep hypocentres inside given floating rupture's depth range
         weight_by_frac = {}
         for prob, depth, fdf in self.hypo_depth_list:
             if top_depth <= depth <= bot_depth:
-                # Either assign the fixedDepFrac or compute it
-                # using the depth delta for given floating rup
+                # Use fixedDipFrac if provided and otherwise compute from depth
                 dip_frac = (fdf if fdf is not None
-                            else (depth - top_depth) / rup_depth_delta)
+                            else (depth - top_depth) / rup_depth_range)
+                # Collapse depths with the same fraction summing their weights
                 weight_by_frac[dip_frac] = (
                     weight_by_frac.get(dip_frac, 0.0) + prob)
 
@@ -236,10 +236,9 @@ class SimpleFaultSource(ParametricSeismicSource):
                 f'No hypo_depth_list depths fall in depth range of floated '
                 f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
 
-        total = sum(weight_by_frac.values()) # Sum weights of retained deps
+        total = sum(weight_by_frac.values())
 
-        return [(frac, w / total # Return retained depths situated in given rup
-                 ) for frac, w in weight_by_frac.items()]
+        return [(frac, w / total) for frac, w in weight_by_frac.items()]
 
     def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
                                    first_row, rup_rows):
