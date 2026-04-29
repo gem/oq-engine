@@ -176,7 +176,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         An error is raised if none of the hypo depths are within the
         depth range of a given floating rup.
         """
-        # Get down-dip seismo depth range for given floated rup
+        # Compute top and bottom depth of this floating rupture
         sin_dip = math.sin(math.radians(self.dip))
         down_dip_delta = self.rupture_mesh_spacing * sin_dip
         top_depth = (
