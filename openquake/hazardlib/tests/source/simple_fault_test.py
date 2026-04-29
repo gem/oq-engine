@@ -618,6 +618,73 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(str(ar.exception), "dip must be between 0.0 and 90.0")
 
     def test_modify_set_dip(self):
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_fault.modify_set_dip(72.0)
         self.assertAlmostEqual(new_fault.dip, 72.0)
+
+
+class HypoDepthListTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.src_mfd = mfdeven.EvenlyDiscretizedMFD(7.5, 1., [1.])
+        self.src_tom = tom.PoissonTOM(50)
+        self.upper_seismogenic_depth = 0.
+        self.lower_seismogenic_depth = 20.
+        self.dip = 60.
+        self.rake = 90.
+        self.mesh_spacing = 1.
+        self.fault_trace = Line([Point(0.0, 0.0), Point(1.0, 0.0)])
+
+    def _make_source(self, hypo_depth_list):
+        return SimpleFaultSource(
+            'test', 'test',
+            TRT.ACTIVE_SHALLOW_CRUST,
+            self.src_mfd,
+            self.mesh_spacing, WC1994(), 1.5, self.src_tom,
+            self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth,
+            self.fault_trace, self.dip, self.rake,
+            hypo_depth_list=hypo_depth_list
+            )
+
+    def test_valid_hypo_depth_list(self):
+        src = self._make_source([(0.5, 5.0), (0.5, 15.0)])
+        self.assertEqual(len(src.hypo_depth_list), 2)
+
+    def test_weights_not_summing_to_one(self):
+        with self.assertRaises(ValueError) as ar:
+            self._make_source([(0.3, 5.0), (0.5, 15.0)])
+        self.assertEqual(
+            str(ar.exception),
+            'hypo_depth_list probabilities sum to 0.8, expected 1.0')
+
+    def test_depth_above_upper_seismogenic_depth(self):
+        with self.assertRaises(ValueError) as ar:
+            self._make_source([(1.0, -1.0)])
+        self.assertEqual(
+            str(ar.exception),
+            'hypo_depth_list entry -1.0 km is outside the '
+            'seismogenic zone [0.0, 20.0] km')
+
+    def test_depth_below_lower_seismogenic_depth(self):
+        with self.assertRaises(ValueError) as ar:
+            self._make_source([(1.0, 25.0)])
+        self.assertEqual(
+            str(ar.exception),
+            'hypo_depth_list entry 25.0 km is outside the '
+            'seismogenic zone [0.0, 20.0] km')
+
+    def test_combined_with_hypo_list_raises(self):
+        hypo_list = numpy.array([[0.5, 0.5, 1.0]])
+        slip_list = numpy.array([[90., 1.0]])
+        with self.assertRaises(ValueError) as ar:
+            SimpleFaultSource(
+                'test', 'test', TRT.ACTIVE_SHALLOW_CRUST,
+                self.src_mfd, self.mesh_spacing, WC1994(), 1.5, self.src_tom,
+                self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+                self.fault_trace, self.dip, self.rake,
+                hypo_slip_list=[hypo_list, slip_list],
+                hypo_depth_list=[(1.0, 10.0)])
+        self.assertEqual(
+            str(ar.exception),
+            'hypo_depth_list and hypo_list/slip_list cannot be used together')
