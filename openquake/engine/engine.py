@@ -424,6 +424,7 @@ OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'cache',
     'concurrent_tasks',
+    'discard_assets',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
@@ -489,12 +490,16 @@ class _Workflow:
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = os.path.join(self.workflow_dir, val)
+                    dic[key] = path = os.path.join(self.workflow_dir, val)
+                    if 'out' in key:
+                        open(path, 'w').close()  # touch the file
+
 
     def validate(self):
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
+        assert len(self.inis), self
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
@@ -565,6 +570,11 @@ def read_many(workflow_toml, params={}, validate=True):
 
             # regular case
             for prefix, ddic in wfdict.items():
+                key, dic = next(iter(ddic.items()))
+                if 'ini' not in dic:
+                    raise SyntaxError(
+                        f'{workflow_toml}: missing ini in {prefix}.{key}')
+
                 wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                ddic, prefix)
                 if validate:

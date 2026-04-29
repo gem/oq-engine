@@ -304,7 +304,7 @@ class FastRatesTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)
         cls.sources = csm.get_sources()
-        cls.cmakers = csm.get_cmakers(oq)
+        cls.cmakers = csm.get_cmakers()
         cls.sitecol = readinput.get_site_collection(oq)
         with Monitor('get_rmap', measuremem=True) as cls.mon:
             cls.rmap = cls.cmakers.get_rmap(csm.src_groups, cls.sitecol)

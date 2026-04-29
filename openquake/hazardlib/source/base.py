@@ -23,6 +23,7 @@ from dataclasses import dataclass
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
+from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import magstr, split_source
@@ -34,6 +35,9 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 F64 = numpy.float64
+I64 = numpy.int64
+TWO30 = I64(2**30)
+
 
 @dataclass
 class SourceParam:
@@ -112,7 +116,6 @@ def poisson_sample(src, eff_num_ses, seed):
     # else (multi)point sources and area sources
     usd = src.upper_seismogenic_depth
     lsd = src.lower_seismogenic_depth
-    rar = src.rupture_aspect_ratio
     rup_args = []
     rates = []
     for ps in split_source(src):
@@ -135,7 +138,7 @@ def poisson_sample(src, eff_num_ses, seed):
             hdd = numpy.array([(1., hc.depth)])
             [[[planar]]] = build_planar(
                 ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
-                usd, lsd, rar)
+                usd, lsd, ps.get_aspect_ratio(mag))
             rup = ParametricProbabilisticRupture(
                 mag, np.rake, ps.tectonic_region_type, hc,
                 PlanarSurface.from_(planar), rate, tom)
@@ -276,8 +279,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
-            ebr.seed = ebr.id + ses_seed
+            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
+                            seed=rupid + TWO30 * self.id + ses_seed)
             yield ebr
 
     def get_mags(self):
@@ -409,7 +412,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
 
-        if rupture_aspect_ratio is not None and not rupture_aspect_ratio > 0:
+        if (rupture_aspect_ratio is not None
+                and isinstance(rupture_aspect_ratio, (int, float))
+                and not rupture_aspect_ratio > 0):
             raise ValueError('rupture aspect ratio must be positive')
 
         self.mfd = mfd
@@ -454,6 +459,53 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.magnitude_scaling_relationship = new_msr
 
+    def get_aspect_ratio(self, mag):
+        """
+        Return the rupture aspect ratio
+        """
+        rar = self.rupture_aspect_ratio
+        if not isinstance(rar, MagDepAspectRatio):
+            return rar
+        # Must be MagDepAspectRatio so get the expression to be eval
+        return rar.get(mag)
+
+    def _check_scalar_aspect_ratio(self, modification):
+        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
+            # Prevent use of aratio epistemic uncertainties when also
+            # using a non-scalar value for aspect ratio in the src XML
+            raise ValueError(
+                'Cannot apply %s to source %r: epistemic uncertainties on '
+                'aspect ratio are not compatible with aspectRatioFunction'
+                % (modification, self.source_id))
+
+    def modify_set_aspect_ratio(self, aspect_ratio):
+        """
+        Replaces the rupture aspect ratio with the given value
+
+        :param float aspect_ratio:
+            New value of the rupture aspect ratio (must be positive)
+        """
+        self._check_scalar_aspect_ratio('set_aspect_ratio')
+        if not aspect_ratio > 0:
+            raise ValueError('rupture aspect ratio must be positive, got %s'
+                             % aspect_ratio)
+        self.rupture_aspect_ratio = aspect_ratio
+
+    def modify_adjust_aspect_ratio(self, increment):
+        """
+        Adjusts the rupture aspect ratio by an incremental value
+
+        :param float increment:
+            Value by which to increase or decrease the rupture aspect ratio
+        """
+        self._check_scalar_aspect_ratio('adjust_aspect_ratio')
+        new_ratio = self.rupture_aspect_ratio + increment
+        if not new_ratio > 0:
+            raise ValueError(
+                'increment %s would result in a non-positive rupture aspect '
+                'ratio (%s)' % (increment, new_ratio))
+        self.rupture_aspect_ratio = new_ratio
+
     def modify_set_slip_rate(self, slip_rate: float):
         """
         Updates the slip rate assigned to the source
@@ -465,7 +517,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def modify_set_mmax_truncatedGR(self, mmax: float):
         """
-        Updates the mmax assigned. This works on for parametric MFDs.s
+        Updates the mmax assigned. This works on for parametric MFDs.
 
         :param mmax:
             The value of the new maximum magnitude

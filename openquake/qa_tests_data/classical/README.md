@@ -10,7 +10,10 @@
 |case\_07|Test DummyGMPE in event_based|
 |case\_08|Test override_vs30 with two values and disagg_by_src|
 |case\_09|Test ConditionalGMPE Macedo2019|
+|case\_11|Test GridAdjustedGMPE|
+|case\_10|Test use of alternative characterstic MFD|
 |case\_12|Two TRTs, 1 rlz|
+|case\_13|Test specification of a reference z1pt4 in the job file|
 |case\_18|3 GMPETables|
 |case\_22|Test tiling and International Date Line|
 |case\_23|Filtering away a TRT|
@@ -23,6 +26,7 @@
 |case\_33|Directivity|
 |case\_34|AvgSA|
 |case\_35|Test cluster feature|
+|case\_36|Test magnitude-dependent aspect ratios|
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
 |case\_39|Test checking of IMT-dependent weights with unsupported IMTs|

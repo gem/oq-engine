@@ -199,9 +199,9 @@ def store_csm(dstore, csm, sitecol, cmakers):
         csm.save(dstore)
         return 1
     N = len(sitecol)
-    oq = cmakers[0].oq
+    oq = csm.oq
     fac = oq.imtls.size * N * 4 / 1024**2
-    max_weight = csm.get_max_weight(oq)
+    max_weight = csm.get_max_weight()
 
     # build source_groups and store _csm
     quartets = []

@@ -19,7 +19,10 @@ from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
         MorikawaFujiwara2013SubSlabSW,
-        MorikawaFujiwara2013SubSlabNE)
+        MorikawaFujiwara2013SubSlabNE,
+        MorikawaFujiwara2013CrustalNIED,
+        MorikawaFujiwara2013SubInterfaceNIED,
+        MorikawaFujiwara2013SubSlabNIED)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -57,3 +60,27 @@ class MorikawaFujiwara2013IntraSlabSWTest(BaseGSIMTestCase):
     def test_all(self):
         self.check('MF13/mean_intraslab_SW.csv',
                    max_discrep_percentage=0.3)
+
+
+class MorikawaFujiwara2013CrustalNIEDTest(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013CrustalNIED
+
+    def test_sigma(self):
+        self.check('MF13/total_std_crustal_nied.csv',
+                   max_discrep_percentage=0.1)
+
+
+class MorikawaFujiwara2013SubInterfaceNIEDTest(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013SubInterfaceNIED
+
+    def test_sigma(self):
+        self.check('MF13/total_std_interface_nied.csv',
+                   max_discrep_percentage=0.1)
+
+
+class MorikawaFujiwara2013SubSlabNIEDTest(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013SubSlabNIED
+
+    def test_sigma(self):
+        self.check('MF13/total_std_intraslab_nied.csv',
+                   max_discrep_percentage=0.1)

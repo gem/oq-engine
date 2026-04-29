@@ -26,7 +26,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs, split
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -133,20 +133,15 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
+def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
-    :param slice_by_event: composite array with fields 'start', 'stop'
+    :param gmf_df: DataFrame of GMFs
     :param oqparam: OqParam instance
-    :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
     :yields: dictionary of arrays, the output of event_based_risk
     """
-    if dstore.parent:
-        dstore.parent.open('r')
-    gmfcols = oqparam.gmf_data_dt().names
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        risk_sids = monitor.read('sids')  # this is fast
         R = 1 if oqparam.collect_rlzs else len(monitor.read('weights'))
         X = len(oqparam.ext_loss_types) + oqparam.ideduc
 
@@ -155,29 +150,11 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         xtypes.append('claim')
     assdf = monitor.read('assets')
     loss3 = {'aids': [], 'bids': [], 'loss': []}
-    for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
-        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        with dstore:
-            haz_sids = dstore['gmf_data/sid'][s0:s1]
-        idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
-        if len(idx) == 0:
-            yield {}
-            continue
-        with dstore, monitor('reading GMFs', measuremem=True):
-            start, stop = idx.min(), idx.max() + 1
-            gmfdic = {}
-            for col in gmfcols:
-                if col == 'sid':
-                    gmfdic[col] = haz_sids[idx]
-                else:
-                    dset = dstore['gmf_data/' + col]
-                    gmfdic[col] = dset[s0+start:s0+stop][idx - start]
-        gmfdf = pandas.DataFrame(gmfdic)  # few MB
-        dic = _event_based_risk(gmfdf, assdf, loss2, loss3, crmodel, monitor)
-        dic['alt'] = build_alt(loss2, xtypes)
-        yield dic
-    yield dict(avg=build_avg(loss3, oqparam.A, R*X))
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    dic = _event_based_risk(gmf_df, assdf, loss2, loss3, crmodel, monitor)
+    dic['alt'] = build_alt(loss2, xtypes)
+    dic['avg'] = build_avg(loss3, oqparam.A, R*X)
+    return dic
 
 
 def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
@@ -204,6 +181,7 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
             # read the assets for a single country, taxonomy (ebrisk)
+            # NB: this is CRUCIAL for running India without going OOM
             with ass_mon:
                 adf = monitor.read(
                     'assets', slc=slice(s0, s1)).set_index('ordinal')
@@ -455,8 +433,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
-        if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
-                all(val == 0 for val in oq.minimum_asset_loss.values())):
+        if (oq.aggregate_by and (
+                self.E * A > float(config.memory.max_potential_gmfs) and
+                all(val == 0 for val in oq.minimum_asset_loss.values()))):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
@@ -525,9 +504,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore,
-                                     self._monitor)
+            smap, gmf_dfs = starmap_from_gmfs(
+                ebr_from_gmfs, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
+            for gmf_df in gmf_dfs:
+                smap.submit((gmf_df, oq))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:
@@ -553,13 +534,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
-        if 'alt' in dic:
-            with self.monitor('saving risk_by_event'):
-                alt = dic.pop('alt')
-                for name in alt.columns:
-                    dset = self.datastore['risk_by_event/' + name]
-                    hdf5.extend(dset, alt[name].to_numpy())
-        if self.oqparam.avg_losses and 'avg' in dic:
+        with self.monitor('saving risk_by_event'):
+            alt = dic.pop('alt')
+            for name in alt.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, alt[name].to_numpy())
+        if self.oqparam.avg_losses:
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')

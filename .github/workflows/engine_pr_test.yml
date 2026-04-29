@@ -18,12 +18,14 @@ jobs:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python  ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
             python install.py devel --version=$GITHUB_HEAD_REF --from_fork
@@ -48,12 +50,14 @@ jobs:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python  ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
             python install.py devel --version=$GITHUB_HEAD_REF --from_fork
@@ -83,12 +87,14 @@ jobs:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python  ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
             python install.py devel --version=$GITHUB_HEAD_REF --from_fork

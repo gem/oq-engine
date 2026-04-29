@@ -386,7 +386,7 @@ class SampleSmTestCase(unittest.TestCase):
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
-        self.assertIn('Extracted 8 nodes out of 13', str(p))
+        self.assertIn('Extracted 5 nodes out of 13', str(p))
 
         # check the exposure is still valid
         sap.runline(f'openquake.commands check_input {dest}')
@@ -398,7 +398,7 @@ class SampleSmTestCase(unittest.TestCase):
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
-        self.assertIn('Extracted 9 nodes out of 15', str(p))
+        self.assertIn('Extracted 6 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
     def test_site_model(self):
@@ -408,7 +408,7 @@ class SampleSmTestCase(unittest.TestCase):
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
-        self.assertIn('Extracted 2 nodes out of 3', str(p))
+        self.assertIn('Extracted 1 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
     def test_sites_csv(self):
@@ -418,7 +418,7 @@ class SampleSmTestCase(unittest.TestCase):
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
-        self.assertIn('Extracted 50 lines out of 99', str(p))
+        self.assertIn('Extracted 53 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
 
@@ -554,7 +554,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r2.hazard_calculation_id, None)
 
     def test_OQ_REDUCE(self):
-        with mock.patch.dict(os.environ, OQ_REDUCE='.1'):
+        with mock.patch.dict(os.environ, OQ_REDUCE='.5'):
             job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
             run_jobs(create_jobs([job_ini]))
 
@@ -695,6 +695,14 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         # test sites_csv == vs30_csv and grid spacing
         sc = sap.runline('openquake.commands prepare_site_model '
                          f'{vs30_csv} -s{vs30_csv} -12 -g10 -a5 -o {output}')
+
+        # test sentinel_z: z1pt0 and z2pt5 should be -999 for all sites
+        sc = sap.runline(
+            'openquake.commands prepare_site_model '
+            f'{vs30_csv} -s{vs30_csv} -12 -999 -a5 -o {output}') 
+        sm = read_csv(output, {None: float})
+        self.assertTrue((sm['z1pt0'] == -999).all())
+        self.assertTrue((sm['z2pt5'] == -999).all())
 
 
 class ReduceSourceModelTestCase(unittest.TestCase):

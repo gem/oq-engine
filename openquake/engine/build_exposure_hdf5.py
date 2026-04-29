@@ -22,8 +22,10 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance, hdf5
+import h5py
+from openquake.baselib import sap, general, performance, parallel, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
+from openquake.hazardlib.countries import country2code, REGIONS
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
@@ -34,45 +36,74 @@ U16 = numpy.uint16
 F32 = numpy.float32
 
 
-def collect_exposures(grm_dir):
+def collect_exposures(grm_dir, redfactor=1):
     """
     Collect the files of kind Exposure_<Country>.xml.
 
     :returns: xmlfiles
     """
+    country_region = []
     out = []
     for region in os.listdir(grm_dir):
-        expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
+        expodir = os.path.join(grm_dir, region, 'Exposure')
         if not os.path.exists(expodir):
             continue
-        for fname in os.listdir(expodir):
-            if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
-                fullname = os.path.join(expodir, fname)
-                out.append(fullname)
-    return out
+        for country in os.listdir(expodir):
+            if country in country2code:
+                country_region.append((country2code[country], region))
+                fullcountry = os.path.join(expodir, country)
+                for f in os.listdir(fullcountry):
+                    if f.startswith('Exposure_') and f.endswith('.xml'):
+                        # i.e. Exposure_ZMB.xml
+                        fullname = os.path.join(expodir, country, f)
+                        out.append(fullname)
+    return general.random_filter(out, redfactor), country_region
 
 
-def read_world_vulnerability(grm_dir, dstore):
+# tested in crmodel_test.py
+def read_crmodel(vulndir, monitor=performance.Monitor()):
     """
-    Store the world CompositeRiskModel
+    Read the vulnerability files of kind vulnerability_<KIND>.xml
+    The association with the loss types is given by the following
+    mapping:
+
+occupants_vulnerability_file = vulnerability_fatalities.xml
+structural_vulnerability_file = vulnerability_building.xml
+contents_vulnerability_file = vulnerability_contents.xml
+number_vulnerability_file = vulnerability_number.xml
+area_vulnerability_file = vulnerability_area.xml
+residents_vulnerability_file = vulnerability_residents.xml
+injured_vulnerability_file = vulnerability_injuries.xml
+affectedpop_vulnerability_file = vulnerability_affectedpop.xml
+embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
     """
-    kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
-             'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
-    for kind in kinds:
-        name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
-        fname = os.path.join(grm_dir, name)
+    L = len('vulnerability_')
+    for name in os.listdir(vulndir):
+        ltype = name[L:].split('.')[0]
+        if ltype in ('total', 'structural', 'nonstructural'):
+            # not used by OQImpact
+            continue
+        elif ltype == 'building':
+            ltype = 'structural'
+        elif ltype == 'injuries':
+            ltype = 'injured'
+        elif ltype == 'fatalities':
+            ltype = 'occupants'
+        # vulnerability_area.xml -> area
+        fname = os.path.join(vulndir, name)
+        logging.info(f'Reading {fname}')
         for vf in nrml.to_python(fname).values():
-            vf.loss_type = 'occupants' if kind == 'fatalities' else kind
+            vf.loss_type = ltype
             vf.kind = 'vulnerability'
             vfuncs.append(vf)
+    logging.info(f'Read {len(vfuncs)} functions')
     oq = OqParam(calculation_mode='custom')
-    crmodel = CompositeRiskModel(oq, vfuncs)
-    dstore.create_df('crm', crmodel.to_dframe(),
-                     'gzip', **crmodel.get_attrs())
-    return len(vfuncs)
+    crm = CompositeRiskModel(oq, vfuncs)
+    crm.region = os.path.basename(vulndir)
+    return crm
 
-
+    
 def get_gsim_lt(cwd):
     """
     :returns: a GsimLogicTree instance
@@ -86,6 +117,7 @@ def get_gsim_lt(cwd):
 
 def discard_dupl(records):
     # discard duplicate sites
+    assert len(records)
     acc = {}
     for rec in records:
         lonlat = rec['lon'], rec['lat']
@@ -131,25 +163,29 @@ def build_site_model(grm_dir):
     return discard_dupl(sm)
 
 
-def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
+def build_site_model_gsims(grm_dir, dstore):
     """
     Storing the global site_model and gsim table
     """
-    rows = []
-    for cwd, dirs, files in os.walk(mosaic_dir):
-        for f in files:
-            if f == 'job_vs30.ini':
-                model = cwd.split('/')[-2]
-                gsim_lt = get_gsim_lt(cwd)
-                for trt, gsims in gsim_lt.values.items():
-                    for gsim in gsims:
-                        q = (model, trt, str(gsim), gsim.weight['default'])
-                        rows.append(q)
+    records = {}  # (model, trt, gsim) -> row
+    for region in REGIONS:
+        for cwd, dirs, files in os.walk(os.path.join(grm_dir, region)):
+            for f in files:
+                if f == 'job_vs30.ini':
+                    model = cwd.split('/')[-2]
+                    gsim_lt = get_gsim_lt(cwd)
+                    for trt, gsims in gsim_lt.values.items():
+                        for gsim in gsims:
+                            key = model, trt, str(gsim)
+                            if key in records:  # MIE is duplicated
+                                assert model == 'MIE', model
+                            else:
+                                records[key] = key + (gsim.weight['default'], )
     smodel = build_site_model(grm_dir)
     dstore['site_model'] = smodel
     dtlist = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr),
               ('weight', float)]
-    dstore['model_trt_gsim_weight'] = numpy.array(rows, dtlist)
+    dstore['model_trt_gsim_weight'] = numpy.array(list(records.values()), dtlist)
     return len(smodel)
 
 
@@ -189,7 +225,7 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
         print("No strings longer than {} characters found.".format(min_length))
 
 
-def main(mosaic_dir, grm_dir, wfp=False, action='build'):
+def main(grm_dir, wfp=False, action='build'):
     """
     If action='build' (the default) stores the global exposure and tmap.
     If action='zip' zips the global exposure in a single file exposures.zip
@@ -197,7 +233,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
     if action.startswith('find_long'):  # i.e. find_long_NAME_2
         fieldname = action[10:]
-        exposures_xml = collect_exposures(grm_dir)
+        exposures_xml, _ = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
             exposure, _ = _get_exposure(xml, stop='asset')
@@ -207,7 +243,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         return
     elif action == 'zip':
         tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
-        exposures_xml = collect_exposures(grm_dir)
+        exposures_xml, _ = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
             print(f'Reading {xml}')
@@ -218,27 +254,53 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
-
+    elif action == 'debug':
+        redfactor = .01  # sample 1 file each 100
+    else:
+        redfactor = 1
     mon = performance.Monitor(measuremem=True)
     description = 'Storing global exposure to hdf5'
     if wfp:
         description += ' (only for WFP countries)'
     job, dstore = create_job_dstore(description=description)
+    sample = os.environ.get('OQ_SAMPLE_ASSETS')
     with dstore, job:
         with mon:
-            n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
+            n = build_site_model_gsims(grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n))
-            n = read_world_vulnerability(grm_dir, dstore)
-            logging.info('Read %d vulnerability functions', n)
-            fnames = collect_exposures(grm_dir)
+            vulndir = os.path.join(
+                grm_dir, 'Vulnerability', 'Global', 'vulnerability')
+            region = REGIONS[0]
+            crmodel = read_crmodel(os.path.join(vulndir, region))
+            logging.info(f'Creating crm{region}')
+            if sample:
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for reg in REGIONS[1:]:
+                    # make a soft link to the first region to save space
+                    dstore[f'crm{reg}'] = h5py.SoftLink(f'crm{region}')
+            else:
+                # creating the big file
+                smap = parallel.Starmap(read_crmodel, h5=dstore)
+                for reg in REGIONS[1:]:
+                    smap.submit((os.path.join(vulndir, reg),))
+                dstore.create_df(f'crm{region}', crmodel.to_dframe(),
+                                 'gzip', **crmodel.get_attrs())
+                for crm in smap:
+                    logging.info(f'Creating crm{crm.region}')
+                    dstore.create_df(f'crm{crm.region}', crm.to_dframe(),
+                                     'gzip', **crm.get_attrs())
+            fnames, country_region = collect_exposures(grm_dir, redfactor)
+            countries, regions = zip(*country_region)
+            dstore['countries'] = numpy.array(countries)
+            dstore['regions'] = numpy.array(regions)
             expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
         logging.info(mon)
 
 
-main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
-main.action = 'Perform an action (build, zip, find_long_<FIELD>)'
+main.action = 'Perform an action (build, debug, zip, find_long_<FIELD>)'
 
 if __name__ == '__main__':
     sap.run(main)

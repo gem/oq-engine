@@ -23,20 +23,21 @@ jobs:
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Set up Python  ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools

@@ -517,3 +517,52 @@ class AbrahamsonSilva2008(GMPE):
     10.00   400.0   0.000  -1.993   -0.7960  -0.2683  -0.6630  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000  0.640  0.640  0.612  0.612  0.350  0.350  0.200
     pgv     400.0  -1.955   5.7578  -0.9046  -0.1200   1.5390  0.0800  -0.0600  0.7000  -0.3900   0.6300   0.0000  0.590  0.470  0.576  0.453  0.420  0.300  0.740
     """)
+
+
+class AbrahamsonSilva2008BCHydro(AbrahamsonSilva2008):
+    """
+    AS08 with BCHydro (IMT-dependent) sigma-mu scaling and
+    single station sigma.
+    """
+    experimental = True
+
+    def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
+        super().__init__(**kwargs)
+        self.single_stat_sigma = single_stat_sigma
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_BCHYDRO[imt]
+            mean[m] += self.sigma_mu_epsilon * C['fe']
+            if self.single_stat_sigma:
+                sig[m] *= C['s2sss']
+
+    COEFFS_BCHYDRO = CoeffsTable(sa_damping=5, table="""\
+    imt     s2sss   fe
+    pga     0.8530  0.2500
+    pgv     0.8700  0.2500
+    0.010   0.8530  0.2500
+    0.020   0.8555  0.2500
+    0.030   0.8570  0.2500
+    0.040   0.8581  0.2500
+    0.050   0.8589  0.2500
+    0.075   0.8604  0.2500
+    0.100   0.8615  0.2500
+    0.150   0.8630  0.2500
+    0.200   0.8640  0.2500
+    0.250   0.8649  0.2500
+    0.300   0.8655  0.2500
+    0.400   0.8666  0.2500
+    0.500   0.8674  0.2500
+    0.750   0.8689  0.2500
+    1.000   0.8700  0.2500
+    1.500   0.8715  0.2813
+    2.000   0.8726  0.3125
+    3.000   0.8741  0.3750
+    4.000   0.8751  0.4375
+    5.000   0.8760  0.5000
+    7.500   0.8775  0.5000
+    10.00   0.8785  0.5000
+    """)
