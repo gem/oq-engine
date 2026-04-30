@@ -23,6 +23,7 @@
 |case\_27|Nankai mutex model, including disaggregation|
 |case\_28|Test hypoDepthDist with a simple fault source|
 |case\_29|Non-parametric source with one rupture represente by 2 kite surfaces|
+|case\_30|Tests 2025 NSHM variants of the MorikawaFujiwara2013 GMM|
 |case\_32|Source Specific Logic Tree|
 |case\_33|Directivity|
 |case\_34|AvgSA|
