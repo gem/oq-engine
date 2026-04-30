@@ -122,19 +122,28 @@ def _get_basin_term(C, ctx, region=None):
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _anomalous_intensity_correction_term(C, region, xvf, focal_depth):
+def _anomalous_intensity_correction_term(C, region, ctx, taper_ai=False):
     """
     Anomalous intensity correction (equation 11).
+
+    NOTE: In the 2025 NSHM (i.e. the NIED subclasses here), for NE Japan
+    a linearly tapered version of this correction is applied, with it set
+    to zero at 35.5 deg north and unity at 36.5 deg north.
     """
     if region == 'NE':
         gamma = C['gNE']
-        return gamma * xvf * np.maximum(focal_depth - 30., 0.)
+        corr = gamma * ctx.xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        if taper_ai:
+            # Only apply in the NIED subclasses (2025 NSHM)
+            taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
+            corr = corr * taper
+        return corr
     
     elif region == 'SW': # Clip xvf and only apply to >= 60 km events
         gamma = C['gSW']
-        xvf = np.minimum(xvf, 75.0)
-        mask = focal_depth >= 60
-        corr = gamma * xvf * np.maximum(focal_depth - 30., 0.)
+        xvf = np.minimum(ctx.xvf, 75.0)
+        mask = ctx.hypo_depth >= 60
+        corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
         corr[mask] = 0.
         return corr
     
@@ -206,6 +215,9 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required distance measure is Rrup [km]
     REQUIRES_DISTANCES = {'rrup'}
 
+    # No tapering of NE correction in the original version
+    taper_ai = False
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         mw01 = CONSTS["Mw01"]
@@ -222,7 +234,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _anomalous_intensity_correction_term(
-                    C, self.region, ctx.xvf, ctx.hypo_depth))
+                    C, self.region, ctx, self.taper_ai))
 
             if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(
@@ -361,6 +373,7 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
 class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
     region = 'NE'
+    taper_ai = True # Apply the tapering of the NE AI correction as in 2025 NSHM
 
 
 class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
@@ -391,6 +404,7 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
 class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
     region = 'NE'
+    taper_ai = True # Apply the tapering of the NE AI correction as in 2025 NSHM
 
 
 class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
