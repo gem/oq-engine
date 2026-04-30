@@ -159,7 +159,7 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(gmf_df, oqparam, monitor):
+def ebr_from_gmfs(gmf_df, assetcol, oqparam, monitor):
     """
     :param gmf_df: DataFrame of GMFs
     :param oqparam: OqParam instance
@@ -168,9 +168,9 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdf = monitor.read('assets')
+    assdf, iss = get_assetdf_startstop(assetcol)
     items = ((id0taxo, assdf[s0:s1].set_index('ordinal'))
-             for id0taxo, s0, s1 in monitor.read('start-stop'))
+             for id0taxo, s0, s1 in iss)
     dic = _event_based_risk(gmf_df, items, crmodel, monitor)
     return dic
 
@@ -490,7 +490,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 ebr_from_gmfs, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, oq))
+                smap.submit((gmf_df, self.assetcol, oq))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:

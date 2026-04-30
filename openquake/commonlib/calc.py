@@ -491,7 +491,8 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         # consider sitecol.sids.max() + 1
         N = max(len(sitecol), sitecol.sids.max() + 1)
     with mon('computing event impact', measuremem=True):
-        num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
+        assetcol = dstore['assetcol']
+        num_assets = get_counts(assetcol['site_id'], N)
         try:
             sbe = data['slice_by_event'][:]
         except KeyError:
