@@ -80,7 +80,7 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
             ords = adf.ordinal.to_numpy()
             idxs = [idx[o] for o in ords]
             rc = scientific.RiskComputer(crmodel, taxo)
-            dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # (A, E, L, Dc)
+            dd5 = rc.get_dd5(adf, gmf_df, rng, Dc-D, crmodel)  # P,A,E,L,Dc
             if R == 1:  # possibly because of collect_rlzs
                 dmgcsq[:, idxs, 0] += dd5.sum(axis=2)
             else:  # use rlzs

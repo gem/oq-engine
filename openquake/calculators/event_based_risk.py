@@ -24,9 +24,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, config
+from openquake.baselib import hdf5, parallel, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -179,7 +178,7 @@ def _event_based_risk(df, gen_adf, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
+    loss3 = {'aids': [], 'bids': [], 'loss': []}  # avg
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
@@ -348,17 +347,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
-    def save_tmp(self, monitor):
+    def save_tmp(self, monitor, from_rups=True):
         """
         Save some useful data in the file calc_XXX_tmp.hdf5
         """
         oq = self.oqparam
-        monitor.save('sids', self.sitecol.sids)
-        adf, iss = get_assetdf_startstop(self.assetcol)
-        monitor.save('assets', adf)
-        monitor.save('start-stop', iss)
-        monitor.save('crmodel', self.crmodel)
-        monitor.save('rlz_id', self.rlzs)
+        if from_rups:
+            adf, iss = get_assetdf_startstop(self.assetcol)
+            monitor.save('assets', adf)
+            monitor.save('start-stop', iss)
 
         # crucial for impact_test
         if 'ID_0' in self.assetcol.tagnames:
@@ -374,6 +371,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:
             aggids = ()
         monitor.save('aggids', aggids)
+        monitor.save('sids', self.sitecol.sids)
+        monitor.save('crmodel', self.crmodel)
+        monitor.save('rlz_id', self.rlzs)
 
     def pre_execute(self):
         oq = self.oqparam
@@ -486,13 +486,25 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            smap, gmf_dfs = starmap_from_gmfs(
-                ebr_from_gmfs, oq, self.datastore, self._monitor)
-            self.save_tmp(smap.monitor)
-            for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, self.assetcol, oq))
+            gmf_df = self.datastore.read_df('gmf_data')
+            self.datastore.swmr_on()
+            smap =  parallel.Starmap(ebr_from_gmfs, h5=self.datastore)
+            ct = oq.concurrent_tasks or 1
+            sids = self.assetcol['site_id']
+            self.save_tmp(smap.monitor, from_rups=False)
+            self.loss2 = general.AccumDict(accum=0)
+            for t in range(ct):
+                gmf_tile = gmf_df[gmf_df.sid % ct == t]
+                asset_tile = self.assetcol.new(self.assetcol[sids % ct == t])
+                if len(asset_tile):
+                    smap.submit((gmf_tile, asset_tile, oq))
             smap.reduce(self.agg_dicts)
-
+            with self.monitor('saving risk_by_event'):
+                alt = build_alt(self.loss2, self.xtypes)
+                print(alt)
+                for name in alt.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, alt[name].to_numpy())
         if self.parent_events:
             assert self.parent_events == len(self.datastore['events'])
         return 1
