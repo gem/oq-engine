@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="Japan Subduction Test">
+
+        <sourceGroup name="interface"
+                     tectonicRegion="Subduction Interface">
+            <characteristicFaultSource id="001"
+                                       name="interface source"
+                                       tectonicRegion="Subduction Interface">
+                <surface>
+                    <planarSurface dip="0.0" strike="0.0">
+                        <topLeft    depth="28.0" lat="35.90" lon="137.50"/>
+                        <topRight   depth="28.0" lat="36.10" lon="137.50"/>
+                        <bottomLeft depth="42.0" lat="35.90" lon="137.50"/>
+                        <bottomRight depth="42.0" lat="36.10" lon="137.50"/>
+                    </planarSurface>
+                </surface>
+                <arbitraryMFD>
+                    <magnitudes>7.0</magnitudes>
+                    <occurRates>0.01</occurRates>
+                </arbitraryMFD>
+                <rake>90.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+
+        <sourceGroup name="intraslab"
+                     tectonicRegion="Subduction IntraSlab">
+            <characteristicFaultSource id="002"
+                                       name="intraslab source"
+                                       tectonicRegion="Subduction IntraSlab">
+                <surface>
+                    <planarSurface dip="0.0" strike="0.0">
+                        <topLeft    depth="70.0" lat="35.90" lon="137.50"/>
+                        <topRight   depth="70.0" lat="36.10" lon="137.50"/>
+                        <bottomLeft depth="90.0" lat="35.90" lon="137.50"/>
+                        <bottomRight depth="90.0" lat="36.10" lon="137.50"/>
+                    </planarSurface>
+                </surface>
+                <arbitraryMFD>
+                    <magnitudes>6.5</magnitudes>
+                    <occurRates>0.01</occurRates>
+                </arbitraryMFD>
+                <rake>-90.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+
+    </sourceModel>
+</nrml>

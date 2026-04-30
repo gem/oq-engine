@@ -122,19 +122,41 @@ def _get_basin_term(C, ctx, region=None):
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _get_intensity_correction_term(C, region, xvf, focal_depth):
+def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
+    """
+    Anomalous intensity correction (equation 11).
+
+    NOTE: When nied_anom_corr is True (NIED subclasses):
+        - NE correction is tapered linearly from zero at 35.5 deg north
+          to full (unity) at 36.5 deg north.
+        - SW correction is restricted to sites west of 136.9 deg east.
+    """
     if region == 'NE':
         gamma = C['gNE']
-    elif region == 'SW':
+        corr = gamma * ctx.xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        if nied_anom_corr:
+            # Only apply in the NIED subclasses (2025 NSHM)
+            taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
+            corr = corr * taper
+        return corr
+    
+    elif region == 'SW': # Clip xvf and only apply to >= 60 km events
         gamma = C['gSW']
+        xvf = np.minimum(ctx.xvf, 75.0)
+        corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        # Only apply for events >= 60 km
+        mask = ctx.hypo_depth < 60
+        if nied_anom_corr:
+            # In NIED subclasses also restrict to sites west of 136.9 deg east
+            mask = mask | (ctx.lon >= 136.9)
+        corr[mask] = 0.
+        return corr
+    
     elif region is None:
         return 0.
+    
     else:
         raise ValueError('Unsupported region')
-    xvf = np.clip(xvf, -75.0, 75.0) # Assume the abs xvf cap should be applied 
-                                    # to both SW AND NE to prevent extreme corr 
-    return (
-        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
@@ -198,6 +220,9 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required distance measure is Rrup [km]
     REQUIRES_DISTANCES = {'rrup'}
 
+    # Use the anomalous intensity correction as defined in original paper
+    nied_anom_corr = False
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         mw01 = CONSTS["Mw01"]
@@ -213,8 +238,8 @@ class MorikawaFujiwara2013Crustal(GMPE):
                                     mw1prime, mw1, ctx.hypo_depth) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
-                _get_intensity_correction_term(
-                    C, self.region, ctx.xvf, ctx.hypo_depth))
+                _anomalous_intensity_correction_term(
+                    C, self.region, ctx, self.nied_anom_corr))
 
             if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(
@@ -352,11 +377,15 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
 
 class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
+    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
+    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
@@ -382,8 +411,12 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
 
 class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
+    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
+    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
