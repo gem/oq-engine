@@ -122,19 +122,27 @@ def _get_basin_term(C, ctx, region=None):
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _get_intensity_correction_term(C, region, xvf, focal_depth):
+def _anomalous_intensity_correction_term(C, region, xvf, focal_depth):
+    """
+    Anomalous intensity correction (equation 11).
+    """
     if region == 'NE':
         gamma = C['gNE']
-    elif region == 'SW':
+        return gamma * xvf * np.maximum(focal_depth - 30., 0.)
+    
+    elif region == 'SW': # Clip xvf and only apply to >= 60 km events
         gamma = C['gSW']
+        xvf = np.minimum(xvf, 75.0)
+        mask = focal_depth >= 60
+        corr = gamma * xvf * np.maximum(focal_depth - 30., 0.)
+        corr[mask] = 0.
+        return corr
+    
     elif region is None:
         return 0.
+    
     else:
         raise ValueError('Unsupported region')
-    xvf = np.clip(xvf, -75.0, 75.0) # Assume the abs xvf cap should be applied 
-                                    # to both SW AND NE to prevent extreme corr 
-    return (
-        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
@@ -213,7 +221,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                                     mw1prime, mw1, ctx.hypo_depth) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
-                _get_intensity_correction_term(
+                _anomalous_intensity_correction_term(
                     C, self.region, ctx.xvf, ctx.hypo_depth))
 
             if imt.name in ["PGA", "SA"]:
