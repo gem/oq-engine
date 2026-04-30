@@ -45,6 +45,32 @@ TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
 
+def get_assetdf_startstop(assetcol):
+    """
+    :param assetcol: an AssetCollection
+    :returns: (dataframe of assets, idx_start_stop array)
+    """
+    assetdf = assetcol.to_dframe()
+    del assetdf['id']
+    if 'ID_0' not in assetdf.columns:
+        assetdf['ID_0'] = U32(0)
+    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+    # NB: this is subtle! without the ordering by 'ordinal'
+    # the asset dataframe will be ordered differently on AMD machines
+    # with respect to Intel machines, depending on the machine, thus
+    # causing different losses
+    id0taxo = TWO24 * assetdf.ID_0.to_numpy() + assetdf.taxonomy.to_numpy()
+
+    iss = []
+    maxsize = int(config.memory.max_assets_chunk)
+    for idx, start, stop in performance.idx_start_stop(id0taxo):
+        for slc in general.gen_slices(start, stop, maxsize):
+            iss.append((idx, slc.start, slc.stop))
+
+    # building start-stop indices, so that the assets are read by taxonomy
+    return assetdf, U32(iss)
+
+
 def fast_agg(keys, values, correl, li, loss2):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
@@ -277,16 +303,6 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def _expand3(arrayN3, maxsize):
-    # expand array with rows (id0taxo, start, stop) in chunks under
-    # maxsize
-    out = []
-    for idx, start, stop in arrayN3:
-        for slc in general.gen_slices(start, stop, maxsize):
-            out.append((idx, slc.start, slc.stop))
-    return U32(out)
-
-
 def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
@@ -338,29 +354,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe()
-        del adf['id']
-        if 'ID_0' not in adf.columns:
-            adf['ID_0'] = U32(0)
-        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
-        # NB: this is subtle! without the ordering by 'ordinal'
-        # the asset dataframe will be ordered differently on AMD machines
-        # with respect to Intel machines, depending on the machine, thus
-        # causing different losses
+        adf, iss = get_assetdf_startstop(self.assetcol)
         monitor.save('assets', adf)
+        monitor.save('start-stop', iss)
+        monitor.save('crmodel', self.crmodel)
+        monitor.save('rlz_id', self.rlzs)
 
         # crucial for impact_test
         if 'ID_0' in self.assetcol.tagnames:
             monitor.save('countries', self.assetcol.tagcol.ID_0)
-
-        # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers by taxonomy
-        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
-        max_assets = int(config.memory.max_assets_chunk)
-        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
-        monitor.save('start-stop', tss)
-        monitor.save('crmodel', self.crmodel)
-        monitor.save('rlz_id', self.rlzs)
         try:
             ws = base.get_weights(oq, self.datastore)
         except KeyError:  # not needed in from ses
