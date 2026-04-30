@@ -1718,7 +1718,10 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
-    def get_losses_ARL(self, adf, gmf_df, rlzs, sec_losses, rndgen):
+    def get_losses_aids(self, adf, gmf_df, rlzs, sec_losses, rndgen):
+        """
+        :returns: (losses(A, R, L), asset_ordinals)
+        """
         A = len(adf)
         L = len(self.loss_types)
         R = 1 if rlzs is None else rlzs.max() + 1
@@ -1732,7 +1735,7 @@ class RiskComputer(dict):
                     losses[idx[aid], 0, li] += loss
                 else:
                     losses[idx[aid], rlzs[eid], li] += loss
-        return losses, adf.ordinal.to_numpy()
+        return losses, adf.aid.to_numpy()
 
     def get_dd5(self, adf, gmf_df, rng=None, C=0, crm=None):
         """
