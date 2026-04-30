@@ -1718,6 +1718,25 @@ class RiskComputer(dict):
                     update_losses(asset_df, out)
             yield out
 
+    def get_losses_aids(self, adf, gmf_df, rlzs, sec_losses, rndgen):
+        """
+        :returns: (losses(A, R, L), asset_ordinals)
+        """
+        A = len(adf)
+        L = len(self.loss_types)
+        R = 1 if rlzs is None else rlzs.max() + 1
+        losses = numpy.zeros((A, R, L), F32)
+        [out] = self.output(adf, gmf_df, sec_losses, rndgen)
+        idx = {aid: i for i, aid in enumerate(adf.aid.unique())}
+        for li, lt in enumerate(self.loss_types):
+            df = out[lt]
+            for eid, aid, loss in zip(df.eid, df.aid, df.loss):
+                if rlzs is None:
+                    losses[idx[aid], 0, li] += loss
+                else:
+                    losses[idx[aid], rlzs[eid], li] += loss
+        return losses, adf.aid.to_numpy()
+
     def get_dd5(self, adf, gmf_df, rng=None, C=0, crm=None):
         """
         :param adf:

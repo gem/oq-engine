@@ -1,4 +1,6 @@
   [Christopher Brooks]
+  * Added ability to specify a distribution of hypocenters within a
+    simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
     scaling and single station sigma) and some unit tests.
   
