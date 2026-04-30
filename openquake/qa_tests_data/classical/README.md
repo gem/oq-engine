@@ -21,6 +21,7 @@
 |case\_25|Test negative depths|
 |case\_26|Test YoungsCoppersmith1985MFD|
 |case\_27|Nankai mutex model, including disaggregation|
+|case\_28|Test hypoDepthDist with a simple fault source|
 |case\_29|Non-parametric source with one rupture represente by 2 kite surfaces|
 |case\_32|Source Specific Logic Tree|
 |case\_33|Directivity|

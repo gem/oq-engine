@@ -27,7 +27,7 @@ from openquake.hazardlib.source.rupture import (  # noqa
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.source.point import PointSource  # noqa
 from openquake.hazardlib.source.area import AreaSource  # noqa
-from openquake.hazardlib.source.simple_fault import SimpleFaultSource  # noqa
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource, HypoData  # noqa
 from openquake.hazardlib.source.complex_fault import ComplexFaultSource, MINWEIGHT  # noqa
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource  # noqa
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource   # noqa
