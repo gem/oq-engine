@@ -220,7 +220,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required distance measure is Rrup [km]
     REQUIRES_DISTANCES = {'rrup'}
 
-    # No tapering of NE correction in the original version
+    # Use the anomalous intensity correction as defined in original paper
     nied_anom_corr = False
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
