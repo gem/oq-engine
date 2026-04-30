@@ -27,7 +27,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, parallel, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.risklib.scientific import (
-    total_losses, insurance_losses, MultiEventRNG, LOSSID)
+    total_losses, insurance_losses, RiskComputer, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
@@ -158,7 +158,7 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(gmf_df, assetcol, oqparam, monitor):
+def risk_from_gmfs(gmf_df, assetcol, oqparam, monitor):
     """
     :param gmf_df: DataFrame of GMFs
     :param oqparam: OqParam instance
@@ -167,24 +167,30 @@ def ebr_from_gmfs(gmf_df, assetcol, oqparam, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdf, iss = get_assetdf_startstop(assetcol)
-    items = ((id0taxo, assdf[s0:s1].set_index('ordinal'))
-             for id0taxo, s0, s1 in iss)
-    dic = _event_based_risk(gmf_df, items, crmodel, monitor)
+    dic = _event_based_risk('risk', gmf_df, assetcol, crmodel, monitor)
     return dic
 
 
-def _event_based_risk(df, gen_adf, crmodel, monitor):
+def _event_based_risk(kind, df, gen_adf, crmodel, monitor):
     oq = crmodel.oqparam
+    xtypes = oq.ext_loss_types + ['claim'] if oq.ideduc else []
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
-    X = len(oq.ext_loss_types) + oq.ideduc
-    loss3 = {'aids': [], 'bids': [], 'loss': []}  # avg
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    X = len(xtypes)
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
+    if kind == 'ebrisk':
+        loss3 = {'aids': [], 'bids': [], 'loss': []}  # avg
+        items = gen_adf
+    else:
+        assdf, iss = get_assetdf_startstop(gen_adf)
+        idx = {o: i for i, o in enumerate(assdf.ordinal)}
+        loss3 = numpy.zeros((len(assdf), R, len(xtypes)), F32)
+        items = ((id0taxo, assdf[s0:s1].set_index('ordinal'))
+                 for id0taxo, s0, s1 in iss)
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
     aggids = monitor.read('aggids')
-    rlz_id = monitor.read('rlz_id')
+    rlzs = monitor.read('rlz_id') if R > 1 else None
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -198,7 +204,8 @@ def _event_based_risk(df, gen_adf, crmodel, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, adf in gen_adf:
+
+    for id0taxo, adf in items:
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
         country = countries[id0taxo // TWO24]
@@ -208,17 +215,22 @@ def _event_based_risk(df, gen_adf, crmodel, monitor):
         if len(gmf_df) == 0:  # common enough
             continue
         with risk_mon:
-            [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+            [taxidx] = adf.taxonomy.unique()
+            rc = RiskComputer(taxidx, country)
+            out = rc.output(adf, gmf_df, oq._sec_losses, rng)
         with agg_mon:
-            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+            if kind == 'ebrisk':
+                aggreg(out, aggids, rlzs, oq, loss2, loss3)
+            else:
+                crmodel.update_losses(out, aggids, idx, rlzs, loss2, loss3)
 
     dic = dict(gmf_bytes=df.memory_usage().sum())
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
-    dic['alt'] = build_alt(loss2, xtypes)
-    dic['avg'] = build_avg(loss3, oq.A, R*X)
+    if kind == 'ebrisk':
+        dic['alt'] = build_alt(loss2, xtypes)
+        dic['avg'] = build_avg(loss3, oq.A, R*X)
+    else:
+        dic['agg'] = loss2
+        dic['avg'] = loss3
     return dic
 
 
@@ -327,7 +339,7 @@ def ebrisk(rups, cmaker, sids, secperils, stations, hdf5path, monitor):
             items = ((id0taxo, monitor.read(
                 'assets', slc=slice(s0, s1)).set_index('ordinal'))
                      for id0taxo, s0, s1 in monitor.read('start-stop'))
-            yield _event_based_risk(gmf_df, items, crmodel, monitor)
+            yield _event_based_risk('ebrisk', gmf_df, items, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -488,7 +500,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:  # start from GMFs
             gmf_df = self.datastore.read_df('gmf_data')
             self.datastore.swmr_on()
-            smap =  parallel.Starmap(ebr_from_gmfs, h5=self.datastore)
+            smap =  parallel.Starmap(risk_from_gmfs, h5=self.datastore)
             ct = oq.concurrent_tasks or 1
             sids = self.assetcol['site_id']
             self.save_tmp(smap.monitor, from_rups=False)
