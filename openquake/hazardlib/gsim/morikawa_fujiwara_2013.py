@@ -127,8 +127,8 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
     Anomalous intensity correction (equation 11).
 
     NOTE: When nied_anom_corr is True (NIED subclasses):
-        - NE correction is tapered  linearly from zero at 35.5 deg north
-          to full at 36.5 deg north.
+        - NE correction is tapered linearly from zero at 35.5 deg north
+          to full (unity) at 36.5 deg north.
         - SW correction is restricted to sites west of 136.9 deg east.
     """
     if region == 'NE':
