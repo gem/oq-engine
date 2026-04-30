@@ -253,3 +253,52 @@ class ChiouYoungs2008(GMPE):
     7.5    1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.1224 -0.0999 -0.1010 1.498 5.9891 5.2000 0.4500 0.0000 0.0000 0.0000 2.7177  0.7514 -0.00096 -0.00094 -0.8346  0.0000 -0.001369 0.001134 0.4800 0.005517 320.3  0.2660 0.5328 0.5328 0.4416 0.4213 0.7000 0.0018
     10.0   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0 -5.5872 -0.1000 -0.1000 1.502 6.1930 5.2000 0.4500 0.0000 0.0000 0.0000 2.7180  1.1856 -0.00094 -0.00091 -0.7332  0.0000 -0.001361 0.000515 0.4800 0.005517 320.1  0.2682 0.5542 0.5542 0.4414 0.4213 0.7000 0.0014
     """)
+
+
+class ChiouYoungs2008BCHydro(ChiouYoungs2008):
+    """
+    CY08 with BCHydro (IMT-dependent) sigma-mu scaling and
+    single station sigma.
+    """
+    experimental = True
+
+    def __init__(self, single_stat_sigma=False, sigma_mu_epsilon=0., **kwargs):
+        super().__init__(**kwargs)
+        self.single_stat_sigma = single_stat_sigma
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        for m, imt in enumerate(imts):
+            C = self.COEFFS_BCHYDRO[imt]
+            mean[m] += self.sigma_mu_epsilon * C['fe']
+            if self.single_stat_sigma:
+                sig[m] *= C['s2sss']
+
+    COEFFS_BCHYDRO = CoeffsTable(sa_damping=5, table="""\
+    imt     s2sss   fe
+    pga     0.8530  0.2500
+    pgv     0.8700  0.2500
+    0.010   0.8530  0.2500
+    0.020   0.8555  0.2500
+    0.030   0.8570  0.2500
+    0.040   0.8581  0.2500
+    0.050   0.8589  0.2500
+    0.075   0.8604  0.2500
+    0.10    0.8615  0.2500
+    0.15    0.8630  0.2500
+    0.20    0.8640  0.2500
+    0.25    0.8649  0.2500
+    0.30    0.8655  0.2500
+    0.40    0.8666  0.2500
+    0.50    0.8674  0.2500
+    0.75    0.8689  0.2500
+    1.0     0.8700  0.2500
+    1.5     0.8715  0.2813
+    2.0     0.8726  0.3125
+    3.0     0.8741  0.3750
+    4.0     0.8751  0.4375
+    5.0     0.8760  0.5000
+    7.5     0.8775  0.5000
+    10.0    0.8785  0.5000
+    """)

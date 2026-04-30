@@ -492,11 +492,6 @@ max_nodes_network:
    Example: *max_nodes_network = 100*
    Default: 1000
 
-max_potential_gmfs:
-  Restrict the product *num_sites * num_events*.
-  Example: *max_potential_gmfs = 1E9*.
-  Default: 2E11
-
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
@@ -1149,7 +1144,6 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)
-    max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     max_sites_correl = valid.Param(valid.positiveint, 1200)
@@ -2068,8 +2062,7 @@ class OqParam(valid.ParamSet):
         if issubclass(cls, cross_correlation.CrossCorrelationBetween):
             tlb = self.truncation_level_between
             if tlb is None:
-                tlb = (self.truncation_level
-                       if self.truncation_level is not None else 99.)
+                tlb = getattr(self, 'truncation_level', None) or 99.
             return cls(tlb)
         return cls()
 
