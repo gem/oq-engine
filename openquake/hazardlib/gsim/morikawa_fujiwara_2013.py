@@ -377,11 +377,13 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
 
 class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
+    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
+    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
@@ -409,10 +411,12 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
 
 class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
+    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
+    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
