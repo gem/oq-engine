@@ -147,7 +147,7 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
         )
 
         # Get the cumulative correction based on distance traversed per
-        # grid cell and the associated distance-based adjustment term
+        # grid cell and the associated distance-based adjustment terms
         adj = 0.0
         for cid in grid:
 
@@ -212,8 +212,7 @@ def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
     return mean_vals, sig_vals
 
 
-def _apply_grid_corrections(grid_data, ctx, imt,
-                            mean, sig, tau, phi):
+def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
     Look up and apply corrections defined in the hdf5. The mean
     adjustment is always added.
@@ -240,8 +239,11 @@ def _apply_grid_corrections(grid_data, ctx, imt,
     if entry is None:
         return 
     
-    # Apply each correction 
-    for term, cfg in grid_data["res_terms"].items(): # e.g. dL2L, mapping dict
+    # Apply each correction
+    for term, cfg in grid_data["res_terms"].items():
+        # Example of (term, cfg):
+        # term = 'dL2L'
+        # cfg = {'location': "hypo", sig_adjustment: "add", sig_component: "tau"}
 
         # Skip if this term has no data for the given IMT
         if term not in entry:
