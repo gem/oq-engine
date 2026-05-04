@@ -149,7 +149,7 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
         # Get the cumulative correction based on distance traversed per
         # grid cell and the associated distance-based adjustment terms
         adj = 0.0
-        for cid in grid:
+        for cid in grid: # Iterate over OQ pgns representing the grid cells
 
             # Get the polygon object
             pgn = grid[cid]['pgn']
