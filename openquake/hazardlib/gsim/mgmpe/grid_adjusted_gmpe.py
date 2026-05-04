@@ -119,7 +119,8 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
         Array of site longitudes
     :param site_lats:
         Array of site latitudes
-    returns:
+    :returns:
+        adjustment_vals sig_vals) arrays of shape (len(hypo_lons),)
     """
     # Set some stores
     n_paths = len(hypo_lons)
