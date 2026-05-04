@@ -259,8 +259,8 @@ def _apply_grid_corrections(grid_data, ctx, imt,
             delta_mean = raytrace_path_adj(
                 term,
                 entry[term], # No sigma correction applied only mean correction
-                ctx.hypo_lat, ctx.hypo_lon,
-                ctx.lat, ctx.lon,
+                ctx.hypo_lon, ctx.hypo_lat,
+                ctx.lon, ctx.lat,
                 )
             delta_sig = np.zeros_like(ctx.lon) # No sig adj for raytraced terms
         else:
