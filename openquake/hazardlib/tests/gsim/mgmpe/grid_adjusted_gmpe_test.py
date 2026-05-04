@@ -31,12 +31,15 @@ aae = np.testing.assert_array_almost_equal
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
-BASE, GRID = 0, 1
+# Test inputs
+BASE, GRID = 0, 1 # Integers of results for original vs modified GSIM
 BASE_GSIM = "AkkarEtAlRjb2014"
 LATS = np.array([0.0, 10.0, 20.0, 40.0])
 LONS = np.array([0.0, 10.0, 20.0, 40.0])
 DP = 4
 
+# Test hdf5 has per-cell values at h3 resolutions 2, 3, 4
+# for PGA, SA(0.5) and SA(1.0)
 DL2L_MEAN = np.array([0.05, 0.10, 0.15, 0.20])
 DL2L_STD = np.array([0.02, 0.04, 0.06, 0.08])
 DS2S_MEAN = np.array([-0.10, -0.15, -0.20, -0.25])
