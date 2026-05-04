@@ -26,6 +26,8 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -92,12 +94,13 @@ def load_residual_grids(hdf5_path):
                             f"'{term}' and IMT '{imt_str}'")
                     # Store sigma adjustment
                     grids[imt_str][f"{term}_sig"] = dict(zip(cell_ids, sig_vals))
+
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
 
-def raytrace_path_adj(att_grid, hypo_lons, hypo_lats, site_lons, site_lats):
+def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
     For each hypocenter-to-site path (travel path) apply an adjustment based
     on the distance traversed through each h3 grid cell. A conventional example
@@ -117,6 +120,46 @@ def raytrace_path_adj(att_grid, hypo_lons, hypo_lats, site_lons, site_lats):
         Array of site latitudes
     returns:
     """
+    # Set some stores
+    n_paths = len(hypo_lons)
+    ra_per_path = np.zeros(n_paths)
+
+    for idx_path in range(n_paths): # Iterate over the paths
+
+        # Discretize the line
+        dsct_line = npoints_between(
+            site_lons[idx_path], site_lats[idx_path], 0.,
+            hypo_lons[idx_path], hypo_lats[idx_path], 0.,
+            100, # npoints
+        )
+
+        # Create mesh of discretized line
+        mesh = Mesh(dsct_line[0], dsct_line[1])
+
+        # Distance between consecutive discretised points along the path
+        line_spacing = distance(
+            mesh.lons[0], mesh.lats[0], 0.,
+            mesh.lons[1], mesh.lats[1], 0.
+        )
+
+        # Get the cumulative correction based on distance traversed per
+        # grid cell and the associated distance-based adjustment term
+        adj = 0.0
+        for cid in grid:
+
+            # Get the polygon object
+            pgn = grid[cid]['pgn']
+            
+            # Get the associated distance-based adjustment
+            dba = grid[cid][term] 
+            
+            # Adj = N points intersecting zone * spacing * per-km adjustment
+            adj += np.count_nonzero(pgn.intersects(mesh)) * line_spacing * dba
+
+        # Store the total cumulative adjustment for the term
+        ra_per_path[idx_path] = adj
+
+    return ra_per_path
 
 
 def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
@@ -213,11 +256,12 @@ def _apply_grid_corrections(grid_data, ctx, imt,
                     )
             # Travel path based (ray-tracing)
             delta_mean = raytrace_path_adj(
+                term,
                 entry[term], # No sigma correction applied only mean correction
                 ctx.hypo_lat, ctx.hypo_lon,
                 ctx.lat, ctx.lon,
                 )
-            delta_sig = None
+            delta_sig = np.zeros_like(ctx.lon)
         else:
             if cfg["location"] == "hypo":
                 # Hypo location-based
