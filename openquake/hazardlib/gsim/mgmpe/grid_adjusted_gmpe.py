@@ -24,6 +24,8 @@ import h3
 import numpy as np
 
 from openquake.hazardlib import const
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -65,6 +67,17 @@ def load_residual_grids(hdf5_path):
                 # Store mean adjustments
                 grids[imt_str][term] = dict(zip(cell_ids, grp[term][:]))
 
+                # If it's path-based adj convert the h3 grid to OQ objs here
+                if res_terms[term]["location"] == "path":
+                    pgns = {cid: {} for cid in cell_ids}
+                    for cid in cell_ids:
+                        bounds = h3.cell_to_boundary(cid)
+                        pnts = []
+                        for pnt in bounds:
+                            pnts.append(Point(pnt[0], pnt[1]))
+                        pgns[cid]["pgn"] = Polygon(pnts)
+                        pgns[cid]["att_per_km"] = grids[imt_str][term][cid]
+
                 # Get sigma adjustments if required
                 if res_terms[term].get("sig_adjustment", "none") != "none":
                     sig_vals = grp[f"{term}_sig"][:]
@@ -77,7 +90,7 @@ def load_residual_grids(hdf5_path):
                             f"'{term}' and IMT '{imt_str}'")
                     # Store sigma adjustment
                     grids[imt_str][f"{term}_sig"] = dict(zip(cell_ids, sig_vals))
-                
+
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
@@ -189,7 +202,7 @@ def _apply_grid_corrections(grid_data, ctx, imt,
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
-        
+
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
             # No sigma adjustment is permitted with raytracing correction 
