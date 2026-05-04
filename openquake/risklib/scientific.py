@@ -819,6 +819,7 @@ class MultiEventRNG(object):
     >>> eids = numpy.array([1] * 3)
     >>> means = numpy.array([.5] * 3)
     >>> covs = numpy.array([.1] * 3)
+    >>> alphas, betas = _alpha_beta(means, means * covs)
     >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, alphas, betas)
