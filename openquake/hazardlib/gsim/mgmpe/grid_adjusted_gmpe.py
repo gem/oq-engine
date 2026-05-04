@@ -54,7 +54,7 @@ def load_residual_grids(hdf5_path):
             for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
                     grids[imt_str] = {} # Set an empty dict for given IMT
-                
+
                 # Get the data for given term and IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
@@ -189,7 +189,7 @@ def _apply_grid_corrections(grid_data, ctx, imt,
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
-
+        
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
             # No sigma adjustment is permitted with raytracing correction 
@@ -210,6 +210,8 @@ def _apply_grid_corrections(grid_data, ctx, imt,
                 # Hypo location-based
                 lats, lons = ctx.hypo_lat, ctx.hypo_lon
             else:
+                # Sanity check
+                assert cfg["location"] == "site"
                 # Site location-based
                 lats, lons = ctx.lat, ctx.lon
 
@@ -337,6 +339,13 @@ class GridAdjustedGMPE(GMPE):
 
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
+
+        # Check for any invalid 'location' assigmnents in res_terms
+        if any(cfg['location'] not in ['hypo', 'site', 'path'] for
+               cfg in self.grid_data["res_terms"].values()):
+            raise ValueError(
+                "An invalid location type has been specified for one or more "
+                "of the adjustmet terms (must be 'hypo', 'site' or 'path'.")
 
         # Add hypo lon/lat to required GSIM rup params for hypo-based lookups
         if any(cfg["location"] in ["hypo", "path"]
