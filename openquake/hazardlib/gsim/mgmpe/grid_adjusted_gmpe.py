@@ -69,7 +69,7 @@ def load_residual_grids(hdf5_path):
                 # Store mean adjustments
                 grids[imt_str][term] = dict(zip(cell_ids, grp[term][:]))
 
-                # If path-based adjustment convert the h3 grid to OQ objs
+                # If path-based adjustment convert the h3 grid to OQ objects
                 # so can use relatively quick intersect function in hazardlib
                 if res_terms[term]["location"] == "path":
                     pgns = {cid: {} for cid in cell_ids}
