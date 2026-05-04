@@ -72,16 +72,18 @@ def load_residual_grids(hdf5_path):
                 # If path-based adjustment convert the h3 grid to OQ objects
                 # so can use relatively quick intersect function in hazardlib
                 if res_terms[term]["location"] == "path":
-                    pgns = {cid: {} for cid in cell_ids}
+                    cells = {cid: {} for cid in cell_ids}
                     for cid in cell_ids:
                         # Make pnts list for OQ polygon
                         pnts = [Point(pnt[0], pnt[1]
                                       ) for pnt in h3.cell_to_boundary(cid)]
                         # Store the polygon
-                        pgns[cid]["pgn"] = Polygon(pnts)
+                        cells[cid]["pgn"] = Polygon(pnts)
                         # Store associated term
-                        pgns[cid][term] = grids[imt_str][term][cid]
-                    grids[imt_str][term] = pgns # Replace orig h3 version
+                        cells[cid][term] = grids[imt_str][term][cid]
+                    
+                    # Replace orig h3 version (IMT-dependent)
+                    grids[imt_str][term] = cells
 
                 # Get sigma adjustments if required
                 if res_terms[term].get("sig_adjustment", "none") != "none":
