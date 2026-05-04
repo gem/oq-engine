@@ -49,7 +49,7 @@ ATT_PER_KM = np.array([0.005, 0.004, 0.003, 0.002])
 # Expected path adjustment per record
 EXPECTED_PATH_ADJ = np.array([0., 1.15658587, 2.10640224, 1.03237941])
 
-# All hypo in same dL2L cells but diff dS2S cells
+# All hypo in same dL2L cells but diff dS2S cells (diff site locs)
 EXPECTED_MEAN_DIFF = DL2L_MEAN[0] + DS2S_MEAN + EXPECTED_PATH_ADJ
 
 
