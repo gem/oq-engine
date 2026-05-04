@@ -56,6 +56,7 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
@@ -316,7 +317,6 @@ def get_model(job_ini):
     If the path to job_ini contains a recognized mosaic model, returns the
     model, else the empty string
     """
-    from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
     for mod in MODELS:
         if mod in job_ini:
             return mod
@@ -1864,7 +1864,12 @@ def read_mosaic_df(mosaic_dir=''):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     print(f'Reading {mosaic_boundaries_file}')
-    return read_geometries(mosaic_boundaries_file, 'name')
+    df = read_geometries(mosaic_boundaries_file, 'name')
+    codes = sorted(df.code.unique())
+    assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
+    if codes != MODELS:
+        logging.info(f'{mosaic_boundaries_file} contains extra models')
+    return df
 
 
 def read_countries_df():
