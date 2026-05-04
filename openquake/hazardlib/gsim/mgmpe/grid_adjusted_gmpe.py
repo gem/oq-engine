@@ -83,6 +83,29 @@ def load_residual_grids(hdf5_path):
             "res_terms": res_terms}
 
 
+def raytrace_path_adj(att_grid, hypo_lons, hypo_lats, site_lons, site_lats):
+    """
+    For each hypocenter-to-site path (travel path) apply an adjustment based
+    on the distance traversed through each h3 grid cell. A conventional example
+    would be if the user had a grid with an attenuation rate per km within each
+    h3 grid cell. The function will compute the distance through that cell, and
+    retrieve a correction proportional to this distance to mean ground-motion.
+
+    :param attenuation_grid:
+        {cell_id: adjustment_value} for a single correction term and given imt
+    :param hypo_lons:
+        Array of hypocentre longitudes
+    :param hypo_lats:
+        Array of hypocentre latitudes
+    :param site_lons:
+        Array of site longitudes
+    :param site_lats:
+        Array of site latitudes
+    returns:
+    """
+    breakpoint()
+
+
 def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
     """
     For each (lat, lon) pair resolve the h3 cell at successively finer
@@ -164,24 +187,39 @@ def _apply_grid_corrections(grid_data, ctx, imt,
         if term not in entry:
             continue
 
-        # The term can be selected based on hypo or site location
-        if cfg["location"] == "hypo":
-            # Hypo location-based
-            lats, lons = ctx.hypo_lat, ctx.hypo_lon
-        else:
-            # Site location-based
-            lats, lons = ctx.lat, ctx.lon
-
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
 
-        # Get the adjustments (sig only if sigma adjustment is needed)
-        delta_mean, delta_sig =\
-              grid_lookup(
-                  entry[term],
-                  entry[f"{term}_sig"] if sig_action != "none" else None,
-                  lats, lons, grid_data["h3_res"]
-                  )
+        # The term can be selected based on hypo or site location or both
+        if cfg["location"] == "path":
+            # No sigma adjustment is permitted with raytracing correction 
+            if sig_action != "none":
+                raise ValueError(
+                    "For raytracing-based path adjustments a sigma adjustment "
+                    "is not currently permitted."
+                    )
+            # Travel path based (ray-tracing)
+            delta_mean = raytrace_path_adj(
+                entry[term], # No sigma correction applied only mean correction
+                ctx.hypo_lat, ctx.hypo_lon,
+                ctx.lat, ctx.lon,
+                )
+            delta_sig = None
+        else:
+            if cfg["location"] == "hypo":
+                # Hypo location-based
+                lats, lons = ctx.hypo_lat, ctx.hypo_lon
+            else:
+                # Site location-based
+                lats, lons = ctx.lat, ctx.lon
+
+            # Get a grid-cell lookup-based adjustment for mean and sigma
+            delta_mean, delta_sig =\
+                grid_lookup(
+                    entry[term],
+                    entry[f"{term}_sig"] if sig_action != "none" else None,
+                    lats, lons, grid_data["h3_res"]
+                    )
         
         # Apply adjustment to mean prediction
         mean += delta_mean
@@ -227,13 +265,20 @@ class GridAdjustedGMPE(GMPE):
 
         * site = Use the site location (ctx.lat, ctx.lon)
 
+        * path = Use raytracing to apply a travel path effect (e.g. an
+                 attenuation rate per km per intersected grid cell)
+
       * sig_adjustment (optional, default "none"): Whether to adjust the
         corresponding GMM sigma component using the "_sig" values of the
         correction term (e.g. for dS2S correction to mean the correction
         to phi (mapped below) would use the dS2S_sig value for given IMT):
 
         * none = Skip sigma adjustment (only apply mean correction - in
-                 this case no "_sig" values need be specified in the hdf5)
+                 this case no "_sig" values need be specified in the hdf5).
+
+                 NOTE: In the case of "path" corrections which use raytracing
+                 sig_adjustment must (currently) be set to "none" or an error
+                 will be raised.
 
         * sub = Subtract variance (reduce sigma)
 
@@ -293,14 +338,14 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
-        # Add hypo lon/lat to required GSIM params to retain it in ctx
-        if any(cfg["location"] == "hypo"
+        # Add hypo lon/lat to required GSIM rup params for hypo-based lookups
+        if any(cfg["location"] in ["hypo", "path"]
                for cfg in self.grid_data["res_terms"].values()):
             self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
                 self.REQUIRES_RUPTURE_PARAMETERS | {'hypo_lat', 'hypo_lon'})
 
-        # Add lat/lon to required site params for site-based lookups
-        if any(cfg["location"] == "site"
+        # Add site lat/lon to required GSIM site params for site-based lookups
+        if any(cfg["location"] in ["site", "path"]
                for cfg in self.grid_data["res_terms"].values()):
             self.REQUIRES_SITES_PARAMETERS = frozenset(
                 self.REQUIRES_SITES_PARAMETERS | {'lat', 'lon'})
