@@ -196,7 +196,7 @@ def _apply_grid_corrections(grid_data, ctx, imt,
             if sig_action != "none":
                 raise ValueError(
                     "For raytracing-based path adjustments a sigma adjustment "
-                    "is not currently permitted."
+                    "is not currently permitted - user must set it to 'none'."
                     )
             # Travel path based (ray-tracing)
             delta_mean = raytrace_path_adj(
