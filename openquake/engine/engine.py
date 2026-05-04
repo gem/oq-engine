@@ -686,7 +686,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     new.append(ini)
                     new_names.append(name)
             if new:
-                jobs = create_jobs(new, log_level=logging.WARNING,
+                jobs = create_jobs(new, log_level=logging.INFO if
+                                   concurrent_jobs == 1 else logging.WARNING,
                                    workflow_id=wfjob.calc_id)
                 run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
