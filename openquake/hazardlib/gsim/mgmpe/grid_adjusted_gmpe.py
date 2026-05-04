@@ -74,13 +74,14 @@ def load_residual_grids(hdf5_path):
                 if res_terms[term]["location"] == "path":
                     pgns = {cid: {} for cid in cell_ids}
                     for cid in cell_ids:
-                        bounds = h3.cell_to_boundary(cid)
-                        pnts = []
-                        for pnt in bounds:
-                            pnts.append(Point(pnt[0], pnt[1]))
+                        # Make pnts list for OQ polygon
+                        pnts = [Point(pnt[0], pnt[1]
+                                      ) for pnt in h3.cell_to_boundary(cid)]
+                        # Store the polygon
                         pgns[cid]["pgn"] = Polygon(pnts)
-                        pgns[cid]["att_per_km"] = grids[imt_str][term][cid]
-                    grids[imt_str]["att_per_km"] = pgns # Replace orig h3 version
+                        # Store associated term
+                        pgns[cid][term] = grids[imt_str][term][cid]
+                    grids[imt_str][term] = pgns # Replace orig h3 version
 
                 # Get sigma adjustments if required
                 if res_terms[term].get("sig_adjustment", "none") != "none":
