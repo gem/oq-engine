@@ -108,7 +108,7 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install pytest-playwright
           playwright install
-          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
+          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py

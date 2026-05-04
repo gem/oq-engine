@@ -72,7 +72,7 @@ class AristotleValidateTestCase(unittest.TestCase):
         rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertIsInstance(rup, BaseRupture)
         self.assertEqual(rupdic['rupture_was_loaded'], True)
-        self.assertEqual(rupdic['mosaic_models'], ['SAM'])
+        self.assertEqual(rupdic['mosaic_models'], ['SAM', 'OPA'])
         self.assertEqual(err, {})
 
     def test_3(self):

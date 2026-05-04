@@ -5,6 +5,7 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.countries import MODELS, REGIONS, country2code
 from openquake.commonlib.readinput import read_mosaic_df
 
+
 TOML = '''\
 [workflow]
 description = "Building SES"
@@ -156,11 +157,11 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
-            elif model in ("PAC", "NZL", "TEM", "ZAF"):
-                lst.append('ses_per_logic_tree_path='
-                           f'{ses_per_logic_tree_path*10}')
-                lst.append('number_of_logic_tree_samples='
-                           f'{number_of_logic_tree_samples//10}')
+            #elif model in ("PAC", "NZL", "TEM", "ZAF"):
+            #    lst.append('ses_per_logic_tree_path='
+            #               f'{ses_per_logic_tree_path*10}')
+            #    lst.append('number_of_logic_tree_samples='
+            #               f'{number_of_logic_tree_samples//10}')
 
     if not lst:
         raise RuntimeError(f'{models} not in {MODELS=}')

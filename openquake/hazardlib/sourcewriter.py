@@ -404,6 +404,25 @@ def build_slip_list_node(slip_list):
     return sliplist
 
 
+def build_hypo_depth_dist_simple_fault(hypo_depth_list):
+    """
+    Returns Node of a hypocentral depth distribution used
+    in a SimpleFaultSource.
+
+    :param hypo_depth_list:
+        List of (probability, depth, fixed_dip_frac_or_None).
+    :returns:
+        A hypoDepthDist Node with optional fixedDipFrac attribute.
+    """
+    nodes = []
+    for prob, depth, fdf in hypo_depth_list:
+        attribs = {'probability': prob, 'depth': depth}
+        if fdf is not None:
+            attribs['fixedDipFrac'] = fdf
+        nodes.append(Node('hypoDepth', attribs))
+    return Node('hypoDepthDist', nodes=nodes)
+
+
 def get_fault_source_nodes(source):
     """
     Returns list of nodes of attributes common to all fault source classes
@@ -428,10 +447,14 @@ def get_fault_source_nodes(source):
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake
     source_nodes.append(Node("rake", text=source.rake))
+    # Parse alternative ways to specify hypocentre if required
     if len(getattr(source, 'hypo_list', [])):
         source_nodes.append(build_hypo_list_node(source.hypo_list))
     if len(getattr(source, 'slip_list', [])):
         source_nodes.append(build_slip_list_node(source.slip_list))
+    if getattr(source, 'hypo_depth_list', ()):
+        source_nodes.append(
+            build_hypo_depth_dist_simple_fault(source.hypo_depth_list))
     return source_nodes
 
 

@@ -189,9 +189,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
             lon='-86.0', lat='88.0', vs30='800.0', site_name='SOMEWHERE')
-        failure_reason = (
-            f"Site at lon={params['lon']} lat={params['lat']}"
-            f" is not covered by any model!")
+        failure_reason = 'File not found'
+        # searching for non-ecisting PAR/in/job_vs30.ini since the point
+        # is far from mosaic.gpkg
         self.aelo_run_then_remove(params, failure_reason)
 
     def aelo_invalid_input(self, params, expected_error):
