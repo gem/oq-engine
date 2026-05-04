@@ -105,7 +105,7 @@ def load_residual_grids(hdf5_path):
 
 def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
-    For each hypocenter-to-site path (travel path) apply an adjustment based
+    For each epicentre-to-site path (travel path) apply an adjustment based
     on the distance traversed through each h3 grid cell. A conventional example
     would be if the user had a grid with an attenuation rate per km within each
     h3 grid cell. The function will compute the distance through that cell, and
