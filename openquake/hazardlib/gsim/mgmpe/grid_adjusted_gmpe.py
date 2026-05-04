@@ -262,7 +262,7 @@ def _apply_grid_corrections(grid_data, ctx, imt,
                 ctx.hypo_lat, ctx.hypo_lon,
                 ctx.lat, ctx.lon,
                 )
-            delta_sig = np.zeros_like(ctx.lon)
+            delta_sig = np.zeros_like(ctx.lon) # No sig adj for raytraced terms
         else:
             if cfg["location"] == "hypo":
                 # Hypo location-based
