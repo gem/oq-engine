@@ -1,4 +1,7 @@
   [Christopher Brooks]
+  * Add the 2025 NSHM variants of the anomalous intensity correction
+    to the `MorikawaFujiwara2013` and some QA tests to check the site
+    location-specific component of these corrections (classical/case_30).
   * Added ability to specify a distribution of hypocenters within a
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median

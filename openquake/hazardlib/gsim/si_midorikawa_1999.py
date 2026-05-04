@@ -71,7 +71,8 @@ def _construct_surface(lons, lats, upper_depth, lower_depth):
     return SimpleFaultSurface(mesh)
 
 
-def _get_min_distance_to_sub_trench(lons, lats):
+def _get_min_distance_to_sub_trench(
+        lons, lats, trench_lons=SUB_TRENCH_LONS, trench_lats=SUB_TRENCH_LATS):
     """
     Compute and return minimum distance between subduction trench
     and points specified by 'lon' and 'lat'
@@ -85,12 +86,13 @@ def _get_min_distance_to_sub_trench(lons, lats):
     :meth:`openquake.hazardlib.geo.base.BaseSurface.get_rx_distance`
     and return its absolute value.
     """
-    trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)
+    trench = _construct_surface(trench_lons, trench_lats, 0., 10.)
     ctx = Mesh(lons, lats, None)
     return np.abs(trench.get_rx_distance(ctx))
 
 
-def _get_min_distance_to_volcanic_front(lons, lats):
+def _get_min_distance_to_volcanic_front(
+        lons, lats, vf_lons=VOLCANIC_FRONT_LONS, vf_lats=VOLCANIC_FRONT_LATS):
     """
     Compute and return minimum distance between volcanic front and points
     specified by 'lon' and 'lat'.
@@ -102,7 +104,7 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     :meth:`_get_min_distance_to_sub_trench`
     but final distance is returned without taking the absolute value.
     """
-    vf = _construct_surface(VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LATS, 0., 10.)
+    vf = _construct_surface(vf_lons, vf_lats, 0., 10.)
     ctx = Mesh(lons, lats, None)
     return vf.get_rx_distance(ctx)
 
