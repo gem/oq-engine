@@ -67,7 +67,8 @@ def load_residual_grids(hdf5_path):
                 # Store mean adjustments
                 grids[imt_str][term] = dict(zip(cell_ids, grp[term][:]))
 
-                # If it's path-based adj convert the h3 grid to OQ objs here
+                # If path-based adjustment convert the h3 grid to OQ objs
+                # so can use relatively quick intersect function in hazardlib
                 if res_terms[term]["location"] == "path":
                     pgns = {cid: {} for cid in cell_ids}
                     for cid in cell_ids:
@@ -77,6 +78,7 @@ def load_residual_grids(hdf5_path):
                             pnts.append(Point(pnt[0], pnt[1]))
                         pgns[cid]["pgn"] = Polygon(pnts)
                         pgns[cid]["att_per_km"] = grids[imt_str][term][cid]
+                    grids[imt_str]["att_per_km"] = pgns # Replace orig h3 version
 
                 # Get sigma adjustments if required
                 if res_terms[term].get("sig_adjustment", "none") != "none":
@@ -90,7 +92,6 @@ def load_residual_grids(hdf5_path):
                             f"'{term}' and IMT '{imt_str}'")
                     # Store sigma adjustment
                     grids[imt_str][f"{term}_sig"] = dict(zip(cell_ids, sig_vals))
-
     return {"grids": grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
@@ -116,7 +117,6 @@ def raytrace_path_adj(att_grid, hypo_lons, hypo_lats, site_lons, site_lats):
         Array of site latitudes
     returns:
     """
-    breakpoint()
 
 
 def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
