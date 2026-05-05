@@ -992,6 +992,19 @@ class SiteCollection(object):
         """
         self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.countries)
 
+    def check_nan(self, field):
+        """
+        Raise a ValueError if the field contains NaNs
+        """
+        try:
+            values = getattr(self, field)
+        except ValueError:  # in scenario test_case_14
+            pass
+        else:
+            if numpy.isnan(values).any():
+                raise ValueError(f'The {field} is NaN, missing site model '
+                                 'or site parameter')
+
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)
 

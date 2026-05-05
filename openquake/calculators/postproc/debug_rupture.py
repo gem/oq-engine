@@ -19,12 +19,12 @@ import os
 import logging
 from unittest.mock import patch
 import numpy
-import pandas
-from openquake.baselib import sap
+from openquake.baselib import sap, performance
 from openquake.commonlib import datastore
-from openquake.calculators.base import save_version_checksum
+from openquake.calculators.getters import sig_eps_dt
+from openquake.calculators.base import save_version_checksum, create_gmf_data
 from openquake.calculators.event_based import (
-    starmap_from_rups, event_based)
+    run, event_based, rup_dt, EventBasedCalculator)
 
 
 # tested in event_based test_case_2
@@ -45,16 +45,22 @@ def main(calc_id: int, rup_id: str):
 
     sites = parent['sitecol']
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
+    
+    prim_imts = oq.get_primary_imtls()
+    create_gmf_data(dstore, prim_imts, oq.sec_imts)
+    dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
+    dstore.create_dset('gmf_data/rup_info', rup_dt)
+
     with job, patch.dict(os.environ, {'OQ_RUPTURE': rup_id}):
-        dfs = []
-        sig_eps = []
-        for res in starmap_from_rups(
-                event_based, oq, rups[0], sites, None, (), dstore):
-            dfs.append(pandas.DataFrame(res['gmfdata']))
-            sig_eps.append(res['sig_eps'])
-        gmf_df = pandas.concat(dfs)
-        dstore.create_dset('gmf_data/sigma_epsilon', numpy.concatenate(sig_eps))
-        dstore.create_df('gmf_data', gmf_df)
+        calc = object.__new__(EventBasedCalculator)
+        calc.oqparam = oq
+        calc.sitecol = sites
+        calc.assetcol = None
+        calc.sec_perils = ()
+        calc.offset = 0
+        calc.datastore = dstore
+        calc._monitor =  performance.Monitor('debug_rupturre', h5=dstore)
+        run(event_based, oq, rups[0], calc)
         dstore['sitecol'] = sites
         save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
