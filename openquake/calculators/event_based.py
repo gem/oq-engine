@@ -421,14 +421,6 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
-    try:
-        vs30 = sitecol.vs30
-    except ValueError:  # in scenario test_case_14
-        pass
-    else:
-        if numpy.isnan(vs30).any():
-            raise ValueError('The vs30 is NaN, missing site model '
-                             'or site parameter')
     if oq.calculation_mode == 'scenario':
         assert len(dstore['ruptures']) == 1
     proxy = RuptureProxy(rup0)
@@ -879,6 +871,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
+        self.sitecol.check_nan('vs30')
         rup0 = dstore['ruptures'][0]
         smap = starmap_from_rups(
             event_based, oq, rup0, self.sitecol,
