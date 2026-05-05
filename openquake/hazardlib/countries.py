@@ -1,4 +1,5 @@
 import re
+from openquake.baselib import general
 
 MODELS = sorted('''
 ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
@@ -18,6 +19,42 @@ South_America
 South_Asia
 Southeast_Asia
 """.split()
+
+MODEL_REGION = """\
+NAF,Africa
+OAT,Africa
+SSA,Africa
+WAF,Africa
+ZAF,Africa
+CCA,Caribbean_Central_America
+CEA,Central_Asia
+CHN,East_Asia
+JPA,East_Asia
+KOR,East_Asia
+TEM,East_Asia
+EUR,Europe
+ARB,Middle_East
+MIE,Middle_East
+ALS,North_America
+CND,North_America
+HAW,North_America
+MEX,North_America
+USA,North_America
+NEA,North_Asia
+NWA,North_Asia
+AUS,Oceania
+NZL,Oceania
+OPA,Oceania
+PAC,Oceania
+PNG,Oceania
+SAM,South_America
+IND,South_Asia
+MIE,South_Asia
+OIN,South_Asia
+IDN,Southeast_Asia
+PHL,Southeast_Asia
+SEA,Southeast_Asia
+"""
 
 # nearly lexicographic order, but with longest names first, to avoid fake
 # matches in the regular expression below; Guinea_Bissau must go before
@@ -258,6 +295,11 @@ Yemen,YEM
 Zambia,ZMB
 Zimbabwe,ZWE
 """
+
+models_by_region = general.AccumDict(accum=[])
+for line in MODEL_REGION.splitlines():
+    model, region = line.split(',')
+    models_by_region[region].append(model)
 
 country2code = dict(line.split(',') for line in COUNTRY_CODE.splitlines())
 code2country = {v: k for k, v in country2code.items()}
