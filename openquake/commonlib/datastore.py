@@ -134,7 +134,7 @@ def create_job_dstore(description='custom calculation', parent=(), ini=None):
     else:
         dic = dict(description=description, calculation_mode='custom')
     log = init(dic)
-    dstore = new(log.calc_id, log.get_oqparam(validate=False))
+    dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
     dstore.parent = parent
     if parent:
         dstore._export_dir = parent['oqparam'].export_dir

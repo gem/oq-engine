@@ -475,10 +475,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             rup0 = self.datastore['ruptures'][0]
             if not hasattr(self, 'sec_perils'):
                 self.add_sec_perils(oq)
-            smap = event_based.starmap_from_rups(
-                ebrisk, oq, rup0, self.sitecol, self.assetcol,
-                self.sec_perils, self.datastore, self.save_tmp)
-            smap.reduce(self.agg_dicts)
+            event_based.run(ebrisk, oq, rup0, self)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
                     'No GMFs were generated, perhaps they were '
