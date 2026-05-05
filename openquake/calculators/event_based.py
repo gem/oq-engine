@@ -217,7 +217,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
             computer = get_computer(cmaker, ebr, sites, sec_perils, *stations)
         except FarAwayRupture:
             continue
-        if stations and stations[0] is not None:  # conditioned GMFs
+        if stations and len(stations[0]):  # conditioned GMFs
             assert cmaker.scenario
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
@@ -431,6 +431,8 @@ def run_conditioned(oq, rup0, full_lt, calc):
     station_data, station_sites = filter_stations(
         station_df, calc.sitecol.complete, rup, maxdist)
     dstore['stations_considered'] = station_sites if station_sites else []
+    if not station_sites:
+        raise RuntimeError('All stations were filtered out!')
 
     # assume scenario with a single true rupture
     assert len(dstore['ruptures']) == 1
@@ -444,7 +446,7 @@ def run_conditioned(oq, rup0, full_lt, calc):
         raise FarAwayRupture
     ebr = proxy.to_ebr(cmaker.trt)
     computer = get_computer(
-        cmaker, ebr, sites, (), station_data, station_sites.sids)
+        cmaker, ebr, sites, calc.sec_perils, station_data, station_sites.sids)
     G = len(cmaker.gsims)
     M = len(cmaker.imts)
     N = len(computer.sitecol)
@@ -467,7 +469,7 @@ def run_conditioned(oq, rup0, full_lt, calc):
     if parallel.oq_distribute() in ('zmq', 'slurm'):
         logging.error('Conditioned scenarios are not meant to be run'
                       ' on a cluster')
-        smap.share(mea=mea, tau=tau, phi=phi)
+    smap.share(mea=mea, tau=tau, phi=phi)
     for args in allargs:
         smap.submit(args)
     smap.reduce(calc.agg_dicts)
@@ -486,7 +488,7 @@ def run(func, oq, rup0, calc):
 
     assetcol = getattr(calc, 'assetcol', None)
     allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (None, ()), dstore)
+                          ((), ()), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
