@@ -429,6 +429,8 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
         if numpy.isnan(vs30).any():
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
+    if oq.calculation_mode == 'scenario':
+        assert len(dstore['ruptures']) == 1
     proxy = RuptureProxy(rup0)
     model = rup0['model'].decode('ascii')
     _model, full_lt = base.get_model_lts(dstore, model)[0]
@@ -747,8 +749,7 @@ class EventBasedCalculator(base.HazardCalculator):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
         G = gsim_lt.get_num_paths()
-        if oq.calculation_mode.startswith('scenario'):
-            ngmfs = oq.number_of_ground_motion_fields
+        ngmfs = getattr(oq, 'number_of_ground_motion_fields', None)
         trt = None
         if oq.rupture_dict or oq.rupture_xml:
             # check the number of branchsets
@@ -782,8 +783,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     f'The TRTs in the rupture.csv file {aw.trts}'
                     f'are inconsistent with the ones in the gsim_lt'
                     f' {list(gsim_lt.values)}')
-            if oq.calculation_mode.startswith('scenario'):
-                # rescale n_occ by ngmfs and nrlzs
+            if ngmfs:  # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
         elif oq.inputs['rupture_model'].endswith('.hdf5'):
             assert oq.calculation_mode.startswith('scenario')

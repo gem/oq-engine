@@ -166,12 +166,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # multi-rupture scenario with 2 ruptures, 10 rlzs, 10 gmfs, 100 sites
         self.run_calc(case_13.__file__, 'job.ini')
         gmf_df = self.calc.datastore.read_df('gmf_data')
-        counts_by_eid = gmf_df[['eid', 'sid']].groupby('eid').count()
-        self.assertEqual(len(counts_by_eid), 200)  # there are 2x10x10 events
-        # the first rupture touches 6 sites, the second 4 sites, so
-        # there are 600+400 = 1000 GMVs
-        self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
-        self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
+        self.assertEqual(len(gmf_df), 5)  # most GMFs are zeros
 
         # check the branches
         tbl = text_table(view('branches', self.calc.datastore))

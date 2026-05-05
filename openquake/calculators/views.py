@@ -1367,7 +1367,7 @@ def view_delta_loss(token, dstore):
         dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
         return pandas.DataFrame(dic)
     num_events = len(dstore['events'])
-    # NB: in risk_from_ses oq.investigation_time can be None,
+    # NB: in risk_from_ses, oq.investigation_time can be None,
     # while risk_investigation_time is mandatory
     itime = oq.investigation_time or oq.risk_investigation_time
     efftime = itime * oq.ses_per_logic_tree_path * R
