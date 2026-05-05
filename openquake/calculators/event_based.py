@@ -415,12 +415,11 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     return allargs
 
 
-# NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
-                      dstore, save_tmp=None):
+def run(func, oq, rup0, calc):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
+    dstore = calc.datastore
     if oq.calculation_mode == 'scenario':
         assert len(dstore['ruptures']) == 1
     proxy = RuptureProxy(rup0)
@@ -434,7 +433,7 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
         maxdist = (oq.maximum_distance_stations or
                    oq.maximum_distance['default'][-1][1])
         station_data, station_sites = filter_stations(
-            station_df, sitecol.complete, rup, maxdist)
+            station_df, calc.sitecol.complete, rup, maxdist)
         dstore['stations_considered'] = station_sites if station_sites else []
     else:
         station_data, station_sites = None, None
@@ -445,7 +444,7 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
-        srcfilter = SourceFilter(sitecol.complete, maxdist)
+        srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             raise FarAwayRupture
@@ -468,14 +467,14 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
     with performance.Monitor(
             'building arguments', measuremem=True, h5=dstore.hdf5):
         station_sids = () if station_sites is None else station_sites.sids
-        allargs = get_allargs(
-            oq, sitecol, assetcol, sec_perils,
-            (station_data, station_sids), dstore)
+        assetcol = getattr(calc, 'assetcol', None)
+        allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
+                              (station_data, station_sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:
-        save_tmp(smap.monitor)
+    if hasattr(calc, 'save_tmp'):
+        calc.save_tmp(smap.monitor)
     if station_data is not None:
         if parallel.oq_distribute() in ('zmq', 'slurm'):
             logging.error('Conditioned scenarios are not meant to be run'
@@ -483,7 +482,7 @@ def starmap_from_rups(func, oq, rup0, sitecol, assetcol, sec_perils,
         smap.share(mea=mea, tau=tau, phi=phi)
     for args in allargs:
         smap.submit(args)
-    return smap
+    smap.reduce(calc.agg_dicts)
 
 
 def set_mags(oq, dstore):
@@ -873,16 +872,13 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         self.sitecol.check_nan('vs30')
         rup0 = dstore['ruptures'][0]
-        smap = starmap_from_rups(
-            event_based, oq, rup0, self.sitecol,
-            getattr(self, 'assetcol', None), self.sec_perils, dstore)
-        acc = smap.reduce(self.agg_dicts)
+        run(event_based, oq, rup0, self)
         if 'gmf_data' not in dstore:
-            return acc
+            return {}
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
                 self.save_avg_gmf()
-        return acc
+        return {}
 
     def save_avg_gmf(self):
         """
