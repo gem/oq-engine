@@ -420,6 +420,9 @@ def run_conditioned(oq, rup0, full_lt, calc):
     Run a conditioned scenario calculation amd store the GMFs
     """
     assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+    if parallel.oq_distribute() in ('zmq', 'slurm'):
+        logging.error('Conditioned scenarios are not meant to be run'
+                      ' on a cluster')
     dstore = calc.datastore
     trt = full_lt.trts[0]
     proxy = RuptureProxy(rup0)
@@ -430,9 +433,8 @@ def run_conditioned(oq, rup0, full_lt, calc):
                oq.maximum_distance['default'][-1][1])
     station_data, station_sites = filter_stations(
         station_df, calc.sitecol.complete, rup, maxdist)
-    dstore['stations_considered'] = station_sites if station_sites else []
-    if not station_sites:
-        raise RuntimeError('All stations were filtered out!')
+    considered = station_sites if station_sites else []
+    dstore['stations_considered'] = considered
 
     # assume scenario with a single true rupture
     assert len(dstore['ruptures']) == 1
@@ -445,31 +447,33 @@ def run_conditioned(oq, rup0, full_lt, calc):
     if sites is None:  # filtered away
         raise FarAwayRupture
     ebr = proxy.to_ebr(cmaker.trt)
-    computer = get_computer(
-        cmaker, ebr, sites, calc.sec_perils, station_data, station_sites.sids)
-    G = len(cmaker.gsims)
-    M = len(cmaker.imts)
-    N = len(computer.sitecol)
-    size = 2 * G * M * N * N * 8  # tau, phi
-    msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
-    logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
-    if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
-        raise ValueError(
-            f'The calculation is too large: {G=}, {M=}, {N=}. '
-            'You must reduce the number of sites i.e. maximum_distance')
-    mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
+    if station_sites:
+        computer = get_computer(
+            cmaker, ebr, sites, calc.sec_perils,
+            station_data, station_sites.sids)
+        G = len(cmaker.gsims)
+        M = len(cmaker.imts)
+        N = len(computer.ctx)
+        size = 2 * G * M * N * N * 8  # tau, phi
+        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
+        if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
+            raise ValueError(
+                f'The calculation is too large: {G=}, {M=}, {N=}. '
+                'You must reduce the number of sites i.e. maximum_distance')
+        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
+    else:
+        computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
 
     assetcol = getattr(calc, 'assetcol', None)
     allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data, station_sites.sids), dstore)
+                          (station_data or (), considered), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    if parallel.oq_distribute() in ('zmq', 'slurm'):
-        logging.error('Conditioned scenarios are not meant to be run'
-                      ' on a cluster')
-    smap.share(mea=mea, tau=tau, phi=phi)
+    if station_sites:
+        smap.share(mea=mea, tau=tau, phi=phi)
     for args in allargs:
         smap.submit(args)
     smap.reduce(calc.agg_dicts)
