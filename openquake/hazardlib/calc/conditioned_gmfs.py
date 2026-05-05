@@ -201,7 +201,7 @@ class ConditionedGmfComputer(GmfComputer):
         observed_imtls = {imt_str: [0]
                           for imt_str in observed_imt_strs
                           if imt_str not in ["MMI", "PGV"]}
-        self.observed_imts = sorted(map(from_string, observed_imtls))
+        self.imts_D = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
     # parallelized
@@ -235,19 +235,19 @@ class TempResult:
     zeta_D: numpy.ndarray = 0
 
 
-def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
+def _create_result(g, m, target_imt, imts_D, station_data_filtered):
     # returns (g, m, conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
 
-    if target_imt in observed_imts:
+    if target_imt in imts_D:
         # Target IMT is present in the observed IMTs
         conditioning_imts = [target_imt]
         bracketed_imts = conditioning_imts
         native_data_available = True
     else:
         # Find where the target IMT falls in the list of observed IMTs
-        all_imts = sorted(observed_imts + [target_imt])
+        all_imts = sorted(imts_D + [target_imt])
         imt_idx = numpy.where(
             target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
         if imt_idx == 0:
@@ -282,14 +282,14 @@ def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
     return t
 
 
-def create_result(g, m, target_imt, target_imts, observed_imts,
+def create_result(g, m, target_imt, imts_Y, imts_D,
                   station_data, sitecol, station_sitecol,
                   spatial_correl, cross_correl_within,
                   cross_correl_between, DD):
     """
     :returns: a TempResult
     """
-    t = _create_result(g, m, target_imt, observed_imts, station_data)
+    t = _create_result(g, m, target_imt, imts_D, station_data)
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -400,14 +400,14 @@ def compute_spatial_cross_covariance_matrix(
 
 
 # In scenario/case_21 one has
-# target_imt = PGA = target_imts = observed_imts
+# target_imt = PGA = imts_Y = imts_D
 # ctx_Y with 571 elements, like target_sitecol
 # station_data has 140 elements like station_sitecol
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
 def get_mu_tau_phi(target_imt, gsim, mean_stds,
-                   target_imts, observed_imts, station_data,
+                   imts_Y, imts_D, station_data,
                    target_sitecol, station_sitecol, spatial_correl,
                    cross_correl_within, r, monitor):
     # Using Bayes rule, compute the posterior distribution of the
@@ -499,11 +499,11 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
 
 # calls get_mu_tau_phi in parallel
-def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
+def get_me_ta_ph(cmaker, sdata, imts_D, imts_Y,
                  mean_stds_D, mean_stds_Y, target, station_filtered,
                  spatial_correl, cross_correl_within, cross_correl_between, h5):
     G = len(cmaker.gsims)
-    M = len(target_imts)
+    M = len(imts_Y)
     N = mean_stds_Y.shape[-1]
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
@@ -523,21 +523,21 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
         # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
         # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        for m, o_imt in enumerate(observed_imts):
+        for m, o_imt in enumerate(imts_D):
             im = o_imt.string
             sdata[im + "_median"] = mean_stds_D[0, g, m]
             sdata[im + "_sigma"] = mean_stds_D[1, g, m]
             sdata[im + "_tau"] = mean_stds_D[2, g, m]
             sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for m, target_imt in enumerate(target_imts):
+        for m, target_imt in enumerate(imts_Y):
             result = create_result(
-                g, m, target_imt, target_imts, observed_imts,
+                g, m, target_imt, imts_Y, imts_D,
                 sdata, target, station_filtered,
                 spatial_correl, cross_correl_within, cross_correl_between,
                 DD)
             smap.submit(
-                (target_imt, gsim, mean_stds_Y[:, g], target_imts,
-                 observed_imts, sdata, target, station_filtered,
+                (target_imt, gsim, mean_stds_Y[:, g], imts_Y,
+                 imts_D, sdata, target, station_filtered,
                  spatial_correl, cross_correl_within, result))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
@@ -550,7 +550,7 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
         rupture, cmaker, station_sitecol, station_data, observed_imt_strs,
-        target_sitecol, target_imts, spatial_correl, cross_correl_between,
+        target_sitecol, imts_Y, spatial_correl, cross_correl_between,
         cross_correl_within, sigma=True, h5=None):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
@@ -558,28 +558,30 @@ def get_mean_covs(
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
 
-    observed_imts = sorted(
+    imts_D = sorted(
           from_string(imt_str) for imt_str in observed_imt_strs 
           if imt_str not in ["MMI", "PGV"])
 
     # Target IMT is not PGA or SA: Currently not supported
-    target_imts = [imt for imt in target_imts
+    imts_Y = [imt for imt in imts_Y
                    if imt.period or imt.string == "PGA"]
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in observed_imts})
+    cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in imts_D})
 
     [ctx_D] = cmaker_D.get_ctxs([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
-    # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
+    # D (observed IMTs) < Y (target IMTs)
+    # shape (4, G, D, N) where 4 means (mean, sig, tau, phi)
 
     # Generate the contexts and calculate the means and 
-    # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in target_imts})
+    # standard deviations at the *target* IMTs ("_Y")
+    cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in imts_Y})
 
     [ctx_Y] = cmaker_Y.get_ctxs([rupture], target_sitecol)
     mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
+    # shape (4, G, Y, N)
 
     # filter sites
     target = target_sitecol.filter(
@@ -587,7 +589,7 @@ def get_mean_covs(
     mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
     me, ta, ph = get_me_ta_ph(
-        cmaker, station_data[mask].copy(), observed_imts, target_imts,
+        cmaker, station_data[mask].copy(), imts_D, imts_Y,
         mean_stds_D, mean_stds_Y, target, station_filtered,
         spatial_correl, cross_correl_within, cross_correl_between, h5)
     if sigma:
