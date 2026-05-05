@@ -467,8 +467,13 @@ def run_conditioned(oq, rup0, full_lt, calc):
     del proxy.geom  # to reduce data transfer
 
     assetcol = getattr(calc, 'assetcol', None)
+    if station_data is None:
+        station_data = ()
+        stations = ()
+    else:
+        stations = station_sites.sids
     allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data or (), considered), dstore)
+                          (station_data, stations), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
