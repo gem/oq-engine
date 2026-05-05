@@ -106,9 +106,9 @@ def load_residual_grids(hdf5_path):
 def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
     For each epicentre-to-site path (travel path) apply an adjustment based
-    on the distance traversed through each h3 grid cell. A conventional example
+    on the distance traversed through each (h3) grid cell. A conventional example
     would be if the user had a grid with an attenuation rate per km within each
-    h3 grid cell. The function will compute the distance through that cell, and
+    grid cell. The function will compute the distance through that cell, and
     retrieve a correction proportional to this distance to mean ground-motion.
 
     :param attenuation_grid:
@@ -149,7 +149,7 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
         # Get the cumulative correction based on distance traversed per
         # grid cell and the associated distance-based adjustment terms
         adj = 0.0
-        for cid in grid: # Iterate over OQ pgns representing the grid cells
+        for cid in grid: # Iterate over OQ pgns representing the h3 grid cells
 
             # Get the polygon object
             pgn = grid[cid]['pgn']
