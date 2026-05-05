@@ -415,71 +415,83 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     return allargs
 
 
+def run_conditioned(oq, rup0, full_lt, calc):
+    """
+    Run a conditioned scenario calculation amd store the GMFs
+    """
+    assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+    dstore = calc.datastore
+    trt = full_lt.trts[0]
+    proxy = RuptureProxy(rup0)
+    proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
+    rup = proxy.to_ebr(trt).rupture
+    station_df = dstore.read_df('station_data', 'site_id')
+    maxdist = (oq.maximum_distance_stations or
+               oq.maximum_distance['default'][-1][1])
+    station_data, station_sites = filter_stations(
+        station_df, calc.sitecol.complete, rup, maxdist)
+    dstore['stations_considered'] = station_sites if station_sites else []
+
+    # assume scenario with a single true rupture
+    assert len(dstore['ruptures']) == 1
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
+    cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+    cmaker.scenario = True
+    maxdist = oq.maximum_distance(cmaker.trt)
+    srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
+    sites = srcfilter.get_close_sites(proxy, cmaker.trt)
+    if sites is None:  # filtered away
+        raise FarAwayRupture
+    ebr = proxy.to_ebr(cmaker.trt)
+    computer = get_computer(
+        cmaker, ebr, sites, (), station_data, station_sites.sids)
+    G = len(cmaker.gsims)
+    M = len(cmaker.imts)
+    N = len(computer.sitecol)
+    size = 2 * G * M * N * N * 8  # tau, phi
+    msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+    logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
+    if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
+        raise ValueError(
+            f'The calculation is too large: {G=}, {M=}, {N=}. '
+            'You must reduce the number of sites i.e. maximum_distance')
+    mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
+    del proxy.geom  # to reduce data transfer
+
+    assetcol = getattr(calc, 'assetcol', None)
+    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
+                          (station_data, station_sites.sids), dstore)
+    assert len(allargs) < TWO16, len(allargs)
+    dstore.swmr_on()
+    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
+    if parallel.oq_distribute() in ('zmq', 'slurm'):
+        logging.error('Conditioned scenarios are not meant to be run'
+                      ' on a cluster')
+        smap.share(mea=mea, tau=tau, phi=phi)
+    for args in allargs:
+        smap.submit(args)
+    smap.reduce(calc.agg_dicts)
+
+
 def run(func, oq, rup0, calc):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
     dstore = calc.datastore
-    if oq.calculation_mode == 'scenario':
-        assert len(dstore['ruptures']) == 1
-    proxy = RuptureProxy(rup0)
     model = rup0['model'].decode('ascii')
     _model, full_lt = base.get_model_lts(dstore, model)[0]
     if "station_data" in oq.inputs:
-        trt = full_lt.trts[0]
-        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
-        rup = proxy.to_ebr(trt).rupture
-        station_df = dstore.read_df('station_data', 'site_id')
-        maxdist = (oq.maximum_distance_stations or
-                   oq.maximum_distance['default'][-1][1])
-        station_data, station_sites = filter_stations(
-            station_df, calc.sitecol.complete, rup, maxdist)
-        dstore['stations_considered'] = station_sites if station_sites else []
-    else:
-        station_data, station_sites = None, None
+        run_conditioned(oq, rup0, full_lt, calc)
+        return
 
-    if station_data is not None:
-        # assume scenario with a single true rupture
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-        cmaker.scenario = True
-        maxdist = oq.maximum_distance(cmaker.trt)
-        srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
-        sites = srcfilter.get_close_sites(proxy, cmaker.trt)
-        if sites is None:  # filtered away
-            raise FarAwayRupture
-        ebr = proxy.to_ebr(cmaker.trt)
-        computer = get_computer(
-            cmaker, ebr, sites, (), station_data, station_sites.sids)
-        G = len(cmaker.gsims)
-        M = len(cmaker.imts)
-        N = len(computer.sitecol)
-        size = 2 * G * M * N * N * 8  # tau, phi
-        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
-        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
-        if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
-            raise ValueError(
-                f'The calculation is too large: {G=}, {M=}, {N=}. '
-                'You must reduce the number of sites i.e. maximum_distance')
-        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
-        del proxy.geom  # to reduce data transfer
-
-    with performance.Monitor(
-            'building arguments', measuremem=True, h5=dstore.hdf5):
-        station_sids = () if station_sites is None else station_sites.sids
-        assetcol = getattr(calc, 'assetcol', None)
-        allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                              (station_data, station_sids), dstore)
+    assetcol = getattr(calc, 'assetcol', None)
+    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
+                          (None, ()), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
         calc.save_tmp(smap.monitor)
-    if station_data is not None:
-        if parallel.oq_distribute() in ('zmq', 'slurm'):
-            logging.error('Conditioned scenarios are not meant to be run'
-                          ' on a cluster')
-        smap.share(mea=mea, tau=tau, phi=phi)
     for args in allargs:
         smap.submit(args)
     smap.reduce(calc.agg_dicts)
