@@ -283,6 +283,7 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
     ID2s = dstore['tagcol/ID_2'][:]
     # NOTE: with errors='ignore' encoding errors in the NAME_2 values
     # due to the truncation to 32 bytes will be ignored
+    # this is used in extract_aggrisk_tags
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8', errors='ignore') for id2 in ID2s]
 
