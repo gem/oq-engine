@@ -6,7 +6,7 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>source_model_char_refrates.xml</uncertaintyModel>
+                    <uncertaintyModel>source_model_ac_mfd_refrates.xml</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>

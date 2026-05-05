@@ -253,7 +253,7 @@ class ClassicalTestCase(CalculatorTestCase):
             str(ctx.exception))
 
     def test_case_10(self):
-        # Tests specification of an AlternativeCharacteristicMFD in an XML
+        # Tests AlternativeCharacteristicMFD on both fault and area sources
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
