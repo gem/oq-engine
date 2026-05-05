@@ -267,7 +267,7 @@ def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']
-        sites = complete.filtered(sids) if stations[0] is None else complete
+        sites = complete.filtered(sids) if len(stations[0]) == 0 else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
