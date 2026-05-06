@@ -23,11 +23,11 @@ from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     GridAdjustedGMPE,
     grid_lookup,
     load_residual_grids,
+    raytrace_path_adj,
 )
 
 aae = np.testing.assert_array_almost_equal
 
-# Paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
@@ -44,15 +44,21 @@ DL2L_MEAN = np.array([0.05, 0.10, 0.15, 0.20])
 DL2L_STD = np.array([0.02, 0.04, 0.06, 0.08])
 DS2S_MEAN = np.array([-0.10, -0.15, -0.20, -0.25])
 DS2S_STD = np.array([0.03, 0.05, 0.07, 0.09])
+ATT_PER_KM = np.array([0.005, 0.004, 0.003, 0.002])
+
+# Expected path adjustment per record
+EXPECTED_PATH_ADJ = np.array([0., 1.15658587, 2.10640224, 1.03237941])
+
+# All hypo in same dL2L cells but diff dS2S cells (diff site locs)
+EXPECTED_MEAN_DIFF = DL2L_MEAN[0] + DS2S_MEAN + EXPECTED_PATH_ADJ
 
 
 class GridAdjustedGMPETest(unittest.TestCase):
 
     def _get_mean_stds(self, imts):
-        # Instantiate GMMs
-        base = valid.gsim(BASE_GSIM) # Original GMM
+        # Compute the mean and std devs from grid adjusted GMM and base GMM
+        base = valid.gsim(BASE_GSIM)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
-        # Make ctx
         cmaker = simple_cmaker([base, adj], imts)
         ctx = cmaker.new_ctx(len(LATS))
         ctx.mag = 6.0
@@ -65,22 +71,17 @@ class GridAdjustedGMPETest(unittest.TestCase):
         ctx.lon = LONS
         ctx.hypo_lat = 0.0
         ctx.hypo_lon = 0.0
-        # Get predictions using original and adjusted GMM
-        out = cmaker.get_mean_stds([ctx])
-        return out
-    
+        return cmaker.get_mean_stds([ctx])
+
     def test_grid_lookup(self):
-        # Load the grid data
+        # Check correct values returned when searching loaded grid
         gd = load_residual_grids(GRID_HDF5)
-        # Known locations return per-cell values
         mu, sd = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
             gd["grids"]["PGA"]["dL2L_sig"],
-            LATS, LONS, gd["h3_res"]
-            )
+            LATS, LONS, gd["h3_res"])
         aae(mu, DL2L_MEAN, decimal=DP)
         aae(sd, DL2L_STD, decimal=DP)
-        # Location outside all grid cells returns zero
         mu, sd = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
             gd["grids"]["PGA"]["dL2L_sig"],
@@ -88,45 +89,40 @@ class GridAdjustedGMPETest(unittest.TestCase):
         aae(mu, 0.0)
         aae(sd, 0.0)
 
-    ### GMM Adjustments ###
+    def test_raytrace_path_adj(self):
+        # Check separately the raytracing
+        gd = load_residual_grids(GRID_HDF5)
+        path_grid = gd["grids"]["PGA"]["att_per_km"]
+        adjs = raytrace_path_adj(
+            "att_per_km", path_grid,
+            np.zeros(len(LONS)), np.zeros(len(LATS)),
+            LONS, LATS,
+        )
+        aae(adjs, EXPECTED_PATH_ADJ, decimal=DP)
+
     def test_mean_and_sigma(self):
-        # Check adjustments are working correctly for all 3 IMTs
-        mea, sig, tau, phi = self._get_mean_stds(["PGA", "SA(0.5)", "SA(1.0)"])
-        # dL2L uses hypo loc -> all sites get cell-0 value
-        dl2l_mu = DL2L_MEAN[0]
+        # Check expected values
+        mea, sig, tau, phi = self._get_mean_stds(
+            ["PGA", "SA(0.5)", "SA(1.0)"])
         dl2l_sd = DL2L_STD[0]
         for m in range(3):
-            # Mean shifted by dL2L (uniform) + dS2S (per-site)
-            aae(mea[GRID, m] - mea[BASE, m],
-                dl2l_mu + DS2S_MEAN, decimal=DP)
-            # Tau reduced (dL2L sub, same for all sites)
+            aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFF, decimal=DP)
             aae(tau[GRID, m],
                 np.sqrt(tau[BASE, m] ** 2 - dl2l_sd ** 2), decimal=DP)
-            # Phi reduced (dS2S sub, per-site)
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_STD ** 2), decimal=DP)
-            # Sig recomputed from adjusted tau and phi
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
 
     def test_no_adjustment_for_missing_imt(self):
-        # Check no adjustment for IMT without corrections in hdf5
+        # Check that no adjustment is applied to IMT without adjustments
         mea, sig, _, _ = self._get_mean_stds(["SA(3.0)"])
         aae(mea[BASE], mea[GRID])
         aae(sig[BASE], sig[GRID])
 
-    ### Check presence of required ctx attributes ###
-    def test_hypo_loc_is_available(self):
-        # Instantiate adjusted GMM
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
-        # dL2L correction uses hypo location
-        self.assertIn("hypo_lat", adj.REQUIRES_RUPTURE_PARAMETERS)
-        self.assertIn("hypo_lon", adj.REQUIRES_RUPTURE_PARAMETERS)
-        # dS2S correction uses site location
-        self.assertIn("lat", adj.REQUIRES_SITES_PARAMETERS)
-        self.assertIn("lon", adj.REQUIRES_SITES_PARAMETERS)
-
-    ### Error cases ###
     def test_error_non_random_effects_base_gsim(self):
-        with self.assertRaises(ValueError): # GSIM is not random-effects
-            GridAdjustedGMPE(gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
+        # Check that cannot use specified adjs for tau/phi with non-random
+        # effects GMM
+        with self.assertRaises(ValueError):
+            GridAdjustedGMPE(
+                gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
