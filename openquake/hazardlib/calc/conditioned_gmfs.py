@@ -349,10 +349,9 @@ def create_result(g, m, target_imt, imts_Y, imts_D,
     # # Engler et al. (2022) equations 12 and 13; assumes between event
     # # residuals are perfectly cross-correlated
     # var_H_y2 = 1.0 / (
-    #     1.0 + numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, tau_y2])
+    #     1.0 + tau_y2.T @ cov_W2_W2_inv @ tau_y2
     # )
-    # mu_H_y2 = numpy.linalg.multi_dot(
-    #   [tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
+    # mu_H_y2 = tau_y2.T @ cov_W2_W2_inv @ zeta * var_H_y2
     # The more generic equations B8 and B9 from Appendix B are used instead
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
@@ -396,7 +395,7 @@ def compute_spatial_cross_covariance_matrix(
         _compute_spatial_cross_correlation_matrix(
             imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
         for imt_2 in imts2] for imt_1 in imts1])
-    return numpy.linalg.multi_dot([diag1, rho, diag2])
+    return diag1 @ rho @ diag2
 
 
 # In scenario/case_21 one has
@@ -415,16 +414,15 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance:
     cov_HD_HD_yD = numpy.linalg.pinv(
-        numpy.linalg.multi_dot([r.T_D.T, r.cov_WD_WD_inv, r.T_D])
+        r.T_D.T @ r.cov_WD_WD_inv @ r.T_D
         + numpy.linalg.pinv(r.corr_HD_HD))
 
-    mu_HD_yD = numpy.linalg.multi_dot(
-        [cov_HD_HD_yD, r.T_D.T, r.cov_WD_WD_inv, r.zeta_D])
+    mu_HD_yD = cov_HD_HD_yD @ r.T_D.T @ r.cov_WD_WD_inv @ r.zeta_D
 
     # Compute the distribution of the conditional between-event
     # residual B|Y2=y2
     mu_BD_yD = r.T_D @ mu_HD_yD
-    cov_BD_BD_yD = numpy.linalg.multi_dot([r.T_D, cov_HD_HD_yD, r.T_D.T])
+    cov_BD_BD_yD = r.T_D @ cov_HD_HD_yD @ r.T_D.T
 
     # Get the nominal bias and its standard deviation as the means of the
     # conditional between-event residual mean and standard deviation
@@ -494,7 +492,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
-    cov_BY_BY_yD = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
+    cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
     return {(r.g, r.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
 
 
