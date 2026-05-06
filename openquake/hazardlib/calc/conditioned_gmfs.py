@@ -416,8 +416,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance:
     cov_HD_HD_yD = numpy.linalg.pinv(
-        t.T_D.T @ t.cov_WD_WD_inv @ t.T_D
-        + numpy.linalg.pinv(t.corr_HD_HD))
+        t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
 
     mu_HD_yD = cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @ t.zeta_D
 
@@ -533,8 +532,8 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
             sdata[im + "_phi"] = mean_stds_D[3, 0, 0]
         cm_Y = cmaker.copy(imtls={im.string: [0] for im in inp.imts_Y},
                            gsims=gdict)
+        mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
         for m, target_imt in enumerate(inp.imts_Y):
-            mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
             temp = create_temp(g, m, target_imt, inp, DD)
             smap.submit((target_imt, gsim, mean_stds_Y[:, 0], inp, temp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
