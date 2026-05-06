@@ -122,9 +122,9 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance
 U32 = numpy.uint32
 F32 = numpy.float32
 
-Distance = namedtuple('Distance', 'YY YD DY DD')
+Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD mtp_args')
 
-def get_ctxs_dist(rupture, cmaker, inp):
+def get_precomputed(rupture, cmaker, inp):
     """
     :returns: (ctx_Y, ctx_D, dist)
     """
@@ -146,7 +146,7 @@ def get_ctxs_dist(rupture, cmaker, inp):
     YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
     DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
     DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
-    return ctx_Y, ctx_D, Distance(YY, YD, DY, DD)
+    return Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, [])
 
     
 class NoInterIntraStdDevs(Exception):
@@ -237,12 +237,12 @@ class ConditionedGmfComputer(GmfComputer):
         return get_mean_covs(
             self.rupture, self.cmaker, self.inp, sigma=False, h5=h5)
 
-    def get_mtp_args(self):
+    def build_precomputed(self):
         """
         :returns:
            a list of G tuples of arguments needed to compute mea, tau, phi
         """
-        return get_mtp_args(self.rupture, self.cmaker, self.inp)
+        return build_precomputed(self.rupture, self.cmaker, self.inp)
 
 
 @dataclass
@@ -537,9 +537,8 @@ def get_mu_tau_phi(by_imt, cmaker_Y, ctx_Y, inp, monitor):
     return out
 
 
-def get_mtp_args(rupture, cmaker, inp):
-    mtp_args = []
-    ctx_Y, ctx_D, dist = get_ctxs_dist(rupture, cmaker, inp)
+def build_precomputed(rupture, cmaker, inp):
+    pre = get_precomputed(rupture, cmaker, inp)
     sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -553,7 +552,7 @@ def get_mtp_args(rupture, cmaker, inp):
         for m, o_imt in enumerate(inp.imts_D):
             im = o_imt.string
             cm = cmaker.copy(imtls={im: [0]}, gsims=gdict)
-            mean_stds_D = cm.get_mean_stds([ctx_D])
+            mean_stds_D = cm.get_mean_stds([pre.ctx_D])
             sdata[im + "_median"] = mean_stds_D[0, 0, 0]
             sdata[im + "_sigma"] = mean_stds_D[1, 0, 0]
             sdata[im + "_tau"] = mean_stds_D[2, 0, 0]
@@ -562,23 +561,23 @@ def get_mtp_args(rupture, cmaker, inp):
                            gsims=gdict)
         by_imt = {}
         for m, target_imt in enumerate(inp.imts_Y):
-            by_imt[target_imt] = create_temp(g, m, target_imt, inp, dist.DD)
-        mtp_args.append((by_imt, cm_Y, ctx_Y, inp))
-    return mtp_args, dist, ctx_Y, ctx_D
+            by_imt[target_imt] = create_temp(g, m, target_imt, inp, pre.DD)
+        pre.mtp_args.append((by_imt, cm_Y, pre.ctx_Y, inp))
+    return pre
 
 
 # calls get_mu_tau_phi in parallel
 def get_me_ta_ph(rupture, cmaker, inp, h5):
-    mtp_args, dist, ctx_Y, ctx_D = get_mtp_args(rupture, cmaker, inp)
+    pre = build_precomputed(rupture, cmaker, inp)
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
-    N = len(ctx_Y)
+    N = len(pre.ctx_Y)
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
-    for args in mtp_args:
+    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY)
+    for args in pre.mtp_args:
         smap.submit(args)
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
