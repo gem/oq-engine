@@ -499,10 +499,10 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
 
 
 # calls get_mu_tau_phi in parallel
-def get_me_ta_ph(cmaker, inp, mean_stds_D, mean_stds_Y, h5):
+def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
-    N = mean_stds_Y.shape[-1]
+    N = len(ctx_Y)
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
@@ -514,6 +514,7 @@ def get_me_ta_ph(cmaker, inp, mean_stds_D, mean_stds_Y, h5):
 
     sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
+        gdict = {gsim: cmaker.gsims[gsim]}
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):
@@ -524,13 +525,18 @@ def get_me_ta_ph(cmaker, inp, mean_stds_D, mean_stds_Y, h5):
         # won't work well as the 4 components will be non-homogeneous
         for m, o_imt in enumerate(inp.imts_D):
             im = o_imt.string
-            sdata[im + "_median"] = mean_stds_D[0, g, m]
-            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
-            sdata[im + "_tau"] = mean_stds_D[2, g, m]
-            sdata[im + "_phi"] = mean_stds_D[3, g, m]
+            cm = cmaker.copy(imtls={im: [0]}, gsims=gdict)
+            mean_stds_D = cm.get_mean_stds([ctx_D])
+            sdata[im + "_median"] = mean_stds_D[0, 0, 0]
+            sdata[im + "_sigma"] = mean_stds_D[1, 0, 0]
+            sdata[im + "_tau"] = mean_stds_D[2, 0, 0]
+            sdata[im + "_phi"] = mean_stds_D[3, 0, 0]
+        cm_Y = cmaker.copy(imtls={im.string: [0] for im in inp.imts_Y},
+                           gsims=gdict)
         for m, target_imt in enumerate(inp.imts_Y):
+            mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
             temp = create_temp(g, m, target_imt, inp, DD)
-            smap.submit((target_imt, gsim, mean_stds_Y[:, g], inp, temp))
+            smap.submit((target_imt, gsim, mean_stds_Y[:, 0], inp, temp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
@@ -548,10 +554,8 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
         rupture = rupture.rupture
 
     # Generate the contexts for stations sites and target sites
-    cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in inp.imts_D})
-    [ctx_D] = cmaker_D.get_ctxs([rupture], inp.sites_D)
-    cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in inp.imts_Y})
-    [ctx_Y] = cmaker_Y.get_ctxs([rupture], inp.sites_Y)
+    [ctx_D] = cmaker.get_ctxs([rupture], inp.sites_D)
+    [ctx_Y] = cmaker.get_ctxs([rupture], inp.sites_Y)
 
     # filter sites
     mask_Y = numpy.isin(inp.sites_Y.sids, ctx_Y.sids)
@@ -559,9 +563,7 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
     mask_D = numpy.isin(inp.sites_D.sids, ctx_D.sids)
     inp.sites_D = inp.sites_D.filter(mask_D)
     inp.stations = inp.stations[mask_D].copy()
-    mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
-    mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
-    me, ta, ph = get_me_ta_ph(cmaker, inp, mean_stds_D, mean_stds_Y, h5)
+    me, ta, ph = get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
