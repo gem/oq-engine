@@ -189,16 +189,7 @@ class ConditionedGmfComputer(GmfComputer):
             amplifier=amplifier, sec_perils=sec_perils)
 
         clust = ground_motion_correlation_params.get("vs30_clustering", True)
-        self.spatial_correl = (spatial_correl or
-                               correlation.JB2009CorrelationModel(clust))
-        self.cross_correl_between = (
-            cross_correl_between or cross_correlation.GodaAtkinson2009())
-        self.cross_correl_within = cross_correlation.BakerJayaram2008()
         self.rupture = rupture
-        self.sitecol = sitecol
-        self.station_sitecol = station_sitecol
-        self.station_data = station_data
-        self.observed_imts = observed_imts
 
         # Target IMT is not PGA or SA: Currently not supported
         target_imts = [imt for imt in self.imts
@@ -210,7 +201,6 @@ class ConditionedGmfComputer(GmfComputer):
             spatial_correl or correlation.JB2009CorrelationModel(clust),
             cross_correl_between or cross_correlation.GodaAtkinson2009(),
             cross_correlation.BakerJayaram2008())
-        self.num_events = number_of_ground_motion_fields
 
     # parallelized
     def get_mea_tau_phi(self, h5):
@@ -224,7 +214,7 @@ class ConditionedGmfComputer(GmfComputer):
 @dataclass
 class Input:
     """
-    Container for the distance matrices and global parameters
+    Container for the conditioned GMFs parameters
     """
     sites_Y: list = ()
     sites_D: list = ()
