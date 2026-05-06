@@ -547,28 +547,20 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
 
-    # Generate the contexts and calculate the means and
-    # standard deviations at the *station* sites ("_D")
+    # Generate the contexts for stations sites and target sites
     cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in inp.imts_D})
-
     [ctx_D] = cmaker_D.get_ctxs([rupture], inp.sites_D)
-    mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
-    # shape (4, G, D, N) where 4 means (mean, sig, tau, phi)
-
-    # Generate the contexts and calculate the means and 
-    # standard deviations at the *target* sites ("_Y")
     cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in inp.imts_Y})
-
     [ctx_Y] = cmaker_Y.get_ctxs([rupture], inp.sites_Y)
-    mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
-    # shape (4, G, Y, N)
 
     # filter sites
-    inp.sites_Y = inp.sites_Y.filter(
-        numpy.isin(inp.sites_Y.sids, ctx_Y.sids))
-    mask = numpy.isin(inp.sites_D.sids, ctx_D.sids)
-    inp.sites_D = inp.sites_D.filter(mask)
-    inp.stations = inp.stations[mask].copy()
+    mask_Y = numpy.isin(inp.sites_Y.sids, ctx_Y.sids)
+    inp.sites_Y = inp.sites_Y.filter(mask_Y)
+    mask_D = numpy.isin(inp.sites_D.sids, ctx_D.sids)
+    inp.sites_D = inp.sites_D.filter(mask_D)
+    inp.stations = inp.stations[mask_D].copy()
+    mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
+    mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
     me, ta, ph = get_me_ta_ph(cmaker, inp, mean_stds_D, mean_stds_Y, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
