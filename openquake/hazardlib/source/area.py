@@ -180,6 +180,16 @@ class AreaSource(ParametricSeismicSource):
             new_mfd = mfd.YoungsCoppersmith1985MFD.from_characteristic_rate(
                 area_mfd.min_mag, area_mfd.b_val, area_mfd.char_mag,
                 area_mfd.char_rate / num_points, area_mfd.bin_width)
+        elif isinstance(area_mfd, mfd.AlternativeCharacteristicMFD):
+            new_mfd = mfd.AlternativeCharacteristicMFD(
+                min_mag=area_mfd.min_mag,
+                max_mag=area_mfd.max_mag,
+                bin_width=area_mfd.bin_width,
+                b_GR=area_mfd.b_GR,
+                b_AC=area_mfd.b_AC,
+                gamma=area_mfd.gamma,
+                delta_m_AC=area_mfd.delta_m_AC,
+                total_rate=area_mfd.total_rate / num_points)
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
