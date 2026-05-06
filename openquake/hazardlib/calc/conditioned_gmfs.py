@@ -411,10 +411,11 @@ def compute_spatial_cross_covariance_matrix(
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
 def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
+    # mean_stds has shape (4, M, N)
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
-    # H|Y2=y2 is normally distributed with mean and covariance:
+    # H|Y2=y2 is normally distributed with mean and covariance
     cov_HD_HD_yD = numpy.linalg.pinv(
         t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
 
@@ -436,10 +437,10 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
            target_imt, nominal_bias_mean, nominal_bias_stddev))
 
     # Predicted mean at the target sites, from GSIM
-    mu_Y = mean_stds[0, 0][:, None]
+    mu_Y = mean_stds[0, 0, :, numpy.newaxis]
 
     # Predicted uncertainty components at the target sites, from GSIM
-    tau_Y = mean_stds[2, 0][:, None]
+    tau_Y = mean_stds[2, 0, :, numpy.newaxis]
     phi_Y_diag = numpy.diag(mean_stds[3, 0])
 
     # Compute the within-event covariance matrices for the
