@@ -553,7 +553,7 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
 
     [ctx_D] = cmaker_D.get_ctxs([rupture], inp.sites_D)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
-    # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
+    # shape (4, G, D, N) where 4 means (mean, sig, tau, phi)
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
