@@ -237,6 +237,13 @@ class ConditionedGmfComputer(GmfComputer):
         return get_mean_covs(
             self.rupture, self.cmaker, self.inp, sigma=False, h5=h5)
 
+    def get_mtp_args(self):
+        """
+        :returns:
+           a list of G tuples of arguments needed to compute mea, tau, phi
+        """
+        return get_mtp_args(self.rupture, self.cmaker, self.inp)
+
 
 @dataclass
 class Input:
@@ -530,18 +537,9 @@ def get_mu_tau_phi(by_imt, cmaker_Y, ctx_Y, inp, monitor):
     return out
 
 
-# calls get_mu_tau_phi in parallel
-def get_me_ta_ph(rupture, cmaker, inp, h5):
+def get_mtp_args(rupture, cmaker, inp):
+    mtp_args = []
     ctx_Y, ctx_D, dist = get_ctxs_dist(rupture, cmaker, inp)
-    G = len(cmaker.gsims)
-    M = len(inp.imts_Y)
-    N = len(ctx_Y)
-    me = numpy.zeros((G, M, N, 1))
-    ta = numpy.zeros((G, M, N, N))
-    ph = numpy.zeros((G, M, N, N))
-    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
-
     sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -549,9 +547,8 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
                     and "add_between_within_stds" in gsim.kwargs):
                 raise NoInterIntraStdDevs(gsim)
 
-        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
-        # so, unlike the regular gsim get_mean_std, a numpy ndarray
-        # won't work well as the 4 components will be non-homogeneous
+        # NB: there are relatively few stations, so cm.get_mean_stds([ctx_D])
+        # is fast and done sequentially, while ctx_Y is done in parallel
         gdict = {gsim: cmaker.gsims[gsim]}
         for m, o_imt in enumerate(inp.imts_D):
             im = o_imt.string
@@ -566,7 +563,23 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
         by_imt = {}
         for m, target_imt in enumerate(inp.imts_Y):
             by_imt[target_imt] = create_temp(g, m, target_imt, inp, dist.DD)
-        smap.submit((by_imt, cm_Y, ctx_Y, inp))
+        mtp_args.append((by_imt, cm_Y, ctx_Y, inp))
+    return mtp_args, dist, ctx_Y, ctx_D
+
+
+# calls get_mu_tau_phi in parallel
+def get_me_ta_ph(rupture, cmaker, inp, h5):
+    mtp_args, dist, ctx_Y, ctx_D = get_mtp_args(rupture, cmaker, inp)
+    G = len(cmaker.gsims)
+    M = len(inp.imts_Y)
+    N = len(ctx_Y)
+    me = numpy.zeros((G, M, N, 1))
+    ta = numpy.zeros((G, M, N, N))
+    ph = numpy.zeros((G, M, N, N))
+    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
+    smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
+    for args in mtp_args:
+        smap.submit(args)
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau

@@ -938,11 +938,11 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.impact:
             imts = list(self.oqparam.imtls)
             ex = Extractor(self.datastore.calc_id)
-            for imt in imts:
-                plt = plot_avg_gmf(ex, imt)
+            for im in imts:
+                plt = plot_avg_gmf(ex, im)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
-                fig_path = f'png/avg_gmf-{imt}.png'
+                fig_path = f'png/avg_gmf-{im}.png'
                 logging.info(f'Saving {fig_path} into the datastore')
                 self.datastore[fig_path] = Image.open(bio)
 
@@ -982,14 +982,14 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.cl.run()
                     expose_outputs(self.cl.datastore)
                     all = slice(None)
-                    for imt in oq.imtls:
+                    for im in oq.imtls:
                         cl_mean_curves = get_mean_curve(
-                            self.datastore, imt, all)
+                            self.datastore, im, all)
                         eb_mean_curves = get_mean_curve(
-                            self.datastore, imt, all)
+                            self.datastore, im, all)
                         self.rdiff, index = util.max_rel_diff_index(
                             cl_mean_curves, eb_mean_curves)
                         logging.warning(
                             'Relative difference with the classical '
                             'mean curves: %d%% at site index %d, imt=%s',
-                            self.rdiff * 100, index, imt)
+                            self.rdiff * 100, index, im)
