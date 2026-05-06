@@ -53,7 +53,7 @@ window.initAeloForm = function() {
             site_class_select.prop('disabled', true);
             site_class_select.append($('<option>', {
                 value: '',
-                text: '-- 2. Select ASCE standard first --',
+                text: '-- 2. Select ASCE standards first --',
                 selected: true,
                 disabled: true
             }));
