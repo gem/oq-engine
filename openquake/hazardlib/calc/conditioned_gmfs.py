@@ -437,9 +437,10 @@ def compute_spatial_cross_covariance_matrix(
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
-def get_mu_tau_phi(by_imt, cmaker, mean_stds, inp, monitor):
+def get_mu_tau_phi(by_imt, cmaker_Y, ctx_Y, inp, monitor):
     out = {}
-    [gsim] = cmaker.gsims
+    [gsim] = cmaker_Y.gsims
+    mean_stds = cmaker_Y.get_mean_stds([ctx_Y])
     for target_imt, t in by_imt.items():
         # mean_stds has shape (4, M, N)
         # Using Bayes rule, compute the posterior distribution of the
@@ -467,11 +468,11 @@ def get_mu_tau_phi(by_imt, cmaker, mean_stds, inp, monitor):
                    target_imt, nominal_bias_mean, nominal_bias_stddev))
 
         # Predicted mean at the target sites, from GSIM
-        mu_Y = mean_stds[0, 0, :, numpy.newaxis]
+        mu_Y = mean_stds[0, 0, 0, :, numpy.newaxis]
 
         # Predicted uncertainty components at the target sites, from GSIM
-        tau_Y = mean_stds[2, 0, :, numpy.newaxis]
-        phi_Y_diag = numpy.diag(mean_stds[3, 0])
+        tau_Y = mean_stds[2, 0, 0, :, numpy.newaxis]
+        phi_Y_diag = numpy.diag(mean_stds[3, 0, 0])
 
         # Compute the within-event covariance matrices for the
         # target sites and observation sites; the shapes are 
@@ -562,11 +563,10 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
             sdata[im + "_phi"] = mean_stds_D[3, 0, 0]
         cm_Y = cmaker.copy(imtls={im.string: [0] for im in inp.imts_Y},
                            gsims=gdict)
-        mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
         by_imt = {}
         for m, target_imt in enumerate(inp.imts_Y):
             by_imt[target_imt] = create_temp(g, m, target_imt, inp, dist.DD)
-        smap.submit((by_imt, cm_Y, mean_stds_Y[:, 0], inp))
+        smap.submit((by_imt, cm_Y, ctx_Y, inp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
