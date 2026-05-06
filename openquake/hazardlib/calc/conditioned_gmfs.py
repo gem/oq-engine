@@ -124,15 +124,29 @@ F32 = numpy.float32
 
 Distance = namedtuple('Distance', 'YY YD DY DD')
 
-def get_dist(inp):
+def get_ctxs_dist(rupture, cmaker, inp):
     """
-    :returns: a Distance tuple
+    :returns: (ctx_Y, ctx_D, dist)
     """
+    if hasattr(rupture, 'rupture'):
+        rupture = rupture.rupture
+
+    # Generate the contexts for stations sites and target sites
+    [ctx_D] = cmaker.get_ctxs([rupture], inp.sites_D)
+    [ctx_Y] = cmaker.get_ctxs([rupture], inp.sites_Y)
+
+    # filter sites
+    mask_Y = numpy.isin(inp.sites_Y.sids, ctx_Y.sids)
+    inp.sites_Y = inp.sites_Y.filter(mask_Y)
+    mask_D = numpy.isin(inp.sites_D.sids, ctx_D.sids)
+    inp.sites_D = inp.sites_D.filter(mask_D)
+    inp.stations = inp.stations[mask_D].copy()
+
     YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
     YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
     DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
     DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
-    return Distance(YY, YD, DY, DD)
+    return ctx_Y, ctx_D, Distance(YY, YD, DY, DD)
 
     
 class NoInterIntraStdDevs(Exception):
@@ -512,7 +526,8 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
 
 
 # calls get_mu_tau_phi in parallel
-def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
+def get_me_ta_ph(rupture, cmaker, inp, h5):
+    ctx_Y, ctx_D, dist = get_ctxs_dist(rupture, cmaker, inp)
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
     N = len(ctx_Y)
@@ -520,7 +535,6 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    dist = get_dist(inp)
     smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
 
     sdata = inp.stations
@@ -556,34 +570,12 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
     return me, ta, ph
 
 
-def get_ctx_Y_D(rupture, cmaker, inp):
-    """
-    :returns: (ctx_Y, ctx_D)
-    """
-    if hasattr(rupture, 'rupture'):
-        rupture = rupture.rupture
-
-    # Generate the contexts for stations sites and target sites
-    [ctx_D] = cmaker.get_ctxs([rupture], inp.sites_D)
-    [ctx_Y] = cmaker.get_ctxs([rupture], inp.sites_Y)
-
-    # filter sites
-    mask_Y = numpy.isin(inp.sites_Y.sids, ctx_Y.sids)
-    inp.sites_Y = inp.sites_Y.filter(mask_Y)
-    mask_D = numpy.isin(inp.sites_D.sids, ctx_D.sids)
-    inp.sites_D = inp.sites_D.filter(mask_D)
-    inp.stations = inp.stations[mask_D].copy()
-
-    return ctx_Y, ctx_D
-
-
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
     """
     :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
     """
-    ctx_Y, ctx_D = get_ctx_Y_D(rupture, cmaker, inp)
-    me, ta, ph = get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5)
+    me, ta, ph = get_me_ta_ph(rupture, cmaker, inp, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
