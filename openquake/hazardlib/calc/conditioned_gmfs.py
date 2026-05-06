@@ -437,92 +437,95 @@ def compute_spatial_cross_covariance_matrix(
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
-def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
-    # mean_stds has shape (4, M, N)
-    # Using Bayes rule, compute the posterior distribution of the
-    # normalized between-event residual H|YD=yD, employing
-    # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
-    # H|Y2=y2 is normally distributed with mean and covariance
-    cov_HD_HD_yD = numpy.linalg.pinv(
-        t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
+def get_mu_tau_phi(by_imt, gsim, mean_stds, inp, monitor):
+    out = {}
+    for target_imt, t in by_imt.items():
+        # mean_stds has shape (4, M, N)
+        # Using Bayes rule, compute the posterior distribution of the
+        # normalized between-event residual H|YD=yD, employing
+        # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
+        # H|Y2=y2 is normally distributed with mean and covariance
+        cov_HD_HD_yD = numpy.linalg.pinv(
+            t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
 
-    mu_HD_yD = cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @ t.zeta_D
+        mu_HD_yD = cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @ t.zeta_D
 
-    # Compute the distribution of the conditional between-event
-    # residual B|Y2=y2
-    mu_BD_yD = t.T_D @ mu_HD_yD
-    cov_BD_BD_yD = t.T_D @ cov_HD_HD_yD @ t.T_D.T
+        # Compute the distribution of the conditional between-event
+        # residual B|Y2=y2
+        mu_BD_yD = t.T_D @ mu_HD_yD
+        cov_BD_BD_yD = t.T_D @ cov_HD_HD_yD @ t.T_D.T
 
-    # Get the nominal bias and its standard deviation as the means of the
-    # conditional between-event residual mean and standard deviation
-    nominal_bias_mean = numpy.mean(mu_BD_yD)
-    nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
+        # Get the nominal bias and its standard deviation as the means of the
+        # conditional between-event residual mean and standard deviation
+        nominal_bias_mean = numpy.mean(mu_BD_yD)
+        nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
 
-    msg = (
-        "GSIM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f"
-        % (gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-           target_imt, nominal_bias_mean, nominal_bias_stddev))
+        msg = ("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
+               "Nominal bias stddev: %.3f" % (
+                   gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
+                   target_imt, nominal_bias_mean, nominal_bias_stddev))
 
-    # Predicted mean at the target sites, from GSIM
-    mu_Y = mean_stds[0, 0, :, numpy.newaxis]
+        # Predicted mean at the target sites, from GSIM
+        mu_Y = mean_stds[0, 0, :, numpy.newaxis]
 
-    # Predicted uncertainty components at the target sites, from GSIM
-    tau_Y = mean_stds[2, 0, :, numpy.newaxis]
-    phi_Y_diag = numpy.diag(mean_stds[3, 0])
+        # Predicted uncertainty components at the target sites, from GSIM
+        tau_Y = mean_stds[2, 0, :, numpy.newaxis]
+        phi_Y_diag = numpy.diag(mean_stds[3, 0])
 
-    # Compute the within-event covariance matrices for the
-    # target sites and observation sites; the shapes are 
-    # (nsites, nstations) and (nstations, nsites) respectively
-    with monitor.shared['YD'] as YD:
-        cov_WY_WD = compute_spatial_cross_covariance_matrix(
-            inp.spatial_correl, inp.cross_correl_within, YD,
-            [target_imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
+        # Compute the within-event covariance matrices for the
+        # target sites and observation sites; the shapes are 
+        # (nsites, nstations) and (nstations, nsites) respectively
+        with monitor.shared['YD'] as YD:
+            cov_WY_WD = compute_spatial_cross_covariance_matrix(
+                inp.spatial_correl, inp.cross_correl_within, YD,
+                [target_imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
 
-    with monitor.shared['DY'] as DY:
-        cov_WD_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_correl, inp.cross_correl_within, DY,
-            t.conditioning_imts, [target_imt], t.phi_D_diag, phi_Y_diag)
+        with monitor.shared['DY'] as DY:
+            cov_WD_WY = compute_spatial_cross_covariance_matrix(
+                inp.spatial_correl, inp.cross_correl_within, DY,
+                t.conditioning_imts, [target_imt], t.phi_D_diag, phi_Y_diag)
 
-    # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
-    RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
+        # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
+        RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
 
-    # # Compute the mean of the conditional between-event residual B|YD=yD
-    # # for the target sites
-    # mu_HN_yD = mu_HD_yD[0, None]
-    # mu_BY_yD = tau_Y @ mu_HN_yD
+        # # Compute the mean of the conditional between-event residual B|YD=yD
+        # # for the target sites
+        # mu_HN_yD = mu_HD_yD[0, None]
+        # mu_BY_yD = tau_Y @ mu_HN_yD
 
-    # Compute the conditioned mean of the ground motion
-    # at the target sites; shape (nsites, 1)
-    mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zeta_D - mu_BD_yD)
+        # Compute the conditioned mean of the ground motion
+        # at the target sites; shape (nsites, 1)
+        mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zeta_D - mu_BD_yD)
 
-    # Compute the within-event covariance matrix for the
-    # target sites (apriori) (nsites, nsites)
-    
-    with monitor.shared['YY'] as YY:
-        cov_WY_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_correl, inp.cross_correl_within, YY,
-            [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
+        # Compute the within-event covariance matrix for the
+        # target sites (apriori) (nsites, nsites)
 
-    # Both conditioned covariance matrices can contain extremely
-    # small negative values due to limitations of floating point
-    # operations (~ -10^-17 to -10^-15), these are clipped to zero
+        with monitor.shared['YY'] as YY:
+            cov_WY_WY = compute_spatial_cross_covariance_matrix(
+                inp.spatial_correl, inp.cross_correl_within, YY,
+                [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
 
-    # Compute the conditioned within-event covariance matrix
-    # for the target sites clipped to zero, shape (nsites, nsites)
-    cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
+        # Both conditioned covariance matrices can contain extremely
+        # small negative values due to limitations of floating point
+        # operations (~ -10^-17 to -10^-15), these are clipped to zero
 
-    # Compute the scaling matrix "C" for the conditioned between-event
-    # covariance matrix
-    if t.native_data_available:
-        C = tau_Y - RC @ t.T_D
-    else:
-        zeros = numpy.zeros((len(inp.sites_Y), len(t.conditioning_imts)))
-        C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
+        # Compute the conditioned within-event covariance matrix
+        # for the target sites clipped to zero, shape (nsites, nsites)
+        cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
-    # Compute the conditioned between-event covariance matrix
-    # for the target sites clipped to zero, shape (nsites, nsites)
-    cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
-    return {(t.g, t.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
+        # Compute the scaling matrix "C" for the conditioned between-event
+        # covariance matrix
+        if t.native_data_available:
+            C = tau_Y - RC @ t.T_D
+        else:
+            zeros = numpy.zeros((len(inp.sites_Y), len(t.conditioning_imts)))
+            C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
+
+        # Compute the conditioned between-event covariance matrix
+        # for the target sites clipped to zero, shape (nsites, nsites)
+        cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
+        out[t.g, t.m] = (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)
+    return out
 
 
 # calls get_mu_tau_phi in parallel
@@ -559,9 +562,10 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
         cm_Y = cmaker.copy(imtls={im.string: [0] for im in inp.imts_Y},
                            gsims=gdict)
         mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
+        by_imt = {}
         for m, target_imt in enumerate(inp.imts_Y):
-            temp = create_temp(g, m, target_imt, inp, dist.DD)
-            smap.submit((target_imt, gsim, mean_stds_Y[:, 0], inp, temp))
+            by_imt[target_imt] = create_temp(g, m, target_imt, inp, dist.DD)
+        smap.submit((by_imt, gsim, mean_stds_Y[:, 0], inp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
