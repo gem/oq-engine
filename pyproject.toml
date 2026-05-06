@@ -54,6 +54,7 @@ version = {attr = "openquake.baselib.__version__"}
 "openquake" = ["openquake.cfg", "README.md", "LICENSE", "CONTRIBUTORS.txt"]
 
 [tool.setuptools.packages.find]
+namespaces = true
 where = ["."]
 include = ["openquake.*"]
 exclude = [
