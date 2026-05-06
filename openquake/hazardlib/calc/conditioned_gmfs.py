@@ -111,6 +111,7 @@ from dataclasses import dataclass
 
 import psutil
 import numpy
+import pandas
 from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
@@ -182,7 +183,7 @@ class ConditionedGmfComputer(GmfComputer):
     """
     def __init__(
             self, rupture, sitecol, station_sitecol, station_data,
-            observed_imt_strs, cmaker, spatial_correl=None,
+            observed_imts, cmaker, spatial_correl=None,
             cross_correl_between=None, ground_motion_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
         assert len(station_data) == len(station_sitecol), (
@@ -203,11 +204,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
         self.station_data = station_data
-        self.observed_imt_strs = observed_imt_strs
-        observed_imtls = {imt_str: [0]
-                          for imt_str in observed_imt_strs
-                          if imt_str not in ["MMI", "PGV"]}
-        self.observed_imts = sorted(map(from_string, observed_imtls))
+        self.observed_imts = observed_imts
         self.num_events = number_of_ground_motion_fields
 
     # parallelized
@@ -218,10 +215,26 @@ class ConditionedGmfComputer(GmfComputer):
         return get_mean_covs(
             self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
-            self.observed_imt_strs, self.sitecol, self.imts,
+            self.observed_imts, self.sitecol, self.imts,
             self.spatial_correl, self.cross_correl_between,
             self.cross_correl_within,
             sigma=False, h5=h5)
+
+
+@dataclass
+class Input:
+    """
+    Container for the distance matrices and global parameters
+    """
+    sites_Y: list = ()
+    sites_D: list = ()
+    imts_Y: list = ()
+    imts_D: list = ()
+    stations: pandas.DataFrame = ()
+    spatial_correl: object = 0
+    cross_correl_within: object = 0
+    cross_correl_between: object = 0
+    sigma: bool = False
 
 
 @dataclass
@@ -555,7 +568,7 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_mean_covs(
-        rupture, cmaker, station_sitecol, station_data, observed_imt_strs,
+        rupture, cmaker, station_sitecol, station_data, observed_imts,
         target_sitecol, target_imts, spatial_correl, cross_correl_between,
         cross_correl_within, sigma=True, h5=None):
     """
@@ -563,10 +576,6 @@ def get_mean_covs(
     """
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
-
-    observed_imts = sorted(
-          from_string(imt_str) for imt_str in observed_imt_strs 
-          if imt_str not in ["MMI", "PGV"])
 
     # Target IMT is not PGA or SA: Currently not supported
     target_imts = [imt for imt in target_imts

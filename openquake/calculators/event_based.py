@@ -26,7 +26,7 @@ from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, python3compat, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
-from openquake.hazardlib import valid, logictree, InvalidFile
+from openquake.hazardlib import imt, valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
@@ -185,12 +185,16 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
         stations = numpy.isin(sids, station_sitecol.sids)
         if stations.any():
             station_sids = sids[stations]
+            observed_imts = sorted(
+                imt.from_string(imt_str) for imt_str in oq.observed_imts
+                if imt_str not in ["MMI", "PGV"])
+
             return ConditionedGmfComputer(
                 ebr, filtered(sids),
                 filtered(station_sids),
                 station_data.loc[station_sids],
-                oq.observed_imts,
-                cmaker, oq.correl_model, oq.cross_correl,
+                observed_imts, cmaker,
+                oq.correl_model, oq.cross_correl,
                 oq.ground_motion_correlation_params,
                 oq.number_of_ground_motion_fields,
                 oq._amplifier, oq._sec_perils)
