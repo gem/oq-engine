@@ -437,8 +437,9 @@ def compute_spatial_cross_covariance_matrix(
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
-def get_mu_tau_phi(by_imt, gsim, mean_stds, inp, monitor):
+def get_mu_tau_phi(by_imt, cmaker, mean_stds, inp, monitor):
     out = {}
+    [gsim] = cmaker.gsims
     for target_imt, t in by_imt.items():
         # mean_stds has shape (4, M, N)
         # Using Bayes rule, compute the posterior distribution of the
@@ -542,7 +543,6 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
 
     sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
-        gdict = {gsim: cmaker.gsims[gsim]}
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):
@@ -551,6 +551,7 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
         # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
         # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
+        gdict = {gsim: cmaker.gsims[gsim]}
         for m, o_imt in enumerate(inp.imts_D):
             im = o_imt.string
             cm = cmaker.copy(imtls={im: [0]}, gsims=gdict)
@@ -565,7 +566,7 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
         by_imt = {}
         for m, target_imt in enumerate(inp.imts_Y):
             by_imt[target_imt] = create_temp(g, m, target_imt, inp, dist.DD)
-        smap.submit((by_imt, gsim, mean_stds_Y[:, 0], inp))
+        smap.submit((by_imt, cm_Y, mean_stds_Y[:, 0], inp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
