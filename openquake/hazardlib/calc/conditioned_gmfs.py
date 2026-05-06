@@ -107,6 +107,7 @@ cov_Y_Y_yD:
 """
 
 import logging
+from collections import namedtuple
 from dataclasses import dataclass
 
 import psutil
@@ -120,6 +121,19 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 U32 = numpy.uint32
 F32 = numpy.float32
+Distance = namedtuple('Distance', 'sites_Y sites_D YY YD DY DD')
+
+def calc_dist(target, observed):
+    """
+    Compute distance matrices between target sites (Y) and observed sites (D)
+    with D < Y
+    """
+    YY = compute_distance_matrix(target, target)
+    YD = compute_distance_matrix(target, observed)
+    DY = compute_distance_matrix(observed, target)
+    DD = compute_distance_matrix(observed, observed)
+    return Distance(target, observed, YY, YD, DY, DD)
+
 
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
@@ -498,7 +512,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
 # calls get_mu_tau_phi in parallel
 def get_me_ta_ph(cmaker, sdata, imts_D, imts_Y,
-                 mean_stds_D, mean_stds_Y, target, station_filtered,
+                 mean_stds_D, mean_stds_Y, dist,
                  spatial_correl, cross_correl_within, cross_correl_between, h5):
     G = len(cmaker.gsims)
     M = len(imts_Y)
@@ -507,10 +521,7 @@ def get_me_ta_ph(cmaker, sdata, imts_D, imts_Y,
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=compute_distance_matrix(target, target),
-               YD=compute_distance_matrix(target, station_filtered),
-               DY=compute_distance_matrix(station_filtered, target))
-    DD = compute_distance_matrix(station_filtered, station_filtered)
+    smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
 
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -530,12 +541,12 @@ def get_me_ta_ph(cmaker, sdata, imts_D, imts_Y,
         for m, target_imt in enumerate(imts_Y):
             result = create_result(
                 g, m, target_imt, imts_Y, imts_D,
-                sdata, target, station_filtered,
+                sdata, dist.sites_Y, dist.sites_D,
                 spatial_correl, cross_correl_within, cross_correl_between,
-                DD)
+                dist.DD)
             smap.submit(
                 (target_imt, gsim, mean_stds_Y[:, g], imts_Y,
-                 imts_D, sdata, target, station_filtered,
+                 imts_D, sdata, dist.sites_Y, dist.sites_D,
                  spatial_correl, cross_correl_within, result))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
@@ -586,10 +597,11 @@ def get_mean_covs(
         numpy.isin(target_sitecol.sids, ctx_Y.sids))
     mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
+    dist = calc_dist(target, station_filtered)
     me, ta, ph = get_me_ta_ph(
         cmaker, station_data[mask].copy(), imts_D, imts_Y,
-        mean_stds_D, mean_stds_Y, target, station_filtered,
-        spatial_correl, cross_correl_within, cross_correl_between, h5)
+        mean_stds_D, mean_stds_Y, dist, spatial_correl, cross_correl_within,
+        cross_correl_between, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
