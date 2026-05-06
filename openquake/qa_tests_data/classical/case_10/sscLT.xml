@@ -6,14 +6,15 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>source_model_char.xml</uncertaintyModel>
+                    <uncertaintyModel>source_model_ac_mfd.xml</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                branchSetID="bs2">
+                                branchSetID="bs2"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b21">
                     <uncertaintyModel>-0.1</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -26,7 +27,8 @@
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="bACRelative"
-                                branchSetID="bs3">
+                                branchSetID="bs3"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b31">
                     <uncertaintyModel>-0.1</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -39,7 +41,8 @@
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl4">
             <logicTreeBranchSet uncertaintyType="bGRAbsolute"
-                                branchSetID="bs4">
+                                branchSetID="bs4"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b41">
                     <uncertaintyModel>0.7</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -52,7 +55,8 @@
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl5">
             <logicTreeBranchSet uncertaintyType="bACAbsolute"
-                                branchSetID="bs5">
+                                branchSetID="bs5"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b51">
                     <uncertaintyModel>0.2</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -65,7 +69,8 @@
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl6">
             <logicTreeBranchSet uncertaintyType="maxMagAndDeltaMagACRelative"
-                                branchSetID="bs6">
+                                branchSetID="bs6"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b61">
                     <uncertaintyModel>0.5 0.2</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -78,7 +83,8 @@
         </logicTreeBranchingLevel>
         <logicTreeBranchingLevel branchingLevelID="bl7">
             <logicTreeBranchSet uncertaintyType="maxMagAndDeltaMagACRelativeNoMoBalance"
-                                branchSetID="bs7">
+                                branchSetID="bs7"
+                                applyToSources="001">
                 <logicTreeBranch branchID="b71">
                     <uncertaintyModel>0.5 0.2</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
