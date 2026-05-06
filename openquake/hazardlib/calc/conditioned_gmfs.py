@@ -108,6 +108,7 @@ cov_Y_Y_yD:
 
 import logging
 from dataclasses import dataclass
+from collections import namedtuple
 
 import psutil
 import numpy
@@ -121,7 +122,19 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance
 U32 = numpy.uint32
 F32 = numpy.float32
 
+Distance = namedtuple('Distance', 'YY YD DY DD')
 
+def get_dist(inp):
+    """
+    :returns: a Distance tuple
+    """
+    YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    return Distance(YY, YD, DY, DD)
+
+    
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
         self.gsim = gsim
@@ -507,10 +520,8 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=compute_distance_matrix(inp.sites_Y, inp.sites_Y),
-               YD=compute_distance_matrix(inp.sites_Y, inp.sites_D),
-               DY=compute_distance_matrix(inp.sites_D, inp.sites_Y))
-    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    dist = get_dist(inp)
+    smap.share(YY=dist.YY, YD=dist.YD, DY=dist.DY)
 
     sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
@@ -535,7 +546,7 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
                            gsims=gdict)
         mean_stds_Y = cm_Y.get_mean_stds([ctx_Y])
         for m, target_imt in enumerate(inp.imts_Y):
-            temp = create_temp(g, m, target_imt, inp, DD)
+            temp = create_temp(g, m, target_imt, inp, dist.DD)
             smap.submit((target_imt, gsim, mean_stds_Y[:, 0], inp, temp))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
@@ -545,10 +556,9 @@ def get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5):
     return me, ta, ph
 
 
-# tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
+def get_ctx_Y_D(rupture, cmaker, inp):
     """
-    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
+    :returns: (ctx_Y, ctx_D)
     """
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
@@ -563,6 +573,16 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
     mask_D = numpy.isin(inp.sites_D.sids, ctx_D.sids)
     inp.sites_D = inp.sites_D.filter(mask_D)
     inp.stations = inp.stations[mask_D].copy()
+
+    return ctx_Y, ctx_D
+
+
+# tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
+def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
+    """
+    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
+    """
+    ctx_Y, ctx_D = get_ctx_Y_D(rupture, cmaker, inp)
     me, ta, ph = get_me_ta_ph(cmaker, inp, ctx_Y, ctx_D, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
