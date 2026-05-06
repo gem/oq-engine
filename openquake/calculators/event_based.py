@@ -26,7 +26,7 @@ from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, general, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
-from openquake.hazardlib import valid, logictree, InvalidFile
+from openquake.hazardlib import imt, valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
@@ -181,11 +181,14 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
         stations = numpy.isin(sites.sids, station_sids)
         if stations.any():
             station_sids = sites.sids[stations]
+            observed_imts = sorted(
+                imt.from_string(imt_str) for imt_str in oq.observed_imts
+                if imt_str not in ["MMI", "PGV"])
             return ConditionedGmfComputer(
                 ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],
-                oq.observed_imts,
-                cmaker, oq.correl_model, oq.cross_correl,
+                observed_imts, cmaker,
+                oq.correl_model, oq.cross_correl,
                 oq.ground_motion_correlation_params,
                 oq.number_of_ground_motion_fields,
                 oq._amplifier, sec_perils)
@@ -301,20 +304,6 @@ def filter_stations(station_df, complete, rup, maxdist):
             logging.info('Discarded %d/%d stations more distant than %d km',
                          ns - len(station_data), ns, maxdist)
     return station_data, station_sites
-
-
-def get_args(dstore):
-    """
-    Get the arguments (rups, cmaker, sids, stations, hdf5path);
-    useful for debugging
-    """
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    try:
-        assetcol = dstore['assetcol']
-    except KeyError:
-        assetcol = None
-    return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
 
 
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
@@ -461,7 +450,6 @@ def run_conditioned(oq, rup0, full_lt, calc):
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
                 'You must reduce the number of sites i.e. maximum_distance')
-        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
     else:
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
@@ -478,10 +466,15 @@ def run_conditioned(oq, rup0, full_lt, calc):
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     if station_sites:
+        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         smap.share(mea=mea, tau=tau, phi=phi)
-    for args in allargs:
-        smap.submit(args)
-    smap.reduce(calc.agg_dicts)
+        for args in allargs:
+            smap.submit(args)
+        smap.reduce(calc.agg_dicts)
+    else:
+        for args in allargs:
+            smap.submit(args)
+        smap.reduce(calc.agg_dicts)
 
 
 def run(func, oq, rup0, calc):
@@ -737,9 +730,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                for imt in primary:
-                    hdf5.extend(self.datastore[f'gmf_data/{imt}'],
-                                df[imt].to_numpy())
+                for im in primary:
+                    hdf5.extend(self.datastore[f'gmf_data/{im}'],
+                                df[im].to_numpy())
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
                                 df[sec_imt].to_numpy())
