@@ -303,20 +303,6 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_args(dstore):
-    """
-    Get the arguments (rups, cmaker, sids, stations, hdf5path);
-    useful for debugging
-    """
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    try:
-        assetcol = dstore['assetcol']
-    except KeyError:
-        assetcol = None
-    return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
-
-
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
@@ -461,7 +447,6 @@ def run_conditioned(oq, rup0, full_lt, calc):
             raise ValueError(
                 f'The calculation is too large: {G=}, {M=}, {N=}. '
                 'You must reduce the number of sites i.e. maximum_distance')
-        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
     else:
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
@@ -478,10 +463,15 @@ def run_conditioned(oq, rup0, full_lt, calc):
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     if station_sites:
+        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         smap.share(mea=mea, tau=tau, phi=phi)
-    for args in allargs:
-        smap.submit(args)
-    smap.reduce(calc.agg_dicts)
+        for args in allargs:
+            smap.submit(args)
+        smap.reduce(calc.agg_dicts)
+    else:
+        for args in allargs:
+            smap.submit(args)
+        smap.reduce(calc.agg_dicts)
 
 
 def run(func, oq, rup0, calc):
