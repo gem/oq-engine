@@ -200,7 +200,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
         oq._amplifier, sec_perils)
 
 
-def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
+def _event_based(proxies, cmaker, sec_perils, conditioner, srcfilter, shr,
                  cmon, umon):
     oq = cmaker.oq
     alldata = []
@@ -215,16 +215,22 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             continue
-        try:
-            ebr = proxy.to_ebr(cmaker.trt)
-            computer = get_computer(cmaker, ebr, sites, sec_perils, *stations)
-        except FarAwayRupture:
-            continue
-        if stations and len(stations[0]):  # conditioned GMFs
+        ebr = proxy.to_ebr(cmaker.trt)
+        if conditioner:  # conditioned GMFs
             assert cmaker.scenario
+            try:
+                computer = get_computer(cmaker, ebr, sites, sec_perils,
+                                        conditioner.stations,
+                                        conditioner.sites_D.sids)
+            except FarAwayRupture:
+                continue
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
+            try:
+                computer = get_computer(cmaker, ebr, sites, sec_perils)
+            except FarAwayRupture:
+                continue
             df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
@@ -248,7 +254,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
+def event_based(rups, cmaker, sids, secperils, conditioner, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -270,11 +276,12 @@ def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']
-        sites = complete.filtered(sids) if len(stations[0]) == 0 else complete
+        sites = (complete.filtered(sids) if len(conditioner.stations) == 0
+                 else complete)
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
-        yield _event_based(block, cmaker, secperils, stations, srcfilter,
+        yield _event_based(block, cmaker, secperils, conditioner, srcfilter,
                            monitor.shared, cmon, umon)
 
 
@@ -350,9 +357,9 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     return filrups, maxw, acc
 
 
-def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
+def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     """
-    :returns: list of starmap arguments
+    :returns: list of starmap arguments for event based calculations
     """
     trts = {}
     for model, full_lt in get_model_lts(dstore):
@@ -397,7 +404,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, dstore)
+                    sec_perils, ((), ()), dstore)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
@@ -455,23 +462,23 @@ def run_conditioned(oq, rup0, full_lt, calc):
     del proxy.geom  # to reduce data transfer
 
     assetcol = getattr(calc, 'assetcol', None)
-    if station_data is None:
-        station_data = ()
-        stations = ()
-    else:
-        stations = station_sites.sids
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data, stations), dstore)
-    assert len(allargs) < TWO16, len(allargs)
-    dstore.swmr_on()
+    allargs = ()
+
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     if station_sites:
+        prec = computer.build_precomputed()
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         smap.share(mea=mea, tau=tau, phi=phi)
-        for args in allargs:
+        for cond in prec.conditioners:
+            cm = calc.maker.copy(imtls={cond.imt: [0]}, gsims=[cond.gsim])
+            args = ([rup0], cm, calc.sitecol.sids, oq.sec_perils,
+                    cond, dstore)
             smap.submit(args)
         smap.reduce(calc.agg_dicts)
     else:
+        allargs = get_allargs(oq, calc.sitecol, assetcol,
+                              calc.sec_perils, dstore)
+        dstore.swmr_on()
         for args in allargs:
             smap.submit(args)
         smap.reduce(calc.agg_dicts)
@@ -487,10 +494,9 @@ def run(func, oq, rup0, calc):
     if "station_data" in oq.inputs:
         run_conditioned(oq, rup0, full_lt, calc)
         return
-
     assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          ((), ()), dstore)
+    allargs = get_allargs(
+        oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
