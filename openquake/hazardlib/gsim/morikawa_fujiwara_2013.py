@@ -38,7 +38,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
-from openquake.hazardlib.gsim.si_midorikawa_1999 import set_mean as _sm1999_set_mean
+from openquake.hazardlib.gsim.si_midorikawa_1999 import (
+    set_mean as _sm1999_set_mean, _get_min_distance_to_volcanic_front)
 
 
 CONSTS = {
@@ -46,6 +47,35 @@ CONSTS = {
     "e": 0.5,
     "Mw01": 8.2,
     "Mw1": 16.0}
+
+# Volcanic front traces provided by NIED
+VOLC_FRONTS = {
+    "pacific": [
+        (24.0, 141.6),
+        (31.0, 140.2),
+        (34.1, 139.7),
+        (36.1, 138.7),
+        (37.2, 140.1),
+        (39.3, 141.0),
+        (42.6, 141.2),
+        (43.6, 145.0),
+        (44.3, 146.9),
+        (45.9, 150.0),
+    ],
+    "philippine": [
+        (24.5, 122.0),
+        (24.5, 124.0),
+        (27.9, 128.3),
+        (29.5, 129.7),
+        (31.5, 130.8),
+        (33.4, 131.6),
+        (34.9, 132.0),
+        (35.3, 133.7),
+        (35.3, 134.9),
+        (36.2, 136.9),
+        (36.2, 138.7),
+    ],
+}
 
 
 ### NIED sigma model functions ###
@@ -131,9 +161,24 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
           to full (unity) at 36.5 deg north.
         - SW correction is restricted to sites west of 136.9 deg east.
     """
+    # No region so apply no anomalous intensity correction
+    if region is None:
+        return 0.
+
+    # Select volc front geometry to compute xvf with
+    if region == "NE":
+        front = 'pacific' # Associate NE with Pacific volc front
+    else:
+        front = 'phillipines' # Associate SW with Phillipines volc front
+    vf_lon = np.array([coo[0] for coo in VOLC_FRONTS[front]])
+    vf_lat = np.array([coo[1] for coo in VOLC_FRONTS[front]])
+
+    # Get xvf
+    xvf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat, vf_lon, vf_lat)
+
     if region == 'NE':
         gamma = C['gNE']
-        corr = gamma * ctx.xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
         if nied_anom_corr:
             # Only apply in the NIED subclasses (2025 NSHM)
             taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
@@ -142,8 +187,8 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
     
     elif region == 'SW': # Clip xvf and only apply to >= 60 km events
         gamma = C['gSW']
-        xvf = np.minimum(ctx.xvf, 75.0)
-        corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        xvf_filt = np.minimum(xvf, 75.0)
+        corr = gamma * xvf_filt * np.maximum(ctx.hypo_depth - 30., 0.)
         # Only apply for events >= 60 km
         mask = ctx.hypo_depth < 60
         if nied_anom_corr:
@@ -151,9 +196,6 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
             mask = mask | (ctx.lon >= 136.9)
         corr[mask] = 0.
         return corr
-    
-    elif region is None:
-        return 0.
     
     else:
         raise ValueError('Unsupported region')
@@ -211,8 +253,9 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required site parameters are:
     #: - Vs30 - time averaged shear-wave velocity [m/s]
     #: - z1p4 - Depth to the 1.4 km/s interface [m]
-    #: - xvf - Distance from the volcanic front [km, positive in the forearc]
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt4', 'xvf'}
+    #: - lon - Site longitude (for xvf computation)
+    #: - lat - Site latitude (for xvf computation)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt4', 'lon', 'lat'}
 
     #: Required rupture parameters are magnitude, and hypocentral depth [km].
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
@@ -377,13 +420,11 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
 
 class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
-    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
-    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
@@ -411,12 +452,10 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
 
 class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
-    REQUIRES_SITES_PARAMETERS = {'lat', 'vs30', 'z1pt4', 'xvf'}
     region = 'NE'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
 
 
 class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
-    REQUIRES_SITES_PARAMETERS = {'lon', 'vs30', 'z1pt4', 'xvf'}
     region = 'SW'
     nied_anom_corr = True # Apply 2025 NSHM version of AI correction
