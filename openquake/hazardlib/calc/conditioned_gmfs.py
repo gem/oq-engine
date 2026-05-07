@@ -456,11 +456,31 @@ def compute_spatial_cross_covariance_matrix(
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
 class Conditioner:
-    def __init__(self, g, gsim, m, target_imt, inp, mean_stds, mean_stds_D):
-        self.args = (g, gsim, m, target_imt, inp, mean_stds, mean_stds_D)
+    def __init__(self, g, gsim, inp, mean_stds, mean_stds_D):
+        self.args = (g, gsim, inp, mean_stds, mean_stds_D)
 
-    def get_mu_tau_phi(self, monitor):
-        g, gsim, m, target_imt, inp, mean_stds, mean_stds_D = self.args
+    @property
+    def g(self):
+        return self.args[0]
+
+    @property
+    def gsim(self):
+        return self.args[1]
+
+    @property
+    def inp(self):
+        return self.args[2]
+
+    @property
+    def mean_stds_Y(self):
+        return self.args[3]
+
+    @property
+    def mean_stds_D(self):
+        return self.args[4]
+
+    def get_mu_tau_phi(self, m, target_imt, monitor):
+        g, gsim, inp, mean_stds, mean_stds_D = self.args
 
         # mean_stds has shape (4, G=1, M=1, N)
         # Using Bayes rule, compute the posterior distribution of the
@@ -570,9 +590,8 @@ def build_precomputed(rupture, cmaker, inp):
         mean_stds_D = cm_D.get_mean_stds([pre.ctx_D])
         cm_Y = cmaker.copy(imtls={inp.imts_Y[0].string: [0]}, gsims=gdict)
         mean_stds_Y = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
-        for m, target_imt in enumerate(inp.imts_Y):
-            pre.conditioners.append(Conditioner(g, gsim, m, target_imt, inp,
-                                                mean_stds_Y, mean_stds_D))
+        pre.conditioners.append(Conditioner(
+            g, gsim, inp, mean_stds_Y, mean_stds_D))
     return pre
 
 
@@ -580,7 +599,8 @@ def get_mu_tau_phi(conditioner, monitor):
     """
     Run the conditioner object and returns mu, tau, phi
     """
-    return conditioner.get_mu_tau_phi(monitor)
+    for m, imt in enumerate(conditioner.inp.imts_Y):
+        yield conditioner.get_mu_tau_phi(m, imt, monitor)
 
 
 # calls get_mu_tau_phi in parallel

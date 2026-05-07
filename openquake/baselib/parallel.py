@@ -1000,7 +1000,8 @@ class Starmap(object):
                 todo = set(range(self.task_no)) - finished
                 logging.debug('%d tasks todo %s', len(todo),
                               shortlist(sorted(todo)))
-                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+                string = decode(self.h5['task_sent'][()])
+                task_sent = ast.literal_eval(string)
                 task_sent.update(self.sent)
                 if self.h5.mode != 'r':
                     del self.h5['task_sent']

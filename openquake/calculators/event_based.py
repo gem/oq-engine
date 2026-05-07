@@ -220,8 +220,8 @@ def _event_based(proxies, cmaker, sec_perils, conditioner, srcfilter, shr,
             assert cmaker.scenario
             try:
                 computer = get_computer(cmaker, ebr, sites, sec_perils,
-                                        conditioner.stations,
-                                        conditioner.sites_D.sids)
+                                        conditioner.inp.stations,
+                                        conditioner.inp.sites_D.sids)
             except FarAwayRupture:
                 continue
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
@@ -276,7 +276,7 @@ def event_based(rups, cmaker, sids, secperils, conditioner, dstore, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']
-        sites = (complete.filtered(sids) if len(conditioner.stations) == 0
+        sites = (complete.filtered(sids) if len(conditioner.inp.stations) == 0
                  else complete)
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
@@ -404,7 +404,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, ((), ()), dstore)
+                    sec_perils, None, dstore)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
@@ -464,24 +464,27 @@ def run_conditioned(oq, rup0, full_lt, calc):
     assetcol = getattr(calc, 'assetcol', None)
     allargs = ()
 
-    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     if station_sites:
         prec = computer.build_precomputed()
-        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
-        smap.share(mea=mea, tau=tau, phi=phi)
+        allargs = []
         for cond in prec.conditioners:
-            cm = calc.maker.copy(imtls={cond.imt: [0]}, gsims=[cond.gsim])
-            args = ([rup0], cm, calc.sitecol.sids, oq.sec_perils,
+            rlzs_by_gsim = {cond.gsim: calc.cmaker.gsims[cond.gsim]}
+            cm = calc.cmaker.copy(gsims=rlzs_by_gsim)
+            cm.min_mag = getdefault(oq.minimum_magnitude, trt)
+            args = ([rup0], cm, calc.sitecol.sids, calc.sec_perils,
                     cond, dstore)
-            smap.submit(args)
-        smap.reduce(calc.agg_dicts)
+            allargs.append(args)
     else:
         allargs = get_allargs(oq, calc.sitecol, assetcol,
                               calc.sec_perils, dstore)
-        dstore.swmr_on()
-        for args in allargs:
-            smap.submit(args)
-        smap.reduce(calc.agg_dicts)
+    dstore.swmr_on()
+    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
+    if station_sites:
+        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
+        smap.share(mea=mea, tau=tau, phi=phi)
+    for args in allargs:
+        smap.submit(args)
+    smap.reduce(calc.agg_dicts)
 
 
 def run(func, oq, rup0, calc):
