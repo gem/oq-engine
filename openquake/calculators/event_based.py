@@ -113,8 +113,8 @@ def build_hcurves(dstore):
     for (sid, rlz), df in gmf_df.groupby(['sid', 'rlz_id']):
         with hc_mon:
             poes = gmvs_to_poes(df, imtls, oq.ses_per_logic_tree_path)
-            for m, imt in enumerate(imtls):
-                hcurves[rsi2str(rlz, sid, imt)] = poes[m]
+            for m, im in enumerate(imtls):
+                hcurves[rsi2str(rlz, sid, im)] = poes[m]
     pmaps = {r: MapArray(sitecol.sids, L1*C, 1).fill(0)
              for r in range(R)}
     slc = {imt: slice(m * L1, m * L1 + L1) for m, imt in enumerate(imtls)}
@@ -603,7 +603,8 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
+        elif (oq.mosaic_model or
+              logs.get_country_or_model(oq.inputs['job_ini'])):
             # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
