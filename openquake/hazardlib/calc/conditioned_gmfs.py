@@ -455,12 +455,18 @@ def compute_spatial_cross_covariance_matrix(
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
-def get_mu_tau_phi(t, gsim, mean_stds, inp, monitor):
+def get_mu_tau_phi(g, gsim, m, target_imt, inp, mean_stds, mean_stds_D,
+                   monitor):
     # mean_stds has shape (4, G=1, M=1, N)
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance
+
+    # build temporary matrices
+    with monitor.shared['DD'] as DD:
+        t = create_temp(g, m, target_imt, inp, mean_stds_D, DD)
+
     cov_HD_HD_yD = numpy.linalg.pinv(
         t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
 
@@ -558,10 +564,10 @@ def build_precomputed(rupture, cmaker, inp):
                            gsims=gdict)
         mean_stds_D = cm_D.get_mean_stds([pre.ctx_D])
         cm_Y = cmaker.copy(imtls={inp.imts_Y[0].string: [0]}, gsims=gdict)
-        mean_stds = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
+        mean_stds_Y = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         for m, target_imt in enumerate(inp.imts_Y):
-            temp = create_temp(g, m, target_imt, inp, mean_stds_D, pre.DD)
-            pre.mtp_args.append((temp, gsim, mean_stds, inp))
+            pre.mtp_args.append((g, gsim, m, target_imt, inp,
+                                 mean_stds_Y, mean_stds_D))
     return pre
 
 
