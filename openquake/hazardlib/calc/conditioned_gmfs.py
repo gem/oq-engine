@@ -550,6 +550,12 @@ def get_mu_tau_phi(g, gsim, m, target_imt, inp, mean_stds, mean_stds_D,
 
 
 def build_precomputed(rupture, cmaker, inp):
+    """
+    :param rupture: hazardlib rupture
+    :param cmaker: ContextMaker
+    :param inp: Input with sites, imts, stations and correlation params
+    :return: Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, mtp_args) tuple
+    """
     pre = get_precomputed(rupture, cmaker, inp)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
