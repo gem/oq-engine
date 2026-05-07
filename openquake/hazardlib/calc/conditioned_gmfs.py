@@ -268,6 +268,7 @@ class TempResult:
     """
     g: int
     m: int
+    imt: str
     bracketed_imts: list
     conditioning_imts: list
     native_data_available: bool
@@ -320,7 +321,7 @@ def _create_temp(g, m, target_imt, imts_D, sdata):
                 f"The station data contains {num_null_values}"
                 f" null values for {target_imt.string}."
                 " Please fill or discard these rows.")
-    t = TempResult(g, m, bracketed_imts, conditioning_imts,
+    t = TempResult(g, m, target_imt, bracketed_imts, conditioning_imts,
                    native_data_available)
     return t
 
@@ -454,7 +455,7 @@ def compute_spatial_cross_covariance_matrix(
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
 # NB: this is run in parallel
-def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
+def get_mu_tau_phi(t, gsim, mean_stds, inp, monitor):
     # mean_stds has shape (4, G=1, M=1, N)
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
@@ -478,7 +479,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
     msg = ("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
            "Nominal bias stddev: %.3f" % (
                gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-               target_imt, nominal_bias_mean, nominal_bias_stddev))
+               t.imt, nominal_bias_mean, nominal_bias_stddev))
 
     # Predicted mean at the target sites, from GSIM
     mu_Y = mean_stds[0, 0, 0, :, numpy.newaxis]
@@ -493,12 +494,12 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
     with monitor.shared['YD'] as YD:
         cov_WY_WD = compute_spatial_cross_covariance_matrix(
             inp.spatial_correl, inp.cross_correl_within, YD,
-            [target_imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
+            [t.imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
 
     with monitor.shared['DY'] as DY:
         cov_WD_WY = compute_spatial_cross_covariance_matrix(
             inp.spatial_correl, inp.cross_correl_within, DY,
-            t.conditioning_imts, [target_imt], t.phi_D_diag, phi_Y_diag)
+            t.conditioning_imts, [t.imt], t.phi_D_diag, phi_Y_diag)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
@@ -518,7 +519,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
     with monitor.shared['YY'] as YY:
         cov_WY_WY = compute_spatial_cross_covariance_matrix(
             inp.spatial_correl, inp.cross_correl_within, YY,
-            [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
+            [t.imt], [t.imt], phi_Y_diag, phi_Y_diag)
 
     # Both conditioned covariance matrices can contain extremely
     # small negative values due to limitations of floating point
@@ -560,7 +561,7 @@ def build_precomputed(rupture, cmaker, inp):
         mean_stds = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         for m, target_imt in enumerate(inp.imts_Y):
             temp = create_temp(g, m, target_imt, inp, mean_stds_D, pre.DD)
-            pre.mtp_args.append((target_imt, gsim, mean_stds, inp, temp))
+            pre.mtp_args.append((temp, gsim, mean_stds, inp))
     return pre
 
 
