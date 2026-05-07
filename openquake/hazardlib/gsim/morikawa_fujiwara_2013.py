@@ -156,6 +156,9 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
     """
     Anomalous intensity correction (equation 11).
 
+    We compute xvf by a ctx by ctx basis because we want to use a
+    different volcanic front depending on the region parameter.
+
     NOTE: When nied_anom_corr is True (NIED subclasses):
         - NE correction is tapered linearly from zero at 35.5 deg north
           to full (unity) at 36.5 deg north.
@@ -169,9 +172,10 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
     if region == "NE":
         front = 'pacific' # Associate NE with Pacific volc front
     else:
-        front = 'phillipines' # Associate SW with Phillipines volc front
-    vf_lon = np.array([coo[0] for coo in VOLC_FRONTS[front]])
-    vf_lat = np.array([coo[1] for coo in VOLC_FRONTS[front]])
+        front = 'philippine'  # Associate SW with Philippine volc front
+    # VOLC_FRONTS tuples are (lat, lon)
+    vf_lat = np.array([coo[0] for coo in VOLC_FRONTS[front]])
+    vf_lon = np.array([coo[1] for coo in VOLC_FRONTS[front]])
 
     # Get xvf
     xvf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat, vf_lon, vf_lat)
