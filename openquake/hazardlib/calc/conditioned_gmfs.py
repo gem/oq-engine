@@ -330,13 +330,13 @@ def create_temp(g, m, target_imt, inp, mean_stds_D, DD):
     :returns: a TempResult
     """
     sdata = {}
-    for im, ms in zip(inp.imts_D, mean_stds_D):
+    for im, ms in zip(inp.imts_D, mean_stds_D.transpose(2, 0, 1, 3)):
         sdata[im.string + "_mean"] = inp.stations[im.string + "_mean"]
         sdata[im.string + "_std"] = inp.stations[im.string + "_std"]
-        sdata[im.string + "_median"] = ms[0, 0, 0]
-        sdata[im.string + "_sigma"] = ms[1, 0, 0]
-        sdata[im.string + "_tau"] = ms[2, 0, 0]
-        sdata[im.string + "_phi"] = ms[3, 0, 0]
+        sdata[im.string + "_median"] = ms[0, 0]
+        sdata[im.string + "_sigma"] = ms[1, 0]
+        sdata[im.string + "_tau"] = ms[2, 0]
+        sdata[im.string + "_phi"] = ms[3, 0]
     sdata = pandas.DataFrame(sdata)
 
     t = _create_temp(g, m, target_imt, inp.imts_D, sdata)
@@ -553,10 +553,9 @@ def build_precomputed(rupture, cmaker, inp):
         # NB: there are relatively few stations, so cm.get_mean_stds([ctx_D])
         # is fast and done sequentially, while ctx_Y is done in parallel
         gdict = {gsim: cmaker.gsims[gsim]}
-        mean_stds_D = []
-        for m, o_imt in enumerate(inp.imts_D):
-            cm = cmaker.copy(imtls={o_imt.string: [0]}, gsims=gdict)
-            mean_stds_D.append(cm.get_mean_stds([pre.ctx_D]))
+        cm_D = cmaker.copy(imtls={im.string: [0] for im in inp.imts_D},
+                           gsims=gdict)
+        mean_stds_D = cm_D.get_mean_stds([pre.ctx_D])
         cm_Y = cmaker.copy(imtls={inp.imts_Y[0].string: [0]}, gsims=gdict)
         mean_stds = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         for m, target_imt in enumerate(inp.imts_Y):
