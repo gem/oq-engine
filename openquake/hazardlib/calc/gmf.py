@@ -354,12 +354,12 @@ class GmfComputer(object):
     def tlw(self):
         return self.cmaker.truncation_level_within
 
-    def compute_all(self, mean_stds=None, cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mean_stds, cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         max_iml = self.cmaker.oq.get_max_iml()
-        conditioned = mean_stds is not None
+        conditioned = isinstance(mean_stds, list)  # triplet
         rng = np.random.default_rng(self.seed)
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
@@ -369,11 +369,6 @@ class GmfComputer(object):
             E = len(idxs)
             if E == 0:  # crucial for performance
                 continue
-            if mean_stds is None:
-                with self.cmaker.gmf_mon:
-                    ms = self.cmaker.get_4MN([self.ctx], gs)
-            else:  # conditioned
-                ms = (mean_stds[0][g], mean_stds[1][g], mean_stds[2][g])
             with cmon:
                 E = len(idxs)
                 result = np.zeros(
@@ -396,10 +391,15 @@ class GmfComputer(object):
                             self.cross_correl.get_inter_eps(self.imts, E, rng).T
                 mean = []
                 for m, imt in enumerate(self.imts):
-                    ms_m = [arr[m] for arr in ms]
-                    mean.append(ms_m[0])
+                    if conditioned:
+                        ms = (mean_stds[0][g, m],
+                              mean_stds[1][g, m],
+                              mean_stds[2][g, m])
+                    else:
+                        ms = mean_stds[:, g, m]
+                    mean.append(ms[0])
                     self._compute_update(
-                        result, m, imt, gs, ms_m, idxs, within_eps, rng)
+                        result, m, imt, gs, ms, idxs, within_eps, rng)
             with umon:
                 result = result.transpose(1, 0, 2)  # shape (N, M, E)
                 self.update(data, result, rlzs, np.array(mean), max_iml)
