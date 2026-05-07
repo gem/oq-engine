@@ -113,8 +113,8 @@ def build_hcurves(dstore):
     for (sid, rlz), df in gmf_df.groupby(['sid', 'rlz_id']):
         with hc_mon:
             poes = gmvs_to_poes(df, imtls, oq.ses_per_logic_tree_path)
-            for m, imt in enumerate(imtls):
-                hcurves[rsi2str(rlz, sid, imt)] = poes[m]
+            for m, im in enumerate(imtls):
+                hcurves[rsi2str(rlz, sid, im)] = poes[m]
     pmaps = {r: MapArray(sitecol.sids, L1*C, 1).fill(0)
              for r in range(R)}
     slc = {imt: slice(m * L1, m * L1 + L1) for m, imt in enumerate(imtls)}
@@ -603,7 +603,8 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif oq.mosaic_model or logs.get_country_or_model(oq.inputs['job_ini']):
+        elif (oq.mosaic_model or
+              logs.get_country_or_model(oq.inputs['job_ini'])):
             # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
@@ -938,11 +939,11 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.impact:
             imts = list(self.oqparam.imtls)
             ex = Extractor(self.datastore.calc_id)
-            for imt in imts:
-                plt = plot_avg_gmf(ex, imt)
+            for im in imts:
+                plt = plot_avg_gmf(ex, im)
                 bio = io.BytesIO()
                 plt.savefig(bio, format='png', bbox_inches='tight')
-                fig_path = f'png/avg_gmf-{imt}.png'
+                fig_path = f'png/avg_gmf-{im}.png'
                 logging.info(f'Saving {fig_path} into the datastore')
                 self.datastore[fig_path] = Image.open(bio)
 
@@ -982,14 +983,14 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.cl.run()
                     expose_outputs(self.cl.datastore)
                     all = slice(None)
-                    for imt in oq.imtls:
+                    for im in oq.imtls:
                         cl_mean_curves = get_mean_curve(
-                            self.datastore, imt, all)
+                            self.datastore, im, all)
                         eb_mean_curves = get_mean_curve(
-                            self.datastore, imt, all)
+                            self.datastore, im, all)
                         self.rdiff, index = util.max_rel_diff_index(
                             cl_mean_curves, eb_mean_curves)
                         logging.warning(
                             'Relative difference with the classical '
                             'mean curves: %d%% at site index %d, imt=%s',
-                            self.rdiff * 100, index, imt)
+                            self.rdiff * 100, index, im)
