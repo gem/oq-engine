@@ -572,7 +572,7 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY)
+    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
     for args in pre.mtp_args:
         smap.submit(args)
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
