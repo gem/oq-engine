@@ -431,6 +431,18 @@ def compute_distance_matrix(sites1, sites2):
     return distance_matrix.astype(F32)
 
 
+def _compute_spatial_cross_correlation_matrix(
+        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix):
+    if imt_1 == imt_2:
+        # since we have a single IMT, there are no cross-correlation terms
+        return spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
+    matrix1 = spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
+    matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
+    spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
+    cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
+    return spatial_correlation_matrix * cross_corr_coeff
+
+
 def compute_spatial_cross_covariance_matrix(
         spatial_correl, cross_correl_within, distance_matrix,
         imts1, imts2, diag1, diag2):
@@ -641,15 +653,3 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
     else:
         # save memory since sigma = tau + phi is not needed
         return [me, ta, ph]
-
-
-def _compute_spatial_cross_correlation_matrix(
-        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix):
-    if imt_1 == imt_2:
-        # since we have a single IMT, there are no cross-correlation terms
-        return spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
-    matrix1 = spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
-    matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
-    spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
-    cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
-    return spatial_correlation_matrix * cross_corr_coeff
