@@ -219,7 +219,7 @@ class ConditionedGmfComputer(GmfComputer):
         clust = ground_motion_correlation_params.get("vs30_clustering", True)
         self.rupture = rupture
 
-        # Target IMT is not PGA or SA: Currently not supported
+        # Target IMT must be PGA or SA
         target_imts = [imt for imt in self.imts
                        if imt.period or imt.string == "PGA"]
 
