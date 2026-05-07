@@ -278,7 +278,7 @@ class TempResult:
     zeta_D: numpy.ndarray = 0
 
 
-def _create_temp(g, m, target_imt, imts_D, station_data_filtered):
+def _create_temp(g, m, target_imt, imts_D, sdata):
     # returns (g, m, conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
@@ -313,7 +313,7 @@ def _create_temp(g, m, target_imt, imts_D, station_data_filtered):
     # Check if the station data for the IMTs shortlisted for conditioning
     # contains NaNs
     for conditioning_imt in conditioning_imts:
-        num_null_values = station_data_filtered[
+        num_null_values = sdata[
             conditioning_imt.string + "_mean"].isna().sum()
         if num_null_values:
             raise ValueError(
@@ -329,39 +329,41 @@ def create_temp(g, m, target_imt, inp, mean_stds_D, DD):
     """
     :returns: a TempResult
     """
-    sdata = inp.stations
+    sdata = {}
     for im, ms in zip(inp.imts_D, mean_stds_D):
+        sdata[im.string + "_mean"] = inp.stations[im.string + "_mean"]
+        sdata[im.string + "_std"] = inp.stations[im.string + "_std"]
         sdata[im.string + "_median"] = ms[0, 0, 0]
         sdata[im.string + "_sigma"] = ms[1, 0, 0]
         sdata[im.string + "_tau"] = ms[2, 0, 0]
         sdata[im.string + "_phi"] = ms[3, 0, 0]
+    sdata = pandas.DataFrame(sdata)
 
-    t = _create_temp(g, m, target_imt, inp.imts_D, inp.stations)
+    t = _create_temp(g, m, target_imt, inp.imts_D, sdata)
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
-        inp.stations[
-            [c_imt.string + "_mean" for c_imt in t.conditioning_imts]]
+        sdata[[c_imt.string + "_mean" for c_imt in t.conditioning_imts]]
     ).values.reshape((-1, 1), order="F")
 
     # Additional sigma for the observations that are uncertain
     # These arise if the values for this particular IMT were not
     # directly recorded, but obtained by conversion equations or
     # cross-correlation functions
-    var_addon_D = inp.stations[
+    var_addon_D = sdata[
         [c_imt.string + "_std" for c_imt in t.conditioning_imts]
     ].values.reshape((-1, 1), order="F") ** 2
 
     # Predicted mean at the observation points, from GSIM(s)
-    mu_yD = inp.stations[
+    mu_yD = sdata[
         [c_imt.string + "_median" for c_imt in t.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
     # Predicted uncertainty components at the observation points
     # from GSIM(s)
-    phi_D = inp.stations[
+    phi_D = sdata[
         [c_imt.string + "_phi" for c_imt in t.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
-    tau_D = inp.stations[
+    tau_D = sdata[
         [c_imt.string + "_tau" for c_imt in t.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
 
