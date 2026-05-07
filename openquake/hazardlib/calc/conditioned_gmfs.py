@@ -325,10 +325,17 @@ def _create_temp(g, m, target_imt, imts_D, station_data_filtered):
     return t
 
 
-def create_temp(g, m, target_imt, inp, DD):
+def create_temp(g, m, target_imt, inp, mean_stds_D, DD):
     """
     :returns: a TempResult
     """
+    sdata = inp.stations
+    for im, ms in zip(inp.imts_D, mean_stds_D):
+        sdata[im.string + "_median"] = ms[0, 0, 0]
+        sdata[im.string + "_sigma"] = ms[1, 0, 0]
+        sdata[im.string + "_tau"] = ms[2, 0, 0]
+        sdata[im.string + "_phi"] = ms[3, 0, 0]
+
     t = _create_temp(g, m, target_imt, inp.imts_D, inp.stations)
 
     # Observations (recorded values at the stations)
@@ -535,7 +542,6 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds, inp, t, monitor):
 
 def build_precomputed(rupture, cmaker, inp):
     pre = get_precomputed(rupture, cmaker, inp)
-    sdata = inp.stations
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -545,18 +551,14 @@ def build_precomputed(rupture, cmaker, inp):
         # NB: there are relatively few stations, so cm.get_mean_stds([ctx_D])
         # is fast and done sequentially, while ctx_Y is done in parallel
         gdict = {gsim: cmaker.gsims[gsim]}
+        mean_stds_D = []
         for m, o_imt in enumerate(inp.imts_D):
-            im = o_imt.string
-            cm = cmaker.copy(imtls={im: [0]}, gsims=gdict)
-            mean_stds_D = cm.get_mean_stds([pre.ctx_D])
-            sdata[im + "_median"] = mean_stds_D[0, 0, 0]
-            sdata[im + "_sigma"] = mean_stds_D[1, 0, 0]
-            sdata[im + "_tau"] = mean_stds_D[2, 0, 0]
-            sdata[im + "_phi"] = mean_stds_D[3, 0, 0]
+            cm = cmaker.copy(imtls={o_imt.string: [0]}, gsims=gdict)
+            mean_stds_D.append(cm.get_mean_stds([pre.ctx_D]))
         cm_Y = cmaker.copy(imtls={inp.imts_Y[0].string: [0]}, gsims=gdict)
         mean_stds = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         for m, target_imt in enumerate(inp.imts_Y):
-            temp = create_temp(g, m, target_imt, inp, pre.DD)
+            temp = create_temp(g, m, target_imt, inp, mean_stds_D, pre.DD)
             pre.mtp_args.append((target_imt, gsim, mean_stds, inp, temp))
     return pre
 
