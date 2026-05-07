@@ -568,7 +568,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     ebr.seed = seed
     N, E = len(sites), realizations
     gc = GmfComputer(ebr, sites, cmaker, correlation_model)
-    df = gc.compute_all()
+    df = gc.compute_all(cmaker.get_mean_stds([gc.ctx]))
     res = {}
     for m, imt in enumerate(gc.imts):
         res[imt] = arr = np.zeros((N, E), F32)
