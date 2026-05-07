@@ -354,15 +354,18 @@ class GmfComputer(object):
     def tlw(self):
         return self.cmaker.truncation_level_within
 
-    def compute_all(self, mean_stds, cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mean_stds=None, cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         max_iml = self.cmaker.oq.get_max_iml()
-        conditioned = isinstance(mean_stds, list)  # triplet
         rng = np.random.default_rng(self.seed)
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
+        if mean_stds is None:
+            with self.cmaker.gmf_mon:
+                mean_stds = self.cmaker.get_mean_stds([self.ctx])
+        conditioned = isinstance(mean_stds, list)  # triplet
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             gs.gid = self.cmaker.gid[g]
             idxs, = np.where(np.isin(self.rlz, rlzs))
@@ -371,8 +374,7 @@ class GmfComputer(object):
                 continue
             with cmon:
                 E = len(idxs)
-                result = np.zeros(
-                    (len(self.imts), len(self.ctx.sids), E), F32)
+                result = np.zeros((len(self.imts), len(self.ctx.sids), E), F32)
                 if conditioned:
                     within_eps = [None] * self.M
                 else:
@@ -568,7 +570,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     ebr.seed = seed
     N, E = len(sites), realizations
     gc = GmfComputer(ebr, sites, cmaker, correlation_model)
-    df = gc.compute_all(cmaker.get_mean_stds([gc.ctx]))
+    df = gc.compute_all()
     res = {}
     for m, imt in enumerate(gc.imts):
         res[imt] = arr = np.zeros((N, E), F32)

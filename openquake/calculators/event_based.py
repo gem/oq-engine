@@ -225,9 +225,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
             with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
                 df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
-            with cmaker.gmf_mon:
-                ms = cmaker.get_mean_stds([computer.ctx])
-            df = computer.compute_all(ms, cmon, umon)
+            df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
                 mea_tau_phi.append(mtp)
