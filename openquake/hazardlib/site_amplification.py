@@ -386,19 +386,18 @@ class Amplifier(object):
         uncert = rng.normal(numpy.zeros_like(gmvs), isigma)
         return numpy.exp(numpy.log(ialpha * gmvs) + uncert)
 
-    def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
+    def amplify_gmfs(self, ampcodes, gmvs, m, imt, rng):
         """
         Amplify in-place the gmvs array of shape (M, N, E)
 
         :param ampcodes: N codes for the amplification functions
         :param gmvs: ground motion values
-        :param imts: intensity measure types
+        :param m: intensity measure index
+        :param imt: intensity measure type
         :param seed: seed used when adding the uncertainty
         """
-        rng = numpy.random.default_rng(seed)
-        for m, imt in enumerate(imts):
-            for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
-                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
+        for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
+            gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
 
 
 def get_poes_site(mean_std, cmaker, ctx):

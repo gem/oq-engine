@@ -415,9 +415,9 @@ class GmfComputer(object):
                 raise RuntimeError(
                     '(%s, %s): %s' % (gs, imt, msg)
                 ).with_traceback(exc.__traceback__)
-        if self.amplifier:
-            self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, self.imts, self.seed)
+            if self.amplifier:
+                self.amplifier.amplify_gmfs(
+                    self.ctx.ampcode, result, m, imt, rng)
 
     def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E, rng):
         N = len(cov_WY_WY)
