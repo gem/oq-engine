@@ -356,11 +356,11 @@ class GridAdjustedGMPE(GMPE):
                  sig_adjustment must (currently) be set to "none" or an error
                  will be raised.
 
-        * sub = Subtract variance (reduce sigma)
+        * sub = Subtract variance from given sigma component (reduce sigma)
 
-        * add = Add variance (inflate sigma)
+        * add = Add variance to given sigma component (inflate sigma)
 
-        * replace = Use this value instead for component of sigma
+        * replace = Use this value instead for given sigma component
 
       * sig_comp_modified (required when sig_adjustment is not "none"): Which
         std-dev component to adjust for the given residual term:
