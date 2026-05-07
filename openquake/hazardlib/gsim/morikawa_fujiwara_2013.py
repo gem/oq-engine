@@ -173,7 +173,6 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
         front = 'pacific' # Associate NE with Pacific volc front
     else:
         front = 'philippine'  # Associate SW with Philippine volc front
-    # VOLC_FRONTS tuples are (lat, lon)
     vf_lat = np.array([coo[0] for coo in VOLC_FRONTS[front]])
     vf_lon = np.array([coo[1] for coo in VOLC_FRONTS[front]])
 
