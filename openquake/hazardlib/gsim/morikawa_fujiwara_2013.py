@@ -49,33 +49,15 @@ CONSTS = {
     "Mw1": 16.0}
 
 # Volcanic front traces provided by NIED
-VOLC_FRONTS = {
-    "pacific": [
-        (24.0, 141.6),
-        (31.0, 140.2),
-        (34.1, 139.7),
-        (36.1, 138.7),
-        (37.2, 140.1),
-        (39.3, 141.0),
-        (42.6, 141.2),
-        (43.6, 145.0),
-        (44.3, 146.9),
-        (45.9, 150.0),
-    ],
-    "philippine": [
-        (24.5, 122.0),
-        (24.5, 124.0),
-        (27.9, 128.3),
-        (29.5, 129.7),
-        (31.5, 130.8),
-        (33.4, 131.6),
-        (34.9, 132.0),
-        (35.3, 133.7),
-        (35.3, 134.9),
-        (36.2, 136.9),
-        (36.2, 138.7),
-    ],
-}
+VOLC_FRONT_PAC_LATS = np.array([
+    24.0, 31.0, 34.1, 36.1, 37.2, 39.3, 42.6, 43.6, 44.3, 45.9])
+VOLC_FRONT_PAC_LONS = np.array([
+    141.6, 140.2, 139.7, 138.7, 140.1, 141.0, 141.2, 145.0, 146.9, 150.0])
+VOLC_FRONT_PHI_LATS = np.array([
+    24.5, 24.5, 27.9, 29.5, 31.5, 33.4, 34.9, 35.3, 35.3, 36.2, 36.2])
+VOLC_FRONT_PHI_LONS = np.array([
+    122.0, 124.0, 128.3, 129.7, 130.8, 131.6, 132.0, 133.7, 134.9,
+    136.9, 138.7])
 
 
 ### NIED sigma model functions ###
@@ -169,12 +151,10 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
         return 0.
 
     # Select volc front geometry to compute xvf with
-    if region == "NE":
-        front = 'pacific' # Associate NE with Pacific volc front
-    else:
-        front = 'philippine'  # Associate SW with Philippine volc front
-    vf_lat = np.array([coo[0] for coo in VOLC_FRONTS[front]])
-    vf_lon = np.array([coo[1] for coo in VOLC_FRONTS[front]])
+    if region == "NE":  # Associate NE with Pacific volc front
+        vf_lat, vf_lon = VOLC_FRONT_PAC_LATS, VOLC_FRONT_PAC_LONS
+    else:  # Associate SW with Philippine volc front
+        vf_lat, vf_lon = VOLC_FRONT_PHI_LATS, VOLC_FRONT_PHI_LONS
 
     # Get xvf
     xvf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat, vf_lon, vf_lat)
