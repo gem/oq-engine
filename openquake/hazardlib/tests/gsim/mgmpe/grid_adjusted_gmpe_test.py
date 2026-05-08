@@ -95,6 +95,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             gd["grids"]["PGA"]["dL2L"],
             LATS, LONS, gd["h3_res"])
         aae(mu, DL2L_MEANS[0], decimal=DP)
+        # Check that zero is returned for out-of-bounds coords
         mu = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
             np.array([-80.0]), np.array([170.0]), gd["h3_res"])
@@ -118,7 +119,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         for m in range(3):
             aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
                 decimal=DP)
-            # dL2L uses "replace" method so tau should be scalar DL2L_SIGS[m]
+            # dL2L uses "replace" method so tau is scalar of DL2L_SIGS[m]
             aae(tau[GRID, m], np.full(len(LATS), DL2L_SIGS[m]), decimal=DP)
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_SIGS[m] ** 2
