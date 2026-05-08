@@ -511,14 +511,13 @@ class Conditioner:
     def mean_stds_D(self):
         return self.args[4]
 
+    # Using Bayes rule, compute the posterior distribution of the
+    # normalized between-event residual H|YD=yD, employing
+    # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
+    # H|Y2=y2 is normally distributed with mean and covariance
     def get_mu_tau_phi(self, m, target_imt, monitor):
+        # NB: mean_stds matrices have shape (4, G=1, M=1, N)
         g, gsim, inp, mean_stds, mean_stds_D = self.args
-
-        # mean_stds has shape (4, G=1, M=1, N)
-        # Using Bayes rule, compute the posterior distribution of the
-        # normalized between-event residual H|YD=yD, employing
-        # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
-        # H|Y2=y2 is normally distributed with mean and covariance
 
         # build temporary matrices
         with monitor.shared['DD'] as DD:
