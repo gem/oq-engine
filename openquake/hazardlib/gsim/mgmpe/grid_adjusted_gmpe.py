@@ -97,7 +97,7 @@ def load_residual_grids(hdf5_path):
                             f"'{imt_str}'")
                     sig_scalar = grp.attrs[sig_key]
                     if sig_scalar < 0:
-                        # Forbid nonsensical negative sigma values
+                        # Forbid negative sigma values
                         raise ValueError(
                             f"Negative _sig value found for term "
                             f"'{term}' and IMT '{imt_str}'")
