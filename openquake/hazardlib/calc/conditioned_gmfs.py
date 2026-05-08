@@ -113,10 +113,10 @@ from collections import namedtuple
 import psutil
 import numpy
 import pandas
-from openquake.baselib import parallel
+from openquake.baselib import performance
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.calc.gmf import exp, GmfComputer, TRUNCATION_THRESHOLD
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
@@ -231,18 +231,8 @@ class ConditionedGmfComputer(GmfComputer):
             cross_correl_between or cross_correlation.GodaAtkinson2009(),
             cross_correlation.BakerJayaram2008())
 
-    def _compute(self, muWWBB, m, imt, gsim, within_eps, idxs):
-        # mea, tau, phi with shapes (N, 1), (N, N), (N, N)
-        mu_Y, cov_WY_WY, cov_BY_BY = muWWBB
-        E = len(idxs)
-        if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
-            arr = mu_Y.repeat(E, axis=1)
-        else:
-            arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E)
-        gmf = exp(arr, imt != "MMI")
-        return gmf  # shapes (N, E)
-
-    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E):
+    def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
+        rng = numpy.random.default_rng(self.seed)
         N = len(cov_WY_WY)
         cutoff = numpy.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
@@ -250,10 +240,10 @@ class ConditionedGmfComputer(GmfComputer):
                 self.cmaker.truncation_level == 99):
             # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
-            arr = self.rng.multivariate_normal(
+            arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            return arr.T
+                check_valid="raise", tol=1e-5, method="cholesky").T
+            return arr
 
         # NB: truncated MVN is used in the scenario risk tests
         # conditioned_stations, case_21_stations, case_26_stations
@@ -261,47 +251,20 @@ class ConditionedGmfComputer(GmfComputer):
         cov_BY_BY = cov_BY_BY + cutoff
 
         lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
-        seed_w = int(self.rng.integers(0, numpy.iinfo(numpy.int32).max))
+        seed_w = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
 
         z_w_truncated = TruncatedMVN(
             numpy.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
         ).sample(E)
 
         lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
-        seed_b = int(self.rng.integers(0, numpy.iinfo(numpy.int32).max))
+        seed_b = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
         z_b_truncated = TruncatedMVN(
             numpy.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
         ).sample(E)
 
         arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
         return arr
-
-    # parallelized
-    def get_mea_tau_phi(self, h5):
-        """
-        :returns: a list of arrays [mea, sig, tau, phi]
-        """
-        return get_mean_covs(
-            self.rupture, self.cmaker, self.inp, sigma=False, h5=h5)
-
-    # parallelized
-    def get_meaMNE(self, h5):
-        """
-        :returns: dictionary g -> (M, N, E+1)
-        """
-        pre = build_precomputed(self.rupture, self.cmaker, self.inp)
-        smap = parallel.Starmap(get_meaMNE, h5=h5)
-        smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
-        for cond in pre.conditioners:
-            smap.submit((self, cond))
-        return smap.reduce()  # g -> MNE
-
-    def build_precomputed(self):
-        """
-        :returns:
-           a list of G tuples of arguments needed to compute mea, tau, phi
-        """
-        return build_precomputed(self.rupture, self.cmaker, self.inp)
 
 
 @dataclass
@@ -640,7 +603,7 @@ class Conditioner:
         # Compute the conditioned between-event covariance matrix
         # for the target sites clipped to zero, shape (nsites, nsites)
         cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
-        return {(t.g, t.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
+        return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 
 def build_precomputed(rupture, cmaker, inp):
@@ -670,32 +633,29 @@ def build_precomputed(rupture, cmaker, inp):
     return pre
 
 
-def get_mu_tau_phi(conditioner, monitor):
-    """
-    Run the conditioner object and returns mu, tau, phi
-    """
-    for m, imt in enumerate(conditioner.inp.imts_Y):
-        yield conditioner.get_mu_tau_phi(m, imt, monitor)
-
-
-def get_meaMNE(computer, conditioner, monitor):
+# TODO: possibly switch to 32 bit floats
+def getMNE(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
-    E = computer.E
-    MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
-    g, m = conditioner.g, conditioner.m
+    E = computer.E // len(computer.cmaker.gsims)
+    MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
+    g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
-        mu, ta, ph = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
+        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)
         if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
-            MNE[m] = mu.repeat(computer.E, axis=1)
+            MNE[m, :, :E] = mu.repeat(E, axis=1)
         else:
-            MNE[m] = computer._compute_mvn(ta, ph, mu, E)
-    return {computer.g: MNE}
+            MNE[m, :, :E] = computer._compute_mvn(mu, ta, ph, E)
+        MNE[m, :, E] = mu[:, 0]  # shape (N, 1) -> N
+    return {g: MNE}
 
 
-# calls get_mu_tau_phi in parallel
-def get_me_ta_ph(rupture, cmaker, inp, h5):
+# used only in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
+def get_mean_covs(rupture, cmaker, inp, sigma=True):
+    """
+    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
+    """
     pre = build_precomputed(rupture, cmaker, inp)
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
@@ -703,24 +663,15 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    monitor = performance.Monitor()
+    monitor.set_shared(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
     for cond in pre.conditioners:
-        smap.submit((cond,))
-    for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
-        me[g, m] = mu
-        ta[g, m] = tau
-        ph[g, m] = phi
-        logging.info(msg)
-    return me, ta, ph
-
-
-# tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
-    """
-    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
-    """
-    me, ta, ph = get_me_ta_ph(rupture, cmaker, inp, h5)
+        for m, imt in enumerate(inp.imts_Y):
+            mu, tau, phi, msg = cond.get_mu_tau_phi(m, imt, monitor)
+            me[cond.g, m] = mu
+            ta[cond.g, m] = tau
+            ph[cond.g, m] = phi
+            logging.info(msg)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:

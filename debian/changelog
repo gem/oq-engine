@@ -12,13 +12,13 @@
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
     scaling and single station sigma) and some unit tests.
-  
+
   [Marco Pagani]
   * Fixing the calculation of ruptures with clusters and mutually exclusive
     sources
 
   [Michele Simionato]
-   * Computing the GMFs with a single core in scenario risk calculations,
+   * Computing the GMFs with a single core in scenario calculations,
      changing a bit the numbers (akin to a change of seed), but saving a
      lot of memory, especially in conditioned computations
    * Changed the distribution in damage calculations to split in blocks
