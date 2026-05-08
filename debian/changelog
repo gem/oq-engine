@@ -1,7 +1,3 @@
-  [Michele Simionato]
-  * Reduced significantly the memory consumption in conditioned scenarios
-    (8 times less memory with 4 IMTs)
-
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
@@ -22,7 +18,7 @@
     sources
 
   [Michele Simionato]
-   * Computing the GMFs with a single core in scenario risk calculations,
+   * Computing the GMFs with a single core in scenario calculations,
      changing a bit the numbers (akin to a change of seed), but saving a
      lot of memory, especially in conditioned computations
    * Changed the distribution in damage calculations to split in blocks
