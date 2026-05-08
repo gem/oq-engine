@@ -128,8 +128,7 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     retrieve a correction proportional to this distance to mean ground-motion.
 
     :param grid:
-        {cell_id: (oq_pgn, per_km_adj_value)} for a single correction term
-        and given imt
+        {cell_id: (oq_pgn, per_km_adj_value)} for a single term and given imt
     :param hypo_lons:
         Array of hypocentre longitudes
     :param hypo_lats:
@@ -179,10 +178,10 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
 
 def grid_lookup(grid_dict, lats, lons, h3_res):
     """
-    For each (lat, lon) pair resolve the h3 cell at successively finer
-    resolutions and return the gridded mean adjustment for the given
-    residual term. Locations that fall outside all grid cells receive
-    a correction of zero.
+    For each (lat, lon) pair resolve the h3 cell starting at the finest
+    h3 resolution and falling back to coarser resolutions, returning the
+    mean adjustment for the given residual term. Locations that fall
+    outside all grid cells receive a correction of zero.
 
     :param grid_dict:
         {cell_id: mean_adjustment_value} for a single correction term and IMT
@@ -222,7 +221,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     adjustment is always added.
 
     :param grid_data:
-        Dict of h3 gridded adjustments
+        Dict returned by load_residual_grids
     :param ctx:
         A ctx object recarray
     :param imt:
@@ -247,7 +246,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     for term, cfg in grid_data["res_terms"].items():
         # Example of (term, cfg):
         # term = 'dL2L'
-        # cfg = {'location': "hypo", sig_adjustment: "add", sig_component: "tau"}
+        # cfg = {'location': "hypo", sig_adjustment: "add", sig_comp_modified: "tau"}
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
@@ -330,9 +329,9 @@ class GridAdjustedGMPE(GMPE):
       is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
 
       * location: How to resolve the correction spatially, with each look-up
-                  resolving the location to a h3 cell, searching from coarse
-                  to fine. If a location falls outside all grid cells then a
-                  correction of zero is applied:
+                  resolving the location to a h3 cell, searching from finest
+                  to coarsest resolution. If a location falls outside all
+                  grid cells then a correction of zero is applied:
 
         * hypo = Use the rupture hypocentre (ctx.hypo_lat, ctx.hypo_lon)
 
@@ -384,7 +383,7 @@ class GridAdjustedGMPE(GMPE):
     oq-engine/openquake/qa_tests_data/classical/case_11/grid_adjustments.hdf5
 
     :param gmpe_name:
-        The underlying GMM to apply the grid-based adjustments too.
+        The underlying GMM to apply the grid-based adjustments to.
     :param grid_hdf5_file:
         Path to the hdf5 file with gridded adjustments.
     """
@@ -409,7 +408,7 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
-        # Check for any invalid 'location' assigmnents in res_terms
+        # Check for any invalid 'location' assignments in res_terms
         if any(cfg['location'] not in ['hypo', 'site', 'path'] for
                cfg in self.grid_data["res_terms"].values()):
             raise ValueError(
