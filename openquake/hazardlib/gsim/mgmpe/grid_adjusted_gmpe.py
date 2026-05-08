@@ -35,14 +35,14 @@ def load_residual_grids(hdf5_path):
     """
     Load the hdf5 residual grids into a dict with five keys:
 
-    * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for all
-      terms. Path terms also appear here (used only for skip check).
+    * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
+      hypo/site terms only.
 
-    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}}} — OQ pgn grids
+    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}}} - OQ pgn grids
       for path-based terms (used in raytracing), stored per term per IMT (cell
-      sets can differ across IMTs and across terms)
+      sets can differ across IMTs and across terms).
 
-    * sig_scalars: {imt_str: {term: float}} — one sigma-adjustment scalar per
+    * sig_scalars: {imt_str: {term: float}} - one sigma-adjustment scalar per
       term per IMT. Only populated when sig_adjustment is not "none".
       NOTE: when sig_adjustment is not none, the hdf5 must contain a scalar
       group attribute named "{term}_sig" on each IMT group.
@@ -108,7 +108,6 @@ def load_residual_grids(hdf5_path):
 
                     # Store grid for given term and imt
                     path_pgns[term][imt_str] = imt_pgns
-                    grids[imt_str][term] = val_dict
                 else:
                     # Hypo/site based correction - store plain mean dict
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
@@ -250,10 +249,6 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # term = 'dL2L'
         # cfg = {'location': "hypo", sig_adjustment: "add", sig_component: "tau"}
 
-        # Skip if this term has no data for the given IMT
-        if term not in entry:
-            continue
-
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
 
@@ -261,12 +256,19 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
             imt_str = str(imt)
+            # Skip if this term has no data for the given IMT
+            if term not in grid_data["path_pgns"] or imt_str not in grid_data["path_pgns"][term]:
+                continue
             mean_adj = raytrace_path_adj(
                 grid_data["path_pgns"][term][imt_str], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
         else:
+            # Skip if this term has no data for the given IMT
+            if term not in entry:
+                continue
+
             if cfg["location"] == "hypo":
                 # Hypo location-based
                 lats, lons = ctx.hypo_lat, ctx.hypo_lon
@@ -386,7 +388,7 @@ class GridAdjustedGMPE(GMPE):
     :param grid_hdf5_file:
         Path to the hdf5 file with gridded adjustments.
     """
-    # Req Params — set from underlying GMM via set_parameters()
+    # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()

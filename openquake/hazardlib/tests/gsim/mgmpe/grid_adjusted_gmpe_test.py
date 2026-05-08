@@ -30,8 +30,9 @@ aae = np.testing.assert_array_almost_equal
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Test file uses replacement adjustment method on tau and
-# subtract adjustment method on phi
-GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5") # Test hdf5 has per-cell values at h3 resolutions 2, 3, 4
+# subtract adjustment method on phi, with h3 resolutions
+# of 2, 3, 4
+GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
 # Test inputs
 BASE, GRID = 0, 1 # Integers of results for original vs modified GSIM
@@ -56,7 +57,7 @@ DS2S_MEANS = [
 DS2S_SIGS = [np.std(m) for m in DS2S_MEANS]
 
 ATT_PER_KM = np.array([0.005, 0.004, 0.003, 0.002])
-ATT_SIG = np.std(ATT_PER_KM)  # Scalar phi_P2P — same for all IMTs
+ATT_SIG = np.std(ATT_PER_KM)  # Scalar phi_P2P - same for all IMTs
 
 # Expected path adjustment per record
 EXPECTED_PATH_ADJ = np.array([0., 1.15658587, 2.10640224, 1.03237941])
