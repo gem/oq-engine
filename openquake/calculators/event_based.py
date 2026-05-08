@@ -404,29 +404,14 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
     return allargs
 
 
-def run_conditioned(oq, rup0, full_lt, calc):
+def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     """
     Run a conditioned scenario calculation amd store the GMFs
     """
-    assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
-    if parallel.oq_distribute() in ('zmq', 'slurm'):
-        logging.error('Conditioned scenarios are not meant to be run'
-                      ' on a cluster')
     dstore = calc.datastore
-    trt = full_lt.trts[0]
-    proxy = RuptureProxy(rup0)
-    proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
-    rup = proxy.to_ebr(trt).rupture
-    station_df = dstore.read_df('station_data', 'site_id')
-    maxdist = (oq.maximum_distance_stations or
-               oq.maximum_distance['default'][-1][1])
-    station_data, station_sites = filter_stations(
-        station_df, calc.sitecol.complete, rup, maxdist)
     considered = station_sites if station_sites else []
     dstore['stations_considered'] = considered
-
-    # assume scenario with a single true rupture
-    assert len(dstore['ruptures']) == 1
+    trt = full_lt.trts[0]
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
     cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
     cmaker.scenario = True
@@ -455,26 +440,16 @@ def run_conditioned(oq, rup0, full_lt, calc):
     del proxy.geom  # to reduce data transfer
 
     assetcol = getattr(calc, 'assetcol', None)
-    if station_data is None:
-        station_data = ()
-        stations = ()
-    else:
-        stations = station_sites.sids
     allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data, stations), dstore)
+                          (station_data, station_sites.sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    if station_sites:
-        mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
-        smap.share(mea=mea, tau=tau, phi=phi)
-        for args in allargs:
-            smap.submit(args)
-        smap.reduce(calc.agg_dicts)
-    else:
-        for args in allargs:
-            smap.submit(args)
-        smap.reduce(calc.agg_dicts)
+    mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
+    smap.share(mea=mea, tau=tau, phi=phi)
+    for args in allargs:
+        smap.submit(args)
+    smap.reduce(calc.agg_dicts)
 
 
 def run(func, oq, rup0, calc):
@@ -484,9 +459,28 @@ def run(func, oq, rup0, calc):
     dstore = calc.datastore
     model = rup0['model'].decode('ascii')
     _model, full_lt = base.get_model_lts(dstore, model)[0]
-    if "station_data" in oq.inputs:
-        run_conditioned(oq, rup0, full_lt, calc)
-        return
+    if "station_data" in oq.inputs:        
+        # assume scenario with a single true rupture
+        assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
+        assert len(dstore['ruptures']) == 1
+
+        if parallel.oq_distribute() in ('zmq', 'slurm'):
+            logging.error('Conditioned scenarios are not meant to be run'
+                          ' on a cluster')
+        dstore = calc.datastore
+        trt = full_lt.trts[0]
+        proxy = RuptureProxy(rup0)
+        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
+        rup = proxy.to_ebr(trt).rupture
+        station_df = dstore.read_df('station_data', 'site_id')
+        maxdist = (oq.maximum_distance_stations or
+                   oq.maximum_distance['default'][-1][1])
+        station_data, station_sites = filter_stations(
+            station_df, calc.sitecol.complete, rup, maxdist)
+        if station_sites:
+            run_conditioned(oq, proxy, full_lt, calc,
+                            station_data, station_sites)
+            return
 
     assetcol = getattr(calc, 'assetcol', None)
     allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
