@@ -241,8 +241,9 @@ class ConditionedGmfComputer(GmfComputer):
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
             arr = self.rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            return arr.T
+                check_valid="raise", tol=1e-5, method="cholesky").T
+            print(arr.shape)
+            return arr
 
         # NB: truncated MVN is used in the scenario risk tests
         # conditioned_stations, case_21_stations, case_26_stations
@@ -651,7 +652,7 @@ def getMNE(computer, conditioner, monitor):
     for m, imt in enumerate(conditioner.inp.imts_Y):
         mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
         if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
-            MNE[m, :, :E] = mu.repeat(computer.E, axis=1)
+            MNE[m, :, :E] = mu.repeat(E, axis=1)
         else:
             MNE[m, :, :E] = computer._compute_mvn(mu, ta, ph, E)
         MNE[m, :, E] = mu[:, 0]  # shape (N, 1) -> N
