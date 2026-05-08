@@ -200,8 +200,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
         oq._amplifier, sec_perils)
 
 
-def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
-                 cmon, umon):
+def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -217,13 +216,9 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
             continue
         try:
             ebr = proxy.to_ebr(cmaker.trt)
-            computer = get_computer(cmaker, ebr, sites, sec_perils, *stations)
+            computer = get_computer(cmaker, ebr, sites, sec_perils)
         except FarAwayRupture:
             continue
-        if stations and len(stations[0]):  # conditioned GMFs
-            assert cmaker.scenario
-            with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
@@ -248,7 +243,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
+def event_based(rups, cmaker, sids, secperils, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -270,12 +265,11 @@ def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']
-        sites = complete.filtered(sids) if len(stations[0]) == 0 else complete
+        sites = complete.filtered(sids)
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
-        yield _event_based(block, cmaker, secperils, stations, srcfilter,
-                           monitor.shared, cmon, umon)
+        yield _event_based(block, cmaker, secperils, srcfilter, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -350,7 +344,7 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     return filrups, maxw, acc
 
 
-def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
+def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     """
     :returns: list of starmap arguments
     """
@@ -397,7 +391,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, station_data_sites, dstore):
                       model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, station_data_sites, dstore)
+                    sec_perils, dstore)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
@@ -439,17 +433,15 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
 
-    assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data, station_sites.sids), dstore)
-    assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
-    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
-    smap.share(mea=mea, tau=tau, phi=phi)
-    for args in allargs:
-        smap.submit(args)
-    smap.reduce(calc.agg_dicts)
+    mtp = computer.get_mea_tau_phi(dstore.hdf5)
+    gmf_df = computer.compute_all(mtp, calc._monitor, calc._monitor)
+    if calc.N >= SLICE_BY_EVENT_NSITES:
+        sbe = build_slice_by_event(gmf_df.eid.to_numpy())
+        hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)
+    del gmf_df['rlz']
+    for col in gmf_df.columns:
+        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
 def run(func, oq, rup0, calc):
@@ -483,8 +475,7 @@ def run(func, oq, rup0, calc):
             return
 
     assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          ((), ()), dstore)
+    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
