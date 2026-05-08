@@ -114,7 +114,7 @@ def load_residual_grids(hdf5_path):
                         # Make pnts list for OQ polygon
                         pnts = [Point(pnt[0], pnt[1]
                                       ) for pnt in h3.cell_to_boundary(cid)]
-                        # Store (OQ polygon, per-km adjustment value) together
+                        # Store (OQ pgn, per km adjustment value) together
                         imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
                     
                     # Store grid for given term and imt
