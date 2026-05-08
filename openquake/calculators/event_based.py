@@ -434,10 +434,6 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
 
-    assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils,
-                          (station_data, station_sites.sids), dstore)
-    assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     mtp = computer.get_mea_tau_phi(dstore.hdf5)
     gmf_df = computer.compute_all(mtp, calc._monitor, calc._monitor)
