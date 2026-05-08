@@ -30,7 +30,6 @@ from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 U8 = np.uint8
 U16 = np.uint16
@@ -425,52 +424,7 @@ class GmfComputer(object):
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, m, imt, self.rng)
 
-    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E):
-        N = len(cov_WY_WY)
-        cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
-        # the cutoff is needed to remove negative eigenvalues
-        if (self.cmaker.oq.truncated_mvn is False or
-                self.cmaker.truncation_level == 99):
-            # do not truncate
-            cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
-            arr = self.rng.multivariate_normal(
-                mu_Y.flatten(), cov_Y_Y, size=E,
-                check_valid="raise", tol=1e-5, method="cholesky")
-            return arr.T
-
-        # NB: truncated MVN is used in the scenario risk tests
-        # conditioned_stations, case_21_stations, case_26_stations
-        cov_WY_WY = cov_WY_WY + cutoff
-        cov_BY_BY = cov_BY_BY + cutoff
-
-        lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
-        seed_w = int(self.rng.integers(0, np.iinfo(np.int32).max))
-
-        z_w_truncated = TruncatedMVN(
-            np.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
-        ).sample(E)
-
-        lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
-        seed_b = int(self.rng.integers(0, np.iinfo(np.int32).max))
-        z_b_truncated = TruncatedMVN(
-            np.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
-        ).sample(E)
-
-        arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
-        return arr
-
     def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs):
-        if len(mean_stds) == 3:  # conditioned GMFs
-            # mea, tau, phi with shapes (N,1), (N,N), (N,N)
-            mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
-            E = len(idxs)
-            if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
-                arr = mu_Y.repeat(E, axis=1)
-            else:
-                arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E)
-            gmf = exp(arr, imt != "MMI")
-            return gmf  # shapes (N, E)
-
         # regular case, sets self.sig, returns gmf
         im = imt.string
         mean, sig, tau, phi = mean_stds  # shapes N
