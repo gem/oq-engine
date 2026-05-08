@@ -395,6 +395,7 @@ class GridAdjustedGMPE(GMPE):
 
     :param gmpe_name:
         The underlying GMM to apply the grid-based adjustments to.
+
     :param grid_hdf5_file:
         Path to the hdf5 file with gridded adjustments.
     """
