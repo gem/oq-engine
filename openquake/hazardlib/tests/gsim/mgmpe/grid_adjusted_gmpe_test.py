@@ -29,6 +29,8 @@ from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
 aae = np.testing.assert_array_almost_equal
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+# Test file uses replacement adjustment method on tau and
+# subtract adjustment method on phi
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
 # Test inputs
@@ -107,8 +109,8 @@ class GridAdjustedGMPETest(unittest.TestCase):
         dl2l_sd = DL2L_STD[0]
         for m in range(3):
             aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFF, decimal=DP)
-            aae(tau[GRID, m],
-                np.sqrt(tau[BASE, m] ** 2 - dl2l_sd ** 2), decimal=DP)
+            # dL2L uses "replace": tau is directly set to the cell std dev
+            aae(tau[GRID, m], np.full(len(LATS), dl2l_sd), decimal=DP)
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_STD ** 2), decimal=DP)
             aae(sig[GRID, m],
