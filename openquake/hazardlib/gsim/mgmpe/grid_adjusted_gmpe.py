@@ -52,9 +52,11 @@ def load_residual_grids(hdf5_path):
       site-based adjustments.
 
     * res_terms: dict mapping each term name to a sub-dict with location
-      (hypo, site, path), and optionally sig_adjustment (sub, add, or none;
-      default none) and sig_comp_modified (tau, phi, or sig; only required
-      when sig_adjustment is not none).
+      (hypo, site, path), and optionally a non-location dependent scalar
+      sig_adjustment (sub, add, replace or none; default none) and also
+      sig_comp_modified (tau, phi, or sig - which is only required when
+      sig_adjustment is not none and maps which component of GMM sigma
+      should be modified by the given sig_adjustment).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
