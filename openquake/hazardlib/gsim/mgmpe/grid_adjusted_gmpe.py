@@ -36,25 +36,25 @@ def load_residual_grids(hdf5_path):
     Load the hdf5 residual grids into a dict with five keys:
 
     * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
-      hypo/site terms only.
+      hypo/site-based terms only.
 
-    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}}} - OQ pgn grids
-      for path-based terms (used in raytracing), stored per term per IMT (cell
-      sets can differ across IMTs and across terms).
+    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ pgn
+      grids for path-based terms (used in raytracing), stored per term per
+      IMT (cell sets can differ across IMTs and across terms).
 
-    * sig_scalars: {imt_str: {term: float}} - one sigma-adjustment scalar per
-      term per IMT. Only populated when sig_adjustment is not "none".
+    * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
+      per term per IMT. Only filled out when sig_adjustment is not "none".
       NOTE: when sig_adjustment is not none, the hdf5 must contain a scalar
       group attribute named "{term}_sig" on each IMT group.
 
-    * h3_res: sorted (coarsest to finest) list of h3 resolutions,
-      derived automatically from the cell IDs in the grids. Used
-      in hypo-based or site-based adjustments.
+    * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
+      automatically from the cell IDs in the grids. Used in hypo-based or
+      site-based adjustments.
 
     * res_terms: dict mapping each term name to a sub-dict with location
-      (hypo or site), and optionally sig_adjustment (sub, add, or none;
+      (hypo, site, path), and optionally sig_adjustment (sub, add, or none;
       default none) and sig_comp_modified (tau, phi, or sig; only required
-      when sig_adjustment is not none)
+      when sig_adjustment is not none).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
