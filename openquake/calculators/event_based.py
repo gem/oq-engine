@@ -421,14 +421,13 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
             cmaker, ebr, sites, calc.sec_perils,
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
-        M = len(cmaker.imts)
         N = len(computer.ctx)
-        size = 2 * G * M * N * N * 8  # tau, phi
-        msg = f'{G=} * {M=} * {humansize(N*N*8)} * 2'
+        size = 2 * G * N * N * 8  # tau, phi
+        msg = f'{G=} * {humansize(N*N*8)} * 2'
         logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
-                f'The calculation is too large: {G=}, {M=}, {N=}. '
+                f'The calculation is too large: {G=}, {N=}. '
                 'You must reduce the number of sites i.e. maximum_distance')
     else:
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
