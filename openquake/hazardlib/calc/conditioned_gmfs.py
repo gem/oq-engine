@@ -113,7 +113,7 @@ from collections import namedtuple
 import psutil
 import numpy
 import pandas
-from openquake.baselib import parallel
+from openquake.baselib import performance
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
@@ -603,7 +603,7 @@ class Conditioner:
         # Compute the conditioned between-event covariance matrix
         # for the target sites clipped to zero, shape (nsites, nsites)
         cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
-        return {(t.g, t.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
+        return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 
 def build_precomputed(rupture, cmaker, inp):
@@ -633,14 +633,6 @@ def build_precomputed(rupture, cmaker, inp):
     return pre
 
 
-def get_mu_tau_phi(conditioner, monitor):
-    """
-    Run the conditioner object and returns mu, tau, phi
-    """
-    for m, imt in enumerate(conditioner.inp.imts_Y):
-        yield conditioner.get_mu_tau_phi(m, imt, monitor)
-
-
 # TODO: switch to 32 bit floats
 def getMNE(computer, conditioner, monitor):
     """
@@ -650,7 +642,7 @@ def getMNE(computer, conditioner, monitor):
     MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
-        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
+        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)
         if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
             MNE[m, :, :E] = mu.repeat(E, axis=1)
         else:
@@ -659,8 +651,11 @@ def getMNE(computer, conditioner, monitor):
     return {g: MNE}
 
 
-# calls get_mu_tau_phi in parallel
-def get_me_ta_ph(rupture, cmaker, inp, h5):
+# used only in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
+def get_mean_covs(rupture, cmaker, inp, sigma=True):
+    """
+    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
+    """
     pre = build_precomputed(rupture, cmaker, inp)
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
@@ -668,24 +663,15 @@ def get_me_ta_ph(rupture, cmaker, inp, h5):
     me = numpy.zeros((G, M, N, 1))
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
-    smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    monitor = performance.Monitor()
+    monitor.set_shared(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
     for cond in pre.conditioners:
-        smap.submit((cond,))
-    for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
-        me[g, m] = mu
-        ta[g, m] = tau
-        ph[g, m] = phi
-        logging.info(msg)
-    return me, ta, ph
-
-
-# tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_mean_covs(rupture, cmaker, inp, sigma=True, h5=None):
-    """
-    :returns: a list of arrays [mea, sig, tau, phi] or [mea, tau, phi]
-    """
-    me, ta, ph = get_me_ta_ph(rupture, cmaker, inp, h5)
+        for m, imt in enumerate(inp.imts_Y):
+            mu, tau, phi, msg = cond.get_mu_tau_phi(m, imt, monitor)
+            me[cond.g, m] = mu
+            ta[cond.g, m] = tau
+            ph[cond.g, m] = phi
+            logging.info(msg)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:

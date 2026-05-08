@@ -62,6 +62,15 @@ PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
 
+class ArrayCtx:
+    def __init__(self, array):
+        self.array = array
+    def __enter__(self):
+        return self.array
+    def __exit__(self, exctype, exc, tb):
+        pass
+
+
 @contextmanager
 def perf_stat():
     """
@@ -314,6 +323,9 @@ class Monitor(object):
         self.counts += 1
         if self.h5:
             self.flush(self.h5)
+
+    def set_shared(self, **kw):
+        self.shared = {k: ArrayCtx(v) for k, v in kw.items()}
 
     def save_task_info(self, h5, res, name, mem_gb=0):
         """
