@@ -62,7 +62,7 @@ ATT_SIG = np.std(ATT_PER_KM)  # Scalar phi_P2P - same for all IMTs
 # Expected path adjustment per record
 EXPECTED_PATH_ADJ = np.array([0., 1.15658587, 2.10640224, 1.03237941])
 
-# Per-IMT expected mean diff: hypo always in first dL2L cell, sites vary
+# Per-IMT exp mean diff with hypo always in first dL2L cell and varying sites
 EXPECTED_MEAN_DIFFS = [
     DL2L_MEANS[m][0] + DS2S_MEANS[m] + EXPECTED_PATH_ADJ for m in range(3)
 ]
