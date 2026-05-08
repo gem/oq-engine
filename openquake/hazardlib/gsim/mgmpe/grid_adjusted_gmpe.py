@@ -111,7 +111,7 @@ def load_residual_grids(hdf5_path):
                     val_dict = dict(zip(cell_ids, mean_vals))
                     imt_pgns = {}
                     for cid in cell_ids:
-                        # Make pnts list for OQ polygon
+                        # Make pnts list for OQ pgn
                         pnts = [Point(pnt[0], pnt[1]
                                       ) for pnt in h3.cell_to_boundary(cid)]
                         # Store (OQ pgn, per km adjustment value) together
