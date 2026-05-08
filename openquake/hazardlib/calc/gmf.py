@@ -463,11 +463,10 @@ class GmfComputer(object):
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
             E = len(idxs)
             if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
-                gmf = exp(mu_Y, imt.string != "MMI")
-                gmf = gmf.repeat(E, axis=1)
+                arr = mu_Y.repeat(E, axis=1)
             else:
                 arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E, rng)
-                gmf = exp(arr, imt != "MMI")
+            gmf = exp(arr, imt != "MMI")
             return gmf  # shapes (N, E)
 
         # regular case, sets self.sig, returns gmf

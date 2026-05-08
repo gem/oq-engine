@@ -115,7 +115,7 @@ import numpy
 import pandas
 from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
@@ -237,6 +237,18 @@ class ConditionedGmfComputer(GmfComputer):
         """
         return get_mean_covs(
             self.rupture, self.cmaker, self.inp, sigma=False, h5=h5)
+
+    # parallelized
+    def get_meaMNE(self, h5):
+        """
+        :returns: dictionary g -> (M, N, E+1)
+        """
+        pre = build_precomputed(self.rupture, self.cmaker, self.inp)
+        smap = parallel.Starmap(get_meaMNE, h5=h5)
+        smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+        for cond in pre.conditioners:
+            smap.submit((self, cond))
+        return smap.reduce()  # g -> MNE
 
     def build_precomputed(self):
         """
@@ -619,6 +631,22 @@ def get_mu_tau_phi(conditioner, monitor):
     """
     for m, imt in enumerate(conditioner.inp.imts_Y):
         yield conditioner.get_mu_tau_phi(m, imt, monitor)
+
+
+def get_meaMNE(computer, conditioner, monitor):
+    """
+    Run the conditioner object and returns meaMNE
+    """
+    E = computer.E
+    MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
+    g, m = conditioner.g, conditioner.m
+    for m, imt in enumerate(conditioner.inp.imts_Y):
+        mu, ta, ph = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
+        if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
+            MNE[m] = mu.repeat(computer.E, axis=1)
+        else:
+            MNE[m] = computer._compute_mvn(ta, ph, mu, E)
+    return {computer.g: MNE}
 
 
 # calls get_mu_tau_phi in parallel
