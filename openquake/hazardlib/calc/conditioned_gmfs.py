@@ -242,7 +242,6 @@ class ConditionedGmfComputer(GmfComputer):
             arr = self.rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
                 check_valid="raise", tol=1e-5, method="cholesky").T
-            print(arr.shape)
             return arr
 
         # NB: truncated MVN is used in the scenario risk tests
