@@ -261,13 +261,13 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                     "is not currently permitted - user must set it to 'none'."
                     )
             # Travel path based (ray-tracing)
-            delta_mean = raytrace_path_adj(
+            mean_adj = raytrace_path_adj(
                 term,
                 entry[term], # No sigma correction applied only mean correction
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
-            delta_sig = np.zeros_like(ctx.lon) # No sig adj for raytraced terms
+            sig_adj = np.zeros_like(ctx.lon) # No sig adj for raytraced terms
         else:
             if cfg["location"] == "hypo":
                 # Hypo location-based
@@ -279,7 +279,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                 lats, lons = ctx.lat, ctx.lon
 
             # Get a grid-cell lookup-based adjustment for mean and sigma
-            delta_mean, delta_sig =\
+            mean_adj, sig_adj =\
                 grid_lookup(
                     entry[term],
                     entry[f"{term}_sig"] if sig_action != "none" else None,
@@ -287,27 +287,38 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                     )
         
         # Apply adjustment to mean prediction
-        mean += delta_mean
+        mean += mean_adj
 
         # Skip sigma adjustment if no sig corrections were loaded
-        if not delta_sig.any():
+        if not sig_adj.any():
             continue
 
         # Apply adjustment to required component of GMM sigma
         sign = -1 if sig_action == "sub" else 1
         sig_comp = cfg["sig_comp_modified"]
         if sig_comp == "tau":
-            # Adjust tau and recompute total sigma too accordingly
-            tau[:] = np.sqrt(tau ** 2 + sign * delta_sig ** 2)
+            # Adjust tau
+            if sig_action != "replace":
+                tau[:] = np.sqrt(tau ** 2 + sign * sig_adj ** 2)
+            else:
+                tau[:] = sig_adj
+            # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         elif sig_comp == "phi":
-            # Adjust phi and recompute total sigma too accordingly
-            phi[:] = np.sqrt(phi ** 2 + sign * delta_sig ** 2)
+            # Adjust phi
+            if sig_action != 'replace':
+                phi[:] = np.sqrt(phi ** 2 + sign * sig_adj ** 2)
+            else:
+                phi[:] = sig_adj
+            # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
             assert sig_comp == "sig"
-            sig[:] = np.sqrt(sig ** 2 + sign * delta_sig ** 2)
+            if sig_action != 'replace':
+                sig[:] = np.sqrt(sig ** 2 + sign * sig_adj ** 2)
+            else:
+                sig[:] = sig_adj
 
 
 class GridAdjustedGMPE(GMPE):
@@ -345,9 +356,11 @@ class GridAdjustedGMPE(GMPE):
                  sig_adjustment must (currently) be set to "none" or an error
                  will be raised.
 
-        * sub = Subtract variance (reduce sigma)
+        * sub = Subtract variance from given sigma component (reduce sigma)
 
-        * add = Add variance (inflate sigma)
+        * add = Add variance to given sigma component (inflate sigma)
+
+        * replace = Use this value instead for given sigma component
 
       * sig_comp_modified (required when sig_adjustment is not "none"): Which
         std-dev component to adjust for the given residual term:
