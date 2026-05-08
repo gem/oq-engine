@@ -33,77 +33,94 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with three keys:
+    Load the hdf5 residual grids into a dict with five keys:
 
-    * grids: nested dict of {imt_str: {term: {cell_id: val}, ...}}
-    
+    * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for all
+      terms. Path terms also appear here (used only for skip check).
+
+    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}}} — OQ pgn grids
+      for path-based terms (used in raytracing), stored per term per IMT (cell
+      sets can differ across IMTs and across terms)
+
+    * sig_scalars: {imt_str: {term: float}} — one sigma-adjustment scalar per
+      term per IMT. Only populated when sig_adjustment is not "none".
+      NOTE: when sig_adjustment is not none, the hdf5 must contain a scalar
+      group attribute named "{term}_sig" on each IMT group.
+
     * h3_res: sorted (coarsest to finest) list of h3 resolutions,
-      derived automatically from the cell IDs in the grids
-    
+      derived automatically from the cell IDs in the grids. Used
+      in hypo-based or site-based adjustments.
+
     * res_terms: dict mapping each term name to a sub-dict with location
       (hypo or site), and optionally sig_adjustment (sub, add, or none;
       default none) and sig_comp_modified (tau, phi, or sig; only required
       when sig_adjustment is not none)
-      NOTE: when sig_adjustment is not none, the hdf5 must contain a
-      dataset named "{term}_sig" alongside the main "{term}" dataset
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments
     """
     grids = {}
+    path_pgns = {}
+    sig_scalars = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
         for term in res_terms: # e.g. dS2S
             for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
-                    grids[imt_str] = {} # Set an empty dict for given IMT
+                    grids[imt_str] = {}       # Set an empty dict for given IMT
+                if imt_str not in sig_scalars:
+                    sig_scalars[imt_str] = {} # Set an empty dict for given IMT
 
                 # Get the data for given term and IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
-                
+
                 # Get h3 resolution
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
-                
-                # Store mean adjustments
-                grids[imt_str][term] = dict(zip(cell_ids, grp[term][:]))
 
-                # If path-based adjustment convert the h3 grid to OQ objects
-                # so can use relatively quick intersect function in hazardlib
+                # Load mean adjustments
+                mean_vals = grp[term][:]
+
+                # If required get scalar sigma adjustment
+                sig_action = res_terms[term].get("sig_adjustment", "none")
+                if sig_action != "none":
+                    sig_scalar = grp.attrs[f"{term}_sig"]
+                    if sig_scalar < 0:
+                        # Forbid nonsensical negative sigma values
+                        raise ValueError(
+                            f"Negative _sig value found for term "
+                            f"'{term}' and IMT '{imt_str}'")
+                    sig_scalars[imt_str][term] = sig_scalar
+
+                # If path-based build OQ pgn grid for this term/IMT
                 if res_terms[term]["location"] == "path":
-                    cells = {cid: {} for cid in cell_ids}
+                    if term not in path_pgns:
+                        path_pgns[term] = {}
+                    val_dict = dict(zip(cell_ids, mean_vals))
+                    imt_pgns = {}
                     for cid in cell_ids:
                         # Make pnts list for OQ polygon
                         pnts = [Point(pnt[0], pnt[1]
                                       ) for pnt in h3.cell_to_boundary(cid)]
-                        # Store the polygon
-                        cells[cid]["pgn"] = Polygon(pnts)
-                        # Store associated term
-                        cells[cid][term] = grids[imt_str][term][cid]
-                    
-                    # Replace orig h3 version (IMT-dependent)
-                    grids[imt_str][term] = cells
+                        # Store (OQ polygon, per-km adjustment value) together
+                        imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
 
-                # Get sigma adjustments if required
-                if res_terms[term].get("sig_adjustment", "none") != "none":
-                    sig_vals = grp[f"{term}_sig"][:]
-                    if (sig_vals < 0).any():
-                        # Negative values are not permitted given if modifying
-                        # sigma it should technically be another variance to be
-                        # combined in quadrature
-                        raise ValueError(
-                            f"Negative _sig values found for term "
-                            f"'{term}' and IMT '{imt_str}'")
-                    # Store sigma adjustment
-                    grids[imt_str][f"{term}_sig"] = dict(zip(cell_ids, sig_vals))
+                    # Store grid for given term and imt
+                    path_pgns[term][imt_str] = imt_pgns
+                    grids[imt_str][term] = val_dict
+                else:
+                    # Hypo/site based correction - store plain mean dict
+                    grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
 
     return {"grids": grids,
+            "path_pgns": path_pgns,
+            "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
 
-def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
+def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
     For each epicentre-to-site path (travel path) apply an adjustment based
     on the distance traversed through each (h3) grid cell. A conventional example
@@ -111,8 +128,9 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     grid cell. The function will compute the distance through that cell, and
     retrieve a correction proportional to this distance to mean ground-motion.
 
-    :param attenuation_grid:
-        {cell_id: adjustment_value} for a single correction term and given imt
+    :param grid:
+        {cell_id: (oq_pgn, per_km_adj_value)} for a single correction term
+        and given imt
     :param hypo_lons:
         Array of hypocentre longitudes
     :param hypo_lats:
@@ -122,7 +140,7 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     :param site_lats:
         Array of site latitudes
     :returns:
-        adjustment_vals sig_vals) arrays of shape (len(hypo_lons),)
+        adjustment_vals array of shape (len(hypo_lons),)
     """
     # Set some stores
     n_paths = len(hypo_lons)
@@ -149,14 +167,8 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
         # Get the cumulative correction based on distance traversed per
         # grid cell and the associated distance-based adjustment terms
         adj = 0.0
-        for cid in grid: # Iterate over OQ pgns representing the h3 grid cells
+        for pgn, dba in grid.values(): # Iter over OQ pgns rep. of h3 cells
 
-            # Get the polygon object
-            pgn = grid[cid]['pgn']
-            
-            # Get the associated distance-based adjustment
-            dba = grid[cid][term] 
-            
             # Adj = N points intersecting zone * spacing * per-km adjustment
             adj += np.count_nonzero(pgn.intersects(mesh)) * line_spacing * dba
 
@@ -166,18 +178,15 @@ def raytrace_path_adj(term, grid, hypo_lons, hypo_lats, site_lons, site_lats):
     return ra_per_path
 
 
-def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
+def grid_lookup(grid_dict, lats, lons, h3_res):
     """
     For each (lat, lon) pair resolve the h3 cell at successively finer
-    resolutions and return the gridded adjustment and its uncertainty
-    for the given residual term. Locations that fall outside all grid
-    cells receive a correction of zero.
+    resolutions and return the gridded mean adjustment for the given
+    residual term. Locations that fall outside all grid cells receive
+    a correction of zero.
 
-    :param mean_dict:
-        {cell_id: adjustment_value} for a single correction term and given imt
-    :param sig_dict:
-        {cell_id: sig_value} for a single correction term and given imt,
-        or None if no sigma adjustment is needed
+    :param grid_dict:
+        {cell_id: mean_adjustment_value} for a single correction term and IMT
     :param lats:
         Array of latitudes (either hypo or site lats, depending on term)
     :param lons:
@@ -185,12 +194,11 @@ def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
     :param h3_res:
         Sorted list of h3 resolution levels (coarse to fine)
     :returns:
-        (adjustment_vals, sig_vals) arrays of shape (len(lats),)
+        mean_vals array of shape (len(lats),)
     """
     # Set arrays
     n = len(lats)
-    mean_vals = np.zeros(n, dtype=np.float32)
-    sig_vals = np.zeros(n, dtype=np.float32)
+    mean_vals = np.zeros(n)
     found = np.zeros(n, dtype=bool)
 
     # Go over the h3 resolutions from finest to coarsest,
@@ -200,16 +208,13 @@ def grid_lookup(mean_dict, sig_dict, lats, lons, h3_res):
             break
         for i in np.where(~found)[0]:
             # Make a h3 cell for given hypo or site
-            cell = h3.latlng_to_cell(float(lats[i]), float(lons[i]), res)
-            if cell in mean_dict:
-                # Assign mean and std dev of given term to the cell
-                mean_vals[i] = mean_dict[cell]
-                if sig_dict is not None:
-                    # Sig based corr only req if sig_action not "none"
-                    sig_vals[i] = sig_dict[cell]
+            cell = h3.latlng_to_cell(lats[i], lons[i], res)
+            if cell in grid_dict:
+                # Assign mean adjustment of given term to the cell
+                mean_vals[i] = grid_dict[cell]
                 found[i] = True
 
-    return mean_vals, sig_vals
+    return mean_vals
 
 
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
@@ -218,7 +223,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     adjustment is always added.
 
     :param grid_data:
-        Dict returned by load_residual_grids
+        Dict of h3 gridded adjustments
     :param ctx:
         A ctx object recarray
     :param imt:
@@ -254,20 +259,13 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
 
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
-            # No sigma adjustment is permitted with raytracing correction 
-            if sig_action != "none":
-                raise ValueError(
-                    "For raytracing-based path adjustments a sigma adjustment "
-                    "is not currently permitted - user must set it to 'none'."
-                    )
             # Travel path based (ray-tracing)
+            imt_str = str(imt)
             mean_adj = raytrace_path_adj(
-                term,
-                entry[term], # No sigma correction applied only mean correction
+                grid_data["path_pgns"][term][imt_str], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
-            sig_adj = np.zeros_like(ctx.lon) # No sig adj for raytraced terms
         else:
             if cfg["location"] == "hypo":
                 # Hypo location-based
@@ -278,47 +276,44 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                 # Site location-based
                 lats, lons = ctx.lat, ctx.lon
 
-            # Get a grid-cell lookup-based adjustment for mean and sigma
-            mean_adj, sig_adj =\
-                grid_lookup(
-                    entry[term],
-                    entry[f"{term}_sig"] if sig_action != "none" else None,
-                    lats, lons, grid_data["h3_res"]
-                    )
-        
+            # Get a grid-cell lookup-based mean adjustment
+            mean_adj = grid_lookup(
+                entry[term], lats, lons, grid_data["h3_res"])
+
         # Apply adjustment to mean prediction
         mean += mean_adj
 
-        # Skip sigma adjustment if no sig corrections were loaded
-        if not sig_adj.any():
+        # Skip sigma adjustment if not required for this term
+        sig_scalar = grid_data["sig_scalars"].get(str(imt), {}).get(term)
+        if sig_scalar is None:
             continue
 
-        # Apply adjustment to required component of GMM sigma
+        # Apply scalar sigma adjustment to required component of GMM sigma
         sign = -1 if sig_action == "sub" else 1
         sig_comp = cfg["sig_comp_modified"]
         if sig_comp == "tau":
             # Adjust tau
             if sig_action != "replace":
-                tau[:] = np.sqrt(tau ** 2 + sign * sig_adj ** 2)
+                tau[:] = np.sqrt(tau ** 2 + sign * sig_scalar ** 2)
             else:
-                tau[:] = sig_adj
+                tau[:] = sig_scalar
             # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         elif sig_comp == "phi":
             # Adjust phi
             if sig_action != 'replace':
-                phi[:] = np.sqrt(phi ** 2 + sign * sig_adj ** 2)
+                phi[:] = np.sqrt(phi ** 2 + sign * sig_scalar ** 2)
             else:
-                phi[:] = sig_adj
+                phi[:] = sig_scalar
             # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
             assert sig_comp == "sig"
             if sig_action != 'replace':
-                sig[:] = np.sqrt(sig ** 2 + sign * sig_adj ** 2)
+                sig[:] = np.sqrt(sig ** 2 + sign * sig_scalar ** 2)
             else:
-                sig[:] = sig_adj
+                sig[:] = sig_scalar
 
 
 class GridAdjustedGMPE(GMPE):
@@ -345,16 +340,12 @@ class GridAdjustedGMPE(GMPE):
                  attenuation rate per km per intersected grid cell)
 
       * sig_adjustment (optional, default "none"): Whether to adjust the
-        corresponding GMM sigma component using the "_sig" values of the
-        correction term (e.g. for dS2S correction to mean the correction
-        to phi (mapped below) would use the dS2S_sig value for given IMT):
+        corresponding GMM sigma component. When not "none", the hdf5 IMT
+        group must contain a scalar attribute named "{term}_sig" holding the
+        sigma adjustment value (e.g. tau_L2L for dL2L, phi_S2S for dS2S):
 
         * none = Skip sigma adjustment (only apply mean correction - in
-                 this case no "_sig" values need be specified in the hdf5).
-
-                 NOTE: In the case of "path" corrections which use raytracing
-                 sig_adjustment must (currently) be set to "none" or an error
-                 will be raised.
+                 this case no "{term}_sig" attribute need be specified).
 
         * sub = Subtract variance from given sigma component (reduce sigma)
 
@@ -421,7 +412,7 @@ class GridAdjustedGMPE(GMPE):
                cfg in self.grid_data["res_terms"].values()):
             raise ValueError(
                 "An invalid location type has been specified for one or more "
-                "of the adjustmet terms (must be 'hypo', 'site' or 'path'.")
+                "of the adjustment terms (must be 'hypo', 'site' or 'path'.")
 
         # Add hypo lon/lat to required GSIM rup params for hypo-based lookups
         if any(cfg["location"] in ["hypo", "path"]

@@ -31,7 +31,7 @@ aae = np.testing.assert_array_almost_equal
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Test file uses replacement adjustment method on tau and
 # subtract adjustment method on phi
-GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
+GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5") # Test hdf5 has per-cell values at h3 resolutions 2, 3, 4
 
 # Test inputs
 BASE, GRID = 0, 1 # Integers of results for original vs modified GSIM
@@ -40,19 +40,31 @@ LATS = np.array([0.0, 10.0, 20.0, 40.0])
 LONS = np.array([0.0, 10.0, 20.0, 40.0])
 DP = 4
 
-# Test hdf5 has per-cell values at h3 resolutions 2, 3, 4
-# for PGA, SA(0.5) and SA(1.0)
-DL2L_MEAN = np.array([0.05, 0.10, 0.15, 0.20])
-DL2L_STD = np.array([0.02, 0.04, 0.06, 0.08])
-DS2S_MEAN = np.array([-0.10, -0.15, -0.20, -0.25])
-DS2S_STD = np.array([0.03, 0.05, 0.07, 0.09])
+# Per-IMT mean arrays and scalar sigs
+DL2L_MEANS = [
+    np.array([0.05, 0.10, 0.15, 0.20]),  # PGA
+    np.array([0.04, 0.08, 0.12, 0.16]),  # SA(0.5)
+    np.array([0.03, 0.06, 0.09, 0.12]),  # SA(1.0)
+]
+DL2L_SIGS = [np.std(m) for m in DL2L_MEANS]
+
+DS2S_MEANS = [
+    np.array([-0.10, -0.15, -0.20, -0.25]),  # PGA
+    np.array([-0.08, -0.12, -0.16, -0.20]),  # SA(0.5)
+    np.array([-0.06, -0.09, -0.12, -0.15]),  # SA(1.0)
+]
+DS2S_SIGS = [np.std(m) for m in DS2S_MEANS]
+
 ATT_PER_KM = np.array([0.005, 0.004, 0.003, 0.002])
+ATT_SIG = np.std(ATT_PER_KM)  # Scalar phi_P2P — same for all IMTs
 
 # Expected path adjustment per record
 EXPECTED_PATH_ADJ = np.array([0., 1.15658587, 2.10640224, 1.03237941])
 
-# All hypo in same dL2L cells but diff dS2S cells (diff site locs)
-EXPECTED_MEAN_DIFF = DL2L_MEAN[0] + DS2S_MEAN + EXPECTED_PATH_ADJ
+# Per-IMT expected mean diff: hypo always in first dL2L cell, sites vary
+EXPECTED_MEAN_DIFFS = [
+    DL2L_MEANS[m][0] + DS2S_MEANS[m] + EXPECTED_PATH_ADJ for m in range(3)
+]
 
 
 class GridAdjustedGMPETest(unittest.TestCase):
@@ -78,25 +90,21 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def test_grid_lookup(self):
         # Check correct values returned when searching loaded grid
         gd = load_residual_grids(GRID_HDF5)
-        mu, sd = grid_lookup(
+        mu = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
-            gd["grids"]["PGA"]["dL2L_sig"],
             LATS, LONS, gd["h3_res"])
-        aae(mu, DL2L_MEAN, decimal=DP)
-        aae(sd, DL2L_STD, decimal=DP)
-        mu, sd = grid_lookup(
+        aae(mu, DL2L_MEANS[0], decimal=DP)
+        mu = grid_lookup(
             gd["grids"]["PGA"]["dL2L"],
-            gd["grids"]["PGA"]["dL2L_sig"],
             np.array([-80.0]), np.array([170.0]), gd["h3_res"])
         aae(mu, 0.0)
-        aae(sd, 0.0)
 
     def test_raytrace_path_adj(self):
         # Check separately the raytracing
         gd = load_residual_grids(GRID_HDF5)
-        path_grid = gd["grids"]["PGA"]["att_per_km"]
+        path_grid = gd["path_pgns"]["att_per_km"]["PGA"]
         adjs = raytrace_path_adj(
-            "att_per_km", path_grid,
+            path_grid, # OQ polygons and adjustments
             np.zeros(len(LONS)), np.zeros(len(LATS)),
             LONS, LATS,
         )
@@ -106,13 +114,14 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # Check expected values
         mea, sig, tau, phi = self._get_mean_stds(
             ["PGA", "SA(0.5)", "SA(1.0)"])
-        dl2l_sd = DL2L_STD[0]
         for m in range(3):
-            aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFF, decimal=DP)
-            # dL2L uses "replace": tau is directly set to the cell std dev
-            aae(tau[GRID, m], np.full(len(LATS), dl2l_sd), decimal=DP)
+            aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
+                decimal=DP)
+            # dL2L uses "replace" method so tau should be scalar DL2L_SIGS[m]
+            aae(tau[GRID, m], np.full(len(LATS), DL2L_SIGS[m]), decimal=DP)
             aae(phi[GRID, m],
-                np.sqrt(phi[BASE, m] ** 2 - DS2S_STD ** 2), decimal=DP)
+                np.sqrt(phi[BASE, m] ** 2 - DS2S_SIGS[m] ** 2
+                        - ATT_SIG ** 2), decimal=DP)
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
 
