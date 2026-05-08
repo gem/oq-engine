@@ -232,6 +232,7 @@ class ConditionedGmfComputer(GmfComputer):
             cross_correlation.BakerJayaram2008())
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
+        rng = numpy.random.default_rng(self.seed)
         N = len(cov_WY_WY)
         cutoff = numpy.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
@@ -239,7 +240,7 @@ class ConditionedGmfComputer(GmfComputer):
                 self.cmaker.truncation_level == 99):
             # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
-            arr = self.rng.multivariate_normal(
+            arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
                 check_valid="raise", tol=1e-5, method="cholesky").T
             return arr
@@ -250,14 +251,14 @@ class ConditionedGmfComputer(GmfComputer):
         cov_BY_BY = cov_BY_BY + cutoff
 
         lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
-        seed_w = int(self.rng.integers(0, numpy.iinfo(numpy.int32).max))
+        seed_w = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
 
         z_w_truncated = TruncatedMVN(
             numpy.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
         ).sample(E)
 
         lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
-        seed_b = int(self.rng.integers(0, numpy.iinfo(numpy.int32).max))
+        seed_b = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
         z_b_truncated = TruncatedMVN(
             numpy.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
         ).sample(E)
@@ -632,12 +633,14 @@ def build_precomputed(rupture, cmaker, inp):
     return pre
 
 
-# TODO: switch to 32 bit floats
+# TODO: possibly switch to 32 bit floats
 def getMNE(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
-    E = computer.E // len(computer.gsims)  # events per realization
+    (gsim, rlzs) = list(computer.cmaker.gsims.items())[conditioner.g]
+    idxs, = numpy.where(numpy.isin(computer.rlz, rlzs))
+    E = len(idxs)
     MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
