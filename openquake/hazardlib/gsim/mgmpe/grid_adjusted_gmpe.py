@@ -36,7 +36,7 @@ def load_residual_grids(hdf5_path):
     Load the hdf5 residual grids into a dict with five keys:
 
     * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
-      hypo/site-based terms only.
+      hypo/site-based terms only which use h3 cells.
 
     * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ pgn
       grids for path-based terms (used in raytracing), stored per term per
@@ -44,8 +44,8 @@ def load_residual_grids(hdf5_path):
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Only filled out when sig_adjustment is not "none".
-      NOTE: when sig_adjustment is not none, the hdf5 must contain a scalar
-      group attribute named "{term}_sig" on each IMT group.
+      NOTE: when sig_adjustment is not none, each IMT group present in the
+      hdf5 for that term must have a scalar group attribute named "{term}_sig".
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
       automatically from the cell IDs in the grids. Used in hypo-based or
@@ -57,7 +57,7 @@ def load_residual_grids(hdf5_path):
       when sig_adjustment is not none).
 
     :param hdf5_path:
-        Path to the hdf5 containing the grid-based adjustments
+        Path to the hdf5 containing the grid-based adjustments.
     """
     grids = {}
     path_pgns = {}
@@ -85,7 +85,15 @@ def load_residual_grids(hdf5_path):
                 # If required get scalar sigma adjustment
                 sig_action = res_terms[term].get("sig_adjustment", "none")
                 if sig_action != "none":
-                    sig_scalar = grp.attrs[f"{term}_sig"]
+                    sig_key= f"{term}_sig"
+                    if sig_key not in grp.attrs:
+                        # Raise error if user specified a sigma adjustment for
+                        # given term but missing a scalar value for given IMT
+                        raise ValueError(
+                            f"sig_adjustment '{sig_action}' requested for "
+                            f"term '{term}' but '{sig_key}' is missing for "
+                            f"'{imt_str}'")
+                    sig_scalar = grp.attrs[sig_key]
                     if sig_scalar < 0:
                         # Forbid nonsensical negative sigma values
                         raise ValueError(
@@ -93,7 +101,8 @@ def load_residual_grids(hdf5_path):
                             f"'{term}' and IMT '{imt_str}'")
                     sig_scalars[imt_str][term] = sig_scalar
 
-                # If path-based build OQ pgn grid for this term/IMT
+                # If path-based build OQ pgn grid for this term/IMT (keep
+                # different grid per IMT in case varies with IMT as well)
                 if res_terms[term]["location"] == "path":
                     if term not in path_pgns:
                         path_pgns[term] = {}
