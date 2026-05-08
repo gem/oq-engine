@@ -645,7 +645,7 @@ def getMNE(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
-    E = computer.E
+    E = computer.E // len(computer.gsims)  # events per realization
     MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
