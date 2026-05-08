@@ -638,9 +638,7 @@ def getMNE(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
-    (gsim, rlzs) = list(computer.cmaker.gsims.items())[conditioner.g]
-    idxs, = numpy.where(numpy.isin(computer.rlz, rlzs))
-    E = len(idxs)
+    E = computer.E // len(computer.cmaker.gsims)
     MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):

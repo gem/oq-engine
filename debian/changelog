@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced significantly the memory consumption in conditioned scenarios
+    (8 times less memory with 4 IMTs)
+
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
@@ -12,7 +16,7 @@
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
     scaling and single station sigma) and some unit tests.
-  
+
   [Marco Pagani]
   * Fixing the calculation of ruptures with clusters and mutually exclusive
     sources
