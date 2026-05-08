@@ -249,6 +249,7 @@ class GmfComputer(object):
         """
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
+        self.rng = np.random.default_rng(self.seed)
         self.rlzs = np.concatenate(list(self.cmaker.gsims.values()))
         self.eid, self.rlz = get_eid_rlz(
             vars(self.ebrupture), self.rlzs, self.cmaker.scenario)
@@ -359,7 +360,6 @@ class GmfComputer(object):
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         max_iml = self.cmaker.oq.get_max_iml()
-        rng = np.random.default_rng(self.seed)
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
         if mean_stds is None:
@@ -383,14 +383,16 @@ class GmfComputer(object):
                         within_eps = [np.zeros((self.N, E), F32)
                                      for _ in range(self.M)]
                     else:
-                        within_eps = [self.within_dist.rvs((self.N, E), rng)
-                                     for _ in range(self.M)]
+                        within_eps = [
+                            self.within_dist.rvs((self.N, E), self.rng)
+                            for _ in range(self.M)]
                     # between_eps are used in _compute
                     if self.tlb <= TRUNCATION_THRESHOLD:
                         self.between_eps[idxs] = 0.
                     else:
                         self.between_eps[idxs] = \
-                            self.cross_correl.get_inter_eps(self.imts, E, rng).T
+                            self.cross_correl.get_inter_eps(
+                                self.imts, E, self.rng).T
                 mean = []
                 for m, imt in enumerate(self.imts):
                     if conditioned:
@@ -401,16 +403,16 @@ class GmfComputer(object):
                         ms = mean_stds[:, g, m]
                     mean.append(ms[0])
                     self._compute_update(
-                        result, m, imt, gs, ms, idxs, within_eps, rng)
+                        result, m, imt, gs, ms, idxs, within_eps)
             with umon:
                 result = result.transpose(1, 0, 2)  # shape (N, M, E)
                 self.update(data, result, rlzs, np.array(mean), max_iml)
         with umon:
             return self.strip_zeros(data)
 
-    def _compute_update(self, result, m, imt, gs, ms, idxs, within_eps, rng):
+    def _compute_update(self, result, m, imt, gs, ms, idxs, within_eps):
         try:
-            result[m] = self._compute(ms, m, imt, gs, within_eps[m], idxs, rng)
+            result[m] = self._compute(ms, m, imt, gs, within_eps[m], idxs)
         except Exception as exc:
             if exc.__class__ is RuntimeError:
                 msg = str(exc)
@@ -421,9 +423,9 @@ class GmfComputer(object):
             ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, m, imt, rng)
+                self.ctx.ampcode, result, m, imt, self.rng)
 
-    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E, rng):
+    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E):
         N = len(cov_WY_WY)
         cutoff = np.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
@@ -431,7 +433,7 @@ class GmfComputer(object):
                 self.cmaker.truncation_level == 99):
             # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
-            arr = rng.multivariate_normal(
+            arr = self.rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
                 check_valid="raise", tol=1e-5, method="cholesky")
             return arr.T
@@ -442,14 +444,14 @@ class GmfComputer(object):
         cov_BY_BY = cov_BY_BY + cutoff
 
         lb_w, ub_w = self.get_symmetric_bounds(cov_WY_WY, self.tlw)
-        seed_w = int(rng.integers(0, np.iinfo(np.int32).max))
+        seed_w = int(self.rng.integers(0, np.iinfo(np.int32).max))
 
         z_w_truncated = TruncatedMVN(
             np.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
         ).sample(E)
 
         lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
-        seed_b = int(rng.integers(0, np.iinfo(np.int32).max))
+        seed_b = int(self.rng.integers(0, np.iinfo(np.int32).max))
         z_b_truncated = TruncatedMVN(
             np.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
         ).sample(E)
@@ -457,7 +459,7 @@ class GmfComputer(object):
         arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
         return arr
 
-    def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs, rng=None):
+    def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs):
         if len(mean_stds) == 3:  # conditioned GMFs
             # mea, tau, phi with shapes (N,1), (N,N), (N,N)
             mu_Y, cov_WY_WY, cov_BY_BY = mean_stds
@@ -465,7 +467,7 @@ class GmfComputer(object):
             if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
                 arr = mu_Y.repeat(E, axis=1)
             else:
-                arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E, rng)
+                arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E)
             gmf = exp(arr, imt != "MMI")
             return gmf  # shapes (N, E)
 
