@@ -441,9 +441,9 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     dstore.swmr_on()
     mtp = computer.get_mea_tau_phi(dstore.hdf5)
     gmf_df = computer.compute_all(mtp, calc._monitor, calc._monitor)
+    del gmf_df['rlz']
     for col in gmf_df.columns:
-        if col != 'rlz':
-            hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
 def run(func, oq, rup0, calc):
