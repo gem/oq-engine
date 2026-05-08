@@ -200,8 +200,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
         oq._amplifier, sec_perils)
 
 
-def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
-                 cmon, umon):
+def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -217,13 +216,9 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
             continue
         try:
             ebr = proxy.to_ebr(cmaker.trt)
-            computer = get_computer(cmaker, ebr, sites, sec_perils, *stations)
+            computer = get_computer(cmaker, ebr, sites, sec_perils)
         except FarAwayRupture:
             continue
-        if stations and len(stations[0]):  # conditioned GMFs
-            assert cmaker.scenario
-            with shr['mea'] as mea, shr['tau'] as tau, shr['phi'] as phi:
-                df = computer.compute_all([mea, tau, phi], cmon, umon)
         else:  # regular GMFs
             df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
@@ -248,7 +243,7 @@ def _event_based(proxies, cmaker, sec_perils, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
+def event_based(rups, cmaker, sids, secperils, mtp, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -270,12 +265,12 @@ def event_based(rups, cmaker, sids, secperils, stations, dstore, monitor):
                 complete = f['complete']  # the current dstore
             except KeyError:
                 complete = f['sitecol']
-        sites = complete.filtered(sids) if len(stations[0]) == 0 else complete
+        sites = complete.filtered(sids) if len(mtp) == 0 else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
     chunksize = int(config.memory.max_ruptures_chunk)
     for block in block_splitter(proxies, chunksize, lambda p: 1):
-        yield _event_based(block, cmaker, secperils, stations, srcfilter,
-                           monitor.shared, cmon, umon)
+        yield _event_based(block, cmaker, secperils, mtp, srcfilter,
+                           cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -444,12 +439,11 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
                           (station_data, station_sites.sids), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
-    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
-    smap.share(mea=mea, tau=tau, phi=phi)
-    for args in allargs:
-        smap.submit(args)
-    smap.reduce(calc.agg_dicts)
+    mtp = computer.get_mea_tau_phi(dstore.hdf5)
+    gmf_df = computer.compute_all(mtp, calc._monitor, calc._monitor)
+    for col in gmf_df.columns:
+        if col != 'rlz':
+            hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
 def run(func, oq, rup0, calc):
