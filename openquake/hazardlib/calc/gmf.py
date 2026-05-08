@@ -277,8 +277,6 @@ class GmfComputer(object):
         """
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
-        if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
-            mean = mean[:, :, 0]
         if max_iml is None:
             max_iml = np.full(self.M, np.inf, float)
 
@@ -354,17 +352,17 @@ class GmfComputer(object):
     def tlw(self):
         return self.cmaker.truncation_level_within
 
-    def compute_all(self, mean_stds=None, cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, MNE=None, cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         max_iml = self.cmaker.oq.get_max_iml()
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
-        if mean_stds is None:
+        conditioned = MNE is not None
+        if not conditioned:
             with self.cmaker.gmf_mon:
                 mean_stds = self.cmaker.get_mean_stds([self.ctx])
-        conditioned = isinstance(mean_stds, list)  # triplet
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             gs.gid = self.cmaker.gid[g]
             idxs, = np.where(np.isin(self.rlz, rlzs))
@@ -374,35 +372,34 @@ class GmfComputer(object):
             with cmon:
                 E = len(idxs)
                 result = np.zeros((len(self.imts), len(self.ctx.sids), E), F32)
-                if conditioned:
-                    within_eps = [None] * self.M
+                # arrays of random numbers of shape (M, N, E) and (M, E)
+                if self.tlw <= TRUNCATION_THRESHOLD:
+                    within_eps = [np.zeros((self.N, E), F32)
+                                 for _ in range(self.M)]
                 else:
-                    # arrays of random numbers of shape (M, N, E) and (M, E)
-                    if self.tlw <= TRUNCATION_THRESHOLD:
-                        within_eps = [np.zeros((self.N, E), F32)
-                                     for _ in range(self.M)]
-                    else:
-                        within_eps = [
-                            self.within_dist.rvs((self.N, E), self.rng)
-                            for _ in range(self.M)]
-                    # between_eps are used in _compute
-                    if self.tlb <= TRUNCATION_THRESHOLD:
-                        self.between_eps[idxs] = 0.
-                    else:
-                        self.between_eps[idxs] = \
-                            self.cross_correl.get_inter_eps(
-                                self.imts, E, self.rng).T
+                    within_eps = [
+                        self.within_dist.rvs((self.N, E), self.rng)
+                        for _ in range(self.M)]
+                # between_eps are used in _compute
+                if self.tlb <= TRUNCATION_THRESHOLD:
+                    self.between_eps[idxs] = 0.
+                else:
+                    self.between_eps[idxs] = \
+                        self.cross_correl.get_inter_eps(
+                            self.imts, E, self.rng).T
                 mean = []
                 for m, imt in enumerate(self.imts):
                     if conditioned:
-                        ms = (mean_stds[0][g, m],
-                              mean_stds[1][g, m],
-                              mean_stds[2][g, m])
+                        result[m] = exp(MNE[g][m, :, :E], imt != 'MMI')
+                        if self.amplifier:
+                            self.amplifier.amplify_gmfs(
+                                self.ctx.ampcode, result, m, imt, self.rng)
+                        mean.append(MNE[g][m, :, E])
                     else:
                         ms = mean_stds[:, g, m]
-                    mean.append(ms[0])
-                    self._compute_update(
-                        result, m, imt, gs, ms, idxs, within_eps)
+                        mean.append(ms[0])
+                        self._compute_update(
+                            result, m, imt, gs, ms, idxs, within_eps)
             with umon:
                 result = result.transpose(1, 0, 2)  # shape (N, M, E)
                 self.update(data, result, rlzs, np.array(mean), max_iml)

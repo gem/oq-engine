@@ -36,7 +36,8 @@ from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
+from openquake.hazardlib.calc.conditioned_gmfs import (
+    ConditionedGmfComputer, build_precomputed, getMNE)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -434,8 +435,14 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
-    mtp = computer.get_mea_tau_phi(dstore.hdf5)
-    gmf_df = computer.compute_all(mtp, calc._monitor, calc._monitor)
+    smap = parallel.Starmap(getMNE, h5=dstore)
+    pre = build_precomputed(ebr.rupture, cmaker, computer.inp)
+    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    computer.init_eid_rlz_sig_eps()
+    for conditioner in pre.conditioners:
+        smap.submit((computer, conditioner))
+    MNEdic = smap.reduce()  # g -> MNE
+    gmf_df = computer.compute_all(MNEdic, calc._monitor, calc._monitor)
     if calc.N >= SLICE_BY_EVENT_NSITES:
         sbe = build_slice_by_event(gmf_df.eid.to_numpy())
         hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)

@@ -116,7 +116,7 @@ import pandas
 from openquake.baselib import parallel
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.calc.gmf import exp, GmfComputer, TRUNCATION_THRESHOLD
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
@@ -231,18 +231,7 @@ class ConditionedGmfComputer(GmfComputer):
             cross_correl_between or cross_correlation.GodaAtkinson2009(),
             cross_correlation.BakerJayaram2008())
 
-    def _compute(self, muWWBB, m, imt, gsim, within_eps, idxs):
-        # mea, tau, phi with shapes (N, 1), (N, N), (N, N)
-        mu_Y, cov_WY_WY, cov_BY_BY = muWWBB
-        E = len(idxs)
-        if max(self.tlw, self.tlb) <= TRUNCATION_THRESHOLD:
-            arr = mu_Y.repeat(E, axis=1)
-        else:
-            arr = self._compute_mvn(cov_WY_WY, cov_BY_BY, mu_Y, E)
-        gmf = exp(arr, imt != "MMI")
-        return gmf  # shapes (N, E)
-
-    def _compute_mvn(self, cov_WY_WY, cov_BY_BY, mu_Y, E):
+    def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         N = len(cov_WY_WY)
         cutoff = numpy.eye(N) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
@@ -275,33 +264,6 @@ class ConditionedGmfComputer(GmfComputer):
 
         arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
         return arr
-
-    # parallelized
-    def get_mea_tau_phi(self, h5):
-        """
-        :returns: a list of arrays [mea, sig, tau, phi]
-        """
-        return get_mean_covs(
-            self.rupture, self.cmaker, self.inp, sigma=False, h5=h5)
-
-    # parallelized
-    def get_meaMNE(self, h5):
-        """
-        :returns: dictionary g -> (M, N, E+1)
-        """
-        pre = build_precomputed(self.rupture, self.cmaker, self.inp)
-        smap = parallel.Starmap(get_meaMNE, h5=h5)
-        smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
-        for cond in pre.conditioners:
-            smap.submit((self, cond))
-        return smap.reduce()  # g -> MNE
-
-    def build_precomputed(self):
-        """
-        :returns:
-           a list of G tuples of arguments needed to compute mea, tau, phi
-        """
-        return build_precomputed(self.rupture, self.cmaker, self.inp)
 
 
 @dataclass
@@ -679,20 +641,22 @@ def get_mu_tau_phi(conditioner, monitor):
         yield conditioner.get_mu_tau_phi(m, imt, monitor)
 
 
-def get_meaMNE(computer, conditioner, monitor):
+# TODO: switch to 32 bit floats
+def getMNE(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
     E = computer.E
-    MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
-    g, m = conditioner.g, conditioner.m
+    MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
+    g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
-        mu, ta, ph = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
+        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)[g, m]
         if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
-            MNE[m] = mu.repeat(computer.E, axis=1)
+            MNE[m, :, :E] = mu.repeat(computer.E, axis=1)
         else:
-            MNE[m] = computer._compute_mvn(ta, ph, mu, E)
-    return {computer.g: MNE}
+            MNE[m, :, :E] = computer._compute_mvn(mu, ta, ph, E)
+        MNE[m, :, E] = mu[:, 0]  # shape (N, 1) -> N
+    return {g: MNE}
 
 
 # calls get_mu_tau_phi in parallel
