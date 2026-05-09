@@ -269,10 +269,33 @@ def grid_lookup(grid_dict, lats, lons, h3_res):
     return mean_vals
 
 
-def _adjust_sigma(sig_action, sig_comp, sig_vals, sig, tau, phi):
+def _adjust_sigma(grid_data, imt, term, cfg, ctx,
+                  sig_action, sig, tau, phi):
     """
-    Apply a sigma adjustment to required component.
+    Resolve the sigma adjustment value for this term/IMT, then apply
+    it to the specified component.
+
+    NOTE: Only one of sig_grids/sig_scalars dicts can be populated per
+    term/IMT - this is enfored when loading the grid cells.
     """
+    # Resolve sigma values - per-cell grid or scalar
+    sig_grid = grid_data["sig_grids"].get(imt, {}).get(term)
+    if sig_grid is not None:
+        if cfg["location"] == "hypo":
+            s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
+        else:
+            s_lats, s_lons = ctx.lat, ctx.lon
+        # Per-cell so look up the sigma adjustment value
+        sig_vals = grid_lookup(
+            sig_grid, s_lats, s_lons, grid_data["h3_res"])
+    else:
+        # Just a scalar adjustment
+        sig_vals = grid_data["sig_scalars"].get(imt, {}).get(term)
+
+    # Get the component to modify
+    sig_comp = cfg["sig_comp_modified"]
+
+    # And make the required adjustment to this component
     if sig_action == "replace":
         if sig_comp == "tau":
             # Adjust tau
@@ -374,22 +397,9 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         if sig_action == "none":
             continue
 
-        # Resolve sigma values: per-cell or scalar (mutually exclusive)
-        sig_grid = grid_data["sig_grids"].get(imt, {}).get(term)
-        sig_scalar = grid_data["sig_scalars"].get(imt, {}).get(term)
-        if sig_grid is not None:
-            if cfg["location"] == "hypo":
-                s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
-            else:
-                s_lats, s_lons = ctx.lat, ctx.lon
-            sig_vals = grid_lookup(
-                sig_grid, s_lats, s_lons, grid_data["h3_res"])
-        else:
-            sig_vals = sig_scalar
-
-        # Apply sigma adjustment to required component of GMM sigma
+        # Apply sigma adjustment to required component
         _adjust_sigma(
-            sig_action, cfg["sig_comp_modified"], sig_vals, sig, tau, phi)
+            grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi)
 
 
 class GridAdjustedGMPE(GMPE):
