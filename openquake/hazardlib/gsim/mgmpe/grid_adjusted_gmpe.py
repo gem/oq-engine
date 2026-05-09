@@ -31,6 +31,68 @@ from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
+def load_sigma_for_term(
+        grp, term, imt_str, location,
+        sig_action, cell_ids, sig_grids, sig_scalars
+        ):
+    """
+    Load the sigma adjustment for one term/IMT group into
+    sig_grids (per-cell) OR sig_scalars (scalar).
+    """
+    sig_key = f"{term}_sig"
+    has_sig_attr = sig_key in grp.attrs
+    has_sig_dataset = sig_key in grp
+    if has_sig_attr and has_sig_dataset:
+        # Raise an error if requesting both scalar and per-cell
+        raise ValueError(
+            f"Both scalar adjustment and per-cell dataset '{sig_key}' "
+            f"found for term '{term}', IMT '{imt_str}'. Provide only one.")
+    if not has_sig_attr and not has_sig_dataset:
+        # Raise an error if not specifiy scalar or per cell
+        # but requested a sigma adjustment
+        raise ValueError(
+            f"sig_adjustment '{sig_action}' requested for term '{term}' "
+            f"but '{sig_key}' is missing for '{imt_str}'")
+    if has_sig_dataset:
+        if location == "path":
+            # Raise an error if requesting per-cell sigma
+            # adjustment with a path-based term
+            raise ValueError(
+                f"Per-cell sigma is not currently supported for "
+                f"path-based terms (term '{term}'). Use a "
+                f"scalar adjustment instead.")
+        sig_vals = grp[sig_key][:]
+        if np.any(sig_vals < 0):
+            raise ValueError(
+                f"Negative _sig value found for term "
+                f"'{term}' and IMT '{imt_str}'")
+        sig_grids[imt_str][term] = dict(zip(cell_ids, sig_vals))
+    else:
+        sig_scalar = grp.attrs[sig_key]
+        if sig_scalar < 0:
+            raise ValueError(
+                f"Negative _sig value found for term "
+                f"'{term}' and IMT '{imt_str}'")
+        sig_scalars[imt_str][term] = sig_scalar
+
+
+def build_raytrace_grid(cell_ids, mean_vals):
+    """
+    Build the OQ polygon grid for one path-based term/IMT.
+
+    Returns {cell_id: (Polygon, per_km_adj_value)}.
+    """
+    val_dict = dict(zip(cell_ids, mean_vals))
+    imt_pgns = {}
+    for cid in cell_ids:
+        pnts = [Point(pnt[0], pnt[1])
+                for pnt in h3.cell_to_boundary(cid)]
+        # Store (OQ pgn, per km adjustment value) together
+        imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
+
+    return imt_pgns
+
+
 def load_residual_grids(hdf5_path):
     """
     Load the hdf5 residual grids into a dict with six keys:
@@ -51,7 +113,7 @@ def load_residual_grids(hdf5_path):
       sig_adjustment is not "none" and the sigma is given as a dataset named
       "{term}_sig" in the IMT group. Per-cell sigma adjustments for path terms
       are not supported currently.
-      
+
       NOTE: sig_scalars and sig_grids are mutually exclusive for each term/IMT
       so providing both raises an error.
 
@@ -85,82 +147,32 @@ def load_residual_grids(hdf5_path):
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
         for term in res_terms: # e.g. dS2S
+            location = res_terms[term]["location"]
+            sig_action = res_terms[term].get("sig_adjustment", "none")
             for imt_str in hf[term]: # e.g. SA(0.5)
-                if imt_str not in grids:
-                    grids[imt_str] = {}
-                if imt_str not in sig_scalars:
-                    sig_scalars[imt_str] = {}
-                if imt_str not in sig_grids:
-                    sig_grids[imt_str] = {}
+                grids.setdefault(imt_str, {})
+                sig_scalars.setdefault(imt_str, {})
+                sig_grids.setdefault(imt_str, {})
 
-                # Get the data for given term and IMT
                 grp = hf[term][imt_str]
                 cell_ids = grp["cell_id"][:].astype(str)
-
-                # Get h3 resolution
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
-
-                # Load mean adjustments
                 mean_vals = grp[term][:]
 
                 # If required get sigma adjustment
-                sig_action = res_terms[term].get("sig_adjustment", "none")
                 if sig_action != "none":
-                    sig_key = f"{term}_sig"
-                    has_sig_attr = sig_key in grp.attrs
-                    has_sig_dataset = sig_key in grp
-                    if has_sig_attr and has_sig_dataset:
-                        # Raise an error if requesting both scalar and per-cell
-                        raise ValueError(
-                            f"Both scalar adjustment and per-cell dataset "
-                            f"'{sig_key}' found for term '{term}', IMT "
-                            f"'{imt_str}'. Provide only one.")
-                    if not has_sig_attr and not has_sig_dataset:
-                        # Raise an error if not specifiy scalar or per cell
-                        # but requeted a sigma adjustment 
-                        raise ValueError(
-                            f"sig_adjustment '{sig_action}' requested for "
-                            f"term '{term}' but '{sig_key}' is missing for "
-                            f"'{imt_str}'")
-                    if has_sig_dataset:
-                        if res_terms[term]["location"] == "path":
-                            # Raise an error if requesting per-cell sigma
-                            # adjustment with a path-based term
-                            raise ValueError(
-                                f"Per-cell sigma is not currently supported for "
-                                f"path-based terms (term '{term}'). Use a "
-                                f"scalar adjustment instead.")
-                        sig_vals = grp[sig_key][:]
-                        if np.any(sig_vals < 0):
-                            raise ValueError(
-                                f"Negative _sig value found for term "
-                                f"'{term}' and IMT '{imt_str}'")
-                        sig_grids[imt_str][term] = dict(
-                            zip(cell_ids, sig_vals))
-                    else:
-                        sig_scalar = grp.attrs[sig_key]
-                        if sig_scalar < 0:
-                            raise ValueError(
-                                f"Negative _sig value found for term "
-                                f"'{term}' and IMT '{imt_str}'")
-                        sig_scalars[imt_str][term] = sig_scalar
+                    load_sigma_for_term(
+                        grp, term, imt_str, location,
+                        sig_action, cell_ids, sig_grids, sig_scalars
+                        )
 
                 # If path-based build OQ pgn grid for this term/IMT (keep
                 # different grid per IMT in case varies with IMT as well)
-                if res_terms[term]["location"] == "path":
-                    if term not in path_pgns:
-                        path_pgns[term] = {}
-                    val_dict = dict(zip(cell_ids, mean_vals))
-                    imt_pgns = {}
-                    for cid in cell_ids:
-                        pnts = [Point(pnt[0], pnt[1]
-                                      ) for pnt in h3.cell_to_boundary(cid)]
-                        # Store (OQ pgn, per km adjustment value) together
-                        imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
-                    
-                    # Store grid for given term and imt
-                    path_pgns[term][imt_str] = imt_pgns
-
+                if location == "path":
+                    path_pgns.setdefault(term, {})
+                    # Build the h3 grid in OQ pgns
+                    path_pgns[term][imt_str
+                                    ] = build_raytrace_grid(cell_ids, mean_vals)
                 else:
                     # Hypo/site based correction - store per cell mean adj
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
