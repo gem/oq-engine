@@ -411,7 +411,7 @@ class GridAdjustedGMPE(GMPE):
         following must be present in each IMT group for that term:
 
         * A scalar adjustment (group attribute "{term}_sig") - one value applied
-          uniformly to all sites/hypocentres depending on the location choice.
+          uniformly across all hypocentres or sites.
 
         * A dataset named "{term}_sig" - one value per h3 cell, looked up
           spatially in the same way as the mean adjustment (hypo or site
@@ -443,9 +443,8 @@ class GridAdjustedGMPE(GMPE):
     NOTE: The corrective terms (each key in the res_terms dict) are not fixed - the
     user can specify as they wish (e.g. they may wish to only include dS2S).
     
-    NOTE: The corrective terms must be IMT-dependent. If an IMT column is missing for
-    a given corrective term then it is SKIPPED (no correction is applied instead of an
-    error being raised).
+    NOTE: Corrections are stored per IMT in the HDF5. If an IMT group is missing
+    for a given term, no correction is applied for that IMT (no error is raised).
 
     NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
 
