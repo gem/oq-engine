@@ -554,14 +554,12 @@ class Conditioner:
         # Compute the within-event covariance matrices for the
         # target sites and observation sites; the shapes are
         # (nsites, nstations) and (nstations, nsites) respectively
-        with (monitor.shared['YD'] as YD,
-              monitor('computing YD', measuremem=True)):
+        with monitor.shared['YD'] as YD:
             cov_WY_WD = compute_spatial_cross_covariance_matrix(
                 inp.spatial_correl, inp.cross_correl_within, YD,
                 [t.imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
 
-        with (monitor.shared['DY'] as DY,
-              monitor('computing DY', measuremem=True)):
+        with monitor.shared['DY'] as DY:
             cov_WD_WY = compute_spatial_cross_covariance_matrix(
                 inp.spatial_correl, inp.cross_correl_within, DY,
                 t.conditioning_imts, [t.imt], t.phi_D_diag, phi_Y_diag)
@@ -578,9 +576,8 @@ class Conditioner:
         # at the target sites; shape (nsites, 1)
         mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zeta_D - mu_BD_yD)
 
-        # Compute the within-event covariance matrix for the
-        # target sites (apriori) (nsites, nsites)
-
+        # Compute the within-event covariance matrix for the target sites:
+        # this is the dominant piece, both in time and memory
         with (monitor.shared['YY'] as YY,
               monitor('computing YY', measuremem=True)):
             cov_WY_WY = compute_spatial_cross_covariance_matrix(
