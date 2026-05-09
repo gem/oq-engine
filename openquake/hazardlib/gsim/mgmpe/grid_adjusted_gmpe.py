@@ -155,6 +155,7 @@ def load_residual_grids(hdf5_path):
                 grids.setdefault(imt_str, {})
                 sig_scalars.setdefault(imt_str, {})
                 sig_grids.setdefault(imt_str, {})
+                
                 # Get group and the mean adj values
                 grp = hf[term][imt_str]
                 mean_vals = grp[term][:]
