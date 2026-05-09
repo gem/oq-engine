@@ -325,7 +325,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         Phi (standard 1d numpy array from compute)
     """
     # Get adjustment data for given imt
-    entry = grid_data["grids"].get(str(imt))
+    entry = grid_data["grids"].get(imt)
     
     # Check if no data
     if entry is None:
@@ -343,12 +343,11 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
-            imt_str = str(imt)
-            # Skip if this term has no data for the given IMT
-            if term not in grid_data["path_pgns"] or imt_str not in grid_data["path_pgns"][term]:
+            if term not in grid_data["path_pgns"] or imt not in grid_data["path_pgns"][term]:
+                # Skip if this term has no data for the given IMT
                 continue
             mean_adj = raytrace_path_adj(
-                grid_data["path_pgns"][term][imt_str], # Grid of OQ pgns + adjs
+                grid_data["path_pgns"][term][imt], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
@@ -376,8 +375,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             continue
 
         # Resolve sigma values: per-cell or scalar (mutually exclusive)
-        sig_grid = grid_data["sig_grids"].get(str(imt), {}).get(term)
-        sig_scalar = grid_data["sig_scalars"].get(str(imt), {}).get(term)
+        sig_grid = grid_data["sig_grids"].get(imt, {}).get(term)
+        sig_scalar = grid_data["sig_scalars"].get(imt, {}).get(term)
         if sig_grid is not None:
             if cfg["location"] == "hypo":
                 s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
@@ -538,5 +537,5 @@ class GridAdjustedGMPE(GMPE):
         
         # Apply grid-based corrections
         for m, imt in enumerate(imts):
-            _apply_grid_corrections(self.grid_data, ctx, imt,
+            _apply_grid_corrections(self.grid_data, ctx, str(imt),
                                     mean[m], sig[m], tau[m], phi[m])
