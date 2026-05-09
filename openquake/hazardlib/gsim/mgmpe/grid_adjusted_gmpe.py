@@ -193,8 +193,9 @@ def load_residual_grids(hdf5_path):
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
     For each epicentre-to-site path (travel path) apply an adjustment based
-    on the distance traversed through each (h3) grid cell. A conventional example
-    would be if the user had a grid with an attenuation rate per km within each
+    on the distance traversed through each (h3) grid cell. A conventional
+    example would be if the user had a grid with an attenuation rate per km
+    within each
     grid cell. The function will compute the distance through that cell, and
     retrieve a correction proportional to this distance to mean ground-motion.
 
@@ -383,7 +384,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
-            if term not in grid_data["path_pgns"] or imt not in grid_data["path_pgns"][term]:
+            if (term not in grid_data["path_pgns"] or
+                imt not in grid_data["path_pgns"][term]):
                 # Skip if this term has no data for the given IMT
                 continue
             mean_adj = raytrace_path_adj(
@@ -476,16 +478,18 @@ class GridAdjustedGMPE(GMPE):
         
         * sig = Adjust total std dev
 
-    NOTE: The corrective terms (each key in the res_terms dict) are not fixed - the
-    user can specify as they wish (e.g. they may wish to only include dS2S).
+    NOTE: The corrective terms (each key in the res_terms dict) are not
+    fixed - the user can specify as they wish (e.g. only include dS2S).
     
-    NOTE: Corrections are stored per IMT in the HDF5. If an IMT group is missing
-    for a given term, no correction is applied for that IMT (no error is raised).
+    NOTE: Corrections are stored per IMT in the HDF5. If an IMT group is
+    missing for a given term, no correction is applied for that IMT (no
+    error is raised).
 
     NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
 
-    NOTE: The h3 cell IDs (i.e. the grids) are on an IMT-by-IMT basis because the
-    availability of data used to derive the corrections might vary with period.
+    NOTE: The h3 cell IDs (i.e. the grids) are on an IMT-by-IMT basis
+    because the availability of data used to derive the corrections might
+    vary with period.
 
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
