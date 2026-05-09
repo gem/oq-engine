@@ -100,7 +100,7 @@ def load_residual_grids(hdf5_path):
     * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
       hypo/site-based terms only which use h3 cells.
 
-    * path_pgns: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ pgn
+    * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ pgn
       grids for path-based terms (used in raytracing), stored per term per
       IMT (cell sets can differ across IMTs and across terms).
 
@@ -140,9 +140,8 @@ def load_residual_grids(hdf5_path):
         Path to the hdf5 containing the grid-based adjustments.
     """
     grids = {}
-    path_pgns = {}
-    sig_scalars = {}
-    sig_grids = {}
+    raytrace_grids = {}
+    sig_scalars, sig_grids = {}, {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
@@ -174,16 +173,16 @@ def load_residual_grids(hdf5_path):
                 # If path-based build OQ pgn grid for this term/IMT (keep
                 # different grid per IMT in case varies with IMT as well)
                 if location == "path":
-                    path_pgns.setdefault(term, {})
+                    raytrace_grids.setdefault(term, {})
                     # Build the h3 grid in OQ pgns
-                    path_pgns[term][imt_str] = build_raytrace_grid(
+                    raytrace_grids[term][imt_str] = build_raytrace_grid(
                         cell_ids, mean_vals)
                 else:
                     # Hypo/site based correction - store per cell mean adj
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
 
     return {"grids": grids,
-            "path_pgns": path_pgns,
+            "raytrace_grids": raytrace_grids,
             "sig_scalars": sig_scalars,
             "sig_grids": sig_grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
@@ -383,12 +382,12 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # The term can be selected based on hypo or site location or both
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
-            if (term not in grid_data["path_pgns"] or
-                imt not in grid_data["path_pgns"][term]):
+            if (term not in grid_data["raytrace_grids"] or
+                imt not in grid_data["raytrace_grids"][term]):
                 # Skip if this term has no data for the given IMT
                 continue
             mean_adj = raytrace_path_adj(
-                grid_data["path_pgns"][term][imt], # Grid of OQ pgns + adjs
+                grid_data["raytrace_grids"][term][imt], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
