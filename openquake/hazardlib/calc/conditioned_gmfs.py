@@ -583,30 +583,31 @@ class Conditioner:
         # Compute the within-event covariance matrix for the target sites:
         # this is the dominant piece, both in time and memory
         with (monitor.shared['YY'] as YY,
-              monitor('computing YY', measuremem=True)):
+              monitor('computing cov_Y_Y', measuremem=True)):
             cov_WY_WY = compute_spatial_cross_covariance_matrix(
                 inp.spatial_correl, inp.cross_correl_within, YY,
                 [t.imt], [t.imt], phi_Y_diag, phi_Y_diag)
 
-        # Both conditioned covariance matrices can contain extremely
-        # small negative values due to limitations of floating point
-        # operations (~ -10^-17 to -10^-15), these are clipped to zero
+            # Both conditioned covariance matrices can contain extremely
+            # small negative values due to limitations of floating point
+            # operations (~ -10^-17 to -10^-15), these are clipped to zero
 
-        # Compute the conditioned within-event covariance matrix
-        # for the target sites clipped to zero, shape (nsites, nsites)
-        cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0).astype(F32)
+            # Compute the conditioned within-event covariance matrix
+            # for the target sites clipped to zero, shape (nsites, nsites)
+            cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0).astype(F32)
 
-        # Compute the scaling matrix "C" for the conditioned between-event
-        # covariance matrix
-        if t.native_data_available:
-            C = (tau_Y - RC @ t.T_D).astype(F32)
-        else:
-            zeros = numpy.zeros((len(inp.sites_Y), len(t.conditioning_imts)))
-            C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
+            # Compute the scaling matrix "C" for the conditioned between-event
+            # covariance matrix
+            if t.native_data_available:
+                C = (tau_Y - RC @ t.T_D).astype(F32)
+            else:
+                N = len(inp.sites_Y)
+                zeros = numpy.zeros((N, len(t.conditioning_imts)), F32)
+                C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
 
-        # Compute the conditioned between-event covariance matrix
-        # for the target sites clipped to zero, shape (nsites, nsites)
-        cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0).astype(F32)
+            # Compute the conditioned between-event covariance matrix
+            # for the target sites clipped to zero, shape (nsites, nsites)
+            cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0).astype(F32)
         return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 
