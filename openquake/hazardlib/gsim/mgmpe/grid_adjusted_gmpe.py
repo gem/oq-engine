@@ -287,8 +287,7 @@ def grid_lookup(grid_dict, lats, lons, h3_res):
     return mean_vals
 
 
-def _adjust_sigma(grid_data, imt, term, cfg, ctx,
-                  sig_action, sig, tau, phi):
+def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
     """
     Resolve the sigma adjustment value for this term/IMT, then apply
     it to the specified component.
@@ -417,7 +416,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             continue
 
         # Apply sigma adjustment to required component
-        _adjust_sigma(
+        adjust_sigma(
             grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi)
 
 
