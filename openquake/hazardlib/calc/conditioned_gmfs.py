@@ -464,7 +464,7 @@ def _compute_spatial_cross_correlation_matrix(
     matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
     spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
     cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
-    return (spatial_correlation_matrix * cross_corr_coeff)
+    return spatial_correlation_matrix * F32(cross_corr_coeff)
 
 
 def compute_spatial_cross_covariance_matrix(
@@ -481,7 +481,7 @@ def compute_spatial_cross_covariance_matrix(
         _compute_spatial_cross_correlation_matrix(
             imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
         for imt_2 in imts2] for imt_1 in imts1])
-    return (diag1 @ rho @ diag2).astype(F32)
+    return diag1.astype(F32) @ rho @ diag2.astype(F32)
 
 
 # In scenario/case_21 one has
