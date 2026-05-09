@@ -234,8 +234,9 @@ class ConditionedGmfComputer(GmfComputer):
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
         N = len(cov_WY_WY)
-        cutoff = numpy.eye(N, dtype=F32) * self.cmaker.oq.correlation_cutoff
-        # the cutoff is needed to remove negative eigenvalues
+        cutoff = F32(self.cmaker.oq.correlation_cutoff)
+        cutoff *= numpy.eye(N, dtype=F32)
+        # NB: the cutoff is needed to remove negative eigenvalues
         if (self.cmaker.oq.truncated_mvn is False or
                 self.cmaker.truncation_level == 99):
             # do not truncate
@@ -256,13 +257,13 @@ class ConditionedGmfComputer(GmfComputer):
         seed_w = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
 
         z_w_truncated = TruncatedMVN(
-            numpy.zeros(N), cov_WY_WY, lb_w, ub_w, seed=seed_w
+            numpy.zeros(N, F32), cov_WY_WY, F32(lb_w), F32(ub_w), seed=seed_w
         ).sample(E)
 
         lb_b, ub_b = self.get_symmetric_bounds(cov_BY_BY, self.tlb)
         seed_b = int(rng.integers(0, numpy.iinfo(numpy.int32).max))
         z_b_truncated = TruncatedMVN(
-            numpy.zeros(N), cov_BY_BY, lb_b, ub_b, seed=seed_b
+            numpy.zeros(N, F32), cov_BY_BY, F32(lb_b), F32(ub_b), seed=seed_b
         ).sample(E)
 
         arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated

@@ -168,7 +168,7 @@ correlation_cutoff:
   Used in conditioned GMF calculation to avoid small negative eigenvalues
   wreaking havoc with the numerics
   Example: *correlation_cutoff = 1E-9*
-  Default: 5E-5
+  Default: 2E-4
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
