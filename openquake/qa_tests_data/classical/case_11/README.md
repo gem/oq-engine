@@ -3,10 +3,11 @@
 Classical PSHA over using 5 sites using `GridAdjustedGMPE` with `AkkarEtAlRjb2014`
 as the underlying GMM to be adjusted. Three H3-gridded residual correction terms
 are applied (`dL2L`, `dS2S`, `att_per_km`) for PGA and SA(0.5) to both the mean predicted
-ground-motion and the mapped sigma component (total, tau or phi). SA(1.0) has no grid
-data and therefore receives no adjustment intentionally. The visualisation of the hdf5
-clearly shows that the h3 grids are varying in density - this is intentional, with
-the `GridAdjustedGMPE` supporting either constant or varying density h3 grid cells.
+ground-motion and the mapped sigma component (can be total, tau or phi). SA(1.0) has no grid
+data and therefore receives no adjustment intentionally (note that the sigma adjustment in
+`GridAdjustedGMPE` is optional). The visualisation of the hdf5 clearly shows that the h3 grids
+are varying in density - this is intentional, with the `GridAdjustedGMPE` supporting either
+constant or varying density h3 grid cells.
 
 The hdf5 containing the corrections used in this simple test case is called
 `grid_adjustments.hdf5`.
@@ -36,7 +37,7 @@ Red star = hypocentre; blue triangles = sites in the site model.
 
 ## Additional Information
 
-It's advisable to consult the `GridAdjustedGMPE` GSIM module itself if you wish to learn
-more about this feature (`oq-engine/openquake/hazardlib/gsim/mgmpe/grid_adjusted_gmpe.py`).
+It's advisable to consult the `GridAdjustedGMPE` GSIM module to fully understand this feature
+if you plan to use it (`oq-engine/openquake/hazardlib/gsim/mgmpe/grid_adjusted_gmpe.py`).
 
 Also, please note that the correction values provided in this test are arbitrary.
