@@ -240,6 +240,8 @@ class ConditionedGmfComputer(GmfComputer):
                 self.cmaker.truncation_level == 99):
             # do not truncate
             cov_Y_Y = cov_WY_WY + cov_BY_BY + cutoff
+            # eig0, _ = numpy.linalg.eigh(cov_WY_WY + cov_BY_BY)
+            # eig, _ = numpy.linalg.eigh(cov_Y_Y)
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=E,
                 check_valid="raise", tol=1e-5, method="cholesky").T

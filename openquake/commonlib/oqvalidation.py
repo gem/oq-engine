@@ -1086,7 +1086,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
-    correlation_cutoff = valid.Param(valid.positivefloat, 5E-5)
+    correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
     siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
