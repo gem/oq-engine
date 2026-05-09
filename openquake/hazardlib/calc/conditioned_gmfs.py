@@ -594,15 +594,15 @@ class Conditioner:
 
         # Compute the conditioned within-event covariance matrix
         # for the target sites clipped to zero, shape (nsites, nsites)
-        cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
+        cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0).astype(F32)
 
         # Compute the scaling matrix "C" for the conditioned between-event
         # covariance matrix
         if t.native_data_available:
-            C = tau_Y - RC @ t.T_D
+            C = (tau_Y - RC @ t.T_D).astype(F32)
         else:
             zeros = numpy.zeros((len(inp.sites_Y), len(t.conditioning_imts)))
-            C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
+            C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
 
         # Compute the conditioned between-event covariance matrix
         # for the target sites clipped to zero, shape (nsites, nsites)
