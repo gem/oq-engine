@@ -100,9 +100,9 @@ def load_residual_grids(hdf5_path):
     * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
       hypo/site-based terms only which use h3 cells.
 
-    * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ pgn
-      grids for path-based terms (used in raytracing), stored per term per
-      IMT (cell sets can differ across IMTs and across terms).
+    * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
+      pgn grids for path-based terms (used in raytracing), stored per term
+      per IMT (cell sets can differ across IMTs and across terms).
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Populated when sig_adjustment is not "none" and the
