@@ -633,13 +633,12 @@ def build_precomputed(rupture, cmaker, inp):
     return pre
 
 
-# TODO: possibly switch to 32 bit floats
-def getMNE(computer, conditioner, monitor):
+def conditioned(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
     E = computer.E // len(computer.cmaker.gsims)
-    MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
+    MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
         mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)
