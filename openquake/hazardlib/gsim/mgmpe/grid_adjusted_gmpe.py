@@ -56,15 +56,23 @@ def load_residual_grids(hdf5_path):
       so providing both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
-      automatically from the cell IDs in the grids. Used in hypo-based or
-      site-based adjustments.
+      automatically from the cell IDs in the grids. Used in hypo-based,
+      site-based, and per-cell sigma adjustments.
 
-    * res_terms: dict mapping each term name to a sub-dict with location
-      (hypo, site, path), and optionally a non-location dependent scalar
-      sig_adjustment (sub, add, replace or none; default none) and also
-      sig_comp_modified (tau, phi, or sig - which is only required when
-      sig_adjustment is not none and maps which component of GMM sigma
-      should be modified by the given sig_adjustment).
+    * res_terms: dict mapping each term name to a sub-dict with three keys:
+
+      - location (required): how to resolve the correction spatially;
+        one of "hypo", "site", or "path".
+
+      - sig_adjustment (optional, default "none"): the action to apply
+        to the GMM sigma component - "sub", "add", "replace", or "none".
+        When not "none", a sigma value must be provided in the HDF5 for
+        each IMT group as either a scalar group attribute "{term}_sig" or
+        a per-cell dataset of the same name. Providing both raises an
+        error. Per-cell sigma is not supported currently for path-based terms.
+
+      - sig_comp_modified (required when sig_adjustment is not "none"):
+        which sigma component to modify - "tau", "phi", or "sig".
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
