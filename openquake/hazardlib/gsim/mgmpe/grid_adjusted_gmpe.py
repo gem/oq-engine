@@ -269,6 +269,41 @@ def grid_lookup(grid_dict, lats, lons, h3_res):
     return mean_vals
 
 
+def _adjust_sigma(sig_action, sig_comp, sig_vals, sig, tau, phi):
+    """
+    Apply a sigma adjustment to required component.
+    """
+    if sig_action == "replace":
+        if sig_comp == "tau":
+            # Adjust tau
+            tau[:] = sig_vals
+            # Recompute total sigma accordingly
+            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
+        elif sig_comp == "phi":
+            # Adjust phi
+            phi[:] = sig_vals
+            # Recompute total sigma accordingly
+            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
+        else:
+            # Adjust total sigma
+            sig[:] = sig_vals
+    else:
+        sign = -1 if sig_action == "sub" else 1
+        if sig_comp == "tau":
+            # Adjust tau
+            tau[:] = np.sqrt(tau ** 2 + sign * sig_vals ** 2)
+            # Recompute total sigma accordingly
+            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
+        elif sig_comp == "phi":
+            # Adjust phi
+            phi[:] = np.sqrt(phi ** 2 + sign * sig_vals ** 2)
+            # Recompute total sigma accordingly
+            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
+        else:
+            # Adjust total sigma
+            sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
+
+
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
     Look up and apply corrections defined in the hdf5. The mean
@@ -326,8 +361,6 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                 # Hypo location-based
                 lats, lons = ctx.hypo_lat, ctx.hypo_lon
             else:
-                # Sanity check
-                assert cfg["location"] == "site"
                 # Site location-based
                 lats, lons = ctx.lat, ctx.lon
 
@@ -356,31 +389,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             sig_vals = sig_scalar
 
         # Apply sigma adjustment to required component of GMM sigma
-        sign = -1 if sig_action == "sub" else 1
-        sig_comp = cfg["sig_comp_modified"]
-        if sig_comp == "tau":
-            # Adjust tau
-            if sig_action != "replace":
-                tau[:] = np.sqrt(tau ** 2 + sign * sig_vals ** 2)
-            else:
-                tau[:] = sig_vals
-            # Recompute total sigma accordingly
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        elif sig_comp == "phi":
-            # Adjust phi
-            if sig_action != 'replace':
-                phi[:] = np.sqrt(phi ** 2 + sign * sig_vals ** 2)
-            else:
-                phi[:] = sig_vals
-            # Recompute total sigma accordingly
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        else:
-            # Adjust total sigma
-            assert sig_comp == "sig"
-            if sig_action != 'replace':
-                sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
-            else:
-                sig[:] = sig_vals
+        _adjust_sigma(
+            sig_action, cfg["sig_comp_modified"], sig_vals, sig, tau, phi)
 
 
 class GridAdjustedGMPE(GMPE):
