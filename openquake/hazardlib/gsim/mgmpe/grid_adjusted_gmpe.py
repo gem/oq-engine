@@ -155,7 +155,7 @@ def load_residual_grids(hdf5_path):
                 grids.setdefault(imt_str, {})
                 sig_scalars.setdefault(imt_str, {})
                 sig_grids.setdefault(imt_str, {})
-                
+
                 # Get group and the mean adj values
                 grp = hf[term][imt_str]
                 mean_vals = grp[term][:]
@@ -176,8 +176,8 @@ def load_residual_grids(hdf5_path):
                 if location == "path":
                     path_pgns.setdefault(term, {})
                     # Build the h3 grid in OQ pgns
-                    path_pgns[term][imt_str
-                                    ] = build_raytrace_grid(cell_ids, mean_vals)
+                    path_pgns[term][imt_str] = build_raytrace_grid(
+                        cell_ids, mean_vals)
                 else:
                     # Hypo/site based correction - store per cell mean adj
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
