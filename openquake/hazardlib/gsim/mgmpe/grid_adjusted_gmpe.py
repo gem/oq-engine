@@ -33,7 +33,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with five keys:
+    Load the hdf5 residual grids into a dict with six keys:
 
     * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
       hypo/site-based terms only which use h3 cells.
@@ -43,9 +43,17 @@ def load_residual_grids(hdf5_path):
       IMT (cell sets can differ across IMTs and across terms).
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
-      per term per IMT. Only filled out when sig_adjustment is not "none".
-      NOTE: when sig_adjustment is not none, each IMT group present in the
-      hdf5 for that term must have a scalar group attribute named "{term}_sig".
+      per term per IMT. Populated when sig_adjustment is not "none" and the
+      sigma is given as a scalar adjustment (group attribute "{term}_sig").
+
+    * sig_grids: {imt_str: {term: {cell_id: float}}} - per-cell sigma
+      adjustment values for hypo/site-based terms. Populated when
+      sig_adjustment is not "none" and the sigma is given as a dataset named
+      "{term}_sig" in the IMT group. Per-cell sigma adjustments for path terms
+      are not supported currently.
+      
+      NOTE: sig_scalars and sig_grids are mutually exclusive for each term/IMT
+      so providing both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
       automatically from the cell IDs in the grids. Used in hypo-based or
@@ -64,15 +72,18 @@ def load_residual_grids(hdf5_path):
     grids = {}
     path_pgns = {}
     sig_scalars = {}
+    sig_grids = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
         for term in res_terms: # e.g. dS2S
             for imt_str in hf[term]: # e.g. SA(0.5)
                 if imt_str not in grids:
-                    grids[imt_str] = {}       # Set an empty dict for given IMT
+                    grids[imt_str] = {}
                 if imt_str not in sig_scalars:
-                    sig_scalars[imt_str] = {} # Set an empty dict for given IMT
+                    sig_scalars[imt_str] = {}
+                if imt_str not in sig_grids:
+                    sig_grids[imt_str] = {}
 
                 # Get the data for given term and IMT
                 grp = hf[term][imt_str]
@@ -84,24 +95,47 @@ def load_residual_grids(hdf5_path):
                 # Load mean adjustments
                 mean_vals = grp[term][:]
 
-                # If required get scalar sigma adjustment
+                # If required get sigma adjustment
                 sig_action = res_terms[term].get("sig_adjustment", "none")
                 if sig_action != "none":
-                    sig_key= f"{term}_sig"
-                    if sig_key not in grp.attrs:
-                        # Raise error if user specified a sigma adjustment for
-                        # given term but missing a scalar value for given IMT
+                    sig_key = f"{term}_sig"
+                    has_sig_attr = sig_key in grp.attrs
+                    has_sig_dataset = sig_key in grp
+                    if has_sig_attr and has_sig_dataset:
+                        # Raise an error if requesting both scalar and per-cell
+                        raise ValueError(
+                            f"Both scalar adjustment and per-cell dataset "
+                            f"'{sig_key}' found for term '{term}', IMT "
+                            f"'{imt_str}'. Provide only one.")
+                    if not has_sig_attr and not has_sig_dataset:
+                        # Raise an error if not specifiy scalar or per cell
+                        # but requeted a sigma adjustment 
                         raise ValueError(
                             f"sig_adjustment '{sig_action}' requested for "
                             f"term '{term}' but '{sig_key}' is missing for "
                             f"'{imt_str}'")
-                    sig_scalar = grp.attrs[sig_key]
-                    if sig_scalar < 0:
-                        # Forbid negative sigma values
-                        raise ValueError(
-                            f"Negative _sig value found for term "
-                            f"'{term}' and IMT '{imt_str}'")
-                    sig_scalars[imt_str][term] = sig_scalar
+                    if has_sig_dataset:
+                        if res_terms[term]["location"] == "path":
+                            # Raise an error if requesting per-cell sigma
+                            # adjustment with a path-based term
+                            raise ValueError(
+                                f"Per-cell sigma is not currently supported for "
+                                f"path-based terms (term '{term}'). Use a "
+                                f"scalar adjustment instead.")
+                        sig_vals = grp[sig_key][:]
+                        if np.any(sig_vals < 0):
+                            raise ValueError(
+                                f"Negative _sig value found for term "
+                                f"'{term}' and IMT '{imt_str}'")
+                        sig_grids[imt_str][term] = dict(
+                            zip(cell_ids, sig_vals))
+                    else:
+                        sig_scalar = grp.attrs[sig_key]
+                        if sig_scalar < 0:
+                            raise ValueError(
+                                f"Negative _sig value found for term "
+                                f"'{term}' and IMT '{imt_str}'")
+                        sig_scalars[imt_str][term] = sig_scalar
 
                 # If path-based build OQ pgn grid for this term/IMT (keep
                 # different grid per IMT in case varies with IMT as well)
@@ -111,7 +145,6 @@ def load_residual_grids(hdf5_path):
                     val_dict = dict(zip(cell_ids, mean_vals))
                     imt_pgns = {}
                     for cid in cell_ids:
-                        # Make pnts list for OQ pgn
                         pnts = [Point(pnt[0], pnt[1]
                                       ) for pnt in h3.cell_to_boundary(cid)]
                         # Store (OQ pgn, per km adjustment value) together
@@ -119,13 +152,15 @@ def load_residual_grids(hdf5_path):
                     
                     # Store grid for given term and imt
                     path_pgns[term][imt_str] = imt_pgns
+
                 else:
-                    # Hypo/site based correction - store plain mean dict
+                    # Hypo/site based correction - store per cell mean adj
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
 
     return {"grids": grids,
             "path_pgns": path_pgns,
             "sig_scalars": sig_scalars,
+            "sig_grids": sig_grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
@@ -295,37 +330,49 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # Apply adjustment to mean prediction
         mean += mean_adj
 
-        # Skip sigma adjustment if not required for this term
-        sig_scalar = grid_data["sig_scalars"].get(str(imt), {}).get(term)
-        if sig_scalar is None:
+        # Skip sigma adjustment if not configured for this term
+        if sig_action == "none":
             continue
 
-        # Apply scalar sigma adjustment to required component of GMM sigma
+        # Resolve sigma values: per-cell or scalar (mutually exclusive)
+        sig_grid = grid_data["sig_grids"].get(str(imt), {}).get(term)
+        sig_scalar = grid_data["sig_scalars"].get(str(imt), {}).get(term)
+        if sig_grid is not None:
+            if cfg["location"] == "hypo":
+                s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
+            else:
+                s_lats, s_lons = ctx.lat, ctx.lon
+            sig_vals = grid_lookup(
+                sig_grid, s_lats, s_lons, grid_data["h3_res"])
+        else:
+            sig_vals = sig_scalar
+
+        # Apply sigma adjustment to required component of GMM sigma
         sign = -1 if sig_action == "sub" else 1
         sig_comp = cfg["sig_comp_modified"]
         if sig_comp == "tau":
             # Adjust tau
             if sig_action != "replace":
-                tau[:] = np.sqrt(tau ** 2 + sign * sig_scalar ** 2)
+                tau[:] = np.sqrt(tau ** 2 + sign * sig_vals ** 2)
             else:
-                tau[:] = sig_scalar
+                tau[:] = sig_vals
             # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         elif sig_comp == "phi":
             # Adjust phi
             if sig_action != 'replace':
-                phi[:] = np.sqrt(phi ** 2 + sign * sig_scalar ** 2)
+                phi[:] = np.sqrt(phi ** 2 + sign * sig_vals ** 2)
             else:
-                phi[:] = sig_scalar
+                phi[:] = sig_vals
             # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
             assert sig_comp == "sig"
             if sig_action != 'replace':
-                sig[:] = np.sqrt(sig ** 2 + sign * sig_scalar ** 2)
+                sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
             else:
-                sig[:] = sig_scalar
+                sig[:] = sig_vals
 
 
 class GridAdjustedGMPE(GMPE):
@@ -352,12 +399,23 @@ class GridAdjustedGMPE(GMPE):
                  attenuation rate per km per intersected grid cell)
 
       * sig_adjustment (optional, default "none"): Whether to adjust the
-        corresponding GMM sigma component. When not "none", the hdf5 IMT
-        group must contain a scalar attribute named "{term}_sig" holding the
-        sigma adjustment value (e.g. tau_L2L for dL2L, phi_S2S for dS2S):
+        corresponding GMM sigma component. When not "none", one of the
+        following must be present in each IMT group for that term:
+
+        * A scalar adjustment (group attribute "{term}_sig") - one value applied
+          uniformly to all sites/hypocentres depending on the location choice.
+
+        * A dataset named "{term}_sig" - one value per h3 cell, looked up
+          spatially in the same way as the mean adjustment (hypo or site
+          location; not supported yet for path-based terms).
+          
+        NOTE: Providing both a scalar adjustment and a cell-by-cell adjustment
+        raises an error - you must select one or the other for each correction.
+
+        Adjustment actions:
 
         * none = Skip sigma adjustment (only apply mean correction - in
-                 this case no "{term}_sig" attribute need be specified).
+                 this case no "{term}_sig" need be specified).
 
         * sub = Subtract variance from given sigma component (reduce sigma)
 
@@ -390,7 +448,8 @@ class GridAdjustedGMPE(GMPE):
     associated with this mgmpe module:
     oq-engine/openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
 
-    A use case (from XML) can be found in the classical QA tests:
+    A use case (from XML) can be found in the classical QA tests (there is 
+    also a readme visualising the hdf5 information):
     oq-engine/openquake/qa_tests_data/classical/case_11/grid_adjustments.hdf5
 
     :param gmpe_name:
