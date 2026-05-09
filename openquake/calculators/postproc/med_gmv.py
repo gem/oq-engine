@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import numpy as np
 from openquake.baselib import parallel, general
 from openquake.baselib.general import groupby
 from openquake.hazardlib.contexts import read_cmakers
@@ -28,7 +29,7 @@ def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
     ctx = cmaker.from_srcs(src_frags, sitecol)
     if len(ctx):
-        mean = cmaker.get_mean_stds([ctx])[0]  # shape (G, M, N)
+        mean = cmaker.get_mean_stds([ctx])[0].astype(np.float32)  # (G, M, N)
         for m, imt in enumerate(cmaker.imtls):
             mean[:, m] = exp(mean[:, m], imt!='MMI')
         gsims = [str(gsim) for gsim in cmaker.gsims]
