@@ -234,7 +234,7 @@ class ConditionedGmfComputer(GmfComputer):
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
         N = len(cov_WY_WY)
-        cutoff = numpy.eye(N) * self.cmaker.oq.correlation_cutoff
+        cutoff = numpy.eye(N, dtype=F32) * self.cmaker.oq.correlation_cutoff
         # the cutoff is needed to remove negative eigenvalues
         if (self.cmaker.oq.truncated_mvn is False or
                 self.cmaker.truncation_level == 99):
@@ -452,6 +452,7 @@ def compute_distance_matrix(sites1, sites2):
     return distance_matrix.astype(F32)
 
 
+# called only by compute_spatial_cross_covariance_matrix
 def _compute_spatial_cross_correlation_matrix(
         imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix):
     if imt_1 == imt_2:
@@ -461,7 +462,7 @@ def _compute_spatial_cross_correlation_matrix(
     matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
     spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
     cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
-    return spatial_correlation_matrix * cross_corr_coeff
+    return (spatial_correlation_matrix * cross_corr_coeff)
 
 
 def compute_spatial_cross_covariance_matrix(
@@ -478,7 +479,7 @@ def compute_spatial_cross_covariance_matrix(
         _compute_spatial_cross_correlation_matrix(
             imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
         for imt_2 in imts2] for imt_1 in imts1])
-    return diag1 @ rho @ diag2
+    return (diag1 @ rho @ diag2).astype(F32)
 
 
 # In scenario/case_21 one has
@@ -574,7 +575,8 @@ class Conditioner:
 
         # Compute the conditioned mean of the ground motion
         # at the target sites; shape (nsites, 1)
-        mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zeta_D - mu_BD_yD)
+        mu_Y_yD = (mu_Y + tau_Y @ mu_HD_yD[0, numpy.newaxis] +
+                   RC @ (t.zeta_D - mu_BD_yD)).astype(F32)
 
         # Compute the within-event covariance matrix for the
         # target sites (apriori) (nsites, nsites)
@@ -602,7 +604,7 @@ class Conditioner:
 
         # Compute the conditioned between-event covariance matrix
         # for the target sites clipped to zero, shape (nsites, nsites)
-        cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0)
+        cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0).astype(F32)
         return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 

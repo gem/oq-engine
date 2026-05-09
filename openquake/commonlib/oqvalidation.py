@@ -167,8 +167,8 @@ collect_rlzs:
 correlation_cutoff:
   Used in conditioned GMF calculation to avoid small negative eigenvalues
   wreaking havoc with the numerics
-  Example: *correlation_cutoff = 1E-11*
-  Default: 1E-12
+  Example: *correlation_cutoff = 1E-9*
+  Default: 5E-5
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -1086,7 +1086,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
-    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
+    correlation_cutoff = valid.Param(valid.positivefloat, 5E-5)
     siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
