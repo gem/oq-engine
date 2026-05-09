@@ -150,14 +150,18 @@ def load_residual_grids(hdf5_path):
             location = res_terms[term]["location"]
             sig_action = res_terms[term].get("sig_adjustment", "none")
             for imt_str in hf[term]: # e.g. SA(0.5)
+
+                # Set stores if not already present
                 grids.setdefault(imt_str, {})
                 sig_scalars.setdefault(imt_str, {})
                 sig_grids.setdefault(imt_str, {})
-
+                # Get group and the mean adj values
                 grp = hf[term][imt_str]
+                mean_vals = grp[term][:]
+
+                # Collect h3 resolutions for this term/IMT
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
-                mean_vals = grp[term][:]
 
                 # If required get sigma adjustment
                 if sig_action != "none":
