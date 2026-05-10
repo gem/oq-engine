@@ -283,7 +283,7 @@ class Input:
 
 
 @dataclass
-class TempResult:
+class DResult:
     """
     Temporary data structure used inside get_mean_covs
     """
@@ -300,7 +300,7 @@ class TempResult:
     zeta_D: numpy.ndarray = 0
 
 
-def _create_temp(g, m, target_imt, imts_D, sdata):
+def _createD(g, m, target_imt, imts_D, sdata):
     # returns (g, m, conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
@@ -342,14 +342,14 @@ def _create_temp(g, m, target_imt, imts_D, sdata):
                 f"The station data contains {num_null_values}"
                 f" null values for {target_imt.string}."
                 " Please fill or discard these rows.")
-    t = TempResult(g, m, target_imt, bracketed_imts, conditioning_imts,
-                   native_data_available)
+    t = DResult(g, m, target_imt, bracketed_imts, conditioning_imts,
+                native_data_available)
     return t
 
 
-def create_temp(g, m, target_imt, inp, mean_stds_D, DD):
+def createD(g, m, target_imt, inp, mean_stds_D, DD):
     """
-    :returns: a TempResult
+    :returns: a DResult object containing correlation matrices of size DxD
     """
     sdata = {}
     for im, ms in zip(inp.imts_D, mean_stds_D.transpose(2, 0, 1, 3)):
@@ -361,7 +361,7 @@ def create_temp(g, m, target_imt, inp, mean_stds_D, DD):
         sdata[im.string + "_phi"] = ms[3, 0]
     sdata = pandas.DataFrame(sdata)
 
-    t = _create_temp(g, m, target_imt, inp.imts_D, sdata)
+    t = _createD(g, m, target_imt, inp.imts_D, sdata)
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -517,12 +517,12 @@ class Conditioner:
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance
     def get_mu_tau_phi(self, m, target_imt, monitor):
-        # NB: mean_stds matrices have shape (4, G=1, M=1, N)
+        # NB: mean_stds matrices have shape (4, 1, M, N)
         g, gsim, inp, mean_stds, mean_stds_D = self.args
 
         # build temporary matrices
         with monitor.shared['DD'] as DD:
-            t = create_temp(g, m, target_imt, inp, mean_stds_D, DD)
+            t = createD(g, m, target_imt, inp, mean_stds_D, DD)
 
         cov_HD_HD_yD = numpy.linalg.pinv(
             t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
@@ -576,10 +576,10 @@ class Conditioner:
         # at the target sites; shape (nsites, 1)
         mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zeta_D - mu_BD_yD)
 
-        # Compute the within-event covariance matrix for the
-        # target sites (apriori) (nsites, nsites)
-
-        with monitor.shared['YY'] as YY:
+        # Compute the within-event covariance matrix for the target sites:
+        # this is the dominant piece, both in time and memory
+        with (monitor.shared['YY'] as YY,
+              monitor('computing YY', measuremem=True)):
             cov_WY_WY = compute_spatial_cross_covariance_matrix(
                 inp.spatial_correl, inp.cross_correl_within, YY,
                 [t.imt], [t.imt], phi_Y_diag, phi_Y_diag)
@@ -633,13 +633,12 @@ def build_precomputed(rupture, cmaker, inp):
     return pre
 
 
-# TODO: possibly switch to 32 bit floats
-def getMNE(computer, conditioner, monitor):
+def conditioned(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
     """
     E = computer.E // len(computer.cmaker.gsims)
-    MNE = numpy.zeros((computer.M, computer.N, E + 1), float)
+    MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
     g = conditioner.g
     for m, imt in enumerate(conditioner.inp.imts_Y):
         mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)
