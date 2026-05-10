@@ -102,7 +102,7 @@ def load_residual_grids(hdf5_path):
 
     * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
       pgn grids for path-based terms (used in raytracing), stored per term
-      per IMT (cell sets can differ across IMTs and across terms).
+      per IMT (cell grids can differ across IMTs and across terms).
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Populated when sig_adjustment is not "none" and the
@@ -118,8 +118,7 @@ def load_residual_grids(hdf5_path):
       so providing both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
-      automatically from the cell IDs in the grids. Used in hypo-based,
-      site-based, and per-cell sigma adjustments.
+      automatically from the cell IDs in the grids.
 
     * res_terms: dict mapping each term name to a sub-dict with three keys:
 
@@ -130,8 +129,8 @@ def load_residual_grids(hdf5_path):
         to the GMM sigma component - "sub", "add", "replace", or "none".
         When not "none", a sigma value must be provided in the HDF5 for
         each IMT group as either a scalar group attribute "{term}_sig" or
-        a per-cell dataset of the same name. Providing both raises an
-        error. Per-cell sigma is not supported currently for path-based terms.
+        a per-cell dataset of the same name (see above). Per-cell sigma
+        lookup is not supported currently for path-based terms.
 
       - sig_comp_modified (required when sig_adjustment is not "none"):
         which sigma component to modify - "tau", "phi", or "sig".
@@ -194,9 +193,9 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     For each epicentre-to-site path (travel path) apply an adjustment based
     on the distance traversed through each (h3) grid cell. A conventional
     example would be if the user had a grid with an attenuation rate per km
-    within each
-    grid cell. The function will compute the distance through that cell, and
-    retrieve a correction proportional to this distance to mean ground-motion.
+    within each grid cell. The function will compute the distance through
+    that cell, and retrieve a correction proportional to this distance to
+    mean ground-motion.
 
     :param grid:
         {cell_id: (oq_pgn, per_km_adj_value)} for a single term and given imt
@@ -431,8 +430,8 @@ class GridAdjustedGMPE(GMPE):
       is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
 
       * location: How to resolve the correction spatially, with each look-up
-                  resolving the location to a h3 cell, searching from finest
-                  to coarsest resolution. If a location falls outside all
+                  resolving the location to a h3 cell, searching from coarsest
+                  to finest resolution. If a location falls outside all
                   grid cells then a correction of zero is applied:
 
         * hypo = Use the rupture hypocentre (ctx.hypo_lat, ctx.hypo_lon)
@@ -454,7 +453,7 @@ class GridAdjustedGMPE(GMPE):
           location; not supported yet for path-based terms).
           
         NOTE: Providing both a scalar adjustment and a cell-by-cell adjustment
-        raises an error - you must select one or the other for each correction.
+        raises an error - you must select exactly 1 for each sigma correction.
 
         Adjustment actions:
 
@@ -479,15 +478,15 @@ class GridAdjustedGMPE(GMPE):
     NOTE: The corrective terms (each key in the res_terms dict) are not
     fixed - the user can specify as they wish (e.g. only include dS2S).
     
-    NOTE: Corrections are stored per IMT in the HDF5. If an IMT group is
-    missing for a given term, no correction is applied for that IMT (no
-    error is raised).
+    NOTE: Corrections are stored per term per IMT in the HDF5. If an IMT
+    group is missing for a given term, no correction is applied for that
+    IMT (no error is raised).
 
     NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
 
-    NOTE: The h3 cell IDs (i.e. the grids) are on an IMT-by-IMT basis
-    because the availability of data used to derive the corrections might
-    vary with period.
+    NOTE: The h3 cell IDs (i.e. the grids) are looked-up on an IMT-by-IMT
+    basis because the availability of data used to derive the corrections
+    might vary with period.
 
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
