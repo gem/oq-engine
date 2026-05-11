@@ -372,7 +372,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     for term, cfg in grid_data["res_terms"].items():
         # Example of (term, cfg):
         # term = 'dL2L'
-        # cfg = {'location': "hypo", sig_adjustment: "add", sig_comp_modified: "tau"}
+        # cfg = {'location': "hypo", sig_adjustment: "sub", sig_comp_modified: "tau"}
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
