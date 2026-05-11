@@ -39,6 +39,132 @@ MAXMAG = 10.2  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
+
+# The default value of the maximum_distance parameter is based on the
+# tectonic region type and magnitude by interpolation using the following
+# (mag, rrup) points, rounding the interpolated distance to the nearest 5 km.
+# These are calibrated approximately to the distance beyond which
+# the μ + 1σ  PGA ≤ 0.06g for vs30 = 360m/s, i.e., assets beyond
+# this distance are highly unlikely to incur damage and can safely
+# be excluded from the analysis. There might be the rare earthquakes
+# where the shaking is high even beyond these distances
+# (eg. 1985 M8.0 Mexico City earthquake) but in such cases the user
+# can always override the default value.
+MAGDIST_BY_TRT = {
+    'ACTIVE_SHALLOW_CRUST': [
+        (5.0,  30), (5.5,  40), (6.0,  50), (6.5,  75),
+        (7.0, 110), (7.5, 150), (8.0, 200),
+    ],
+    'STABLE_CONTINENTAL': [
+        (5.0,  40), (5.5,  50), (6.0,  75), (6.5, 125),
+        (7.0, 200), (7.5, 300), (8.0, 400),
+    ],
+    'SUBDUCTION_INTERFACE': [
+        (6.0,  60), (6.5,  90), (7.0, 120), (7.5, 170),
+        (8.0, 225), (8.5, 270), (9.0, 305), (9.5, 340),
+    ],
+    'SUBDUCTION_INTRASLAB': [
+        (6.0, 100), (6.5, 150), (7.0, 200), (7.5, 250), (8.0, 300),
+    ],
+    'VOLCANIC': [(4.5, 10), (5.0, 15)]
+}
+
+
+# Mapping from every known mosaic TRT string -> canonical TRT string
+MOSAIC_TRT_TO_CANONICAL_TRT = {
+    # Active Shallow Crust
+    "Active Shallow Crust ALS":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust CAM":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust CAN":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust CCA":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust CHN":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust EMME":          "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust JPN":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust MEX":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust NWA-NEA":       "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust PHL":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust SAM":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust SEA":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust TEM":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust TWN":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust USA":           "ACTIVE_SHALLOW_CRUST",
+    "Active Shallow Crust":               "ACTIVE_SHALLOW_CRUST",
+    "active shallow crust":               "ACTIVE_SHALLOW_CRUST",
+    "Himalayan Thrust":                   "ACTIVE_SHALLOW_CRUST",
+    "Iceland Atlantic Active Region":     "ACTIVE_SHALLOW_CRUST",
+    "Oceanic Crust without Volcanism":    "ACTIVE_SHALLOW_CRUST",
+    "Philippine Active Shallow Crust":    "ACTIVE_SHALLOW_CRUST",
+    "Shallow Default":                    "ACTIVE_SHALLOW_CRUST",
+    "Spreading and Transforms":           "ACTIVE_SHALLOW_CRUST",
+    "TECTONIC_REGION_2":                  "ACTIVE_SHALLOW_CRUST",
+    "TECTONIC_REGION_3":                  "ACTIVE_SHALLOW_CRUST",
+    # Stable Continental
+    "Active-Stable Shallow Crust":        "STABLE_CONTINENTAL",
+    "Craton":                             "STABLE_CONTINENTAL",
+    "Cratonic Crust":                     "STABLE_CONTINENTAL",
+    "cratonic":                           "STABLE_CONTINENTAL",
+    "Cratonic":                           "STABLE_CONTINENTAL",
+    "intraplate margin lower":            "STABLE_CONTINENTAL",
+    "intraplate margin upper":            "STABLE_CONTINENTAL",
+    "Non_cratonic":                       "STABLE_CONTINENTAL",
+    "SCR Non Craton":                     "STABLE_CONTINENTAL",
+    "SSC KOR":                            "STABLE_CONTINENTAL",
+    "SSC":                                "STABLE_CONTINENTAL",
+    "Stable Continental Crust":           "STABLE_CONTINENTAL",
+    "Stable Continental Region":          "STABLE_CONTINENTAL",
+    "Stable Continental Crust NWA-NEA":   "STABLE_CONTINENTAL",
+    "Stable Shallow Crust EMME":          "STABLE_CONTINENTAL",
+    "Stable Shallow Crust MEX":           "STABLE_CONTINENTAL",
+    "Stable Shallow Crust NWA-NEA":       "STABLE_CONTINENTAL",
+    "Stable Shallow Crust SAM":           "STABLE_CONTINENTAL",
+    "Stable Shallow Crust USA":           "STABLE_CONTINENTAL",
+    "Stable Shallow Crust":               "STABLE_CONTINENTAL",
+    "stable shallow crust":               "STABLE_CONTINENTAL",
+    "TECTONIC_REGION_1":                  "STABLE_CONTINENTAL",
+    "TECTONIC_REGION_4":                  "STABLE_CONTINENTAL",
+    "Tectonic_Type_A":                    "STABLE_CONTINENTAL",
+    "Tectonic_Type_B":                    "STABLE_CONTINENTAL",
+    "Tectonic_Type_C":                    "STABLE_CONTINENTAL",
+    "Tectonic_Type_D":                    "STABLE_CONTINENTAL",
+    "Tectonic_Type_E":                    "STABLE_CONTINENTAL",
+    # Subduction Interface
+    "Interface subduction zone":                       "SUBDUCTION_INTERFACE",
+    "Philippine Subduction":                           "SUBDUCTION_INTERFACE",
+    "Subduction Interface - North East Correction":    "SUBDUCTION_INTERFACE",
+    "Subduction Interface - South West Correction":    "SUBDUCTION_INTERFACE",
+    "Subduction Interface CAM":                        "SUBDUCTION_INTERFACE",
+    "Subduction Interface CAN":                        "SUBDUCTION_INTERFACE",
+    "Subduction Interface CCA":                        "SUBDUCTION_INTERFACE",
+    "Subduction Interface EMME":                       "SUBDUCTION_INTERFACE",
+    "Subduction Interface SAM":                        "SUBDUCTION_INTERFACE",
+    "Subduction Interface":                            "SUBDUCTION_INTERFACE",
+    "subduction interface":                            "SUBDUCTION_INTERFACE",
+    # Subduction IntraSlab
+    "Subduction IntraSlab":                            "SUBDUCTION_INTRASLAB",
+    "Deep Crust 1":                                    "SUBDUCTION_INTRASLAB",
+    "Deep Seismicity EMME":                            "SUBDUCTION_INTRASLAB",
+    "Deep Seismicity":                                 "SUBDUCTION_INTRASLAB",
+    "Intraslab subduction zone":                       "SUBDUCTION_INTRASLAB",
+    "Non-Subduction Deep":                             "SUBDUCTION_INTRASLAB",
+    "Subduction Inslab EMME":                          "SUBDUCTION_INTRASLAB",
+    "Subduction Inslab":                               "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab - North East Correction":    "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab - South West Correction":    "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab CAM":                        "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab CCA":                        "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab SAM":                        "SUBDUCTION_INTRASLAB",
+    "Subduction Intraslab":                            "SUBDUCTION_INTRASLAB",
+    "subduction intraslab":                            "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab30":                          "SUBDUCTION_INTRASLAB",
+    "Subduction IntraSlab55":                          "SUBDUCTION_INTRASLAB",
+    "Subduction":                                      "SUBDUCTION_INTRASLAB",
+    "DeepSeismicity":                                  "SUBDUCTION_INTRASLAB",
+    # Volcanic
+    "Oceanic Crust with Volcanism":       "VOLCANIC",
+    "Volcanic":                           "VOLCANIC",
+}
+
+
 class FilteredAway(Exception):
     pass
 
@@ -289,6 +415,34 @@ class IntegrationDistance(dict):
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
+def build_default_magdist():
+    """
+    Build an IntegrationDistance instance keyed on every known mosaic TRT
+    string. This ensures __missing__ is never reached for any TRT present
+    in the mosaic mapping.
+    Distance values are rounded to the nearest 5 km in
+    MAGDIST_BY_TRT; no further rounding is applied here.
+
+    Returns an IntegrationDistance, so that methods
+    like .cut() and .__call__() are available after assignment
+    to OqParam.maximum_distance.
+    """
+    result = IntegrationDistance(
+        (mosaic_trt, MAGDIST_BY_TRT[canonical_trt])
+        for mosaic_trt, canonical_trt in MOSAIC_TRT_TO_CANONICAL_TRT.items()
+    )
+    # NOTE: fallback for TRTs not in the mosaic mapping, otherwise
+    # IntegrationDistance.__missing__ would raise an error.
+    # FIXME: we should update the mosaic to canonical TRT mapping
+    # to include any missing trt category we run into
+    result['default'] = MAGDIST_BY_TRT['ACTIVE_SHALLOW_CRUST']
+    return result
+
+
+# Module-level constant consumed by OqParam.
+DEFAULT_INTEGRATION_DISTANCE = build_default_magdist()
+
+
 def split_source(src):
     """
     :param src: a splittable (or not splittable) source
@@ -324,7 +478,7 @@ def split_source(src):
         if has_grp_id:
             split.grp_id = src.grp_id
         offset += split.num_ruptures
-        #split.nsites = src.nsites
+        # split.nsites = src.nsites
     return splits
 
 
@@ -466,6 +620,7 @@ class RuptureFilter(object):
     def __repr__(self):
         return '<%s mag=%.1f dist=%.0f>' % (self.__class__.__name__,
                                             self.rup.mag, self.dist)
+
 
 class SourceFilter(object):
     """
@@ -613,7 +768,7 @@ class SourceFilter(object):
         distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
         dists = numpy.min([distl, distr], axis=0)  # shape (N, S)
         maxdist = self.integration_distance.y[-1]
-        return (dists <= maxdist).sum(axis=0) # shape (N, S) => S
+        return (dists <= maxdist).sum(axis=0)  # shape (N, S) => S
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
