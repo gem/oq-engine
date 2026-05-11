@@ -100,7 +100,7 @@ def load_residual_grids(hdf5_path):
     * grids: nested dict of
       {imt_str: {term: {"mean": {cell_id: float},
                         "sig":  {cell_id: float}}, ...}}
-      for hypo/site-based terms only. "sig" is present only when
+      for hypo/site-based terms only. The "sig" key is present only when
       sig_adjustment is not "none" and the sigma is given as a per-cell
       dataset named "{term}_sig". Per-cell sigma is not supported for
       path-based terms.
@@ -114,7 +114,7 @@ def load_residual_grids(hdf5_path):
       sigma is given as a scalar adjustment (group attribute "{term}_sig").
 
       NOTE: sig_scalars and grids[imt][term]["sig"] are mutually exclusive
-      for each term/IMT; providing both raises an error.
+      for each term/IMT - the presence of both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
       automatically from the cell IDs in the grids.
@@ -172,7 +172,7 @@ def load_residual_grids(hdf5_path):
                     grids[imt_str][term] = {
                         "mean": dict(zip(cell_ids, mean_vals))}
 
-                # If required get sigma adjustment
+                # If req get sigma adjustment and store in grids dict too
                 if sig_action != "none":
                     load_sigma_for_term(
                         grp, term, imt_str, location,
