@@ -1657,7 +1657,10 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    source_id = dstore['source_info']
+    try:
+        source_id = dstore['source_info']
+    except KeyError:  # scenario
+        source_id = None
     multi_model = isinstance(source_id, Group)
     dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
@@ -1671,10 +1674,7 @@ def extract_rupture_info(dstore, what):
         if multi_model:
             source_id = dstore[f'source_info/{model}']['source_id']
         else:
-            try:
-                source_id = dstore['source_info']['source_id']
-            except KeyError:  # scenario
-                source_id = None
+            source_id = dstore['source_info']['source_id']
         [(model, full_lt)] = base.get_model_lts(dstore, model)
         rups = allrups[allrups['model'] == model.encode('ascii')]
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
