@@ -180,7 +180,7 @@ def load_residual_grids(hdf5_path):
                         )
 
     return {"grids": grids,
-            "raytrace_grids": raytrace_grids,
+            "raytrace_grids": raytrace_grids, # Cells are OQ pgns instead of h3
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
