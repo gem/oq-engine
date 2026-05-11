@@ -1,7 +1,7 @@
 | ID_0    | loss_type       | value          | lossmea     | q05        | q50         | q95         | ID      | NAME                       |
 |---------+-----------------+----------------+-------------+------------+-------------+-------------+---------+----------------------------|
 | JPN     | contents        | 2_781_837_824  | 2_702_992   | 218_046    | 2_449_497   | 5_490_618   | nan     | nan                        |
-| JPN     | structural      | 11_076_059_136 | 190_211_152 | 44_687_756 | 150_998_735 | 374_918_134 | nan     | nan                        |
+| JPN     | structural      | 11_076_059_136 | 190_211_152 | 44_687_761 | 150_998_735 | 374_918_116 | nan     | nan                        |
 | JPN     | occupants       | 76_351         | 0.8096      | 0.0090     | 0.6222      | 2.2340      | nan     | nan                        |
 | JPN     | area            | 5_831_172      | 47_649      | 2_955      | 29_281      | 134_813     | nan     | nan                        |
 | JPN     | number          | 27_666         | 287.2       | 10.4968    | 184.1       | 798.9       | nan     | nan                        |
@@ -17,7 +17,7 @@
 | *total* | number          | 27_666         | 287.2       | 10.4968    | 184.1       | 798.9       | nan     | nan                        |
 | *total* | occupants       | 76_351         | 0.8096      | 0.0090     | 0.6222      | 2.2340      | nan     | nan                        |
 | *total* | residents       | 95_864         | 897.4       | 30.8973    | 603.5       | 2_389       | nan     | nan                        |
-| *total* | structural      | 11_076_059_136 | 190_211_152 | 44_687_756 | 150_998_735 | 374_918_134 | nan     | nan                        |
+| *total* | structural      | 11_076_059_136 | 190_211_152 | 44_687_761 | 150_998_735 | 374_918_116 | nan     | nan                        |
 | nan     | contents        | 6_021_803      | 877.7       | 0.0        | 0.0499      | 28.9870     | 01101   | Montgomery County          |
 | nan     | structural      | 16_744_171     | 254_766     | 0.0        | 139_696     | 719_745     | 01101   | Montgomery County          |
 | nan     | occupants       | 146.2670       | 0.0059      | 0.0        | 1.203E-06   | 0.0240      | 01101   | Montgomery County          |
@@ -46,7 +46,7 @@
 | nan     | contents        | 2_795_189      | 1.1974      | 0.0        | 0.0280      | 4.4072      | 01104   | Sapporo-shi Shiroishi-ku   |
 | nan     | structural      | 8_937_310      | 78_384      | 0.0        | 26_536      | 205_027     | 01104   | Sapporo-shi Shiroishi-ku   |
 | nan     | occupants       | 77.8992        | 4.086E-04   | 0.0        | 7.790E-07   | 7.790E-07   | 01104   | Sapporo-shi Shiroishi-ku   |
-| nan     | area            | 3_992          | 5.4427      | 0.0        | 3.992E-05   | 0.0612      | 01104   | Sapporo-shi Shiroishi-ku   |
+| nan     | area            | 3_992          | 5.4428      | 0.0        | 3.992E-05   | 0.0612      | 01104   | Sapporo-shi Shiroishi-ku   |
 | nan     | number          | 1.2554         | 0.0020      | 0.0        | 1.255E-08   | 1.218E-05   | 01104   | Sapporo-shi Shiroishi-ku   |
 | nan     | injured         | 77.8992        | 0.0024      | 0.0        | 7.790E-07   | 7.790E-07   | 01104   | Sapporo-shi Shiroishi-ku   |
 | nan     | embodied_carbon | 2_242          | 75.2828     | 0.0        | 62.6742     | 185.0       | 01104   | Sapporo-shi Shiroishi-ku   |
@@ -65,7 +65,7 @@
 | nan     | area            | 5_454          | 1.641E-05   | 0.0        | 4.145E-05   | 4.145E-05   | 01107   | Pickens County             |
 | nan     | number          | 2.4786         | 7.790E-09   | 0.0        | 1.978E-08   | 1.978E-08   | 01107   | Pickens County             |
 | nan     | injured         | 130.1174       | 4.341E-07   | 0.0        | 1.110E-06   | 1.110E-06   | 01107   | Pickens County             |
-| nan     | embodied_carbon | 3_501          | 31.6130     | 0.0        | 57.0322     | 120.9635    | 01107   | Pickens County             |
+| nan     | embodied_carbon | 3_501          | 31.6130     | 0.0        | 57.0323     | 120.9635    | 01107   | Pickens County             |
 | nan     | contents        | 2_760_416      | 208.2       | 0.0        | 0.0202      | 683.2       | 01109   | Pike County                |
 | nan     | structural      | 13_254_072     | 51_063      | 0.0        | 9_863       | 130_697     | 01109   | Pike County                |
 | nan     | occupants       | 185.7          | 1.287E-04   | 0.0        | 1.239E-06   | 1.857E-06   | 01109   | Pike County                |
@@ -178,7 +178,7 @@
 | nan     | injured         | 110.4685       | 3.377E-08   | 0.0        | 0.0         | 4.824E-07   | 01225   | Takikawa-shi               |
 | nan     | embodied_carbon | 3_334          | 0.4080      | 0.0        | 0.0         | 5.8286      | 01225   | Takikawa-shi               |
 | nan     | contents        | 1_672_349      | 0.0043      | 0.0        | 0.0090      | 0.0167      | 01231   | Eniwa-shi                  |
-| nan     | structural      | 6_473_414      | 140.1683    | 0.0        | 0.0210      | 891.8       | 01231   | Eniwa-shi                  |
+| nan     | structural      | 6_473_414      | 140.1684    | 0.0        | 0.0210      | 891.8       | 01231   | Eniwa-shi                  |
 | nan     | occupants       | 44.3736        | 9.077E-08   | 0.0        | 1.706E-07   | 4.437E-07   | 01231   | Eniwa-shi                  |
 | nan     | area            | 2_886          | 5.465E-06   | 0.0        | 9.842E-06   | 2.886E-05   | 01231   | Eniwa-shi                  |
 | nan     | number          | 14.8880        | 1.358E-08   | 0.0        | 9.020E-09   | 1.489E-07   | 01231   | Eniwa-shi                  |
@@ -186,7 +186,7 @@
 | nan     | affectedpop     | 53.9182        | 3.774E-08   | 0.0        | 0.0         | 5.392E-07   | 01231   | Eniwa-shi                  |
 | nan     | injured         | 44.3736        | 9.077E-08   | 0.0        | 1.706E-07   | 4.437E-07   | 01231   | Eniwa-shi                  |
 | nan     | embodied_carbon | 1_432          | 0.2877      | 0.0        | 4.076E-06   | 2.8438      | 01231   | Eniwa-shi                  |
-| nan     | contents        | 1_411_798      | 32.2413     | 0.0        | 4.256E-22   | 0.0363      | 01233   | Date-shi                   |
+| nan     | contents        | 1_411_798      | 32.2414     | 0.0        | 4.256E-22   | 0.0363      | 01233   | Date-shi                   |
 | nan     | structural      | 5_647_191      | 9_688       | 0.0        | 5_156       | 36_547      | 01233   | Date-shi                   |
 | nan     | occupants       | 31.1314        | 1.852E-07   | 0.0        | 3.113E-07   | 3.113E-07   | 01233   | Date-shi                   |
 | nan     | area            | 3_446          | 2.050E-05   | 0.0        | 3.446E-05   | 3.446E-05   | 01233   | Date-shi                   |
@@ -213,7 +213,7 @@
 | nan     | affectedpop     | 47.2614        | 3.568E-07   | 0.0        | 4.726E-07   | 4.726E-07   | 01236   | Hokuto-shi                 |
 | nan     | injured         | 23.9423        | 1.808E-07   | 0.0        | 2.394E-07   | 2.394E-07   | 01236   | Hokuto-shi                 |
 | nan     | embodied_carbon | 468.6          | 1.4548      | 0.0        | 0.6179      | 5.9055      | 01236   | Hokuto-shi                 |
-| nan     | contents        | 544_351        | 0.0845      | 0.0        | 2.307E-32   | 0.0054      | 01334   | Kikonai-cho                |
+| nan     | contents        | 544_351        | 0.0845      | 0.0        | 2.308E-32   | 0.0054      | 01334   | Kikonai-cho                |
 | nan     | structural      | 2_177_403      | 7_021       | 0.0        | 1_955       | 16_688      | 01334   | Kikonai-cho                |
 | nan     | occupants       | 10.0333        | 8.829E-08   | 0.0        | 1.003E-07   | 1.003E-07   | 01334   | Kikonai-cho                |
 | nan     | area            | 1_328          | 1.169E-05   | 0.0        | 1.328E-05   | 1.328E-05   | 01334   | Kikonai-cho                |
@@ -275,7 +275,7 @@
 | nan     | injured         | 2.9960         | 1.343E-08   | 0.0        | 2.100E-08   | 2.996E-08   | 01401   | Kyowa-cho                  |
 | nan     | embodied_carbon | 122.1375       | 0.1464      | 0.0        | 0.0401      | 0.4453      | 01401   | Kyowa-cho                  |
 | nan     | contents        | 1_185_460      | 0.0025      | 0.0        | 0.0         | 0.0119      | 01408   | Yoichi-cho                 |
-| nan     | structural      | 4_741_839      | 4.2097      | 0.0        | 0.0         | 0.0474      | 01408   | Yoichi-cho                 |
+| nan     | structural      | 4_741_839      | 4.2096      | 0.0        | 0.0         | 0.0474      | 01408   | Yoichi-cho                 |
 | nan     | occupants       | 41.8621        | 8.791E-08   | 0.0        | 0.0         | 4.186E-07   | 01408   | Yoichi-cho                 |
 | nan     | area            | 2_220          | 4.662E-06   | 0.0        | 0.0         | 2.220E-05   | 01408   | Yoichi-cho                 |
 | nan     | number          | 2.9562         | 6.208E-09   | 0.0        | 0.0         | 2.956E-08   | 01408   | Yoichi-cho                 |
@@ -300,7 +300,7 @@
 | nan     | injured         | 3.6023         | 1.261E-09   | 0.0        | 0.0         | 1.801E-08   | 01427   | Yuni-cho                   |
 | nan     | embodied_carbon | 106.3768       | 0.0126      | 0.0        | 0.0         | 0.1800      | 01427   | Yuni-cho                   |
 | nan     | contents        | 258_277        | 0.0012      | 0.0        | 0.0026      | 0.0026      | 01575   | Sobetsu-cho                |
-| nan     | structural      | 1_033_109      | 192.1       | 0.0        | 145.1896    | 917.8       | 01575   | Sobetsu-cho                |
+| nan     | structural      | 1_033_109      | 192.1       | 0.0        | 145.1897    | 917.8       | 01575   | Sobetsu-cho                |
 | nan     | occupants       | 6.9929         | 3.182E-08   | 0.0        | 6.993E-08   | 6.993E-08   | 01575   | Sobetsu-cho                |
 | nan     | area            | 630.3          | 2.868E-06   | 0.0        | 6.303E-06   | 6.303E-06   | 01575   | Sobetsu-cho                |
 | nan     | number          | 4.0008         | 1.820E-08   | 0.0        | 4.001E-08   | 4.001E-08   | 01575   | Sobetsu-cho                |
@@ -354,7 +354,7 @@
 | nan     | injured         | 18.5262        | 1.945E-08   | 0.0        | 0.0         | 1.853E-07   | 01609   | Erimo-cho                  |
 | nan     | embodied_carbon | 333.7          | 0.0351      | 0.0        | 0.0         | 0.3698      | 01609   | Erimo-cho                  |
 | nan     | contents        | 107_466        | 1.128E-04   | 0.0        | 0.0         | 0.0011      | 01636   | Shimizu-cho                |
-| nan     | structural      | 429_863        | 14.6797     | 0.0        | 0.0         | 132.6800    | 01636   | Shimizu-cho                |
+| nan     | structural      | 429_863        | 14.6796     | 0.0        | 0.0         | 132.6800    | 01636   | Shimizu-cho                |
 | nan     | occupants       | 2.1082         | 2.214E-09   | 0.0        | 0.0         | 2.108E-08   | 01636   | Shimizu-cho                |
 | nan     | area            | 262.3          | 2.754E-07   | 0.0        | 0.0         | 2.623E-06   | 01636   | Shimizu-cho                |
 | nan     | number          | 1.9987         | 2.099E-09   | 0.0        | 0.0         | 1.999E-08   | 01636   | Shimizu-cho                |
@@ -433,7 +433,7 @@
 | nan     | injured         | 6.0799         | 7.614E-05   | 0.0        | 6.080E-08   | 1.758E-04   | 02204   | Kuroishi-shi               |
 | nan     | embodied_carbon | 124.8832       | 2.0542      | 0.0        | 1.2301      | 6.6810      | 02204   | Kuroishi-shi               |
 | nan     | contents        | 1_738_379      | 193.5       | 0.0        | 0.0080      | 0.3107      | 02206   | Towada-shi                 |
-| nan     | structural      | 6_953_511      | 25_664      | 137.5318   | 7_610       | 97_899      | 02206   | Towada-shi                 |
+| nan     | structural      | 6_953_511      | 25_664      | 137.5320   | 7_610       | 97_899      | 02206   | Towada-shi                 |
 | nan     | occupants       | 35.2977        | 3.039E-07   | 1.042E-07  | 3.530E-07   | 3.530E-07   | 02206   | Towada-shi                 |
 | nan     | area            | 4_626          | 0.1112      | 1.425E-05  | 4.626E-05   | 4.626E-05   | 02206   | Towada-shi                 |
 | nan     | number          | 30.9989        | 7.145E-04   | 1.000E-07  | 3.100E-07   | 3.100E-07   | 02206   | Towada-shi                 |
@@ -467,7 +467,7 @@
 | nan     | injured         | 43.9114        | 2.898E-07   | 0.0        | 4.391E-07   | 4.391E-07   | 02361   | Fujisaki-machi             |
 | nan     | embodied_carbon | 781.9          | 0.3304      | 0.0        | 0.1304      | 1.5946      | 02361   | Fujisaki-machi             |
 | nan     | contents        | 380_766        | 0.0030      | 0.0        | 0.0038      | 0.0038      | 02362   | Owani-machi                |
-| nan     | structural      | 1_523_064      | 558.1       | 0.0        | 17.7252     | 2_139       | 02362   | Owani-machi                |
+| nan     | structural      | 1_523_064      | 558.1       | 0.0        | 17.7251     | 2_139       | 02362   | Owani-machi                |
 | nan     | occupants       | 8.6571         | 6.753E-08   | 0.0        | 8.657E-08   | 8.657E-08   | 02362   | Owani-machi                |
 | nan     | area            | 1_013          | 7.904E-06   | 0.0        | 1.013E-05   | 1.013E-05   | 02362   | Owani-machi                |
 | nan     | number          | 7.0028         | 5.462E-08   | 0.0        | 7.003E-08   | 7.003E-08   | 02362   | Owani-machi                |
@@ -530,14 +530,14 @@
 | nan     | injured         | 49.3955        | 3.790E-07   | 0.0        | 4.940E-07   | 4.940E-07   | 03205   | Hanamaki-shi               |
 | nan     | embodied_carbon | 1_533          | 61.7279     | 0.0        | 52.5783     | 164.0930    | 03205   | Hanamaki-shi               |
 | nan     | contents        | 1_282_843      | 19.4986     | 0.0        | 0.0088      | 18.6247     | 03206   | Kitakami-shi               |
-| nan     | structural      | 3_246_081      | 11_371      | 108.3097   | 1_974       | 60_501      | 03206   | Kitakami-shi               |
+| nan     | structural      | 3_246_081      | 11_371      | 108.3096   | 1_974       | 60_501      | 03206   | Kitakami-shi               |
 | nan     | occupants       | 22.3803        | 1.708E-07   | 1.794E-08  | 2.238E-07   | 2.238E-07   | 03206   | Kitakami-shi               |
 | nan     | area            | 1_799          | 0.0425      | 3.480E-06  | 1.799E-05   | 0.0166      | 03206   | Kitakami-shi               |
 | nan     | number          | 3.0278         | 8.239E-05   | 6.751E-09  | 3.028E-08   | 3.221E-05   | 03206   | Kitakami-shi               |
 | nan     | injured         | 22.3803        | 4.428E-06   | 2.093E-08  | 2.238E-07   | 2.238E-07   | 03206   | Kitakami-shi               |
 | nan     | embodied_carbon | 598.3          | 12.5338     | 1.7603     | 8.7158      | 34.4199     | 03206   | Kitakami-shi               |
 | nan     | contents        | 2_449_998      | 0.0214      | 0.0        | 0.0245      | 0.0245      | 03207   | Kuji-shi                   |
-| nan     | structural      | 9_799_993      | 1_717       | 0.0        | 3.2152      | 9_966       | 03207   | Kuji-shi                   |
+| nan     | structural      | 9_799_993      | 1_717       | 0.0        | 3.2155      | 9_966       | 03207   | Kuji-shi                   |
 | nan     | occupants       | 41.7682        | 3.655E-07   | 0.0        | 4.177E-07   | 4.177E-07   | 03207   | Kuji-shi                   |
 | nan     | area            | 6_262          | 5.479E-05   | 0.0        | 6.262E-05   | 6.262E-05   | 03207   | Kuji-shi                   |
 | nan     | number          | 43.9891        | 3.849E-07   | 0.0        | 4.399E-07   | 4.399E-07   | 03207   | Kuji-shi                   |
@@ -554,7 +554,7 @@
 | nan     | affectedpop     | 2.0433         | 1.461E-08   | 0.0        | 2.043E-08   | 2.043E-08   | 03208   | Tono-shi                   |
 | nan     | injured         | 1.0351         | 7.401E-09   | 0.0        | 1.035E-08   | 1.035E-08   | 03208   | Tono-shi                   |
 | nan     | embodied_carbon | 25.1072        | 0.1307      | 0.0        | 0.0735      | 0.4510      | 03208   | Tono-shi                   |
-| nan     | contents        | 1_856_063      | 318.5       | 8.526E-04  | 0.0146      | 74.7798     | 03209   | Ichinoseki-shi             |
+| nan     | contents        | 1_856_063      | 318.5       | 8.526E-04  | 0.0146      | 74.7799     | 03209   | Ichinoseki-shi             |
 | nan     | structural      | 5_063_789      | 26_106      | 0.0098     | 10_713      | 121_302     | 03209   | Ichinoseki-shi             |
 | nan     | occupants       | 21.1303        | 1.767E-07   | 2.019E-08  | 2.113E-07   | 2.113E-07   | 03209   | Ichinoseki-shi             |
 | nan     | area            | 2_723          | 1.6634      | 1.862E-06  | 2.723E-05   | 2.723E-05   | 03209   | Ichinoseki-shi             |
@@ -591,7 +591,7 @@
 | nan     | injured         | 3.1058         | 2.593E-08   | 0.0        | 3.106E-08   | 3.106E-08   | 03214   | Hachimantai-shi            |
 | nan     | embodied_carbon | 308.4          | 0.7551      | 0.0        | 0.3848      | 1.9437      | 03214   | Hachimantai-shi            |
 | nan     | contents        | 3_302_228      | 0.0406      | 0.0        | 0.0318      | 0.0330      | 03215   | Oshu-shi                   |
-| nan     | structural      | 13_208_910     | 48_788      | 223.2      | 21_316      | 153_154     | 03215   | Oshu-shi                   |
+| nan     | structural      | 13_208_910     | 48_788      | 223.2      | 21_317      | 153_154     | 03215   | Oshu-shi                   |
 | nan     | occupants       | 67.9051        | 6.086E-07   | 1.804E-08  | 6.700E-07   | 6.791E-07   | 03215   | Oshu-shi                   |
 | nan     | area            | 8_440          | 0.0845      | 2.061E-06  | 8.337E-05   | 8.440E-05   | 03215   | Oshu-shi                   |
 | nan     | number          | 58.9974        | 5.922E-04   | 1.333E-08  | 5.833E-07   | 5.900E-07   | 03215   | Oshu-shi                   |
@@ -663,7 +663,7 @@
 | nan     | injured         | 64.1519        | 6.223E-07   | 4.277E-07  | 6.415E-07   | 6.415E-07   | 03524   | Ichinohe-machi             |
 | nan     | embodied_carbon | 1_494          | 21.8020     | 1.1694     | 11.0039     | 72.6569     | 03524   | Ichinohe-machi             |
 | nan     | contents        | 108_214_904    | 31_402      | 0.0669     | 0.2211      | 46_798      | 04101   | Sendai-shi Aoba-ku         |
-| nan     | structural      | 436_695_296    | 2_851_066   | 20_544     | 667_828     | 11_122_933  | 04101   | Sendai-shi Aoba-ku         |
+| nan     | structural      | 436_695_296    | 2_851_066   | 20_544     | 667_828     | 11_122_934  | 04101   | Sendai-shi Aoba-ku         |
 | nan     | occupants       | 2_408          | 0.0012      | 3.204E-06  | 2.408E-05   | 2.408E-05   | 04101   | Sendai-shi Aoba-ku         |
 | nan     | area            | 276_113        | 42.6235     | 2.351E-04  | 0.0028      | 235.0       | 04101   | Sendai-shi Aoba-ku         |
 | nan     | number          | 1_528          | 0.1911      | 7.722E-08  | 1.528E-05   | 0.1275      | 04101   | Sendai-shi Aoba-ku         |
@@ -687,7 +687,7 @@
 | nan     | number          | 0.8873         | 0.0088      | 4.437E-09  | 8.873E-09   | 0.0021      | 04103   | Sendai-shi Wakabayashi-ku  |
 | nan     | injured         | 46.7506        | 0.0159      | 2.004E-07  | 4.675E-07   | 0.0028      | 04103   | Sendai-shi Wakabayashi-ku  |
 | nan     | embodied_carbon | 1_184          | 82.2782     | 13.8816    | 66.9475     | 152.7273    | 04103   | Sendai-shi Wakabayashi-ku  |
-| nan     | contents        | 4_430_566      | 136.9732    | 0.0017     | 0.0438      | 369.4       | 04104   | Sendai-shi Taihaku-ku      |
+| nan     | contents        | 4_430_566      | 136.9733    | 0.0017     | 0.0438      | 369.4       | 04104   | Sendai-shi Taihaku-ku      |
 | nan     | structural      | 17_722_266     | 69_001      | 825.8      | 23_313      | 191_213     | 04104   | Sendai-shi Taihaku-ku      |
 | nan     | occupants       | 130.1365       | 1.038E-06   | 5.725E-08  | 1.301E-06   | 1.301E-06   | 04104   | Sendai-shi Taihaku-ku      |
 | nan     | area            | 8_504          | 3.8197      | 6.780E-06  | 8.504E-05   | 5.8907      | 04104   | Sendai-shi Taihaku-ku      |
@@ -731,7 +731,7 @@
 | nan     | injured         | 12.0461        | 6.870E-08   | 0.0        | 1.181E-07   | 1.205E-07   | 04205   | Kesennuma-shi              |
 | nan     | embodied_carbon | 797.2          | 0.2680      | 0.0        | 0.0361      | 0.7245      | 04205   | Kesennuma-shi              |
 | nan     | contents        | 2_630_288      | 0.0337      | 0.0        | 8.476E-14   | 0.0614      | 04206   | Shiroishi-shi              |
-| nan     | structural      | 10_521_153     | 44_408      | 122.8561   | 14_061      | 153_458     | 04206   | Shiroishi-shi              |
+| nan     | structural      | 10_521_153     | 44_408      | 122.8547   | 14_061      | 153_458     | 04206   | Shiroishi-shi              |
 | nan     | occupants       | 67.5829        | 6.556E-07   | 4.506E-07  | 6.758E-07   | 6.758E-07   | 04206   | Shiroishi-shi              |
 | nan     | area            | 7_128          | 6.914E-05   | 4.752E-05  | 7.128E-05   | 7.128E-05   | 04206   | Shiroishi-shi              |
 | nan     | number          | 49.9916        | 4.849E-07   | 3.333E-07  | 4.999E-07   | 4.999E-07   | 04206   | Shiroishi-shi              |
@@ -793,7 +793,7 @@
 | nan     | affectedpop     | 131.8549       | 0.5126      | 2.982E-07  | 1.319E-06   | 2.9846      | 04215   | Osaki-shi                  |
 | nan     | injured         | 142.8300       | 1.064E-04   | 7.474E-07  | 1.428E-06   | 1.428E-06   | 04215   | Osaki-shi                  |
 | nan     | embodied_carbon | 2_735          | 54.8704     | 1.3989     | 37.4152     | 151.5738    | 04215   | Osaki-shi                  |
-| nan     | contents        | 9_912_426      | 538.4       | 0.0030     | 0.0046      | 5.1913      | 04321   | Ogawara-machi              |
+| nan     | contents        | 9_912_426      | 538.4       | 0.0030     | 0.0046      | 5.1914      | 04321   | Ogawara-machi              |
 | nan     | structural      | 39_649_704     | 163_827     | 441.3      | 55_409      | 548_279     | 04321   | Ogawara-machi              |
 | nan     | occupants       | 282.4          | 2.731E-06   | 1.700E-06  | 2.824E-06   | 2.824E-06   | 04321   | Ogawara-machi              |
 | nan     | area            | 26_480         | 2.566E-04   | 1.708E-04  | 2.648E-04   | 2.648E-04   | 04321   | Ogawara-machi              |
@@ -803,7 +803,7 @@
 | nan     | injured         | 282.4          | 2.731E-06   | 1.700E-06  | 2.824E-06   | 2.824E-06   | 04321   | Ogawara-machi              |
 | nan     | embodied_carbon | 4_765          | 84.2665     | 3.7984     | 47.2989     | 244.1       | 04321   | Ogawara-machi              |
 | nan     | contents        | 726_787        | 0.0070      | 0.0044     | 0.0073      | 0.0073      | 04323   | Shibata-machi              |
-| nan     | structural      | 3_145_361      | 4_044       | 39.3906    | 1_732       | 11_713      | 04323   | Shibata-machi              |
+| nan     | structural      | 3_145_361      | 4_044       | 39.3908    | 1_732       | 11_713      | 04323   | Shibata-machi              |
 | nan     | occupants       | 55.8195        | 5.397E-07   | 3.524E-07  | 5.582E-07   | 5.582E-07   | 04323   | Shibata-machi              |
 | nan     | area            | 1_446          | 1.392E-05   | 8.463E-06  | 1.446E-05   | 1.446E-05   | 04323   | Shibata-machi              |
 | nan     | number          | 5.8936         | 5.627E-08   | 2.909E-08  | 5.894E-08   | 5.894E-08   | 04323   | Shibata-machi              |
@@ -830,7 +830,7 @@
 | nan     | injured         | 3.7181         | 3.272E-08   | 0.0        | 3.718E-08   | 3.718E-08   | 04421   | Taiwa-cho                  |
 | nan     | embodied_carbon | 132.5423       | 2.0283      | 0.0        | 1.5658      | 5.5295      | 04421   | Taiwa-cho                  |
 | nan     | contents        | 238_834        | 5.1137      | 0.0        | 0.0024      | 0.0481      | 04422   | Osato-cho                  |
-| nan     | structural      | 955_334        | 6_044       | 161.8386   | 3_412       | 15_879      | 04422   | Osato-cho                  |
+| nan     | structural      | 955_334        | 6_044       | 161.8385   | 3_412       | 15_879      | 04422   | Osato-cho                  |
 | nan     | occupants       | 6.4180         | 6.225E-08   | 4.279E-08  | 6.418E-08   | 6.418E-08   | 04422   | Osato-cho                  |
 | nan     | area            | 647.2          | 0.0013      | 4.315E-06  | 6.472E-06   | 6.472E-06   | 04422   | Osato-cho                  |
 | nan     | number          | 4.9978         | 1.009E-05   | 3.332E-08  | 4.998E-08   | 4.998E-08   | 04422   | Osato-cho                  |
@@ -847,7 +847,7 @@
 | nan     | affectedpop     | 39.4410        | 0.0863      | 2.572E-08  | 3.944E-07   | 0.0143      | 04424   | Ohira-mura                 |
 | nan     | injured         | 20.4146        | 1.839E-05   | 1.331E-08  | 2.041E-07   | 2.041E-07   | 04424   | Ohira-mura                 |
 | nan     | embodied_carbon | 322.8          | 7.6244      | 0.0276     | 2.7061      | 25.3334     | 04424   | Ohira-mura                 |
-| nan     | contents        | 44_916         | 11.3885     | 2.128E-30  | 4.492E-04   | 4.492E-04   | 04444   | Shikama-cho                |
+| nan     | contents        | 44_916         | 11.3885     | 2.126E-30  | 4.492E-04   | 4.492E-04   | 04444   | Shikama-cho                |
 | nan     | structural      | 179_665        | 898.5       | 8.983E-04  | 30.6041     | 915.0       | 04444   | Shikama-cho                |
 | nan     | occupants       | 1.2615         | 1.217E-08   | 6.307E-09  | 1.261E-08   | 1.262E-08   | 04444   | Shikama-cho                |
 | nan     | area            | 121.7240       | 0.0596      | 6.086E-07  | 1.217E-06   | 1.217E-06   | 04444   | Shikama-cho                |
@@ -883,7 +883,7 @@
 | nan     | affectedpop     | 62.2014        | 1.215E-04   | 1.459E-07  | 6.220E-07   | 6.220E-07   | 05201   | Akita-shi                  |
 | nan     | injured         | 219.6          | 2.034E-06   | 6.268E-07  | 2.196E-06   | 2.196E-06   | 05201   | Akita-shi                  |
 | nan     | embodied_carbon | 6_552          | 93.3485     | 6.3713     | 104.5375    | 170.7763    | 05201   | Akita-shi                  |
-| nan     | contents        | 662_484        | 2.6520      | 3.762E-04  | 5.643E-04   | 15.0894     | 05202   | Noshiro-shi                |
+| nan     | contents        | 662_484        | 2.6520      | 3.762E-04  | 5.643E-04   | 15.0895     | 05202   | Noshiro-shi                |
 | nan     | structural      | 2_649_937      | 8_415       | 0.0023     | 2_951       | 27_833      | 05202   | Noshiro-shi                |
 | nan     | occupants       | 12.7561        | 1.164E-07   | 9.905E-09  | 1.276E-07   | 1.276E-07   | 05202   | Noshiro-shi                |
 | nan     | area            | 1_778          | 1.623E-05   | 1.515E-06  | 1.778E-05   | 1.778E-05   | 05202   | Noshiro-shi                |
@@ -910,7 +910,7 @@
 | nan     | affectedpop     | 102.0631       | 0.0109      | 2.214E-07  | 1.077E-04   | 0.0554      | 05204   | Odate-shi                  |
 | nan     | injured         | 70.5655        | 5.211E-06   | 2.256E-07  | 7.057E-07   | 7.057E-07   | 05204   | Odate-shi                  |
 | nan     | embodied_carbon | 1_842          | 16.0063     | 0.3569     | 10.6833     | 42.3052     | 05204   | Odate-shi                  |
-| nan     | contents        | 117_465        | 14.9150     | 0.0        | 3.018E-20   | 63.3975     | 05206   | Oga-shi                    |
+| nan     | contents        | 117_465        | 14.9150     | 0.0        | 3.018E-20   | 63.3976     | 05206   | Oga-shi                    |
 | nan     | structural      | 469_861        | 9_038       | 0.0        | 3_826       | 45_631      | 05206   | Oga-shi                    |
 | nan     | occupants       | 1.9009         | 1.616E-08   | 0.0        | 1.901E-08   | 1.901E-08   | 05206   | Oga-shi                    |
 | nan     | area            | 315.3          | 1.9767      | 0.0        | 3.153E-06   | 15.3261     | 05206   | Oga-shi                    |
@@ -931,7 +931,7 @@
 | nan     | contents        | 2_106_458      | 230.1       | 0.0033     | 0.0193      | 1_263       | 05212   | Daisen-shi                 |
 | nan     | structural      | 8_425_834      | 54_600      | 1_084      | 13_885      | 301_840     | 05212   | Daisen-shi                 |
 | nan     | occupants       | 62.2957        | 5.669E-06   | 5.295E-07  | 6.230E-07   | 6.230E-07   | 05212   | Daisen-shi                 |
-| nan     | area            | 5_389          | 16.2526     | 4.902E-05  | 5.389E-05   | 80.5544     | 05212   | Daisen-shi                 |
+| nan     | area            | 5_389          | 16.2526     | 4.902E-05  | 5.389E-05   | 80.5545     | 05212   | Daisen-shi                 |
 | nan     | number          | 27.9708        | 0.0597      | 2.697E-07  | 2.797E-07   | 0.5147      | 05212   | Daisen-shi                 |
 | nan     | residents       | 62.9040        | 0.1415      | 6.290E-07  | 6.290E-07   | 1.1189      | 05212   | Daisen-shi                 |
 | nan     | affectedpop     | 62.9040        | 0.2950      | 6.290E-07  | 5.799E-04   | 2.2366      | 05212   | Daisen-shi                 |
@@ -964,7 +964,7 @@
 | nan     | affectedpop     | 8.3758         | 3.421E-05   | 0.0        | 8.376E-08   | 8.376E-08   | 05348   | Mitane-cho                 |
 | nan     | injured         | 33.1052        | 3.112E-07   | 0.0        | 3.311E-07   | 3.311E-07   | 05348   | Mitane-cho                 |
 | nan     | embodied_carbon | 484.7          | 2.3500      | 0.0        | 1.5875      | 7.1532      | 05348   | Mitane-cho                 |
-| nan     | contents        | 4_251_628      | 1_100       | 0.0        | 6.845E-04   | 82.7254     | 05366   | Ikawa-machi                |
+| nan     | contents        | 4_251_628      | 1_100       | 0.0        | 6.845E-04   | 82.7252     | 05366   | Ikawa-machi                |
 | nan     | structural      | 17_006_512     | 70_979      | 0.0        | 18_136      | 267_492     | 05366   | Ikawa-machi                |
 | nan     | occupants       | 92.8542        | 8.728E-07   | 0.0        | 9.285E-07   | 9.285E-07   | 05366   | Ikawa-machi                |
 | nan     | area            | 11_414         | 1.073E-04   | 0.0        | 1.141E-04   | 1.141E-04   | 05366   | Ikawa-machi                |
@@ -983,7 +983,7 @@
 | nan     | injured         | 78.9188        | 0.0183      | 2.621E-07  | 7.892E-07   | 7.892E-07   | 05434   | Misato-cho                 |
 | nan     | embodied_carbon | 1_224          | 32.2972     | 0.6013     | 9.8403      | 102.7944    | 05434   | Misato-cho                 |
 | nan     | contents        | 14_050_235     | 31_241      | 0.0        | 4.457E-22   | 416.5       | 05463   | Ugo-machi                  |
-| nan     | structural      | 56_200_940     | 954_617     | 6_353      | 267_914     | 4_057_032   | 05463   | Ugo-machi                  |
+| nan     | structural      | 56_200_940     | 954_617     | 6_353      | 267_914     | 4_057_033   | 05463   | Ugo-machi                  |
 | nan     | occupants       | 301.4          | 2.924E-06   | 2.010E-06  | 3.014E-06   | 3.014E-06   | 05463   | Ugo-machi                  |
 | nan     | area            | 37_719         | 69.8138     | 2.515E-04  | 3.772E-04   | 17.0910     | 05463   | Ugo-machi                  |
 | nan     | number          | 241.0          | 0.4460      | 1.606E-06  | 2.410E-06   | 0.1092      | 05463   | Ugo-machi                  |
@@ -1009,7 +1009,7 @@
 | nan     | affectedpop     | 1.8386         | 1.783E-08   | 1.226E-08  | 1.839E-08   | 1.839E-08   | 06202   | Yonezawa-shi               |
 | nan     | injured         | 5.0699         | 3.177E-04   | 4.759E-08  | 5.070E-08   | 3.099E-04   | 06202   | Yonezawa-shi               |
 | nan     | embodied_carbon | 478.8          | 4.7857      | 0.1071     | 2.2091      | 15.5697     | 06202   | Yonezawa-shi               |
-| nan     | contents        | 62_436         | 4.1785      | 6.488E-37  | 6.244E-04   | 0.1371      | 06203   | Tsuruoka-shi               |
+| nan     | contents        | 62_436         | 4.1784      | 6.488E-37  | 6.244E-04   | 0.1371      | 06203   | Tsuruoka-shi               |
 | nan     | structural      | 249_743        | 1_789       | 0.0025     | 246.3       | 9_738       | 06203   | Tsuruoka-shi               |
 | nan     | occupants       | 1.2393         | 1.239E-08   | 1.239E-08  | 1.239E-08   | 1.239E-08   | 06203   | Tsuruoka-shi               |
 | nan     | area            | 156.8737       | 0.0044      | 1.569E-06  | 1.569E-06   | 0.0097      | 06203   | Tsuruoka-shi               |
@@ -1073,10 +1073,10 @@
 | nan     | contents        | 2_366_596      | 3_046       | 0.0125     | 0.0237      | 25_153      | 06213   | Nanyo-shi                  |
 | nan     | structural      | 11_335_341     | 314_183     | 17_346     | 127_599     | 1_076_586   | 06213   | Nanyo-shi                  |
 | nan     | occupants       | 82.1699        | 0.0148      | 7.002E-07  | 8.217E-07   | 0.0802      | 06213   | Nanyo-shi                  |
-| nan     | area            | 5_266          | 88.2710     | 4.344E-05  | 0.0604      | 398.5       | 06213   | Nanyo-shi                  |
+| nan     | area            | 5_266          | 88.2711     | 4.344E-05  | 0.0604      | 398.5       | 06213   | Nanyo-shi                  |
 | nan     | number          | 24.7276        | 0.2326      | 1.907E-07  | 3.332E-05   | 0.7814      | 06213   | Nanyo-shi                  |
 | nan     | residents       | 89.2339        | 0.6031      | 6.526E-07  | 8.923E-07   | 2.4425      | 06213   | Nanyo-shi                  |
-| nan     | affectedpop     | 89.2339        | 0.8003      | 6.526E-07  | 8.923E-07   | 4.5425      | 06213   | Nanyo-shi                  |
+| nan     | affectedpop     | 89.2339        | 0.8003      | 6.526E-07  | 8.923E-07   | 4.5426      | 06213   | Nanyo-shi                  |
 | nan     | injured         | 82.1699        | 0.0557      | 7.002E-07  | 8.217E-07   | 0.2893      | 06213   | Nanyo-shi                  |
 | nan     | embodied_carbon | 2_584          | 147.4276    | 27.7078    | 120.7181    | 389.6       | 06213   | Nanyo-shi                  |
 | nan     | contents        | 497_196        | 0.2808      | 7.305E-29  | 0.0050      | 0.0050      | 06322   | Nishikawa-machi            |
@@ -1106,7 +1106,7 @@
 | nan     | affectedpop     | 2.8129         | 0.1213      | 2.813E-08  | 2.813E-08   | 0.6535      | 06381   | Takahata-machi             |
 | nan     | injured         | 1.4559         | 7.024E-04   | 1.456E-08  | 1.456E-08   | 0.0022      | 06381   | Takahata-machi             |
 | nan     | embodied_carbon | 26.9303        | 1.5292      | 0.0270     | 0.4607      | 6.0998      | 06381   | Takahata-machi             |
-| nan     | contents        | 1_802_246      | 321.9       | 0.0        | 2.620E-10   | 2_194       | 06382   | Kawanishi-machi            |
+| nan     | contents        | 1_802_246      | 321.9       | 0.0        | 2.621E-10   | 2_194       | 06382   | Kawanishi-machi            |
 | nan     | structural      | 7_208_984      | 109_958     | 0.0        | 18_099      | 313_214     | 06382   | Kawanishi-machi            |
 | nan     | occupants       | 39.2250        | 3.550E-07   | 0.0        | 3.922E-07   | 3.923E-07   | 06382   | Kawanishi-machi            |
 | nan     | area            | 4_528          | 30.7564     | 0.0        | 4.528E-05   | 4.528E-05   | 06382   | Kawanishi-machi            |
@@ -1118,7 +1118,7 @@
 | nan     | contents        | 374_626        | 751.4       | 0.0        | 0.0037      | 1_676       | 06401   | Oguni-machi                |
 | nan     | structural      | 1_498_502      | 46_616      | 375.3      | 8_261       | 202_442     | 06401   | Oguni-machi                |
 | nan     | occupants       | 6.0998         | 6.100E-08   | 6.100E-08  | 6.100E-08   | 6.100E-08   | 06401   | Oguni-machi                |
-| nan     | area            | 941.3          | 25.5973     | 9.413E-06  | 9.413E-06   | 78.7712     | 06401   | Oguni-machi                |
+| nan     | area            | 941.3          | 25.5973     | 9.413E-06  | 9.413E-06   | 78.7713     | 06401   | Oguni-machi                |
 | nan     | number          | 6.0027         | 0.1632      | 6.003E-08  | 6.003E-08   | 0.5023      | 06401   | Oguni-machi                |
 | nan     | residents       | 12.0407        | 0.3983      | 1.204E-07  | 1.204E-07   | 1.5916      | 06401   | Oguni-machi                |
 | nan     | affectedpop     | 12.0407        | 0.5191      | 1.204E-07  | 1.204E-07   | 2.7975      | 06401   | Oguni-machi                |
@@ -1127,7 +1127,7 @@
 | nan     | contents        | 5_460_446      | 361.9       | 0.0235     | 0.0546      | 1_631       | 07201   | Fukushima-shi              |
 | nan     | structural      | 19_115_444     | 81_966      | 5_603      | 35_996      | 261_345     | 07201   | Fukushima-shi              |
 | nan     | occupants       | 127.1357       | 1.222E-06   | 6.223E-07  | 1.271E-06   | 1.271E-06   | 07201   | Fukushima-shi              |
-| nan     | area            | 9_158          | 11.9581     | 4.566E-05  | 0.1850      | 57.1987     | 07201   | Fukushima-shi              |
+| nan     | area            | 9_158          | 11.9581     | 4.566E-05  | 0.1850      | 57.1986     | 07201   | Fukushima-shi              |
 | nan     | number          | 39.9763        | 0.0804      | 2.499E-07  | 0.0013      | 0.4044      | 07201   | Fukushima-shi              |
 | nan     | residents       | 145.0097       | 0.3070      | 1.223E-06  | 0.0148      | 1.5812      | 07201   | Fukushima-shi              |
 | nan     | affectedpop     | 145.0097       | 0.8329      | 1.228E-06  | 0.0983      | 2.6683      | 07201   | Fukushima-shi              |
@@ -1141,7 +1141,7 @@
 | nan     | residents       | 2.4471         | 0.0345      | 0.0        | 2.447E-08   | 0.0474      | 07202   | Aizuwakamatsu-shi          |
 | nan     | affectedpop     | 2.4471         | 0.0782      | 0.0        | 2.447E-08   | 0.2531      | 07202   | Aizuwakamatsu-shi          |
 | nan     | injured         | 35.6066        | 8.467E-04   | 3.437E-07  | 3.561E-07   | 0.0052      | 07202   | Aizuwakamatsu-shi          |
-| nan     | embodied_carbon | 462.4          | 40.6921     | 7.0304     | 39.4075     | 67.8487     | 07202   | Aizuwakamatsu-shi          |
+| nan     | embodied_carbon | 462.4          | 40.6921     | 7.0304     | 39.4075     | 67.8488     | 07202   | Aizuwakamatsu-shi          |
 | nan     | contents        | 1_675_838      | 151.0939    | 5.245E-04  | 0.0152      | 228.3       | 07203   | Koriyama-shi               |
 | nan     | structural      | 6_072_475      | 67_357      | 1_401      | 35_915      | 177_958     | 07203   | Koriyama-shi               |
 | nan     | occupants       | 41.0303        | 3.609E-07   | 3.508E-08  | 4.103E-07   | 4.103E-07   | 07203   | Koriyama-shi               |
@@ -1151,7 +1151,7 @@
 | nan     | affectedpop     | 16.3397        | 0.2837      | 3.968E-08  | 1.634E-07   | 1.8664      | 07203   | Koriyama-shi               |
 | nan     | injured         | 41.0303        | 0.0028      | 3.508E-08  | 4.103E-07   | 0.0153      | 07203   | Koriyama-shi               |
 | nan     | embodied_carbon | 1_532          | 88.1450     | 0.5053     | 81.6485     | 186.5       | 07203   | Koriyama-shi               |
-| nan     | contents        | 9_986_410      | 49.5915     | 0.0        | 0.0971      | 166.1589    | 07204   | Iwaki-shi                  |
+| nan     | contents        | 9_986_410      | 49.5907     | 0.0        | 0.0971      | 166.1589    | 07204   | Iwaki-shi                  |
 | nan     | structural      | 37_243_176     | 121_046     | 0.0        | 27_707      | 435_839     | 07204   | Iwaki-shi                  |
 | nan     | occupants       | 209.2          | 1.724E-06   | 0.0        | 2.092E-06   | 2.092E-06   | 07204   | Iwaki-shi                  |
 | nan     | area            | 23_609         | 0.1398      | 0.0        | 2.361E-04   | 2.361E-04   | 07204   | Iwaki-shi                  |
@@ -1236,7 +1236,7 @@
 | nan     | residents       | 11.8046        | 0.3748      | 1.180E-07  | 1.180E-07   | 2.4370      | 07308   | Kawamata-machi             |
 | nan     | affectedpop     | 11.8046        | 0.6454      | 1.180E-07  | 3.323E-04   | 4.0104      | 07308   | Kawamata-machi             |
 | nan     | injured         | 6.1102         | 0.0046      | 6.110E-08  | 6.110E-08   | 0.0302      | 07308   | Kawamata-machi             |
-| nan     | embodied_carbon | 145.1414       | 7.2153      | 0.7100     | 2.9518      | 26.0100     | 07308   | Kawamata-machi             |
+| nan     | embodied_carbon | 145.1414       | 7.2153      | 0.7100     | 2.9518      | 26.0099     | 07308   | Kawamata-machi             |
 | nan     | contents        | 1_580_843      | 0.0138      | 0.0        | 0.0158      | 0.0158      | 07344   | Tenei-mura                 |
 | nan     | structural      | 4_742_530      | 74_913      | 0.0        | 45_890      | 224_651     | 07344   | Tenei-mura                 |
 | nan     | occupants       | 19.5037        | 1.707E-07   | 0.0        | 1.950E-07   | 1.950E-07   | 07344   | Tenei-mura                 |
@@ -1269,7 +1269,7 @@
 | nan     | affectedpop     | 7.2674         | 1.924E-04   | 7.267E-08  | 7.267E-08   | 0.0012      | 07447   | Aizumisato-machi           |
 | nan     | injured         | 3.7617         | 3.762E-08   | 3.762E-08  | 3.762E-08   | 3.762E-08   | 07447   | Aizumisato-machi           |
 | nan     | embodied_carbon | 126.1521       | 1.3846      | 0.1311     | 1.0521      | 3.9549      | 07447   | Aizumisato-machi           |
-| nan     | contents        | 5_254_923      | 28.8930     | 0.0        | 0.0025      | 16.0627     | 07466   | Yabuki-machi               |
+| nan     | contents        | 5_254_923      | 28.8929     | 0.0        | 0.0025      | 16.0616     | 07466   | Yabuki-machi               |
 | nan     | structural      | 21_019_692     | 63_845      | 0.0        | 14_176      | 342_733     | 07466   | Yabuki-machi               |
 | nan     | occupants       | 142.8090       | 1.122E-06   | 0.0        | 1.428E-06   | 1.428E-06   | 07466   | Yabuki-machi               |
 | nan     | area            | 14_107         | 0.2979      | 0.0        | 1.411E-04   | 0.3600      | 07466   | Yabuki-machi               |
@@ -1294,8 +1294,8 @@
 | nan     | affectedpop     | 6.9474         | 0.0307      | 0.0        | 6.947E-08   | 0.0034      | 07482   | Yamatsuri-machi            |
 | nan     | injured         | 3.5959         | 1.077E-05   | 0.0        | 3.596E-08   | 3.596E-08   | 07482   | Yamatsuri-machi            |
 | nan     | embodied_carbon | 69.9120        | 0.9455      | 0.0        | 0.1375      | 2.7366      | 07482   | Yamatsuri-machi            |
-| nan     | contents        | 10_203_548     | 3_084       | 9.302E-12  | 0.0125      | 2_623       | 07521   | Miharu-machi               |
-| nan     | structural      | 40_814_192     | 259_199     | 635.4      | 37_888      | 1_304_741   | 07521   | Miharu-machi               |
+| nan     | contents        | 10_203_548     | 3_084       | 9.301E-12  | 0.0125      | 2_623       | 07521   | Miharu-machi               |
+| nan     | structural      | 40_814_192     | 259_199     | 635.4      | 37_888      | 1_304_742   | 07521   | Miharu-machi               |
 | nan     | occupants       | 256.3          | 2.265E-06   | 3.049E-07  | 2.563E-06   | 2.563E-06   | 07521   | Miharu-machi               |
 | nan     | area            | 27_392         | 0.6434      | 3.301E-05  | 2.739E-04   | 1.0356      | 07521   | Miharu-machi               |
 | nan     | number          | 195.0          | 0.0046      | 2.399E-07  | 1.950E-06   | 0.0074      | 07521   | Miharu-machi               |
@@ -1312,7 +1312,7 @@
 | nan     | affectedpop     | 32.7430        | 0.0120      | 0.0        | 3.274E-07   | 7.070E-04   | 07541   | Hirono-machi               |
 | nan     | injured         | 16.9479        | 1.415E-07   | 0.0        | 1.695E-07   | 1.695E-07   | 07541   | Hirono-machi               |
 | nan     | embodied_carbon | 575.3          | 6.3293      | 0.0        | 1.9100      | 23.5682     | 07541   | Hirono-machi               |
-| nan     | contents        | 445_701        | 140.3217    | 7.920E-04  | 0.0045      | 95.3979     | 08201   | Mito-shi                   |
+| nan     | contents        | 445_701        | 140.3217    | 7.920E-04  | 0.0045      | 95.3980     | 08201   | Mito-shi                   |
 | nan     | structural      | 2_422_616      | 15_193      | 1_808      | 9_624       | 37_630      | 08201   | Mito-shi                   |
 | nan     | occupants       | 14.1286        | 1.347E-07   | 7.653E-08  | 1.413E-07   | 1.413E-07   | 08201   | Mito-shi                   |
 | nan     | area            | 1_062          | 0.0695      | 5.818E-06  | 1.062E-05   | 0.1120      | 08201   | Mito-shi                   |
@@ -1365,7 +1365,7 @@
 | nan     | injured         | 25.7119        | 2.417E-07   | 0.0        | 2.571E-07   | 2.571E-07   | 08208   | Ryugasaki-shi              |
 | nan     | embodied_carbon | 513.2          | 20.9118     | 0.0        | 12.9852     | 62.4608     | 08208   | Ryugasaki-shi              |
 | nan     | contents        | 642_455        | 3_509       | 0.0        | 0.0064      | 672.9       | 08210   | Shimotsuma-shi             |
-| nan     | structural      | 2_569_819      | 117_808     | 23.9741    | 16_223      | 547_494     | 08210   | Shimotsuma-shi             |
+| nan     | structural      | 2_569_819      | 117_808     | 23.9743    | 16_223      | 547_494     | 08210   | Shimotsuma-shi             |
 | nan     | occupants       | 15.7595        | 1.576E-07   | 1.576E-07  | 1.576E-07   | 1.576E-07   | 08210   | Shimotsuma-shi             |
 | nan     | area            | 1_741          | 54.6250     | 1.741E-05  | 1.741E-05   | 219.2       | 08210   | Shimotsuma-shi             |
 | nan     | number          | 14.0106        | 0.4396      | 1.401E-07  | 1.401E-07   | 1.7640      | 08210   | Shimotsuma-shi             |
@@ -1404,7 +1404,7 @@
 | nan     | residents       | 143.5595       | 3.2863      | 1.428E-06  | 1.436E-06   | 11.9548     | 08216   | Kasama-shi                 |
 | nan     | affectedpop     | 143.5595       | 7.0647      | 1.428E-06  | 1.436E-06   | 37.1367     | 08216   | Kasama-shi                 |
 | nan     | injured         | 76.8363        | 0.0175      | 7.510E-07  | 7.684E-07   | 0.0408      | 08216   | Kasama-shi                 |
-| nan     | embodied_carbon | 2_302          | 177.1052    | 24.1403    | 109.8980    | 517.6       | 08216   | Kasama-shi                 |
+| nan     | embodied_carbon | 2_302          | 177.1051    | 24.1403    | 109.8980    | 517.6       | 08216   | Kasama-shi                 |
 | nan     | contents        | 2_963_077      | 1_182       | 0.0102     | 0.0304      | 7_834       | 08220   | Tsukuba-shi                |
 | nan     | structural      | 11_852_312     | 393_851     | 12_756     | 113_084     | 1_606_882   | 08220   | Tsukuba-shi                |
 | nan     | occupants       | 86.4359        | 8.546E-07   | 7.560E-07  | 8.644E-07   | 8.644E-07   | 08220   | Tsukuba-shi                |
@@ -1432,7 +1432,7 @@
 | nan     | affectedpop     | 11.8601        | 0.8365      | 0.0        | 0.0034      | 4.1963      | 08223   | Itako-shi                  |
 | nan     | injured         | 6.0083         | 0.0049      | 0.0        | 6.008E-08   | 0.0176      | 08223   | Itako-shi                  |
 | nan     | embodied_carbon | 118.0576       | 5.0381      | 0.0        | 1.6817      | 19.1210     | 08223   | Itako-shi                  |
-| nan     | contents        | 138_125        | 0.0012      | 3.954E-33  | 0.0014      | 0.0014      | 08225   | Hitachiomiya-shi           |
+| nan     | contents        | 138_125        | 0.0012      | 3.955E-33  | 0.0014      | 0.0014      | 08225   | Hitachiomiya-shi           |
 | nan     | structural      | 552_500        | 2_959       | 66.1412    | 1_057       | 9_019       | 08225   | Hitachiomiya-shi           |
 | nan     | occupants       | 3.1912         | 3.095E-08   | 2.127E-08  | 3.191E-08   | 3.191E-08   | 08225   | Hitachiomiya-shi           |
 | nan     | area            | 374.3          | 0.0012      | 2.495E-06  | 3.743E-06   | 3.743E-06   | 08225   | Hitachiomiya-shi           |
@@ -1458,9 +1458,9 @@
 | nan     | injured         | 45.8417        | 1.304E-04   | 4.584E-07  | 4.584E-07   | 4.584E-07   | 08227   | Chikusei-shi               |
 | nan     | embodied_carbon | 833.3          | 14.8245     | 0.2053     | 5.1649      | 54.5978     | 08227   | Chikusei-shi               |
 | nan     | contents        | 1_291_667      | 1_466       | 0.0        | 0.0129      | 8_169       | 08228   | Bando-shi                  |
-| nan     | structural      | 5_166_669      | 183_305     | 12.0363    | 18_938      | 743_773     | 08228   | Bando-shi                  |
+| nan     | structural      | 5_166_669      | 183_305     | 12.0364    | 18_938      | 743_773     | 08228   | Bando-shi                  |
 | nan     | occupants       | 35.2040        | 3.520E-07   | 3.520E-07  | 3.520E-07   | 3.520E-07   | 08228   | Bando-shi                  |
-| nan     | area            | 3_500          | 61.5037     | 3.500E-05  | 3.500E-05   | 178.0623    | 08228   | Bando-shi                  |
+| nan     | area            | 3_500          | 61.5036     | 3.500E-05  | 3.500E-05   | 178.0623    | 08228   | Bando-shi                  |
 | nan     | number          | 27.9961        | 0.4924      | 2.800E-07  | 2.800E-07   | 1.4269      | 08228   | Bando-shi                  |
 | nan     | residents       | 69.4906        | 1.9622      | 6.949E-07  | 6.949E-07   | 8.0401      | 08228   | Bando-shi                  |
 | nan     | affectedpop     | 69.4906        | 3.8561      | 6.949E-07  | 6.949E-07   | 20.7229     | 08228   | Bando-shi                  |
@@ -1476,7 +1476,7 @@
 | nan     | injured         | 14.6037        | 1.608E-04   | 1.460E-07  | 1.460E-07   | 3.796E-04   | 08229   | Inashiki-shi               |
 | nan     | embodied_carbon | 848.7          | 18.1144     | 1.1900     | 9.0318      | 56.1544     | 08229   | Inashiki-shi               |
 | nan     | contents        | 6_588_468      | 1_929       | 0.0223     | 0.0659      | 9_320       | 08231   | Sakuragawa-shi             |
-| nan     | structural      | 20_875_496     | 507_070     | 15_837     | 163_681     | 2_001_401   | 08231   | Sakuragawa-shi             |
+| nan     | structural      | 20_875_496     | 507_069     | 15_837     | 163_681     | 2_001_401   | 08231   | Sakuragawa-shi             |
 | nan     | occupants       | 41.8912        | 4.155E-07   | 3.815E-07  | 4.189E-07   | 4.189E-07   | 08231   | Sakuragawa-shi             |
 | nan     | area            | 10_157         | 39.0969     | 7.774E-05  | 1.016E-04   | 78.2282     | 08231   | Sakuragawa-shi             |
 | nan     | number          | 27.8969        | 0.3118      | 2.660E-07  | 2.790E-07   | 0.6240      | 08231   | Sakuragawa-shi             |
@@ -1517,7 +1517,7 @@
 | nan     | residents       | 96.1005        | 2.1463      | 9.484E-07  | 9.610E-07   | 7.8079      | 08236   | Omitama-shi                |
 | nan     | affectedpop     | 96.1005        | 4.6141      | 9.484E-07  | 9.610E-07   | 24.2548     | 08236   | Omitama-shi                |
 | nan     | injured         | 81.8300        | 0.0115      | 8.101E-07  | 8.183E-07   | 0.0267      | 08236   | Omitama-shi                |
-| nan     | embodied_carbon | 1_403          | 72.9273     | 1.3407     | 25.7327     | 260.5       | 08236   | Omitama-shi                |
+| nan     | embodied_carbon | 1_403          | 72.9273     | 1.3407     | 25.7326     | 260.5       | 08236   | Omitama-shi                |
 | nan     | contents        | 276_864        | 0.0025      | 0.0        | 0.0028      | 0.0028      | 08341   | Tokai-mura                 |
 | nan     | structural      | 1_107_455      | 1_723       | 0.0074     | 207.2       | 6_023       | 08341   | Tokai-mura                 |
 | nan     | occupants       | 6.8537         | 6.648E-08   | 4.569E-08  | 6.854E-08   | 6.854E-08   | 08341   | Tokai-mura                 |
@@ -1587,15 +1587,15 @@
 | nan     | injured         | 240.6          | 0.0038      | 2.381E-06  | 2.406E-06   | 0.0179      | 09203   | Tochigi-shi                |
 | nan     | embodied_carbon | 6_432          | 92.7736     | 10.1698    | 57.0221     | 191.7       | 09203   | Tochigi-shi                |
 | nan     | contents        | 5_818_699      | 2.4848      | 0.0414     | 0.0577      | 5.5602      | 09204   | Sano-shi                   |
-| nan     | structural      | 21_219_180     | 477_235     | 54_519     | 242_666     | 1_633_740   | 09204   | Sano-shi                   |
+| nan     | structural      | 21_219_180     | 477_235     | 54_519     | 242_667     | 1_633_740   | 09204   | Sano-shi                   |
 | nan     | occupants       | 131.5806       | 2.672E-04   | 1.316E-06  | 1.316E-06   | 2.010E-04   | 09204   | Sano-shi                   |
-| nan     | area            | 9_702          | 37.3267     | 9.702E-05  | 9.702E-05   | 98.3501     | 09204   | Sano-shi                   |
+| nan     | area            | 9_702          | 37.3267     | 9.702E-05  | 9.702E-05   | 98.3502     | 09204   | Sano-shi                   |
 | nan     | number          | 28.9882        | 0.0288      | 2.899E-07  | 2.899E-07   | 0.0799      | 09204   | Sano-shi                   |
 | nan     | residents       | 89.5278        | 0.0028      | 8.953E-07  | 8.953E-07   | 0.0213      | 09204   | Sano-shi                   |
 | nan     | affectedpop     | 89.5278        | 0.0411      | 8.953E-07  | 8.953E-07   | 0.3203      | 09204   | Sano-shi                   |
 | nan     | injured         | 131.5806       | 0.0063      | 1.316E-06  | 1.316E-06   | 0.0424      | 09204   | Sano-shi                   |
 | nan     | embodied_carbon | 4_825          | 304.5       | 103.3832   | 248.9       | 659.5       | 09204   | Sano-shi                   |
-| nan     | contents        | 6_292_720      | 5_741       | 0.0163     | 26.8590     | 35_801      | 09205   | Kanuma-shi                 |
+| nan     | contents        | 6_292_720      | 5_741       | 0.0163     | 26.8591     | 35_801      | 09205   | Kanuma-shi                 |
 | nan     | structural      | 21_222_668     | 737_189     | 120_596    | 501_153     | 1_806_430   | 09205   | Kanuma-shi                 |
 | nan     | occupants       | 89.8970        | 0.0010      | 8.990E-07  | 8.990E-07   | 0.0043      | 09205   | Kanuma-shi                 |
 | nan     | area            | 12_323         | 134.7205    | 1.232E-04  | 2.6148      | 770.7       | 09205   | Kanuma-shi                 |
@@ -1623,7 +1623,7 @@
 | nan     | contents        | 4_534_352      | 6_158       | 0.0307     | 15.4714     | 38_096      | 09209   | Moka-shi                   |
 | nan     | structural      | 13_637_058     | 780_237     | 110_140    | 542_570     | 1_969_141   | 09209   | Moka-shi                   |
 | nan     | occupants       | 100.1321       | 0.0460      | 8.471E-07  | 0.0045      | 0.2305      | 09209   | Moka-shi                   |
-| nan     | area            | 6_396          | 171.3601    | 6.283E-05  | 19.2898     | 783.4       | 09209   | Moka-shi                   |
+| nan     | area            | 6_396          | 171.3600    | 6.283E-05  | 19.2898     | 783.4       | 09209   | Moka-shi                   |
 | nan     | number          | 5.6344         | 0.0779      | 4.966E-08  | 0.0069      | 0.3687      | 09209   | Moka-shi                   |
 | nan     | residents       | 9.4385         | 0.0613      | 6.292E-08  | 9.439E-08   | 0.4654      | 09209   | Moka-shi                   |
 | nan     | affectedpop     | 9.4385         | 0.2343      | 6.292E-08  | 9.439E-08   | 1.7522      | 09209   | Moka-shi                   |
@@ -1648,7 +1648,7 @@
 | nan     | injured         | 17.6904        | 1.557E-07   | 0.0        | 1.769E-07   | 1.769E-07   | 09214   | Sakura-shi                 |
 | nan     | embodied_carbon | 667.8          | 9.3735      | 0.0        | 8.3476      | 19.8368     | 09214   | Sakura-shi                 |
 | nan     | contents        | 4_170_511      | 0.0417      | 0.0415     | 0.0417      | 0.0417      | 09216   | Shimotsuke-shi             |
-| nan     | structural      | 16_765_242     | 153_571     | 159.5320   | 41_691      | 620_483     | 09216   | Shimotsuke-shi             |
+| nan     | structural      | 16_765_242     | 153_571     | 159.5330   | 41_691      | 620_483     | 09216   | Shimotsuke-shi             |
 | nan     | occupants       | 103.2134       | 1.032E-06   | 1.027E-06  | 1.032E-06   | 1.032E-06   | 09216   | Shimotsuke-shi             |
 | nan     | area            | 7_840          | 1.1063      | 7.798E-05  | 7.840E-05   | 1.4131      | 09216   | Shimotsuke-shi             |
 | nan     | number          | 51.0049        | 0.0072      | 5.067E-07  | 5.100E-07   | 0.0092      | 09216   | Shimotsuke-shi             |
@@ -1674,7 +1674,7 @@
 | nan     | affectedpop     | 24.4490        | 2.372E-07   | 1.630E-07  | 2.445E-07   | 2.445E-07   | 09344   | Ichikai-machi              |
 | nan     | injured         | 12.6553        | 1.228E-07   | 8.437E-08  | 1.266E-07   | 1.266E-07   | 09344   | Ichikai-machi              |
 | nan     | embodied_carbon | 427.1          | 1.5609      | 0.0785     | 0.7871      | 4.3451      | 09344   | Ichikai-machi              |
-| nan     | contents        | 49_292         | 86.4606     | 0.0        | 1.586E-25   | 1.5055      | 09361   | Mibu-machi                 |
+| nan     | contents        | 49_292         | 86.4607     | 0.0        | 1.586E-25   | 1.5055      | 09361   | Mibu-machi                 |
 | nan     | structural      | 197_166        | 1_367       | 27.3205    | 683.0       | 4_875       | 09361   | Mibu-machi                 |
 | nan     | occupants       | 1.0327         | 1.033E-08   | 1.033E-08  | 1.033E-08   | 1.033E-08   | 09361   | Mibu-machi                 |
 | nan     | area            | 129.9711       | 1.300E-06   | 1.300E-06  | 1.300E-06   | 1.300E-06   | 09361   | Mibu-machi                 |
@@ -1702,7 +1702,7 @@
 | nan     | injured         | 12.0203        | 9.223E-05   | 3.363E-09  | 1.202E-07   | 1.202E-07   | 09407   | Nasu-machi                 |
 | nan     | embodied_carbon | 627.8          | 5.6258      | 0.1395     | 1.9556      | 15.1777     | 09407   | Nasu-machi                 |
 | nan     | contents        | 4_545_591      | 55_775      | 0.0169     | 510.6       | 275_789     | 10201   | Maebashi-shi               |
-| nan     | structural      | 22_754_392     | 2_343_231   | 192_583    | 1_121_786   | 6_979_320   | 10201   | Maebashi-shi               |
+| nan     | structural      | 22_754_392     | 2_343_231   | 192_583    | 1_121_786   | 6_979_321   | 10201   | Maebashi-shi               |
 | nan     | occupants       | 153.2065       | 0.0535      | 1.532E-06  | 7.928E-04   | 0.2411      | 10201   | Maebashi-shi               |
 | nan     | area            | 10_427         | 842.2       | 1.043E-04  | 38.8741     | 3_732       | 10201   | Maebashi-shi               |
 | nan     | number          | 16.0124        | 2.1806      | 1.601E-07  | 0.1882      | 9.2413      | 10201   | Maebashi-shi               |
@@ -1711,7 +1711,7 @@
 | nan     | injured         | 153.2065       | 0.3814      | 1.532E-06  | 0.0136      | 1.7447      | 10201   | Maebashi-shi               |
 | nan     | embodied_carbon | 5_207          | 839.0       | 209.4      | 585.9       | 1_972       | 10201   | Maebashi-shi               |
 | nan     | contents        | 12_669_269     | 45_830      | 11.5169    | 15_364      | 206_407     | 10202   | Takasaki-shi               |
-| nan     | structural      | 51_631_484     | 3_950_066   | 247_943    | 1_930_763   | 14_096_340  | 10202   | Takasaki-shi               |
+| nan     | structural      | 51_631_484     | 3_950_066   | 247_943    | 1_930_763   | 14_096_342  | 10202   | Takasaki-shi               |
 | nan     | occupants       | 506.0          | 0.0069      | 5.060E-06  | 0.0013      | 0.0284      | 10202   | Takasaki-shi               |
 | nan     | area            | 26_280         | 1_898       | 8.8178     | 519.0       | 7_425       | 10202   | Takasaki-shi               |
 | nan     | number          | 93.9570        | 12.1124     | 0.0224     | 3.4949      | 45.3823     | 10202   | Takasaki-shi               |
@@ -1720,7 +1720,7 @@
 | nan     | injured         | 506.0          | 0.5216      | 0.0030     | 0.1608      | 2.2899      | 10202   | Takasaki-shi               |
 | nan     | embodied_carbon | 10_025         | 964.0       | 130.4551   | 678.7       | 2_732       | 10202   | Takasaki-shi               |
 | nan     | contents        | 10_667_343     | 106_601     | 0.1471     | 9_989       | 660_587     | 10203   | Kiryu-shi                  |
-| nan     | structural      | 40_810_200     | 4_869_202   | 301_126    | 1_768_324   | 16_361_582  | 10203   | Kiryu-shi                  |
+| nan     | structural      | 40_810_200     | 4_869_202   | 301_126    | 1_768_324   | 16_361_583  | 10203   | Kiryu-shi                  |
 | nan     | occupants       | 250.5          | 0.0075      | 2.505E-06  | 1.048E-04   | 0.0335      | 10203   | Kiryu-shi                  |
 | nan     | area            | 24_259         | 2_395       | 0.3136     | 191.5       | 11_589      | 10203   | Kiryu-shi                  |
 | nan     | number          | 128.5331       | 16.3791     | 4.182E-04  | 0.3018      | 82.3482     | 10203   | Kiryu-shi                  |
@@ -1729,7 +1729,7 @@
 | nan     | injured         | 250.5          | 0.3355      | 2.505E-06  | 0.0126      | 1.6012      | 10203   | Kiryu-shi                  |
 | nan     | embodied_carbon | 6_864          | 984.5       | 187.4      | 626.8       | 2_534       | 10203   | Kiryu-shi                  |
 | nan     | contents        | 4_392_105      | 20_772      | 0.0380     | 652.7       | 75_920      | 10204   | Isesaki-shi                |
-| nan     | structural      | 18_077_962     | 2_448_931   | 80_120     | 775_012     | 8_694_823   | 10204   | Isesaki-shi                |
+| nan     | structural      | 18_077_962     | 2_448_931   | 80_120     | 775_012     | 8_694_824   | 10204   | Isesaki-shi                |
 | nan     | occupants       | 136.5026       | 0.0184      | 1.365E-06  | 0.0019      | 0.0756      | 10204   | Isesaki-shi                |
 | nan     | area            | 10_964         | 1_195       | 1.096E-04  | 15.7821     | 5_877       | 10204   | Isesaki-shi                |
 | nan     | number          | 68.6469        | 8.6960      | 6.865E-07  | 0.0360      | 43.8464     | 10204   | Isesaki-shi                |
@@ -1756,7 +1756,7 @@
 | nan     | injured         | 25.8906        | 0.0084      | 2.589E-07  | 1.115E-05   | 0.0634      | 10206   | Numata-shi                 |
 | nan     | embodied_carbon | 556.4          | 32.1562     | 2.1628     | 17.4165     | 110.5863    | 10206   | Numata-shi                 |
 | nan     | contents        | 721_097        | 21_079      | 0.0515     | 2_434       | 98_083      | 10208   | Shibukawa-shi              |
-| nan     | structural      | 2_884_390      | 751_522     | 29_011     | 236_544     | 2_595_927   | 10208   | Shibukawa-shi              |
+| nan     | structural      | 2_884_390      | 751_522     | 29_011     | 236_544     | 2_595_928   | 10208   | Shibukawa-shi              |
 | nan     | occupants       | 17.3424        | 4.843E-04   | 1.734E-07  | 1.734E-07   | 0.0020      | 10208   | Shibukawa-shi              |
 | nan     | area            | 1_954          | 539.2       | 2.0450     | 68.9787     | 1_927       | 10208   | Shibukawa-shi              |
 | nan     | number          | 15.0132        | 4.1443      | 0.0157     | 0.5342      | 14.8001     | 10208   | Shibukawa-shi              |
@@ -1772,7 +1772,7 @@
 | nan     | injured         | 12.6855        | 0.0477      | 1.269E-07  | 1.269E-07   | 0.2555      | 10209   | Fujioka-shi                |
 | nan     | embodied_carbon | 1_194          | 175.1888    | 4.8009     | 49.7530     | 706.6       | 10209   | Fujioka-shi                |
 | nan     | contents        | 11_799_335     | 104_301     | 1.056E-04  | 562.7       | 609_002     | 10210   | MIHAESTI                   |
-| nan     | structural      | 35_398_008     | 7_209_604   | 1_013_098  | 4_329_981   | 23_064_650  | 10210   | MIHAESTI                   |
+| nan     | structural      | 35_398_008     | 7_209_604   | 1_013_098  | 4_329_982   | 23_064_652  | 10210   | MIHAESTI                   |
 | nan     | occupants       | 43.3950        | 0.0288      | 4.339E-07  | 0.0023      | 0.1306      | 10210   | MIHAESTI                   |
 | nan     | area            | 15_397         | 1_891       | 1.540E-04  | 180.2       | 8_612       | 10210   | MIHAESTI                   |
 | nan     | number          | 4.8162         | 0.5802      | 4.816E-08  | 0.0571      | 2.7006      | 10210   | MIHAESTI                   |
@@ -1842,7 +1842,7 @@
 | nan     | injured         | 8.4220         | 0.0017      | 8.422E-08  | 8.422E-08   | 0.0134      | 10449   | Minakami-machi             |
 | nan     | embodied_carbon | 191.3          | 11.5154     | 0.7485     | 5.9043      | 43.7393     | 10449   | Minakami-machi             |
 | nan     | contents        | 757_052        | 29.7041     | 0.0        | 0.0076      | 2.3835      | 10521   | Itakura-machi              |
-| nan     | structural      | 3_028_208      | 140_750     | 28.2461    | 19_242      | 561_515     | 10521   | Itakura-machi              |
+| nan     | structural      | 3_028_208      | 140_750     | 28.2463    | 19_242      | 561_515     | 10521   | Itakura-machi              |
 | nan     | occupants       | 18.6361        | 1.864E-07   | 1.864E-07  | 1.864E-07   | 1.864E-07   | 10521   | Itakura-machi              |
 | nan     | area            | 2_052          | 64.3687     | 2.052E-05  | 2.052E-05   | 258.3       | 10521   | Itakura-machi              |
 | nan     | number          | 15.9764        | 0.5012      | 1.598E-07  | 1.598E-07   | 2.0115      | 10521   | Itakura-machi              |
@@ -1859,7 +1859,7 @@
 | nan     | affectedpop     | 30.5134        | 7.6437      | 3.051E-07  | 1.6045      | 25.8193     | 10525   | Ora-machi                  |
 | nan     | injured         | 15.7940        | 0.0489      | 1.579E-07  | 3.104E-04   | 0.2094      | 10525   | Ora-machi                  |
 | nan     | embodied_carbon | 329.2          | 71.0301     | 6.4490     | 39.0252     | 221.7       | 10525   | Ora-machi                  |
-| nan     | contents        | 631_070        | 171.4858    | 0.0        | 1.834E-12   | 21.6934     | 11101   | Saitama-shi Nishi-ku       |
+| nan     | contents        | 631_070        | 171.4857    | 0.0        | 1.834E-12   | 21.6934     | 11101   | Saitama-shi Nishi-ku       |
 | nan     | structural      | 3_576_065      | 96_646      | 6_866      | 41_961      | 413_770     | 11101   | Saitama-shi Nishi-ku       |
 | nan     | occupants       | 26.8014        | 0.0010      | 2.680E-07  | 2.680E-07   | 0.0048      | 11101   | Saitama-shi Nishi-ku       |
 | nan     | area            | 1_485          | 10.6820     | 1.485E-05  | 1.485E-05   | 53.6051     | 11101   | Saitama-shi Nishi-ku       |
@@ -1880,7 +1880,7 @@
 | nan     | contents        | 5_307_977      | 8_903       | 0.0183     | 0.0531      | 68_422      | 11107   | Saitama-shi Urawa-ku       |
 | nan     | structural      | 27_031_476     | 682_122     | 60_421     | 313_814     | 3_020_811   | 11107   | Saitama-shi Urawa-ku       |
 | nan     | occupants       | 286.0          | 0.0116      | 2.860E-06  | 2.860E-06   | 0.0727      | 11107   | Saitama-shi Urawa-ku       |
-| nan     | area            | 11_612         | 120.4130    | 1.161E-04  | 0.1782      | 735.3       | 11107   | Saitama-shi Urawa-ku       |
+| nan     | area            | 11_612         | 120.4129    | 1.161E-04  | 0.1782      | 735.3       | 11107   | Saitama-shi Urawa-ku       |
 | nan     | number          | 6.7334         | 0.0572      | 6.733E-08  | 8.465E-05   | 0.3492      | 11107   | Saitama-shi Urawa-ku       |
 | nan     | residents       | 262.1          | 5.5496      | 2.621E-06  | 0.0058      | 36.0345     | 11107   | Saitama-shi Urawa-ku       |
 | nan     | affectedpop     | 262.1          | 10.2009     | 2.621E-06  | 0.0058      | 74.0387     | 11107   | Saitama-shi Urawa-ku       |
@@ -1949,7 +1949,7 @@
 | nan     | affectedpop     | 635.9          | 0.0063      | 6.359E-06  | 6.359E-06   | 6.359E-06   | 11208   | Tokorozawa-shi             |
 | nan     | injured         | 578.3          | 5.783E-06   | 5.783E-06  | 5.783E-06   | 5.783E-06   | 11208   | Tokorozawa-shi             |
 | nan     | embodied_carbon | 14_348         | 256.4       | 21.0512    | 187.0       | 602.0       | 11208   | Tokorozawa-shi             |
-| nan     | contents        | 2_888_355      | 52_073      | 2.373E-18  | 93.8008     | 247_544     | 11209   | Hanno-shi                  |
+| nan     | contents        | 2_888_355      | 52_073      | 2.373E-18  | 93.8009     | 247_544     | 11209   | Hanno-shi                  |
 | nan     | structural      | 11_553_419     | 2_152_767   | 28_021     | 472_378     | 8_677_251   | 11209   | Hanno-shi                  |
 | nan     | occupants       | 79.4464        | 0.0013      | 7.945E-07  | 7.945E-07   | 0.0095      | 11209   | Hanno-shi                  |
 | nan     | area            | 7_828          | 1_411       | 7.828E-05  | 8.0298      | 7_713       | 11209   | Hanno-shi                  |
@@ -2018,7 +2018,7 @@
 | nan     | injured         | 371.9          | 0.2222      | 3.719E-06  | 3.719E-06   | 0.6008      | 11217   | Konosu-shi                 |
 | nan     | embodied_carbon | 5_948          | 626.1       | 14.5284    | 314.5       | 1_641       | 11217   | Konosu-shi                 |
 | nan     | contents        | 3_681_842      | 16_708      | 0.0062     | 0.0431      | 63_136      | 11218   | Fukaya-shi                 |
-| nan     | structural      | 10_830_402     | 1_453_929   | 255_710    | 890_579     | 4_532_769   | 11218   | Fukaya-shi                 |
+| nan     | structural      | 10_830_402     | 1_453_928   | 255_710    | 890_579     | 4_532_769   | 11218   | Fukaya-shi                 |
 | nan     | occupants       | 67.0842        | 0.0133      | 6.708E-07  | 6.708E-07   | 0.0793      | 11218   | Fukaya-shi                 |
 | nan     | area            | 4_785          | 380.9       | 4.785E-05  | 13.2322     | 1_531       | 11218   | Fukaya-shi                 |
 | nan     | number          | 10.7727        | 0.2963      | 1.077E-07  | 0.0186      | 0.8814      | 11218   | Fukaya-shi                 |
@@ -2087,7 +2087,7 @@
 | nan     | number          | 0.9591         | 5.647E-05   | 9.591E-09  | 9.591E-09   | 1.776E-04   | 11229   | Wako-shi                   |
 | nan     | injured         | 34.1567        | 3.416E-07   | 3.416E-07  | 3.416E-07   | 3.416E-07   | 11229   | Wako-shi                   |
 | nan     | embodied_carbon | 458.5          | 3.9933      | 0.1383     | 1.4521      | 20.1263     | 11229   | Wako-shi                   |
-| nan     | contents        | 2_110_601      | 1.6449      | 0.0106     | 0.0211      | 0.0211      | 11231   | Okegawa-shi                |
+| nan     | contents        | 2_110_601      | 1.6448      | 0.0106     | 0.0211      | 0.0211      | 11231   | Okegawa-shi                |
 | nan     | structural      | 11_960_074     | 72_546      | 3_003      | 30_017      | 191_455     | 11231   | Okegawa-shi                |
 | nan     | occupants       | 77.0821        | 7.708E-07   | 7.708E-07  | 7.708E-07   | 7.708E-07   | 11231   | Okegawa-shi                |
 | nan     | area            | 4_967          | 0.0305      | 4.967E-05  | 4.967E-05   | 4.967E-05   | 11231   | Okegawa-shi                |
@@ -2097,7 +2097,7 @@
 | nan     | injured         | 77.0821        | 7.708E-07   | 7.708E-07  | 7.708E-07   | 7.708E-07   | 11231   | Okegawa-shi                |
 | nan     | embodied_carbon | 2_676          | 105.3551    | 16.1590    | 72.4322     | 226.7       | 11231   | Okegawa-shi                |
 | nan     | contents        | 1_562_146      | 0.0156      | 0.0156     | 0.0156      | 0.0156      | 11232   | Kuki-shi                   |
-| nan     | structural      | 6_248_583      | 57_533      | 51.7637    | 15_671      | 234_829     | 11232   | Kuki-shi                   |
+| nan     | structural      | 6_248_583      | 57_533      | 51.7640    | 15_671      | 234_829     | 11232   | Kuki-shi                   |
 | nan     | occupants       | 49.6374        | 4.964E-07   | 4.964E-07  | 4.964E-07   | 4.964E-07   | 11232   | Kuki-shi                   |
 | nan     | area            | 2_925          | 0.4194      | 2.925E-05  | 2.925E-05   | 0.5357      | 11232   | Kuki-shi                   |
 | nan     | number          | 24.0001        | 0.0034      | 2.400E-07  | 2.400E-07   | 0.0044      | 11232   | Kuki-shi                   |
@@ -2156,12 +2156,12 @@
 | nan     | injured         | 3.8837         | 3.884E-08   | 3.884E-08  | 3.884E-08   | 3.884E-08   | 11301   | Ina-machi                  |
 | nan     | embodied_carbon | 106.0747       | 0.7402      | 0.0927     | 0.4499      | 1.6553      | 11301   | Ina-machi                  |
 | nan     | contents        | 543_717        | 1_467       | 0.0        | 6.698E-05   | 10_038      | 11341   | Namegawa-machi             |
-| nan     | structural      | 2_174_870      | 179_670     | 2_591      | 57_066      | 650_908     | 11341   | Namegawa-machi             |
+| nan     | structural      | 2_174_870      | 179_670     | 2_591      | 57_066      | 650_909     | 11341   | Namegawa-machi             |
 | nan     | occupants       | 21.3908        | 2.139E-07   | 2.139E-07  | 2.139E-07   | 2.139E-07   | 11341   | Namegawa-machi             |
 | nan     | area            | 1_473          | 48.2635     | 1.473E-05  | 1.473E-05   | 227.1       | 11341   | Namegawa-machi             |
 | nan     | number          | 11.0164        | 0.3608      | 1.102E-07  | 1.102E-07   | 1.6980      | 11341   | Namegawa-machi             |
 | nan     | residents       | 41.3263        | 2.5575      | 4.133E-07  | 0.0168      | 11.6088     | 11341   | Namegawa-machi             |
-| nan     | affectedpop     | 41.3263        | 5.2969      | 4.133E-07  | 0.5686      | 20.7430     | 11341   | Namegawa-machi             |
+| nan     | affectedpop     | 41.3263        | 5.2969      | 4.133E-07  | 0.5686      | 20.7431     | 11341   | Namegawa-machi             |
 | nan     | injured         | 21.3908        | 0.0133      | 2.139E-07  | 2.139E-07   | 0.0619      | 11341   | Namegawa-machi             |
 | nan     | embodied_carbon | 251.7          | 36.3958     | 3.0339     | 24.3633     | 98.0076     | 11341   | Namegawa-machi             |
 | nan     | contents        | 423_801        | 1_589       | 0.0        | 0.0011      | 2_147       | 11342   | Ranzan-machi               |
@@ -2180,7 +2180,7 @@
 | nan     | number          | 1.8793         | 5.906E-04   | 1.879E-08  | 1.879E-08   | 0.0026      | 11347   | Yoshimi-machi              |
 | nan     | injured         | 26.9379        | 1.008E-04   | 2.694E-07  | 2.694E-07   | 2.694E-07   | 11347   | Yoshimi-machi              |
 | nan     | embodied_carbon | 961.7          | 23.4873     | 1.2846     | 12.8542     | 70.4251     | 11347   | Yoshimi-machi              |
-| nan     | contents        | 2_633_977      | 9_443       | 0.0049     | 22.0681     | 55_705      | 11349   | Tokigawa-machi             |
+| nan     | contents        | 2_633_977      | 9_443       | 0.0049     | 22.0680     | 55_705      | 11349   | Tokigawa-machi             |
 | nan     | structural      | 10_535_908     | 1_217_107   | 73_155     | 487_862     | 3_898_689   | 11349   | Tokigawa-machi             |
 | nan     | occupants       | 66.9482        | 3.477E-05   | 6.695E-07  | 6.695E-07   | 2.515E-04   | 11349   | Tokigawa-machi             |
 | nan     | area            | 7_138          | 592.2       | 7.138E-05  | 6.9910      | 2_523       | 11349   | Tokigawa-machi             |
@@ -2190,7 +2190,7 @@
 | nan     | injured         | 66.9482        | 0.0994      | 6.695E-07  | 3.939E-04   | 0.4230      | 11349   | Tokigawa-machi             |
 | nan     | embodied_carbon | 1_220          | 204.9       | 26.2488    | 131.6115    | 546.4       | 11349   | Tokigawa-machi             |
 | nan     | contents        | 2_222_285      | 20_891      | 1.031E-39  | 0.0222      | 150_804     | 11385   | Kamisato-machi             |
-| nan     | structural      | 8_889_138      | 1_312_983   | 15_140     | 321_986     | 4_572_987   | 11385   | Kamisato-machi             |
+| nan     | structural      | 8_889_138      | 1_312_983   | 15_140     | 321_986     | 4_572_988   | 11385   | Kamisato-machi             |
 | nan     | occupants       | 60.3935        | 6.039E-07   | 6.039E-07  | 6.039E-07   | 6.039E-07   | 11385   | Kamisato-machi             |
 | nan     | area            | 6_022          | 777.2       | 6.022E-05  | 0.0785      | 3_940       | 11385   | Kamisato-machi             |
 | nan     | number          | 54.0328        | 6.9726      | 5.403E-07  | 7.040E-04   | 35.3535     | 11385   | Kamisato-machi             |
@@ -2207,7 +2207,7 @@
 | nan     | affectedpop     | 6.0569         | 0.0279      | 6.057E-08  | 6.057E-08   | 0.1255      | 11408   | Yorii-machi                |
 | nan     | injured         | 18.0909        | 0.0562      | 1.809E-07  | 1.809E-07   | 0.3012      | 11408   | Yorii-machi                |
 | nan     | embodied_carbon | 554.9          | 71.1353     | 4.7799     | 20.2606     | 293.7       | 11408   | Yorii-machi                |
-| nan     | contents        | 16_324_434     | 433.8       | 0.1225     | 0.1572      | 36.2806     | 12101   | Pasco County               |
+| nan     | contents        | 16_324_434     | 433.8       | 0.1225     | 0.1572      | 36.2809     | 12101   | Pasco County               |
 | nan     | structural      | 66_333_096     | 787_817     | 33_397     | 462_694     | 2_232_420   | 12101   | Pasco County               |
 | nan     | occupants       | 381.1          | 5.985E-04   | 2.842E-06  | 3.811E-06   | 0.0039      | 12101   | Pasco County               |
 | nan     | area            | 30_202         | 5.6705      | 2.253E-04  | 3.020E-04   | 30.7968     | 12101   | Pasco County               |
@@ -2225,7 +2225,7 @@
 | nan     | affectedpop     | 3.4646         | 0.0242      | 0.0        | 3.465E-08   | 0.1411      | 12102   | Chiba-shi Hanamigawa-ku    |
 | nan     | injured         | 1.7549         | 1.650E-08   | 0.0        | 1.755E-08   | 1.755E-08   | 12102   | Chiba-shi Hanamigawa-ku    |
 | nan     | embodied_carbon | 37.6091        | 1.5365      | 0.0        | 0.9458      | 4.7637      | 12102   | Chiba-shi Hanamigawa-ku    |
-| nan     | contents        | 3_435_335      | 0.0319      | 5.816E-24  | 0.0344      | 0.0344      | 12103   | Pinellas County            |
+| nan     | contents        | 3_435_335      | 0.0319      | 5.817E-24  | 0.0344      | 0.0344      | 12103   | Pinellas County            |
 | nan     | structural      | 19_466_898     | 133_318     | 2_194      | 35_350      | 364_504     | 12103   | Pinellas County            |
 | nan     | occupants       | 104.6246       | 1.046E-06   | 1.046E-06  | 1.046E-06   | 1.046E-06   | 12103   | Pinellas County            |
 | nan     | area            | 7_972          | 0.7656      | 7.972E-05  | 7.972E-05   | 7.972E-05   | 12103   | Pinellas County            |
@@ -2243,8 +2243,8 @@
 | nan     | affectedpop     | 165.9707       | 0.0995      | 7.665E-07  | 1.660E-06   | 0.6402      | 12104   | Chiba-shi Wakaba-ku        |
 | nan     | injured         | 84.0809        | 3.934E-04   | 3.883E-07  | 8.408E-07   | 0.0032      | 12104   | Chiba-shi Wakaba-ku        |
 | nan     | embodied_carbon | 2_858          | 104.6220    | 1.4823     | 94.2718     | 223.1       | 12104   | Chiba-shi Wakaba-ku        |
-| nan     | contents        | 1_094_888      | 1.8962      | 0.0106     | 0.0109      | 0.2530      | 12105   | Polk County                |
-| nan     | structural      | 4_447_883      | 6_161       | 158.5173   | 1_823       | 11_543      | 12105   | Polk County                |
+| nan     | contents        | 1_094_888      | 1.8963      | 0.0106     | 0.0109      | 0.2530      | 12105   | Polk County                |
+| nan     | structural      | 4_447_883      | 6_161       | 158.5174   | 1_823       | 11_543      | 12105   | Polk County                |
 | nan     | occupants       | 84.1938        | 4.934E-05   | 8.331E-07  | 8.419E-07   | 8.419E-07   | 12105   | Polk County                |
 | nan     | area            | 2_044          | 1.2589      | 1.976E-05  | 2.044E-05   | 0.6956      | 12105   | Polk County                |
 | nan     | number          | 2.6314         | 0.0111      | 1.868E-08  | 2.631E-08   | 0.0062      | 12105   | Polk County                |
@@ -2279,7 +2279,7 @@
 | nan     | affectedpop     | 41.9108        | 0.1465      | 4.191E-07  | 4.191E-07   | 0.3689      | 12207   | Matsudo-shi                |
 | nan     | injured         | 440.8          | 0.0043      | 2.795E-07  | 4.408E-06   | 0.0282      | 12207   | Matsudo-shi                |
 | nan     | embodied_carbon | 10_031         | 345.4       | 3.3400     | 326.9       | 697.0       | 12207   | Matsudo-shi                |
-| nan     | contents        | 3_038_767      | 158.9445    | 0.0291     | 0.0304      | 1_198       | 12208   | Noda-shi                   |
+| nan     | contents        | 3_038_767      | 158.9446    | 0.0291     | 0.0304      | 1_198       | 12208   | Noda-shi                   |
 | nan     | structural      | 7_303_781      | 151_000     | 14_910     | 108_934     | 348_797     | 12208   | Noda-shi                   |
 | nan     | occupants       | 21.2587        | 2.113E-07   | 1.917E-07  | 2.126E-07   | 2.126E-07   | 12208   | Noda-shi                   |
 | nan     | area            | 3_457          | 8.7525      | 3.457E-05  | 0.2387      | 41.9870     | 12208   | Noda-shi                   |
@@ -2289,7 +2289,7 @@
 | nan     | injured         | 21.2587        | 0.0026      | 1.917E-07  | 2.126E-07   | 0.0126      | 12208   | Noda-shi                   |
 | nan     | embodied_carbon | 1_349          | 19.5645     | 1.7448     | 12.6958     | 50.0139     | 12208   | Noda-shi                   |
 | nan     | contents        | 521_559        | 0.0052      | 0.0052     | 0.0052      | 0.0052      | 12210   | Mobara-shi                 |
-| nan     | structural      | 2_086_234      | 4_952       | 168.3609   | 2_166       | 20_061      | 12210   | Mobara-shi                 |
+| nan     | structural      | 2_086_234      | 4_952       | 168.3608   | 2_166       | 20_061      | 12210   | Mobara-shi                 |
 | nan     | occupants       | 13.2703        | 1.327E-07   | 1.327E-07  | 1.327E-07   | 1.327E-07   | 12210   | Mobara-shi                 |
 | nan     | area            | 955.2          | 9.552E-06   | 9.552E-06  | 9.552E-06   | 9.552E-06   | 12210   | Mobara-shi                 |
 | nan     | number          | 7.9985         | 7.998E-08   | 7.998E-08  | 7.998E-08   | 7.998E-08   | 12210   | Mobara-shi                 |
@@ -2305,9 +2305,9 @@
 | nan     | residents       | 69.1323        | 0.8989      | 5.373E-07  | 0.0499      | 4.0959      | 12211   | Narita-shi                 |
 | nan     | affectedpop     | 69.1323        | 1.3255      | 5.373E-07  | 0.1911      | 5.2653      | 12211   | Narita-shi                 |
 | nan     | injured         | 35.0225        | 0.0120      | 2.722E-07  | 1.382E-04   | 0.0582      | 12211   | Narita-shi                 |
-| nan     | embodied_carbon | 1_319          | 44.3506     | 5.4438     | 36.3840     | 106.6992    | 12211   | Narita-shi                 |
+| nan     | embodied_carbon | 1_319          | 44.3507     | 5.4438     | 36.3840     | 106.6992    | 12211   | Narita-shi                 |
 | nan     | contents        | 436_610        | 23.7703     | 0.0032     | 0.0044      | 0.1337      | 12213   | Togane-shi                 |
-| nan     | structural      | 1_746_441      | 38_315      | 2_015      | 18_357      | 107_848     | 12213   | Togane-shi                 |
+| nan     | structural      | 1_746_441      | 38_315      | 2_015      | 18_356      | 107_848     | 12213   | Togane-shi                 |
 | nan     | occupants       | 14.6809        | 1.433E-07   | 1.077E-07  | 1.468E-07   | 1.468E-07   | 12213   | Togane-shi                 |
 | nan     | area            | 799.7          | 0.9449      | 5.864E-06  | 7.997E-06   | 1.2697      | 12213   | Togane-shi                 |
 | nan     | number          | 0.9831         | 0.0012      | 7.209E-09  | 9.831E-09   | 0.0016      | 12213   | Togane-shi                 |
@@ -2366,7 +2366,7 @@
 | nan     | residents       | 44.9828        | 1.9076      | 2.999E-07  | 4.498E-07   | 15.4071     | 12225   | Kimitsu-shi                |
 | nan     | affectedpop     | 44.9828        | 2.8278      | 2.999E-07  | 4.498E-07   | 21.4030     | 12225   | Kimitsu-shi                |
 | nan     | injured         | 22.7883        | 0.0141      | 1.519E-07  | 2.279E-07   | 0.1130      | 12225   | Kimitsu-shi                |
-| nan     | embodied_carbon | 422.8          | 47.1315     | 1.8362     | 27.9843     | 174.9657    | 12225   | Kimitsu-shi                |
+| nan     | embodied_carbon | 422.8          | 47.1315     | 1.8362     | 27.9843     | 174.9658    | 12225   | Kimitsu-shi                |
 | nan     | contents        | 6_398_626      | 12_375      | 0.0160     | 1.7094      | 67_497      | 12227   | Urayasu-shi                |
 | nan     | structural      | 19_195_876     | 1_970_776   | 175_907    | 1_355_068   | 6_083_691   | 12227   | Urayasu-shi                |
 | nan     | occupants       | 146.9113       | 0.0299      | 1.102E-06  | 1.469E-06   | 0.2059      | 12227   | Urayasu-shi                |
@@ -2416,7 +2416,7 @@
 | nan     | injured         | 14.3436        | 0.0040      | 9.562E-08  | 1.434E-07   | 0.0096      | 12233   | Tomisato-shi               |
 | nan     | embodied_carbon | 112.3298       | 7.9058      | 0.1392     | 3.5537      | 22.7813     | 12233   | Tomisato-shi               |
 | nan     | contents        | 5_779_156      | 7_203       | 0.0033     | 0.0054      | 24_012      | 12236   | Katori-shi                 |
-| nan     | structural      | 23_116_624     | 743_953     | 4_159      | 173_730     | 2_561_549   | 12236   | Katori-shi                 |
+| nan     | structural      | 23_116_624     | 743_953     | 4_159      | 173_730     | 2_561_548   | 12236   | Katori-shi                 |
 | nan     | occupants       | 163.1546       | 1.587E-06   | 1.135E-06  | 1.632E-06   | 1.632E-06   | 12236   | Katori-shi                 |
 | nan     | area            | 15_556         | 142.6489    | 1.083E-04  | 1.556E-04   | 185.5       | 12236   | Katori-shi                 |
 | nan     | number          | 126.0094       | 1.1462      | 8.801E-07  | 1.260E-06   | 1.4904      | 12236   | Katori-shi                 |
@@ -2424,10 +2424,10 @@
 | nan     | affectedpop     | 322.1          | 8.4188      | 2.240E-06  | 3.221E-06   | 32.1337     | 12236   | Katori-shi                 |
 | nan     | injured         | 163.1546       | 0.0264      | 1.135E-06  | 1.632E-06   | 0.0359      | 12236   | Katori-shi                 |
 | nan     | embodied_carbon | 2_712          | 177.7919    | 5.3227     | 92.0132     | 552.4       | 12236   | Katori-shi                 |
-| nan     | contents        | 1_630_407      | 1_154       | 0.0133     | 2.4526      | 5_958       | 12239   | Oamishirasato-shi          |
+| nan     | contents        | 1_630_407      | 1_154       | 0.0133     | 2.4525      | 5_958       | 12239   | Oamishirasato-shi          |
 | nan     | structural      | 6_521_632      | 62_640      | 1_894      | 22_797      | 200_207     | 12239   | Oamishirasato-shi          |
 | nan     | occupants       | 92.2313        | 9.141E-07   | 8.309E-07  | 9.223E-07   | 9.223E-07   | 12239   | Oamishirasato-shi          |
-| nan     | area            | 3_336          | 7.0961      | 3.156E-05  | 3.336E-05   | 14.7328     | 12239   | Oamishirasato-shi          |
+| nan     | area            | 3_336          | 7.0961      | 3.156E-05  | 3.336E-05   | 14.7327     | 12239   | Oamishirasato-shi          |
 | nan     | number          | 18.9023        | 0.0061      | 1.875E-07  | 1.890E-07   | 0.0125      | 12239   | Oamishirasato-shi          |
 | nan     | residents       | 73.7645        | 4.998E-05   | 7.376E-07  | 7.376E-07   | 7.376E-07   | 12239   | Oamishirasato-shi          |
 | nan     | affectedpop     | 73.7645        | 0.0017      | 7.376E-07  | 7.376E-07   | 0.0019      | 12239   | Oamishirasato-shi          |
@@ -2436,9 +2436,9 @@
 | nan     | contents        | 1_285_416      | 2_751       | 0.0        | 1.723E-09   | 16_509      | 12347   | Tako-machi                 |
 | nan     | structural      | 5_141_664      | 179_617     | 766.9      | 43_864      | 614_749     | 12347   | Tako-machi                 |
 | nan     | occupants       | 33.3763        | 3.238E-07   | 2.225E-07  | 3.338E-07   | 3.338E-07   | 12347   | Tako-machi                 |
-| nan     | area            | 3_484          | 35.0188     | 2.322E-05  | 3.484E-05   | 45.5450     | 12347   | Tako-machi                 |
+| nan     | area            | 3_484          | 35.0188     | 2.322E-05  | 3.484E-05   | 45.5449     | 12347   | Tako-machi                 |
 | nan     | number          | 28.9995        | 0.2915      | 1.933E-07  | 2.900E-07   | 0.3792      | 12347   | Tako-machi                 |
-| nan     | residents       | 64.4829        | 0.8969      | 4.299E-07  | 6.448E-07   | 1.8603      | 12347   | Tako-machi                 |
+| nan     | residents       | 64.4829        | 0.8969      | 4.299E-07  | 6.448E-07   | 1.8602      | 12347   | Tako-machi                 |
 | nan     | affectedpop     | 64.4829        | 1.8311      | 4.299E-07  | 6.448E-07   | 7.0455      | 12347   | Tako-machi                 |
 | nan     | injured         | 33.3763        | 0.0059      | 2.225E-07  | 3.338E-07   | 0.0080      | 12347   | Tako-machi                 |
 | nan     | embodied_carbon | 595.4          | 42.5655     | 1.0090     | 21.1615     | 139.5970    | 12347   | Tako-machi                 |
@@ -2511,7 +2511,7 @@
 | nan     | injured         | 134.6228       | 0.1176      | 8.975E-07  | 1.346E-06   | 0.8825      | 13109   | Evans County               |
 | nan     | embodied_carbon | 5_076          | 649.5       | 81.6042    | 503.3       | 1_921       | 13109   | Evans County               |
 | nan     | contents        | 14_986_150     | 139_993     | 0.0259     | 221.1       | 633_955     | 13110   | Meguro-ku                  |
-| nan     | structural      | 59_944_604     | 3_796_058   | 68_580     | 1_359_551   | 20_218_776  | 13110   | Meguro-ku                  |
+| nan     | structural      | 59_944_604     | 3_796_058   | 68_580     | 1_359_551   | 20_218_778  | 13110   | Meguro-ku                  |
 | nan     | occupants       | 383.9          | 3.759E-06   | 2.951E-06  | 3.839E-06   | 3.839E-06   | 13110   | Meguro-ku                  |
 | nan     | area            | 35_654         | 1_641       | 3.565E-04  | 24.1241     | 11_679      | 13110   | Meguro-ku                  |
 | nan     | number          | 279.8          | 14.3985     | 2.798E-06  | 0.2121      | 102.4209    | 13110   | Meguro-ku                  |
@@ -2527,7 +2527,7 @@
 | nan     | injured         | 701.3          | 0.0065      | 5.766E-06  | 7.013E-06   | 0.0331      | 13111   | Fannin County              |
 | nan     | embodied_carbon | 18_071         | 584.6       | 165.6102   | 508.6       | 1_275       | 13111   | Fannin County              |
 | nan     | contents        | 8_544_024      | 29_922      | 0.0059     | 548.2       | 132_622     | 13112   | Setagaya-ku                |
-| nan     | structural      | 34_176_096     | 2_015_822   | 171_681    | 1_308_323   | 6_564_854   | 13112   | Setagaya-ku                |
+| nan     | structural      | 34_176_096     | 2_015_822   | 171_681    | 1_308_322   | 6_564_853   | 13112   | Setagaya-ku                |
 | nan     | occupants       | 428.4          | 0.0166      | 3.906E-06  | 4.284E-06   | 0.0952      | 13112   | Setagaya-ku                |
 | nan     | area            | 15_634         | 431.0       | 1.563E-04  | 3.0868      | 2_680       | 13112   | Setagaya-ku                |
 | nan     | number          | 37.9745        | 2.3255      | 3.797E-07  | 0.0186      | 18.0670     | 13112   | Setagaya-ku                |
@@ -2543,14 +2543,14 @@
 | nan     | injured         | 23.4293        | 0.0328      | 1.562E-07  | 2.343E-07   | 0.2252      | 13113   | Fayette County             |
 | nan     | embodied_carbon | 1_347          | 86.9327     | 2.5469     | 45.3968     | 362.1       | 13113   | Fayette County             |
 | nan     | contents        | 13_444_634     | 0.1170      | 6.406E-44  | 0.1344      | 0.1344      | 13114   | Nakano-ku                  |
-| nan     | structural      | 53_778_536     | 1_506_936   | 141_931    | 1_089_848   | 4_925_500   | 13114   | Nakano-ku                  |
+| nan     | structural      | 53_778_536     | 1_506_936   | 141_931    | 1_089_847   | 4_925_500   | 13114   | Nakano-ku                  |
 | nan     | occupants       | 525.9          | 5.101E-06   | 3.506E-06  | 5.259E-06   | 5.259E-06   | 13114   | Nakano-ku                  |
 | nan     | area            | 18_342         | 2.8476      | 1.223E-04  | 1.834E-04   | 22.1392     | 13114   | Nakano-ku                  |
 | nan     | number          | 6.8911         | 0.0011      | 4.594E-08  | 6.891E-08   | 0.0083      | 13114   | Nakano-ku                  |
 | nan     | injured         | 525.9          | 5.101E-06   | 3.506E-06  | 5.259E-06   | 5.259E-06   | 13114   | Nakano-ku                  |
 | nan     | embodied_carbon | 11_806         | 1_264       | 327.8      | 1_261       | 2_255       | 13114   | Nakano-ku                  |
-| nan     | contents        | 40_495_284     | 99.8015     | 0.0072     | 0.4050      | 735.1       | 13115   | Floyd County               |
-| nan     | structural      | 228_279_312    | 2_703_296   | 210_125    | 1_320_436   | 6_617_118   | 13115   | Floyd County               |
+| nan     | contents        | 40_495_284     | 99.8013     | 0.0072     | 0.4050      | 735.0       | 13115   | Floyd County               |
+| nan     | structural      | 228_279_312    | 2_703_296   | 210_125    | 1_320_436   | 6_617_117   | 13115   | Floyd County               |
 | nan     | occupants       | 1_089          | 1.089E-05   | 1.089E-05  | 1.089E-05   | 1.089E-05   | 13115   | Floyd County               |
 | nan     | area            | 78_712         | 41.0458     | 7.871E-04  | 7.871E-04   | 224.1       | 13115   | Floyd County               |
 | nan     | number          | 198.0          | 0.3876      | 1.980E-06  | 1.980E-06   | 2.2044      | 13115   | Floyd County               |
@@ -2597,7 +2597,7 @@
 | nan     | contents        | 7_646_747      | 14.4068     | 0.0396     | 0.0765      | 0.0997      | 13120   | Nerima-ku                  |
 | nan     | structural      | 31_046_712     | 1_137_342   | 50_494     | 622_285     | 3_018_273   | 13120   | Nerima-ku                  |
 | nan     | occupants       | 402.6          | 4.026E-06   | 4.026E-06  | 4.026E-06   | 4.026E-06   | 13120   | Nerima-ku                  |
-| nan     | area            | 11_821         | 109.4288    | 1.182E-04  | 1.182E-04   | 150.7522    | 13120   | Nerima-ku                  |
+| nan     | area            | 11_821         | 109.4289    | 1.182E-04  | 1.182E-04   | 150.7522    | 13120   | Nerima-ku                  |
 | nan     | number          | 8.9110         | 0.0286      | 8.911E-08  | 8.911E-08   | 0.0395      | 13120   | Nerima-ku                  |
 | nan     | residents       | 13.5226        | 1.352E-07   | 1.352E-07  | 1.352E-07   | 1.352E-07   | 13120   | Nerima-ku                  |
 | nan     | affectedpop     | 13.5226        | 1.352E-07   | 1.352E-07  | 1.352E-07   | 1.352E-07   | 13120   | Nerima-ku                  |
@@ -2631,12 +2631,12 @@
 | nan     | injured         | 102.8149       | 1.391E-05   | 8.233E-07  | 1.028E-06   | 1.028E-06   | 13123   | Gilmer County              |
 | nan     | embodied_carbon | 2_240          | 153.0352    | 50.8214    | 151.4570    | 242.7       | 13123   | Gilmer County              |
 | nan     | contents        | 44_801_464     | 76_683      | 0.2404     | 19_131      | 232_450     | 13201   | Hachioji-shi               |
-| nan     | structural      | 222_746_048    | 7_798_482   | 1_146_891  | 4_194_901   | 25_098_042  | 13201   | Hachioji-shi               |
+| nan     | structural      | 222_746_048    | 7_798_482   | 1_146_891  | 4_194_902   | 25_098_042  | 13201   | Hachioji-shi               |
 | nan     | occupants       | 1_568          | 0.2148      | 1.556E-05  | 0.0380      | 0.8017      | 13201   | Hachioji-shi               |
 | nan     | area            | 89_824         | 1_658       | 8.941E-04  | 106.7594    | 7_495       | 13201   | Hachioji-shi               |
 | nan     | number          | 302.8          | 5.1993      | 3.027E-06  | 0.0217      | 27.5428     | 13201   | Hachioji-shi               |
-| nan     | residents       | 2_207          | 27.4695     | 2.207E-05  | 5.405E-04   | 158.9311    | 13201   | Hachioji-shi               |
-| nan     | affectedpop     | 2_207          | 53.3776     | 2.207E-05  | 0.0515      | 358.5       | 13201   | Hachioji-shi               |
+| nan     | residents       | 2_207          | 27.4695     | 2.207E-05  | 5.406E-04   | 158.9311    | 13201   | Hachioji-shi               |
+| nan     | affectedpop     | 2_207          | 53.3775     | 2.207E-05  | 0.0515      | 358.5       | 13201   | Hachioji-shi               |
 | nan     | injured         | 1_568          | 0.9237      | 1.556E-05  | 0.0758      | 4.5112      | 13201   | Hachioji-shi               |
 | nan     | embodied_carbon | 38_313         | 3_051       | 1_060      | 2_426       | 7_617       | 13201   | Hachioji-shi               |
 | nan     | contents        | 958_779        | 0.0067      | 0.0        | 0.0096      | 0.0096      | 13205   | Mitchell County            |
@@ -2655,7 +2655,7 @@
 | nan     | affectedpop     | 3.7491         | 9.324E-05   | 3.749E-08  | 3.749E-08   | 3.749E-08   | 13206   | Fuchu-shi                  |
 | nan     | injured         | 1.8986         | 1.899E-08   | 1.899E-08  | 1.899E-08   | 1.899E-08   | 13206   | Fuchu-shi                  |
 | nan     | embodied_carbon | 86.7347        | 3.3807      | 0.5068     | 2.2873      | 7.1996      | 13206   | Fuchu-shi                  |
-| nan     | contents        | 141_529        | 0.0013      | 8.784E-06  | 0.0014      | 0.0014      | 13207   | Monroe County              |
+| nan     | contents        | 141_529        | 0.0013      | 8.785E-06  | 0.0014      | 0.0014      | 13207   | Monroe County              |
 | nan     | structural      | 801_999        | 7_575       | 662.1      | 4_161       | 18_284      | 13207   | Monroe County              |
 | nan     | occupants       | 3.4762         | 3.476E-08   | 3.476E-08  | 3.476E-08   | 3.476E-08   | 13207   | Monroe County              |
 | nan     | area            | 273.5          | 0.0011      | 2.735E-06  | 2.735E-06   | 2.735E-06   | 13207   | Monroe County              |
@@ -2680,7 +2680,7 @@
 | nan     | number          | 0.9012         | 0.0087      | 9.012E-09  | 9.012E-09   | 0.0120      | 13211   | Morgan County              |
 | nan     | injured         | 143.8461       | 0.0329      | 1.438E-06  | 1.438E-06   | 0.0542      | 13211   | Morgan County              |
 | nan     | embodied_carbon | 1_457          | 59.4738     | 2.2842     | 32.0068     | 155.3688    | 13211   | Morgan County              |
-| nan     | contents        | 986_182        | 193.3       | 9.203E-36  | 0.0099      | 668.6       | 13212   | Hino-shi                   |
+| nan     | contents        | 986_182        | 193.3       | 9.202E-36  | 0.0099      | 668.6       | 13212   | Hino-shi                   |
 | nan     | structural      | 5_588_367      | 63_840      | 4_582      | 32_422      | 157_554     | 13212   | Hino-shi                   |
 | nan     | occupants       | 32.6026        | 3.260E-07   | 3.260E-07  | 3.260E-07   | 3.260E-07   | 13212   | Hino-shi                   |
 | nan     | area            | 1_906          | 0.0535      | 1.906E-05  | 1.906E-05   | 1.906E-05   | 13212   | Hino-shi                   |
@@ -2699,18 +2699,18 @@
 | nan     | injured         | 55.9197        | 5.592E-07   | 5.592E-07  | 5.592E-07   | 5.592E-07   | 13214   | Kokubunji-shi              |
 | nan     | embodied_carbon | 1_814          | 99.6799     | 19.7857    | 74.3896     | 198.0       | 13214   | Kokubunji-shi              |
 | nan     | contents        | 14_985_567     | 9_691       | 0.0591     | 0.4764      | 63_225      | 13215   | Muscogee County            |
-| nan     | structural      | 65_496_308     | 2_231_389   | 182_154    | 895_771     | 12_225_487  | 13215   | Muscogee County            |
+| nan     | structural      | 65_496_308     | 2_231_388   | 182_154    | 895_771     | 12_225_487  | 13215   | Muscogee County            |
 | nan     | occupants       | 392.0          | 0.0150      | 3.920E-06  | 3.920E-06   | 0.0957      | 13215   | Muscogee County            |
 | nan     | area            | 36_225         | 692.6       | 3.622E-04  | 0.4628      | 4_079       | 13215   | Muscogee County            |
-| nan     | number          | 267.0          | 5.2990      | 2.670E-06  | 5.729E-04   | 30.9483     | 13215   | Muscogee County            |
+| nan     | number          | 267.0          | 5.2989      | 2.670E-06  | 5.729E-04   | 30.9483     | 13215   | Muscogee County            |
 | nan     | residents       | 773.9          | 20.6253     | 7.739E-06  | 0.0147      | 136.0372    | 13215   | Muscogee County            |
 | nan     | affectedpop     | 773.9          | 34.0573     | 7.739E-06  | 0.0305      | 252.5       | 13215   | Muscogee County            |
 | nan     | injured         | 392.0          | 0.1587      | 3.920E-06  | 3.920E-06   | 0.9640      | 13215   | Muscogee County            |
 | nan     | embodied_carbon | 8_564          | 610.1       | 117.3586   | 387.8       | 2_126       | 13215   | Muscogee County            |
 | nan     | contents        | 1_697_184      | 7_530       | 0.0015     | 0.2267      | 22_168      | 13218   | Fussa-shi                  |
-| nan     | structural      | 3_151_914      | 207_706     | 2_824      | 54_283      | 841_214     | 13218   | Fussa-shi                  |
+| nan     | structural      | 3_151_914      | 207_706     | 2_824      | 54_283      | 841_213     | 13218   | Fussa-shi                  |
 | nan     | occupants       | 260.5          | 3.897E-04   | 2.605E-06  | 2.605E-06   | 2.605E-06   | 13218   | Fussa-shi                  |
-| nan     | area            | 2_014          | 45.3486     | 2.014E-05  | 2.014E-05   | 177.4184    | 13218   | Fussa-shi                  |
+| nan     | area            | 2_014          | 45.3486     | 2.014E-05  | 2.014E-05   | 177.4183    | 13218   | Fussa-shi                  |
 | nan     | number          | 3.0075         | 0.0677      | 3.008E-08  | 3.008E-08   | 0.2649      | 13218   | Fussa-shi                  |
 | nan     | injured         | 260.5          | 0.1048      | 2.605E-06  | 2.605E-06   | 0.4188      | 13218   | Fussa-shi                  |
 | nan     | embodied_carbon | 497.9          | 71.1720     | 16.0647    | 53.2520     | 159.9255    | 13218   | Fussa-shi                  |
@@ -2724,7 +2724,7 @@
 | nan     | injured         | 9.0329         | 9.033E-08   | 9.033E-08  | 9.033E-08   | 9.033E-08   | 13221   | Kiyose-shi                 |
 | nan     | embodied_carbon | 331.7          | 13.7009     | 2.1785     | 9.5143      | 29.2850     | 13221   | Kiyose-shi                 |
 | nan     | contents        | 25_197_552     | 0.2467      | 0.1932     | 0.2520      | 0.2520      | 13224   | Tama-shi                   |
-| nan     | structural      | 100_790_216    | 1_251_665   | 21_227     | 690_292     | 3_734_750   | 13224   | Tama-shi                   |
+| nan     | structural      | 100_790_216    | 1_251_665   | 21_227     | 690_292     | 3_734_751   | 13224   | Tama-shi                   |
 | nan     | occupants       | 699.9          | 6.852E-06   | 5.366E-06  | 6.999E-06   | 6.999E-06   | 13224   | Tama-shi                   |
 | nan     | area            | 38_587         | 3.778E-04   | 2.958E-04  | 3.859E-04   | 3.859E-04   | 13224   | Tama-shi                   |
 | nan     | number          | 9.9695         | 9.760E-08   | 7.643E-08  | 9.969E-08   | 9.969E-08   | 13224   | Tama-shi                   |
@@ -2760,7 +2760,7 @@
 | nan     | injured         | 84.0526        | 0.0786      | 8.405E-07  | 8.405E-07   | 0.3210      | 13228   | Akiruno-shi                |
 | nan     | embodied_carbon | 2_208          | 291.8       | 83.1192    | 236.5       | 597.4       | 13228   | Akiruno-shi                |
 | nan     | contents        | 832_171        | 4_234       | 2.758E-06  | 0.0083      | 30_014      | 13229   | Pierce County              |
-| nan     | structural      | 3_328_684      | 196_946     | 3_457      | 55_523      | 748_939     | 13229   | Pierce County              |
+| nan     | structural      | 3_328_684      | 196_946     | 3_457      | 55_523      | 748_938     | 13229   | Pierce County              |
 | nan     | occupants       | 87.6105        | 1.311E-04   | 8.761E-07  | 8.761E-07   | 8.761E-07   | 13229   | Pierce County              |
 | nan     | area            | 2_127          | 47.8919     | 2.127E-05  | 2.127E-05   | 187.4       | 13229   | Pierce County              |
 | nan     | number          | 1.9404         | 0.0437      | 1.940E-08  | 1.940E-08   | 0.1709      | 13229   | Pierce County              |
@@ -2792,7 +2792,7 @@
 | nan     | residents       | 18.6154        | 1.1026      | 1.862E-07  | 1.862E-07   | 8.2687      | 14102   | Yokohama-shi Kanagawa-ku   |
 | nan     | affectedpop     | 18.6154        | 1.4579      | 1.862E-07  | 0.0044      | 10.3604     | 14102   | Yokohama-shi Kanagawa-ku   |
 | nan     | injured         | 797.0          | 0.0111      | 7.970E-06  | 7.970E-06   | 0.0801      | 14102   | Yokohama-shi Kanagawa-ku   |
-| nan     | embodied_carbon | 10_445         | 100.2892    | 9.6653     | 41.0676     | 325.0       | 14102   | Yokohama-shi Kanagawa-ku   |
+| nan     | embodied_carbon | 10_445         | 100.2892    | 9.6653     | 41.0677     | 325.0       | 14102   | Yokohama-shi Kanagawa-ku   |
 | nan     | contents        | 1_131_401      | 0.0113      | 0.0113     | 0.0113      | 0.0113      | 14105   | Yokohama-shi Minami-ku     |
 | nan     | structural      | 4_525_605      | 45_787      | 5_287      | 31_176      | 131_964     | 14105   | Yokohama-shi Minami-ku     |
 | nan     | occupants       | 83.1786        | 8.318E-07   | 8.318E-07  | 8.318E-07   | 8.318E-07   | 14105   | Yokohama-shi Minami-ku     |
@@ -2819,11 +2819,11 @@
 | nan     | injured         | 149.4475       | 0.0127      | 1.494E-06  | 1.494E-06   | 0.0974      | 14111   | Yokohama-shi Konan-ku      |
 | nan     | embodied_carbon | 4_813          | 305.2       | 82.3788    | 263.1       | 629.0       | 14111   | Yokohama-shi Konan-ku      |
 | nan     | contents        | 5_982_745      | 54_779      | 0.0        | 0.0417      | 314_740     | 14112   | Yokohama-shi Asahi-ku      |
-| nan     | structural      | 23_930_980     | 951_355     | 2_857      | 217_742     | 4_831_335   | 14112   | Yokohama-shi Asahi-ku      |
+| nan     | structural      | 23_930_980     | 951_355     | 2_857      | 217_742     | 4_831_334   | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | occupants       | 173.9264       | 2.699E-04   | 1.160E-06  | 1.739E-06   | 1.739E-06   | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | area            | 16_213         | 526.6       | 9.265E-05  | 1.621E-04   | 2_515       | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | number          | 136.0098       | 4.4173      | 9.067E-07  | 1.360E-06   | 21.0991     | 14112   | Yokohama-shi Asahi-ku      |
-| nan     | residents       | 343.3          | 12.2834     | 1.962E-06  | 3.433E-06   | 64.2939     | 14112   | Yokohama-shi Asahi-ku      |
+| nan     | residents       | 343.3          | 12.2834     | 1.962E-06  | 3.433E-06   | 64.2938     | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | affectedpop     | 343.3          | 14.6995     | 1.962E-06  | 3.433E-06   | 90.1031     | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | injured         | 173.9264       | 0.0992      | 1.160E-06  | 1.739E-06   | 0.4797      | 14112   | Yokohama-shi Asahi-ku      |
 | nan     | embodied_carbon | 2_772          | 211.5       | 3.5333     | 107.2047    | 753.7       | 14112   | Yokohama-shi Asahi-ku      |
@@ -2844,7 +2844,7 @@
 | nan     | injured         | 2.1229         | 0.0018      | 2.123E-08  | 2.123E-08   | 0.0086      | 14117   | Yokohama-shi Aoba-ku       |
 | nan     | embodied_carbon | 58.0912        | 2.3618      | 0.2298     | 0.8643      | 7.5204      | 14117   | Yokohama-shi Aoba-ku       |
 | nan     | contents        | 41_188_888     | 67_637      | 0.1144     | 7.6291      | 221_485     | 14131   | Kawasaki-shi Kawasaki-ku   |
-| nan     | structural      | 161_535_840    | 7_699_603   | 212_293    | 3_620_408   | 35_687_394  | 14131   | Kawasaki-shi Kawasaki-ku   |
+| nan     | structural      | 161_535_840    | 7_699_603   | 212_293    | 3_620_408   | 35_687_397  | 14131   | Kawasaki-shi Kawasaki-ku   |
 | nan     | occupants       | 1_023          | 5.606E-05   | 5.980E-06  | 1.023E-05   | 2.567E-04   | 14131   | Kawasaki-shi Kawasaki-ku   |
 | nan     | area            | 94_112         | 2_407       | 5.646E-04  | 0.0385      | 19_182      | 14131   | Kawasaki-shi Kawasaki-ku   |
 | nan     | number          | 515.9          | 17.8316     | 3.438E-06  | 4.323E-05   | 142.2563    | 14131   | Kawasaki-shi Kawasaki-ku   |
@@ -2887,7 +2887,7 @@
 | nan     | injured         | 0.9204         | 7.707E-06   | 9.204E-09  | 9.204E-09   | 5.852E-05   | 14137   | Kawasaki-shi Asao-ku       |
 | nan     | embodied_carbon | 29.3969        | 0.5453      | 0.1030     | 0.4333      | 1.4751      | 14137   | Kawasaki-shi Asao-ku       |
 | nan     | contents        | 6_997_577      | 3_873       | 0.0675     | 1.7670      | 10_582      | 14151   | Sagamihara-shi Midori-ku   |
-| nan     | structural      | 27_990_308     | 1_514_214   | 122_816    | 599_000     | 5_997_714   | 14151   | Sagamihara-shi Midori-ku   |
+| nan     | structural      | 27_990_308     | 1_514_214   | 122_816    | 599_000     | 5_997_713   | 14151   | Sagamihara-shi Midori-ku   |
 | nan     | occupants       | 374.5          | 0.0320      | 3.734E-06  | 3.745E-06   | 0.1290      | 14151   | Sagamihara-shi Midori-ku   |
 | nan     | area            | 11_665         | 219.9       | 1.155E-04  | 0.0926      | 891.9       | 14151   | Sagamihara-shi Midori-ku   |
 | nan     | number          | 9.8838         | 0.2656      | 8.884E-08  | 6.722E-04   | 1.3095      | 14151   | Sagamihara-shi Midori-ku   |
@@ -2895,7 +2895,7 @@
 | nan     | affectedpop     | 13.0293        | 1.0909      | 1.303E-07  | 0.0903      | 3.9428      | 14151   | Sagamihara-shi Midori-ku   |
 | nan     | injured         | 374.5          | 0.2807      | 3.734E-06  | 3.745E-06   | 1.1424      | 14151   | Sagamihara-shi Midori-ku   |
 | nan     | embodied_carbon | 7_190          | 857.5       | 334.4      | 703.0       | 1_820       | 14151   | Sagamihara-shi Midori-ku   |
-| nan     | contents        | 1_019_520      | 4_031       | 0.0079     | 0.0102      | 126.4782    | 14153   | Sagamihara-shi Minami-ku   |
+| nan     | contents        | 1_019_520      | 4_031       | 0.0079     | 0.0102      | 126.4777    | 14153   | Sagamihara-shi Minami-ku   |
 | nan     | structural      | 5_777_280      | 88_776      | 1_887      | 15_982      | 429_631     | 14153   | Sagamihara-shi Minami-ku   |
 | nan     | occupants       | 33.9403        | 4.331E-04   | 3.394E-07  | 3.394E-07   | 0.0013      | 14153   | Sagamihara-shi Minami-ku   |
 | nan     | area            | 2_372          | 9.5892      | 2.372E-05  | 2.372E-05   | 40.6256     | 14153   | Sagamihara-shi Minami-ku   |
@@ -2905,7 +2905,7 @@
 | nan     | injured         | 33.9403        | 0.0039      | 3.394E-07  | 3.394E-07   | 0.0134      | 14153   | Sagamihara-shi Minami-ku   |
 | nan     | embodied_carbon | 1_289          | 66.3941     | 9.0760     | 36.5774     | 223.1       | 14153   | Sagamihara-shi Minami-ku   |
 | nan     | contents        | 9_680_537      | 382.4       | 6.200E-06  | 0.0931      | 2_894       | 14205   | Fujisawa-shi               |
-| nan     | structural      | 38_722_148     | 737_782     | 53_206     | 406_104     | 2_487_080   | 14205   | Fujisawa-shi               |
+| nan     | structural      | 38_722_148     | 737_783     | 53_206     | 406_104     | 2_487_080   | 14205   | Fujisawa-shi               |
 | nan     | occupants       | 264.0          | 2.640E-06   | 2.640E-06  | 2.640E-06   | 2.640E-06   | 14205   | Fujisawa-shi               |
 | nan     | area            | 26_235         | 69.9300     | 2.623E-04  | 0.4820      | 489.9       | 14205   | Fujisawa-shi               |
 | nan     | number          | 232.0          | 0.6273      | 2.320E-06  | 0.0044      | 4.3933      | 14205   | Fujisawa-shi               |
@@ -2937,7 +2937,7 @@
 | nan     | residents       | 13.1493        | 0.1019      | 1.315E-07  | 1.315E-07   | 0.2051      | 14212   | Atsugi-shi                 |
 | nan     | affectedpop     | 13.1493        | 0.2617      | 1.315E-07  | 1.315E-07   | 0.9670      | 14212   | Atsugi-shi                 |
 | nan     | injured         | 77.3508        | 0.0014      | 7.735E-07  | 7.735E-07   | 0.0023      | 14212   | Atsugi-shi                 |
-| nan     | embodied_carbon | 3_554          | 39.2572     | 2.4925     | 12.5836     | 159.4801    | 14212   | Atsugi-shi                 |
+| nan     | embodied_carbon | 3_554          | 39.2571     | 2.4925     | 12.5836     | 159.4801    | 14212   | Atsugi-shi                 |
 | nan     | contents        | 18_266_968     | 786.8       | 1.504E-37  | 0.1827      | 58.8280     | 14213   | Yamato-shi                 |
 | nan     | structural      | 73_067_872     | 1_291_523   | 94_412     | 746_279     | 4_452_353   | 14213   | Yamato-shi                 |
 | nan     | occupants       | 470.2          | 4.702E-06   | 4.702E-06  | 4.702E-06   | 4.702E-06   | 14213   | Yamato-shi                 |
@@ -2966,7 +2966,7 @@
 | nan     | contents        | 736_302        | 3_087       | 6.925E-31  | 0.0074      | 7_543       | 14216   | Zama-shi                   |
 | nan     | structural      | 4_172_377      | 102_824     | 4_380      | 26_827      | 460_068     | 14216   | Zama-shi                   |
 | nan     | occupants       | 27.5795        | 0.0011      | 2.758E-07  | 2.758E-07   | 0.0025      | 14216   | Zama-shi                   |
-| nan     | area            | 1_699          | 14.2987     | 1.699E-05  | 1.699E-05   | 33.6137     | 14216   | Zama-shi                   |
+| nan     | area            | 1_699          | 14.2987     | 1.699E-05  | 1.699E-05   | 33.6136     | 14216   | Zama-shi                   |
 | nan     | number          | 2.9541         | 0.0249      | 2.954E-08  | 2.954E-08   | 0.0585      | 14216   | Zama-shi                   |
 | nan     | residents       | 54.4400        | 0.6785      | 5.444E-07  | 5.444E-07   | 1.9760      | 14216   | Zama-shi                   |
 | nan     | affectedpop     | 54.4400        | 1.3518      | 5.444E-07  | 5.444E-07   | 5.9432      | 14216   | Zama-shi                   |
@@ -2980,7 +2980,7 @@
 | nan     | residents       | 42.8703        | 0.5249      | 4.287E-07  | 4.287E-07   | 1.5840      | 15101   | Niigata-shi Kita-ku        |
 | nan     | affectedpop     | 42.8703        | 1.5052      | 4.287E-07  | 4.287E-07   | 8.3343      | 15101   | Niigata-shi Kita-ku        |
 | nan     | injured         | 21.7180        | 0.0055      | 2.172E-07  | 2.172E-07   | 0.0171      | 15101   | Niigata-shi Kita-ku        |
-| nan     | embodied_carbon | 644.2          | 26.9068     | 2.5836     | 15.0173     | 76.8315     | 15101   | Niigata-shi Kita-ku        |
+| nan     | embodied_carbon | 644.2          | 26.9068     | 2.5836     | 15.0173     | 76.8316     | 15101   | Niigata-shi Kita-ku        |
 | nan     | contents        | 126_688        | 7_008       | 0.0        | 804.2       | 29_159      | 15102   | Niigata-shi Higashi-ku     |
 | nan     | structural      | 506_750        | 210_684     | 993.8      | 148_464     | 448_156     | 15102   | Niigata-shi Higashi-ku     |
 | nan     | occupants       | 2.0499         | 9.020E-05   | 2.050E-08  | 2.050E-08   | 2.497E-04   | 15102   | Niigata-shi Higashi-ku     |
@@ -3014,11 +3014,11 @@
 | nan     | residents       | 2.4158         | 0.0700      | 2.416E-08  | 2.416E-08   | 0.6020      | 15107   | Niigata-shi Nishi-ku       |
 | nan     | affectedpop     | 2.4158         | 0.1422      | 2.416E-08  | 2.416E-08   | 1.2286      | 15107   | Niigata-shi Nishi-ku       |
 | nan     | injured         | 66.0895        | 0.1061      | 6.609E-07  | 0.0022      | 0.7766      | 15107   | Niigata-shi Nishi-ku       |
-| nan     | embodied_carbon | 1_139          | 177.2599    | 51.5480    | 134.5863    | 517.3       | 15107   | Niigata-shi Nishi-ku       |
+| nan     | embodied_carbon | 1_139          | 177.2598    | 51.5480    | 134.5863    | 517.3       | 15107   | Niigata-shi Nishi-ku       |
 | nan     | contents        | 407_205        | 0.0262      | 0.0        | 0.0041      | 0.0041      | 15108   | Niigata-shi Nishikan-ku    |
 | nan     | structural      | 1_628_821      | 78_730      | 2_461      | 28_402      | 344_341     | 15108   | Niigata-shi Nishikan-ku    |
 | nan     | occupants       | 16.8615        | 6.895E-05   | 1.686E-07  | 1.686E-07   | 1.686E-07   | 15108   | Niigata-shi Nishikan-ku    |
-| nan     | area            | 762.6          | 27.7721     | 7.626E-06  | 7.626E-06   | 150.9012    | 15108   | Niigata-shi Nishikan-ku    |
+| nan     | area            | 762.6          | 27.7721     | 7.626E-06  | 7.626E-06   | 150.9013    | 15108   | Niigata-shi Nishikan-ku    |
 | nan     | number          | 0.9751         | 0.0355      | 9.751E-09  | 9.751E-09   | 0.1930      | 15108   | Niigata-shi Nishikan-ku    |
 | nan     | injured         | 16.8615        | 0.0183      | 1.686E-07  | 1.686E-07   | 0.1011      | 15108   | Niigata-shi Nishikan-ku    |
 | nan     | embodied_carbon | 343.9          | 21.3357     | 1.0016     | 9.0281      | 85.0490     | 15108   | Niigata-shi Nishikan-ku    |
@@ -3057,7 +3057,7 @@
 | nan     | residents       | 56.8430        | 0.4686      | 5.170E-07  | 0.0039      | 2.8622      | 15206   | Shibata-shi                |
 | nan     | affectedpop     | 56.8430        | 0.8328      | 5.170E-07  | 0.0495      | 4.3436      | 15206   | Shibata-shi                |
 | nan     | injured         | 36.6271        | 0.0058      | 3.011E-07  | 3.663E-07   | 0.0366      | 15206   | Shibata-shi                |
-| nan     | embodied_carbon | 1_167          | 14.9197     | 1.7838     | 11.3242     | 36.5200     | 15206   | Shibata-shi                |
+| nan     | embodied_carbon | 1_167          | 14.9197     | 1.7838     | 11.3241     | 36.5200     | 15206   | Shibata-shi                |
 | nan     | contents        | 124_002        | 10.6260     | 0.0        | 5.409E-06   | 3.0477      | 15208   | Ojiya-shi                  |
 | nan     | structural      | 496_009        | 21_262      | 804.9      | 11_886      | 61_081      | 15208   | Ojiya-shi                  |
 | nan     | occupants       | 2.5887         | 2.589E-08   | 2.589E-08  | 2.589E-08   | 2.589E-08   | 15208   | Ojiya-shi                  |
@@ -3079,14 +3079,14 @@
 | nan     | contents        | 1_094_496      | 3_122       | 1.684E-31  | 0.0104      | 17_399      | 15211   | Mitsuke-shi                |
 | nan     | structural      | 4_377_983      | 667_830     | 118_078    | 411_934     | 2_055_551   | 15211   | Mitsuke-shi                |
 | nan     | occupants       | 52.2454        | 0.0209      | 5.225E-07  | 5.225E-07   | 0.1274      | 15211   | Mitsuke-shi                |
-| nan     | area            | 1_904          | 136.4015    | 1.904E-05  | 5.3702      | 815.5       | 15211   | Mitsuke-shi                |
+| nan     | area            | 1_904          | 136.4014    | 1.904E-05  | 5.3702      | 815.5       | 15211   | Mitsuke-shi                |
 | nan     | number          | 0.9530         | 0.0683      | 9.530E-09  | 0.0027      | 0.4081      | 15211   | Mitsuke-shi                |
 | nan     | injured         | 52.2454        | 0.1295      | 5.225E-07  | 0.0036      | 0.7738      | 15211   | Mitsuke-shi                |
 | nan     | embodied_carbon | 1_226          | 292.6       | 137.2934   | 234.1       | 619.2       | 15211   | Mitsuke-shi                |
 | nan     | contents        | 1_292_015      | 1_644       | 0.0080     | 0.0121      | 10_690      | 15213   | Tsubame-shi                |
 | nan     | structural      | 3_837_190      | 364_704     | 10_879     | 134_127     | 1_776_766   | 15213   | Tsubame-shi                |
 | nan     | occupants       | 10.8577        | 1.086E-07   | 1.086E-07  | 1.086E-07   | 1.086E-07   | 15213   | Tsubame-shi                |
-| nan     | area            | 2_102          | 166.3530    | 2.102E-05  | 1.0538      | 1_141       | 15213   | Tsubame-shi                |
+| nan     | area            | 2_102          | 166.3531    | 2.102E-05  | 1.0538      | 1_141       | 15213   | Tsubame-shi                |
 | nan     | number          | 9.0342         | 0.9976      | 9.034E-08  | 0.0069      | 7.0558      | 15213   | Tsubame-shi                |
 | nan     | residents       | 19.5307        | 2.7705      | 1.953E-07  | 0.0785      | 17.6139     | 15213   | Tsubame-shi                |
 | nan     | affectedpop     | 19.5307        | 3.7689      | 1.953E-07  | 0.7047      | 18.3313     | 15213   | Tsubame-shi                |
@@ -3100,7 +3100,7 @@
 | nan     | residents       | 110.8404       | 0.1510      | 0.0        | 1.108E-06   | 0.0224      | 15216   | Itoigawa-shi               |
 | nan     | affectedpop     | 110.8404       | 0.4956      | 0.0        | 1.108E-06   | 0.3419      | 15216   | Itoigawa-shi               |
 | nan     | injured         | 69.6078        | 6.695E-04   | 0.0        | 6.961E-07   | 6.961E-07   | 15216   | Itoigawa-shi               |
-| nan     | embodied_carbon | 1_742          | 35.0192     | 0.0        | 17.8334     | 111.6360    | 15216   | Itoigawa-shi               |
+| nan     | embodied_carbon | 1_742          | 35.0192     | 0.0        | 17.8334     | 111.6359    | 15216   | Itoigawa-shi               |
 | nan     | contents        | 1_412_685      | 4_864       | 0.0144     | 2_488       | 17_358      | 15218   | Gosen-shi                  |
 | nan     | structural      | 3_878_531      | 320_274     | 16_695     | 246_798     | 646_325     | 15218   | Gosen-shi                  |
 | nan     | occupants       | 21.7863        | 2.282E-04   | 2.179E-07  | 2.179E-07   | 6.200E-04   | 15218   | Gosen-shi                  |
@@ -3134,7 +3134,7 @@
 | nan     | area            | 275.4          | 0.0284      | 2.754E-06  | 2.754E-06   | 0.1427      | 15225   | Uonuma-shi                 |
 | nan     | number          | 2.0019         | 2.264E-04   | 2.002E-08  | 2.002E-08   | 0.0011      | 15225   | Uonuma-shi                 |
 | nan     | residents       | 5.8959         | 5.728E-04   | 5.896E-08  | 5.896E-08   | 0.0028      | 15225   | Uonuma-shi                 |
-| nan     | affectedpop     | 5.8959         | 0.0108      | 5.896E-08  | 6.803E-05   | 0.0529      | 15225   | Uonuma-shi                 |
+| nan     | affectedpop     | 5.8959         | 0.0108      | 5.896E-08  | 6.802E-05   | 0.0529      | 15225   | Uonuma-shi                 |
 | nan     | injured         | 2.9870         | 2.987E-08   | 2.987E-08  | 2.987E-08   | 2.987E-08   | 15225   | Uonuma-shi                 |
 | nan     | embodied_carbon | 113.5100       | 2.3027      | 0.3499     | 1.9028      | 4.9711      | 15225   | Uonuma-shi                 |
 | nan     | contents        | 2_156_459      | 3_785       | 0.0        | 0.0216      | 1_527       | 15226   | Minamiuonuma-shi           |
@@ -3147,7 +3147,7 @@
 | nan     | injured         | 40.1506        | 0.0066      | 4.015E-07  | 4.015E-07   | 0.0337      | 15226   | Minamiuonuma-shi           |
 | nan     | embodied_carbon | 918.5          | 85.1896     | 10.7183    | 66.2973     | 189.8       | 15226   | Minamiuonuma-shi           |
 | nan     | contents        | 894_001        | 0.0089      | 0.0089     | 0.0089      | 0.0089      | 15227   | Tainai-shi                 |
-| nan     | structural      | 2_086_003      | 6_353       | 46.2520    | 2_473       | 24_563      | 15227   | Tainai-shi                 |
+| nan     | structural      | 2_086_003      | 6_353       | 46.2522    | 2_473       | 24_563      | 15227   | Tainai-shi                 |
 | nan     | occupants       | 6.2477         | 6.248E-08   | 6.248E-08  | 6.248E-08   | 6.248E-08   | 15227   | Tainai-shi                 |
 | nan     | area            | 976.6          | 9.766E-06   | 9.766E-06  | 9.766E-06   | 9.766E-06   | 15227   | Tainai-shi                 |
 | nan     | number          | 0.9929         | 9.929E-09   | 9.929E-09  | 9.929E-09   | 9.929E-09   | 15227   | Tainai-shi                 |
@@ -3174,7 +3174,7 @@
 | nan     | contents        | 255_284        | 1_323       | 9.609E-45  | 3.322E-06   | 10_181      | 15586   | Awashimaura-mura           |
 | nan     | structural      | 1_021_137      | 37_881      | 1_100      | 9_671       | 168_974     | 15586   | Awashimaura-mura           |
 | nan     | occupants       | 4.5200         | 4.520E-08   | 4.520E-08  | 4.520E-08   | 4.520E-08   | 15586   | Awashimaura-mura           |
-| nan     | area            | 636.2          | 22.1217     | 6.362E-06  | 6.362E-06   | 141.1687    | 15586   | Awashimaura-mura           |
+| nan     | area            | 636.2          | 22.1217     | 6.362E-06  | 6.362E-06   | 141.1686    | 15586   | Awashimaura-mura           |
 | nan     | number          | 4.0260         | 0.1400      | 4.026E-08  | 4.026E-08   | 0.8933      | 15586   | Awashimaura-mura           |
 | nan     | residents       | 8.9146         | 0.4209      | 8.915E-08  | 8.915E-08   | 2.7312      | 15586   | Awashimaura-mura           |
 | nan     | affectedpop     | 8.9146         | 0.6609      | 8.915E-08  | 0.0015      | 4.1439      | 15586   | Awashimaura-mura           |
@@ -3244,7 +3244,7 @@
 | nan     | contents        | 1_813_394      | 112.6407    | 0.0023     | 0.0134      | 842.8       | 16210   | Nanto-shi                  |
 | nan     | structural      | 7_253_579      | 106_594     | 1_313      | 51_931      | 312_768     | 16210   | Nanto-shi                  |
 | nan     | occupants       | 38.6308        | 1.875E-05   | 1.535E-07  | 3.863E-07   | 3.863E-07   | 16210   | Nanto-shi                  |
-| nan     | area            | 3_777          | 4.7370      | 1.435E-05  | 3.777E-05   | 22.0158     | 16210   | Nanto-shi                  |
+| nan     | area            | 3_777          | 4.7370      | 1.435E-05  | 3.777E-05   | 22.0159     | 16210   | Nanto-shi                  |
 | nan     | number          | 9.8331         | 0.0225      | 2.132E-08  | 9.833E-08   | 0.0876      | 16210   | Nanto-shi                  |
 | nan     | residents       | 19.3585        | 0.0857      | 3.216E-08  | 1.936E-07   | 0.3889      | 16210   | Nanto-shi                  |
 | nan     | affectedpop     | 19.3585        | 0.1728      | 3.216E-08  | 1.936E-07   | 0.8830      | 16210   | Nanto-shi                  |
@@ -3343,7 +3343,7 @@
 | nan     | structural      | 1_122_804      | 10_599      | 780.8      | 4_871       | 27_130      | 19206   | Otsuki-shi                 |
 | nan     | occupants       | 4.4586         | 1.659E-05   | 4.459E-08  | 4.459E-08   | 4.459E-08   | 19206   | Otsuki-shi                 |
 | nan     | area            | 429.4          | 0.2144      | 4.294E-06  | 4.294E-06   | 0.0520      | 19206   | Otsuki-shi                 |
-| nan     | number          | 3.0070         | 0.0015      | 3.007E-08  | 3.007E-08   | 3.598E-04   | 19206   | Otsuki-shi                 |
+| nan     | number          | 3.0070         | 0.0015      | 3.007E-08  | 3.007E-08   | 3.599E-04   | 19206   | Otsuki-shi                 |
 | nan     | residents       | 8.8011         | 0.0059      | 8.801E-08  | 8.801E-08   | 0.0013      | 19206   | Otsuki-shi                 |
 | nan     | affectedpop     | 8.8011         | 0.0122      | 8.801E-08  | 8.801E-08   | 0.0047      | 19206   | Otsuki-shi                 |
 | nan     | injured         | 4.4586         | 9.950E-05   | 4.459E-08  | 4.459E-08   | 4.459E-08   | 19206   | Otsuki-shi                 |
@@ -3430,7 +3430,7 @@
 | nan     | injured         | 76.3876        | 6.705E-06   | 4.415E-08  | 7.639E-07   | 7.639E-07   | 20202   | Matsumoto-shi              |
 | nan     | embodied_carbon | 2_210          | 11.7364     | 0.2070     | 7.0021      | 30.4679     | 20202   | Matsumoto-shi              |
 | nan     | contents        | 6_304_239      | 20_927      | 6.904E-04  | 0.0630      | 149_063     | 20203   | Ueda-shi                   |
-| nan     | structural      | 25_216_956     | 1_967_312   | 148_073    | 991_019     | 6_602_609   | 20203   | Ueda-shi                   |
+| nan     | structural      | 25_216_956     | 1_967_312   | 148_073    | 991_019     | 6_602_610   | 20203   | Ueda-shi                   |
 | nan     | occupants       | 128.4634       | 0.0129      | 1.285E-06  | 1.285E-06   | 0.0950      | 20203   | Ueda-shi                   |
 | nan     | area            | 6_354          | 119.0778    | 6.354E-05  | 6.354E-05   | 810.8       | 20203   | Ueda-shi                   |
 | nan     | number          | 3.9939         | 0.0589      | 3.994E-08  | 3.994E-08   | 0.4011      | 20203   | Ueda-shi                   |
@@ -3444,7 +3444,7 @@
 | nan     | area            | 773.4          | 7.5238      | 3.867E-06  | 7.734E-06   | 28.3282     | 20204   | Okaya-shi                  |
 | nan     | number          | 0.8543         | 0.0083      | 4.272E-09  | 8.543E-09   | 0.0313      | 20204   | Okaya-shi                  |
 | nan     | injured         | 2.0280         | 4.787E-04   | 1.014E-08  | 2.028E-08   | 0.0017      | 20204   | Okaya-shi                  |
-| nan     | embodied_carbon | 580.8          | 31.6781     | 7.1506     | 18.9749     | 92.5315     | 20204   | Okaya-shi                  |
+| nan     | embodied_carbon | 580.8          | 31.6781     | 7.1506     | 18.9749     | 92.5314     | 20204   | Okaya-shi                  |
 | nan     | contents        | 3_974_020      | 24.1820     | 0.0        | 0.0397      | 33.3196     | 20205   | Wilson County              |
 | nan     | structural      | 15_896_081     | 459_796     | 0.0        | 317_533     | 1_215_811   | 20205   | Wilson County              |
 | nan     | occupants       | 71.1759        | 4.871E-04   | 0.0        | 7.118E-07   | 7.118E-07   | 20205   | Wilson County              |
@@ -3472,7 +3472,7 @@
 | nan     | affectedpop     | 12.0528        | 0.0201      | 8.035E-08  | 1.205E-07   | 0.1095      | 20208   | Komoro-shi                 |
 | nan     | injured         | 6.1059         | 1.298E-04   | 4.071E-08  | 6.106E-08   | 7.123E-04   | 20208   | Komoro-shi                 |
 | nan     | embodied_carbon | 333.6          | 21.6390     | 2.4855     | 14.3148     | 62.9936     | 20208   | Komoro-shi                 |
-| nan     | contents        | 653_618        | 1.5724      | 1.656E-20  | 0.0065      | 0.0065      | 20209   | Wyandotte County           |
+| nan     | contents        | 653_618        | 1.5725      | 1.656E-20  | 0.0065      | 0.0065      | 20209   | Wyandotte County           |
 | nan     | structural      | 3_703_837      | 15_728      | 511.5      | 6_311       | 66_582      | 20209   | Wyandotte County           |
 | nan     | occupants       | 9.7458         | 9.746E-08   | 9.746E-08  | 9.746E-08   | 9.746E-08   | 20209   | Wyandotte County           |
 | nan     | area            | 924.3          | 9.243E-06   | 9.243E-06  | 9.243E-06   | 9.243E-06   | 20209   | Wyandotte County           |
@@ -3529,8 +3529,8 @@
 | nan     | number          | 4.9827         | 4.833E-08   | 3.322E-08  | 4.983E-08   | 4.983E-08   | 20220   | Azumino-shi                |
 | nan     | injured         | 98.7609        | 9.580E-07   | 6.584E-07  | 9.876E-07   | 9.876E-07   | 20220   | Azumino-shi                |
 | nan     | embodied_carbon | 1_802          | 7.1234      | 0.2026     | 2.2199      | 18.5273     | 20220   | Azumino-shi                |
-| nan     | contents        | 81_596         | 71.3243     | 0.0        | 8.160E-04   | 3.2673      | 20303   | Koumi-machi                |
-| nan     | structural      | 462_379        | 5_483       | 69.4526    | 1_765       | 24_196      | 20303   | Koumi-machi                |
+| nan     | contents        | 81_596         | 71.3243     | 0.0        | 8.160E-04   | 3.2672      | 20303   | Koumi-machi                |
+| nan     | structural      | 462_379        | 5_483       | 69.4525    | 1_765       | 24_196      | 20303   | Koumi-machi                |
 | nan     | occupants       | 0.9955         | 9.955E-09   | 9.955E-09  | 9.955E-09   | 9.955E-09   | 20303   | Koumi-machi                |
 | nan     | area            | 115.3928       | 0.0052      | 1.154E-06  | 1.154E-06   | 0.0247      | 20303   | Koumi-machi                |
 | nan     | number          | 0.9946         | 4.465E-05   | 9.946E-09  | 9.946E-09   | 2.125E-04   | 20303   | Koumi-machi                |
@@ -3554,7 +3554,7 @@
 | nan     | number          | 0.6981         | 1.484E-05   | 6.981E-09  | 6.981E-09   | 6.410E-05   | 20323   | Miyota-machi               |
 | nan     | injured         | 46.6426        | 4.664E-07   | 4.664E-07  | 4.664E-07   | 4.664E-07   | 20323   | Miyota-machi               |
 | nan     | embodied_carbon | 343.9          | 5.3574      | 0.1085     | 1.8158      | 21.0261     | 20323   | Miyota-machi               |
-| nan     | contents        | 635_544        | 1.9312      | 5.621E-27  | 0.0064      | 11.4296     | 20350   | Nagawa-machi               |
+| nan     | contents        | 635_544        | 1.9312      | 5.621E-27  | 0.0064      | 11.4295     | 20350   | Nagawa-machi               |
 | nan     | structural      | 3_601_413      | 36_804      | 453.9      | 12_019      | 158_619     | 20350   | Nagawa-machi               |
 | nan     | occupants       | 11.5263        | 1.153E-07   | 1.153E-07  | 1.153E-07   | 1.153E-07   | 20350   | Nagawa-machi               |
 | nan     | area            | 898.8          | 0.0347      | 8.988E-06  | 8.988E-06   | 0.1885      | 20350   | Nagawa-machi               |
@@ -3572,14 +3572,14 @@
 | nan     | affectedpop     | 3.9679         | 0.5449      | 3.968E-08  | 0.0417      | 2.8216      | 20363   | Hara-mura                  |
 | nan     | injured         | 2.0537         | 0.0058      | 2.054E-08  | 2.054E-08   | 0.0366      | 20363   | Hara-mura                  |
 | nan     | embodied_carbon | 49.1354        | 4.5397      | 0.3035     | 2.4702      | 15.0183     | 20363   | Hara-mura                  |
-| nan     | contents        | 288_013        | 36.6796     | 5.760E-04  | 0.0020      | 151.4072    | 20382   | Tatsuno-machi              |
+| nan     | contents        | 288_013        | 36.6796     | 5.760E-04  | 0.0020      | 151.4073    | 20382   | Tatsuno-machi              |
 | nan     | structural      | 1_152_051      | 7_971       | 60.8909    | 1_016       | 36_726      | 20382   | Tatsuno-machi              |
 | nan     | occupants       | 23.8684        | 2.202E-07   | 1.193E-07  | 2.387E-07   | 2.387E-07   | 20382   | Tatsuno-machi              |
 | nan     | area            | 624.8          | 0.0017      | 3.124E-06  | 6.248E-06   | 0.0118      | 20382   | Tatsuno-machi              |
 | nan     | number          | 0.8830         | 2.355E-06   | 4.415E-09  | 8.830E-09   | 1.667E-05   | 20382   | Tatsuno-machi              |
 | nan     | injured         | 23.8684        | 2.202E-07   | 1.193E-07  | 2.387E-07   | 2.387E-07   | 20382   | Tatsuno-machi              |
 | nan     | embodied_carbon | 150.4165       | 5.8465      | 0.6307     | 3.1306      | 17.4841     | 20382   | Tatsuno-machi              |
-| nan     | contents        | 2_918_402      | 22.1088     | 0.0139     | 0.0285      | 32.7615     | 20383   | Minowa-machi               |
+| nan     | contents        | 2_918_402      | 22.1088     | 0.0139     | 0.0285      | 32.7614     | 20383   | Minowa-machi               |
 | nan     | structural      | 11_673_609     | 63_898      | 5_632      | 42_385      | 144_557     | 20383   | Minowa-machi               |
 | nan     | occupants       | 118.9400       | 1.189E-06   | 1.189E-06  | 1.189E-06   | 1.189E-06   | 20383   | Minowa-machi               |
 | nan     | area            | 5_930          | 0.2079      | 5.930E-05  | 5.930E-05   | 5.930E-05   | 20383   | Minowa-machi               |
@@ -3597,7 +3597,7 @@
 | nan     | affectedpop     | 2.2023         | 2.059E-08   | 0.0        | 2.202E-08   | 2.202E-08   | 20402   | Matsukawa-machi            |
 | nan     | injured         | 1.1397         | 1.066E-08   | 0.0        | 1.140E-08   | 1.140E-08   | 20402   | Matsukawa-machi            |
 | nan     | embodied_carbon | 62.5259        | 0.8233      | 0.0        | 0.5670      | 2.4621      | 20402   | Matsukawa-machi            |
-| nan     | contents        | 649_369        | 81.1637     | 0.0013     | 0.0065      | 9.3910      | 20403   | Takamori-machi             |
+| nan     | contents        | 649_369        | 81.1638     | 0.0013     | 0.0065      | 9.3910      | 20403   | Takamori-machi             |
 | nan     | structural      | 3_679_756      | 15_231      | 433.8      | 9_434       | 45_549      | 20403   | Takamori-machi             |
 | nan     | occupants       | 17.5169        | 1.603E-07   | 3.503E-08  | 1.752E-07   | 1.752E-07   | 20403   | Takamori-machi             |
 | nan     | area            | 918.3          | 0.0023      | 1.837E-06  | 9.183E-06   | 9.183E-06   | 20403   | Takamori-machi             |
@@ -3658,7 +3658,7 @@
 | nan     | affectedpop     | 10.8326        | 7.892E-05   | 0.0        | 1.083E-07   | 1.083E-07   | 20590   | Iizuna-machi               |
 | nan     | injured         | 5.6071         | 5.271E-08   | 0.0        | 5.607E-08   | 5.607E-08   | 20590   | Iizuna-machi               |
 | nan     | embodied_carbon | 146.7426       | 0.7911      | 0.0        | 0.4480      | 2.2535      | 20590   | Iizuna-machi               |
-| nan     | contents        | 20_095_990     | 109.7901    | 0.0211     | 0.1938      | 279.9       | 21201   | Gifu-shi                   |
+| nan     | contents        | 20_095_990     | 109.7904    | 0.0211     | 0.1938      | 279.9       | 21201   | Gifu-shi                   |
 | nan     | structural      | 106_755_056    | 265_787     | 31_186     | 235_322     | 707_238     | 21201   | Gifu-shi                   |
 | nan     | occupants       | 625.4          | 5.497E-06   | 8.451E-07  | 6.254E-06   | 6.254E-06   | 21201   | Gifu-shi                   |
 | nan     | area            | 49_115         | 4.352E-04   | 6.875E-05  | 4.912E-04   | 4.912E-04   | 21201   | Gifu-shi                   |
@@ -3703,7 +3703,7 @@
 | nan     | affectedpop     | 346.1          | 2.985E-06   | 5.222E-07  | 3.461E-06   | 3.461E-06   | 21205   | Rowan County               |
 | nan     | injured         | 219.9          | 1.852E-06   | 5.828E-07  | 2.199E-06   | 2.199E-06   | 21205   | Rowan County               |
 | nan     | embodied_carbon | 11_137         | 153.8655    | 2.1410     | 169.3712    | 352.0       | 21205   | Rowan County               |
-| nan     | contents        | 3_006_689      | 14.0190     | 0.0011     | 0.0024      | 96.0971     | 21206   | Nakatsugawa-shi            |
+| nan     | contents        | 3_006_689      | 14.0190     | 0.0011     | 0.0024      | 96.0972     | 21206   | Nakatsugawa-shi            |
 | nan     | structural      | 12_026_753     | 28_205      | 134.1555   | 5_745       | 94_227      | 21206   | Nakatsugawa-shi            |
 | nan     | occupants       | 58.5964        | 4.957E-07   | 3.330E-08  | 5.860E-07   | 5.860E-07   | 21206   | Nakatsugawa-shi            |
 | nan     | area            | 7_687          | 6.492E-05   | 3.297E-06  | 7.687E-05   | 7.687E-05   | 21206   | Nakatsugawa-shi            |
@@ -3745,7 +3745,7 @@
 | nan     | residents       | 32.6984        | 6.368E-04   | 1.744E-07  | 3.270E-07   | 3.270E-07   | 21211   | Shelby County              |
 | nan     | affectedpop     | 32.6984        | 0.0041      | 1.744E-07  | 3.270E-07   | 3.270E-07   | 21211   | Shelby County              |
 | nan     | injured         | 177.7110       | 0.0029      | 1.163E-06  | 1.777E-06   | 5.172E-04   | 21211   | Shelby County              |
-| nan     | embodied_carbon | 2_945          | 81.8405     | 19.1743    | 69.6989     | 152.3477    | 21211   | Shelby County              |
+| nan     | embodied_carbon | 2_945          | 81.8405     | 19.1742    | 69.6988     | 152.3477    | 21211   | Shelby County              |
 | nan     | contents        | 2_408_151      | 0.0208      | 0.0054     | 0.0241      | 0.0241      | 21212   | Toki-shi                   |
 | nan     | structural      | 7_409_142      | 35_455      | 860.1      | 16_922      | 167_591     | 21212   | Toki-shi                   |
 | nan     | occupants       | 23.5515        | 2.167E-07   | 1.129E-07  | 2.355E-07   | 2.355E-07   | 21212   | Toki-shi                   |
@@ -3783,7 +3783,7 @@
 | nan     | injured         | 1.0512         | 5.466E-09   | 0.0        | 7.008E-09   | 1.051E-08   | 21215   | Spencer County             |
 | nan     | embodied_carbon | 71.5100        | 0.1753      | 0.0        | 0.0733      | 0.5921      | 21215   | Spencer County             |
 | nan     | contents        | 58_190         | 4.539E-04   | 0.0        | 5.819E-04   | 5.819E-04   | 21217   | Taylor County              |
-| nan     | structural      | 232_759        | 214.9       | 0.0        | 32.8054     | 911.2       | 21217   | Taylor County              |
+| nan     | structural      | 232_759        | 214.9       | 0.0        | 32.8055     | 911.2       | 21217   | Taylor County              |
 | nan     | occupants       | 1.3140         | 1.071E-08   | 0.0        | 1.314E-08   | 1.314E-08   | 21217   | Taylor County              |
 | nan     | area            | 151.4370       | 1.234E-06   | 0.0        | 1.514E-06   | 1.514E-06   | 21217   | Taylor County              |
 | nan     | number          | 1.0025         | 8.170E-09   | 0.0        | 1.003E-08   | 1.003E-08   | 21217   | Taylor County              |
@@ -3799,8 +3799,8 @@
 | nan     | residents       | 424.9          | 3.994E-06   | 0.0        | 4.249E-06   | 4.249E-06   | 21218   | Motosu-shi                 |
 | nan     | affectedpop     | 424.9          | 0.0021      | 0.0        | 4.249E-06   | 4.249E-06   | 21218   | Motosu-shi                 |
 | nan     | injured         | 215.3          | 2.024E-06   | 0.0        | 2.153E-06   | 2.153E-06   | 21218   | Motosu-shi                 |
-| nan     | embodied_carbon | 3_934          | 88.1761     | 0.0        | 42.0189     | 232.7       | 21218   | Motosu-shi                 |
-| nan     | contents        | 3_026_133      | 114.2133    | 0.0108     | 0.0185      | 0.3320      | 21219   | Todd County                |
+| nan     | embodied_carbon | 3_934          | 88.1761     | 0.0        | 42.0190     | 232.7       | 21218   | Motosu-shi                 |
+| nan     | contents        | 3_026_133      | 114.2132    | 0.0108     | 0.0185      | 0.3320      | 21219   | Todd County                |
 | nan     | structural      | 12_104_531     | 63_665      | 448.7      | 25_963      | 265_939     | 21219   | Todd County                |
 | nan     | occupants       | 72.7973        | 6.677E-07   | 2.395E-07  | 7.280E-07   | 7.280E-07   | 21219   | Todd County                |
 | nan     | area            | 6_478          | 0.1804      | 2.286E-05  | 6.478E-05   | 6.478E-05   | 21219   | Todd County                |
@@ -3909,14 +3909,14 @@
 | nan     | contents        | 6_649_367      | 3_020       | 0.0333     | 0.0665      | 19_050      | 22101   | St. Mary Parish            |
 | nan     | structural      | 29_368_984     | 951_685     | 63_970     | 533_189     | 3_401_615   | 22101   | St. Mary Parish            |
 | nan     | occupants       | 242.3          | 0.0119      | 2.423E-06  | 2.423E-06   | 0.0797      | 22101   | St. Mary Parish            |
-| nan     | area            | 13_266         | 162.5292    | 1.327E-04  | 1.327E-04   | 844.7       | 22101   | St. Mary Parish            |
+| nan     | area            | 13_266         | 162.5293    | 1.327E-04  | 1.327E-04   | 844.7       | 22101   | St. Mary Parish            |
 | nan     | number          | 16.9601        | 0.3080      | 1.696E-07  | 1.696E-07   | 0.7049      | 22101   | St. Mary Parish            |
 | nan     | residents       | 138.4688       | 3.5909      | 1.385E-06  | 1.385E-06   | 2.3076      | 22101   | St. Mary Parish            |
 | nan     | affectedpop     | 138.4688       | 4.5770      | 1.385E-06  | 1.385E-06   | 6.5466      | 22101   | St. Mary Parish            |
 | nan     | injured         | 242.3          | 0.0950      | 2.423E-06  | 2.423E-06   | 0.7012      | 22101   | St. Mary Parish            |
 | nan     | embodied_carbon | 7_298          | 593.2       | 109.0984   | 518.9       | 1_449       | 22101   | St. Mary Parish            |
 | nan     | contents        | 18_620_376     | 2_367       | 0.0979     | 0.1862      | 10_889      | 22102   | Shizuoka-shi Suruga-ku     |
-| nan     | structural      | 85_121_200     | 1_011_108   | 87_946     | 628_618     | 2_513_891   | 22102   | Shizuoka-shi Suruga-ku     |
+| nan     | structural      | 85_121_200     | 1_011_107   | 87_946     | 628_619     | 2_513_891   | 22102   | Shizuoka-shi Suruga-ku     |
 | nan     | occupants       | 591.9          | 0.0052      | 5.919E-06  | 5.919E-06   | 0.0197      | 22102   | Shizuoka-shi Suruga-ku     |
 | nan     | area            | 38_323         | 47.8432     | 3.832E-04  | 3.832E-04   | 340.5       | 22102   | Shizuoka-shi Suruga-ku     |
 | nan     | number          | 93.8698        | 0.1061      | 9.387E-07  | 9.387E-07   | 0.1966      | 22102   | Shizuoka-shi Suruga-ku     |
@@ -3925,7 +3925,7 @@
 | nan     | injured         | 591.9          | 0.0382      | 5.919E-06  | 5.919E-06   | 0.2051      | 22102   | Shizuoka-shi Suruga-ku     |
 | nan     | embodied_carbon | 20_392         | 847.9       | 181.4      | 796.6       | 1_523       | 22102   | Shizuoka-shi Suruga-ku     |
 | nan     | contents        | 353_449        | 1_841       | 0.0        | 0.0035      | 3_976       | 22103   | St. Tammany Parish         |
-| nan     | structural      | 1_413_795      | 17_493      | 169.3399   | 4_580       | 62_654      | 22103   | St. Tammany Parish         |
+| nan     | structural      | 1_413_795      | 17_493      | 169.3398   | 4_580       | 62_654      | 22103   | St. Tammany Parish         |
 | nan     | occupants       | 7.6330         | 7.633E-08   | 7.633E-08  | 7.633E-08   | 7.633E-08   | 22103   | St. Tammany Parish         |
 | nan     | area            | 915.7          | 0.2979      | 9.157E-06  | 9.157E-06   | 0.4504      | 22103   | St. Tammany Parish         |
 | nan     | number          | 7.0014         | 0.0023      | 7.001E-08  | 7.001E-08   | 0.0034      | 22103   | St. Tammany Parish         |
@@ -3936,7 +3936,7 @@
 | nan     | contents        | 5_895_429      | 358.0       | 0.0049     | 0.0590      | 926.2       | 22131   | Hamamatsu-shi Naka-ku      |
 | nan     | structural      | 31_681_736     | 194_310     | 6_381      | 83_981      | 576_007     | 22131   | Hamamatsu-shi Naka-ku      |
 | nan     | occupants       | 181.5          | 1.717E-06   | 2.528E-07  | 1.815E-06   | 1.815E-06   | 22131   | Hamamatsu-shi Naka-ku      |
-| nan     | area            | 14_310         | 23.0852     | 1.035E-05  | 0.0667      | 112.0882    | 22131   | Hamamatsu-shi Naka-ku      |
+| nan     | area            | 14_310         | 23.0852     | 1.035E-05  | 0.0667      | 112.0881    | 22131   | Hamamatsu-shi Naka-ku      |
 | nan     | number          | 77.8309        | 0.1734      | 1.238E-08  | 5.127E-04   | 0.8626      | 22131   | Hamamatsu-shi Naka-ku      |
 | nan     | residents       | 283.4          | 0.6358      | 0.0        | 0.0104      | 2.8462      | 22131   | Hamamatsu-shi Naka-ku      |
 | nan     | affectedpop     | 283.4          | 1.3915      | 0.0        | 0.1255      | 5.1734      | 22131   | Hamamatsu-shi Naka-ku      |
@@ -3996,7 +3996,7 @@
 | nan     | affectedpop     | 42.9996        | 0.4976      | 4.300E-07  | 4.300E-07   | 1.0103      | 22207   | Fujinomiya-shi             |
 | nan     | injured         | 21.7836        | 0.0017      | 2.178E-07  | 2.178E-07   | 0.0102      | 22207   | Fujinomiya-shi             |
 | nan     | embodied_carbon | 756.5          | 15.0329     | 0.7055     | 6.3226      | 53.4551     | 22207   | Fujinomiya-shi             |
-| nan     | contents        | 1_520_492      | 570.8       | 1.831E-33  | 0.0152      | 97.6150     | 22209   | Shimada-shi                |
+| nan     | contents        | 1_520_492      | 570.8       | 1.831E-33  | 0.0152      | 97.6152     | 22209   | Shimada-shi                |
 | nan     | structural      | 6_081_969      | 134_543     | 3_060      | 31_637      | 545_659     | 22209   | Shimada-shi                |
 | nan     | occupants       | 38.0246        | 3.802E-07   | 3.802E-07  | 3.802E-07   | 3.802E-07   | 22209   | Shimada-shi                |
 | nan     | area            | 3_939          | 8.7168      | 3.939E-05  | 3.939E-05   | 53.0798     | 22209   | Shimada-shi                |
@@ -4086,7 +4086,7 @@
 | nan     | injured         | 27.4158        | 2.577E-07   | 0.0        | 2.742E-07   | 2.742E-07   | 22223   | Omaezaki-shi               |
 | nan     | embodied_carbon | 625.9          | 0.9803      | 0.0        | 0.5018      | 2.8091      | 22223   | Omaezaki-shi               |
 | nan     | contents        | 7_204_678      | 3_998       | 0.0089     | 2.2329      | 18_916      | 22226   | Makinohara-shi             |
-| nan     | structural      | 22_626_208     | 947_493     | 215_997    | 747_046     | 2_023_243   | 22226   | Makinohara-shi             |
+| nan     | structural      | 22_626_208     | 947_492     | 215_997    | 747_046     | 2_023_243   | 22226   | Makinohara-shi             |
 | nan     | occupants       | 35.9937        | 3.173E-04   | 1.766E-07  | 3.599E-07   | 0.0020      | 22226   | Makinohara-shi             |
 | nan     | area            | 9_842          | 23.8323     | 7.653E-05  | 1.2706      | 112.4326    | 22226   | Makinohara-shi             |
 | nan     | number          | 2.6191         | 0.0080      | 2.128E-08  | 2.193E-04   | 0.0293      | 22226   | Makinohara-shi             |
@@ -4136,7 +4136,7 @@
 | nan     | residents       | 21.5816        | 0.0351      | 3.816E-08  | 2.158E-07   | 0.2375      | 23102   | Nagoya-shi Higashi-ku      |
 | nan     | affectedpop     | 21.5816        | 0.1233      | 3.816E-08  | 2.158E-07   | 0.8259      | 23102   | Nagoya-shi Higashi-ku      |
 | nan     | injured         | 10.9332        | 2.443E-04   | 1.933E-08  | 1.093E-07   | 0.0017      | 23102   | Nagoya-shi Higashi-ku      |
-| nan     | embodied_carbon | 450.1          | 6.4304      | 0.1614     | 4.9703      | 17.0754     | 23102   | Nagoya-shi Higashi-ku      |
+| nan     | embodied_carbon | 450.1          | 6.4304      | 0.1613     | 4.9703      | 17.0754     | 23102   | Nagoya-shi Higashi-ku      |
 | nan     | contents        | 699_429        | 0.0066      | 0.0        | 0.0070      | 0.0070      | 23104   | Nagoya-shi Nishi-ku        |
 | nan     | structural      | 2_797_716      | 22_730      | 0.0        | 13_884      | 53_814      | 23104   | Nagoya-shi Nishi-ku        |
 | nan     | occupants       | 24.5249        | 2.305E-07   | 0.0        | 2.452E-07   | 2.452E-07   | 23104   | Nagoya-shi Nishi-ku        |
@@ -4202,7 +4202,7 @@
 | nan     | residents       | 941.9          | 0.0013      | 2.390E-06  | 9.419E-06   | 9.419E-06   | 23111   | Nagoya-shi Minato-ku       |
 | nan     | affectedpop     | 941.9          | 0.0137      | 2.390E-06  | 9.419E-06   | 0.0488      | 23111   | Nagoya-shi Minato-ku       |
 | nan     | injured         | 477.2          | 5.548E-06   | 1.211E-06  | 4.772E-06   | 4.772E-06   | 23111   | Nagoya-shi Minato-ku       |
-| nan     | embodied_carbon | 14_873         | 137.2322    | 9.7650     | 80.7249     | 506.5       | 23111   | Nagoya-shi Minato-ku       |
+| nan     | embodied_carbon | 14_873         | 137.2323    | 9.7650     | 80.7249     | 506.5       | 23111   | Nagoya-shi Minato-ku       |
 | nan     | contents        | 2_599_409      | 0.0213      | 7.549E-04  | 0.0260      | 0.0260      | 23113   | Nagoya-shi Moriyama-ku     |
 | nan     | structural      | 10_397_639     | 5_063       | 0.0030     | 1_993       | 19_255      | 23113   | Nagoya-shi Moriyama-ku     |
 | nan     | occupants       | 123.3473       | 1.008E-06   | 1.343E-08  | 1.233E-06   | 1.233E-06   | 23113   | Nagoya-shi Moriyama-ku     |
@@ -4306,7 +4306,7 @@
 | nan     | contents        | 29_276_520     | 5_588       | 0.0123     | 0.2816      | 1_473       | 23211   | Toyota-shi                 |
 | nan     | structural      | 117_106_072    | 1_185_629   | 3_418      | 138_881     | 3_769_063   | 23211   | Toyota-shi                 |
 | nan     | occupants       | 729.5          | 6.618E-06   | 4.757E-07  | 7.295E-06   | 7.295E-06   | 23211   | Toyota-shi                 |
-| nan     | area            | 78_312         | 92.3875     | 2.470E-05  | 7.831E-04   | 22.7782     | 23211   | Toyota-shi                 |
+| nan     | area            | 78_312         | 92.3876     | 2.470E-05  | 7.831E-04   | 22.7782     | 23211   | Toyota-shi                 |
 | nan     | number          | 576.0          | 0.6901      | 9.671E-08  | 5.760E-06   | 0.1737      | 23211   | Toyota-shi                 |
 | nan     | residents       | 1_374          | 3.1271      | 2.851E-07  | 1.374E-05   | 0.5994      | 23211   | Toyota-shi                 |
 | nan     | affectedpop     | 1_374          | 8.8535      | 2.851E-07  | 6.469E-04   | 1.9836      | 23211   | Toyota-shi                 |
@@ -4324,7 +4324,7 @@
 | nan     | contents        | 1_140_891      | 3.6734      | 0.0085     | 0.0101      | 25.9677     | 23213   | Nishio-shi                 |
 | nan     | structural      | 4_563_563      | 21_506      | 0.0398     | 7_199       | 105_944     | 23213   | Nishio-shi                 |
 | nan     | occupants       | 26.1611        | 2.540E-07   | 2.253E-07  | 2.616E-07   | 2.616E-07   | 23213   | Nishio-shi                 |
-| nan     | area            | 2_491          | 7.1403      | 2.098E-05  | 2.491E-05   | 27.5138     | 23213   | Nishio-shi                 |
+| nan     | area            | 2_491          | 7.1403      | 2.098E-05  | 2.491E-05   | 27.5139     | 23213   | Nishio-shi                 |
 | nan     | number          | 21.0083        | 0.0544      | 1.801E-07  | 2.101E-07   | 0.2098      | 23213   | Nishio-shi                 |
 | nan     | residents       | 51.6408        | 0.2094      | 4.448E-07  | 5.164E-07   | 1.0540      | 23213   | Nishio-shi                 |
 | nan     | affectedpop     | 51.6408        | 0.3885      | 4.448E-07  | 0.0018      | 2.4597      | 23213   | Nishio-shi                 |
@@ -4442,10 +4442,10 @@
 | nan     | contents        | 17_792_984     | 31.1356     | 0.0034     | 0.0034      | 38.8578     | 23442   | Higashiura-cho             |
 | nan     | structural      | 71_171_936     | 694_974     | 3_041      | 85_460      | 2_422_309   | 23442   | Higashiura-cho             |
 | nan     | occupants       | 487.6          | 4.416E-06   | 8.981E-08  | 4.876E-06   | 4.876E-06   | 23442   | Higashiura-cho             |
-| nan     | area            | 48_219         | 56.6471     | 9.146E-06  | 4.822E-04   | 4.822E-04   | 23442   | Higashiura-cho             |
+| nan     | area            | 48_219         | 56.6472     | 9.146E-06  | 4.822E-04   | 4.822E-04   | 23442   | Higashiura-cho             |
 | nan     | number          | 358.0          | 0.4203      | 6.999E-08  | 3.580E-06   | 3.580E-06   | 23442   | Higashiura-cho             |
 | nan     | residents       | 942.1          | 2.1174      | 1.735E-07  | 9.421E-06   | 9.421E-06   | 23442   | Higashiura-cho             |
-| nan     | affectedpop     | 942.1          | 6.0184      | 1.735E-07  | 9.421E-06   | 1.0661      | 23442   | Higashiura-cho             |
+| nan     | affectedpop     | 942.1          | 6.0185      | 1.735E-07  | 9.421E-06   | 1.0661      | 23442   | Higashiura-cho             |
 | nan     | injured         | 487.6          | 0.0111      | 8.981E-08  | 4.876E-06   | 4.876E-06   | 23442   | Higashiura-cho             |
 | nan     | embodied_carbon | 8_241          | 238.7       | 1.1662     | 73.0532     | 736.3       | 23442   | Higashiura-cho             |
 | nan     | contents        | 1_221_366      | 3_569       | 0.0        | 2.113E-08   | 18_817      | 23501   | Kota-cho                   |
@@ -4616,7 +4616,7 @@
 | nan     | injured         | 63.1628        | 4.958E-07   | 0.0        | 6.316E-07   | 6.316E-07   | 25442   | Kora-cho                   |
 | nan     | embodied_carbon | 476.1          | 1.0718      | 0.0        | 0.4176      | 4.4714      | 25442   | Kora-cho                   |
 | nan     | contents        | 75_057         | 1.051E-04   | 0.0        | 0.0         | 7.506E-04   | 26102   | Kyoto-shi Kamigyo-ku       |
-| nan     | structural      | 425_322        | 14.7567     | 0.0        | 0.0         | 115.0652    | 26102   | Kyoto-shi Kamigyo-ku       |
+| nan     | structural      | 425_322        | 14.7568     | 0.0        | 0.0         | 115.0652    | 26102   | Kyoto-shi Kamigyo-ku       |
 | nan     | occupants       | 1.4286         | 2.000E-09   | 0.0        | 0.0         | 1.429E-08   | 26102   | Kyoto-shi Kamigyo-ku       |
 | nan     | area            | 208.4          | 2.917E-07   | 0.0        | 0.0         | 2.084E-06   | 26102   | Kyoto-shi Kamigyo-ku       |
 | nan     | number          | 1.9413         | 2.718E-09   | 0.0        | 0.0         | 1.941E-08   | 26102   | Kyoto-shi Kamigyo-ku       |
@@ -4696,7 +4696,7 @@
 | nan     | affectedpop     | 21.9470        | 8.427E-08   | 0.0        | 2.986E-08   | 2.195E-07   | 26206   | Kameoka-shi                |
 | nan     | injured         | 11.1185        | 4.269E-08   | 0.0        | 1.513E-08   | 1.112E-07   | 26206   | Kameoka-shi                |
 | nan     | embodied_carbon | 197.1          | 0.1600      | 0.0        | 0.0338      | 0.4256      | 26206   | Kameoka-shi                |
-| nan     | contents        | 38_135         | 7.787E-04   | 0.0        | 0.0         | 3.813E-04   | 26207   | Joyo-shi                   |
+| nan     | contents        | 38_135         | 7.788E-04   | 0.0        | 0.0         | 3.813E-04   | 26207   | Joyo-shi                   |
 | nan     | structural      | 152_540        | 97.3027     | 0.0        | 0.0         | 379.0       | 26207   | Joyo-shi                   |
 | nan     | occupants       | 1.0523         | 3.999E-09   | 0.0        | 0.0         | 1.052E-08   | 26207   | Joyo-shi                   |
 | nan     | area            | 102.8594       | 3.909E-07   | 0.0        | 0.0         | 1.029E-06   | 26207   | Joyo-shi                   |
@@ -4853,7 +4853,7 @@
 | nan     | residents       | 189.4          | 1.231E-06   | 0.0        | 1.894E-06   | 1.894E-06   | 27122   | Osaka-shi Nishinari-ku     |
 | nan     | affectedpop     | 189.4          | 1.231E-06   | 0.0        | 1.894E-06   | 1.894E-06   | 27122   | Osaka-shi Nishinari-ku     |
 | nan     | injured         | 95.9548        | 6.237E-07   | 0.0        | 9.595E-07   | 9.595E-07   | 27122   | Osaka-shi Nishinari-ku     |
-| nan     | embodied_carbon | 4_751          | 60.3316     | 0.0        | 46.9886     | 191.5       | 27122   | Osaka-shi Nishinari-ku     |
+| nan     | embodied_carbon | 4_751          | 60.3316     | 0.0        | 46.9887     | 191.5       | 27122   | Osaka-shi Nishinari-ku     |
 | nan     | contents        | 3_379_652      | 0.0095      | 0.0        | 0.0         | 0.0338      | 27125   | Red Lake County            |
 | nan     | structural      | 7_885_855      | 0.0221      | 0.0        | 0.0         | 0.0789      | 27125   | Red Lake County            |
 | nan     | occupants       | 54.6921        | 1.531E-07   | 0.0        | 0.0         | 5.469E-07   | 27125   | Red Lake County            |
@@ -4921,7 +4921,7 @@
 | nan     | injured         | 256.9          | 1.670E-06   | 0.0        | 2.036E-06   | 2.569E-06   | 27146   | Sakai-shi Kita-ku          |
 | nan     | embodied_carbon | 3_900          | 11.4691     | 0.0        | 6.7521      | 33.7148     | 27146   | Sakai-shi Kita-ku          |
 | nan     | contents        | 23_452         | 1.524E-04   | 0.0        | 2.345E-04   | 2.345E-04   | 27147   | Steele County              |
-| nan     | structural      | 93_808         | 108.6987    | 0.0        | 60.3144     | 397.7       | 27147   | Steele County              |
+| nan     | structural      | 93_808         | 108.6988    | 0.0        | 60.3144     | 397.7       | 27147   | Steele County              |
 | nan     | occupants       | 0.6190         | 4.024E-09   | 0.0        | 6.190E-09   | 6.190E-09   | 27147   | Steele County              |
 | nan     | area            | 43.9174        | 2.855E-07   | 0.0        | 4.392E-07   | 4.392E-07   | 27147   | Steele County              |
 | nan     | number          | 0.5008         | 3.255E-09   | 0.0        | 5.008E-09   | 5.008E-09   | 27147   | Steele County              |
@@ -5136,7 +5136,7 @@
 | nan     | injured         | 1.5728         | 2.202E-09   | 0.0        | 0.0         | 1.573E-08   | 28110   | Kobe-shi Chuo-ku           |
 | nan     | embodied_carbon | 101.1137       | 0.0245      | 0.0        | 0.0         | 0.2064      | 28110   | Kobe-shi Chuo-ku           |
 | nan     | contents        | 1_506_881      | 0.0042      | 0.0        | 0.0         | 0.0151      | 28111   | Perry County               |
-| nan     | structural      | 8_538_991      | 5_107       | 0.0        | 0.0         | 28_525      | 28111   | Perry County               |
+| nan     | structural      | 8_538_991      | 5_107       | 0.0        | 0.0         | 28_524      | 28111   | Perry County               |
 | nan     | occupants       | 39.7228        | 1.112E-07   | 0.0        | 0.0         | 3.972E-07   | 28111   | Perry County               |
 | nan     | area            | 3_714          | 1.040E-05   | 0.0        | 0.0         | 3.714E-05   | 28111   | Perry County               |
 | nan     | number          | 1.3380         | 3.746E-09   | 0.0        | 0.0         | 1.338E-08   | 28111   | Perry County               |
@@ -5388,7 +5388,7 @@
 | nan     | area            | 2_601          | 4.552E-06   | 0.0        | 0.0         | 2.601E-05   | 28586   | Shinonsen-cho              |
 | nan     | number          | 0.6663         | 1.166E-09   | 0.0        | 0.0         | 6.663E-09   | 28586   | Shinonsen-cho              |
 | nan     | injured         | 39.7436        | 6.955E-08   | 0.0        | 0.0         | 3.974E-07   | 28586   | Shinonsen-cho              |
-| nan     | embodied_carbon | 1_674          | 9.0047      | 0.0        | 0.0         | 55.7573     | 28586   | Shinonsen-cho              |
+| nan     | embodied_carbon | 1_674          | 9.0047      | 0.0        | 0.0         | 55.7574     | 28586   | Shinonsen-cho              |
 | nan     | contents        | 4_072_664      | 0.0181      | 0.0        | 0.0125      | 0.0407      | 29201   | Scott County               |
 | nan     | structural      | 16_290_657     | 2_678       | 0.0        | 2_468       | 7_396       | 29201   | Scott County               |
 | nan     | occupants       | 326.3          | 1.410E-06   | 0.0        | 9.665E-07   | 3.263E-06   | 29201   | Scott County               |
@@ -5408,7 +5408,7 @@
 | nan     | injured         | 130.9486       | 5.632E-07   | 0.0        | 1.763E-07   | 1.309E-06   | 29203   | Shannon County             |
 | nan     | embodied_carbon | 4_141          | 14.5757     | 0.0        | 1.6702      | 64.7995     | 29203   | Shannon County             |
 | nan     | contents        | 129_510        | 4.986E-04   | 0.0        | 0.0013      | 0.0013      | 29205   | Shelby County              |
-| nan     | structural      | 733_890        | 178.4684    | 0.0        | 0.0073      | 1_448       | 29205   | Shelby County              |
+| nan     | structural      | 733_890        | 178.4685    | 0.0        | 0.0073      | 1_448       | 29205   | Shelby County              |
 | nan     | occupants       | 3.5290         | 1.359E-08   | 0.0        | 3.529E-08   | 3.529E-08   | 29205   | Shelby County              |
 | nan     | area            | 319.2          | 1.229E-06   | 0.0        | 3.192E-06   | 3.192E-06   | 29205   | Shelby County              |
 | nan     | number          | 2.9942         | 1.153E-08   | 0.0        | 2.994E-08   | 2.994E-08   | 29205   | Shelby County              |
@@ -5637,7 +5637,7 @@
 | nan     | injured         | 7.5107         | 7.886E-09   | 0.0        | 0.0         | 7.511E-08   | 32209   | Unnan-shi                  |
 | nan     | embodied_carbon | 152.9242       | 0.0134      | 0.0        | 0.0         | 0.1037      | 32209   | Unnan-shi                  |
 | nan     | contents        | 584_790        | 5.388E-05   | 0.0        | 0.0         | 7.698E-04   | 32343   | Okuizumo-cho               |
-| nan     | structural      | 2_339_160      | 4.6346      | 0.0        | 0.0         | 17.2318     | 32343   | Okuizumo-cho               |
+| nan     | structural      | 2_339_160      | 4.6346      | 0.0        | 0.0         | 17.2319     | 32343   | Okuizumo-cho               |
 | nan     | occupants       | 10.0263        | 8.778E-10   | 0.0        | 0.0         | 1.254E-08   | 32343   | Okuizumo-cho               |
 | nan     | area            | 1_375          | 1.267E-07   | 0.0        | 0.0         | 1.810E-06   | 32343   | Okuizumo-cho               |
 | nan     | number          | 9.1773         | 8.219E-10   | 0.0        | 0.0         | 1.174E-08   | 32343   | Okuizumo-cho               |
@@ -5654,7 +5654,7 @@
 | nan     | affectedpop     | 131.2068       | 6.593E-07   | 0.0        | 8.429E-07   | 1.275E-06   | 33104   | Okayama-shi Minami-ku      |
 | nan     | injured         | 210.0          | 8.567E-07   | 0.0        | 1.097E-06   | 1.651E-06   | 33104   | Okayama-shi Minami-ku      |
 | nan     | embodied_carbon | 5_020          | 1.6860      | 0.0        | 0.2761      | 8.0947      | 33104   | Okayama-shi Minami-ku      |
-| nan     | contents        | 7_106_024      | 81.6202     | 0.0        | 0.0212      | 12.2554     | 33202   | Kurashiki-shi              |
+| nan     | contents        | 7_106_024      | 81.6201     | 0.0        | 0.0212      | 12.2554     | 33202   | Kurashiki-shi              |
 | nan     | structural      | 26_223_342     | 82_790      | 0.0        | 47_709      | 333_782     | 33202   | Kurashiki-shi              |
 | nan     | occupants       | 170.7841       | 3.026E-04   | 0.0        | 8.985E-07   | 1.697E-06   | 33202   | Kurashiki-shi              |
 | nan     | area            | 14_101         | 1.2301      | 0.0        | 7.523E-05   | 1.9662      | 33202   | Kurashiki-shi              |
@@ -5743,7 +5743,7 @@
 | nan     | injured         | 128.6717       | 3.363E-07   | 0.0        | 0.0         | 1.196E-06   | 33215   | Mimasaka-shi               |
 | nan     | embodied_carbon | 3_454          | 3.3083      | 0.0        | 0.0         | 9.6486      | 33215   | Mimasaka-shi               |
 | nan     | contents        | 4_163_922      | 54.7550     | 0.0        | 8.290E-04   | 0.0416      | 33216   | Asakuchi-shi               |
-| nan     | structural      | 16_655_689     | 9_040       | 0.0        | 156.3443    | 44_829      | 33216   | Asakuchi-shi               |
+| nan     | structural      | 16_655_689     | 9_040       | 0.0        | 156.3430    | 44_829      | 33216   | Asakuchi-shi               |
 | nan     | occupants       | 95.3705        | 4.845E-07   | 0.0        | 5.397E-07   | 9.537E-07   | 33216   | Asakuchi-shi               |
 | nan     | area            | 10_244         | 5.243E-05   | 0.0        | 6.739E-05   | 1.024E-04   | 33216   | Asakuchi-shi               |
 | nan     | number          | 75.9919        | 3.890E-07   | 0.0        | 5.000E-07   | 7.599E-07   | 33216   | Asakuchi-shi               |
@@ -5807,7 +5807,7 @@
 | nan     | injured         | 83.3794        | 2.127E-08   | 0.0        | 0.0         | 3.038E-07   | 34207   | Fukuyama-shi               |
 | nan     | embodied_carbon | 1_506          | 0.0814      | 0.0        | 0.0         | 1.1627      | 34207   | Fukuyama-shi               |
 | nan     | contents        | 3_986_785      | 8.152E-04   | 0.0        | 0.0         | 0.0116      | 34209   | Miyoshi-shi                |
-| nan     | structural      | 11_995_325     | 8.7966      | 0.0        | 0.0         | 120.8938    | 34209   | Miyoshi-shi                |
+| nan     | structural      | 11_995_325     | 8.7966      | 0.0        | 0.0         | 120.8928    | 34209   | Miyoshi-shi                |
 | nan     | occupants       | 57.2274        | 1.789E-08   | 0.0        | 0.0         | 2.555E-07   | 34209   | Miyoshi-shi                |
 | nan     | area            | 6_850          | 2.209E-06   | 0.0        | 0.0         | 3.156E-05   | 34209   | Miyoshi-shi                |
 | nan     | number          | 34.6897        | 1.680E-08   | 0.0        | 0.0         | 2.400E-07   | 34209   | Miyoshi-shi                |
@@ -6091,10 +6091,10 @@
 | nan     | embodied_carbon | 222.8          | 0.0321      | 0.0        | 0.0         | 0.4580      | 39428   | Kuroshio-cho               |
 | nan     | affectedpop     | 94_780         | 1_399       | 3.2798     | 159.2865    | 6_964       | *total* | *total*                    |
 | nan     | area            | 5_748_745      | 47_649      | 13.2342    | 2_326       | 244_559     | *total* | *total*                    |
-| nan     | contents        | 2_742_409_472  | 2_702_992   | 18.3473    | 111_982     | 11_905_178  | *total* | *total*                    |
+| nan     | contents        | 2_742_409_472  | 2_702_992   | 18.3473    | 111_982     | 11_905_177  | *total* | *total*                    |
 | nan     | embodied_carbon | 1_932_360      | 67_459      | 11_262     | 49_265      | 168_904     | *total* | *total*                    |
 | nan     | injured         | 75_410         | 11.4329     | 0.0040     | 0.6793      | 57.0970     | *total* | *total*                    |
 | nan     | number          | 27_188         | 287.2       | 0.0517     | 10.5843     | 1_534       | *total* | *total*                    |
 | nan     | occupants       | 75_410         | 0.8096      | 3.472E-04  | 0.0542      | 3.9353      | *total* | *total*                    |
 | nan     | residents       | 94_780         | 897.4       | 0.3312     | 44.8892     | 4_676       | *total* | *total*                    |
-| nan     | structural      | 10_920_261_632 | 190_211_144 | 10_691_776 | 88_807_054  | 656_498_964 | *total* | *total*                    |
+| nan     | structural      | 10_920_261_632 | 190_211_145 | 10_691_776 | 88_807_054  | 656_498_974 | *total* | *total*                    |
