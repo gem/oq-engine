@@ -174,8 +174,8 @@ def load_residual_grids(hdf5_path):
                 if location == "path":
                     raytrace_grids.setdefault(term, {})
                     # Build the h3 grid in OQ pgns
-                    raytrace_grids[term][imt_str] = build_raytrace_grid(
-                        cell_ids, mean_vals)
+                    raytrace_grids[term][imt_str] =\
+                          build_raytrace_grid(cell_ids, mean_vals)
                 else:
                     # Hypo/site based correction - store per cell mean adj
                     grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
@@ -301,8 +301,7 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
         else:
             s_lats, s_lons = ctx.lat, ctx.lon
         # Per-cell so look up the sigma adjustment value
-        sig_vals = grid_lookup(
-            sig_grid, s_lats, s_lons, grid_data["h3_res"])
+        sig_vals = grid_lookup(sig_grid, s_lats, s_lons, grid_data["h3_res"])
     else:
         # Just a scalar adjustment
         sig_vals = grid_data["sig_scalars"].get(imt, {}).get(term)
@@ -378,7 +377,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
 
-        # The term can be selected based on hypo or site location or both (path-based)
+        # Term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
             if (term not in grid_data["raytrace_grids"] or
@@ -403,8 +402,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                 lats, lons = ctx.lat, ctx.lon
 
             # Get a grid-cell lookup-based mean adjustment
-            mean_adj = grid_lookup(
-                entry[term], lats, lons, grid_data["h3_res"])
+            mean_adj = grid_lookup(entry[term], lats, lons, grid_data["h3_res"])
 
         # Apply adjustment to mean prediction
         mean += mean_adj
@@ -414,8 +412,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             continue
 
         # Apply sigma adjustment to required component
-        adjust_sigma(
-            grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi)
+        adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi)
 
 
 class GridAdjustedGMPE(GMPE):
