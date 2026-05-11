@@ -231,10 +231,11 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(new.eps_inter_PGA.mean(), 0.027470896)
 
     def test_case_21_stations(self):
-        # conditioned gmfs
+        # conditioned gmfs; the numbers are quite different between AMD
+        # and Intel machines (delta=.002) at 32 bit precision
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('gmf-data.csv', fname)
+        self.assertEqualFiles('gmf-data.csv', fname, delta=.002)
 
         # check that stations are discarded when extracting avg_gmf
         aw = extract(self.calc.datastore, 'avg_gmf?imt=SA(0.1)')
