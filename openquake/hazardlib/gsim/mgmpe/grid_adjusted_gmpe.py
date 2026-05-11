@@ -33,11 +33,11 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 def load_sigma_for_term(
         grp, term, imt_str, location,
-        sig_action, cell_ids, sig_grids, sig_scalars
+        sig_action, cell_ids, grids, sig_scalars
         ):
     """
     Load the sigma adjustment for one term/IMT group into
-    sig_grids (per-cell) OR sig_scalars (scalar).
+    grids[imt_str][term]["sig"] (per-cell) OR sig_scalars (scalar).
     """
     sig_key = f"{term}_sig"
     has_sig_attr = sig_key in grp.attrs
@@ -66,7 +66,7 @@ def load_sigma_for_term(
             raise ValueError(
                 f"Negative _sig value found for term "
                 f"'{term}' and IMT '{imt_str}'")
-        sig_grids[imt_str][term] = dict(zip(cell_ids, sig_vals))
+        grids[imt_str][term]["sig"] = dict(zip(cell_ids, sig_vals))
     else:
         sig_scalar = grp.attrs[sig_key]
         if sig_scalar < 0:
@@ -95,10 +95,15 @@ def build_raytrace_grid(cell_ids, mean_vals):
 
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with six keys:
+    Load the hdf5 residual grids into a dict with five keys:
 
-    * grids: nested dict of {imt_str: {term: {cell_id: mean}, ...}} for
-      hypo/site-based terms only which use h3 cells.
+    * grids: nested dict of
+      {imt_str: {term: {"mean": {cell_id: float},
+                        "sig":  {cell_id: float}}, ...}}
+      for hypo/site-based terms only. "sig" is present only when
+      sig_adjustment is not "none" and the sigma is given as a per-cell
+      dataset named "{term}_sig". Per-cell sigma is not supported for
+      path-based terms.
 
     * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
       pgn grids for path-based terms (used in raytracing), stored per term
@@ -108,14 +113,8 @@ def load_residual_grids(hdf5_path):
       per term per IMT. Populated when sig_adjustment is not "none" and the
       sigma is given as a scalar adjustment (group attribute "{term}_sig").
 
-    * sig_grids: {imt_str: {term: {cell_id: float}}} - per-cell sigma
-      adjustment values for hypo/site-based terms. Populated when
-      sig_adjustment is not "none" and the sigma is given as a dataset named
-      "{term}_sig" in the IMT group. Per-cell sigma adjustments for path terms
-      are not supported currently.
-
-      NOTE: sig_scalars and sig_grids are mutually exclusive for each term/IMT
-      so providing both raises an error.
+      NOTE: sig_scalars and grids[imt][term]["sig"] are mutually exclusive
+      for each term/IMT; providing both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
       automatically from the cell IDs in the grids.
@@ -140,7 +139,7 @@ def load_residual_grids(hdf5_path):
     """
     grids = {}
     raytrace_grids = {}
-    sig_scalars, sig_grids = {}, {}
+    sig_scalars = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
@@ -152,7 +151,6 @@ def load_residual_grids(hdf5_path):
                 # Set stores if not already present
                 grids.setdefault(imt_str, {})
                 sig_scalars.setdefault(imt_str, {})
-                sig_grids.setdefault(imt_str, {})
 
                 # Get group and the mean adj values
                 grp = hf[term][imt_str]
@@ -161,13 +159,6 @@ def load_residual_grids(hdf5_path):
                 # Collect h3 resolutions for this term/IMT
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
-
-                # If required get sigma adjustment
-                if sig_action != "none":
-                    load_sigma_for_term(
-                        grp, term, imt_str, location,
-                        sig_action, cell_ids, sig_grids, sig_scalars
-                        )
 
                 # If path-based build OQ pgn grid for this term/IMT (keep
                 # different grid per IMT in case varies with IMT as well)
@@ -178,12 +169,19 @@ def load_residual_grids(hdf5_path):
                           build_raytrace_grid(cell_ids, mean_vals)
                 else:
                     # Hypo/site based correction - store per cell mean adj
-                    grids[imt_str][term] = dict(zip(cell_ids, mean_vals))
+                    grids[imt_str][term] = {
+                        "mean": dict(zip(cell_ids, mean_vals))}
+
+                # If required get sigma adjustment
+                if sig_action != "none":
+                    load_sigma_for_term(
+                        grp, term, imt_str, location,
+                        sig_action, cell_ids, grids, sig_scalars
+                        )
 
     return {"grids": grids,
             "raytrace_grids": raytrace_grids,
             "sig_scalars": sig_scalars,
-            "sig_grids": sig_grids,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
@@ -290,11 +288,11 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
     Resolve the sigma adjustment value for this term/IMT, then apply
     it to the specified component.
 
-    NOTE: Only one of sig_grids/sig_scalars dicts can be populated per
-    term/IMT - this is enfored when loading the grid cells.
+    NOTE: Only one of grids[imt][term]["sig"]/sig_scalars can be populated
+    per term/IMT - this is enforced when loading the grid cells.
     """
     # Resolve sigma values - per-cell grid or scalar
-    sig_grid = grid_data["sig_grids"].get(imt, {}).get(term)
+    sig_grid = grid_data["grids"].get(imt, {}).get(term, {}).get("sig")
     if sig_grid is not None:
         if cfg["location"] == "hypo":
             s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
@@ -405,7 +403,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
                 lats, lons = ctx.lat, ctx.lon
 
             # Get a grid-cell lookup-based mean adjustment
-            mean_adj = grid_lookup(entry[term], lats, lons, grid_data["h3_res"])
+            mean_adj = grid_lookup(
+                entry[term]["mean"], lats, lons, grid_data["h3_res"])
 
         # Apply adjustment to mean prediction
         mean += mean_adj

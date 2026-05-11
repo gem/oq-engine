@@ -105,12 +105,12 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # Check correct values returned when searching loaded grid
         gd = load_residual_grids(GRID_HDF5)
         mu = grid_lookup(
-            gd["grids"]["PGA"]["dL2L"],
+            gd["grids"]["PGA"]["dL2L"]["mean"],
             LATS, LONS, gd["h3_res"])
         aae(mu, DL2L_MEAN_PER_CELL[0], decimal=DP)
         # Check that zero is returned for out-of-bounds coords
         mu = grid_lookup(
-            gd["grids"]["PGA"]["dL2L"],
+            gd["grids"]["PGA"]["dL2L"]["mean"],
             np.array([-80.0]), np.array([170.0]), gd["h3_res"])
         aae(mu, 0.0)
 
