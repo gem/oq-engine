@@ -6,7 +6,7 @@ residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) for
 PGA and SA(0.5) to both the mean predicted ground-motion and the mapped
 sigma component (can be total, tau or phi). SA(1.0) has no grid data and
 therefore receives no adjustment intentionally. The visualisation of the
-hdf5 clearly shows that the h3 grids are varying in density - this is
+hdf5 clearly shows that the h3 grids can vary in density - this is
 intentional, with the `GridAdjustedGMPE` supporting either constant or
 varying density h3 grid cells.
 
