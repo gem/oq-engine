@@ -59,7 +59,7 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    arr = extract(dstore, 'rupture_info')
+    arr = extract(dstore, 'rupture_info?boundaries=no')
     if export.sanity_check:
         bad = view('bad_ruptures', dstore)
         if len(bad):  # nonempty
