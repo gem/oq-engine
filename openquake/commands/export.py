@@ -23,7 +23,7 @@ from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
+def main(datastore_key, calc_id: str=-1, *, exports='csv', export_dir='.'):
     """
     Export an output from the datastore. To see the available datastore
     keys, use the command `oq info exports`.
