@@ -119,7 +119,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         gd = load_residual_grids(GRID_HDF5)
         for m, imt in enumerate(IMTS):
             adjs = raytrace_path_adj(
-                gd["path_pgns"]["att_per_km"][imt],
+                gd["raytrace_grids"]["att_per_km"][imt],
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
                 LONS, LATS,
             )
