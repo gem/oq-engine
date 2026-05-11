@@ -35,7 +35,7 @@ exists for this GMM sigma correction too in the hdf5):
 | centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup) |
 | right | `att_per_km`-based mean ground-motion correction per travel path (raytracing) |
 
-Red star = hypocentre; blue triangles = sites in the site model.
+Red star = hypocentre; green triangles = sites in the site model.
 
 ## Additional Information
 
