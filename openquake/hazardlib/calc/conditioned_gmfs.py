@@ -478,11 +478,10 @@ def compute_spatial_cross_covariance_matrix(
     # at the same location and the spatial correlation due to the distance
     # between sites m and n. Can be refactored down the line to support direct
     # spatial cross-correlation models
-    rho = numpy.block([[
-        _compute_spatial_cross_correlation_matrix(
-            imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
-        for imt_2 in imts2] for imt_1 in imts1])
-    return diag1.astype(F32) @ rho @ diag2.astype(F32)
+    rho = [[_compute_spatial_cross_correlation_matrix(
+        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
+            for imt_2 in imts2] for imt_1 in imts1]
+    return diag1.astype(F32) @ numpy.block(rho) @ diag2.astype(F32)
 
 
 # In scenario/case_21 one has

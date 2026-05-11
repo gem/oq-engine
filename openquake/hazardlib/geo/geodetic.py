@@ -26,6 +26,8 @@ from scipy.spatial.distance import cdist
 from openquake.baselib.general import round
 from openquake.baselib.performance import compile
 
+F32 = np.float32
+
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
 
@@ -657,10 +659,10 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
-    lons1 = np.radians(lons1)
-    lats1 = np.radians(lats1)
+    lons1 = np.radians(F32(lons1))
+    lats1 = np.radians(F32(lats1))
     assert lons1.shape == lats1.shape
-    lons2 = np.radians(lons2)
-    lats2 = np.radians(lats2)
+    lons2 = np.radians(F32(lons2))
+    lats2 = np.radians(F32(lats2))
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2
