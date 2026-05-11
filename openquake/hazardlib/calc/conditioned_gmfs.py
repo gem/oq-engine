@@ -665,9 +665,9 @@ def get_mean_covs(rupture, cmaker, inp, sigma=True):
     G = len(cmaker.gsims)
     M = len(inp.imts_Y)
     N = len(pre.ctx_Y)
-    me = numpy.zeros((G, M, N, 1))
-    ta = numpy.zeros((G, M, N, N))
-    ph = numpy.zeros((G, M, N, N))
+    me = numpy.zeros((G, M, N, 1), F32)
+    ta = numpy.zeros((G, M, N, N), F32)
+    ph = numpy.zeros((G, M, N, N), F32)
     monitor = performance.Monitor()
     monitor.set_shared(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
     for cond in pre.conditioners:
