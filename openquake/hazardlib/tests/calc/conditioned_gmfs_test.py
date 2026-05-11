@@ -146,7 +146,7 @@ class SetUSGSTestCase(unittest.TestCase):
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
         aac(numpy.max(mu), 1)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -172,7 +172,7 @@ class SetUSGSTestCase(unittest.TestCase):
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.52970, rtol=1e-4)
         aac(numpy.max(mu), 1)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), 0.89955, rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -197,7 +197,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.zeros_like(mu), mu, atol=1e-4)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)

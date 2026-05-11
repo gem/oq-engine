@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Keeping the correlation matrices at 32 bit to save memory and to double
+    the speed
+
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a

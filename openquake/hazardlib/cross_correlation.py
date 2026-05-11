@@ -47,7 +47,7 @@ class CrossCorrelation(ABC):
             in the input `imts` list.
         """
         num_imts = len(imts)
-        mtx = np.zeros((num_imts, num_imts))
+        mtx = np.zeros((num_imts, num_imts), np.float32)
         for i1 in range(num_imts):
             for i2 in range(i1, num_imts):
                 cor = self.get_correlation(imts[i1], imts[i2])
@@ -113,6 +113,7 @@ class CrossCorrelationBetween(ABC):
             An intensity measure type
         :return: a scalar
         """
+
     @abstractmethod
     def get_inter_eps(self, imts, num_events, rng):
         pass
@@ -122,9 +123,9 @@ class CrossCorrelationBetween(ABC):
         mu = np.zeros(num_imts)
         bounds = np.full(num_imts, self.truncation_level)
         seed = int(rng.integers(0, np.iinfo(np.int32).max))
-        # TruncatedMVN mutates the covariance matrix in-place during factorization:
-        # always work on a copy to avoid corrupting cached correlation matrices.
-        corr = np.array(corma, dtype=float, copy=True)
+        # TruncatedMVN mutates the cov matrix in-place during factorization:
+        # always work on a copy to avoid corrupting cached correlation matrices
+        corr = np.array(corma, copy=True)
         mineig = np.linalg.eigvalsh(corr).min()
         if not np.isfinite(mineig) or mineig < 1e-8:
             # TruncatedMVN is numerically unstable for nearly-singular matrices.
@@ -194,7 +195,8 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         try:
             return self.cache[periods]
         except KeyError:
-            self.cache[periods] = corma = np.zeros((len(imts), len(imts)))
+            self.cache[periods] = corma = np.zeros(
+                (len(imts), len(imts)), np.float32)
         for i, imi in enumerate(imts):
             for j, imj in enumerate(imts):
                 corma[i, j] = self.get_correlation(imi, imj)
