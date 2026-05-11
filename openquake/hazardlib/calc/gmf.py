@@ -53,9 +53,9 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
-@compile(["float64[:,:](float64[:,:], boolean)",
-          "float64[:](float64[:], boolean)",
-          "float64(float64, boolean)"])
+@compile(["(float32[:,:], boolean)",
+          "(float32[:], boolean)",
+          "(float64, boolean)"])
 def exp(vals, notMMI):
     """
     Exponentiate the values unless the IMT is MMI
@@ -65,7 +65,7 @@ def exp(vals, notMMI):
     return vals
 
 
-@compile("(float32[:,:,:],float64[:,:],float64[:],float64[:],int64)")
+@compile("(float32[:,:,:],float32[:,:],float64[:],float64[:],int64)")
 def set_max_min(array, mean, max_iml, min_iml, mmi_index):
     N, M, E = array.shape
 
@@ -150,7 +150,8 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
         idxs, = np.where(np.isin(rlz, rlzs))
         E = len(idxs)
         # build arrays of random numbers of shape (M, N, E) and (M, E)
-        within_eps = [within_dist.rvs((N, E), rng) for _ in range(M)]
+        within_eps = [within_dist.rvs((N, E), rng).astype(F32)
+                      for _ in range(M)]
         eps = np.zeros((E, M), F32)
         eps[idxs] = between_correl.get_inter_eps(cmaker.imtls, E, rng).T
         gmf = np.zeros((M, N, E))
@@ -360,10 +361,10 @@ class GmfComputer(object):
         self.init_eid_rlz_sig_eps()
         data = AccumDict(accum=[])
         conditioned = MNE is not None
-        if not conditioned:
-            with self.cmaker.gmf_mon:
-                mean_stds = self.cmaker.get_mean_stds([self.ctx])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
+            if not conditioned:
+                with self.cmaker.gmf_mon:
+                    mean_stds = self.cmaker.get_4MN([self.ctx], gs).astype(F32)
             gs.gid = self.cmaker.gid[g]
             idxs, = np.where(np.isin(self.rlz, rlzs))
             E = len(idxs)
@@ -378,7 +379,7 @@ class GmfComputer(object):
                                  for _ in range(self.M)]
                 else:
                     within_eps = [
-                        self.within_dist.rvs((self.N, E), self.rng)
+                        self.within_dist.rvs((self.N, E), self.rng).astype(F32)
                         for _ in range(self.M)]
                 # between_eps are used in _compute
                 if self.tlb <= TRUNCATION_THRESHOLD:
@@ -396,7 +397,7 @@ class GmfComputer(object):
                                 self.ctx.ampcode, result, m, imt, self.rng)
                         mean.append(MNE[g][m, :, E])
                     else:
-                        ms = mean_stds[:, g, m]
+                        ms = mean_stds[:, m]
                         mean.append(ms[0])
                         self._compute_update(
                             result, m, imt, gs, ms, idxs, within_eps)
@@ -440,7 +441,8 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise ValueError('truncation_level_within=0 requires '
                                  'no correlation model')
-            gmf = exp(mean, im != 'MMI')[:, None].repeat(len(idxs), axis=1)
+            gmf = exp(mean, im != 'MMI')[:, np.newaxis].repeat(
+                len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -449,7 +451,8 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
-            gmf = exp(mean[:, None] + sig[:, None] * within_eps, im != 'MMI')
+            gmf = exp(mean[:, np.newaxis] + sig[:, np.newaxis] * within_eps,
+                      im != 'MMI')
             self.sig[idxs, m] = np.nan
         else:
             # NB: [:, newaxis] is used to implement multiplication by row;
@@ -459,10 +462,11 @@ class GmfComputer(object):
             within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
             if self.correlation_model is not None:
                 within_res = self.correlation_model.apply_correlation(
-                    self.sites, imt, within_res, phi)
+                    self.sites, imt, within_res, phi).astype(F32)
             between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]
             # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + within_res + between_res, im != 'MMI')
+            gmf = exp(mean[:, np.newaxis] + within_res + between_res,
+                      im != 'MMI')
             self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
         return gmf  # shapes (N, E)
 

@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    ConditionedGmfComputer, build_precomputed, getMNE)
+    ConditionedGmfComputer, build_precomputed, conditioned)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -434,7 +434,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
-    smap = parallel.Starmap(getMNE, h5=dstore)
+    smap = parallel.Starmap(conditioned, h5=dstore)
     pre = build_precomputed(ebr.rupture, cmaker, computer.inp)
     smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
     computer.init_eid_rlz_sig_eps()
