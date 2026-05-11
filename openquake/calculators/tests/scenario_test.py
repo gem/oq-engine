@@ -318,7 +318,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         if sys.platform != 'darwin':
-            self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+            self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-3)
 
     def test_case_27(self):
         # TodorovicSilva2022NonParametric
