@@ -378,7 +378,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
 
-        # The term can be selected based on hypo or site location or both
+        # The term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
             # Travel path based (ray-tracing)
             if (term not in grid_data["raytrace_grids"] or
