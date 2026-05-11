@@ -30,7 +30,7 @@ def main(datastore_key, calc_id: str=-1, *, exports='csv', export_dir='.'):
     """
     try:
         calc_id = int(calc_id)
-    except TypeError:
+    except ValueError:
         pass
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
