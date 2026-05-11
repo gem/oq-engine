@@ -490,7 +490,7 @@ class GridAdjustedGMPE(GMPE):
     oq-engine/openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
 
     A use case (from XML) can be found in the classical QA tests (there is 
-    also a readme visualising the hdf5 information):
+    also a readme visualising the h3 grids stored in the hdf5):
     oq-engine/openquake/qa_tests_data/classical/case_11/grid_adjustments.hdf5
 
     :param gmpe_name:
