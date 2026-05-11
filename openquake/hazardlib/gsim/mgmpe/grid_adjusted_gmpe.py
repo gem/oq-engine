@@ -379,11 +379,14 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
 
         # Term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
+            
             # Travel path based (ray-tracing)
             if (term not in grid_data["raytrace_grids"] or
                 imt not in grid_data["raytrace_grids"][term]):
                 # Skip if this term has no data for the given IMT
                 continue
+
+            # Get raytraced mean adjustment
             mean_adj = raytrace_path_adj(
                 grid_data["raytrace_grids"][term][imt], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
