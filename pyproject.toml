@@ -1,4 +1,3 @@
-# FIXME: MN - trigger for test
 [build-system]
 requires = ["setuptools >= 79.0", "wheel"]
 build-backend = "setuptools.build_meta"
