@@ -238,9 +238,6 @@ STANDALONE_APP_NAME_MAP = {
 if APPLICATION_MODE != 'TOOLS_ONLY':
     STANDALONE_APP_NAME_MAP['openquakeplatform_taxonomy'] = 'glossary'
 
-ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
-# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
-
 EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
 
 # If False, a warning is displayed in case a newer version of the engine has
