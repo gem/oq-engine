@@ -966,16 +966,26 @@ SITE_CLASSES = {
         'BC': {'display_name': 'B-C boundary', 'vs30': 760},
     },
     'ASCE7-22': {
-        'A': {'display_name': 'A - Hard rock', 'vs30': 1500},
-        'B': {'display_name': 'B - Medium hard rock', 'vs30': 1080},
-        'BC': {'display_name': 'BC - Soft rock', 'vs30': 760},
-        'C': {'display_name': 'C - Very dense sand or hard clay', 'vs30': 530},
-        'CD': {'display_name': 'CD - Dense sand or ery stiff clay', 'vs30': 365},
-        'D': {'display_name': 'D - Medium dense sand or stiff clay', 'vs30': 260},
-        'DE': {'display_name': 'DE - Loose sand or medium stiff clay', 'vs30': 185},
-        'E': {'display_name': 'E - Very loose sand or soft clay', 'vs30': 150},
-        'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
-        'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+        'A': {'display_name': 'A - Hard rock',
+              'vs30': 1500},
+        'B': {'display_name': 'B - Medium hard rock',
+              'vs30': 1080},
+        'BC': {'display_name': 'BC - Soft rock',
+               'vs30': 760},
+        'C': {'display_name': 'C - Very dense sand or hard clay',
+              'vs30': 530},
+        'CD': {'display_name': 'CD - Dense sand or ery stiff clay',
+               'vs30': 365},
+        'D': {'display_name': 'D - Medium dense sand or stiff clay',
+              'vs30': 260},
+        'DE': {'display_name': 'DE - Loose sand or medium stiff clay',
+               'vs30': 185},
+        'E': {'display_name': 'E - Very loose sand or soft clay',
+              'vs30': 150},
+        'default': {'display_name': 'Default',
+                    'vs30': [260, 365, 530]},
+        'custom': {'display_name': 'Specify Vs30',
+                   'vs30': None},
     },
 }
 
@@ -1348,7 +1358,8 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types, [0])
+            self.hazard_imtls = dict.fromkeys(
+                self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
 
     def _normalize_minimum_intensity(self):
@@ -1566,7 +1577,8 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('poes_disagg or iml_disagg must be set')
             elif self.poes_disagg and self.iml_disagg:
                 self.raise_invalid(
-                    'iml_disagg and poes_disagg cannot be set at the same time')
+                    'iml_disagg and poes_disagg cannot be set'
+                    ' at the same time')
             if not self.disagg_bin_edges:
                 for k in ('mag_bin_width', 'distance_bin_width',
                           'coordinate_bin_width', 'num_epsilon_bins'):
@@ -1596,7 +1608,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses            
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
@@ -1668,21 +1680,22 @@ class OqParam(valid.ParamSet):
         has_sites = self.sites or 'site_model' in self.inputs
         if not has_sites:
             return
-        
+
         # Check if using IMT-dependent weights per GMM so can raise error
         # if not supported and non-zero weight has been assigned to IMT
         weight = {
-            (gmm, from_string(imt).name): 0.0 for gmm in gsims for imt
-              in self.imtls}
-        imt_weighted = {gmm: False for gmm in gsims} # Req to track if weighted
-            
+            (gmm, from_string(imt).name): 0.0
+            for gmm in gsims for imt in self.imtls}
+        imt_weighted = {gmm: False
+                        for gmm in gsims}  # Req to track if weighted
+
         if "gsim_logic_tree" in self.inputs:
             branches = GsimLogicTree(self.inputs["gsim_logic_tree"]).branches
             for branch in branches:
                 if branch.gsim not in imt_weighted:
                     continue
                 gimts = [cls.__name__ for cls in
-                        branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
+                         branch.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES]
                 if isinstance(branch.weight, ImtWeight):
                     imt_weighted[branch.gsim] = True
                     for imt in self.imtls:
@@ -1694,25 +1707,25 @@ class OqParam(valid.ParamSet):
         for gsim in gsims:
             params = getattr(gsim, 'params', {})
             ok_imts = {cls.__name__ for cls in gsim.
-                    DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                       DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if 'conditional_gmpe' in params:
                 ok_imts |= set(params['conditional_gmpe'])
             elif hasattr(gsim, 'gmpe'):
                 ok_imts |= {cls.__name__ for cls in gsim.gmpe.
-                        DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+                            DEFINED_FOR_INTENSITY_MEASURE_TYPES}
             if ok_imts:
                 invalid_imts = imts - ok_imts
                 # Don't collect IMT if unsupported buts has zero wt
                 bad_wt_imts = [imt for imt in invalid_imts if
-                            weight[(gsim, imt)] > 0]
+                               weight[(gsim, imt)] > 0]
                 if (invalid_imts and not bad_wt_imts and not
-                    imt_weighted[gsim]
-                    ):
+                        imt_weighted[gsim]):
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' % (
                             ', '.join(invalid_imts), gsim))
-                if bad_wt_imts: # If IMT-dependent and wt greater than
-                                # zero for unsupported IMT then raise
+                if bad_wt_imts:
+                    # If IMT-dependent and wt greater than
+                    # zero for unsupported IMT then raise
                     raise ValueError(
                         'Non-zero weights assigned to unsupported IMT(s) '
                         '(%s) for the GSIM %s' % (', '.join(bad_wt_imts), gsim)
@@ -1734,6 +1747,7 @@ class OqParam(valid.ParamSet):
                             raise ValueError(
                                 'Please set a value for %r, this is required '
                                 'by the GSIM %s' % (param_name, gsim))
+
     @property
     def tses(self):
         """
@@ -2623,7 +2637,7 @@ def to_ini(key, val):
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
-    elif key  == 'cache':
+    elif key == 'cache':
         # parameter not affecting the numbers
         return ''
     else:
