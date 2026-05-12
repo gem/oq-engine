@@ -1400,6 +1400,9 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance'):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
+            logging.info(
+                f'maximum_distance:'
+                f' {self.maximum_distance[self.tectonic_region_type]}')
 
         self.check_hazard()
         self.check_gsim_lt()
