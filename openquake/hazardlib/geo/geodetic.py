@@ -337,10 +337,10 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     """
     m = len(lons)
     assert m == len(lats), (m, len(lats))
-    lons = np.radians(lons)
-    lats = np.radians(lats)
+    lons = np.radians(F32(lons))
+    lats = np.radians(F32(lats))
     cos_lats = np.cos(lats)
-    result = np.zeros((m, m))
+    result = np.zeros((m, m), F32)
     for i in range(len(lons)):
         a = np.sin((lats[i] - lats) / 2.0)
         b = np.sin((lons[i] - lons) / 2.0)
@@ -659,10 +659,10 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
-    lons1 = np.radians(F32(lons1))
-    lats1 = np.radians(F32(lats1))
+    lons1 = np.radians(lons1)
+    lats1 = np.radians(lats1)
     assert lons1.shape == lats1.shape
-    lons2 = np.radians(F32(lons2))
-    lats2 = np.radians(F32(lats2))
+    lons2 = np.radians(lons2)
+    lats2 = np.radians(lats2)
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2
