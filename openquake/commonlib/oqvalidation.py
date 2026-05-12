@@ -1412,7 +1412,9 @@ class OqParam(valid.ParamSet):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
             logging.info(
-                f'maximum_distance:'
+                f'Tectonic region type:'
+                f' {self.tectonic_region_type}; '
+                f'Maximum source-to-site distance:'
                 f' {self.maximum_distance[self.tectonic_region_type]}')
 
         self.check_hazard()
