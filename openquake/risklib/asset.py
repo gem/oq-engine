@@ -448,6 +448,24 @@ class AssetCollection(object):
             arr[tuple(i - 1 for i in tagid)] = aval
         return arr
 
+    # used to aggregate the exposure by taxonomy and macro-taxonomy
+    # tested in test_amplification and test_workflow
+    def aggdf(self, tagname):
+        """
+        Aggregate the assets by tagname.
+
+        :returns: a DataFrame (tagname, value-field, ..., occupants)
+        """
+        tags = numpy.array(getattr(self.tagcol, tagname))
+        dic = {tagname: self.array[tagname]}
+        for field in self.fields:
+            dic[field] = self.array['value-' + field]
+        for field in self.occfields:
+            dic[field] = self.array[field]
+        df = pandas.DataFrame(dic).groupby(tagname).sum()
+        df[tagname] = tags[df.index]
+        return df.set_index(tagname)
+
     def arr_value(self, loss_types):
         """
         :param loss_types: the relevant loss types
