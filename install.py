@@ -210,7 +210,7 @@ PLATFORM = {
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 # FIXME just for devel test
 # URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/b3.23-pre5/"
 
 
 def ensure(pip=None, pyvenv=None):
