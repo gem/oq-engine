@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
   * Extended the rupture exporter to also work with multi-model SES files
   * Keeping the correlation matrices at 32 bit to save memory and to double
     the speed
