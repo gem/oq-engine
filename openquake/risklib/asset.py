@@ -462,9 +462,9 @@ class AssetCollection(object):
             dic[field] = self.array['value-' + field]
         for field in self.occfields:
             dic[field] = self.array[field]
-        df = pandas.DataFrame(dic).groupby(tagname).sum().reset_index()
+        df = pandas.DataFrame(dic).groupby(tagname).sum()
         df[tagname] = tags[df.index]
-        return df
+        return df.set_index(tagname)
 
     def arr_value(self, loss_types):
         """
