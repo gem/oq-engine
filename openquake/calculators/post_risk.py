@@ -614,19 +614,22 @@ class PostRiskCalculator(base.RiskCalculator):
             build_reinsurance(self.datastore, oq, self.num_events)
         return 1
 
+    # tested in test_workflow
     def save_avg_losses_by(self, tagnames):
         """
         Aggregate the mean avg_losses by one tagname at the time and create
-        datagroups avg_losses_by/<tagname>.
+        datagroups avg_losses_by/<tagname> and aggexp_by/<tagname>.
         """
         aggtags = set()
         for aggby in self.oqparam.aggregate_by:
             aggtags.update(aggby)
+        assetcol = self.datastore['assetcol']
         for tag in tagnames:
             if tag in aggtags:  # aggrisk already contains this aggregation
                 continue
             name = f'avg_losses_by/{tag}'
             self.datastore.create_df(name, extract(self.datastore, name))
+            self.datastore.create_df(f'aggexp_by/{tag}', assetcol.aggdf(tag))
 
     def post_execute(self, ok):
         """

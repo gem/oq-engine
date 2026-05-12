@@ -636,6 +636,7 @@ def prepare_workflow(params, workflow_toml, pdb):
             dstore = datastore.read(workflow_id, 'r+')
             descr = wfjob.get_job().description
         wfjob.workflows = workflows
+    dstore['/'].attrs['engine_version'] = general.engine_version()
     return wfjob, dstore, names, descr
 
 
