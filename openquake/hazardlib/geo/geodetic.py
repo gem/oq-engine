@@ -79,8 +79,12 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
 
     :returns:
         Distance in km, floating point scalar or numpy array of such.
+        NB: to save memory, arrays are computed as float32
     """
-    lons1, lats1, lons2, lats2 = _prepare_coords(lons1, lats1, lons2, lats2)
+    if isinstance(lons1, float):
+        return fast_distance(lons1, lats1, lons2, lats2)
+    lons1, lats1, lons2, lats2 = _prepare_coords(
+        lons1, lats1, lons2, lats2, F32)
     distance = np.arcsin(np.sqrt(
         np.sin((lats1 - lats2) / 2.0) ** 2.0
         + np.cos(lats1) * np.cos(lats2)
@@ -89,7 +93,8 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     return diameter * distance
 
 
-@compile("(f8, f8, f8[:], f8[:])")
+@compile(["(f8, f8, f8[:], f8[:])",
+          "(f8, f8, f8, f8)"])
 def fast_distance(lon, lat, lons, lats):
     lon, lat = math.radians(lon), math.radians(lat)
     lons, lats = np.radians(lons), np.radians(lats)
@@ -335,18 +340,7 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     :param lats: array of m latitudes
     :returns: matrix of (m, m) distances
     """
-    m = len(lons)
-    assert m == len(lats), (m, len(lats))
-    lons = np.radians(F32(lons))
-    lats = np.radians(F32(lats))
-    cos_lats = np.cos(lats)
-    result = np.zeros((m, m), F32)
-    for i in range(len(lons)):
-        a = np.sin((lats[i] - lats) / 2.0)
-        b = np.sin((lons[i] - lons) / 2.0)
-        result[i, :] = np.arcsin(
-            np.sqrt(a * a + cos_lats[i] * cos_lats * b * b)) * diameter
-    return result
+    return geodetic_distance(lons, lats, lons, lats, diameter)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
@@ -653,7 +647,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     return (np.pi / 2 - angle) * EARTH_RADIUS
 
 
-def _prepare_coords(lons1, lats1, lons2, lats2):
+def _prepare_coords(lons1, lats1, lons2, lats2, dtype=None):
     """
     Convert two pairs of spherical coordinates in decimal degrees
     to numpy arrays of radians. Makes sure that respective coordinates
@@ -665,4 +659,6 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     lons2 = np.radians(lons2)
     lats2 = np.radians(lats2)
     assert lons2.shape == lats2.shape
+    if dtype:
+        return dtype(lons1), dtype(lats1), dtype(lons2), dtype(lats2)
     return lons1, lats1, lons2, lats2

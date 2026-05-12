@@ -145,11 +145,13 @@ def cholesky(spatial_cov, cross_corr):
     :returns: a triangular matrix of shape (M * N, M * N)
     """
     M, N = spatial_cov.shape[:2]
+    cutoff = numpy.eye(N) * 1E-8  # avoid negative eigenvalues
     try:
-        L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
+        L = numpy.array([numpy.linalg.cholesky(spatial_cov[i] + cutoff)
                          for i in range(M)])
     except numpy.linalg.LinAlgError as exc:
-        raise exc.__class__('%s: see https://docs.openquake.org/oq-engine/advanced/shakemaps.html#correlation' % exc)
+        raise exc.__class__('%s: see https://docs.openquake.org/oq-engine/'
+                            'advanced/shakemaps.html#correlation' % exc)
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
