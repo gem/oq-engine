@@ -208,7 +208,9 @@ PLATFORM = {
     "win32": ("win64",),
 }
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
+# FIXME just for devel test
+# URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
 
 
 def ensure(pip=None, pyvenv=None):
