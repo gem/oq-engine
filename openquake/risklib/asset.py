@@ -449,19 +449,22 @@ class AssetCollection(object):
         return arr
 
     # used to aggregate the exposure by taxonomy and macro-taxonomy
+    # tested in test_amplification and test_workflow
     def aggdf(self, tagname):
         """
         Aggregate the assets by tagname.
 
         :returns: a DataFrame (tagname, value-field, ..., occupants)
         """
-        itags = self.array[tagname]
-        dic = {tagname: getattr(self.tagcol, tagname)}
+        tags = numpy.array(getattr(self.tagcol, tagname))
+        dic = {tagname: self.array[tagname]}
         for field in self.fields:
-            dic[field] = general.fast_agg(itags, self.array['value-' + field])
+            dic[field] = self.array['value-' + field]
         for field in self.occfields:
-            dic[field] = general.fast_agg(itags, self.array[field])
-        return pandas.DataFrame(dic)[1:]
+            dic[field] = self.array[field]
+        df = pandas.DataFrame(dic).groupby(tagname).sum().reset_index()
+        df[tagname] = tags[df.index]
+        return df
 
     def arr_value(self, loss_types):
         """
