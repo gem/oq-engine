@@ -84,13 +84,10 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     if isinstance(lons1, float):
         return fast_distance(lons1, lats1, lons2, lats2)
     lons1, lats1, lons2, lats2 = _prepare_coords(
-        lons1, lats1, lons2, lats2, F32)
-    distance = np.arcsin(np.sqrt(
-        np.sin((lats1 - lats2) / 2.0) ** 2.0
-        + np.cos(lats1) * np.cos(lats2)
-        * np.sin((lons1 - lons2) / 2.0) ** 2.0
-    ))
-    return diameter * distance
+        lons1, lats1, lons2, lats2, F32)    
+    arr = np.sin((lats1 - lats2) / 2.0) ** 2.0
+    arr += np.cos(lats1) * np.cos(lats2) * np.sin((lons1 - lons2) / 2.0) ** 2.0
+    return diameter * np.arcsin(np.sqrt(arr))
 
 
 @compile(["(f8, f8, f8[:], f8[:])",
