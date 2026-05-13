@@ -589,7 +589,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
         if 'geometry' in oq.inputs:
-            # tested in event_based/case_32
+            # tested in event_based/case_32 with a .geojson file
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
@@ -679,8 +679,12 @@ class EventBasedCalculator(base.HazardCalculator):
             with mon:
                 self.nruptures += len(rup_array)
                 if len(self.mosaic_df):
+                    # tested in global_ses
                     rup_array['model'] = geolocate(
                         rup_array['hypo'], self.mosaic_df)
+                    if 'geometry' not in oq.inputs:
+                        # make sure all ruptures are associated to a model
+                        assert (rup_array['model'] != b'???').all()
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
