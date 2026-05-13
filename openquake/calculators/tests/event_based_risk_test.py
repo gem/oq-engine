@@ -497,7 +497,6 @@ agg_id
         aggdf = assetcol.aggdf('taxonomy')
         self.assertEqual(list(aggdf.columns),
                          ['number', 'structural', 'taxonomy'])
-        assert 'taxonomy' in aggdf  # sanity check
         self.assertEqual(len(sitecol), 12)
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
