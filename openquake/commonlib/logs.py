@@ -27,7 +27,7 @@ import traceback
 from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
-from openquake.hazardlib.countries import country2code, MODELS
+from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -219,6 +219,9 @@ def get_country_or_model(job_ini):
     for model in MODELS:
         if model in job_ini:
             return model
+    for model in ALIASES:
+        if model in job_ini:
+            return ALIASES[model]
     return ''
 
 
