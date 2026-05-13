@@ -180,7 +180,6 @@ class GriddedSurface(BaseSurface):
         # Some surfaces (observed in non-parametric rups with gridded surfaces
         # in NEA) have only two points which is not enough for fitting a plane
         # so take azimuth of these two points instead as proxy strike for rup
-        # NOTE: These rup surfaces were deliberately modelled with only 2 pnts
         if coo.shape[0] == 2:
             dx = coo[1, 0] - coo[0, 0]
             dy = coo[1, 1] - coo[0, 1]

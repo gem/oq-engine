@@ -1,6 +1,5 @@
   [Christopher Brooks]
-  * Fix exporting of ruptures with surfaces defined using a
-    `GriddedSurface` but with only 2 mesh points (NEA slab srcs)
+  * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
 
   [Michele Simionato]
   * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
