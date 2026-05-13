@@ -23,6 +23,7 @@ import logging
 import pandas
 import numpy
 import h5py
+import re
 from openquake.baselib import sap, general, performance, parallel, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.hazardlib.countries import country2code, REGIONS
@@ -135,7 +136,7 @@ def build_site_model(grm_dir):
     dfs = []
     for cwd, dirs, files in os.walk(grm_dir):
         for f in files:
-            if f.startswith('Site_model_') and f.endswith('.csv'):
+            if re.fullmatch(r'Site_model_[A-Za-z]{3}\.csv', f):
                 print('Reading %s' % f)
                 df = pandas.read_csv(os.path.join(cwd, f))
                 if factor < 1:
