@@ -680,11 +680,17 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 if len(self.mosaic_df):
                     # tested in global_ses
-                    rup_array['model'] = geolocate(
+                    rup_array['model'] = models = geolocate(
                         rup_array['hypo'], self.mosaic_df)
                     if 'geometry' not in oq.inputs:
-                        # make sure all ruptures are associated to a model
-                        assert (rup_array['model'] != b'???').all()
+                        # find ruptures not associated to a model
+                        bad = models == b'???'
+                        outside = bad.sum()
+                        if outside:
+                            logging.error('There are %d ruptures outside the '
+                                          'mosaic', outside)
+                            rup_array = rup_array[~bad]
+                            geom = geom[~bad]
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
