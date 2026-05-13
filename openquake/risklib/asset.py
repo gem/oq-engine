@@ -464,7 +464,7 @@ class AssetCollection(object):
             dic[field] = self.array[field]
         df = pandas.DataFrame(dic).groupby(tagname).sum()
         df[tagname] = tags[df.index]
-        return df.set_index(tagname)
+        return df
 
     def arr_value(self, loss_types):
         """
