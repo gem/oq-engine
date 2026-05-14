@@ -1,53 +1,21 @@
 # -*- coding: utf-8 -*-
+# Copyright (C) 2015-2024 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Bayless and Somerville (2024) Ground Motion Model for Australia (BS24)
-
-OpenQuake hazardlib implementation
-by T Costa de Lima, April 2026, Geoscience Australia
-(thuany.costadelima@ga.gov.au)
-
-Reference:
-    Bayless J. and P. Somerville (2024). An Updated Ground Motion Model for
-    Australia Developed Using Broadband Ground Motion Simulations.
-    Proc. AEES 2024 National Conference, Adelaide, South Australia.
-
-    Coefficients and Fortran code with the model were kindly provided by Jeff Bayless
-    (jeff.bayless@aecom.com).
-    
-    Full coefficient tables from:
-    Appendix D - Bayless J. and P. Somerville (2024, updated May 2026). 
-    AECOM internal report.
-
-===========================================================================
-Model description  (Equations from the 2024 AEES paper):
-
-    ln(RotD50) = fM + fP + fS + fZ1.0 + fZtor + fHW             Median model [Eq. 2]
-
-    fM    = magnitude scaling               [Eq. 3, ASK14 polynomial formulation]
-    fP    = distance scaling                [Eq. 4, ASK14 path scaling formulation, geometric spreading + anelastic Q]
-    fZtor = earthquake depth scaling        [Eq. 5, new cubic polynomial in Ztor]
-
-    fS    = Vs30 site amplification         [adopted, Boore et al. 2014]
-    fZ1.0 = basin depth scaling             [adopted, Boore et al. 2014]
-    fHW   = hanging wall effects            [adopted, Donahue & Abrahamson 2014 as implemented in ASK14]
-
-Aleatory variability [Eq. 6]: Al Atik (2015) global model.
-    sigma = sqrt(tau^2 + phi^2)
-
-Output: ln(RotD50) in units of g (OpenQuake standard).
-Note: Bayless Fortran outputs cm/s/s (+6.89). Here we return ln(g).
-
-Applicability: M 4.0-8.0, Rrup 0-300 km, T 0.01-10 sec,
-                  Vs30 150-1500 m/s.
-
-The Cratonic and NonCratonic versions share all coefficients except:
-    a1  (high-freq source level / source spectrum mean level)
-    a17 (anelastic attenuation / crustal Q)
-
-===========================================================================
-Module exports:
-    BaylessSomerville2024Cratonic
-    BaylessSomerville2024NonCratonic
+Module exports :class:`BaylessSomerville2024Cratonic`,
+               :class:`BaylessSomerville2024NonCratonic`
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -57,97 +25,96 @@ from openquake.hazardlib.imt import PGA, SA
 
 def _get_fM(C, mag):
     """
-    Magnitude scaling fM [Equation 3 in Bayless J. and P. Somerville (2024)].
+    Magnitude scaling fM [Eq. 3, Bayless & Somerville (2024)].
 
-    ASK14 polynomial formulation:
-        M >= M1:        a1 + a5*(M-M1) + a8*(8.5-M)^2
-        M2 <= M < M1:   a1 + a4*(M-M1) + a8*(8.5-M)^2
-        M < M2:         fM(M=M2) + a6*(M-M2) + a7*(M-M2)^2
+    ASK14 polynomial formulation::
 
-    M is the moment magnitude;
-    M1 is period-dependent (6.75-7.25); this is already taken into account in the COEFFS
-    M2 = 5.0 fixed.
+        M >= M1:       a1 + a5*(M-M1) + a8*(8.5-M)^2
+        M2 <= M < M1:  a1 + a4*(M-M1) + a8*(8.5-M)^2
+        M < M2:        fM(M=M2) + a6*(M-M2) + a7*(M-M2)^2
+
+    M1 is period-dependent (6.75–7.25); M2 = 5.0 fixed.
     """
-
     M1 = C['M1']
-    M2 = 5.0 # Lower magnitude break, fixed at 5.0 (same as ASK14)
+    M2 = 5.0
     fM = np.zeros_like(mag, dtype=float)
     fM_M2 = C['a1'] + C['a4'] * (M2 - M1) + C['a8'] * (8.5 - M2) ** 2
 
     idx = mag >= M1
-    fM[idx] = C['a1'] + C['a5']*(mag[idx]-M1) + C['a8']*(8.5-mag[idx])**2
+    fM[idx] = (C['a1'] + C['a5'] * (mag[idx] - M1)
+               + C['a8'] * (8.5 - mag[idx]) ** 2)
 
     idx = (mag >= M2) & (mag < M1)
-    fM[idx] = C['a1'] + C['a4']*(mag[idx]-M1) + C['a8']*(8.5-mag[idx])**2
+    fM[idx] = (C['a1'] + C['a4'] * (mag[idx] - M1)
+               + C['a8'] * (8.5 - mag[idx]) ** 2)
 
     idx = mag < M2
-    fM[idx] = fM_M2 + C['a6']*(mag[idx]-M2) + C['a7']*(mag[idx]-M2)**2
+    fM[idx] = fM_M2 + C['a6'] * (mag[idx] - M2) + C['a7'] * (mag[idx] - M2) ** 2
 
     return fM
 
 
-
 def _get_fP(C, mag, rrup):
     """
-    Path scaling fP [Equation 4 in Bayless J. and P. Somerville (2024)].
+    Path scaling fP [Eq. 4, Bayless & Somerville (2024)]::
+
         fP = [a2 + a3*(M-M1)] * ln(R) + a17*Rrup
 
-    R = sqrt(Rrup^2 + c4M^2), where c4M is the additive distance term to represent the
-    near-source amplitude saturation effects of the finite-fault rupture dimension as 
-    described in Equation 4 in Abrahamson et al. (ASK14, 2014). 
+    R = sqrt(Rrup^2 + c4M^2), where c4M represents near-source amplitude
+    saturation from the finite-fault rupture dimension (ASK14 Eq. 4.4).
 
-    The ln(R) term models the magnitude-dependent geometric spreading;
-    
-    a17Rrup models anelastic attenuation and scattering effects.
+    The ln(R) term models magnitude-dependent geometric spreading;
+    a17*Rrup models anelastic attenuation and scattering.
 
     Notes:
-        - a17 differs between Cratonic (slower) and NonCratonic (faster) versions.
-        
-        - c4M tapers with magnitude (ASK14), Equation 4.4 in Abrahamson et al. (2014).
-            M >= 5.0 : c4M = c4
-            4 <= M < 5 : c4M = c4 - (c4 - 1.0) * (5.0 - M)   [ASK14, lower anchor = 1.0]
-            M < 4.0  : c4M = 1.0
 
-            Here however we set c4M lower anchor = 2.0 (intentional deviation from ASK14 which uses 1.0)
-            Jeff Bayless confirmed this was set based on scaling for very small
-            magnitudes at short distances (personal communication, May 2026).
+    - a17 differs between Cratonic (slower) and NonCratonic (faster).
+    - c4M tapers with magnitude::
 
-        - For M < M2=5.0, geometric spreading is frozen at M2 (ASK14, pg.1032)
-            M2 = 5.0  # Fixed lower magnitude break, ASK14 PEER Report 2013/04, p.23:
-               # "the breaks in the magnitude scaling in Equation (4.2) are
-               #  set at M1=6.75 and M2=5.0"
-            
+          M >= 5.0      : c4M = c4
+          4 <= M < 5    : c4M = c4 - (c4 - 2.0) * (5.0 - M)
+          M < 4.0       : c4M = 2.0
+
+      The lower anchor is 2.0, an intentional deviation from ASK14
+      (which uses 1.0); confirmed by Jeff Bayless (personal
+      communication, May 2026) based on scaling for very small
+      magnitudes at short distances.
+    - For M < M2 = 5.0, geometric spreading is frozen at M2 (ASK14).
     """
     c4 = C['c4']
     M1 = C['M1']
     M2 = 5.0
 
     c4m = np.where(mag >= 5.0, c4,
-                np.where(mag >= 4.0, c4 - (c4 - 2.0) * (5.0 - mag),
-                   2.0))
+                   np.where(mag >= 4.0, c4 - (c4 - 2.0) * (5.0 - mag),
+                            2.0))
 
-    R = np.sqrt(rrup**2 + c4m**2) # in km
+    R = np.sqrt(rrup**2 + c4m**2)
 
     mag_for_geom = np.where(mag < M2, M2, mag)
-    return (C['a2'] + C['a3'] * (mag_for_geom - M1)) * np.log(R) + C['a17'] * rrup
-
+    return ((C['a2'] + C['a3'] * (mag_for_geom - M1)) * np.log(R)
+            + C['a17'] * rrup)
 
 
 def _get_fZtor(C, ztor):
     """
-    Depth scaling fZtor [Originally from Equation 5 in Bayless and Somerville (2024)]:
+    Depth scaling fZtor [Eq. 5, Bayless & Somerville (2024)]::
+
         fZtor = d1*Z^3 + d2*Z^2 + d3*Z + d4
-    
-    However, instead of using Z = min(Ztor, 20 km), we now have Z = min(Ztor - 10, 5) after personal communication
-    with Jeff Bayless [BS24 Appendix Rev2, May 2026].
+        Z = min(Ztor - 10, 5)
 
-    -Ztor is the depth to the top of the rupture plane in km.
-    -d1 through d4 are period-dependent coefficients
+    The transformation Z = min(Ztor - 10, 5) replaces the original
+    Z = min(Ztor, 20 km) following personal communication with Jeff
+    Bayless [BS24 Appendix Rev2, May 2026].
 
-    -The model is centred at Ztor = 10 km (no scaling at reference depth).
-    -d4 is fixed to zero at all periods, so fZtor = 0 when Z = 0 (Ztor = 10 km).
-    -Z is capped at 5 km (equivalent to Ztor >= 15 km) based on log-likelihood analysis of the simulation data.
-    -For Ztor < 10 km, Z is negative, giving amplification at long periods and de-amplification at short periods (Rg wave effects).
+    - Ztor is the depth to the top of the rupture plane (km).
+    - d1 through d4 are period-dependent coefficients.
+    - The model is centred at Ztor = 10 km (no scaling at reference
+      depth). d4 is fixed to zero, so fZtor = 0 when Z = 0.
+    - Z is capped at 5 km (Ztor >= 15 km) based on log-likelihood
+      analysis of the simulation data.
+    - For Ztor < 10 km, Z is negative, giving amplification at long
+      periods and de-amplification at short periods (Rg wave effects).
     """
     Z = np.minimum(ztor - 10.0, 5.0)
     return C['d1'] * Z**3 + C['d2'] * Z**2 + C['d3'] * Z + C['d4']
@@ -155,187 +122,165 @@ def _get_fZtor(C, ztor):
 
 def _get_stddevs(C, mag):
     """
-    Aleatory variability  (Al Atik 2015, Table 5.1 / Eq. 5.6 & 5.14)
+    Aleatory variability (Al Atik 2015, Table 5.1 / Eq. 5.6 & 5.14)::
+
         sigma = sqrt(tau^2 + phi^2)
 
-    tau: between-event standard deviation
-    phi: within-event standard deviation  
+    tau: between-event standard deviation (Eq. 5.6, global model)
+    phi: within-event standard deviation  (Eq. 5.14)
     """
-    # tau equation from Eq. 5.6 in Al Atik 2015, global model
-    tau1, tau2, tau3, tau4 = 0.4518, 0.4270, 0.3863, 0.3508 # from Table 5.1 in Al Atik 2015
-    tau = np.where(mag > 6.5, tau4, 
-                np.where(mag > 5.5, tau3 + (tau4-tau3)*(mag-5.5)/1.0,
-                    np.where(mag > 5.0, tau2 + (tau3-tau2)*(mag-5.0)/0.5,
-                        np.where(mag > 4.5, tau1 + (tau2-tau1)*(mag-4.5)/0.5,
-                            tau1
-                        )
-                    )
-                )
-            )
-    # phi equation from Eq. 5.14 in Al Atik 2015
+    tau1, tau2 = 0.4518, 0.4270
+    tau3, tau4 = 0.3863, 0.3508
+    tau = np.where(
+        mag > 6.5, tau4,
+        np.where(mag > 5.5, tau3 + (tau4 - tau3) * (mag - 5.5) / 1.0,
+                 np.where(mag > 5.0, tau2 + (tau3 - tau2) * (mag - 5.0) / 0.5,
+                          np.where(mag > 4.5,
+                                   tau1 + (tau2 - tau1) * (mag - 4.5) / 0.5,
+                                   tau1))))
     PhiA, PhiB = C['PhiA'], C['PhiB']
-    phi = np.where(mag <= 5.0, PhiA, 
-                np.where(mag > 6.5, PhiB, 
-                    PhiA + (mag - 5.0) * (PhiB - PhiA) / 1.5
-                    )
-            )
+    phi = np.where(mag <= 5.0, PhiA,
+                   np.where(mag > 6.5, PhiB,
+                            PhiA + (mag - 5.0) * (PhiB - PhiA) / 1.5))
     return np.sqrt(tau**2 + phi**2), tau, phi
-
 
 
 def _get_fZ10(C, z1pt0, vs30, imt_period):
     """
-    fZ1.0: Basin depth scaling (Boore et al. 2014)
+    Basin depth scaling fZ1.0 [Boore et al. 2014, BSSA14].
 
-    Z1.0 is the depth to the 1.0 km/s shear-wave velocity horizon, basically 
-    how deep we have to go underground before the rock becomes 
-    "fast" (Vs = 1000 m/s). It is a proxy for basin depth. 
-    
-    A site sitting on top of a deep sedimentary basin has a 
-    large Z1.0 (say 0.5–2 km). A site on hard rock has a very small 
-    Z1.0 (maybe 0.001 km).
+    Z1.0 is the depth (km) to the 1.0 km/s shear-wave velocity
+    horizon — a proxy for basin depth. Deep sedimentary basins have
+    large Z1.0; hard-rock sites have very small Z1.0.
+
+    No basin term is applied for periods T < 0.65 s (BSSA14 Eq. 9).
+
+    The California reference Z1.0 (km) from BSSA14 Eq. 11::
+
+        z1_ref = exp(-7.15/4 * ln((Vs30^4 + 570.94^4)
+                                  / (1360^4 + 570.94^4))) / 1000
+
+    dz1 = z1 - z1_ref is the deviation of the site's actual basin
+    depth from the Vs30-implied reference. Positive dz1 indicates a
+    deeper-than-average basin (extra amplification); negative dz1
+    indicates a shallower basin (de-amplification). When z1pt0 < 0
+    (not measured), z1 = z1_ref so dz1 = 0 and the term vanishes.
+
+    b6 is the slope (amplification per km of extra basin depth) and
+    b7 is the maximum cap value. The final term is capped at b7.
     """
-    if imt_period < 0.65:   #  this means no basin term for short periods T < 0.65 sec, BSSA14 (Boore et al. 2014, Eq. 9)
-        return np.zeros_like(vs30) # equivalent to F_dz1=0.0 in the fortran code
+    if imt_period < 0.65:
+        # No basin term for short periods T < 0.65 s (BSSA14 Eq. 9)
+        return np.zeros_like(vs30)
 
-    # California model z1_ref (km) from BSSA14,  Boore et al., 2014 / Jeff's Fortran code, expected (reference) Z1.0 for a given Vs30
-    # Eq 11 in Boore et al., 2014
+    # Expected (reference) Z1.0 for a given Vs30 (BSSA14 Eq. 11)
     z1_ref = (np.exp(-7.15 / 4.0 *
-               np.log((vs30**4 + 570.94**4) / (1360.0**4 + 570.94**4)))
+                     np.log((vs30**4 + 570.94**4)
+                            / (1360.0**4 + 570.94**4)))
               / 1000.0)
 
-    z1 = np.where(z1pt0 < 0, z1_ref, z1pt0) #  until proper Z1.0 measurements are collected here, don't apply \
-                                            # a basin correction! \
-                                            # If z1pt0 is -999 (not measured), we use the Vs30-derived reference. \
-                                            # Otherwise we use the actual measured value.
+    # Use measured z1pt0 where available; fall back to z1_ref otherwise
+    z1 = np.where(z1pt0 < 0, z1_ref, z1pt0)
 
-    dz1 = z1 - z1_ref                   #[Eq. 10 Boore et al., 2014], This is the deviation of the site's actual basin depth
-                                        # from what you'd expect given its Vs30. 
-                                        # A positive dz1 means the basin is deeper than average for 
-                                        # that Vs30 -> extra amplification. A negative dz1 means shallower 
-                                        # than average -> de-amplification. When z1pt0 = -999, dz1 = 0 and the term vanishes.
+    dz1 = z1 - z1_ref  # BSSA14 Eq. 10
 
     b6, b7 = C['b6'], C['b7']
-    ratio = np.where(np.abs(b6) > 1e-9, b7 / b6, 1e9)   # b6 is the slope (how much amplification per km of 
-                                                        # extra basin depth) and b7 is the maximum cap. The 
-                                                        # ratio line just avoids dividing by zero in the
-                                                        # case b6 is zero
+    # Avoid division by zero when b6 is zero
+    ratio = np.where(np.abs(b6) > 1e-9, b7 / b6, 1e9)
 
     return np.where(dz1 <= ratio, b6 * dz1, b7)
 
 
-#  Taper 5: along-strike Ry0  [ASK14 Eq. 4.13, Ry0 version] where:
-    #ry0 = getattr(ctx, 'ry0', np.zeros_like(rx))
-    #ry1 = rx * np.tan(np.radians(20.0))
 def _get_fHW(C, ctx):
     """
-    Geometric hanging wall effects fHW (Donahue & Abrahamson 2014 with ASK14 implementation).
+    Hanging wall effects fHW
+    (Donahue & Abrahamson 2014 with ASK14 implementation).
 
-        The total hanging wall term is:
+    The total hanging wall term is::
+
         fHW = a13 * T1 * T2 * T3 * T4 * T5
 
-    It uses coefficient a13 stored in BS24 COEFFS, (Table D-8).
+    The functional form with five tapers is described in Abrahamson
+    et al. (2013) PEER Report 2013/04, Section 4.4, Eq. 4.11–4.15a.
+    Each taper T1–T5 ranges from 0 to 1 (T1 can exceed 1 for dip <
+    30°). Returns zero for footwall sites (rx <= 0) and vertical
+    faults (dip = 90).
 
-    Requires ctx: rx, ry0, rrup, rjb, ztor, dip, mag, width.
-    Returns zero for footwall sites (rx <= 0) and vertical faults (dip=90).
+    Requires ctx attributes: rx, ry0, rrup, rjb, ztor, dip, mag, width.
 
-    The functional form with five tapers is described in:
-        Abrahamson et al. (2013) PEER Report 2013/04, Section 4.4,
-        Equations 4.11 to 4.15a.
+    TAPER 1 — T1: Dip taper (ASK14 Eq. 4.11)::
 
-    T1-T5 are five distance/geometry tapers, each ranging 0 to 1
-    (or slightly above 1 for T1 when dip < 30°).
+        T1 = (90 - dip) / 45   for dip > 30°
+        T1 = 60 / 45           for dip <= 30°
 
-    -----------------------------------------------------------------------
-    TAPER 1 — T1: Dip taper
-    -----------------------------------------------------------------------
-    ASK14 PEER Report Eq. 4.11
-        T1 = (90 - dip) / 45      for dip > 30°
-        T1 = 60 / 45              for dip <= 30°
+    TAPER 2 — T2: Magnitude taper (ASK14 Eq. 4.12)::
 
-    -----------------------------------------------------------------------
-    TAPER 2 — T2: Magnitude taper
-    -----------------------------------------------------------------------
-    ASK14 PEER Report Eq. 4.12
-        T2 = 1 + a2HW * (M - 6.5)              for M >= 6.5
-        T2 = 1 + a2HW * (M - 6.5) - (1-a2HW)*(M-6.5)^2   for 5.5 < M < 6.5
-        T2 = 0                                  for M <= 5.5
+        T2 = 1 + a2*(M - 6.5)         for M >= 6.5
+        T2 = 1 + a2*(M-6.5)
+               - (1-a2)*(M-6.5)^2     for 5.5 < M < 6.5
+        T2 = 0                         for M <= 5.5
+        a2 = 0.2 (ASK14)
 
-    -----------------------------------------------------------------------
-    TAPER 3 — T3: Rx distance taper
-    -----------------------------------------------------------------------
-    ASK14 PEER Report Eq. 4.13
-        R1 = W * cos(dip)     [horizontal projection of fault width]
-        R2 = 3 * R1
+    TAPER 3 — T3: Rx distance taper (ASK14 Eq. 4.13)::
 
-        T3 = h1 + h2*(Rx/R1) + h3*(Rx/R1)^2     for Rx < R1
-        T3 = 1 - (Rx - R1) / (R2 - R1)          for R1 <= Rx <= R2
-        T3 = 0                                  for Rx > R2
-        T3 = 0                                  for Rx < 0  (footwall)
+        R1 = W * cos(dip),  R2 = 3*R1
+        T3 = h1 + h2*(Rx/R1) + h3*(Rx/R1)^2   for Rx < R1
+        T3 = 1 - (Rx - R1) / (R2 - R1)         for R1 <= Rx <= R2
+        T3 = 0                                   for Rx > R2
+        h1=0.25, h2=1.5, h3=-0.75 (gives T3=0.25 at Rx=0, T3=1 at
+        Rx=R1)
 
-    Note: the quadratic h1 + h2*(Rx/R1) + h3*(Rx/R1)^2 with the
-    specific h values of h1=0.25, h2=1.5, h3=-0.75
-    gives T3=0.25 at Rx=0, T3=1.0 at Rx=R1.
+    TAPER 4 — T4: Depth to top of rupture taper (ASK14 Eq. 4.14)::
 
-    -----------------------------------------------------------------------
-    TAPER 4 — T4: Depth to top of rupture (Ztor) taper
-    -----------------------------------------------------------------------
-    ASK14 PEER Report Eq. 4.14
-        T4 = 1 - (Ztor^2) / 100    for Ztor < 10 km
-        T4 = 0                      for Ztor >= 10 km
+        T4 = 1 - (Ztor^2) / 100   for Ztor < 10 km
+        T4 = 0                     for Ztor >= 10 km
 
-    -----------------------------------------------------------------------
-    TAPER 5 — T5: Along-strike (Ry0) taper
-    -----------------------------------------------------------------------
-    ASK14 PEER Report Eq. 4.15a
+    TAPER 5 — T5: Along-strike Ry0 taper (ASK14 Eq. 4.15a)::
+
+        Ry1 = Rx * tan(20°)
         T5 = 1                          for Ry0 < Ry1
-        T5 = 1 - (Ry0 - Ry1) / 5        for Ry0 - Ry1 <  5
+        T5 = 1 - (Ry0 - Ry1) / 5       for Ry0 - Ry1 < 5
         T5 = 0                          for Ry0 - Ry1 >= 5
-
+        Ry0 = 0 when not available
+        (sites along the rupture, no along-strike offset)
     """
-
     mag, rx, ztor, dip, width = ctx.mag, ctx.rx, ctx.ztor, ctx.dip, ctx.width
 
     # Taper 1: dip  [ASK14 Eq. 4.11]
     hw_t1 = np.where(dip <= 30.0, 60.0 / 45.0, (90.0 - dip) / 45.0)
 
     # Taper 2: magnitude  [ASK14 Eq. 4.12]
-    hw_a2 = 0.2 # also in ASK14, listed just before Eq15.b
+    hw_a2 = 0.2
     hw_t2 = np.where(
         mag >= 6.5,
         1.0 + hw_a2 * (mag - 6.5),
         np.where(
             mag > 5.5,
-            1.0 + hw_a2*(mag-6.5) - (1.0-hw_a2)*(mag-6.5)**2,
+            1.0 + hw_a2 * (mag - 6.5) - (1.0 - hw_a2) * (mag - 6.5) ** 2,
             0.0))
 
     # Taper 3: Rx distance  [ASK14 Eq. 4.13]
-    ## h1, h2, h3 values, and R1 and R2 are also in ASK14, listed just before Eq15.b
+    # h1, h2, h3, R1, R2 from ASK14 listed just before Eq. 4.15b
     h1 = 0.25
     h2 = 1.5
-    h3 = -0.75 
+    h3 = -0.75
     R1 = width * np.cos(np.radians(dip))  # horizontal fault width projection
     R2 = 3.0 * R1
-    ##
-    
     hw_t3 = np.where(
         rx > R2, 0.0,
         np.where(
             rx < R1,
-            h1 + h2*(rx/R1) + h3*(rx/R1)**2,
-            np.where((rx >= R1) & (rx <= R2), 
+            h1 + h2 * (rx / R1) + h3 * (rx / R1) ** 2,
+            np.where((rx >= R1) & (rx <= R2),
                      1.0 - (rx - R1) / (R2 - R1),
                      0.0)))
-            
 
     # Taper 4: Ztor depth  [ASK14 Eq. 4.14]
     hw_t4 = np.where(ztor < 10.0, 1.0 - ztor**2 / 100.0, 0.0)
 
-    # Taper 5: along-strike Ry0  [ASK14 Eq. 4.13, Ry0 version]
-    # Ry0 = 0 if not available (sites along the rupture, no along-strike offset)
+    # Taper 5: along-strike Ry0  [ASK14 Eq. 4.15a]
     ry0 = getattr(ctx, 'ry0', np.zeros_like(rx))
     ry1 = rx * np.tan(np.radians(20.0))
-    
     hw_t5 = np.where(
         ry0 < ry1, 1.0,
         np.where(ry0 - ry1 < 5.0,
@@ -345,71 +290,89 @@ def _get_fHW(C, ctx):
     return C['a13'] * hw_t1 * hw_t2 * hw_t3 * hw_t4 * hw_t5
 
 
-
 def _get_fS(C, vs30, pga_rock):
     """
-    fS: Vs30 site amplification from Seyhan and Stewart (2014) as used in Boore et al. (2014; BSSA14).
+    Vs30 site amplification fS from Seyhan & Stewart (2014) as used
+    in Boore et al. (2014; BSSA14).
 
-    -----------------------------------------------------------------------
-    TERM 1 — flin: Linear site amplification
-    Eq. 6  in Boore et al. (2014; BSSA14)
-    ----------------------------------------------------------------------- 
-        
-        flin = c_site * ln( min(Vs30, vc) / 760 ), [v_ref = 760; if Vs30 > vcT, use vcT instead of Vs30] 
+    TERM 1 — flin: Linear site amplification (BSSA14 Eq. 6)::
 
-    Coefficients (from Table D-8, BSSA14 columns):
-        c_site : slope of the linear amplification in log-velocity space.
-                 Negative values mean amplification increases as Vs30
-                 decreases below 760 m/s (softer sites amplify more).
-                 In Table D-8 this column is labelled 'c'.
-        vc     : velocity cap (m/s). For Vs30 above vc the linear term
-                 saturates — very hard rock does not keep amplifying
-                 beyond this threshold. Values range ~770–1503 m/s
-                 depending on period (Table D-8 column 'vc').
+        flin = c_site * ln(min(Vs30, vc) / 760)
 
-    Behaviour:
-        Vs30 = 760 m/s (reference): ln(760/760) = 0  -> flin = 0  
-        Vs30 < 760 m/s (soft site): ln < 0, c_site < 0 -> flin > 0 (amplification)
-        Vs30 > vc    (very hard rock): capped, no further change
+    c_site: slope of linear amplification in log-velocity space.
+    Negative values mean softer sites amplify more relative to the
+    760 m/s reference.
+    vc: velocity cap (m/s); amplification saturates above this value.
 
-    -----------------------------------------------------------------------
-    TERM 2 — fnl: Nonlinear site amplification
-    Eq.s 7 and 8  in Boore et al. (2014; BSSA14)
-    -----------------------------------------------------------------------
-    
+    TERM 2 — fnl: Nonlinear site amplification (BSSA14 Eq. 7–8)::
+
         fnl = b1 + b2 * log((pgar + b3) / b3)
-        b2 = b4T * (exp(b5T*(min(vs30,760)-360)) - exp(b5T*(760-360))) 
+        b2  = b4 * (exp(b5*(min(Vs30,760)-360))
+                    - exp(b5*(760-360)))
+        b1 = 0, b3 = 0.1 (hardcoded from Fortran)
 
     The nonlinear term captures soil softening: at high input shaking
-    levels (large pga_rock), soft soils amplify less than they would
-    linearly because they yield (strain softening). The term is zero
-    at the reference rock condition and grows with softer Vs30 and
-    stronger input motion.
-
+    (large pga_rock), soft soils amplify less than linearly because
+    they yield. The term is zero at the reference rock condition.
     """
-    #Reference Vs30 = 760 m/s. At reference: fS ~ 0.
-
-    # --- Term 1: Linear ---
+    # Term 1: Linear
     flin = C['c_site'] * np.log(np.minimum(vs30, C['vc']) / 760.0)
 
-    # --- Term 2: Nonlinear ---
-    # Fortran b1=0.0, b3=0.1 are hardcoded constants
-    # b2 is zero at Vs30=760 (reference) by construction of the formula.
-    b1 = 0.0   # from the fortran code
-    b3 = 0.1   # from the fortran code
+    # Term 2: Nonlinear
+    b1 = 0.0
+    b3 = 0.1
     b2 = C['b4'] * (np.exp(C['b5'] * (np.minimum(vs30, 760.0) - 360.0))
                     - np.exp(C['b5'] * (760.0 - 360.0)))
     fnl = b1 + b2 * np.log((pga_rock + b3) / b3)
 
     return flin + fnl
 
- 
-# ---------------------------------------------------------------------------
-# Base GSIM class
-# ---------------------------------------------------------------------------
-class BaylessSomerville2024Base(GMPE):
+
+class BaylessSomerville2024Cratonic(GMPE):
     """
-    Base class for BS24. Use Cratonic or NonCratonic subclasses directly.
+    Bayless and Somerville (2024) GMM for Cratonic Australia.
+
+    Reference: Bayless J. and P. Somerville (2024). An Updated Ground
+    Motion Model for Australia Developed Using Broadband Ground Motion
+    Simulations. Proc. AEES 2024 National Conference, Adelaide, SA.
+
+    Coefficients and Fortran code kindly provided by Jeff Bayless
+    (jeff.bayless@aecom.com). Full coefficient tables from Appendix D,
+    Bayless & Somerville (2024, updated May 2026), AECOM internal report.
+
+    Implementation by T. Costa de Lima, April 2026, Geoscience Australia
+    (thuany.costadelima@ga.gov.au).
+
+    Note: Coefficients updated May 2026 following personal communication
+    with Jeff Bayless: revised depth scaling Z = min(Ztor-10, 5), d4=0,
+    updated a1/d1/d2/d3 coefficients.
+
+    Applicable to Yilgarn, Gawler, Pilbara, Kimberley, and Northern
+    Australian Cratons (NSHA23 Precambrian classification).
+
+    Higher short-period ground motions and slower attenuation than the
+    NonCratonic version.
+
+    Model::
+
+        ln(RotD50) = fM + fP + fS + fZ1.0 + fZtor + fHW   [Eq. 2]
+
+    fM    = magnitude scaling               [Eq. 3, ASK14 polynomial]
+    fP    = distance scaling                [Eq. 4, geometric + Q]
+    fZtor = earthquake depth scaling        [Eq. 5, cubic in Ztor]
+    fS    = Vs30 site amplification         [adopted, BSSA14]
+    fZ1.0 = basin depth scaling             [adopted, BSSA14]
+    fHW   = hanging wall effects            [adopted, ASK14]
+
+    Aleatory variability (Eq. 6): Al Atik (2015) global model::
+
+        sigma = sqrt(tau^2 + phi^2)
+
+    Applicability: M 4.0–8.0, Rrup 0–300 km, T 0.01–10 s,
+    Vs30 150–1500 m/s. Output: ln(RotD50) in units of g.
+
+    The Cratonic and NonCratonic versions share all coefficients
+    except a1 (source level) and a17 (anelastic attenuation / Q).
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
@@ -419,27 +382,25 @@ class BaylessSomerville2024Base(GMPE):
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT,
     }
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor', 'dip', 'width'}
     REQUIRES_DISTANCES = {'rrup', 'rx', 'rjb'}
 
-    def __init__(self, hwflag=1, **kwargs):
-        """
-        hwflag : int, optional
-            1 (default) — compute hanging wall term (from Fortran version HWFlag=1)
-            0           — suppress hanging wall term (from Fortran version HWFlag=0).
-                          Use this for point sources where Rx is not defined.
-        """
-        super().__init__(**kwargs)
+    def __init__(self, hwflag=1):
         self.hwflag = hwflag
 
-
-    DEFINED_FOR_REFERENCE_VELOCITY = 760.
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        # Pass 1: rock PGA at Vs30=760 for nonlinear site term
-        #C_PGA = self.COEFFS[PGA()]
-        C_PGA = self.COEFFS[SA(0.01)]  # Fortran uses pgat=0.01, not T=0
+        """
+        Compute mean ground motion and standard deviations.
+
+        hwflag=1 (default): compute hanging wall term.
+        hwflag=0: suppress hanging wall term (use for point sources
+        where Rx is not defined).
+        """
+        # Pass 1: rock PGA at Vs30=760 for the nonlinear site term.
+        # Fortran uses T=0.01 s as the proxy for PGA.
+        C_PGA = self.COEFFS[SA(0.01)]
         pga_rock = np.exp(
             _get_fM(C_PGA, ctx.mag)
             + _get_fP(C_PGA, ctx.mag, ctx.rrup)
@@ -455,26 +416,11 @@ class BaylessSomerville2024Base(GMPE):
                 + _get_fZtor(C, ctx.ztor)
                 + _get_fS(C, ctx.vs30, pga_rock)
                 + _get_fZ10(C, ctx.z1pt0, ctx.vs30, imt_period)
-                #+ _get_fHW(C, ctx)
-                + (_get_fHW(C, ctx) if self.hwflag == 1 else np.zeros_like(ctx.mag))
+                + (_get_fHW(C, ctx) if self.hwflag == 1
+                   else np.zeros_like(ctx.mag))
             )
             sig[m], tau[m], phi[m] = _get_stddevs(C, ctx.mag)
 
-
-# ---------------------------------------------------------------------------
-# Cratonic subclass — full coefficient table
-# ---------------------------------------------------------------------------
-class BaylessSomerville2024Cratonic(BaylessSomerville2024Base):
-    """
-    Bayless and Somerville (2024) GMM — Cratonic Australia.
-
-    Applicable to Yilgarn, Gawler, Pilbara, Kimberley, and Northern
-    Australian Cratons (NSHA23 classification).
-
-    Higher short-period ground motions and slower attenuation than NonCratonic.
-
-    Coefficients from Table D-7 (a1_Crat, a17_Crat) and Table D-8.
-    """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT      a1        a17        M1      c4     a2       a3      a4       a5       a6      a7       a8        d1          d2          d3          d4        a13    c_site    vc      b4        b5       b6        b7      PhiA    PhiB
 pga         1.4840  -0.005124  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.1541  0.0000  -0.0017     1.680e-04   -3.109e-03    1.730e-02    0.0000  0.6000 -0.6037  1500  -0.1483  -0.0070  -9.9000  -9.9000  0.7131  0.5770
@@ -514,10 +460,10 @@ pga         1.4840  -0.005124  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.
 0.400       1.4467  -0.002933  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.4688  0.0000  -0.0475     1.712e-04   -3.047e-03    1.565e-02    0.0000  0.5800 -0.9109  1253  -0.1958  -0.0071  -9.9000  -9.9000  0.6680  0.5998
 0.450       1.3702  -0.002813  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.5162  0.0000  -0.0565     1.655e-04   -3.011e-03    1.547e-02    0.0000  0.5694 -0.9417  1227  -0.1848  -0.0073  -9.9000  -9.9000  0.6556  0.5943
 0.500       1.3013  -0.002713  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.5586  0.0000  -0.0650     1.550e-04   -2.964e-03    1.566e-02    0.0000  0.5600 -0.9693  1204  -0.1750  -0.0074  -9.9000  -9.9000  0.6446  0.5893
-0.550       1.2428  -0.002635  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.5876  0.0000  -0.0733     1.477e-04   -2.910e-03    1.553e-02    0.0000  0.5529 -0.9801  1191  -0.1665  -0.0076  -7.5512  -7.5590  0.6354  0.5854
-0.600       1.1898  -0.002567  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6141  0.0000  -0.0814     1.454e-04   -2.875e-03    1.478e-02    0.0000  0.5465 -0.9900  1179  -0.1587  -0.0077  -5.4070  -5.4218  0.6270  0.5819
-0.650       1.1442  -0.002524  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6385  0.0000  -0.0895     1.409e-04   -2.840e-03    1.415e-02    0.0000  0.5406 -0.9991  1167  -0.1515  -0.0079  -3.4345  -3.4558  0.6193  0.5786
-0.750       1.0448  -0.002523  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6821  0.0000  -0.1044     1.275e-04   -2.727e-03    1.319e-02    0.0000  0.5300 -1.0154  1148  -0.1387  -0.0081  0.0920   0.0590   0.6055  0.5728
+0.550       1.2293  -0.002629  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.5876  0.0000  -0.0733     1.477e-04   -2.910e-03    1.553e-02    0.0000  0.5529 -0.9801  1191  -0.1665  -0.0076  -7.5512  -7.5590  0.6354  0.5854
+0.600       1.1651  -0.002555  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6141  0.0000  -0.0814     1.454e-04   -2.875e-03    1.478e-02    0.0000  0.5465 -0.9900  1179  -0.1587  -0.0077  -5.4070  -5.4218  0.6270  0.5819
+0.650       1.1003  -0.002489  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6385  0.0000  -0.0895     1.409e-04   -2.840e-03    1.415e-02    0.0000  0.5406 -0.9991  1167  -0.1515  -0.0079  -3.4345  -3.4558  0.6193  0.5786
+0.750       0.9799  -0.002383  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.6821  0.0000  -0.1044     1.275e-04   -2.727e-03    1.319e-02    0.0000  0.5300 -1.0154  1148  -0.1387  -0.0081  0.0920   0.0590   0.6055  0.5728
 0.850       0.9275  -0.002584  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.7173  0.0000  -0.1180     1.026e-04   -2.513e-03    1.245e-02    0.0000  0.5169 -1.0305  1131  -0.1241  -0.0083  0.2116   0.1238   0.5943  0.5669
 1.000       0.6928  -0.002658  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.7630  0.0000  -0.1360     3.420e-05   -1.965e-03    1.227e-02    0.0000  0.5000 -1.0500  1110  -0.1052  -0.0084  0.3670   0.2080   0.5797  0.5593
 1.100       0.4995  -0.002630  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.7800  0.0000  -0.1465    -3.040e-05   -1.493e-03    1.338e-02    0.0000  0.4812 -1.0489  1101  -0.0950  -0.0083  0.4307   0.2317   0.5717  0.5545
@@ -544,19 +490,17 @@ pga         1.4840  -0.005124  6.75   4.5    -0.7627  0.22  -0.0209  -0.3309  2.
 """)
 
 
-# ---------------------------------------------------------------------------
-# NonCratonic subclass
-# ---------------------------------------------------------------------------
-class BaylessSomerville2024NonCratonic(BaylessSomerville2024Base):
+class BaylessSomerville2024NonCratonic(BaylessSomerville2024Cratonic):
     """
-    Bayless and Somerville (2024) GMM — Non-Cratonic Australia.
+    Bayless and Somerville (2024) GMM for Non-Cratonic Australia.
 
     Applicable to Eastern Australian Phanerozoic Accretionary Terranes,
-    extended and oceanic crust (NSHA23). 
+    extended and oceanic crust (NSHA23 Phanerozoic classification).
 
-    Lower short-period ground motions and more rapid attenuation than Cratonic version.
-
-    Differs from Cratonic only in a1 and a17 (Table D-7 NonCratonic columns).
+    Lower short-period ground motions and more rapid attenuation than
+    the Cratonic version. Differs from
+    :class:`BaylessSomerville2024Cratonic` only in coefficients a1
+    (source level) and a17 (anelastic attenuation / crustal Q).
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT      a1        a17        M1      c4     a2       a3      a4       a5       a6      a7       a8        d1          d2          d3          d4        a13    c_site    vc      b4        b5       b6        b7      PhiA    PhiB
