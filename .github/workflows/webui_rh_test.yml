@@ -81,6 +81,19 @@ jobs:
             echo "Git branch '$BRANCH' does not exist in the remote repository"
             TOOLS_BRANCH=master
          fi
+
+         set +e
+         git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
+         EXIT_CODE=$?
+         # set again to fail on exit code not 0
+         set -e
+         if [[ $EXIT_CODE == '0' ]]; then
+            echo "Git branch '$BRANCH' exists in the remote repository"
+            TOOLS_BRANCH=$BRANCH
+         elif [[ $EXIT_CODE == '2' ]]; then
+            echo "Git branch '$BRANCH' does not exist in the remote repository"
+            TOOLS_BRANCH=main
+         fi
          echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
          git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
          eval '$mypython -m pip install -e ./${app}'
