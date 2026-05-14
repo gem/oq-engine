@@ -67,37 +67,31 @@ jobs:
         ## Standalone apps
         echo "Downloading standalone apps"
         for app in oq-platform-standalone django-gem-taxonomy oq-platform-ipt oq-platform-taxonomy; do
-         # do not fail on exit code 2 if the branch
-         # does not exist in the app repository
-         set +e
-         git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
-         EXIT_CODE=$?
-         # set again to fail on exit code not 0
-         set -e
-         if [[ $EXIT_CODE == '0' ]]; then
-            echo "Git branch '$BRANCH' exists in the remote repository"
-            TOOLS_BRANCH=$BRANCH
-         elif [[ $EXIT_CODE == '2' ]]; then
-            echo "Git branch '$BRANCH' does not exist in the remote repository"
-            TOOLS_BRANCH=master
-         fi
-
-         set +e
-         git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
-         EXIT_CODE=$?
-         # set again to fail on exit code not 0
-         set -e
-         if [[ $EXIT_CODE == '0' ]]; then
-            echo "Git branch '$BRANCH' exists in the remote repository"
-            TOOLS_BRANCH=$BRANCH
-         elif [[ $EXIT_CODE == '2' ]]; then
-            echo "Git branch '$BRANCH' does not exist in the remote repository"
-            TOOLS_BRANCH=main
-         fi
-         echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
-         git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-         eval '$mypython -m pip install -e ./${app}'
+            for branch in "$BRANCH" "master" "main"; do
+                TOOLS_BRANCH="$branch"
+                # do not fail on exit code 2 if the branch
+                # does not exist in the app repository
+                set +e
+                git ls-remote --exit-code --heads https://github.com/gem/${app}.git $TOOLS_BRANCH >/dev/null 2>&1
+                EXIT_CODE=$?
+                # set again to fail on exit code not 0
+                set -e
+                if [[ $EXIT_CODE -eq 0 ]]; then
+                    echo "Git branch '$BRANCH' exists in the remote repository"
+                    break
+                fi
+            done
+            if [[ $EXIT_CODE -ne 0 ]]; then
+                break
+            fi
+            echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
+            git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
+            eval '$mypython -m pip install -e ./${app}'
         done
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo "No '$branch', nor 'master' or 'main' branch found for '$app' django app; failed"
+            exit 1
+        fi
         deactivate
     - name: Actualize 'default' templates for email notifications
       run: |
