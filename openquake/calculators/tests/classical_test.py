@@ -462,7 +462,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_30.__file__)
 
     def test_case_31(self):
-        # Area and point sources with fixedDipFrac in hypoDepthDist
+        # Distributed sources with fixedDipFrac in hypoDepthDist
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_31.__file__)
 
     def test_case_32(self):
