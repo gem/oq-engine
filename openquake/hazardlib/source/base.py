@@ -123,10 +123,10 @@ def poisson_sample(src, eff_num_ses, seed):
             [ps] = src
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
+            hdfs = ps.hypo_dip_fracs
             for np_prob, np in ps.nodal_plane_distribution.data:
                 for d, (hc_prob, hc_depth) in enumerate(
                         ps.hypocenter_distribution.data):
-                    hdfs = ps.hypo_dip_fracs
                     dip_frac = (0.5 if hdfs is None or hdfs[d] is None
                                 else hdfs[d])
                     args = (mag_occ_rate, np_prob, hc_prob,
