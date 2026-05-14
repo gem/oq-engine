@@ -326,7 +326,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
         self.region = getattr(self, 'region', None)
 
         # PHP zone masks are only needed for the NIED NSHM subclasses
-        if self.nshm25_nied and trt == CONST.S:
+        if self.nshm25_nied and trt == const.TRT.SUBDUCTION_INTRASLAB:
             hypo_mesh = Mesh(ctx.hypo_lon, ctx.hypo_lat)
             php_nshm = {key: pgn.intersects(hypo_mesh)
                         for key, pgn in PHP_PGNS.items()}
