@@ -129,19 +129,19 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
         center_shift = (1. - 2. * dip_fracs[d]) * half_height
         top = cdep + center_shift - half_height
         bot = cdep + center_shift + half_height
-        layer_shift = usd - top
-        # If it is shallower (layer_shift > 0) than we need to move the
+        vshift = usd - top
+        # if it is shallower (vshift > 0) than we need to move the
         # rupture by that value vertically
-        if layer_shift < 0:
-            # The top edge is below the upper seismogenic depth: we need
+        if vshift < 0:
+            # the top edge is below the upper seismogenic depth: we need
             # to check that we do not cross the lower border
-            layer_shift = lsd - bot
-            if layer_shift > 0:
-                # The bottom edge of the rupture is above the lower depth;
+            vshift = lsd - bot
+            if vshift > 0:
+                # the bottom edge of the rupture is above the lower depth;
                 # that means that we don't need to move the rupture
                 # as it fits inside seismogenic layer.
-                layer_shift = 0.
-        vshifts[d] = center_shift + layer_shift
+                vshift = 0.
+        vshifts[d] = center_shift + vshift
     if (vshifts == 0).any():
         lonlat = numpy.empty((4, 2))
         lonlat[0] = geodetic.fast_point_at(
