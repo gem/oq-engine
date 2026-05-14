@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
   * Extended the rupture exporter to also work with multi-model SES files
   * Keeping the correlation matrices at 32 bit to save memory and to double
     the speed
@@ -6,7 +7,9 @@
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
-    site parameter for consistency with NIED's own implementation.
+    site parameter for consistency with NIED's own implementation and
+    to apply the SW `PH` correction to all inslab events rather than
+    just those with depths less than 80 km.
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
