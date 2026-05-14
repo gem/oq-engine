@@ -304,6 +304,7 @@ def filter_stations(station_df, complete, rup, maxdist):
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    allrups = allrups[in_mosaic(allrups)]
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
         rup_id = I64(rup_id.split(','))
