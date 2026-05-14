@@ -7,7 +7,9 @@
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
-    site parameter for consistency with NIED's own implementation.
+    site parameter for consistency with NIED's own implementation and
+    to apply the SW `PH` correction to all inslab events rather than
+    just those with depths less than 80 km.
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
