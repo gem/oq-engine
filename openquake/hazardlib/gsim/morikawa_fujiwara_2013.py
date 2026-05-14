@@ -445,9 +445,6 @@ class MorikawaFujiwara2013CrustalNIED(MorikawaFujiwara2013Crustal):
 
     The distance type used is rrup.
     """
-    # Required rupture parameters are magnitude and hypocentral position pars
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth', 'hypo_lon', 'hypo_lat'}
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # Compute the underlying mean
         super().compute(ctx, imts, mean, sig, tau, phi)
