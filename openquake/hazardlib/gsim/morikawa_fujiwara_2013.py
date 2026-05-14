@@ -215,7 +215,7 @@ def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
         xvf_filt = np.minimum(xvf, 75.0)
         corr = gamma * xvf_filt * np.maximum(ctx.hypo_depth - 30., 0.)
         # Only apply for events >= 60 km
-        mask = ctx.hypo_depth < 60
+        mask = ctx.hypo_depth < 60 # NB events shallow are EXCLUDED in the mask
         if php_nshm:
             # In NIED subclasses also restrict to sites west of 136.9 deg east
             mask = mask | (ctx.lon >= 136.9)
@@ -225,7 +225,7 @@ def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
                 mask = mask | ~(php_nshm['zone_04'] | php_nshm['zone_05'])
 
         # Apply corr only for events with depth greater than or equal to
-        # 60 km AND if the NIED NSHM version also only those events within
+        # 60 km AND if the NIED NSHM version also only those slab events in
         # zones 4 or 5 AND only at sites west of 136.9 deg east 
         corr[mask] = 0.
 
@@ -258,16 +258,21 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z,
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     
-    # PH correction term for inslab events
-    apply_ph = hypo_z < 80
+    if region != "SW":
+        # Cannot be a PHP earthquake so end here
+        return tmp
+    
+    # Must be SW (i.e., PHP) so apply additional PHP corr
+    apply_ph = hypo_z < 80 # Only apply to shallower events
     if php_nshm:
-        # Additional filter to exclude the PH adjustment for
-        # slab events if they are in zones 3, 4 or 5
+        # Additional filter to only apply the PH adjustment for
+        # slab events if they are OUTSIDE zones 3, 4 or 5
         in_php = (php_nshm['zone_03'] | php_nshm['zone_04']
                     | php_nshm['zone_05'])
-        apply_ph = apply_ph & ~in_php
+        apply_ph = apply_ph & ~in_php # Negative mask on in_php
 
     tmp[apply_ph] += C['PH']
+
     return tmp
 
 
@@ -321,10 +326,10 @@ class MorikawaFujiwara2013Crustal(GMPE):
         self.region = getattr(self, 'region', None)
 
         # PHP zone masks are only needed for the NIED NSHM subclasses
-        if self.nshm25_nied:
+        if self.nshm25_nied and trt == CONST.S:
             hypo_mesh = Mesh(ctx.hypo_lon, ctx.hypo_lat)
             php_nshm = {key: pgn.intersects(hypo_mesh)
-                         for key, pgn in PHP_PGNS.items()}
+                        for key, pgn in PHP_PGNS.items()}
         else:
             php_nshm = {}
 
