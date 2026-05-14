@@ -669,6 +669,8 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             fdfs = [hd.attrib.get('fixedDipFrac') for hd in node.hypoDepthDist]
             if not any(f is not None for f in fdfs):
+                # No entries have a fixed frac so return None and uniformly
+                # use the OQ default of 0.5 (centroid)
                 return None
             fracs = []
             for fdf in fdfs:

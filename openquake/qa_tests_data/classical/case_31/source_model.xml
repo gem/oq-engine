@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Area and point sources with fixedDipFrac in the hypoDepthDist">
+
+        <areaSource id="1" name="Area Source"
+                    tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                0.0 -0.8  1.0 -0.8  1.0 0.3  0.0 0.3
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="0.9"
+                                      minMag="5.5" maxMag="7.0"/>
+            <nodalPlaneDist>
+                <nodalPlane strike="0.0" dip="60.0" rake="90.0" probability="1.0"/>
+            </nodalPlaneDist>
+            <!-- fixedDipFrac varies per depth: centroid, 2/3, and 3/4 down-dip -->
+            <hypoDepthDist>
+                <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.5"/>
+                <hypoDepth depth="10.0" probability="0.50" fixedDipFrac="0.6667"/>
+                <hypoDepth depth="15.0" probability="0.25" fixedDipFrac="0.75"/>
+            </hypoDepthDist>
+        </areaSource>
+
+        <pointSource id="2" name="Point Source"
+                     tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>0.5 0.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="0.9"
+                                      minMag="5.5" maxMag="7.0"/>
+            <nodalPlaneDist>
+                <nodalPlane strike="0.0" dip="60.0" rake="90.0" probability="1.0"/>
+            </nodalPlaneDist>
+            <!-- fixedDipFrac varies per depth: centroid, 2/3, and 3/4 down-dip -->
+            <hypoDepthDist>
+                <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.5"/>
+                <hypoDepth depth="10.0" probability="0.50" fixedDipFrac="0.6667"/>
+                <hypoDepth depth="15.0" probability="0.25" fixedDipFrac="0.75"/>
+            </hypoDepthDist>
+        </pointSource>
+
+    </sourceModel>
+</nrml>
