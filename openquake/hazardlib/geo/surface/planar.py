@@ -125,7 +125,8 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
         # calculate how much shallower the upper border of the rupture
         # is than the upper seismogenic depth:
         # dip_fracs[d] controls where the hypocentre sits on the rupture
-        # (0=top, 1=bottom); 0.5 is the OQ default centroid placement
+        # (0=top, 1=bottom); 0.5 is the OQ default centroid placement (i.e.,
+        # centering rupture on the hypocentre)
         center_shift = (1. - 2. * dip_fracs[d]) * half_height
         top = cdep + center_shift - half_height
         bot = cdep + center_shift + half_height
