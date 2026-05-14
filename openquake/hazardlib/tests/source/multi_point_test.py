@@ -84,3 +84,17 @@ multiPointSource{id='mp1', name='multi point source'}
         numpy.testing.assert_almost_equal(
             (-0.8994569916564479, -0.39932, 1.8994569916564479, 1.89932),
             bbox)
+
+    def test_hypo_dip_fracs_passed_to_point_sources(self):
+        # hypo_dip_fracs propagates to every PointSource from __iter__
+        fracs = (0.5, 2 / 3)
+        hd = PMF([(0.5, 5), (0.5, 14)])
+        npd = PMF([(1, NodalPlane(0, 60, 90))])
+        mesh = Mesh(numpy.array([0., 1.]), numpy.array([0., 0.]))
+        mmfd = MultiMFD('incrementalMFD', size=2, min_mag=[4.5],
+                        bin_width=[1.0], occurRates=[[0.1], [0.2]])
+        mps = MultiPointSource('mp2', 'test', 'Active Shallow Crust',
+                               mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh,
+                               hypo_dip_fracs=fracs)
+        for ps in mps:
+            self.assertEqual(ps.hypo_dip_fracs, fracs)
