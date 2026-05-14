@@ -220,7 +220,7 @@ def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
             # In NIED subclasses also restrict to sites west of 136.9 deg east
             mask = mask | (ctx.lon >= 136.9)
             # In the NIED case we also only apply SW correction if an
-            # inslab event is inside zone 4 or zone 5 of the PHP slab
+            # inslab event is INSIDE zone 4 or zone 5 of the PHP slab
             if trt == const.TRT.SUBDUCTION_INTRASLAB:
                 mask = mask | ~(php_nshm['zone_04'] | php_nshm['zone_05'])
 
@@ -265,11 +265,10 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z,
     # Must be SW (i.e., PHP) so apply additional PHP corr
     apply_ph = hypo_z < 80 # Only apply to shallower events
     if php_nshm:
-        # Additional filter to only apply the PH adjustment for
-        # slab events if they are OUTSIDE zones 3, 4 or 5
+        # Suppress PH adjustment for events inside PHP zones 3, 4 or 5
         in_php = (php_nshm['zone_03'] | php_nshm['zone_04']
-                    | php_nshm['zone_05'])
-        apply_ph = apply_ph & ~in_php # Negative mask on in_php
+                  | php_nshm['zone_05'])
+        apply_ph = apply_ph & ~in_php
 
     tmp[apply_ph] += C['PH']
 
