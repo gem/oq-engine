@@ -704,7 +704,9 @@ class SourceConverter(RuptureConverter):
                 'ini file has no `area_source_discretization` parameter either'
                 % node['id'])
         hdd = self.convert_hddist(node)
-        hdd.hypo_dip_fracs = self.convert_hypo_dip_fracs(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
@@ -732,7 +734,9 @@ class SourceConverter(RuptureConverter):
         lon_lat = ~geom.Point.pos
         msr = ~node.magScaleRel
         hdd = self.convert_hddist(node)
-        hdd.hypo_dip_fracs = self.convert_hypo_dip_fracs(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
@@ -759,7 +763,9 @@ class SourceConverter(RuptureConverter):
         lons, lats = zip(*split_coords_2d(~geom.posList))
         msr = ~node.magScaleRel
         hdd = self.convert_hddist(node)
-        hdd.hypo_dip_fracs = self.convert_hypo_dip_fracs(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.MultiPointSource(
             source_id=node['id'],
             name=node['name'],
