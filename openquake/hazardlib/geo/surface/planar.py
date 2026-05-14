@@ -216,9 +216,9 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False,
     :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
     :param dip_fracs:
-        Optional 1-D float64 array of length D giving the down-dip fraction
-        at which the hypocentre sits on the rupture for each depth entry in
-        hdd (0=top, 1=bottom). Defaults to 0.5 (rupture centred on hypocentre).
+        Optional array of down-dip fractions at which a hypocentre sits on the
+        rupture for each depth entry in hdd (0=top, 1=bottom). Defaults to 0.5
+        which means the rupture is centred on hypocentre (default OQ behaviour)
     :return:
         an array of shape (M, N, D, 3)
     """
