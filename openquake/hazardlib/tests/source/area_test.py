@@ -102,3 +102,25 @@ class ModifySimpleFaultTestCase(unittest.TestCase):
         self.assertTrue(polygon_new, src.polygon)
 
 
+class AreaSourceDipFracsTestCase(unittest.TestCase):
+
+    def test_hypo_dip_fracs_passed_to_point_sources(self):
+        # hypo_dip_fracs is propagated to every PointSource yeilded by __iter__
+        fracs = (0.5, 2/3)
+        polygon = Polygon([Point(0, 0), Point(0, 1), Point(1, 1), Point(1, 0)])
+        src = make_area_source(
+            polygon, 200.0,
+            hypocenter_distribution=PMF([(0.5, 5), (0.5, 10)]),
+            hypo_dip_fracs=fracs)
+        for ps in src:
+            self.assertEqual(ps.hypo_dip_fracs, fracs)
+
+    def test_none_fracs_passed_through(self):
+        polygon = Polygon([Point(0, 0), Point(0, 1), Point(1, 1), Point(1, 0)])
+        src = make_area_source(polygon, 200.0)
+        for ps in src:
+            # Check the hypo_dip_frac is defaulting correctly to
+            # None if not specified
+            self.assertIsNone(ps.hypo_dip_fracs)
+
+
