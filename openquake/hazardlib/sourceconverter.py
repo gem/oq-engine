@@ -768,7 +768,8 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hddist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
-            temporal_occurrence_model=self.get_tom(node))
+            temporal_occurrence_model=self.get_tom(node),
+            hypo_dip_fracs=self.convert_hypo_dip_fracs(node))
 
     def convert_simpleFaultSource(self, node):
         """

@@ -24,7 +24,7 @@
 |case\_28|Test hypoDepthDist (and down-dip fractions for hypo placement) with a simple fault source|
 |case\_29|Non-parametric source with one rupture represente by 2 kite surfaces|
 |case\_30|Tests 2025 NSHM variants of the MorikawaFujiwara2013 GMM|
-|case\_31|Test specification of down-dip fractions in hypoDepthDist within area and a point sources|
+|case\_31|Test specification of down-dip hypo location fractions in a hypoDepthDist with area, point and mult-point sources|
 |case\_32|Source Specific Logic Tree|
 |case\_33|Directivity|
 |case\_34|AvgSA|

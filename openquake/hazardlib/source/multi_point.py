@@ -43,7 +43,8 @@ class MultiPointSource(ParametricSeismicSource):
     MultiPointSource class, used to describe point sources with different
     MFDs and the same rupture_mesh_spacing, magnitude_scaling_relationship,
     rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
-    lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
+    lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution,
+    hypo_dip_fracs
     """
     code = b'M'
     MODIFICATIONS = {
@@ -61,7 +62,7 @@ class MultiPointSource(ParametricSeismicSource):
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
-                 mesh, temporal_occurrence_model=None):
+                 mesh, temporal_occurrence_model=None, hypo_dip_fracs=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
         rupture_mesh_spacing = None
         super().__init__(
@@ -74,6 +75,7 @@ class MultiPointSource(ParametricSeismicSource):
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
+        self.hypo_dip_fracs = hypo_dip_fracs
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -88,7 +90,8 @@ class MultiPointSource(ParametricSeismicSource):
                 self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
-                self.hypocenter_distribution)
+                self.hypocenter_distribution,
+                hypo_dip_fracs=self.hypo_dip_fracs)
             ps.scaling_rate = getattr(self, 'scaling_rate', 1)
             yield ps
 
@@ -180,6 +183,10 @@ class MultiPointSource(ParametricSeismicSource):
                'upper_seismogenic_depth': self.upper_seismogenic_depth,
                'lower_seismogenic_depth': self.lower_seismogenic_depth,
                self.mfd.kind: mfd}
+        if self.hypo_dip_fracs is not None:
+            dic['hypo_dip_fracs'] = numpy.array(
+                [numpy.nan if f is None else f for f in self.hypo_dip_fracs],
+                F32)
         attrs = {'source_id': self.source_id,
                  'name': self.name,
                  'magnitude_scaling_relationship':
@@ -199,6 +206,12 @@ class MultiPointSource(ParametricSeismicSource):
         self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio')[()]
         self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth')[()]
         self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth')[()]
+        if 'hypo_dip_fracs' in dic:
+            hdfs = dic.pop('hypo_dip_fracs')[:]
+            self.hypo_dip_fracs = tuple(
+                None if numpy.isnan(f) else float(f) for f in hdfs)
+        else:
+            self.hypo_dip_fracs = None
         [(mfd_kind, mfd)] = dic.items()
         self.nodal_plane_distribution = PMF([
             (prob, NodalPlane(strike, dip, rake))

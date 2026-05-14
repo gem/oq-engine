@@ -57,5 +57,31 @@
             </hypoDepthDist>
         </pointSource>
 
+        <multiPointSource id="3" name="Multi-Point Source"
+                          tectonicRegion="Active Shallow Crust">
+            <multiPointGeometry>
+                <gml:posList>0.2 -0.3  0.8 -0.3</gml:posList>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </multiPointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <multiMFD kind="truncGutenbergRichterMFD" size="2">
+                <a_val>3.0 3.0</a_val>
+                <b_val>0.9</b_val>
+                <min_mag>5.5</min_mag>
+                <max_mag>7.0</max_mag>
+            </multiMFD>
+            <nodalPlaneDist>
+                <nodalPlane strike="0.0" dip="60.0" rake="90.0" probability="1.0"/>
+            </nodalPlaneDist>
+            <!-- fixedDipFrac varies per depth: centroid, 2/3, and 3/4 down-dip -->
+            <hypoDepthDist>
+                <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.5"/>
+                <hypoDepth depth="10.0" probability="0.50" fixedDipFrac="0.6667"/>
+                <hypoDepth depth="15.0" probability="0.25" fixedDipFrac="0.75"/>
+            </hypoDepthDist>
+        </multiPointSource>
+
     </sourceModel>
 </nrml>
