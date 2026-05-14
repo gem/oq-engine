@@ -1,3 +1,9 @@
+  [Thuany Costa de Lima]
+  * Added Bayless and Somerville (2024) ground motion model for
+    Australia (BS24): BaylessSomerville2024Cratonic and
+    BaylessSomerville2024NonCratonic classes in
+    openquake/hazardlib/gsim/bayless_somerville_2024.py
+    
   [Christopher Brooks]
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
