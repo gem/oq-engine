@@ -54,7 +54,4 @@ def get_portable_gsims():
         if 'ctx' not in cls.compute.__annotations__:
             portable[cls.__name__] = cls
     return portable
-from openquake.hazardlib.gsim.bayless_somerville_2024 import (
-    BaylessSomerville2024Cratonic,
-    BaylessSomerville2024NonCratonic,
-)
+
