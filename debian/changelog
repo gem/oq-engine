@@ -1,4 +1,7 @@
   [Christopher Brooks]
+  * Add ability to specify a down-dip fraction for hypocentre placement
+    on the rupture surface within a `hypoDepthDist` for area, point and
+    multi-point sources with a QA test in classical/case_31.
   * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
 
   [Michele Simionato]
