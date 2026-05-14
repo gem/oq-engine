@@ -33,6 +33,7 @@ class AreaSource(ParametricSeismicSource):
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.
         See :meth:`openquake.hazardlib.source.area.AreaSource.iter_ruptures`.
+
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """

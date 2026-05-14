@@ -115,12 +115,9 @@ class PointSource(ParametricSeismicSource):
         :class:`~openquake.hazardlib.pmf.PMF` with values being float
         numbers in km representing the depth of the hypocenter. Latitude
         and longitude of the hypocenter is always set to ones of ``location``.
-    :param hypo_dip_fracs:
-        Optional tuple which is parallel to hypocenter_distribution.data.
-        It contains the down-dip fraction at which the hypocentre is placed
-        for each hypocentre depth. In the case of being None the default OQ
-        behaviour of every hypocentre being placed at the rupture centroid
-        (fraction 0.5) is observed.
+        An optional hypo_dip_fracs attribute on the PMF (tuple, one entry per
+        depth) sets the down-dip fraction for hypocentre placement; absent or
+        None entries default to 0.5 (rupture centroid).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.

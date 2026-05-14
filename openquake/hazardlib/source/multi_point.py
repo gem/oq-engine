@@ -43,8 +43,9 @@ class MultiPointSource(ParametricSeismicSource):
     MultiPointSource class, used to describe point sources with different
     MFDs and the same rupture_mesh_spacing, magnitude_scaling_relationship,
     rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
-    lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution,
-    hypo_dip_fracs
+    lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution.
+    An optional hypo_dip_fracs attribute on the hypocenter_distribution PMF
+    propagates to each yielded PointSource.
     """
     code = b'M'
     MODIFICATIONS = {
