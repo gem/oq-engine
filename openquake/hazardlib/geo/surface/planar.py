@@ -104,9 +104,9 @@ def get_rupdims(usd, lsd, rar, area, dip):
 # and the line passing through the rupture center and parallel to the
 # top and bottom edges. Theta is zero for vertical ruptures (because
 # rup_proj_width is zero)
-@compile("(f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8[:])")
+@compile("(f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8[:], f8[:])")
 def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
-                   clon, clat, cdeps):
+                   clon, clat, cdeps, dip_fracs):
     half_length, half_width, half_height = get_rupdims(
         usd, lsd, rar, area, dip) / 2.
     # precalculate azimuth values for horizontal and vertica moves
@@ -124,19 +124,24 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
         # center and it's upper and lower borders:
         # calculate how much shallower the upper border of the rupture
         # is than the upper seismogenic depth:
-        vshift = usd - cdep + half_height
-        # if it is shallower (vshift > 0) than we need to move the rupture
-        # by that value vertically.
-        if vshift < 0:
-            # the top edge is below the upper seismogenic depth: we need
+        # dip_fracs[d] controls where the hypocentre sits on the rupture
+        # (0=top, 1=bottom); 0.5 is the OQ default centroid placement
+        center_shift = (1. - 2. * dip_fracs[d]) * half_height
+        top = cdep + center_shift - half_height
+        bot = cdep + center_shift + half_height
+        layer_shift = usd - top
+        # If it is shallower (layer_shift > 0) than we need to move the
+        # rupture by that value vertically
+        if layer_shift < 0:
+            # The top edge is below the upper seismogenic depth: we need
             # to check that we do not cross the lower border
-            vshift = lsd - cdep - half_height
-            if vshift > 0:
-                # the bottom edge of the rupture is above the lower depth;
+            layer_shift = lsd - bot
+            if layer_shift > 0:
+                # The bottom edge of the rupture is above the lower depth;
                 # that means that we don't need to move the rupture
                 # as it fits inside seismogenic layer.
-                vshift = 0
-        vshifts[d] = vshift
+                layer_shift = 0.
+        vshifts[d] = center_shift + layer_shift
     if (vshifts == 0).any():
         lonlat = numpy.empty((4, 2))
         lonlat[0] = geodetic.fast_point_at(
@@ -184,9 +189,9 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
 
 
 @compile("(f8, f8, f8, f8[:, :], f8[:, :], f8[:, :], "
-         "f8[:, :], f8[:, :], f8[:, :], f8, f8)")
+         "f8[:, :], f8[:, :], f8[:, :], f8, f8, f8[:])")
 def build_corners(usd, lsd, rar, area, mag, strike,
-                  dip, rake, hdd, lon, lat):
+                  dip, rake, hdd, lon, lat, dip_fracs):
     M, N = mag.shape
     corners = numpy.zeros((6, M, N, len(hdd), 3))
     # 0,1,2,3: tl, tr, bl, br
@@ -196,12 +201,13 @@ def build_corners(usd, lsd, rar, area, mag, strike,
         for n in range(N):
             corners[:, m, n] = _build_corners(
                 usd, lsd, rar, area[m, n], mag[m, n], strike[m, n],
-                dip[m, n], rake[m, n], lon, lat, hdd[:, 1])
+                dip[m, n], rake[m, n], lon, lat, hdd[:, 1], dip_fracs)
     return corners
 
 
 # not numbified but fast anyway
-def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
+def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False,
+                 dip_fracs=None):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N)
@@ -209,9 +215,15 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
         Hypocenter depths
     :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
+    :param dip_fracs:
+        Optional 1-D float64 array of length D giving the down-dip fraction
+        at which the hypocentre sits on the rupture for each depth entry in
+        hdd (0=top, 1=bottom). Defaults to 0.5 (rupture centred on hypocentre).
     :return:
         an array of shape (M, N, D, 3)
     """
+    if dip_fracs is None:
+        dip_fracs = numpy.full(len(hdd), 0.5)
     if isinstance(rar, numpy.ndarray):
         # Compute aratio per mag
         M, N = planin.mag.shape
@@ -221,12 +233,12 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
                 corners[:, m, n] = _build_corners(
                     usd, lsd, rar[m, n], planin.area[m, n], planin.mag[m, n],
                     planin.strike[m, n], planin.dip[m, n], planin.rake[m, n],
-                    lon, lat, hdd[:, 1])
+                    lon, lat, hdd[:, 1], dip_fracs)
     else:
         # Regular scalar aratio
         corners = build_corners(
             usd, lsd, rar, planin.area, planin.mag,
-            planin.strike, planin.dip, planin.rake, hdd, lon, lat)
+            planin.strike, planin.dip, planin.rake, hdd, lon, lat, dip_fracs)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
