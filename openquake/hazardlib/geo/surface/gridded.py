@@ -185,6 +185,10 @@ class GriddedSurface(BaseSurface):
             dy = coo[1, 1] - coo[0, 1]
             # Use horizontal azimuth instead for strike
             self.strike = np.degrees(np.arctan2(dx, dy)) % 360
+            # We cannot compute a dip from two points so has to be
+            # set to a nan to keep this limitation explicit downstream
+            if self.dip is None:
+                self.dip = np.nan
             return self.strike
 
         _pnt0, vers = geo_utils.plane_fit(coo)
