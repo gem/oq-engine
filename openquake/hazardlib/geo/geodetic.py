@@ -90,7 +90,8 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     return diameter * np.arcsin(np.sqrt(arr))
 
 
-@compile(["(f8, f8, f8[:], f8[:])",
+@compile(["(f8, f8, f8[:,:], f8[:,:])",
+          "(f8, f8, f8[:], f8[:])",
           "(f8, f8, f8, f8)"])
 def fast_distance(lon, lat, lons, lats):
     lon, lat = math.radians(lon), math.radians(lat)
@@ -337,6 +338,7 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     :param lats: array of m latitudes
     :returns: matrix of (m, m) distances
     """
+    # tested in test_case_shakemap
     return geodetic_distance(lons, lats, lons, lats, diameter)
 
 
