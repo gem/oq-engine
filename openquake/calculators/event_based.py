@@ -379,7 +379,10 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     oq.mags_by_trt = AccumDict(accum=set())
 
     for (model, trt_smr), rups in acc.items():
-        if len(rups) == 0:
+        try:
+            rlzs_by_gsim[model, trt_smr]
+        except KeyError:
+            logging.error("Missing rlzs_by_gsim for {model}, {trt_smr}")
             continue
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
