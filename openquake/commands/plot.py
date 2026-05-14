@@ -565,7 +565,7 @@ def make_figure_ebruptures(extractors, what):
     sitecol = ex.get('sitecol')
     in_, out = ex.get(what)
     _fig, ax = plt.subplots()
-    add_borders(ax, readinput.read_mosaic_df)
+    add_borders(ax, readinput.read_countries_df)
     ax.grid(True)
     ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
                label='sites')

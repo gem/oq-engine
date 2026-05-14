@@ -25,10 +25,10 @@ jobs:
       options: --privileged
     steps:
     - name: Clone Repository (Master)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: github.event.inputs.git-ref == ''
     - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}

@@ -1,3 +1,62 @@
+  [Michele Simionato]
+  * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
+  * Extended the rupture exporter to also work with multi-model SES files
+  * Keeping the correlation matrices at 32 bit to save memory and to double
+    the speed
+
+  [Christopher Brooks]
+  * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
+    front (xvf) on a ctx-by-ctx basis instead of requiring it as a
+    site parameter for consistency with NIED's own implementation.
+  * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
+    distance-based corrections and update the QA test (classical/case_11)
+    to test this feature.
+  * Add the 2025 NSHM variants of the anomalous intensity correction
+    to the `MorikawaFujiwara2013` and some QA tests to check the site
+    location-specific component of these corrections (classical/case_30).
+  * Added ability to specify a distribution of hypocenters within a
+    simple fault source. Tested in classical/case_28 and unit tests.
+  * Added the BCHydro adjusted versions of the original NGA GMMs (median
+    scaling and single station sigma) and some unit tests.
+
+  [Marco Pagani]
+  * Fixing the calculation of ruptures with clusters and mutually exclusive
+    sources
+
+  [Michele Simionato]
+   * Computing the GMFs with a single core in scenario calculations,
+     changing a bit the numbers (akin to a change of seed), but saving a
+     lot of memory, especially in conditioned computations
+   * Changed the distribution in damage calculations to split in blocks
+     of assets, with a huge performance benefit for large scenarios
+
+  [Christopher Brooks]
+  * Add ability to specify a magnitude-dependent aspect ratio which
+    is evaluated using a predefined expression via a `MagDepAratio`
+    class.
+  * Add the magnitude-scaling relationship used in the Northern
+    Volcanic Arc (NVA) source zone of the BC Hydro SSC logic tree.
+  * Add the NIED 2025 sigma model to the `MorikawaFujiwara2013` GSIM
+    and some unit tests.
+  * Add ability to specify sentinel (-999) z_ref values when using the
+    `prepare_site_model` command.
+  * Add a relative epistemic uncertainty for seismogenic depths in the
+    source model logic tree. Some unit tests added and a QA test in
+    logictree/case_33.
+  * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
+    the job file.
+
+  [Michele Simionato]
+  * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
+  * Added parameter `rupture_id` to be used with `rupture_model_file`
+    to run scenarios starting from a SES.hdf5 file
+
+  [Christopher Brooks]
+  * Added new epistemic uncertainties in the source model logic tree
+    for the rupture aspect ratio (`setAspectRatioAbsolute` and
+    `setAspectRatioRelative`). Unit tests added and a QA test in
+    logictree/case_32.
+
   [Michele Simionato, Paolo Tormene]
   * Updated build_exposure_hdf5 to work with the 2026 Global Risk Model
 

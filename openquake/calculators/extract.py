@@ -1643,6 +1643,7 @@ def extract_ebruptures(dstore, what):
 
 
 # used in the rupture exporter and in the plugin
+# NB: it also works for multi-model SES
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):
     """
@@ -1655,47 +1656,60 @@ def extract_rupture_info(dstore, what):
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
+    [bounds] = qdict.get('boundaries', ['yes'])
+    # bound is yes for the plugin and no for the exporter
     oq = dstore['oqparam']
     try:
-        source_id = dstore['source_info']['source_id']
+        info = dstore['source_info']
+        source_id = info['source_id']
     except KeyError:  # scenario
         source_id = None
+    multi_model = isinstance(source_id, Group)
     dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    full_lt = dstore['full_lt']
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
-    allproxies = calc.get_proxies(dstore.filename, slice(None), min_mag)
-    if not allproxies:
+    allrups = dstore['ruptures'][:]
+    if len(allrups) == 0:
         # when starting from GMFs there are no ruptures
         raise getters.NotFound
-    for trt_smr, proxies in general.groupby(
-            allproxies, lambda p: p.rec['trt_smr']).items():
-        trt = full_lt.trts[trt_smr // TWO24]
-        if 'source_mags' not in dstore:  # ruptures import from CSV
-            mags = numpy.unique(dstore['ruptures']['mag'])
-        else:
-            mags = dstore[f'source_mags/{trt}'][:]
-        rdata = RuptureData(trt, rlzs_by_gsim[trt_smr], mags)
-        arr = rdata.to_array(proxies)
-        for r in arr:
-            if source_id is None:
-                srcid = 'no-source'
+    models = decode(numpy.unique(allrups['model']))
+    for model in models:
+        if multi_model:
+            source_id = dstore[f'source_info/{model}']['source_id']
+        [(_model, full_lt)] = base.get_model_lts(dstore, model)
+        rups = allrups[allrups['model'] == model.encode('ascii')]
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
+        allproxies = calc.get_proxies(dstore.filename, rups, min_mag)
+        for trt_smr, proxies in general.groupby(
+                allproxies, lambda p: p.rec['trt_smr']).items():
+            trt = full_lt.trts[trt_smr // TWO24]
+            if 'source_mags' not in dstore:  # ruptures import from CSV
+                mags = numpy.unique(rups['mag'])
             else:
-                srcid = source_id[r['source_id']]
-            coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
-            coordset = sorted(set(coords))
-            if len(coordset) < 4:   # degenerate to line
-                boundaries.append('LINESTRING(%s)' % ', '.join(coordset))
-            else:  # good polygon
-                boundaries.append('POLYGON((%s))' % ', '.join(coords))
-            rows.append(
-                (r['rup_id'], srcid, r['multiplicity'],
-                 r['mag'], r['lon'], r['lat'], r['depth'],
-                 trt, r['strike'], r['dip'], r['rake']))
+                mags = dstore[f'source_mags/{trt}'][:]
+            rdata = RuptureData(trt, rlzs_by_gsim[trt_smr], mags)
+            arr = rdata.to_array(proxies)
+            for r in arr:
+                if source_id is None:
+                    srcid = 'no-source'
+                else:
+                    srcid = source_id[r['source_id']]
+                if bounds == 'yes':
+                    coords = ['%.5f %.5f' % xyz[:2]
+                              for xyz in zip(*r['boundaries'])]
+                    coordset = sorted(set(coords))
+                    if len(coordset) < 4:   # degenerate to line
+                        boundaries.append('LINESTRING(%s)' %
+                                          ', '.join(coordset))
+                    else:  # good polygon
+                        boundaries.append('POLYGON((%s))' % ', '.join(coords))
+                rows.append(
+                    (r['rup_id'], srcid, r['multiplicity'],
+                     r['mag'], r['lon'], r['lat'], r['depth'],
+                     trt, r['strike'], r['dip'], r['rake']))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
@@ -1837,7 +1851,8 @@ def extract_high_sites(dstore, what):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/high_sites
     """
-    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
+    # NSML1 -> NM
     return (max_hazard > .2).all(axis=1)  # shape N
 
 

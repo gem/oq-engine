@@ -134,7 +134,7 @@ def create_job_dstore(description='custom calculation', parent=(), ini=None):
     else:
         dic = dict(description=description, calculation_mode='custom')
     log = init(dic)
-    dstore = new(log.calc_id, log.get_oqparam(validate=False))
+    dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
     dstore.parent = parent
     if parent:
         dstore._export_dir = parent['oqparam'].export_dir
@@ -354,7 +354,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         # removing inner slashed to avoid creating intermediate directories
         name, ext = relname.replace('/', '-').rsplit('.', 1)
-        newname = '%s_%s.%s' % (name, self.calc_id, ext)
+        short = self.calc_id or os.path.basename(self.filename).split('.')[0]
+        newname = '%s_%s.%s' % (name, short, ext)
         if export_dir is None:
             export_dir = self.export_dir
         return os.path.join(export_dir, newname)
@@ -516,13 +517,16 @@ class DataStore(collections.abc.MutableMapping):
         :returns: datastore metadata version, date, checksum as a dictionary
         """
         a = self.hdf5.attrs
+        version = a.get('engine_version', 'unknown')
+        checksum = a.get('checksum32', 'unknown')
+        date = a.get('date', 'unknown')
         if 'aelo_version' in a:
             return dict(generated_by='AELO %s' % a['aelo_version'],
-                        start_date=a['date'], checksum=a['checksum32'])
+                        start_date=date, checksum=checksum)
         else:
             return dict(
-                generated_by='OpenQuake engine %s' % a['engine_version'],
-                start_date=a['date'], checksum=a['checksum32'])
+                generated_by='OpenQuake engine %s' % version,
+                start_date=date, checksum=checksum)
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed

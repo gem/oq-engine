@@ -147,7 +147,13 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-    MODIFICATIONS = {'set_geometry', 'adjust_mfd_from_slip'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'adjust_mfd_from_slip',
+        'set_aspect_ratio',
+        'set_geometry',
+        'set_msr',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -215,7 +221,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                     msr, mag, eps_ar_low, eps_ar_upp, num_bins, rupture_area)
             else:
                 rup_lens = [numpy.sqrt(
-                    rupture_area * self.rupture_aspect_ratio)]
+                    rupture_area * self.get_aspect_ratio(mag))]
                 pmf = [1.0]
 
             # Internal check on the MFD

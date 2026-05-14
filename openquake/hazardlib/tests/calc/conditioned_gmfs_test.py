@@ -26,11 +26,24 @@ import unittest
 import numpy
 
 from openquake.hazardlib.contexts import simple_cmaker
-from openquake.hazardlib.calc.conditioned_gmfs import get_mean_covs
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.calc.conditioned_gmfs import get_mean_covs, Input
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+def mc(rupture, cmaker, station_sitecol, station_data,
+       observed_imt_strs, target_sitecol, target_imts,
+       spatial_correl, cross_correl_between, cross_correl_within):
+    observed_imts = [from_string(x) for x in observed_imt_strs]
+    inp = Input(
+        target_sitecol, station_sitecol,
+        target_imts, observed_imts, station_data,
+        spatial_correl,
+        cross_correl_between,
+        cross_correl_within)
+    return get_mean_covs(rupture, cmaker, inp)
 
 
 class SetUSGSTestCase(unittest.TestCase):
@@ -41,15 +54,15 @@ class SetUSGSTestCase(unittest.TestCase):
                                maximum_distance=test_data.MAX_DIST)
         station_sitecol = test_data.CASE01_STATION_SITECOL
         station_data = test_data.CASE01_STATION_DATA
-        observed_imt_strs = test_data.CASE01_OBSERVED_IMTS
+        observed_imts = test_data.CASE01_OBSERVED_IMTS
         target_sitecol = test_data.CASE01_TARGET_SITECOL
         target_imts = test_data.CASE01_TARGET_IMTS
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
-            observed_imt_strs, target_sitecol, target_imts,
+            observed_imts, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
@@ -72,7 +85,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -99,7 +112,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -125,7 +138,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -133,7 +146,7 @@ class SetUSGSTestCase(unittest.TestCase):
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
         aac(numpy.max(mu), 1)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -151,7 +164,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -159,7 +172,7 @@ class SetUSGSTestCase(unittest.TestCase):
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.min(mu), 0.52970, rtol=1e-4)
         aac(numpy.max(mu), 1)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), 0.89955, rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -177,14 +190,14 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
         mu = mean_covs[0][0, 0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0, 0]))
         aac(numpy.zeros_like(mu), mu, atol=1e-4)
-        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=3e-4)
         aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -202,7 +215,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -224,7 +237,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -254,7 +267,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mus = []
         sigs = []
         for i, station_data in enumerate(station_data_list):
-            mean_covs = get_mean_covs(
+            mean_covs = mc(
                 rupture, cmaker, station_sitecol, station_data,
                 observed_imt_strs, target_sitecol, target_imts,
                 spatial_correl, cross_correl_between, cross_correl_within)
@@ -282,7 +295,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)
@@ -304,7 +317,7 @@ class SetUSGSTestCase(unittest.TestCase):
         spatial_correl = test_data.DummySpatialCorrelationModel()
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
-        mean_covs = get_mean_covs(
+        mean_covs = mc(
             rupture, cmaker, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within)

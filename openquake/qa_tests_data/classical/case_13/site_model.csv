@@ -1,0 +1,4 @@
+lon,lat,vs30,vs30measured,xvf
+-65,0,400,FALSE,-30
+-65.25,0,600,FALSE,-10
+-65.5,0,300,FALSE,25

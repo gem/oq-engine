@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="setAspectRatioAbsolute"
+                                branchSetID="bs2">
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>1.0</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b22">
+                    <uncertaintyModel>2.0</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="setAspectRatioRelative"
+                                branchSetID="bs3">
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>-0.5</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b32">
+                    <uncertaintyModel>0.5</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

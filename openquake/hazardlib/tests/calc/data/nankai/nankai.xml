@@ -27,7 +27,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         8.8
                     </magnitude>
                     <rake>
-                        undefined
+                        90.01
                     </rake>
                     <hypocenter depth="14.5" lat="33.272" lon="134.894"/>
                     <griddedSurface>

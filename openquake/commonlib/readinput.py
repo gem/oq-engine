@@ -56,6 +56,7 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
@@ -64,7 +65,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import (
-    build_planar_rupture_from_dict, get_ruptures)
+    build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
@@ -316,7 +317,6 @@ def get_model(job_ini):
     If the path to job_ini contains a recognized mosaic model, returns the
     model, else the empty string
     """
-    from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
     for mod in MODELS:
         if mod in job_ini:
             return mod
@@ -588,7 +588,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                     z[name] = valid.latitudes(coos)
                 else:
                     z[name] = valid.longitudes(coos)
-            elif name in ["vs30", "z1pt0", "z2pt5"]:
+            elif name in ["vs30", "z1pt0", "z2pt5", "z1pt4"]:
                 pars = ' '.join(str(x) for x in vals)
                 if name == 'vs30' and not oqparam.override_vs30:
                     # if override_vs30 is set, then we can have vs30=-999
@@ -911,6 +911,7 @@ def get_rupture(oqparam):
     if rupture_model and rupture_model.endswith('.json'):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
+        # NB: this is tested in aristotle_run
     elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
@@ -922,6 +923,10 @@ def get_rupture(oqparam):
         if len(rups) == 1:
             # ScenarioDamageTestCase::test_case_12
             rup = rups[0]
+    elif rupture_model and rupture_model.endswith('.hdf5'):
+        trts = list(get_gsim_lt(oqparam).values)
+        with hdf5.File(rupture_model) as ses:
+            rup = get_ebrupture(ses, oqparam.rupture_id, trts).rupture
     elif oqparam.rupture_dict:
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -1146,8 +1151,11 @@ def read_consdict(oqparam, limit_states, perils):
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
                                   (consequence, fnames))
-            consdict['%s_by_%s' % (consequence, by)] = df[
-                df.consequence == consequence]
+            if by == 'risk_id':  # by is risk_id or taxonomy
+                key = f'{consequence}_by_{by}'
+            else:
+                key = by
+            consdict[key] = df[df.consequence == consequence]
     return consdict
 
 
@@ -1165,7 +1173,8 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
-    if oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict:
+    if (oqparam.rupture_xml or oqparam.rupture_csv or oqparam.rupture_dict
+            or oqparam.rupture_id):
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
         # tested in scenario_damage/case_12
@@ -1855,7 +1864,12 @@ def read_mosaic_df(mosaic_dir=''):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     logging.info(f'Reading {mosaic_boundaries_file}')
-    return read_geometries(mosaic_boundaries_file, 'name')
+    df = read_geometries(mosaic_boundaries_file, 'name')
+    codes = sorted(df.code.unique())
+    assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
+    if codes != MODELS:
+        logging.info(f'{mosaic_boundaries_file} contains extra models')
+    return df
 
 
 def read_countries_df():

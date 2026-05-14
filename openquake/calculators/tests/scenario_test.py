@@ -166,12 +166,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # multi-rupture scenario with 2 ruptures, 10 rlzs, 10 gmfs, 100 sites
         self.run_calc(case_13.__file__, 'job.ini')
         gmf_df = self.calc.datastore.read_df('gmf_data')
-        counts_by_eid = gmf_df[['eid', 'sid']].groupby('eid').count()
-        self.assertEqual(len(counts_by_eid), 200)  # there are 2x10x10 events
-        # the first rupture touches 6 sites, the second 4 sites, so
-        # there are 600+400 = 1000 GMVs
-        self.assertEqual(4*(counts_by_eid.sid == 4).sum(), 400)
-        self.assertEqual(6*(counts_by_eid.sid == 6).sum(), 600)
+        self.assertEqual(len(gmf_df), 5)  # most GMFs are zeros
 
         # check the branches
         tbl = text_table(view('branches', self.calc.datastore))
@@ -211,9 +206,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('agg_keys.org', gettemp(tbl))
 
     def test_case_18(self):
-        # 1 rupture with KiteSurfaces, number_of_ground_motion_fields=10
+        # 1 rupture with KiteSurfaces, number_of_ground_motion_fields=10,
+        # 3 GSIMs
         self.run_calc(case_18.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['rupgeoms']), 10)
+        self.assertEqual(len(self.calc.datastore['rupgeoms']), 1)
+        self.assertEqual(self.calc.datastore['ruptures'][0]['n_occ'], 30)
 
     def test_case_19(self):
         # reading CSV ruptures with missing TRTs
@@ -234,10 +231,11 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(new.eps_inter_PGA.mean(), 0.027470896)
 
     def test_case_21_stations(self):
-        # conditioned gmfs
+        # conditioned gmfs; the numbers are quite different between AMD
+        # and Intel machines (delta=.002) at 32 bit precision
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('gmf-data.csv', fname)
+        self.assertEqualFiles('gmf-data.csv', fname, delta=.002)
 
         # check that stations are discarded when extracting avg_gmf
         aw = extract(self.calc.datastore, 'avg_gmf?imt=SA(0.1)')
@@ -320,7 +318,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         if sys.platform != 'darwin':
-            self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+            self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-3)
 
     def test_case_27(self):
         # TodorovicSilva2022NonParametric

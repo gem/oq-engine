@@ -27,6 +27,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf, valid
+from openquake.hazardlib.aspect_ratio import build_aspect_ratio_node
 from openquake.hazardlib.source import (
     NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import NegativeBinomialTOM
@@ -341,6 +342,8 @@ def build_hypo_depth_dist(hdd):
     return Node("hypoDepthDist", nodes=hdds)
 
 
+
+
 def get_distributed_seismicity_source_nodes(source):
     """
     Returns list of nodes of attributes common to all distributed seismicity
@@ -360,7 +363,7 @@ def get_distributed_seismicity_source_nodes(source):
              text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
+        build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse nodal plane distribution
@@ -401,6 +404,25 @@ def build_slip_list_node(slip_list):
     return sliplist
 
 
+def build_hypo_depth_dist_simple_fault(hypo_depth_list):
+    """
+    Returns Node of a hypocentral depth distribution used
+    in a SimpleFaultSource.
+
+    :param hypo_depth_list:
+        List of (probability, depth, fixed_dip_frac_or_None).
+    :returns:
+        A hypoDepthDist Node with optional fixedDipFrac attribute.
+    """
+    nodes = []
+    for prob, depth, fdf in hypo_depth_list:
+        attribs = {'probability': prob, 'depth': depth}
+        if fdf is not None:
+            attribs['fixedDipFrac'] = fdf
+        nodes.append(Node('hypoDepth', attribs))
+    return Node('hypoDepthDist', nodes=nodes)
+
+
 def get_fault_source_nodes(source):
     """
     Returns list of nodes of attributes common to all fault source classes
@@ -420,15 +442,19 @@ def get_fault_source_nodes(source):
             text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
+        build_aspect_ratio_node(source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake
     source_nodes.append(Node("rake", text=source.rake))
+    # Parse alternative ways to specify hypocentre if required
     if len(getattr(source, 'hypo_list', [])):
         source_nodes.append(build_hypo_list_node(source.hypo_list))
     if len(getattr(source, 'slip_list', [])):
         source_nodes.append(build_slip_list_node(source.slip_list))
+    if getattr(source, 'hypo_depth_list', ()):
+        source_nodes.append(
+            build_hypo_depth_dist_simple_fault(source.hypo_depth_list))
     return source_nodes
 
 

@@ -17,7 +17,20 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports class:`MorikawaFujiwara2013`
+Module exports :class:`MorikawaFujiwara2013Crustal`,
+:class:`MorikawaFujiwara2013CrustalNIED`,
+:class:`MorikawaFujiwara2013SubInterface`,
+:class:`MorikawaFujiwara2013SubInterfaceNE`,
+:class:`MorikawaFujiwara2013SubInterfaceSW`,
+:class:`MorikawaFujiwara2013SubInterfaceNIED`,
+:class:`MorikawaFujiwara2013SubInterfaceNENIED`,
+:class:`MorikawaFujiwara2013SubInterfaceSWNIED`,
+:class:`MorikawaFujiwara2013SubSlab`,
+:class:`MorikawaFujiwara2013SubSlabNE`,
+:class:`MorikawaFujiwara2013SubSlabSW`,
+:class:`MorikawaFujiwara2013SubSlabNIED`,
+:class:`MorikawaFujiwara2013SubSlabNENIED`,
+:class:`MorikawaFujiwara2013SubSlabSWNIED`.
 """
 import numpy as np
 
@@ -25,6 +38,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
+from openquake.hazardlib.gsim.si_midorikawa_1999 import (
+    set_mean as _sm1999_set_mean, _get_min_distance_to_volcanic_front)
 
 
 CONSTS = {
@@ -33,26 +48,140 @@ CONSTS = {
     "Mw01": 8.2,
     "Mw1": 16.0}
 
+# Volcanic front traces provided by NIED
+VOLC_FRONT_PAC_LATS = np.array([
+    24.0, 31.0, 34.1, 36.1, 37.2, 39.3, 42.6, 43.6, 44.3, 45.9])
+VOLC_FRONT_PAC_LONS = np.array([
+    141.6, 140.2, 139.7, 138.7, 140.1, 141.0, 141.2, 145.0, 146.9, 150.0])
+VOLC_FRONT_PHI_LATS = np.array([
+    24.5, 24.5, 27.9, 29.5, 31.5, 33.4, 34.9, 35.3, 35.3, 36.2, 36.2])
+VOLC_FRONT_PHI_LONS = np.array([
+    122.0, 124.0, 128.3, 129.7, 130.8, 131.6, 132.0, 133.7, 134.9,
+    136.9, 138.7])
 
+
+### NIED sigma model functions ###
+def _get_nied_sigma_crustal(rrup):
+    """
+    Distance-dependent total sigma in log10 units for shallow
+    crustal earthquakes as described in equation 7 of:
+
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/
+
+    The distance type used is rupture dist
+    """
+    # Select distance dependent sigma
+    return np.piecewise(
+        rrup.astype(float),
+        [rrup <= 20., (rrup > 20.) & (rrup <= 30.)],
+        [0.23,                                                  # rrup <= 20
+         lambda x:
+         0.23 - 0.03 * np.log10(x / 20.) / np.log10(30. / 20.), # 20 < rrup <= 30
+         0.20]                                                  # rrup > 30
+    )
+
+
+def _get_nied_sigma_subduction(ctx, d_pgv):
+    """
+    Amplitude-dependent total sigma in log10 units for subduction
+    earthquakes as described in equation 8 of:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/
+    
+    PGV at Vs30=600 m/s is required here and obtained from Si and
+    Midorikawa (1999). NOTE: Given we need PGV for Vs30 of 600 m/s
+    the _apply_amplification_factor part of SM99's compute method
+    is intentionally skipped here (it's not needed).
+
+    d_pgv: coefficient for PGV in Si & Midorikawa (1999) which is
+           -0.02 for interface and 0.12 for intraslab
+    
+    """
+    # Get the PGA for vs30 of 600 m/s in SM99
+    pgv_log10 = np.zeros(len(ctx.rrup))
+    _sm1999_set_mean(
+        PGV(), ctx.mag, ctx.hypo_depth, ctx.rrup, d_pgv, pgv_log10
+        )
+    pgv = 10. ** pgv_log10  # From log 10 into linear (cm/s)
+
+    # Now select based on the PGV in linear space
+    return np.piecewise(
+        pgv,
+        [pgv <= 25., (pgv > 25.) & (pgv <= 50.)],
+        [0.20,                                    # PGV <= 25
+         lambda x: 0.20 - 0.05 * (x - 25.) / 25., # 25 < PGV <= 50
+         0.15]                                    # PGV > 50
+    )
+
+
+def _apply_nied_sigma(imts, sig, sigma_log10):
+    """
+    Assign the NIED sigma which is supplied in log10 and
+    apply the same unit conversion used in the underlying
+    compute method
+    """
+    for m, imt in enumerate(imts):
+        if imt.name == 'JMA':
+            sig[m] = 2 * sigma_log10
+        else:
+            sig[m] = sigma_log10 * np.log(10)
+
+
+### Original GMM ###
 def _get_basin_term(C, ctx, region=None):
     d0 = CONSTS["D0"]
     tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _get_intensity_correction_term(C, region, xvf, focal_depth):
+def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
+    """
+    Anomalous intensity correction (equation 11).
+
+    We compute xvf by a ctx by ctx basis because we want to use a
+    different volcanic front depending on the region parameter.
+
+    NOTE: When nied_anom_corr is True (NIED subclasses):
+        - NE correction is tapered linearly from zero at 35.5 deg north
+          to full (unity) at 36.5 deg north.
+        - SW correction is restricted to sites west of 136.9 deg east.
+    """
+    # No region so apply no anomalous intensity correction
+    if region is None:
+        return 0.
+
+    # Select volc front geometry to compute xvf with
+    if region == "NE":  # Associate NE with Pacific volc front
+        vf_lat, vf_lon = VOLC_FRONT_PAC_LATS, VOLC_FRONT_PAC_LONS
+    else:  # Associate SW with Philippine volc front
+        vf_lat, vf_lon = VOLC_FRONT_PHI_LATS, VOLC_FRONT_PHI_LONS
+
+    # Get xvf
+    xvf = _get_min_distance_to_volcanic_front(ctx.lon, ctx.lat, vf_lon, vf_lat)
+
     if region == 'NE':
         gamma = C['gNE']
-    elif region == 'SW':
+        corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
+        if nied_anom_corr:
+            # Only apply in the NIED subclasses (2025 NSHM)
+            taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
+            corr = corr * taper
+        return corr
+    
+    elif region == 'SW': # Clip xvf and only apply to >= 60 km events
         gamma = C['gSW']
-    elif region is None:
-        return 0.
+        xvf_filt = np.minimum(xvf, 75.0)
+        corr = gamma * xvf_filt * np.maximum(ctx.hypo_depth - 30., 0.)
+        # Only apply for events >= 60 km
+        mask = ctx.hypo_depth < 60
+        if nied_anom_corr:
+            # In NIED subclasses also restrict to sites west of 136.9 deg east
+            mask = mask | (ctx.lon >= 136.9)
+        corr[mask] = 0.
+        return corr
+    
     else:
         raise ValueError('Unsupported region')
-    xvf = np.clip(xvf, -75.0, 75.0) # Assume the abs xvf cap should be applied 
-                                    # to both SW AND NE to prevent extreme corr 
-    return (
-        gamma * xvf * np.maximum(focal_depth-30., 0.))
 
 
 _get_magnitude_term = CallableDict()
@@ -107,14 +236,18 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required site parameters are:
     #: - Vs30 - time averaged shear-wave velocity [m/s]
     #: - z1p4 - Depth to the 1.4 km/s interface [m]
-    #: - xvf - Distance from the volcanic front [km, positive in the forearc]
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt4', 'xvf'}
+    #: - lon - Site longitude (for xvf computation)
+    #: - lat - Site latitude (for xvf computation)
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt4', 'lon', 'lat'}
 
     #: Required rupture parameters are magnitude, and hypocentral depth [km].
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup [km]
     REQUIRES_DISTANCES = {'rrup'}
+
+    # Use the anomalous intensity correction as defined in original paper
+    nied_anom_corr = False
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
@@ -131,8 +264,8 @@ class MorikawaFujiwara2013Crustal(GMPE):
                                     mw1prime, mw1, ctx.hypo_depth) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
-                _get_intensity_correction_term(
-                    C, self.region, ctx.xvf, ctx.hypo_depth))
+                _anomalous_intensity_correction_term(
+                    C, self.region, ctx, self.nied_anom_corr))
 
             if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(
@@ -227,3 +360,85 @@ class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013SubSlab):
 
 class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlab):
     region = 'SW'
+
+
+### NIED 2025 Japan NSHM Variants ###
+class MorikawaFujiwara2013CrustalNIED(MorikawaFujiwara2013Crustal):
+    """
+    2025 NSHM variant that uses an alternative distance-dependent
+    sigma model that is described at:
+
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 7)
+
+    The distance type used is rrup.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is rrup-dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_crustal(ctx.rrup))
+
+
+class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
+    """
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
+    is described in:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
+
+    PGV at Vs30=600 m/s as computed with Si and Midorikawa (1999) is required
+    as an input parameter.
+
+    This is the interface variant.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is PGV dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_subduction(ctx, -0.02))
+
+
+class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
+    region = 'NE'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+
+
+class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
+    region = 'SW'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+
+
+class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
+    """
+    2025 NSHM variant that uses a PGV amplitude-dependent sigma model that
+    is described in:
+    
+    https://www.j-shis.bosai.go.jp/en/labs/mf2013/ (eq. 8)
+
+    PGV at Vs30=600 m/s as computed with Si and Midorikawa (1999) is required
+    as an input parameter.
+
+    This is the inslab variant.
+    """
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+
+        # Compute the underlying mean
+        super().compute(ctx, imts, mean, sig, tau, phi)
+        
+        # Apply the NIED sigma which is PGV-dependent
+        _apply_nied_sigma(
+            imts, sig, _get_nied_sigma_subduction(ctx, 0.12))
+
+
+class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
+    region = 'NE'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+
+
+class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
+    region = 'SW'
+    nied_anom_corr = True # Apply 2025 NSHM version of AI correction

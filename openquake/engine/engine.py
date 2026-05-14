@@ -424,6 +424,7 @@ OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'cache',
     'concurrent_tasks',
+    'discard_assets',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
@@ -489,7 +490,10 @@ class _Workflow:
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = os.path.join(self.workflow_dir, val)
+                    dic[key] = path = os.path.join(self.workflow_dir, val)
+                    if 'out' in key:
+                        open(path, 'w').close()  # touch the file
+
 
     def validate(self):
         """
@@ -632,6 +636,7 @@ def prepare_workflow(params, workflow_toml, pdb):
             dstore = datastore.read(workflow_id, 'r+')
             descr = wfjob.get_job().description
         wfjob.workflows = workflows
+    dstore['/'].attrs['engine_version'] = general.engine_version()
     return wfjob, dstore, names, descr
 
 
@@ -682,7 +687,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     new.append(ini)
                     new_names.append(name)
             if new:
-                jobs = create_jobs(new, log_level=logging.WARNING,
+                jobs = create_jobs(new, log_level=logging.INFO if
+                                   concurrent_jobs == 1 else logging.WARNING,
                                    workflow_id=wfjob.calc_id)
                 run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):

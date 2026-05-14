@@ -20,6 +20,7 @@ import sys
 import gzip
 import numpy
 from unittest import mock
+
 from openquake.baselib import parallel, general, config
 from openquake.baselib.general import decode
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
@@ -32,15 +33,15 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
-    case_09, case_10, case_11, case_12, case_18, case_22, case_23, case_24,
-    case_25, case_26, case_27, case_29, case_32, case_33, case_34, case_35,
-    case_37, case_38, case_39, case_40, case_41, case_42, case_43, case_44,
-    case_47, case_48, case_49, case_50, case_51, case_53, case_54, case_55,
-    case_57, case_60, case_61, case_62, case_63, case_64, case_65, case_66,
-    case_67, case_68, case_69, case_70, case_71, case_72, case_74, case_75,
-    case_76, case_77, case_78, case_80, case_81, case_82, case_83, case_84,
-    case_85, case_86, case_87, case_88, case_89, case_90, case_91, case_92,
-    case_93, case_94)
+    case_09, case_10, case_11, case_12, case_13, case_18, case_22, case_23,
+    case_24, case_25, case_26, case_27, case_28, case_29, case_30, case_32,
+    case_33, case_34, case_35, case_36, case_37, case_38, case_39, case_40,
+    case_41, case_42, case_43, case_44, case_47, case_48, case_49, case_50,
+    case_51, case_53, case_54, case_55, case_57, case_60, case_61, case_62,
+    case_63, case_64, case_65, case_66, case_67, case_68, case_69, case_70,
+    case_71, case_72, case_74, case_75, case_76, case_77, case_78, case_80,
+    case_81, case_82, case_83, case_84, case_85, case_86, case_87, case_88,
+    case_89, case_90, case_91, case_92, case_93, case_94)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -252,7 +253,7 @@ class ClassicalTestCase(CalculatorTestCase):
             str(ctx.exception))
 
     def test_case_10(self):
-        # Tests specification of an AlternativeCharacteristicMFD in an XML
+        # Tests AlternativeCharacteristicMFD on both fault and area sources
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
@@ -267,8 +268,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_11(self):
         # Check grid-adjusted GMPE
-        self.run_calc(case_11.__file__, 'job.ini',
-                      calculation_mode='classical')
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.5).csv',
@@ -281,6 +280,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
+
+    def test_case_13(self):
+        # Test specification of reference z1pt4
+        self.assert_curves_ok(
+            ['hazard_curve-mean-PGA.csv',
+             'hazard_curve-mean-SA(0.5).csv'],
+            case_13.__file__)
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
@@ -397,6 +403,26 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+    def test_case_28(self):
+        # Simple fault with hypoDepthDist
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_28.__file__)
+
+        # Same depth distribution but hypocentre fixed at 2/3 downdip
+        self.assert_curves_ok(
+            ["hazard_curve-mean-PGA_fixed_dip_frac.csv"],
+            case_28.__file__,
+            source_model_logic_tree_file=(
+                'source_model_logic_tree_fixed_dip_frac.xml'))
+
+        # Depth outside seismogenic zone must be rejected
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_28.__file__, 'job.ini',
+                          source_model_logic_tree_file=(
+                              'source_model_logic_tree_depth_error.xml'))
+
+        self.assertIn('hypo_depth_list 25.0 km is outside the '
+                      'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
+
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
 
@@ -426,6 +452,15 @@ class ClassicalTestCase(CalculatorTestCase):
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
 
+    def test_case_30(self):
+        # Tests NIED specific variants of the anomalous intensity correction in
+        # the MorikawaFujiwara2013 NE/SW subclassess
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(0.5).csv',
+            'hazard_curve-mean-SA(1.0).csv'],
+            case_30.__file__)
+
     def test_case_32(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_32.__file__)
@@ -453,6 +488,44 @@ class ClassicalTestCase(CalculatorTestCase):
         # cluster
         self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],
                               case_35.__file__)
+    
+    def test_case_36(self):
+        # Test mag-dependent aratio using the linear_piecewise expression type
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_36.__file__)
+
+        # Check that epistemic uncertainty on aratio is rejected when the
+        # source uses aspectRatioFunction
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_epistemic_error.xml'))
+        self.assertEqual(
+            str(ctx.exception),
+            "Cannot apply set_aspect_ratio to source '1': epistemic "
+            "uncertainties on aspect ratio are not compatible with "
+            "aspectRatioFunction")
+
+        # Check that aspectRatioFunction is rejected for kiteFaultSource
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_kite_error.xml'))
+        self.assertIn(
+            'aspectRatioFunction is not supported for a kiteFaultSource (id=kf1)',
+            str(ctx.exception))
+
+        # Check that specifying both ruptAspectRatio and aspectRatioFunction
+        # in the same source is rejected
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_36.__file__, 'job.ini',
+                source_model_logic_tree_file=(
+                    'source_model_logic_tree_both_aratio_error.xml'))
+        self.assertIn(
+            "Source '1' specifies both ruptAspectRatio and aspectRatioFunction",
+            str(ctx.exception))
 
     def test_case_37(self):
         # Christchurch
@@ -952,6 +1025,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ground_motion_fields='false')
         rups = self.calc.datastore['ruptures'][()]
+        rups.sort(order='id')
         tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
         self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
 

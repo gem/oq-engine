@@ -38,8 +38,16 @@ class AreaSource(ParametricSeismicSource):
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
     code = b'A'
-    MODIFICATIONS = {'set_geometry', 'set_lower_seismogenic_depth',
-                     'set_upper_seismogenic_depth'}
+    MODIFICATIONS = {
+        'adjust_aspect_ratio',
+        'set_aspect_ratio',
+        'set_geometry',
+        'set_lower_seismogenic_depth',
+        'set_upper_seismogenic_depth',
+        'adjust_lower_seismogenic_depth',
+        'adjust_upper_seismogenic_depth',
+        'set_msr',
+    }
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -76,12 +84,32 @@ class AreaSource(ParametricSeismicSource):
         """
         self.lower_seismogenic_depth = lsd
 
+    def modify_adjust_lower_seismogenic_depth(self, increment):
+        """
+        Modifies the lower seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the lower
+            seismogenic depth
+        """
+        self.lower_seismogenic_depth += increment
+
     def modify_set_upper_seismogenic_depth(self, usd):
         """
         Modifies the current source geometry by replacing the original
         upper seismogenic depth with the passed depth
         """
         self.upper_seismogenic_depth = usd
+
+    def modify_adjust_upper_seismogenic_depth(self, increment):
+        """
+        Modifies the upper seismogenic depth by adding an increment
+
+        :param float increment:
+            Value (in km) by which to increase or decrease the upper
+            seismogenic depth
+        """
+        self.upper_seismogenic_depth += increment
 
     def iter_ruptures(self, **kwargs):
         """
@@ -152,6 +180,16 @@ class AreaSource(ParametricSeismicSource):
             new_mfd = mfd.YoungsCoppersmith1985MFD.from_characteristic_rate(
                 area_mfd.min_mag, area_mfd.b_val, area_mfd.char_mag,
                 area_mfd.char_rate / num_points, area_mfd.bin_width)
+        elif isinstance(area_mfd, mfd.AlternativeCharacteristicMFD):
+            new_mfd = mfd.AlternativeCharacteristicMFD(
+                min_mag=area_mfd.min_mag,
+                max_mag=area_mfd.max_mag,
+                bin_width=area_mfd.bin_width,
+                b_GR=area_mfd.b_GR,
+                b_AC=area_mfd.b_AC,
+                gamma=area_mfd.gamma,
+                delta_m_AC=area_mfd.delta_m_AC,
+                total_rate=area_mfd.total_rate / num_points)
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):

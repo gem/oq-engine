@@ -70,6 +70,7 @@ def _export_import(name, calc_id, output_type, dstore):
         str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
+        # output_type = 'aggexp_tags'
         for fname in export.export((output_type, 'csv'), calc_ds):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
@@ -89,6 +90,7 @@ def import_outputs(dstore, calcs, out_types):
             name = wf.loc[calc_id]['name']
             for out_type in out_types:
                 _export_import(name, calc_id, out_type, dstore)
+    logging.info(f'Saved outputs in workflow {dstore.filename}')
     print(mon)
 
 

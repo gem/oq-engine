@@ -327,6 +327,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # exporting job.zip
         fnames = export(('job', 'zip'), self.calc.datastore)
+        print(open(fnames[0]).read())
         dstore = base.run_calc(fnames[0]).datastore
         [fname] = export(('damages-rlzs', 'csv'), dstore)
         self.assertEqualFiles('expected/dmg.csv', dmg_csv, delta=4E-5)

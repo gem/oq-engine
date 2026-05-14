@@ -20,6 +20,7 @@ import logging
 import operator
 import functools
 import numpy
+import pandas
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
@@ -146,7 +147,8 @@ def get_model_lts(h5):
     else:
         # full_lt is a h5py group
         for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
+            flt = h5[f'full_lt/{model}']
+            out.append((model, flt))
     return out
 
 
@@ -287,6 +289,8 @@ class RuptureImporter(object):
         for model, lt in self.model_lts:
             rlzs_by_gsim = lt.get_rlzs_by_gsim_dic()
             for trt_smr, start, stop in idx_start_stop:
+                if self.scenario:
+                    trt_smr = 0
                 rlzs = numpy.concatenate(
                     list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
                 records = get_events(
@@ -334,10 +338,10 @@ class RuptureImporter(object):
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
         num_['sites'] = self.N
         if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if self.N * E > oq.max_potential_gmfs:
+            if self.N * E > float(config.memory.max_potential_gmfs):
                 raise ValueError(
                     'A GMF calculation with {:_d} sites and {:_d} events is '
-                    'forbidden unless you raise `max_potential_gmfs` to {:_d}'.
+                    'forbidden with the current `max_potential_gmfs` < {:_d}'.
                     format(self.N, int(E), int(self.N * E)))
         for var in num_:
             if num_[var] > max_[var]:
@@ -501,19 +505,23 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
 
-    maxw = slices['weight'].sum() // ct or 1.
+    maxw = slices['weight'].sum() // ct or 1
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
     if oq.calculation_mode == 'event_based_risk':
         expected_outputs = count_outputs(data['eid'], slices, maxw, w)
         logging.info('Expected outputs = %d', expected_outputs)
+    gmf_dfs = []
+    for gmfslices in general.block_splitter(slices, maxw, w):
+        dfs = []
+        for gmfslice in gmfslices:
+            slc = slice(gmfslice[0], gmfslice[1])
+            dfs.append(dstore.read_df('gmf_data', slc=slc))
+        gmf_dfs.append(pandas.concat(dfs))
+
     dstore.swmr_on()
-    smap = parallel.Starmap.apply(
-        task_func, (slices, oq, ds),
-        maxweight=maxw, weight=w, h5=dstore.hdf5)
-    if oq.calculation_mode == 'event_based_risk':
-        smap.expected_outputs = expected_outputs
-    return smap
+    smap = parallel.Starmap(task_func, h5=dstore.hdf5)
+    return smap, gmf_dfs
 
 
 def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):

@@ -13,6 +13,7 @@
 |case\_11|Test GridAdjustedGMPE|
 |case\_10|Test use of alternative characterstic MFD|
 |case\_12|Two TRTs, 1 rlz|
+|case\_13|Test specification of a reference z1pt4 in the job file|
 |case\_18|3 GMPETables|
 |case\_22|Test tiling and International Date Line|
 |case\_23|Filtering away a TRT|
@@ -20,11 +21,14 @@
 |case\_25|Test negative depths|
 |case\_26|Test YoungsCoppersmith1985MFD|
 |case\_27|Nankai mutex model, including disaggregation|
+|case\_28|Test hypoDepthDist with a simple fault source|
 |case\_29|Non-parametric source with one rupture represente by 2 kite surfaces|
+|case\_30|Tests 2025 NSHM variants of the MorikawaFujiwara2013 GMM|
 |case\_32|Source Specific Logic Tree|
 |case\_33|Directivity|
 |case\_34|AvgSA|
 |case\_35|Test cluster feature|
+|case\_36|Test magnitude-dependent aspect ratios|
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
 |case\_39|Test checking of IMT-dependent weights with unsupported IMTs|

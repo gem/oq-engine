@@ -167,8 +167,8 @@ collect_rlzs:
 correlation_cutoff:
   Used in conditioned GMF calculation to avoid small negative eigenvalues
   wreaking havoc with the numerics
-  Example: *correlation_cutoff = 1E-11*
-  Default: 1E-12
+  Example: *correlation_cutoff = 1E-9*
+  Default: 2E-4
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -492,11 +492,6 @@ max_nodes_network:
    Example: *max_nodes_network = 100*
    Default: 1000
 
-max_potential_gmfs:
-  Restrict the product *num_sites * num_events*.
-  Example: *max_potential_gmfs = 1E9*.
-  Default: 2E11
-
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
@@ -679,6 +674,12 @@ reference_depth_to_2pt5km_per_sec:
   Example: *reference_depth_to_2pt5km_per_sec = 5*.
   Default: no default
 
+reference_depth_to_1pt4km_per_sec:
+  Used when there is no site model to specify a global z1pt4 parameter,
+  used in some GMPEs.
+  Example: *reference_depth_to_1pt4km_per_sec = 50*.
+  Default: no default
+
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
@@ -730,6 +731,11 @@ rupture_dict:
   Dictionary with rupture parameters lon, lat, dep, mag, rake, strike, dip
   Example: *rupture_dict = {'lon': 10, 'lat': 20, 'dep': 10, 'mag': 6, 'rake': 0}*
   Default: {}
+
+rupture_id:
+   Integer identifier used to read a single rupture from a SES.hdf5 file
+   Example: *rupture_id = 12719545647984*
+   Default: None
 
 rupture_mesh_spacing:
   Set the discretization parameter (in km) for rupture geometries.
@@ -1085,7 +1091,7 @@ class OqParam(valid.ParamSet):
     countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
-    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
+    correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
     siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1143,7 +1149,6 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)
-    max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     max_sites_correl = valid.Param(valid.positiveint, 1200)
@@ -1179,6 +1184,9 @@ class OqParam(valid.ParamSet):
     reference_depth_to_2pt5km_per_sec = valid.Param(
         # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
+    reference_depth_to_1pt4km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
@@ -1189,6 +1197,7 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
+    rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})
     complex_fault_mesh_spacing = valid.Param(
@@ -2059,8 +2068,7 @@ class OqParam(valid.ParamSet):
         if issubclass(cls, cross_correlation.CrossCorrelationBetween):
             tlb = self.truncation_level_between
             if tlb is None:
-                tlb = (self.truncation_level
-                       if self.truncation_level is not None else 99.)
+                tlb = getattr(self, 'truncation_level', None) or 99.
             return cls(tlb)
         return cls()
 

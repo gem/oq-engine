@@ -36,20 +36,17 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
 
     # TODO: we need tests also for event-based
 
-    def _check_csv_outputs(self, outputs_list, datastore, testcase,
-                           replace_expected=False):
+    def _check_csv_outputs(self, outputs_list, datastore, testcase):
         for output in outputs_list:
             expected_fname = 'expected/infra-' + output + '.csv'
             expected_path = os.path.join(
                 os.path.dirname(testcase.__file__), expected_fname)
             [got_path] = export(('infra-' + output, 'csv'), datastore)
-            if replace_expected:
+            if os.environ.get('OQ_OVERWRITE'):
                 shutil.copy2(got_path, expected_path)
             else:
                 self.assertEqualFiles(
                     got_path, expected_path, check_text=True)
-        if replace_expected:
-            raise ValueError('Remember to set replace_expected to False!')
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')

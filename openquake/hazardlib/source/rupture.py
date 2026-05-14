@@ -191,6 +191,25 @@ def get_ebr(rec, geom, trt):
     return ebr
 
 
+def get_ebrupture(dstore, rup_id, trts=()):
+    # used in `oq show rupture` and in scenario from SES
+    """
+    This is EXTREMELY inefficient, since it reads all ruptures.
+    NB: it assumes rup_is is unique
+    """
+    logging.info(f'Reading {dstore}')
+    rups = dstore['ruptures'][:]  # read everything in memory
+    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
+    idxs, = numpy.where(rups['id'] == rup_id)
+    if len(idxs) == 0:
+        raise ValueError(f"Missing {rup_id=} in {dstore}")
+    [rec] = rups[idxs]
+    trts = trts or dstore.getitem('full_lt').attrs['trts']
+    trt = trts[rec['trt_smr'] // TWO24]
+    geom = rupgeoms[rec['geom_id']]
+    return get_ebr(rec, geom, trt)
+
+
 def float5(x):
     # a float with 5 digits
     return round(float(x), 5)
