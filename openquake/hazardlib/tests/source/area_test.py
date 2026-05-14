@@ -107,11 +107,10 @@ class AreaSourceDipFracsTestCase(unittest.TestCase):
     def test_hypo_dip_fracs_passed_to_point_sources(self):
         # hypo_dip_fracs is propagated to every PointSource yielded by __iter__
         fracs = (0.5, 2/3)
+        hdd = PMF([(0.5, 5), (0.5, 10)])
+        hdd.hypo_dip_fracs = fracs
         polygon = Polygon([Point(0, 0), Point(0, 1), Point(1, 1), Point(1, 0)])
-        src = make_area_source(
-            polygon, 50.0,
-            hypocenter_distribution=PMF([(0.5, 5), (0.5, 10)]),
-            hypo_dip_fracs=fracs)
+        src = make_area_source(polygon, 50.0, hypocenter_distribution=hdd)
         for ps in src:
             self.assertEqual(ps.hypo_dip_fracs, fracs)
 

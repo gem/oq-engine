@@ -62,7 +62,7 @@ class MultiPointSource(ParametricSeismicSource):
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
-                 mesh, temporal_occurrence_model=None, hypo_dip_fracs=None):
+                 mesh, temporal_occurrence_model=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
         rupture_mesh_spacing = None
         super().__init__(
@@ -75,7 +75,7 @@ class MultiPointSource(ParametricSeismicSource):
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
-        self.hypo_dip_fracs = hypo_dip_fracs
+        self.hypo_dip_fracs = getattr(hypocenter_distribution, 'hypo_dip_fracs', None)
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -90,8 +90,7 @@ class MultiPointSource(ParametricSeismicSource):
                 self.lower_seismogenic_depth,
                 point,
                 self.nodal_plane_distribution,
-                self.hypocenter_distribution,
-                hypo_dip_fracs=self.hypo_dip_fracs)
+                self.hypocenter_distribution)
             ps.scaling_rate = getattr(self, 'scaling_rate', 1)
             yield ps
 
@@ -217,6 +216,7 @@ class MultiPointSource(ParametricSeismicSource):
             (prob, NodalPlane(strike, dip, rake))
             for prob, strike, dip, rake in npd])
         self.hypocenter_distribution = PMF(hdd)
+        self.hypocenter_distribution.hypo_dip_fracs = self.hypo_dip_fracs
         self.mesh = Mesh(mesh['lon'], mesh['lat'])
         kw = {k: dset[:] for k, dset in mfd.items()}
         kw['size'] = len(mesh)

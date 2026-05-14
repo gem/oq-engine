@@ -33,13 +33,6 @@ class AreaSource(ParametricSeismicSource):
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.
         See :meth:`openquake.hazardlib.source.area.AreaSource.iter_ruptures`.
-    :param hypo_dip_fracs:
-        Optional tuple which is parallel to hypocenter_distribution.data.
-        It contains the down-dip fraction at which the hypocentre is placed
-        for each hypocentre depth. In the case of being None the default OQ
-        behaviour of every hypocentre being placed at the rupture centroid
-        (fraction 0.5) is observed.
-
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
@@ -63,7 +56,7 @@ class AreaSource(ParametricSeismicSource):
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
                  # area-specific parameters
-                 polygon, area_discretization, hypo_dip_fracs=None):
+                 polygon, area_discretization):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -73,7 +66,7 @@ class AreaSource(ParametricSeismicSource):
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
-        self.hypo_dip_fracs = hypo_dip_fracs
+        self.hypo_dip_fracs = getattr(hypocenter_distribution, 'hypo_dip_fracs', None)
         self.polygon = polygon
         self.area_discretization = area_discretization
         self.max_radius = 0
@@ -216,7 +209,6 @@ class AreaSource(ParametricSeismicSource):
                 location=geo.Point(lon, lat),
                 nodal_plane_distribution=self.nodal_plane_distribution,
                 hypocenter_distribution=self.hypocenter_distribution,
-                hypo_dip_fracs=self.hypo_dip_fracs,
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt._num_ruptures = pt.count_ruptures()
             yield pt

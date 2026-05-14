@@ -460,23 +460,24 @@ class PointSourceDipFracsTestCase(unittest.TestCase):
 
     def test_stored(self):
         # hypo_dip_fracs tuple is stored as-is on the source
-        hdd = [(0.25, 5), (0.5, 10), (0.25, 15)]
+        hd = PMF([(0.25, 5), (0.5, 10), (0.25, 15)])
+        hd.hypo_dip_fracs = (0.5, 2 / 3, 0.75)
         src = make_point_source(
             upper_seismogenic_depth=0, lower_seismogenic_depth=20,
-            hypocenter_distribution=PMF(hdd),
-            nodal_plane_distribution=PMF([(1, NodalPlane(0, 60, 90))]),
-            hypo_dip_fracs=(0.5, 2 / 3, 0.75))
+            hypocenter_distribution=hd,
+            nodal_plane_distribution=PMF([(1, NodalPlane(0, 60, 90))]))
         self.assertEqual(src.hypo_dip_fracs, (0.5, 2 / 3, 0.75))
 
     def test_dip_frac_shifts_planar(self):
         # Varying fracs per depth must produce different rupture corners
         # than the default centroid placement (0.5)
-        hdd = [(0.25, 5), (0.5, 10), (0.25, 15)]
+        hdd = PMF([(0.25, 5), (0.5, 10), (0.25, 15)])
+        hdd_off = PMF([(0.25, 5), (0.5, 10), (0.25, 15)])
+        hdd_off.hypo_dip_fracs = (0.5, 2 / 3, 0.75)
         kwargs = dict(upper_seismogenic_depth=0, lower_seismogenic_depth=20,
-                      hypocenter_distribution=PMF(hdd),
                       nodal_plane_distribution=PMF([(1, NodalPlane(0, 60, 90))]))
-        src_cen = make_point_source(**kwargs)
-        src_off = make_point_source(hypo_dip_fracs=(0.5, 2 / 3, 0.75), **kwargs)
+        src_cen = make_point_source(hypocenter_distribution=hdd, **kwargs)
+        src_off = make_point_source(hypocenter_distribution=hdd_off, **kwargs)
         pla_cen = list(src_cen.get_planar().values())[0][0]
         pla_off = list(src_off.get_planar().values())[0][0]
         self.assertFalse(numpy.array_equal(pla_cen, pla_off))

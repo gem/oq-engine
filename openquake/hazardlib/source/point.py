@@ -148,8 +148,7 @@ class PointSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # point-specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 location, nodal_plane_distribution, hypocenter_distribution,
-                 hypo_dip_fracs=None):
+                 location, nodal_plane_distribution, hypocenter_distribution):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -175,7 +174,7 @@ class PointSource(ParametricSeismicSource):
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
-        self.hypo_dip_fracs = hypo_dip_fracs
+        self.hypo_dip_fracs = getattr(hypocenter_distribution, 'hypo_dip_fracs', None)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
@@ -187,6 +186,7 @@ class PointSource(ParametricSeismicSource):
         new.nodal_plane_distribution = PMF([(1., nodalplane)])
         new.hypocenter_distribution = PMF([(1., depth)])
         new.hypo_dip_fracs = None if dip_frac is None else (dip_frac,)
+        new.hypocenter_distribution.hypo_dip_fracs = new.hypo_dip_fracs
         return new
 
     def get_planin(self, magd=None, npd=None):
@@ -438,6 +438,7 @@ def pdata_to_psources(pdata):
     msr = pdata['msr']
     out = []
     for i, rec in enumerate(pdata['array']):
+        hcd[i].hypo_dip_fracs = hdf[i]
         out.append(PointSource(
             source_id=f'{name}:{i}',
             name=name,
@@ -451,7 +452,6 @@ def pdata_to_psources(pdata):
             location=Point(rec['lon'], rec['lat']),
             nodal_plane_distribution=npd[i],
             hypocenter_distribution=hcd[i],
-            hypo_dip_fracs=hdf[i],
             temporal_occurrence_model=tom))
     return out
 

@@ -93,8 +93,8 @@ multiPointSource{id='mp1', name='multi point source'}
         mesh = Mesh(numpy.array([0., 1.]), numpy.array([0., 0.]))
         mmfd = MultiMFD('incrementalMFD', size=2, min_mag=[4.5],
                         bin_width=[1.0], occurRates=[[0.1], [0.2]])
+        hd.hypo_dip_fracs = fracs
         mps = MultiPointSource('mp2', 'test', 'Active Shallow Crust',
-                               mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh,
-                               hypo_dip_fracs=fracs)
+                               mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh)
         for ps in mps:
             self.assertEqual(ps.hypo_dip_fracs, fracs)
