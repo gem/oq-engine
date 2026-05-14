@@ -656,15 +656,16 @@ class SourceConverter(RuptureConverter):
 
     def convert_hypo_dip_fracs(self, node):
         """
-        Read fixedDipFrac (down-dip fraction to place hypocentre)
-        from each hypoDepth entry in a hypoDepthDist.
-         
-        If fixedDipFrac is present it returns a tuple of fraction 
-        per depth entry, with any missing entries being assigned a
-        fraction of 0.5 during rupture construction (i.e., the
-        default centroid-based placement usually assumed in OQ).
+        Read fixedDipFrac from each hypoDepth entry in a hypoDepthDist.
 
-        Returns None when no entry specifies fixedDipFrac.
+        Each value is the down-dip fraction placing the hypocentre on the
+        rupture (0=top, 1=bottom); the rupture is shifted so the hypocentre
+        lands at that fraction along dip, then clamped to [USD, LSD].
+
+        NOTE: Missing entries default to 0.5 (rupture centroid, default
+        OQ behaviour).
+
+        NOTE: Returns None when no entry specifies fixedDipFrac.
         """
         with context(self.fname, node):
             fdfs = [hd.attrib.get('fixedDipFrac') for hd in node.hypoDepthDist]

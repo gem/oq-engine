@@ -124,9 +124,9 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
         # center and it's upper and lower borders:
         # calculate how much shallower the upper border of the rupture
         # is than the upper seismogenic depth:
-        # dip_fracs[d] controls where the hypocentre sits on the rupture
-        # (0=top, 1=bottom); 0.5 is the OQ default centroid placement (i.e.,
-        # centering rupture on the hypocentre)
+        # dip_fracs[d]: down-dip fraction placing the hypocentre on the rupture
+        # (0=top, 1=bottom) so rupture is shifted so hypocentre lands at that
+        # fraction along dip, then clamped to stay inside [USD, LSD]
         center_shift = (1. - 2. * dip_fracs[d]) * half_height
         top = cdep + center_shift - half_height
         bot = cdep + center_shift + half_height
@@ -217,9 +217,11 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False,
     :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
     :param dip_fracs:
-        Optional array of down-dip fractions at which a hypocentre sits on the
-        rupture for each depth entry in hdd (0=top, 1=bottom). Defaults to 0.5
-        which means the rupture is centred on hypocentre (default OQ behaviour)
+        Optional array, one entry per depth in hdd. Each value is the
+        down-dip fraction placing the hypocentre on the rupture (0=top of
+        rupture, 1=bottom). The rupture is shifted so the hypocentre lands
+        at that fraction along dip, then clamped to [USD, LSD].
+        Defaults to 0.5 (hypocentre at rupture centroid, default OQ behaviour).
     :return:
         an array of shape (M, N, D, 3)
     """
