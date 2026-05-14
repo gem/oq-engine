@@ -174,7 +174,8 @@ class PointSource(ParametricSeismicSource):
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
-        self.hypo_dip_fracs = getattr(hypocenter_distribution, 'hypo_dip_fracs', None)
+        self.hypo_dip_fracs = getattr(
+            hypocenter_distribution, 'hypo_dip_fracs', None)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 

@@ -75,7 +75,8 @@ class MultiPointSource(ParametricSeismicSource):
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
-        self.hypo_dip_fracs = getattr(hypocenter_distribution, 'hypo_dip_fracs', None)
+        self.hypo_dip_fracs = getattr(
+            hypocenter_distribution, 'hypo_dip_fracs', None)
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
