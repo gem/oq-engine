@@ -1,3 +1,6 @@
+  [Christopher Brooks]
+  * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
+
   [Michele Simionato]
   * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
   * Extended the rupture exporter to also work with multi-model SES files
