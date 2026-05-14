@@ -374,7 +374,7 @@ def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
         num_assets = {}
     sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
     if len(sites) < len(sitecol):
-        logging.info('Reducing %s->%d sites', sitecol, len(sites))
+        logging.debug('Reducing %s->%d sites', sitecol, len(sites))
     mags = numpy.round(ruptures['mag'], 1)
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
     smap = Starmap(filter_rups,
