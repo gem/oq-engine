@@ -59,6 +59,34 @@ VOLC_FRONT_PHI_LONS = np.array([
     122.0, 124.0, 128.3, 129.7, 130.8, 131.6, 132.0, 133.7, 134.9,
     136.9, 138.7])
 
+# Philippine Sea plate subduction zone boundary polygons
+PSE_CPHL_03_LONS = np.array([
+    132.5830, 132.8830, 132.9000, 132.9000, 132.4830, 132.3000,
+    132.1330, 131.2830, 131.5170, 131.7670, 132.1830, 132.3170])
+PSE_CPHL_03_LATS = np.array([
+    34.3000, 34.4170, 33.8000, 33.5170, 33.2000, 33.0000,
+    33.2170, 33.2670, 33.6830, 34.0170, 33.9670, 34.1000])
+
+PSE_CPHL_04_LONS = np.array([
+    132.1330, 131.9170, 131.7000, 131.5170, 131.4830, 131.0830,
+    130.9000, 130.3000, 130.0000, 130.4000, 130.6000, 131.0000, 131.2830])
+PSE_CPHL_04_LATS = np.array([
+    33.2170, 32.9330, 32.5330, 32.0170, 31.7830, 31.0670,
+    30.8170, 31.0500, 31.2670, 32.0000, 32.3670, 32.6500, 33.2670])
+
+PSE_CPHL_05_LONS = np.array([
+    130.3000, 130.9000, 130.4670, 130.0670, 129.6000, 129.2000,
+    128.8000, 127.7670, 126.8170, 126.2670, 125.3000, 125.0000,
+    124.5000, 123.7000, 123.0000, 122.5000, 122.2330, 121.5000,
+    122.2330, 123.0000, 124.0000, 125.0000, 126.0000, 127.0000,
+    128.0000, 129.0000, 130.0000])
+PSE_CPHL_05_LATS = np.array([
+    31.0500, 30.8170, 30.2500, 29.8000, 29.2330, 28.6000,
+    28.1000, 27.1000, 26.1000, 25.6000, 24.9670, 24.8500,
+    24.7170, 24.6330, 24.5330, 24.5500, 24.5500, 24.5500,
+    25.3330, 25.5000, 25.7670, 26.5000, 27.2670, 28.0000,
+    28.8170, 30.0000, 31.2670])
+
 
 ### NIED sigma model functions ###
 def _get_nied_sigma_crustal(rrup):
@@ -177,6 +205,9 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
         if nied_anom_corr:
             # In NIED subclasses also restrict to sites west of 136.9 deg east
             mask = mask | (ctx.lon >= 136.9)
+            # In the NIED case we also only apply if the event is inside zones
+            # 3, 4 or 5 of the NSHM zonation
+            breakpoint()
         corr[mask] = 0.
         return corr
     
@@ -204,7 +235,7 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     if region == "SW":
-        tmp += C['PH'] # Morikawa and Fujiwara (2015)
+        tmp[hypo_z < 80] += C['PH'] # Morikawa and Fujiwara (2015)
     return tmp
 
 
