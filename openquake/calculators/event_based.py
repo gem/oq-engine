@@ -302,9 +302,12 @@ def filter_stations(station_df, complete, rup, maxdist):
 
 
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
+    filter_mosaic = (oq.mosaic_model or
+                     logs.get_country_or_model(oq.inputs['job_ini']))
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
-    allrups = allrups[in_mosaic(allrups)]
+    if filter_mosaic:
+        allrups = allrups[in_mosaic(allrups)]
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
         rup_id = I64(rup_id.split(','))
