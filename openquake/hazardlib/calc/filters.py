@@ -433,8 +433,8 @@ def build_default_magdist():
     )
     # NOTE: fallback for TRTs not in the mosaic mapping, otherwise
     # IntegrationDistance.__missing__ would raise an error.
-    # FIXME: we should update the mosaic to canonical TRT mapping
-    # to include any missing trt category we run into
+    # We should update the mosaic to canonical TRT mapping
+    # to include any missing trt category we run into.
     result['default'] = MAGDIST_BY_TRT['ACTIVE_SHALLOW_CRUST']
     return result
 
