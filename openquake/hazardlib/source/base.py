@@ -124,21 +124,27 @@ def poisson_sample(src, eff_num_ses, seed):
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
             for np_prob, np in ps.nodal_plane_distribution.data:
-                for hc_prob, hc_depth in ps.hypocenter_distribution.data:
+                for d, (hc_prob, hc_depth) in enumerate(
+                        ps.hypocenter_distribution.data):
+                    hdfs = ps.hypo_dip_fracs
+                    dip_frac = (0.5 if hdfs is None or hdfs[d] is None
+                                else hdfs[d])
                     args = (mag_occ_rate, np_prob, hc_prob,
-                            mag, np, lon, lat, hc_depth, ps)
+                            mag, np, lon, lat, hc_depth, dip_frac, ps)
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
     eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
     occurs = rng.poisson(eff_rates)
     for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
         if num_occ:
-            _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, ps = args
+            (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,
+             dip_frac, ps) = args
             hc = Point(lon, lat, hc_depth)
             hdd = numpy.array([(1., hc.depth)])
+            dip_fracs = numpy.array([dip_frac])
             [[[planar]]] = build_planar(
                 ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
-                usd, lsd, ps.get_aspect_ratio(mag))
+                usd, lsd, ps.get_aspect_ratio(mag), dip_fracs=dip_fracs)
             rup = ParametricProbabilisticRupture(
                 mag, np.rake, ps.tectonic_region_type, hc,
                 PlanarSurface.from_(planar), rate, tom)
