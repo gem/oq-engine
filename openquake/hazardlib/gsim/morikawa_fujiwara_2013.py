@@ -174,18 +174,19 @@ def _get_basin_term(C, ctx, region=None):
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _anomalous_intensity_correction_term(
-        C, region, ctx, trt, php_masks, nshm25_nied=False):
+def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
     """
     Anomalous intensity correction (equation 11).
 
     We compute xvf by a ctx by ctx basis because we want to use a
     different volcanic front depending on the region parameter.
 
-    NOTE: When nshm25_nied is True (NIED subclasses):
+    NOTE: When php_nshm is non-empty (NIED subclasses):
         - NE correction is tapered linearly from zero at 35.5 deg north
           to full (unity) at 36.5 deg north.
         - SW correction is restricted to sites west of 136.9 deg east.
+        - For slab earthquakes do not apply if the event is located in
+          zones 4 or 5 of the Philippine plate as defined in the NSHM.
     """
     # No region so apply no anomalous intensity correction
     if region is None:
@@ -203,7 +204,7 @@ def _anomalous_intensity_correction_term(
     if region == 'NE':
         gamma = C['gNE']
         corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
-        if nshm25_nied:
+        if php_nshm:
             # Only apply in the NIED subclasses (2025 NSHM)
             taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
             corr = corr * taper
@@ -215,16 +216,17 @@ def _anomalous_intensity_correction_term(
         corr = gamma * xvf_filt * np.maximum(ctx.hypo_depth - 30., 0.)
         # Only apply for events >= 60 km
         mask = ctx.hypo_depth < 60
-        if nshm25_nied:
+        if php_nshm:
             # In NIED subclasses also restrict to sites west of 136.9 deg east
             mask = mask | (ctx.lon >= 136.9)
             # In the NIED case we also only apply SW correction if an
             # inslab event is inside zone 4 or zone 5 of the PHP slab
             if trt == const.TRT.SUBDUCTION_INTRASLAB:
-                mask = mask | ~(php_masks['zone_04'] | php_masks['zone_05'])
+                mask = mask | ~(php_nshm['zone_04'] | php_nshm['zone_05'])
 
         # Apply corr only for events with depth greater than or equal to
-        # 60 km within zones 4 or 5, with at sites west of 136.9 deg east
+        # 60 km AND if the NIED NSHM version also only those events within
+        # zones 4 or 5 AND only at sites west of 136.9 deg east 
         corr[mask] = 0.
 
         return corr
@@ -238,33 +240,33 @@ _get_magnitude_term = CallableDict()
 
 @_get_magnitude_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
 def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, hypo_z,
-                          php_masks, nied_nshm):
+                          php_nshm):
     return (C['a'] * (mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e'] * mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
 def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, hypo_z,
-                          php_masks, nied_nshm):
+                          php_nshm):
     return (C['a'] * (mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
 def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z,
-                          php_masks, nied_nshm):
+                          php_nshm):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
     
     # PH correction term for inslab events
     apply_ph = hypo_z < 80
-    if nied_nshm:
+    if php_nshm:
         # Additional filter to exclude the PH adjustment for
         # slab events if they are in zones 3, 4 or 5
-        in_php = (php_masks['zone_03'] | php_masks['zone_04']
-                    | php_masks['zone_05'])
+        in_php = (php_nshm['zone_03'] | php_nshm['zone_04']
+                    | php_nshm['zone_05'])
         apply_ph = apply_ph & ~in_php
-        
+
     tmp[apply_ph] += C['PH']
     return tmp
 
@@ -321,10 +323,10 @@ class MorikawaFujiwara2013Crustal(GMPE):
         # PHP zone masks are only needed for the NIED NSHM subclasses
         if self.nshm25_nied:
             hypo_mesh = Mesh(ctx.hypo_lon, ctx.hypo_lat)
-            php_masks = {key: pgn.intersects(hypo_mesh)
+            php_nshm = {key: pgn.intersects(hypo_mesh)
                          for key, pgn in PHP_PGNS.items()}
         else:
-            php_masks = {}
+            php_nshm = {}
 
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -332,11 +334,11 @@ class MorikawaFujiwara2013Crustal(GMPE):
             mean[m] = (
                 _get_magnitude_term(trt, self.region, C,ctx.rrup,
                                     mw1prime, mw1, ctx.hypo_depth,
-                                    php_masks, self.nshm25_nied) +
+                                    php_nshm) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _anomalous_intensity_correction_term(
-                    C, self.region, ctx, trt, php_masks, self.nshm25_nied))
+                    C, self.region, ctx, trt, php_nshm))
 
             if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(
