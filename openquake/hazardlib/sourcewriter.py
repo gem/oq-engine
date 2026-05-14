@@ -323,21 +323,29 @@ def build_nodal_plane_dist(npd):
     return Node("nodalPlaneDist", nodes=npds)
 
 
-def build_hypo_depth_dist(hdd):
+def build_hypo_depth_dist(hdd, hypo_dip_fracs=None):
     """
     Returns the hypocentral depth distribution as a Node instance
 
     :param hdd:
         Hypocentral depth distribution as an instance of :class:
         `openquake.hzardlib.pmf.PMF`
+    :param hypo_dip_fracs:
+        Optional tuple which contains the down-dip fraction at which a
+        hypocentre of a given depth is placed on the rupture.
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
     hdds = []
     dist = []
-    for (prob, depth) in hdd.data:
+    for i, (prob, depth) in enumerate(hdd.data):
         dist.append((prob, depth))
-        hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
+        attrs = {"depth": depth, "probability": prob}
+        if hypo_dip_fracs is not None and hypo_dip_fracs[i] is not None:
+            # If hypo_dip_fracs but not for this entry a default of 0.5
+            # is used during hypocentre placement during rup construction.
+            attrs["fixedDipFrac"] = hypo_dip_fracs[i]
+        hdds.append(Node("hypoDepth", attrs))
     sourceconverter.fix_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
@@ -371,7 +379,8 @@ def get_distributed_seismicity_source_nodes(source):
         build_nodal_plane_dist(source.nodal_plane_distribution))
     # Parse hypocentral depth distribution
     source_nodes.append(
-        build_hypo_depth_dist(source.hypocenter_distribution))
+        build_hypo_depth_dist(source.hypocenter_distribution,
+                              getattr(source, 'hypo_dip_fracs', None)))
     return source_nodes
 
 

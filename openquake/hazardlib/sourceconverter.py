@@ -654,6 +654,34 @@ class SourceConverter(RuptureConverter):
             fix_dupl(hddist, self.fname, hdnode.lineno)
             return pmf.PMF(hddist)
 
+    def convert_hypo_dip_fracs(self, node):
+        """
+        Read fixedDipFrac (down-dip fraction to place hypocentre)
+        from each hypoDepth entry in a hypoDepthDist.
+         
+        If fixedDipFrac is present it returns a tuple of fraction 
+        per depth entry, with any missing entries being assigned a
+        fraction of 0.5 during rupture construction (i.e., the
+        default centroid-based placement usually assumed in OQ).
+
+        Returns None when no entry specifies fixedDipFrac.
+        """
+        with context(self.fname, node):
+            fdfs = [hd.attrib.get('fixedDipFrac') for hd in node.hypoDepthDist]
+            if not any(f is not None for f in fdfs):
+                return None
+            fracs = []
+            for fdf in fdfs:
+                if fdf is None:
+                    fracs.append(None)
+                else:
+                    frac = float(fdf)
+                    if not 0. < frac <= 1.:
+                        raise ValueError(
+                            'fixedDipFrac %s must be in the range (0, 1)' % frac)
+                    fracs.append(frac)
+            return tuple(fracs)
+
     def convert_areaSource(self, node):
         """
         Convert the given node into an area source object.
@@ -685,6 +713,7 @@ class SourceConverter(RuptureConverter):
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hddist(node),
+            hypo_dip_fracs=self.convert_hypo_dip_fracs(node),
             polygon=polygon,
             area_discretization=area_discretization,
             temporal_occurrence_model=self.get_tom(node))
@@ -712,6 +741,7 @@ class SourceConverter(RuptureConverter):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hddist(node),
+            hypo_dip_fracs=self.convert_hypo_dip_fracs(node),
             temporal_occurrence_model=self.get_tom(node))
 
     def convert_multiPointSource(self, node):
