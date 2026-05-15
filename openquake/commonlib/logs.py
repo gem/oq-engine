@@ -265,8 +265,10 @@ class LogContext:
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
         inputs = self.params.get('inputs', {})  # missing in test_recompute
-        tag = self.params.get('mosaic_model') or get_country_or_model(
-            inputs.get('job_ini', ''))
+        if 'mosaic_model' not in self.params:
+            self.params['mosaic_model'] = get_country_or_model(
+                inputs.get('job_ini', ''))
+        tag = self.params['mosaic_model']
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, tag + ' ' if tag else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)]
