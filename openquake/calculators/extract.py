@@ -1665,11 +1665,12 @@ def extract_rupture_info(dstore, what):
     except KeyError:  # scenario
         source_id = None
     multi_model = isinstance(source_id, Group)
+    multi_lt = isinstance(dstore['full_lt'], Group)
     dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
-    if multi_model:
+    if multi_lt:
         dtlist.append(('model', '<S3'))
     rows = []
     boundaries = []
@@ -1708,10 +1709,12 @@ def extract_rupture_info(dstore, what):
                                           ', '.join(coordset))
                     else:  # good polygon
                         boundaries.append('POLYGON((%s))' % ', '.join(coords))
-                rows.append(
-                    (r['rup_id'], srcid, r['multiplicity'],
-                     r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake']))
+                row = [r['rup_id'], srcid, r['multiplicity'],
+                       r['mag'], r['lon'], r['lat'], r['depth'],
+                       trt, r['strike'], r['dip'], r['rake']]
+                if multi_lt:
+                    row.append(r['model'])
+                rows.append(tuple(row))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
