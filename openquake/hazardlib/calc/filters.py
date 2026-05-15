@@ -415,32 +415,10 @@ class IntegrationDistance(dict):
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
-def build_default_magdist():
-    """
-    Build an IntegrationDistance instance keyed on every known mosaic TRT
-    string. This ensures __missing__ is never reached for any TRT present
-    in the mosaic mapping.
-    Distance values are rounded to the nearest 5 km in
-    MAGDIST_BY_TRT; no further rounding is applied here.
-
-    Returns an IntegrationDistance, so that methods
-    like .cut() and .__call__() are available after assignment
-    to OqParam.maximum_distance.
-    """
-    result = IntegrationDistance(
+DEFAULT_INTEGRATION_DISTANCE = IntegrationDistance(
         (mosaic_trt, MAGDIST_BY_TRT[canonical_trt])
         for mosaic_trt, canonical_trt in MOSAIC_TRT_TO_CANONICAL_TRT.items()
-    )
-    # NOTE: fallback for TRTs not in the mosaic mapping, otherwise
-    # IntegrationDistance.__missing__ would raise an error.
-    # We should update the mosaic to canonical TRT mapping
-    # to include any missing trt category we run into.
-    result['default'] = MAGDIST_BY_TRT['ACTIVE_SHALLOW_CRUST']
-    return result
-
-
-# Module-level constant consumed by OqParam.
-DEFAULT_INTEGRATION_DISTANCE = build_default_magdist()
+)
 
 
 def split_source(src):

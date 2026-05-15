@@ -29,6 +29,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.nrml import validators as nrml_validators
+from openquake.hazardlib.calc.filters import DEFAULT_INTEGRATION_DISTANCE
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -111,6 +112,9 @@ class AristotleParam:
                 params['description'] = (
                     f'{rupdic["usgs_id"]}: M {rupdic["mag"]}'
                     f' ({rupdic["lat"]}, {rupdic["lon"]})')
+        if self.maximum_distance is None:
+            md = DEFAULT_INTEGRATION_DISTANCE[self.trt]
+            params['maximum_distance'] = str({self.trt: md})
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
         _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
