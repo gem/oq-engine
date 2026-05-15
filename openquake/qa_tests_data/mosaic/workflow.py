@@ -142,7 +142,8 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         models = MODELS
     for model in models:
         base = os.path.abspath(os.path.join(mosaic_dir, model))
-        assert os.path.exists(base), base
+        if not os.path.exists(base):
+            raise RuntimeError(r'Missing repository {base}')
         ini = os.path.join(base, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             ext = '_vs30.ini'
