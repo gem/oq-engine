@@ -22,6 +22,7 @@ from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
 from openquake.calculators import base
+from openquake.calculators.export import export
 from openquake.engine import global_ses
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
@@ -94,6 +95,10 @@ def test_one_site():
     df = calc.datastore.read_df('gmf_data', 'sid')
     assert len(df) == 14
     assert df.index.max() < 1
+
+    # test multi-model rupture exporter
+    [fname] = export(('ruptures', 'csv'), calc.datastore.parent)
+    assert os.path.basename(fname) == 'ruptures_rups.csv'
 
 
 def test_sites():  # 5 sites

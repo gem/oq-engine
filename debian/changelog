@@ -5,6 +5,20 @@
     openquake/hazardlib/gsim/bayless_somerville_2024.py
     
   [Christopher Brooks]
+  * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
+
+  [Michele Simionato]
+  * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
+  * Extended the rupture exporter to also work with multi-model SES files
+  * Keeping the correlation matrices at 32 bit to save memory and to double
+    the speed
+
+  [Christopher Brooks]
+  * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
+    front (xvf) on a ctx-by-ctx basis instead of requiring it as a
+    site parameter for consistency with NIED's own implementation and
+    to apply the SW `PH` correction to all inslab events rather than
+    just those with depths less than 80 km.
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
@@ -15,13 +29,13 @@
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
     scaling and single station sigma) and some unit tests.
-  
+
   [Marco Pagani]
   * Fixing the calculation of ruptures with clusters and mutually exclusive
     sources
 
   [Michele Simionato]
-   * Computing the GMFs with a single core in scenario risk calculations,
+   * Computing the GMFs with a single core in scenario calculations,
      changing a bit the numbers (akin to a change of seed), but saving a
      lot of memory, especially in conditioned computations
    * Changed the distribution in damage calculations to split in blocks

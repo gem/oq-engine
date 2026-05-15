@@ -136,8 +136,7 @@ def main(job_ini,
     else:  # toml
         if workflow_id:
            params['workflow_id'] = int(workflow_id)
-        return run_workflow(job_ini, params, nodes=nodes, pdb=pdb,
-                            concurrent_jobs=1)
+        return run_workflow(job_ini, params, nodes=nodes, pdb=pdb)
 
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')

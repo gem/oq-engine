@@ -622,6 +622,8 @@ def _fix(col):
 @export.add(('aggexp_tags', 'csv'))
 def export_aggexp_tags_csv(ekey, dstore):
     """
+    Export outputs like aggexp_tags-NAME_1, ... and aggexp-taxonomy, ...
+
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
@@ -634,6 +636,13 @@ def export_aggexp_tags_csv(ekey, dstore):
         fname = dstore.export_path('%s-%s.csv' % (ekey[0], '-'.join(aggby)))
         writer.save(df, fname, comment=dstore.metadata)
         fnames.append(fname)
+    if 'aggexp_by' in dstore:
+        # tested in run_workflow
+        for name in sorted(dstore['aggexp_by']):
+            df = dstore.read_df(f'aggexp_by/{name}')
+            fname = dstore.export_path(f'aggexp-{name}.csv')
+            writer.save(df, fname, comment=dstore.metadata)
+            fnames.append(fname)
     return fnames
 
 

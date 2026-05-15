@@ -18,11 +18,12 @@ window.initAeloForm = function() {
     // NOTE: avoiding to call it DEFAULT_SITE_CLASS to avoid confusion with the 'default' one
     const PRESELECTED_SITE_CLASS = 'BC';
 
-    var vs30_original_placeholder;
+    var vs30_original_placeholder = $('input#vs30').attr('placeholder');
     $('select#site_class').on('change', function() {
         const site_class = $(this).val();
         const input_vs30 = $('input#vs30');
         const asce_version = $("#asce_version").val();
+        if (!site_class) return;
         if (site_class === 'custom') {
             input_vs30.prop('disabled', false);
             input_vs30.val('');
@@ -44,37 +45,40 @@ window.initAeloForm = function() {
         const asce_version = $(this).val();
         const site_class_select = $('select#site_class');
         const input_vs30 = $('input#vs30');
+
         site_class_select.empty();
+
+        if (!asce_version) {
+            // If no ASCE version is selected, lock the dropdowns back down
+            site_class_select.prop('disabled', true);
+            site_class_select.append($('<option>', {
+                value: '',
+                text: '-- 2. Select ASCE standards first --',
+                selected: true,
+                disabled: true
+            }));
+            input_vs30.val('').prop('disabled', true);
+            return;
+        }
+
+        // Otherwise, enable Site Class and show its own placeholder
+        site_class_select.prop('disabled', false);
+
         if (asce_version === 'ASCE7-16') {
             site_class_select.append($('<option>', {
                 value: PRESELECTED_SITE_CLASS,
                 text: window.AELO.site_classes[asce_version][PRESELECTED_SITE_CLASS]['display_name']}));
-            input_vs30.val(window.AELO.site_classes[asce_version][PRESELECTED_SITE_CLASS]['vs30']);
         } else if (asce_version === 'ASCE7-22') {
             for (const site_class of Object.keys(window.AELO.site_classes[asce_version])) {
                 site_class_select.append(
                     $("<option>", {
                         value: site_class,
-                        text: window.AELO.site_classes[asce_version][site_class]['display_name'],
-                        selected: site_class === PRESELECTED_SITE_CLASS
+                        text: window.AELO.site_classes[asce_version][site_class]['display_name']
                     })
                 );
             }
         }
-        const site_class = site_class_select.val();
-        if (site_class === 'custom') {
-            input_vs30.prop('disabled', false);
-            input_vs30.val('');
-        } else {
-            input_vs30.prop('disabled', true);
-            if (site_class === 'default') {
-                input_vs30.val('');
-            } else {
-                const site_class = site_class_select.val();
-                input_vs30.val(window.AELO.site_classes[asce_version][site_class]['vs30']);
-                check_vs30_below_200();
-            }
-        }
+        site_class_select.val(PRESELECTED_SITE_CLASS).change();
     });
 
     const vs30_below_200_warning = `

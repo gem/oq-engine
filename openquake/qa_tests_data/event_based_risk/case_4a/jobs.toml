@@ -1,5 +1,6 @@
 [multi.workflow]
 description = "multi-workflow"
+may_fail = ["riskJob"]
 
 [hazard.Job]
 ini = "job_hazard.ini"
