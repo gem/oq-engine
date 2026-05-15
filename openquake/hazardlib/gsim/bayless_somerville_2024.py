@@ -37,21 +37,17 @@ def _get_fM(C, mag):
     """
     M1 = C['M1']
     M2 = 5.0
-    fM = np.zeros_like(mag, dtype=float)
     fM_M2 = C['a1'] + C['a4'] * (M2 - M1) + C['a8'] * (8.5 - M2) ** 2
 
-    idx = mag >= M1
-    fM[idx] = (C['a1'] + C['a5'] * (mag[idx] - M1)
-               + C['a8'] * (8.5 - mag[idx]) ** 2)
+    fM_above_M1 = (C['a1'] + C['a5'] * (mag - M1)
+                   + C['a8'] * (8.5 - mag) ** 2)
+    fM_mid = (C['a1'] + C['a4'] * (mag - M1)
+              + C['a8'] * (8.5 - mag) ** 2)
+    fM_below_M2 = (fM_M2 + C['a6'] * (mag - M2)
+                   + C['a7'] * (mag - M2) ** 2)
 
-    idx = (mag >= M2) & (mag < M1)
-    fM[idx] = (C['a1'] + C['a4'] * (mag[idx] - M1)
-               + C['a8'] * (8.5 - mag[idx]) ** 2)
-
-    idx = mag < M2
-    fM[idx] = fM_M2 + C['a6'] * (mag[idx] - M2) + C['a7'] * (mag[idx] - M2) ** 2
-
-    return fM
+    return np.where(mag >= M1, fM_above_M1,
+                    np.where(mag >= M2, fM_mid, fM_below_M2))
 
 
 def _get_fP(C, mag, rrup):
