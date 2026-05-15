@@ -13,15 +13,14 @@
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
-    site parameter for consistency with NIED's own implementation and
-    to apply the SW `PH` correction to all inslab events rather than
-    just those with depths less than 80 km.
+    site parameter for consistency with NIED's own implementation.
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
   * Add the 2025 NSHM variants of the anomalous intensity correction
-    to the `MorikawaFujiwara2013` and some QA tests to check the site
-    location-specific component of these corrections (classical/case_30).
+    and the PH correction to the `MorikawaFujiwara2013` and some QA
+    tests to check the site location-specific component of these
+    corrections (classical/case_30).
   * Added ability to specify a distribution of hypocenters within a
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
@@ -52,7 +51,7 @@
     source model logic tree. Some unit tests added and a QA test in
     logictree/case_33.
   * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
-    the job file.
+    the job file (QA test in classical/case_13 with `MorikawaFujiwara2013`).
 
   [Michele Simionato]
   * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
