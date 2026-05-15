@@ -30,7 +30,7 @@ from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import expo_to_hdf5
+from openquake.commonlib import expo_to_hdf5, readinput
 
 U16 = numpy.uint16
 F32 = numpy.float32
@@ -98,7 +98,7 @@ embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
             vf.kind = 'vulnerability'
             vfuncs.append(vf)
     logging.info(f'Read {len(vfuncs)} functions')
-    oq = OqParam(calculation_mode='custom')
+    oq = OqParam(**readinput.oqdict(calculation_mode='custom'))
     crm = CompositeRiskModel(oq, vfuncs)
     crm.region = os.path.basename(vulndir)
     return crm

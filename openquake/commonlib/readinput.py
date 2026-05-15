@@ -101,10 +101,11 @@ def get_country_or_model(job_ini):
     return ''
 
 
-def oqdict(params):
+def oqdict(params={}, **kw):
     """
     Update the params dictionary with inputs['job_ini'] and 'mosaic_model'
     """
+    params = params | kw
     inputs = params.setdefault('inputs', {})
     inputs.setdefault('job_ini', '<in-memory>')
     if not params.get('mosaic_model', ''):
