@@ -1580,7 +1580,8 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', I64), ('source_id', SOURCE_ID), ('multiplicity', U32),
+            ('rup_id', I64), ('source_id', SOURCE_ID),
+            ('model', '<S3'), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1604,7 +1605,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.id, ebr.source_id, ebr.n_occ, rate,
+                (ebr.id, ebr.source_id, ebr.model, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)
@@ -1665,10 +1666,13 @@ def extract_rupture_info(dstore, what):
     except KeyError:  # scenario
         source_id = None
     multi_model = isinstance(source_id, Group)
+    multi_lt = isinstance(dstore['full_lt'], Group)
     dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
+    if multi_lt:
+        dtlist.append(('model', '<S3'))
     rows = []
     boundaries = []
     allrups = dstore['ruptures'][:]
@@ -1706,10 +1710,12 @@ def extract_rupture_info(dstore, what):
                                           ', '.join(coordset))
                     else:  # good polygon
                         boundaries.append('POLYGON((%s))' % ', '.join(coords))
-                rows.append(
-                    (r['rup_id'], srcid, r['multiplicity'],
-                     r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake']))
+                row = [r['rup_id'], srcid, r['multiplicity'],
+                       r['mag'], r['lon'], r['lat'], r['depth'],
+                       trt, r['strike'], r['dip'], r['rake']]
+                if multi_lt:
+                    row.append(r['model'])
+                rows.append(tuple(row))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,
