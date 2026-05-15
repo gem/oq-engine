@@ -37,6 +37,8 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
+from openquake.hazardlib.geo import Point, Polygon
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
 from openquake.hazardlib.gsim.si_midorikawa_1999 import (
     set_mean as _sm1999_set_mean, _get_min_distance_to_volcanic_front)
@@ -58,6 +60,44 @@ VOLC_FRONT_PHI_LATS = np.array([
 VOLC_FRONT_PHI_LONS = np.array([
     122.0, 124.0, 128.3, 129.7, 130.8, 131.6, 132.0, 133.7, 134.9,
     136.9, 138.7])
+
+# Philippine Sea plate subduction zone boundaries
+PSE_CPHL_03_LONS = np.array([
+    132.5830, 132.8830, 132.9000, 132.9000, 132.4830, 132.3000,
+    132.1330, 131.2830, 131.5170, 131.7670, 132.1830, 132.3170])
+PSE_CPHL_03_LATS = np.array([
+    34.3000, 34.4170, 33.8000, 33.5170, 33.2000, 33.0000,
+    33.2170, 33.2670, 33.6830, 34.0170, 33.9670, 34.1000])
+
+PSE_CPHL_04_LONS = np.array([
+    132.1330, 131.9170, 131.7000, 131.5170, 131.4830, 131.0830,
+    130.9000, 130.3000, 130.0000, 130.4000, 130.6000, 131.0000, 131.2830])
+PSE_CPHL_04_LATS = np.array([
+    33.2170, 32.9330, 32.5330, 32.0170, 31.7830, 31.0670,
+    30.8170, 31.0500, 31.2670, 32.0000, 32.3670, 32.6500, 33.2670])
+
+PSE_CPHL_05_LONS = np.array([
+    130.3000, 130.9000, 130.4670, 130.0670, 129.6000, 129.2000,
+    128.8000, 127.7670, 126.8170, 126.2670, 125.3000, 125.0000,
+    124.5000, 123.7000, 123.0000, 122.5000, 122.2330, 121.5000,
+    122.2330, 123.0000, 124.0000, 125.0000, 126.0000, 127.0000,
+    128.0000, 129.0000, 130.0000])
+PSE_CPHL_05_LATS = np.array([
+    31.0500, 30.8170, 30.2500, 29.8000, 29.2330, 28.6000,
+    28.1000, 27.1000, 26.1000, 25.6000, 24.9670, 24.8500,
+    24.7170, 24.6330, 24.5330, 24.5500, 24.5500, 24.5500,
+    25.3330, 25.5000, 25.7670, 26.5000, 27.2670, 28.0000,
+    28.8170, 30.0000, 31.2670])
+
+# Make a list of pgns representing the PHP slab boundaries
+PHP_PGNS = {
+    "zone_03": Polygon([Point(lo, la) for lo, la in zip(
+        PSE_CPHL_03_LONS, PSE_CPHL_03_LATS)]),
+    "zone_04": Polygon([Point(lo, la) for lo, la in zip(
+        PSE_CPHL_04_LONS, PSE_CPHL_04_LATS)]),
+    "zone_05": Polygon([Point(lo, la) for lo, la in zip(
+        PSE_CPHL_05_LONS, PSE_CPHL_05_LATS)]),
+}
 
 
 ### NIED sigma model functions ###
@@ -134,17 +174,19 @@ def _get_basin_term(C, ctx, region=None):
     return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
 
 
-def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
+def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
     """
     Anomalous intensity correction (equation 11).
 
     We compute xvf by a ctx by ctx basis because we want to use a
     different volcanic front depending on the region parameter.
 
-    NOTE: When nied_anom_corr is True (NIED subclasses):
+    NOTE: When php_nshm is non-empty (NIED subclasses):
         - NE correction is tapered linearly from zero at 35.5 deg north
           to full (unity) at 36.5 deg north.
         - SW correction is restricted to sites west of 136.9 deg east.
+        - For slab earthquakes do not apply if the event is located in
+          zones 4 or 5 of the Philippine plate as defined in the NSHM.
     """
     # No region so apply no anomalous intensity correction
     if region is None:
@@ -162,7 +204,7 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
     if region == 'NE':
         gamma = C['gNE']
         corr = gamma * xvf * np.maximum(ctx.hypo_depth - 30., 0.)
-        if nied_anom_corr:
+        if php_nshm:
             # Only apply in the NIED subclasses (2025 NSHM)
             taper = np.clip((ctx.lat - 35.5) / 1.0, 0.0, 1.0)
             corr = corr * taper
@@ -173,11 +215,20 @@ def _anomalous_intensity_correction_term(C, region, ctx, nied_anom_corr=False):
         xvf_filt = np.minimum(xvf, 75.0)
         corr = gamma * xvf_filt * np.maximum(ctx.hypo_depth - 30., 0.)
         # Only apply for events >= 60 km
-        mask = ctx.hypo_depth < 60
-        if nied_anom_corr:
+        mask = ctx.hypo_depth < 60 # NB events shallow are EXCLUDED in the mask
+        if php_nshm:
             # In NIED subclasses also restrict to sites west of 136.9 deg east
             mask = mask | (ctx.lon >= 136.9)
+            # In the NIED case we also only apply SW correction if an
+            # inslab event is INSIDE zone 4 or zone 5 of the PHP slab
+            if trt == const.TRT.SUBDUCTION_INTRASLAB:
+                mask = mask | ~(php_nshm['zone_04'] | php_nshm['zone_05'])
+
+        # Apply corr only for events with depth greater than or equal to
+        # 60 km AND if the NIED NSHM version also only those slab events in
+        # zones 4 or 5 AND only at sites west of 136.9 deg east 
         corr[mask] = 0.
+
         return corr
     
     else:
@@ -188,23 +239,39 @@ _get_magnitude_term = CallableDict()
 
 
 @_get_magnitude_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, hypo_z):
+def _get_magnitude_term_1(trt, region, C, rrup, mw1prime, mw1, hypo_z,
+                          php_nshm):
     return (C['a'] * (mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e'] * mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, hypo_z):
+def _get_magnitude_term_2(trt, region, C, rrup, mw1prime, mw1, hypo_z,
+                          php_nshm):
     return (C['a'] * (mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
             np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
 
 
 @_get_magnitude_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z):
+def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z,
+                          php_nshm):
     tmp = (C['a'] * (mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
            np.log10(rrup + C['d'] * 10.**(CONSTS['e']*mw1prime)))
-    if region == "SW":
-        tmp[hypo_z < 80] += C['PH'] # Morikawa and Fujiwara (2015)
+    
+    if region != "SW":
+        # Cannot be a PHP earthquake so end here
+        return tmp
+    
+    # Must be SW (i.e., PHP) so apply additional PHP corr
+    apply_ph = hypo_z < 80 # Only apply to shallower events
+    if php_nshm:
+        # Suppress PH adjustment for events inside PHP zones 3, 4 or 5
+        in_php = (php_nshm['zone_03'] | php_nshm['zone_04']
+                  | php_nshm['zone_05'])
+        apply_ph = apply_ph & ~in_php
+
+    tmp[apply_ph] += C['PH']
+
     return tmp
 
 
@@ -247,7 +314,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     # Use the anomalous intensity correction as defined in original paper
-    nied_anom_corr = False
+    nshm25_nied = False
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
@@ -256,16 +323,26 @@ class MorikawaFujiwara2013Crustal(GMPE):
         mw1prime = np.array(ctx.mag)
         mw1prime[ctx.mag >= mw01] = mw01
         self.region = getattr(self, 'region', None)
+
+        # PHP zone masks are only needed for the NIED NSHM subclasses
+        if self.nshm25_nied and trt == const.TRT.SUBDUCTION_INTRASLAB:
+            hypo_mesh = Mesh(ctx.hypo_lon, ctx.hypo_lat)
+            php_nshm = {key: pgn.intersects(hypo_mesh)
+                        for key, pgn in PHP_PGNS.items()}
+        else:
+            php_nshm = {}
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
             mean[m] = (
                 _get_magnitude_term(trt, self.region, C,ctx.rrup,
-                                    mw1prime, mw1, ctx.hypo_depth) +
+                                    mw1prime, mw1, ctx.hypo_depth,
+                                    php_nshm) +
                 _get_basin_term(C, ctx) +
                 _get_shallow_amplification_term(C, ctx.vs30) +
                 _anomalous_intensity_correction_term(
-                    C, self.region, ctx, self.nied_anom_corr))
+                    C, self.region, ctx, trt, php_nshm))
 
             if imt.name in ["PGA", "SA"]:
                 mean[m] = np.log(
@@ -393,6 +470,9 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
     This is the interface variant.
     """
+    # Required rupture parameters are magnitude and hypocentral position pars
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth', 'hypo_lon', 'hypo_lat'}
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         # Compute the underlying mean
         super().compute(ctx, imts, mean, sig, tau, phi)
@@ -404,12 +484,12 @@ class MorikawaFujiwara2013SubInterfaceNIED(MorikawaFujiwara2013SubInterface):
 
 class MorikawaFujiwara2013SubInterfaceNENIED(MorikawaFujiwara2013SubInterfaceNIED):
     region = 'NE'
-    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+    nshm25_nied = True # Apply 2025 NSHM specific adjustments
 
 
 class MorikawaFujiwara2013SubInterfaceSWNIED(MorikawaFujiwara2013SubInterfaceNIED):
     region = 'SW'
-    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+    nshm25_nied = True # Apply 2025 NSHM specific adjustments
 
 
 class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
@@ -424,6 +504,9 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
     This is the inslab variant.
     """
+    # Required rupture parameters are magnitude and hypocentral position pars
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth', 'hypo_lon', 'hypo_lat'}
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
 
         # Compute the underlying mean
@@ -436,9 +519,9 @@ class MorikawaFujiwara2013SubSlabNIED(MorikawaFujiwara2013SubSlab):
 
 class MorikawaFujiwara2013SubSlabNENIED(MorikawaFujiwara2013SubSlabNIED):
     region = 'NE'
-    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+    nshm25_nied = True # Apply 2025 NSHM specific adjustments
 
 
 class MorikawaFujiwara2013SubSlabSWNIED(MorikawaFujiwara2013SubSlabNIED):
     region = 'SW'
-    nied_anom_corr = True # Apply 2025 NSHM version of AI correction
+    nshm25_nied = True # Apply 2025 NSHM specific adjustments

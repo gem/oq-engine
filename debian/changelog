@@ -1,3 +1,6 @@
+  [Christopher Brooks]
+  * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
+
   [Michele Simionato]
   * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
   * Extended the rupture exporter to also work with multi-model SES files
@@ -12,8 +15,9 @@
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
   * Add the 2025 NSHM variants of the anomalous intensity correction
-    to the `MorikawaFujiwara2013` and some QA tests to check the site
-    location-specific component of these corrections (classical/case_30).
+    and the PH correction to the `MorikawaFujiwara2013` and some QA
+    tests to check the site location-specific component of these
+    corrections (classical/case_30).
   * Added ability to specify a distribution of hypocenters within a
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
@@ -44,7 +48,7 @@
     source model logic tree. Some unit tests added and a QA test in
     logictree/case_33.
   * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
-    the job file.
+    the job file (QA test in classical/case_13 with `MorikawaFujiwara2013`).
 
   [Michele Simionato]
   * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
