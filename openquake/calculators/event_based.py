@@ -693,16 +693,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
-                ok = slice(None)
                 if len(self.mosaic_df):
                     # tested in global_ses
                     rup_array['model'] = geolocate(
                         rup_array['hypo'], self.mosaic_df)
-                    if 'geometry' not in oq.inputs:
-                        ok = in_mosaic(rup_array)
                 # NB: the ruptures will we reordered and resaved later
-                hdf5.extend(self.datastore['ruptures'], rup_array[ok])
-                hdf5.extend(self.datastore['rupgeoms'], geom[ok])
+                hdf5.extend(self.datastore['ruptures'], rup_array)
+                hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
         logging.info(f'Generated {tot_ruptures} ruptures in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:

@@ -1669,6 +1669,8 @@ def extract_rupture_info(dstore, what):
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
+    if multi_model:
+        dtlist.append(('model', '<S3'))
     rows = []
     boundaries = []
     allrups = dstore['ruptures'][:]
