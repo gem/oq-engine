@@ -1475,8 +1475,6 @@ def import_ruptures_hdf5(h5, fnames):
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
             oq = f['oqparam']
-            mosaic_model = (oq.mosaic_model or logs.get_country_or_model(
-                oq.inputs['job_ini']))
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
@@ -1489,15 +1487,15 @@ def import_ruptures_hdf5(h5, fnames):
             rup['e0'] += E
             E += len(events)
             offset += len(rup)
-            if mosaic_model:
+            if oq.mosaic_model:
                 # keep only the ruptures in the model
-                model = mosaic_model.encode('ascii')
+                model = oq.mosaic_model.encode('ascii')
                 rups.extend(rup[rup['model'] == model])
             else:
                 rups.extend(rup)
-            if mosaic_model and 'full_lt' in f:
-                h5[f'full_lt/{mosaic_model}'] = f['full_lt']
-                h5[f'source_info/{mosaic_model}'] = f['source_info'][:]
+            if oq.mosaic_model and 'full_lt' in f:
+                h5[f'full_lt/{oq.mosaic_model}'] = f['full_lt']
+                h5[f'source_info/{oq.mosaic_model}'] = f['source_info'][:]
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')

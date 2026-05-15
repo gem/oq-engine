@@ -302,11 +302,9 @@ def filter_stations(station_df, complete, rup, maxdist):
 
 
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
-    filter_mosaic = (oq.mosaic_model or
-                     logs.get_country_or_model(oq.inputs['job_ini']))
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
-    if filter_mosaic:
+    if oq.mosaic_model:
         allrups = allrups[in_mosaic(allrups)]
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
@@ -612,8 +610,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif (oq.mosaic_model or
-              logs.get_country_or_model(oq.inputs['job_ini'])):
+        elif oq.mosaic_model:
             # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
