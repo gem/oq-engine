@@ -607,7 +607,7 @@ class Conditioner:
 
             # Compute the conditioned between-event covariance matrix
             # for the target sites clipped to zero, shape (nsites, nsites)
-            cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0).astype(F32)
+            cov_BY_BY_yD = (C @ cov_HD_HD_yD.astype(F32) @ C.T).clip(min=0)
         return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 
