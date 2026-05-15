@@ -160,7 +160,11 @@ def get_closest_country(lon, lat, buffer_radius):
         lon, lat, buffer_radius, countries_df)
     if not close_countries:
         return '???'
-    return close_countries[0]
+    # close_countries are ordered by ascending distance
+    closest_country = close_countries[0]
+    if closest_country in ALIASES:
+        closest_country = ALIASES[closest_country]
+    return closest_country
 
 
 # used in extract_fom_zip
