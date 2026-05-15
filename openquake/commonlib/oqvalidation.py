@@ -39,8 +39,8 @@ from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
-from openquake.sep.classes import SecondaryPeril
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
+from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -975,10 +975,14 @@ SITE_CLASSES = {
         'B': {'display_name': 'B - Medium hard rock', 'vs30': 1080},
         'BC': {'display_name': 'BC - Soft rock', 'vs30': 760},
         'C': {'display_name': 'C - Very dense sand or hard clay', 'vs30': 530},
-        'CD': {'display_name': 'CD - Dense sand or ery stiff clay', 'vs30': 365},
-        'D': {'display_name': 'D - Medium dense sand or stiff clay', 'vs30': 260},
-        'DE': {'display_name': 'DE - Loose sand or medium stiff clay', 'vs30': 185},
-        'E': {'display_name': 'E - Very loose sand or soft clay', 'vs30': 150},
+        'CD': {'display_name':
+               'CD - Dense sand or ery stiff clay', 'vs30': 365},
+        'D': {'display_name':
+              'D - Medium dense sand or stiff clay', 'vs30': 260},
+        'DE': {'display_name':
+               'DE - Loose sand or medium stiff clay', 'vs30': 185},
+        'E': {'display_name':
+              'E - Very loose sand or soft clay', 'vs30': 150},
         'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
         'custom': {'display_name': 'Specify Vs30', 'vs30': None},
     },
@@ -1377,8 +1381,6 @@ class OqParam(valid.ParamSet):
                names_vals['hazard_calculation_id'] == 0)
         if hc0:
             self.hazard_calculation_id = 0  # fake calculation_id
-        if 'job_ini' not in self.inputs:
-            self.inputs['job_ini'] = '<in-memory>'
         if 'calculation_mode' not in names_vals:
             self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
