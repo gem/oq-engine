@@ -107,7 +107,8 @@ def oqdict(params):
     """
     inputs = params.setdefault('inputs', {})
     inputs.setdefault('job_ini', '<in-memory>')
-    params.setdefault('mosaic_model', get_country_or_model(inputs['job_ini']))
+    if not params.get('mosaic_model', ''):
+        params['mosaic_model'] = get_country_or_model(inputs['job_ini'])
     return params
 
 
