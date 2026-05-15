@@ -297,6 +297,10 @@ class RunShowExportTestCase(unittest.TestCase):
         base = pathlib.Path(case_4a.__file__).parent
         wf_id = run_workflow(base / 'jobs.toml',
                              dict(description='test_workflow'))
+        # check description
+        job = commonlib.logs.dbcmd('get_job', wf_id)
+        assert job.description =='jobs.toml: test_workflow'
+
         # check aggexp_by
         with read(wf_id) as dstore:
             print(dstore.read_df('aggexp-taxonomy'))

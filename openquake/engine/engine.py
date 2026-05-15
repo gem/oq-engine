@@ -250,7 +250,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     jobs = []
     for job_ini in job_inis:
         if isinstance(job_ini, dict):
-            dic = job_ini
+            dic = readinput.oqdict(job_ini)
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
@@ -605,7 +605,9 @@ def prepare_workflow(params, workflow_toml, pdb):
         workflow_id = params.pop('workflow_id')
     except KeyError:
         # create a new workflow
-        [wfjob] = create_jobs([{'calculation_mode': 'workflow'}], pdb=pdb)
+        [wfjob] = create_jobs([{
+            'calculation_mode': 'workflow',
+            'description': os.path.basename(workflow_toml)}], pdb=pdb)
         workflow_id = wfjob.calc_id
         new = True
     else:
@@ -637,7 +639,10 @@ def prepare_workflow(params, workflow_toml, pdb):
             descr = wfjob.get_job().description
         wfjob.workflows = workflows
     dstore['/'].attrs['engine_version'] = general.engine_version()
-    return wfjob, dstore, names, descr
+    
+    logs.dbcmd('update_job', workflow_id,
+               {'description': f'{os.path.basename(workflow_toml)}: {descr}'})
+    return wfjob, dstore, names
 
 
 def format_dic(success):
@@ -662,7 +667,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     workflow files.
     """
     t0 = time.time()
-    wfjob, dstore, names, descr = prepare_workflow(params, workflow_toml, pdb)
+    wfjob, dstore, names = prepare_workflow(params, workflow_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
@@ -673,7 +678,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
-                kw.update(calculation_mode='workflow', description=descr)
+                kw.update(calculation_mode='workflow')
                 dstore['oqparam'] = OqParam(**kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
