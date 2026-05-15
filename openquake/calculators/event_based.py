@@ -304,6 +304,8 @@ def filter_stations(station_df, complete, rup, maxdist):
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    if oq.mosaic_model and 'scenario' not in oq.calculation_mode:
+        allrups = allrups[in_mosaic(allrups)]
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
         rup_id = I64(rup_id.split(','))
@@ -566,6 +568,20 @@ def read_gsim_lt(oq):
     return gsim_lt
 
 
+def in_mosaic(rup_array):
+    """
+    Extract the ruptures associated to a model.
+    :returns: slice(None) or a mask
+    """
+    bad = rup_array['model'] == b'???'
+    outside = bad.sum()
+    if outside:
+        logging.error('There are %d ruptures outside the '
+                      'mosaic', outside)
+        return ~bad
+    return slice(None)
+
+
 @base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -594,8 +610,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif (oq.mosaic_model or
-              logs.get_country_or_model(oq.inputs['job_ini'])):
+        elif oq.mosaic_model:
             # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
@@ -678,22 +693,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
+                ok = slice(None)
                 if len(self.mosaic_df):
                     # tested in global_ses
-                    rup_array['model'] = models = geolocate(
+                    rup_array['model'] = geolocate(
                         rup_array['hypo'], self.mosaic_df)
                     if 'geometry' not in oq.inputs:
-                        # find ruptures not associated to a model
-                        bad = models == b'???'
-                        outside = bad.sum()
-                        if outside:
-                            logging.error('There are %d ruptures outside the '
-                                          'mosaic', outside)
-                            rup_array = rup_array[~bad]
-                            geom = geom[~bad]
+                        ok = in_mosaic(rup_array)
                 # NB: the ruptures will we reordered and resaved later
-                hdf5.extend(self.datastore['ruptures'], rup_array)
-                hdf5.extend(self.datastore['rupgeoms'], geom)
+                hdf5.extend(self.datastore['ruptures'], rup_array[ok])
+                hdf5.extend(self.datastore['rupgeoms'], geom[ok])
         t1 = time.time()
         logging.info(f'Generated {tot_ruptures} ruptures in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:

@@ -250,7 +250,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     jobs = []
     for job_ini in job_inis:
         if isinstance(job_ini, dict):
-            dic = job_ini
+            dic = readinput.oqdict(job_ini)
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
