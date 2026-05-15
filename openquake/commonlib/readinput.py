@@ -153,7 +153,7 @@ def get_closest_country(lon, lat, buffer_radius):
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
         creating a circular buffer region around the point
-    :returns: the closest country or '???'
+    :returns: the iso3 code of the closest country or '???'
     """
     countries_df = read_countries_df()
     close_countries = geo.utils.geolocate_within_buffer(
@@ -161,10 +161,7 @@ def get_closest_country(lon, lat, buffer_radius):
     if not close_countries:
         return '???'
     # close_countries are ordered by ascending distance
-    closest_country = close_countries[0]
-    if closest_country in ALIASES:
-        closest_country = ALIASES[closest_country]
-    return closest_country
+    return close_countries[0]
 
 
 # used in extract_fom_zip
