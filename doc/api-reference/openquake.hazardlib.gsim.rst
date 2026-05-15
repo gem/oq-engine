@@ -278,6 +278,13 @@ bayless_abrahamson_2018
     :undoc-members:
     :show-inheritance:
 
+bayless_somerville_2024
+------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bayless_somerville_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 eshm20_bchydro
 ------------------------------------------------
