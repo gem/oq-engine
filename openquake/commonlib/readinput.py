@@ -56,7 +56,6 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
@@ -69,6 +68,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
+from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
@@ -82,6 +82,33 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
+
+
+def get_country_or_model(job_ini):
+    """
+    If the path to job_ini contains a recognized country, returns the
+    country code or the mosaic code, else the empty string.
+    """
+    for name, cc in country2code.items():
+        if name in job_ini:
+            return cc
+    for model in MODELS:
+        if model in job_ini:
+            return model
+    for model in ALIASES:
+        if model in job_ini:
+            return ALIASES[model]
+    return ''
+
+
+def oqdict(params):
+    """
+    Update the params dictionary with inputs['job_ini'] and 'mosaic_model'
+    """
+    inputs = params.setdefault('inputs', {})
+    inputs.setdefault('job_ini', '<in-memory>')
+    params.setdefault('mosaic_model', get_country_or_model(inputs['job_ini']))
+    return params
 
 
 class DuplicatedPoint(Exception):
@@ -445,7 +472,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-    oqparam = OqParam(**job_ini)
+    oqparam = OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()

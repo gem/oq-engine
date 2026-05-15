@@ -40,7 +40,6 @@ from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
-from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
@@ -1376,10 +1375,6 @@ class OqParam(valid.ParamSet):
                names_vals['hazard_calculation_id'] == 0)
         if hc0:
             self.hazard_calculation_id = 0  # fake calculation_id
-        if 'job_ini' not in self.inputs:
-            self.inputs['job_ini'] = '<in-memory>'
-        elif not self.mosaic_model:
-            self.mosaic_model = get_country_or_model(self.inputs['job_ini'])
         if 'calculation_mode' not in names_vals:
             self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
@@ -2633,20 +2628,3 @@ def to_ini(key, val):
         if val is None:
             val = ''
         return f'{key} = {val}'
-
-
-def get_country_or_model(job_ini):
-    """
-    If the path to job_ini contains a recognized country, returns the
-    country code or the mosaic code, else the empty string.
-    """
-    for name, cc in country2code.items():
-        if name in job_ini:
-            return cc
-    for model in MODELS:
-        if model in job_ini:
-            return model
-    for model in ALIASES:
-        if model in job_ini:
-            return ALIASES[model]
-    return ''

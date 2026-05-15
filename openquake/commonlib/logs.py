@@ -28,7 +28,6 @@ from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
-from openquake.commonlib.oqvalidation import get_country_or_model
 
 UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
@@ -264,10 +263,6 @@ class LogContext:
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
-        inputs = self.params.get('inputs', {})  # missing in test_recompute
-        if 'mosaic_model' not in self.params:
-            self.params['mosaic_model'] = get_country_or_model(
-                inputs.get('job_ini', ''))
         tag = self.params['mosaic_model']
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, tag + ' ' if tag else '')
@@ -333,7 +328,9 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     """
     if job_ini in ('job', 'calc'):  # backward compatibility
         job_ini = dummy
-    if not isinstance(job_ini, dict):
+    if isinstance(job_ini, dict):
+        job_ini = readinput.oqdict(job_ini)
+    else:
         job_ini = readinput.get_params(job_ini)
     return LogContext(job_ini, log_level, log_file, user_name, hc_id,
                       host, pdb)
