@@ -747,17 +747,19 @@ class EBRupture(object):
     :param int n_occ: number of occurrences of the rupture
     :param int64 id: rupture ID
     :param int e0: initial event ID (default 0)
+    :param str model: mosaic model (default "???")
     :param seed: rupture seed to be set (default "NA")
     """
 
     def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
-                 e0=0, seed='NA'):
+                 e0=0, model='???', seed='NA'):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = id
         self.e0 = e0
+        self.model = model
         self.seed = seed
 
     @property

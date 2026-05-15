@@ -1580,7 +1580,8 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', I64), ('source_id', SOURCE_ID), ('multiplicity', U32),
+            ('rup_id', I64), ('source_id', SOURCE_ID),
+            ('model', '<S3'), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1604,7 +1605,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.id, ebr.source_id, ebr.n_occ, rate,
+                (ebr.id, ebr.source_id, ebr.model, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)
