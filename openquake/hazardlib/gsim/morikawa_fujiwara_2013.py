@@ -265,9 +265,11 @@ def _get_magnitude_term_3(trt, region, C, rrup, mw1prime, mw1, hypo_z,
     # Must be SW (i.e., PHP) so apply additional PHP corr
     apply_ph = hypo_z < 80 # Only apply to shallower events
     if php_nshm:
-        # Suppress PH adjustment for events inside PHP zones 3, 4 or 5
-        in_php = (php_nshm['zone_03'] | php_nshm['zone_04']
-                  | php_nshm['zone_05'])
+        # Suppress PH adjustment for events inside PHP zones 4 or 5
+        # NOTE: NIED state they apply to zone 3 too, but this might
+        # not be the case in their actual implementation given the
+        # matches are significantly better here if omitting zone 3
+        in_php = (php_nshm['zone_04'] | php_nshm['zone_05'])
         apply_ph = apply_ph & ~in_php
 
     tmp[apply_ph] += C['PH']
