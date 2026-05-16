@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Extended use_rates to work also with IMT-dependent weights
+
   [Christopher Brooks]
   * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
 
