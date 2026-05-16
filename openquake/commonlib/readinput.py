@@ -1005,9 +1005,6 @@ def get_full_lt(oqparam):
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
-    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
-        raise ValueError('use_rates=true cannot be used with imtWeight')
-
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
