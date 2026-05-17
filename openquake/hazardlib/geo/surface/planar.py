@@ -131,7 +131,7 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
         top = cdep + center_shift - half_height
         bot = cdep + center_shift + half_height
         vshift = usd - top
-        # If it is shllower (vshift > 0) than we need to move the
+        # If it is shallower (vshift > 0) than we need to move the
         # rupture by that value vertically
         if vshift < 0:
             # the top edge is below the upper seismogenic depth: we need
