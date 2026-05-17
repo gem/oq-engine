@@ -367,14 +367,16 @@ class MapGetter(object):
         M = self.M
         L1 = self.L // M
         means = MapArray(U32(self.sids), M, L1).fill(0)
+        gweights = self.gweights[0]
+        imt_dep_weights = gweights.shape[1] > 1
         for sid in self.sids:
-            rates = self.array[self.sid2idx[sid]]  # shape (L, G)
             if len(self.ilabels):
                 gweights = self.gweights[self.ilabels[sid]]
-            else:
-                gweights = self.gweights[0]
+            rates = self.array[self.sid2idx[sid]]  # shape (L, G)
             sidx = means.sidx[sid]
-            means.array[sidx] = (rates @ gweights).reshape((M, L1))
+            for m in range(M):
+                means.array[sidx, m] = rates[m*L1: m*L1+L1] @ gweights[
+                    :, m if imt_dep_weights else -1]
         means.array[:] = to_probs(means.array)
         return means
 
