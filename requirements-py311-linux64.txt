@@ -16,7 +16,8 @@ https://wheelhouse.openquake.org/v3/linux/py311/numba-0.61.2-cp311-cp311-manylin
 https://wheelhouse.openquake.org/v3/linux/py311/numpy-2.2.6-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/onnxruntime-1.23.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/pandas-2.2.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py311/pillow-12.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+# https://wheelhouse.openquake.org/v3/linux/py311/pillow-12.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+pillow=12.2.0
 https://wheelhouse.openquake.org/v3/linux/py311/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/pyogrio-0.11.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/pyproj-3.7.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
@@ -36,7 +37,8 @@ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/django-4.2.27-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/django-4.2.27-py3-none-any.whl
+django==4.2.30
 https://wheelhouse.openquake.org/v3/py/django_appconf-1.0.6-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
@@ -45,7 +47,8 @@ https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flatbuffers-25.12.19-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.39.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/geopandas-1.1.1-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/geopandas-1.1.1-py3-none-any.whl
+geopandas==1.1.2
 https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/idna-3.6-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-7.0.0-py3-none-any.whl
@@ -70,10 +73,12 @@ https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/requests-2.31.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/setuptools-79.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/six-1.16.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl
+sqlparse==0.5.4
 https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
+urllib3==2.7.0
 https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl
