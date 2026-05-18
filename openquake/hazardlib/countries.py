@@ -267,7 +267,7 @@ Suriname,SUR
 Sweden,SWE
 Switzerland,CHE
 Syria,SYR
-Taiwan,TEM
+Taiwan,TWN
 Tajikistan,TJK
 Tanzania,TZA
 Thailand,THA

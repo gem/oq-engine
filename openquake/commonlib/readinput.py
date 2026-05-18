@@ -153,13 +153,14 @@ def get_closest_country(lon, lat, buffer_radius):
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
         creating a circular buffer region around the point
-    :returns: the closest country or '???'
+    :returns: the iso3 code of the closest country or '???'
     """
     countries_df = read_countries_df()
     close_countries = geo.utils.geolocate_within_buffer(
         lon, lat, buffer_radius, countries_df)
     if not close_countries:
         return '???'
+    # close_countries are ordered by ascending distance
     return close_countries[0]
 
 
@@ -1004,9 +1005,6 @@ def get_full_lt(oqparam):
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
-    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
-        raise ValueError('use_rates=true cannot be used with imtWeight')
-
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
@@ -1843,7 +1841,7 @@ def read_geometries(fname, name):
     """
     codes = []
     geoms = []
-    with fiona.open(fname) as f:
+    with fiona.open(fname, IMMUTABLE="YES") as f:
         crs = f.crs
         for feature in f:
             props = feature["properties"]

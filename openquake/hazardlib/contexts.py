@@ -1929,6 +1929,8 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
+    if not hasattr(full_lt, 'weights'):
+        full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])

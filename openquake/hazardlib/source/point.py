@@ -53,7 +53,7 @@ def calc_average(pointsources):
     node_w, dep_w, rate_w = [], [], []
     acc = dict(lon=[], lat=[], strike=[], dip=[], rake=[], dep=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
-               rupture_aspect_ratio=[])
+               rupture_aspect_ratio=[], hypo_dip_frac=[])
     trt = pointsources[0].tectonic_region_type
     for src in pointsources:
         assert src.tectonic_region_type == trt
@@ -65,6 +65,13 @@ def calc_average(pointsources):
         ws, deps = zip(*src.hypocenter_distribution.data)
         acc['dep'].extend(deps)
         dep_w.extend(ws)
+        if src.hypo_dip_fracs is None:
+            # Default OQ behaviour of using rup centroid
+            acc['hypo_dip_frac'].extend([0.5] * len(deps))
+        else:
+            # Use the down-dip fraction from the hypoDepthDist
+            acc['hypo_dip_frac'].extend(
+                0.5 if f is None else f for f in src.hypo_dip_fracs)
         acc['lon'].append(src.location.x)
         acc['lat'].append(src.location.y)
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
@@ -74,7 +81,8 @@ def calc_average(pointsources):
     for key in acc:
         if key in ('dip', 'strike', 'rake'):
             acc[key] = numpy.average(acc[key], weights=node_w)
-        elif key == 'dep':
+        elif key in ('dep', 'hypo_dip_frac'):
+            # Same entry in hypoDepthDist so share weight
             acc[key] = numpy.average(acc[key], weights=dep_w)
         elif key == 'rupture_aspect_ratio' and isinstance(
             acc[key][0], MagDepAspectRatio):
@@ -107,6 +115,11 @@ class PointSource(ParametricSeismicSource):
         :class:`~openquake.hazardlib.pmf.PMF` with values being float
         numbers in km representing the depth of the hypocenter. Latitude
         and longitude of the hypocenter is always set to ones of ``location``.
+        An optional hypo_dip_fracs attribute on the PMF (tuple, one entry
+        per depth) gives the fractional position of the hypocentre within the
+        seismogenic zone [USD, LSD] (0=top, 1=bottom); the rupture is shifted
+        so the hypocentre lands at that fraction. Absent or None entries
+        default to 0.5 (rupture centroid, default OQ behaviour).
 
     See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
@@ -160,16 +173,20 @@ class PointSource(ParametricSeismicSource):
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
+        self.hypo_dip_fracs = getattr(
+            hypocenter_distribution, 'hypo_dip_fracs', None)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
-    def restrict(self, nodalplane, depth):
+    def restrict(self, nodalplane, depth, dip_frac=None):
         """
         :returns: source restricted to a single nodal plane and depth
         """
         new = copy.copy(self)
         new.nodal_plane_distribution = PMF([(1., nodalplane)])
         new.hypocenter_distribution = PMF([(1., depth)])
+        new.hypo_dip_fracs = None if dip_frac is None else (dip_frac,)
+        new.hypocenter_distribution.hypo_dip_fracs = new.hypo_dip_fracs
         return new
 
     def get_planin(self, magd=None, npd=None):
@@ -261,8 +278,11 @@ class PointSource(ParametricSeismicSource):
         else:
             # Regular aratio
             rar = self.rupture_aspect_ratio
+        dip_fracs = (None if self.hypo_dip_fracs is None else
+                     numpy.array([0.5 if f is None else f
+                                  for f in self.hypo_dip_fracs]))
         planar = build_planar(
-            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo)
+            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo, dip_fracs)
         dic = {mag: [pla.reshape(-1, 3)]   # MND3
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
@@ -294,7 +314,8 @@ class PointSource(ParametricSeismicSource):
         """
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
-        yield from self.restrict(np, avg['dep'])._gen_ruptures(iruptures=True)
+        yield from self.restrict(
+            np, avg['dep'], avg['hypo_dip_frac'])._gen_ruptures(iruptures=True)
 
     def count_nphc(self):
         """
@@ -393,6 +414,8 @@ def psources_to_pdata(pointsources, name):
                                   for ps in pointsources]),
                  hcd=Deduplicate([ps.hypocenter_distribution
                                   for ps in pointsources]),
+                 hdf=Deduplicate([ps.hypo_dip_fracs
+                                  for ps in pointsources]),
                  mfd=Deduplicate([ps.mfd for ps in pointsources]),
                  msr=Deduplicate([ps.magnitude_scaling_relationship
                                   for ps in pointsources]))
@@ -409,11 +432,13 @@ def pdata_to_psources(pdata):
     rar = pdata['rar']
     npd = pdata['npd']
     hcd = pdata['hcd']
+    hdf = pdata['hdf']
     rms = pdata['rms']
     mfd = pdata['mfd']
     msr = pdata['msr']
     out = []
     for i, rec in enumerate(pdata['array']):
+        hcd[i].hypo_dip_fracs = hdf[i]
         out.append(PointSource(
             source_id=f'{name}:{i}',
             name=name,
@@ -454,6 +479,7 @@ class CollapsedPointSource(PointSource):
         self.nodal_plane_distribution = PMF(
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
+        self.hypo_dip_fracs = (self.hypo_dip_frac,)
 
     @property
     def pointsources(self):
@@ -490,7 +516,8 @@ class CollapsedPointSource(PointSource):
         :yields: the underlying ruptures with mean nodal plane and hypocenter
         """
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from self.restrict(np, self.location.z)._gen_ruptures(
+        yield from self.restrict(
+            np, self.location.z, self.hypo_dip_frac)._gen_ruptures(
             iruptures=True)
 
     def count_ruptures(self):

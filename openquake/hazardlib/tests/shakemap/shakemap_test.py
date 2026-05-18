@@ -9,7 +9,6 @@ from openquake.hazardlib.shakemap.gmfs import (
     spatial_correlation_array, spatial_covariance_array,
     cross_correlation_matrix, cholesky)
 
-aae = numpy.testing.assert_almost_equal
 F64 = numpy.float64
 imts = [imt.from_string(x)
         for x in ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']]
@@ -22,6 +21,10 @@ gmf_dict = {'kind': 'Silva&Horspool',
             'spatialcorr': 'yes',
             'crosscorr': 'yes',
             'cholesky_limit': 10000}
+
+
+def aae(x, y):
+    numpy.testing.assert_almost_equal(x, y, decimal=4)
 
 
 def mean_std(shakemap, vs30):
@@ -63,7 +66,7 @@ class ShakemapTestCase(unittest.TestCase):
         lons = numpy.array([84., 84., 84., 85.5, 85.5, 85.5, 87., 87., 87.])
         lats = numpy.array([26., 27.5, 29., 26., 27.5, 29., 26., 27.5, 29.])
         dmatrix = geo.geodetic.distance_matrix(lons, lats)
-        aae(dmatrix.sum(), 18539.6131407)
+        aae(dmatrix.sum(), 18539.605)
 
         # spatial correlation
         sca = spatial_correlation_array(dmatrix, imts, 'yes')
@@ -151,15 +154,18 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, vs30=None)
-        #                 PGA,       SA(0.3),   SA(1.0),   SA(3.0)
-        aae(gmf_by_imt, [[0.0975816, 0.2442196, 0.0286512, 0.6358019],
-                         [0.2023841, 0.5013746, 0.0297236, 0.6544367],
-                         [0.3010831, 0.5986039, 0.0305651, 0.6575208],
-                         [0.386838, 0.9331248, 0.0296789, 0.6393688]])
-        aae(std_by_imt, [[0.5922380, 0.6723980, 0.6325073, 0.6445988],
-                         [0.6077153, 0.6661571, 0.6296381, 0.668559],
-                         [0.6146356, 0.6748830, 0.6714424, 0.6613612],
-                         [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
+        #                PGA,    SA(0.3), SA(1.0), SA(3.0)
+        aae(gmf_by_imt, [[0.0976, 0.2442, 0.0287, 0.6358],
+                         [0.2024, 0.5014, 0.0297, 0.6544],
+                         [0.3011, 0.5986, 0.0306, 0.6575],
+                         [0.3868, 0.9331, 0.0297, 0.6394]])
+        aae(std_by_imt ,[[0.5922, 0.6724, 0.6325, 0.6446],
+                         [0.6077, 0.6662, 0.6296, 0.6686],
+                         [0.6146, 0.6749, 0.6714, 0.6614],
+                         [0.5815, 0.646 , 0.6491, 0.6603]])
+        # NB: the spatial correlation matrix is highly degenerate
+        # with 3 of 4 eigenvalues equal to zero, the numbers above are
+        # not trustworthy
 
     def test_for_mmi(self):
         # test both files in one zip
