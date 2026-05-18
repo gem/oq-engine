@@ -31,6 +31,7 @@ from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from
+from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -92,19 +93,16 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     if 'vs30' not in sites_df.keys():
         sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
-    models_in_dir = os.listdir(mosaic_dir)
     for vs30, dvf in sites_df.groupby('vs30'):
         # vs30 is a string and can contain multiple values, like '260 365 530'
         # it is used to set override_vs30 in `get_params_from` and then
         # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
-            if model not in models_in_dir:
+            if model not in MODELS:
                 continue
-            if model in ('???', 'USA', 'GLD'):
+            elif exclude_models and model in exclude_models.split(','):
                 continue
-            if exclude_models and model in exclude_models.split(','):
-                continue
-            if only_models and model not in only_models.split(','):
+            elif only_models and model not in only_models.split(','):
                 continue
 
             df = df.sort_values(['Longitude', 'Latitude'])
