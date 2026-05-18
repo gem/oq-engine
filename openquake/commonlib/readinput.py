@@ -1841,7 +1841,7 @@ def read_geometries(fname, name):
     """
     codes = []
     geoms = []
-    with fiona.open(fname) as f:
+    with fiona.open(fname, IMMUTABLE="YES") as f:
         crs = f.crs
         for feature in f:
             props = feature["properties"]
