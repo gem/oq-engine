@@ -56,7 +56,6 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
@@ -69,6 +68,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
+from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
@@ -82,6 +82,35 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
+
+
+def get_country_or_model(job_ini):
+    """
+    If the path to job_ini contains a recognized country, returns the
+    country code or the mosaic code, else the empty string.
+    """
+    for name, cc in country2code.items():
+        if name in job_ini:
+            return cc
+    for model in MODELS:
+        if model in job_ini:
+            return model
+    for model in ALIASES:
+        if model in job_ini:
+            return ALIASES[model]
+    return ''
+
+
+def oqdict(params={}, **kw):
+    """
+    Update the params dictionary with inputs['job_ini'] and 'mosaic_model'
+    """
+    params = params | kw
+    inputs = params.setdefault('inputs', {})
+    inputs.setdefault('job_ini', '<in-memory>')
+    if not params.get('mosaic_model', ''):
+        params['mosaic_model'] = get_country_or_model(inputs['job_ini'])
+    return params
 
 
 class DuplicatedPoint(Exception):
@@ -124,13 +153,14 @@ def get_closest_country(lon, lat, buffer_radius):
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
         creating a circular buffer region around the point
-    :returns: the closest country or '???'
+    :returns: the iso3 code of the closest country or '???'
     """
     countries_df = read_countries_df()
     close_countries = geo.utils.geolocate_within_buffer(
         lon, lat, buffer_radius, countries_df)
     if not close_countries:
         return '???'
+    # close_countries are ordered by ascending distance
     return close_countries[0]
 
 
@@ -445,7 +475,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-    oqparam = OqParam(**job_ini)
+    oqparam = OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
@@ -974,9 +1004,6 @@ def get_full_lt(oqparam):
     oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
-
-    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
-        raise ValueError('use_rates=true cannot be used with imtWeight')
 
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
