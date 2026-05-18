@@ -448,11 +448,9 @@ def compute_distance_matrix(sites1, sites2):
         raise MemoryError('The distance_matrix of shape (%d, %d) is too large!'
                           % (len(sites1), len(sites2)))
     distance_matrix = geodetic_distance(
-        sites1.lons.reshape(sites1.lons.shape + (1,)),
-        sites1.lats.reshape(sites1.lats.shape + (1,)),
-        sites2.lons,
-        sites2.lats)
-    return distance_matrix.astype(F32)
+        sites1.lons.reshape(-1, 1), sites1.lats.reshape(-1, 1),
+        sites2.lons, sites2.lats)
+    return distance_matrix
 
 
 # called only by compute_spatial_cross_covariance_matrix
