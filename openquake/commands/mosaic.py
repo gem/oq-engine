@@ -100,6 +100,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         for model, df in dvf.groupby('model'):
             if model not in MODELS:
                 continue
+            elif model in ('???', 'USA', 'GLD'):
+                continue
             elif exclude_models and model in exclude_models.split(','):
                 continue
             elif only_models and model not in only_models.split(','):
