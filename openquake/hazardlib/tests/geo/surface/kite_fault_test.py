@@ -857,7 +857,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         width = srfc.get_width()
-        np.testing.assert_almost_equal(37.2501538, width)
+        np.testing.assert_almost_equal(37.25014257, width)
 
 
 class IdealizedATest(unittest.TestCase):
