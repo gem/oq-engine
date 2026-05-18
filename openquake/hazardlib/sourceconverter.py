@@ -654,6 +654,37 @@ class SourceConverter(RuptureConverter):
             fix_dupl(hddist, self.fname, hdnode.lineno)
             return pmf.PMF(hddist)
 
+    def convert_hypo_dip_fracs(self, node):
+        """
+        Read fixedDipFrac from each hypoDepth entry in a hypoDepthDist.
+
+        Each value is the down-dip fraction placing the hypocentre on the
+        rupture (0=top, 1=bottom); the rupture is shifted so the hypocentre
+        lands at that fraction along dip, then clamped to [USD, LSD].
+
+        NOTE: Missing entries default to 0.5 (rupture centroid, default
+        OQ behaviour).
+
+        NOTE: Returns None when no entry specifies fixedDipFrac.
+        """
+        with context(self.fname, node):
+            fdfs = [hd.attrib.get('fixedDipFrac') for hd in node.hypoDepthDist]
+            if not any(f is not None for f in fdfs):
+                # No entries have a fixed frac so return None and uniformly
+                # use the OQ default of 0.5 (centroid)
+                return None
+            fracs = []
+            for fdf in fdfs:
+                if fdf is None:
+                    fracs.append(None)
+                else:
+                    frac = float(fdf)
+                    if not 0. < frac <= 1.:
+                        raise ValueError(
+                            'fixedDipFrac %s must be in the range (0, 1)' % frac)
+                    fracs.append(frac)
+            return tuple(fracs)
+
     def convert_areaSource(self, node):
         """
         Convert the given node into an area source object.
@@ -673,6 +704,10 @@ class SourceConverter(RuptureConverter):
                 'The source %r has no `discretization` parameter and the job.'
                 'ini file has no `area_source_discretization` parameter either'
                 % node['id'])
+        hdd = self.convert_hddist(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
@@ -684,7 +719,7 @@ class SourceConverter(RuptureConverter):
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hddist(node),
+            hypocenter_distribution=hdd,
             polygon=polygon,
             area_discretization=area_discretization,
             temporal_occurrence_model=self.get_tom(node))
@@ -699,6 +734,10 @@ class SourceConverter(RuptureConverter):
         geom = node.pointGeometry
         lon_lat = ~geom.Point.pos
         msr = ~node.magScaleRel
+        hdd = self.convert_hddist(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
@@ -711,7 +750,7 @@ class SourceConverter(RuptureConverter):
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hddist(node),
+            hypocenter_distribution=hdd,
             temporal_occurrence_model=self.get_tom(node))
 
     def convert_multiPointSource(self, node):
@@ -724,6 +763,10 @@ class SourceConverter(RuptureConverter):
         geom = node.multiPointGeometry
         lons, lats = zip(*split_coords_2d(~geom.posList))
         msr = ~node.magScaleRel
+        hdd = self.convert_hddist(node)
+        fracs = self.convert_hypo_dip_fracs(node)
+        if fracs is not None:
+            hdd.hypo_dip_fracs = fracs
         return source.MultiPointSource(
             source_id=node['id'],
             name=node['name'],
@@ -734,7 +777,7 @@ class SourceConverter(RuptureConverter):
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=self.convert_hddist(node),
+            hypocenter_distribution=hdd,
             mesh=geo.Mesh(F32(lons), F32(lats)),
             temporal_occurrence_model=self.get_tom(node))
 

@@ -41,7 +41,6 @@ from zoneinfo import ZoneInfo
 from shapely.geometry import shape, Point, Polygon
 import pandas as pd
 import numpy
-import fiona
 
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
@@ -50,6 +49,7 @@ import math
 from openquake.baselib import performance, config
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures)

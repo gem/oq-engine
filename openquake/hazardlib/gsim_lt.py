@@ -319,7 +319,7 @@ class GsimLogicTree(object):
         """
         :returns: True if the logic tree has IMT-dependend weights
         """
-        return len(self.branches[0].weight.dic) > 1
+        return any(len(br.weight.dic) > 1 for br in self.branches)
 
     def check_imts(self, imts):
         """

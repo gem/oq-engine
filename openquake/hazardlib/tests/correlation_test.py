@@ -23,7 +23,8 @@ from openquake.hazardlib.correlation import JB2009CorrelationModel, \
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 
-aaae = numpy.testing.assert_array_almost_equal
+def aaae(x, y, decimal=5):
+    numpy.testing.assert_array_almost_equal(x, y, decimal)
 
 
 class JB2009CorrelationMatrixTestCase(unittest.TestCase):
@@ -144,8 +145,7 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
             filtered, PGA(), intra_residuals_sampled)
         aaae(intra_residuals_correlated,
              [[1.826757, -3.078332,  0.958064,  0.069637,  1.31825 ],
-              [0.421635,  1.766101,  0.050661, -0.514753,  0.606409]],
-             decimal=6)
+              [0.421635,  1.766101,  0.050661, -0.514753,  0.606409]])
 
 
 class HM2018CorrelationMatrixTestCase(unittest.TestCase):

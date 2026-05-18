@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.26.0-gitdb0ae91534', start_date='2026-05-09T02:54:46', checksum=4015107745, investigation_time=None, risk_investigation_time=None"
+#,,,"generated_by='OpenQuake engine 3.26.0-git6806e12523', start_date='2026-05-12T04:16:25', checksum=4015107745, investigation_time=None, risk_investigation_time=None"
 loss_type,rlz_id,loss_value,loss_ratio
 number,0,1.16317E+00,2.23086E-04
 number,1,2.55152E-01,4.89357E-05

@@ -266,7 +266,7 @@ class ConditionedGmfComputer(GmfComputer):
             numpy.zeros(N, F32), cov_BY_BY, F32(lb_b), F32(ub_b), seed=seed_b
         ).sample(E)
 
-        arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
+        arr = mu_Y.flatten()[:, numpy.newaxis] + z_w_truncated + z_b_truncated
         return arr
 
 
@@ -448,11 +448,9 @@ def compute_distance_matrix(sites1, sites2):
         raise MemoryError('The distance_matrix of shape (%d, %d) is too large!'
                           % (len(sites1), len(sites2)))
     distance_matrix = geodetic_distance(
-        sites1.lons.reshape(sites1.lons.shape + (1,)),
-        sites1.lats.reshape(sites1.lats.shape + (1,)),
-        sites2.lons,
-        sites2.lats)
-    return distance_matrix.astype(F32)
+        sites1.lons.reshape(-1, 1), sites1.lats.reshape(-1, 1),
+        sites2.lons, sites2.lats)
+    return distance_matrix
 
 
 # called only by compute_spatial_cross_covariance_matrix
@@ -478,11 +476,10 @@ def compute_spatial_cross_covariance_matrix(
     # at the same location and the spatial correlation due to the distance
     # between sites m and n. Can be refactored down the line to support direct
     # spatial cross-correlation models
-    rho = numpy.block([[
-        _compute_spatial_cross_correlation_matrix(
-            imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
-        for imt_2 in imts2] for imt_1 in imts1])
-    return diag1.astype(F32) @ rho @ diag2.astype(F32)
+    rho = [[_compute_spatial_cross_correlation_matrix(
+        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
+            for imt_2 in imts2] for imt_1 in imts1]
+    return diag1.astype(F32) @ numpy.block(rho) @ diag2.astype(F32)
 
 
 # In scenario/case_21 one has
@@ -608,7 +605,7 @@ class Conditioner:
 
             # Compute the conditioned between-event covariance matrix
             # for the target sites clipped to zero, shape (nsites, nsites)
-            cov_BY_BY_yD = (C @ cov_HD_HD_yD @ C.T).clip(min=0).astype(F32)
+            cov_BY_BY_yD = (C @ cov_HD_HD_yD.astype(F32) @ C.T).clip(min=0)
         return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 

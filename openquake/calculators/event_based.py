@@ -923,7 +923,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         elif N > 50_000:
             logging.warning(
-                f'There are many sites ({N}), computing `avg_gmf` will'
+                f'There are many sites ({N}), computing `avg_gmf` will '
                 'be really slow, you should reduce `gmf_max_gb`')
 
         rlzs = self.datastore['events'][:]['rlz_id']
