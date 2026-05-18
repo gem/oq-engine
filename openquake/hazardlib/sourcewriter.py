@@ -323,25 +323,26 @@ def build_nodal_plane_dist(npd):
     return Node("nodalPlaneDist", nodes=npds)
 
 
-def build_hypo_depth_dist(hdd):
+def build_hypo_depth_dist(hypo_depth_list):
     """
-    Returns the hypocentral depth distribution as a Node instance
+    Returns a hypoDepthDist Node from a list of
+    (prob, depth, fdf_or_None) triples.
 
-    :param hdd:
-        Hypocentral depth distribution as an instance of :class:
-        `openquake.hzardlib.pmf.PMF`
+    :param hypo_depth_list:
+        List of (probability, depth, fixed_dip_frac_or_None) triples.
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    hdds = []
+    nodes = []
     dist = []
-    for (prob, depth) in hdd.data:
+    for prob, depth, fdf in hypo_depth_list:
         dist.append((prob, depth))
-        hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
+        attrs = {'depth': depth, 'probability': prob}
+        if fdf is not None:
+            attrs['fixedDipFrac'] = fdf
+        nodes.append(Node('hypoDepth', attrs))
     sourceconverter.fix_dupl(dist)
-    return Node("hypoDepthDist", nodes=hdds)
-
-
+    return Node('hypoDepthDist', nodes=nodes)
 
 
 def get_distributed_seismicity_source_nodes(source):
@@ -370,8 +371,12 @@ def get_distributed_seismicity_source_nodes(source):
     source_nodes.append(
         build_nodal_plane_dist(source.nodal_plane_distribution))
     # Parse hypocentral depth distribution
+    hdf = getattr(source, 'hypo_dip_fracs', None)
     source_nodes.append(
-        build_hypo_depth_dist(source.hypocenter_distribution))
+        build_hypo_depth_dist(
+            [(prob, depth, None if hdf is None else hdf[i])
+             for i, (prob, depth) in enumerate(
+                 source.hypocenter_distribution.data)]))
     return source_nodes
 
 
@@ -403,24 +408,6 @@ def build_slip_list_node(slip_list):
             Node('slip', dict(weight=row[1]), row[0]))
     return sliplist
 
-
-def build_hypo_depth_dist_simple_fault(hypo_depth_list):
-    """
-    Returns Node of a hypocentral depth distribution used
-    in a SimpleFaultSource.
-
-    :param hypo_depth_list:
-        List of (probability, depth, fixed_dip_frac_or_None).
-    :returns:
-        A hypoDepthDist Node with optional fixedDipFrac attribute.
-    """
-    nodes = []
-    for prob, depth, fdf in hypo_depth_list:
-        attribs = {'probability': prob, 'depth': depth}
-        if fdf is not None:
-            attribs['fixedDipFrac'] = fdf
-        nodes.append(Node('hypoDepth', attribs))
-    return Node('hypoDepthDist', nodes=nodes)
 
 
 def get_fault_source_nodes(source):
@@ -454,7 +441,7 @@ def get_fault_source_nodes(source):
         source_nodes.append(build_slip_list_node(source.slip_list))
     if getattr(source, 'hypo_depth_list', ()):
         source_nodes.append(
-            build_hypo_depth_dist_simple_fault(source.hypo_depth_list))
+            build_hypo_depth_dist(source.hypo_depth_list))
     return source_nodes
 
 
