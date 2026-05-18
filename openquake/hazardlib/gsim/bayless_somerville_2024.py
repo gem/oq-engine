@@ -397,7 +397,9 @@ class BaylessSomerville2024Cratonic(GMPE):
         # Pass 1: rock PGA at Vs30=760 for the nonlinear site term.
         # Fortran uses T=0.01 s as the proxy for PGA.
         C_PGA = self.COEFFS[SA(0.01)]
-        # Coefficients are calibrated in ln(g); pga_rock is in g.
+        # The model equations produce ln(g) directly. The Fortran
+        # reference adds 6.89 at output only to report in ln(cm/s2);
+        # internally it operates in ln(g). pga_rock is in g.
         pga_rock = np.exp(
             _get_fM(C_PGA, ctx.mag)
             + _get_fP(C_PGA, ctx.mag, ctx.rrup)
