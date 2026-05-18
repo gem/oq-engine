@@ -15,7 +15,7 @@ https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.6-cp312-cp312-win_am
 https://wheelhouse.openquake.org/v3/windows/py312/onnxruntime-1.23.2-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pandas-2.2.3-cp312-cp312-win_amd64.whl
 # https://wheelhouse.openquake.org/v3/windows/py312/pillow-12.1.1-cp312-cp312-win_amd64.whl
-pillow=12.2.0
+pillow==12.2.0
 https://wheelhouse.openquake.org/v3/windows/py312/psutil-7.2.2-cp37-abi3-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyogrio-0.11.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyproj-3.7.2-cp312-cp312-win_amd64.whl

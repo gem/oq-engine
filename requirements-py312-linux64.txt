@@ -17,7 +17,7 @@ https://wheelhouse.openquake.org/v3/linux/py312/numpy-2.2.6-cp312-cp312-manylinu
 https://wheelhouse.openquake.org/v3/linux/py312/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 # https://wheelhouse.openquake.org/v3/linux/py312/pillow-12.1.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-pillow=12.2.0
+pillow==12.2.0
 https://wheelhouse.openquake.org/v3/linux/py312/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/pyogrio-0.11.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/pyproj-3.7.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl

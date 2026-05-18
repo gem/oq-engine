@@ -16,7 +16,7 @@ https://wheelhouse.openquake.org/v3/macos/arm64/py312/numpy-2.2.6-cp312-cp312-ma
 https://wheelhouse.openquake.org/v3/macos/arm64/py312/onnxruntime-1.23.2-cp312-cp312-macosx_13_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py312/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
 # https://wheelhouse.openquake.org/v3/macos/arm64/py312/pillow-12.1.1-cp312-cp312-macosx_11_0_arm64.whl
-pillow=12.2.0
+pillow==12.2.0
 https://wheelhouse.openquake.org/v3/macos/arm64/py312/psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py312/pyogrio-0.11.1-cp312-cp312-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/macos/arm64/py312/pyproj-3.7.2-cp312-cp312-macosx_11_0_arm64.whl
