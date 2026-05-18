@@ -266,7 +266,7 @@ class ConditionedGmfComputer(GmfComputer):
             numpy.zeros(N, F32), cov_BY_BY, F32(lb_b), F32(ub_b), seed=seed_b
         ).sample(E)
 
-        arr = mu_Y.flatten()[:, None] + z_w_truncated + z_b_truncated
+        arr = mu_Y.flatten()[:, numpy.newaxis] + z_w_truncated + z_b_truncated
         return arr
 
 
