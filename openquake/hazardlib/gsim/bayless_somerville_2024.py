@@ -397,13 +397,11 @@ class BaylessSomerville2024Cratonic(GMPE):
         # Pass 1: rock PGA at Vs30=760 for the nonlinear site term.
         # Fortran uses T=0.01 s as the proxy for PGA.
         C_PGA = self.COEFFS[SA(0.01)]
-        # Coefficients are calibrated in cm/s^2; convert to g.
-        # ln(g) = ln(cm/s^2) - ln(980.665)
+        # Coefficients are calibrated in ln(g); pga_rock is in g.
         pga_rock = np.exp(
             _get_fM(C_PGA, ctx.mag)
             + _get_fP(C_PGA, ctx.mag, ctx.rrup)
             + _get_fZtor(C_PGA, ctx.ztor)
-            - np.log(980.665)
         )
         # Pass 2: each IMT
         for m, imt in enumerate(imts):
@@ -417,7 +415,6 @@ class BaylessSomerville2024Cratonic(GMPE):
                 + _get_fZ10(C, ctx.z1pt0, ctx.vs30, imt_period)
                 + (_get_fHW(C, ctx) if self.hwflag == 1
                    else np.zeros_like(ctx.mag))
-                - np.log(980.665)
             )
             sig[m], tau[m], phi[m] = _get_stddevs(C, ctx.mag)
 
