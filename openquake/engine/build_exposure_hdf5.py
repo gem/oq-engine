@@ -144,7 +144,7 @@ def build_site_model(grm_dir):
                    for region in REGIONS):
             continue
         for f in files:
-            if re.fullmatch(r'Site_model_[A-Za-z]{3}\.csv', f):
+            if re.fullmatch(r'Site_model_[A-Z]{3}\.csv', f):
                 print('Reading %s' % f)
                 df = pandas.read_csv(os.path.join(cwd, f))
                 if factor < 1:
