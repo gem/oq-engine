@@ -200,9 +200,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     small_eig = (eig < 1E-6).sum()
     if small_eig:
         # raise RuntimeError(f'{small_eig} of {N} eigenvalues are zeros')
-        logging.error('The spatial correlation matrix is degenerate, '
-                      f'{small_eig} of {N} eigenvalues are zeros, '
-                      'you cannot trust the results')
+        logging.warning('The spatial correlation matrix is degenerate, '
+                        f'{small_eig} of {N} eigenvalues are zeros')
 
     stddev = [shakemap['std'][str(imt)] for imt in imts]
     for im, std in zip(imts, stddev):
