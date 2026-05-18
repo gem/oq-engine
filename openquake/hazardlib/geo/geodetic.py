@@ -84,7 +84,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     if isinstance(lons1, float):
         return fast_distance(lons1, lats1, lons2, lats2)
     lons1, lats1, lons2, lats2 = _prepare_coords(
-        lons1, lats1, lons2, lats2, F32)    
+        lons1, lats1, lons2, lats2, F32)
     arr = np.sin((lats1 - lats2) / 2.0) ** 2.0
     arr += np.cos(lats1) * np.cos(lats2) * np.sin((lons1 - lons2) / 2.0) ** 2.0
     return diameter * np.arcsin(np.sqrt(arr))
@@ -101,6 +101,17 @@ def fast_distance(lon, lat, lons, lats):
         + np.cos(lat) * np.cos(lats)
         * np.sin((lon - lons) / 2.0) ** 2.0))
     return 2 * EARTH_RADIUS * distance
+
+
+def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
+    """
+    :param lons: array of m longitudes
+    :param lats: array of m latitudes
+    :returns: matrix of (m, m) distances
+    """
+    # tested in test_case_shakemap
+    return geodetic_distance(
+        lons.reshape(-1, 1), lats.reshape(-1, 1), lons, lats, diameter)
 
 
 @compile("(f8, f8, f8[:], f8[:])")
@@ -330,16 +341,6 @@ def min_geodetic_distance(a, b):
     if isinstance(b, tuple):
         b = spherical_to_cartesian(b[0].flatten(), b[1].flatten())
     return cdist(a, b).min(axis=0)
-
-
-def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
-    """
-    :param lons: array of m longitudes
-    :param lats: array of m latitudes
-    :returns: matrix of (m, m) distances
-    """
-    # tested in test_case_shakemap
-    return geodetic_distance(lons, lats, lons, lats, diameter)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):

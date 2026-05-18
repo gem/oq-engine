@@ -196,6 +196,14 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts, spatialcorr)
 
+    eig, _ = numpy.linalg.eigh(spatial_corr[0])
+    small_eig = (eig < 1E-6).sum()
+    if small_eig:
+        # raise RuntimeError(f'{small_eig} of {N} eigenvalues are zeros')
+        logging.error('The spatial correlation matrix is degenerate, '
+                      f'{small_eig} of {N} eigenvalues are zeros, '
+                      'you cannot trust the results')
+
     stddev = [shakemap['std'][str(imt)] for imt in imts]
     for im, std in zip(imts, stddev):
         if std.sum() == 0:
