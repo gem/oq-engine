@@ -2,7 +2,13 @@
   * Added Bayless and Somerville (2024) ground motion model for
     Australia (BS24): BaylessSomerville2024Cratonic and
     BaylessSomerville2024NonCratonic classes in
-    openquake/hazardlib/gsim/bayless_somerville_2024.py
+    openquake/hazardlib/gsim/bayless_somerville_2024.py.
+    Fixes applied during review: corrected footwall check in the
+    hanging wall term (_get_fHW); corrected unit handling (model
+    produces ln(g) directly); corrected missing Z1.0 basin depth
+    handling; aligned PGA row coefficients with T=0.01s (minimum
+    period of the model) for compatibility with OpenQuake's
+    CoeffsTable framework.
     
   [Michele Simionato]
   * Extended use_rates to work also with IMT-dependent weights
