@@ -674,6 +674,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     success_dset = dstore['success']
     successes = success_dset[:]  # array of lists
+    expected_failures = set()
     with dstore:
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
@@ -703,7 +704,9 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     status_dset[idx] = rec.status
                     size_dset[idx] = rec.size_mb
                     if rec.status == 'failed':
-                        if name not in wf.may_fail:
+                        if name in wf.may_fail:
+                            expected_failures.add(name)
+                        else:
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
@@ -730,9 +733,10 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     if failed:
         mask = status_dset[:] == b'failed'
         dic = {str(name): int(calc) for name, calc in
-               zip(names[mask], calc_dset[:][mask])}
+               zip(names[mask], calc_dset[:][mask])
+               if name not in expected_failures}
         with wfjob:
-            logging.warning(f'The following jobs failed: {dic}')
+            logging.error(f'The following jobs failed unexpectedly: {dic}')
     return wfjob.calc_id
 
 
