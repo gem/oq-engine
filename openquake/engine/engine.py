@@ -456,7 +456,7 @@ class _Workflow:
         env = defaults.get('workflow', {}).get('env', {})
         for k, v in env.items():
             if k not in os.environ:
-                os.environ[k] = v
+                os.environ[k] = str(v)
 
         # replace feature for multi-workflows
         repl = defaults.get('workflow', {}).get('replace', {})
