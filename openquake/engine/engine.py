@@ -736,7 +736,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                zip(names[mask], calc_dset[:][mask])
                if name not in expected_failures}
         with wfjob:
-            logging.warning(f'The following jobs failed unexpectedly: {dic}')
+            logging.error(f'The following jobs failed unexpectedly: {dic}')
     return wfjob.calc_id
 
 
