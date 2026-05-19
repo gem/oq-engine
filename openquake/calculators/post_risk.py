@@ -659,7 +659,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
-                    logging.warning(
+                    logging.info(
                         'A big variation in the %s losses is expected: try'
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
