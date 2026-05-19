@@ -393,6 +393,7 @@ class File(h5py.File):
             if is_array and len(value) and isinstance(value[0], str):
                 dt = vstr
             elif is_array:
+                assert len(value), f'Empty array for {key}/{name}'
                 dt = value.dtype
             else:
                 dt = value
