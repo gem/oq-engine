@@ -415,7 +415,11 @@ def get_params(job_ini, kw={}):
         raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
+    rs = int(os.environ.get('OQ_REDUCE_SAMPLING', '0'))
+    if rs:
+        # used in testing to reduce the number of samples
+        params['number_of_logic_tree_samples'] = str(
+            rs * int(params['number_of_logic_tree_samples']))
     return params
 
 
