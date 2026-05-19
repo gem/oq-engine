@@ -451,15 +451,20 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
-        repl = defaults['workflow'].get('replace', {})
+
+        # replace feature for multi-workflows
+        repl = defaults.get('workflow', {}).get('replace', {})
         for _, dic in ddic.items():
             for name in dic:
                 if name in repl:
                     dic[name] = repl[name]
+
+        # check the repositories exist
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
+
         inis = []
         names = []
         self.success = []
