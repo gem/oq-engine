@@ -1365,6 +1365,12 @@ class OqParam(valid.ParamSet):
         self.minimum_intensity = dic
 
     def __init__(self, **names_vals):
+        rs = float(os.environ.get('OQ_SAMPLES', '0'))
+        if rs:
+            # used in tests to reduce the number of samples
+            names_vals['number_of_logic_tree_samples'] = str(int(
+                rs * int(names_vals['number_of_logic_tree_samples'])))
+
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
         self.fix_legacy_names(names_vals)

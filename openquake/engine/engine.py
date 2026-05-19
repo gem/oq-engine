@@ -451,10 +451,27 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
+
+        # set the passed environment variables if not already set
+        env = defaults.get('workflow', {}).get('env', {})
+        for k, v in env.items():
+            if k not in os.environ:
+                os.environ[k] = str(v)
+
+        # replace feature for multi-workflows
+        repl = defaults.get('workflow', {}).get('replace', {})
+        if repl:
+            for _, dic in ddic.items():
+                for name in dic:
+                    if name in repl:
+                        dic[name] = repl[name]
+
+        # check the repositories exist
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
+
         inis = []
         names = []
         self.success = []
@@ -546,18 +563,23 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflow_toml, params={}, validate=True):
+def read_many(workflow_toml, params, validate=True):
     """
-    Read the workflow file and returns a list a workflow dictionary.
+    Read the workflow file and returns a list of workflow dictionaries.
     Set 'workflow_dir', 'success' and 'inis' on each.
     Also expand relative paths to absolute paths for parameters following
     the `_file` name convention.
+
+    :param workflow_toml: path to a workflow file
+    :param params: dictionary containg at least workflow_id
+    :param validate: if True, validate the OqParam object
     """
     out = []
     prefix = ''
     try:
         with open(workflow_toml, encoding='utf8') as f:
             wfdict = toml.load(f)
+
         if 'multi' in wfdict:
             multi = wfdict.pop('multi')
 
@@ -602,13 +624,13 @@ def prepare_workflow(params, workflow_toml, pdb):
     """
     try:
         # retrieve an old workflow
-        workflow_id = params.pop('workflow_id')
+        workflow_id = params['workflow_id']
     except KeyError:
         # create a new workflow
         [wfjob] = create_jobs([{
             'calculation_mode': 'workflow',
             'description': os.path.basename(workflow_toml)}], pdb=pdb)
-        workflow_id = wfjob.calc_id
+        workflow_id = params['workflow_id'] = wfjob.calc_id
         new = True
     else:
         wfjob = logs.init({'job_id': workflow_id})
