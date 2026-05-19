@@ -49,7 +49,8 @@ https://wheelhouse.openquake.org/v3/py/flatbuffers-25.12.19-py2.py3-none-any.whl
 fonttools==4.60.2
 https://wheelhouse.openquake.org/v3/py/geopandas-1.1.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/idna-3.6-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/idna-3.6-py3-none-any.whl
+idna==3.7
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-7.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/iniconfig-2.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/mccabe-0.7.0-py2.py3-none-any.whl
@@ -65,11 +66,13 @@ https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-3.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pytest-8.3.3-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/pytest-8.3.3-py3-none-any.whl
+pytest==9.0.3
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-2.0.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/requests-2.31.0-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/requests-2.31.0-py3-none-any.whl
+requests==2.33.0
 https://wheelhouse.openquake.org/v3/py/setuptools-79.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/six-1.16.0-py2.py3-none-any.whl
 # https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl
@@ -80,4 +83,5 @@ https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
 # https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
 urllib3==2.7.0
-https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl
+# https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl
+zipp==3.19.1

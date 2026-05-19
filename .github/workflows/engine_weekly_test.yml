@@ -13,9 +13,6 @@ on:
         default: false
   schedule:
     - cron: "0 1 * * 0"
-  push:
-    branches:
-      - updatedeps
 
 jobs:
 
