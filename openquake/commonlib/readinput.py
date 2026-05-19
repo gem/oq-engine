@@ -415,7 +415,6 @@ def get_params(job_ini, kw={}):
         raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
     return params
 
 
