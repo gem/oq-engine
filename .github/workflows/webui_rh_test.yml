@@ -9,8 +9,6 @@ on:
         required: true
   schedule:
     - cron: "05 15 * * *"
-  branches:
-    - updatedeps
 
 jobs:
   test_ui:
