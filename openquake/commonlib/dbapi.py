@@ -309,7 +309,9 @@ class Db(object):
             if dname and not os.path.exists(dname):
                 os.makedirs(dname)
             self.local.conn = self.connect(*self.args, **self.kw)
-            #  honor ON DELETE CASCADE
+            # set WAL mode to avoid OperationalError: database is locked
+            self.local.conn.execute('PRAGMA journal_mode=WAL')
+            # honor ON DELETE CASCADE
             self.local.conn.execute('PRAGMA foreign_keys = ON')
             return self.local.conn
 
