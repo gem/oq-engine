@@ -9,8 +9,9 @@ on:
         required: true
   schedule:
     - cron: "0 */12 * * *" # At minute 0 past every 12th hour
-  branches:
-    - updatedeps
+  push:
+    branches:
+      - updatedeps
 
 jobs:
   install_oq:
