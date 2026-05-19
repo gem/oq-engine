@@ -17,6 +17,7 @@ on:
   push:
     branches:
       - 'engine-3.25'
+      - updatedeps
 
 jobs:
   Run_demos_and_test_WebUI:
