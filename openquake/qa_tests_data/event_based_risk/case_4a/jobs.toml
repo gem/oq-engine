@@ -1,6 +1,7 @@
 [multi.workflow]
 description = "multi-workflow"
 may_fail = ["riskJob"]
+replace = {out_file="SES.hdf5", hazard_calculation_id="SES.hdf5"}
 
 [hazard.Job]
 ini = "job_hazard.ini"

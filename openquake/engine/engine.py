@@ -561,8 +561,12 @@ def read_many(workflow_toml, params, validate=True):
     prefix = ''
     try:
         with open(workflow_toml, encoding='utf8') as f:
-            toml_str = f.read().replace('{wf_id}', str(params['workflow_id']))
-            wfdict = toml.loads(toml_str)
+            wfdict = toml.load(f)
+            if 'replace' in params:
+                for name, value in wfdict.items():
+                    if name in params['replace']:
+                        wfdict[name] = params['replace'][name]
+
         if 'multi' in wfdict:
             multi = wfdict.pop('multi')
 
