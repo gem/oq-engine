@@ -20,6 +20,7 @@ import io
 import os
 import re
 import gzip
+import logging
 import collections
 import numpy
 import h5py
@@ -388,6 +389,9 @@ class DataStore(collections.abc.MutableMapping):
         for field in str_fields:
             typedic[field] = hdf5.vstr
         df = hdf5.read_csv(fname, typedic, renamedict, dframe=True)
+        if len(df) == 0:
+            logging.warning(f"Empty {fname}")
+            return
         if extra:
             for col, val in extra.items():
                 df[col] = val
