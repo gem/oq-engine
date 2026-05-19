@@ -451,6 +451,11 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
+        repl = defaults['workflow'].get('replace', {})
+        for _, dic in ddic.items():
+            for name in dic:
+                if name in repl:
+                    dic[name] = repl[name]
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
@@ -562,10 +567,6 @@ def read_many(workflow_toml, params, validate=True):
     try:
         with open(workflow_toml, encoding='utf8') as f:
             wfdict = toml.load(f)
-            if 'replace' in params:
-                for name, value in wfdict.items():
-                    if name in params['replace']:
-                        wfdict[name] = params['replace'][name]
 
         if 'multi' in wfdict:
             multi = wfdict.pop('multi')
