@@ -452,12 +452,19 @@ class _Workflow:
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
 
+        # set the passed environment variables if not already set
+        env = defaults.get('workflow', {}).get('env', {})
+        for k, v in env.items():
+            if k not in os.environ:
+                os.environ[k] = v
+
         # replace feature for multi-workflows
         repl = defaults.get('workflow', {}).get('replace', {})
-        for _, dic in ddic.items():
-            for name in dic:
-                if name in repl:
-                    dic[name] = repl[name]
+        if repl:
+            for _, dic in ddic.items():
+                for name in dic:
+                    if name in repl:
+                        dic[name] = repl[name]
 
         # check the repositories exist
         for value in self.checkout:
