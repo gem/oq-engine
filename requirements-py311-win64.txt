@@ -54,8 +54,6 @@ https://wheelhouse.openquake.org/v3/py/networkx-3.2.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/packaging-26.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pbr-6.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pluggy-1.5.0-py3-none-any.whl
-# https://wheelhouse.openquake.org/v3/py/protobuf-4.25.1-py3-none-any.whl
-protobuf==5.29.6
 https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl
@@ -83,3 +81,4 @@ https://wheelhouse.openquake.org/v3/py/idna-3.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sqlparse-0.5.5-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django-4.2.30-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.11.1-py3-none-any.wh
+https://wheelhouse.openquake.org/v3/py/protobuf-5.29.6-cp310-abi3-win_amd64.whl
