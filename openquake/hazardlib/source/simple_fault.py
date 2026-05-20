@@ -374,11 +374,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        info = get_rup_info(self)
+        if not hasattr(self, 'info'):
+            self.info = get_rup_info(self)
         n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
-        self._nr = [int(x) for x in info['rup_along_length'] *
-                    info['rup_along_width'] * n_hypo * n_slip]
+        self._nr = [int(x) for x in self.info['rup_along_length'] *
+                    self.info['rup_along_width'] * n_hypo * n_slip]
         return sum(self._nr)
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
