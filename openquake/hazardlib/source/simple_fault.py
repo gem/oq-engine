@@ -21,7 +21,7 @@ import copy
 import math
 import numpy
 from collections import namedtuple
-from openquake.baselib.general import round, cached_property
+# from openquake.baselib.general import round, cached_property
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -35,7 +35,9 @@ HypoData = namedtuple('HypoData', ['hypo_list', 'slip_list', 'depth_list'],
 U32 = numpy.uint32
 F64 = numpy.float64
 rup_info_dt = numpy.dtype([('rup_along_length', U32), ('rup_along_width', U32),
-                           ('mag_occ_rate', F64)])
+                           ('rup_cols', U32), ('rup_rows', U32),
+                           ('mag', F64), ('mag_rate', F64)])
+
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -194,7 +196,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
-    @cached_property
+    @property
     def info(self):
         """
         Get enough information to count the ruptures inside a
@@ -222,7 +224,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             data.append((num_rup_along_length, num_rup_along_width,
-                         mag_occ_rate))
+                         rup_cols, rup_rows, mag, mag_occ_rate))
         return numpy.array(data, rup_info_dt)
 
     def _hypo_list_from_depths(self, first_row, rup_rows):
@@ -377,8 +379,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
-        self._nr = [int(x) for x in self.info['rup_along_length'] *
-                    self.info['rup_along_width'] * n_hypo * n_slip]
+        info = self.info
+        self._nr = [int(x) for x in info['rup_along_length'] *
+                    info['rup_along_width'] * n_hypo * n_slip]
         return sum(self._nr)
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
