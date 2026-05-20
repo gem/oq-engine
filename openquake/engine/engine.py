@@ -458,8 +458,8 @@ class _Workflow:
             if k not in os.environ:
                 os.environ[k] = str(v)
 
-        # replace feature for multi-workflows
-        repl = defaults.get('workflow', {}).get('replace', {})
+        # override feature for multi-workflows
+        repl = defaults.get('workflow', {}).get('override', {})
         if repl:
             for _, dic in ddic.items():
                 for name in dic:
