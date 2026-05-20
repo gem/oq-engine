@@ -641,7 +641,7 @@ def prepare_workflow(params, workflow_toml, pdb):
         n = len(names)
         check_unique(names, workflow_toml)
         logging.info('Running %d workflows: %s', n,
-                     [wf.names for wf in workflows])
+                     [list(wf.names) for wf in workflows])
 
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
