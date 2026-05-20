@@ -192,7 +192,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         checks and the `count` flag, when True the function
         """
         step = kwargs.get('step', 1)
-        only_count = kwargs.get('count', False)
+        only_rates = kwargs.get('rates', False)
         eps_ar_low = kwargs.get('eps_low', None)
         eps_ar_upp = kwargs.get('eps_upp', None)
         num_bins = kwargs.get('num_bins', None)
@@ -211,6 +211,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         # Loop over the range of magnitudes admitted
         rupture_counter = []
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            rates = []
 
             # Computing rupture parameters
             rupture_area = msr.get_median_area(mag, self.rake)
@@ -228,8 +229,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             assert numpy.abs(1.0 - numpy.sum(pmf)) < 1e-5
 
             # Loop over the rupture lengths
-            tmp = 0.0
-            tmp_num_rups = 0
+            num_rups = 0
             for rupture_length, wei in zip(rup_lens, pmf):
 
                 # Generate rupture slices
@@ -238,50 +238,31 @@ class ComplexFaultSource(ParametricSeismicSource):
 
                 # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
-                tmp += occurrence_rate * len(rupture_slices)
 
-                # Just counting the ruptures
-                if only_count:
-                    tmp_num_rups += len(rupture_slices)
+                if only_rates:
+                    rates.extend([occurrence_rate]* len(rupture_slices[::step]))
                     continue
 
                 for rupture_slice in rupture_slices[::step]:
-
-                    # Create the mesh of the rupture from the mesh of the
-                    # complex fault
+                    # Create the surface of the rupture
                     mesh = whole_fault_mesh[rupture_slice]
+                    surface = ComplexFaultSurface(mesh)
 
                     # XXX: use surface centroid as rupture's hypocenter
                     # XXX: instead of point with middle index
                     hypocenter = mesh.get_middle_point()
-                    try:
-                        surface = ComplexFaultSurface(mesh)
-                    except ValueError as e:
-                        raise ValueError("Invalid source with id=%s. %s" % (
-                            self.source_id, str(e)))
 
                     # Create the rupture
                     rup = ParametricProbabilisticRupture(
-                        mag,
-                        self.rake,
-                        self.tectonic_region_type,
-                        hypocenter,
-                        surface,
-                        occurrence_rate,
-                        self.temporal_occurrence_model
-                    )
+                        mag, self.rake, self.tectonic_region_type,
+                        hypocenter, surface, occurrence_rate,
+                        self.temporal_occurrence_model)
                     rup.mag_occ_rate = mag_occ_rate
                     yield rup
 
-            # Checking rates
-            if not only_count:
-                assert numpy.abs(mag_occ_rate - tmp) < 1e-5, mag_occ_rate - tmp
-
-            rupture_counter.append(tmp_num_rups)
-
-        # Just return the number of ruptures per magnitude bin
-        if only_count:
-            yield numpy.array(rupture_counter)
+            rupture_counter.append(num_rups)
+            if only_rates:
+                yield numpy.array(rates)
 
     def count_ruptures(self):
         """
@@ -289,8 +270,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         if not hasattr(self, '_nr'):
-            self._nr = list(self.iter_ruptures(count=True))[0]
-            self._num_ruptures = numpy.sum(self._nr)
+            self._nr = [len(r) for r in self.iter_ruptures(rates=True)]
+            self._num_ruptures = sum(self._nr)
         return self._num_ruptures
 
     def modify_set_geometry(self, edges, spacing):

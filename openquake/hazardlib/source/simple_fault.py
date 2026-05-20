@@ -101,9 +101,10 @@ class SimpleFaultSource(ParametricSeismicSource):
     for description of other parameters.
 
     :raises ValueError:
-        If :meth:`~openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface.check_fault_data`
-        fails, if rake value is invalid and if rupture mesh spacing is too high
-        for the lowest magnitude value.
+        If :meth:`~openquake.hazardlib.geo.surface.simple_fault.
+        SimpleFaultSurface.check_fault_data` fails, if rake value is
+        invalid and if rupture mesh spacing is too high for the lowest
+        magnitude value.
     """
     code = b'S'
     MODIFICATIONS = {
@@ -121,7 +122,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_msr',
         'set_slip_rate',
     }
-
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship,
@@ -165,17 +165,17 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError('hypo_list and slip_list have to be both given '
                              'or neither given')
 
-        if self.hypo_depth_list and (len(self.hypo_list) or len(self.slip_list)):
-            raise ValueError(
-                'hypo_depth_list and hypo_list/slip_list cannot be used together'
-                )
+        if self.hypo_depth_list and (
+                len(self.hypo_list) or len(self.slip_list)):
+            raise ValueError('hypo_depth_list and hypo_list/slip_list cannot '
+                             'be used together')
         if self.hypo_depth_list:
             total = sum(wei for wei, _depth, _fdf in self.hypo_depth_list)
             if abs(total - 1.0) > 1e-7:
-                raise ValueError(
-                    f'hypo_depth_list probabilities sum to {total}, expected 1.0')
+                raise ValueError('hypo_depth_list probabilities sum to '
+                                 f'{total}, expected 1.0')
         for _wei, depth, fdf in self.hypo_depth_list:
-            if not (upper_seismogenic_depth <= depth <= lower_seismogenic_depth):
+            if not upper_seismogenic_depth <= depth <= lower_seismogenic_depth:
                 raise ValueError(
                     f'hypo_depth_list {depth} km is outside the '
                     f'seismogenic zone [{upper_seismogenic_depth}, '
