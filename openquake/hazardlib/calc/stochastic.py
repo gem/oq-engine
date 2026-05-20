@@ -91,6 +91,7 @@ def get_rup_array(ebruptures, magdist):
     # NB: PMFs for nonparametric ruptures are not saved since they
     # are useless for the GMF computation
     arr = numpy.array(rups, rupture_dt)
+    print('-----------------', arr.nbytes / 1024**3)
     return hdf5.ArrayWrapper(arr, dic)
 
 

@@ -228,8 +228,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             assert numpy.abs(1.0 - numpy.sum(pmf)) < 1e-5
 
             # Loop over the rupture lengths
-            tmp = 0.0
-            tmp_num_rups = 0
+            num_rups = 0
             for rupture_length, wei in zip(rup_lens, pmf):
 
                 # Generate rupture slices
@@ -238,46 +237,30 @@ class ComplexFaultSource(ParametricSeismicSource):
 
                 # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
-                tmp += occurrence_rate * len(rupture_slices)
 
                 # Just counting the ruptures
                 if only_count:
-                    tmp_num_rups += len(rupture_slices)
+                    num_rups += len(rupture_slices)
                     continue
 
                 for rupture_slice in rupture_slices[::step]:
-
-                    # Create the mesh of the rupture from the mesh of the
-                    # complex fault
+                    # Create the surface of the rupture
                     mesh = whole_fault_mesh[rupture_slice]
+                    surface = ComplexFaultSurface(mesh)
 
                     # XXX: use surface centroid as rupture's hypocenter
                     # XXX: instead of point with middle index
                     hypocenter = mesh.get_middle_point()
-                    try:
-                        surface = ComplexFaultSurface(mesh)
-                    except ValueError as e:
-                        raise ValueError("Invalid source with id=%s. %s" % (
-                            self.source_id, str(e)))
 
                     # Create the rupture
                     rup = ParametricProbabilisticRupture(
-                        mag,
-                        self.rake,
-                        self.tectonic_region_type,
-                        hypocenter,
-                        surface,
-                        occurrence_rate,
-                        self.temporal_occurrence_model
-                    )
+                        mag, self.rake, self.tectonic_region_type,
+                        hypocenter, surface, occurrence_rate,
+                        self.temporal_occurrence_model)
                     rup.mag_occ_rate = mag_occ_rate
                     yield rup
 
-            # Checking rates
-            if not only_count:
-                assert numpy.abs(mag_occ_rate - tmp) < 1e-5, mag_occ_rate - tmp
-
-            rupture_counter.append(tmp_num_rups)
+            rupture_counter.append(num_rups)
 
         # Just return the number of ruptures per magnitude bin
         if only_count:
