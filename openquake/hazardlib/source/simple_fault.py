@@ -21,7 +21,7 @@ import copy
 import math
 import numpy
 from collections import namedtuple
-from openquake.baselib.general import round
+from openquake.baselib.general import round, cached_property
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -36,35 +36,6 @@ U32 = numpy.uint32
 F64 = numpy.float64
 rup_info_dt = numpy.dtype([('rup_along_length', U32), ('rup_along_width', U32),
                            ('mag_occ_rate', F64)])
-
-
-def get_rup_info(src):
-    """
-    Get enough information to count the ruptures inside a simple fault source
-    """
-    try:
-        whole_fault_surface = SimpleFaultSurface.from_fault_data(
-            src.fault_trace, src.upper_seismogenic_depth,
-            src.lower_seismogenic_depth, src.dip,
-            src.rupture_mesh_spacing)
-    except Exception as exc:
-        source_id = src.source_id
-        exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
-        raise
-    whole_fault_mesh = whole_fault_surface.mesh
-    mesh_rows, mesh_cols = whole_fault_mesh.shape
-    fault_length = float((mesh_cols - 1) * src.rupture_mesh_spacing)
-    fault_width = float((mesh_rows - 1) * src.rupture_mesh_spacing)
-    data = []
-    for (mag, mag_occ_rate) in src.get_annual_occurrence_rates():
-        if mag_occ_rate == 0:
-            continue
-        rup_cols, rup_rows = src._get_rupture_dimensions(
-            fault_length, fault_width, mag)
-        num_rup_along_length = mesh_cols - rup_cols + 1
-        num_rup_along_width = mesh_rows - rup_rows + 1
-        data.append((num_rup_along_length, num_rup_along_width, mag_occ_rate))
-    return numpy.array(data, rup_info_dt)
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -223,6 +194,36 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
+    @cached_property
+    def info(self):
+        """
+        Get enough information to count the ruptures inside a
+        simple fault source
+        """
+        try:
+            whole_fault_surface = SimpleFaultSurface.from_fault_data(
+                self.fault_trace, self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth, self.dip,
+                self.rupture_mesh_spacing)
+        except Exception as exc:
+            source_id = self.source_id
+            exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
+            raise
+        whole_fault_mesh = whole_fault_surface.mesh
+        mesh_rows, mesh_cols = whole_fault_mesh.shape
+        fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
+        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        data = []
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            if mag_occ_rate == 0:
+                continue
+            rup_cols, rup_rows = self._get_rupture_dimensions(
+                fault_length, fault_width, mag)
+            num_rup_along_length = mesh_cols - rup_cols + 1
+            num_rup_along_width = mesh_rows - rup_rows + 1
+            data.append((num_rup_along_length, num_rup_along_width,
+                         mag_occ_rate))
+        return numpy.array(data, rup_info_dt)
 
     def _hypo_list_from_depths(self, first_row, rup_rows):
         """
@@ -374,8 +375,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        if not hasattr(self, 'info'):
-            self.info = get_rup_info(self)
         n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
         self._nr = [int(x) for x in self.info['rup_along_length'] *
