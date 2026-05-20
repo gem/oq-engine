@@ -28,7 +28,6 @@ https://wheelhouse.openquake.org/v3/linux/py313/shapely-2.1.0-cp313-cp313-manyli
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/attrs-23.1.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/certifi-2023.11.17-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/chardet-5.2.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/click-8.1.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/click_plugins-1.1.1-py2.py3-none-any.whl
