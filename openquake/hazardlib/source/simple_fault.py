@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 import copy
 import math
 from collections import namedtuple
+import numpy
 from openquake.baselib.general import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -286,6 +287,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         divided by the number of ruptures that can be placed in a fault.
         """
         step = kwargs.get('step', 1)
+        only_rates = kwargs.get('rates')
+        n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
+        n_slip = len(self.slip_list) or 1
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
@@ -301,6 +305,9 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
             occurrence_rate = mag_occ_rate / float(num_rup)
+            if only_rates:
+                yield numpy.full(num_rup * n_hypo * n_slip, occurrence_rate)
+                continue
             for first_row in range(num_rup_along_width)[::step]:
                 for first_col in range(num_rup_along_length)[::step]:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,

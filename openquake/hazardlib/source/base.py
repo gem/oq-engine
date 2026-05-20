@@ -105,10 +105,10 @@ def poisson_sample(src, eff_num_ses, seed):
                     hypo, sfc, src.occur_rates[i], tom)
                 yield rup, rupids[i], num_occ
         else:  # simple or complex fault
-            ruptures = list(src.iter_ruptures())
-            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            iruptures = src.iter_ruptures()
+            rates = numpy.concatenate(list(src.iter_ruptures(rates=True)))
             occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, rupid, num_occ in zip(ruptures, rupids, occurs):
+            for rup, rupid, num_occ in zip(iruptures, rupids, occurs):
                 if num_occ:
                     yield rup, rupid, num_occ
         return
