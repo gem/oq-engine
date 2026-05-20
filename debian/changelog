@@ -1,8 +1,10 @@
   [Thuany Costa de Lima]
   * Added Bayless and Somerville (2024) GMM for Australia:
-    BaylessSomerville2024Cratonic and BaylessSomerville2024NonCratonic. 
-    
+    BaylessSomerville2024Cratonic and BaylessSomerville2024NonCratonic.
+
   [Michele Simionato]
+  * Saved memory in the rupture sampling algorithm for fault sources
+    (simple, complex, characteristic)
   * Extended use_rates to work also with IMT-dependent weights
 
   [Christopher Brooks]
