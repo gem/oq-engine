@@ -21,7 +21,7 @@ import copy
 import math
 import numpy
 from collections import namedtuple
-from openquake.baselib.general import round, cached_property
+# from openquake.baselib.general import round, cached_property
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -196,7 +196,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
-    @cached_property
+    #@cached_property
     def mesh_info(self):
         """
         Get enough information to count the ruptures inside a
@@ -323,11 +323,16 @@ class SimpleFaultSource(ParametricSeismicSource):
         divided by the number of ruptures that can be placed in a fault.
         """
         step = kwargs.get('step', 1)
-        del self.__dict__['mesh_info']
-        whole_mesh, info = self.mesh_info
+        only_rates = kwargs.get('rates')
+        n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
+        n_slip = len(self.slip_list) or 1
+        whole_mesh, info = self.mesh_info()
         for rec in info:
-            occurrence_rate = rec['mag_rate'] / float(
-                rec['rup_along_length'] * rec['rup_along_width'])
+            nr = rec['rup_along_length'] * rec['rup_along_width']
+            occurrence_rate = rec['mag_rate'] / nr
+            if only_rates:
+                yield numpy.full(nr * n_hypo * n_slip, occurrence_rate)
+                continue
             for first_row in range(rec['rup_along_width'])[::step]:
                 for first_col in range(rec['rup_along_length'])[::step]:
                     mesh = whole_mesh[first_row: first_row + rec['rup_rows'],
@@ -370,7 +375,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
-        _, info = self.mesh_info
+        _, info = self.mesh_info()
         self._nr = [int(x) for x in info['rup_along_length'] *
                     info['rup_along_width'] * n_hypo * n_slip]
         return sum(self._nr)

@@ -193,6 +193,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         step = kwargs.get('step', 1)
         only_count = kwargs.get('count', False)
+        only_rates = kwargs.get('rates', False)
         eps_ar_low = kwargs.get('eps_low', None)
         eps_ar_upp = kwargs.get('eps_upp', None)
         num_bins = kwargs.get('num_bins', None)
@@ -211,6 +212,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         # Loop over the range of magnitudes admitted
         rupture_counter = []
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            rates = []
 
             # Computing rupture parameters
             rupture_area = msr.get_median_area(mag, self.rake)
@@ -238,6 +240,10 @@ class ComplexFaultSource(ParametricSeismicSource):
                 # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
 
+                if only_rates:
+                    rates.extend([occurrence_rate]* len(rupture_slices[::step]))
+                    continue
+
                 # Just counting the ruptures
                 if only_count:
                     num_rups += len(rupture_slices)
@@ -261,6 +267,8 @@ class ComplexFaultSource(ParametricSeismicSource):
                     yield rup
 
             rupture_counter.append(num_rups)
+            if only_rates:
+                yield numpy.array(rates)
 
         # Just return the number of ruptures per magnitude bin
         if only_count:
