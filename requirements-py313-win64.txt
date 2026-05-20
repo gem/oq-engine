@@ -74,5 +74,5 @@ https://wheelhouse.openquake.org/v3/py/pluggy-1.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sqlparse-0.5.5-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django-4.2.30-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.11.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/protobuf-5.29.6-cp310-abi3-win_amd64.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.60.2-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/protobuf-5.29.6-py3-none-any.wl
