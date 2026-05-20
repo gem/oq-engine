@@ -323,39 +323,30 @@ class SimpleFaultSource(ParametricSeismicSource):
         divided by the number of ruptures that can be placed in a fault.
         """
         step = kwargs.get('step', 1)
-        whole_fault_surface = SimpleFaultSurface.from_fault_data(
-            self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
-        whole_fault_mesh = whole_fault_surface.mesh
-        mesh_rows, mesh_cols = whole_fault_mesh.shape
-        fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
-        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
-
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            rup_cols, rup_rows = self._get_rupture_dimensions(
-                fault_length, fault_width, mag)
-            num_rup_along_length = mesh_cols - rup_cols + 1
-            num_rup_along_width = mesh_rows - rup_rows + 1
-            num_rup = num_rup_along_length * num_rup_along_width
-            occurrence_rate = mag_occ_rate / float(num_rup)
-            for first_row in range(num_rup_along_width)[::step]:
-                for first_col in range(num_rup_along_length)[::step]:
-                    mesh = whole_fault_mesh[first_row: first_row + rup_rows,
-                                            first_col: first_col + rup_cols]
+        del self.__dict__['mesh_info']
+        whole_mesh, info = self.mesh_info
+        for rec in info:
+            occurrence_rate = rec['mag_rate'] / float(
+                rec['rup_along_length'] * rec['rup_along_width'])
+            for first_row in range(rec['rup_along_width'])[::step]:
+                for first_col in range(rec['rup_along_length'])[::step]:
+                    mesh = whole_mesh[first_row: first_row + rec['rup_rows'],
+                                      first_col: first_col + rec['rup_cols']]
                     surface = SimpleFaultSurface(mesh)
                     
                     if self.hypo_depth_list:
                         yield from self._iter_ruptures_hypo_depth(
-                            surface, occurrence_rate, mag, first_row, rup_rows)
+                            surface, occurrence_rate, rec['mag'],
+                            first_row, rec['rup_rows'])
                         
                     elif len(self.hypo_list) and len(self.slip_list):
                         yield from self._iter_ruptures_hypo_slip(
-                            surface, occurrence_rate, mag)
+                            surface, occurrence_rate, rec['mag'])
                         
                     else:
                         # Regular version using surf centroid
                         yield ParametricProbabilisticRupture(
-                            mag, self.rake, self.tectonic_region_type,
+                            rec['mag'], self.rake, self.tectonic_region_type,
                             mesh.get_middle_point(), surface, occurrence_rate,
                             self.temporal_occurrence_model)
 
