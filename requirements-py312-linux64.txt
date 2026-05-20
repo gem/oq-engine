@@ -26,7 +26,6 @@ https://wheelhouse.openquake.org/v3/linux/py312/setproctitle-1.3.7-cp312-cp312-m
 https://wheelhouse.openquake.org/v3/linux/py312/shapely-2.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #pp
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/attrs-23.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/chardet-5.2.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/click-8.1.7-py3-none-any.whl
@@ -47,14 +46,11 @@ fonttools==4.60.2
 https://wheelhouse.openquake.org/v3/py/geopandas-1.1.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-7.0.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/iniconfig-2.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/mccabe-0.7.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/mpmath-1.3.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/munch-4.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-3.2.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/packaging-26.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pbr-6.0.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pluggy-1.5.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl
@@ -79,7 +75,6 @@ https://wheelhouse.openquake.org/v3/py/packaging-26.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/iniconfig-2.3.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pygments-2.20.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pluggy-1.6.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/idna-3.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sqlparse-0.5.5-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django-4.2.30-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.11.1-py3-none-any.whl
