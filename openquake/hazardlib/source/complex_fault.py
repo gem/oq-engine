@@ -209,7 +209,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         msr = self.magnitude_scaling_relationship
 
         # Loop over the range of magnitudes admitted
-        rupture_counter = []
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rates = []
 
@@ -229,7 +228,6 @@ class ComplexFaultSource(ParametricSeismicSource):
             assert numpy.abs(1.0 - numpy.sum(pmf)) < 1e-5
 
             # Loop over the rupture lengths
-            num_rups = 0
             for rupture_length, wei in zip(rup_lens, pmf):
 
                 # Generate rupture slices
@@ -260,7 +258,6 @@ class ComplexFaultSource(ParametricSeismicSource):
                     rup.mag_occ_rate = mag_occ_rate
                     yield rup
 
-            rupture_counter.append(num_rups)
             if only_rates:
                 yield numpy.array(rates)
 
