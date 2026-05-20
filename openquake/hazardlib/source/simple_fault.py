@@ -21,7 +21,7 @@ import copy
 import math
 import numpy
 from collections import namedtuple
-# from openquake.baselib.general import round, cached_property
+from openquake.baselib.general import round, cached_property
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -196,8 +196,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             raise ValueError('mesh spacing %s is too high to represent '
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
-    @property
-    def info(self):
+    @cached_property
+    def mesh_info(self):
         """
         Get enough information to count the ruptures inside a
         simple fault source
@@ -225,7 +225,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_width = mesh_rows - rup_rows + 1
             data.append((num_rup_along_length, num_rup_along_width,
                          rup_cols, rup_rows, mag, mag_occ_rate))
-        return numpy.array(data, rup_info_dt)
+        return whole_fault_mesh, numpy.array(data, rup_info_dt)
 
     def _hypo_list_from_depths(self, first_row, rup_rows):
         """
@@ -379,7 +379,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
-        info = self.info
+        _, info = self.mesh_info
         self._nr = [int(x) for x in info['rup_along_length'] *
                     info['rup_along_width'] * n_hypo * n_slip]
         return sum(self._nr)
