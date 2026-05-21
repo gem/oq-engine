@@ -115,6 +115,7 @@ class Allen2022(GMPE):
 
     Note on PGA sigma [Equation 10, p. 1051]:
         sigma_PGA = sqrt(tau_PGA^2 + phi_PGA^2 + lambda_PGA^2)
+        
     where lambda_PGA = 0.270 accounts for the additional uncertainty from
     PGA proxy estimation using low-sample-rate data (paper p. 1050).
     This term is already incorporated into the sigma value in Table 1
