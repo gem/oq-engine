@@ -762,7 +762,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         parent = datastore.read(oq.hazard_calculation_id)
-        oqparent = parent['oqparam']
+        oqparent = datastore.get_oq(parent)
         if 'weights' in parent:
             weights = numpy.unique(parent['weights'][:])
             if (oq.job_type == 'risk' and oq.collect_rlzs and
@@ -779,14 +779,14 @@ class HazardCalculator(BaseCalculator):
             self.oqparam.concurrent_tasks = (
                 self.oqparam.__class__.concurrent_tasks.default)
         params = {name: value for name, value in
-                  vars(parent['oqparam']).items()
+                  vars(datastore.get_oq(parent)).items()
                   if name not in vars(self.oqparam)
                   and name != 'ground_motion_fields'}
         if params:
             self.save_params(**params)
         with self.monitor('importing inputs', measuremem=True):
             self.read_inputs()
-        oqp = parent['oqparam']
+        oqp = datastore.get_oq(parent)
         if oqp.investigation_time != oq.investigation_time:
             raise ValueError(
                 'The parent calculation was using investigation_time=%s'
@@ -815,8 +815,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if not oq.risk_imtls:
             if self.datastore.parent:
-                oq.risk_imtls = (
-                    self.datastore.parent['oqparam'].risk_imtls)
+                oqp = datastore.get_oq(self.datastore.parent)
+                oq.risk_imtls = oqp.risk_imtls
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         elif 'full_lt' in self.datastore:
@@ -997,7 +997,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
 
-        oq_hazard = (self.datastore.parent['oqparam']
+        oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)

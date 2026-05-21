@@ -163,8 +163,6 @@ def read_hc_id(hdf5):
         oq = get_oq(hdf5)
     except KeyError:  # oqparam not saved yet
         return
-    except OSError:  # file open by another process with oqparam not flushed
-        return
     return oq.hazard_calculation_id
 
 

@@ -28,7 +28,7 @@ import pandas
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.general import decode
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
@@ -55,7 +55,7 @@ def export_ruptures_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')

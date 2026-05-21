@@ -137,7 +137,6 @@ def test_site_model():  # 5 sites
 
 
 def teardown_module():
-    breakpoint()
     if os.path.exists(RUP_HDF5):
         os.remove(RUP_HDF5)
     if last_job:

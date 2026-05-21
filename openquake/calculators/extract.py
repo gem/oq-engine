@@ -1662,7 +1662,7 @@ def extract_rupture_info(dstore, what):
         min_mag = 0
     [bounds] = qdict.get('boundaries', ['yes'])
     # bound is yes for the plugin and no for the exporter
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     try:
         info = dstore['source_info']
         source_id = info['source_id']
