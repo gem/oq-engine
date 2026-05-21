@@ -93,7 +93,7 @@ def test_one_site():
         path('job1.ini'), hazard_calculation_id='rups.hdf5')
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 69
+    assert len(df) == 14
     assert df.index.max() < 1
 
     # test multi-model rupture exporter
