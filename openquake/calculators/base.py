@@ -774,6 +774,7 @@ class HazardCalculator(BaseCalculator):
             check_imtls(oq.imtls, oqparent.imtls)
         self.check_precalc(oqparent.calculation_mode)
         self.datastore.parent = parent
+
         # copy missing parameters from the parent
         if 'concurrent_tasks' not in vars(self.oqparam):
             self.oqparam.concurrent_tasks = (
