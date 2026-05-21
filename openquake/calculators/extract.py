@@ -1333,8 +1333,11 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     R = len(base.get_weights(oq, dstore))
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    rup_df = dstore.read_df('ruptures', 'id')[
-        ['mag', 'n_occ', 'occurrence_rate']]
+    try:
+        rup_df = dstore.read_df('ruptures', 'id')
+    except KeyError:
+        rup_df = dstore.read_df('filtered_ruptures', 'id')
+    rup_df = rup_df[['mag', 'n_occ', 'occurrence_rate']]
     rup_df.mag = numpy.round(rup_df.mag, 1)
     dic = dict(mag=[], freq=[], occ_rate=[])
     for mag, df in rup_df.groupby('mag'):
