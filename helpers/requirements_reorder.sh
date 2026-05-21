@@ -30,11 +30,12 @@ for fin in $(ls requirements-*.txt); do
             # echo "${fin}: FOUND $package AT LINE $lin"
             cat "$fin" | sed -n ${lin}p >> $NEW_REQ
         else
-            echo "${fin}: $package NOT FOUND: add at the end of the file"
+            echo "${fin}: OLD $package NOT FOUND: add it commented with the name of this branch"
+            echo "# Package '$package' removed at branch '$(git branch --show-current)'" >> $NEW_REQ
+            echo "# $r" >> $NEW_REQ
         fi
     done
 
-    is_first="true"
     for r in $(cat "$fin"); do
         # echo "ROW: $r"
         if $(echo "$r" | grep -q '^\s*#'); then
@@ -47,11 +48,8 @@ for fin in $(ls requirements-*.txt); do
         fi
         
         if ! grep -q -o "/${package}-" "$REQ_MASTER"; then
-            if [ "$is_first" = "true" ]; then
-                echo "# Added at branch $(git branch --show-current)" >> $NEW_REQ
-                is_first="false"
-            fi
             echo "${fin}, ALERT, entry: [$r] NOT FOUND, append at the end of the file"
+            echo "# Package '${package}' added at branch '$(git branch --show-current)'" >> $NEW_REQ
             echo "$r" >> $NEW_REQ
         fi
     done
