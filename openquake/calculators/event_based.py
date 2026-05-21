@@ -366,20 +366,24 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
             rlzs_by_gsim[model, trt_smr] = rbg
 
     # store the filtered ruptures for debugging purposes
-    oq_by = {}  # populated if parent is a SES.hdf5 file
+    oq.mags_by_trt = AccumDict(accum=set())
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
         dstore['relevant_events'] = events[
             numpy.isin(events['rup_id'], filrups['id'])]
+
+        # populate oq_by when the parent is a SES.hdf5 file
         grp = dstore.parent['oqparam']
         if isinstance(grp, h5py.Group):
+            oq_by = {}
             for model in grp:
                 oq_by[model] = dstore[f'oqparam/{model}']
                 oq_by[model].mags_by_trt = AccumDict(accum=set())
         else:
-            oq_by['???'] = oq
-            oq.mags_by_trt = AccumDict(accum=set())            
+            oq_by = {'???': oq}
+    else:
+        oq_by = {'???': oq}  # parent is nota SES.hdf5 file
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
@@ -400,8 +404,6 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        print('%s: sending %d ruptures for trt_smr=%d' %
-              (model, len(rups), trt_smr))
         for block in block_splitter(rups, maxw * 2, rup_weight):
             args = (numpy.array(block), cmaker, sitecol.sids,
                     sec_perils, dstore)
