@@ -1863,7 +1863,7 @@ def run_calc(job_ini, **kw):
         fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
-        return calc
+    return calc
 
 
 def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):

@@ -93,12 +93,18 @@ def test_one_site():
         path('job1.ini'), hazard_calculation_id='rups.hdf5')
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 14
+    assert len(df) == 69
     assert df.index.max() < 1
 
     # test multi-model rupture exporter
     [fname] = export(('ruptures', 'csv'), calc.datastore.parent)
     assert os.path.basename(fname) == 'ruptures_rups.csv'
+
+    # check the maximum_distance is different for MIE and EUR
+    mie = calc.oq_by['MIE'].maximum_distance['default'][0]
+    eur = calc.oq_by['EUR'].maximum_distance['default'][0]
+    assert mie == [5, 300]
+    assert eur == [5, 250]
 
 
 def test_sites():  # 5 sites

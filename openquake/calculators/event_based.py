@@ -20,6 +20,7 @@ import io
 import time
 import os.path
 import logging
+import h5py
 import numpy
 import pandas
 from shapely import geometry
@@ -349,7 +350,7 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
 
 def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     """
-    :returns: list of starmap arguments
+    :returns: (list of starmap arguments, oq_by dictionary)
     """
     trts = {}
     for model, full_lt in get_model_lts(dstore):
@@ -372,7 +373,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         dstore['relevant_events'] = events[
             numpy.isin(events['rup_id'], filrups['id'])]
         grp = dstore.parent['oqparam']
-        if isinstance(grp, hdf5.Group):
+        if isinstance(grp, h5py.Group):
             for model in grp:
                 oq_by[model] = dstore[f'oqparam/{model}']
 
@@ -380,7 +381,6 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     # NB: must be done before instantiating the ContextMaker
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
-
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
@@ -391,9 +391,10 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         trt = trts[model][trt_smr // TWO24]
         if oq_by:  # from SES.hdf5
             oq = oq_by[model]
-        mags = [magstr(mag) for mag in numpy.unique(
-            numpy.round(rups['mag'], 2))]
-        oq.mags_by_trt[trt].update(mags)
+        if not hasattr(oq, 'mags_by_trt'):
+            oq.mags_by_trt = AccumDict(accum=set())
+        oq.mags_by_trt[trt].update(magstr(mag) for mag in
+                                   numpy.unique(numpy.round(rups['mag'], 2)))
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
@@ -405,7 +406,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
-    return allargs
+    return allargs, oq_by
 
 
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
@@ -490,7 +491,8 @@ def run(func, oq, rup0, calc):
             return
 
     assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
+    allargs, calc.oq_by = get_allargs(
+        oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
