@@ -3,6 +3,7 @@
     BaylessSomerville2024Cratonic and BaylessSomerville2024NonCratonic.
 
   [Michele Simionato]
+  * Changed `postjobs.build_ses` to store `oqparam/{model}`
   * Saved memory in the rupture sampling algorithm for fault sources
     (simple, complex, characteristic)
   * Extended use_rates to work also with IMT-dependent weights
