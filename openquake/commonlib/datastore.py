@@ -152,6 +152,10 @@ def read_hc_id(hdf5):
         return
     except OSError:  # file open by another process with oqparam not flushed
         return
+    if not hasattr(oq, 'hazard_calculation_id'):
+        # oqparam is a datagroup containing an oq instance for each dataset
+        firstname = list(oq)[0]
+        oq = hdf5[f'oqparam/{firstname}']
     return oq.hazard_calculation_id
 
 
