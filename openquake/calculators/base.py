@@ -762,7 +762,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         parent = datastore.read(oq.hazard_calculation_id)
-        oqparent = datastore.get_oq(parent)
+        oqp = datastore.get_oq(parent)
         if 'weights' in parent:
             weights = numpy.unique(parent['weights'][:])
             if (oq.job_type == 'risk' and oq.collect_rlzs and
@@ -770,9 +770,9 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'collect_rlzs=true can be specified only if '
                     'the realizations have identical weights')
-        if oqparent.imtls and oq.calculation_mode in ('classical', 'disagg'):
-            check_imtls(oq.imtls, oqparent.imtls)
-        self.check_precalc(oqparent.calculation_mode)
+        if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
+            check_imtls(oq.imtls, oq.imtls)
+        self.check_precalc(oqp.calculation_mode)
         self.datastore.parent = parent
 
         # copy missing parameters from the parent
@@ -787,7 +787,6 @@ class HazardCalculator(BaseCalculator):
             self.save_params(**params)
         with self.monitor('importing inputs', measuremem=True):
             self.read_inputs()
-        oqp = datastore.get_oq(parent)
         if oqp.investigation_time != oq.investigation_time:
             raise ValueError(
                 'The parent calculation was using investigation_time=%s'
