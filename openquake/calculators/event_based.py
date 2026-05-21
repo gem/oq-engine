@@ -378,12 +378,12 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         if isinstance(grp, h5py.Group):
             oq_by = {}
             for model in grp:
-                oq_by[model] = dstore[f'oqparam/{model}']
+                oq_by[model] = oq.from_parent(dstore[f'oqparam/{model}'], True)
                 oq_by[model].mags_by_trt = AccumDict(accum=set())
         else:
             oq_by = {'???': oq}
     else:
-        oq_by = {'???': oq}  # parent is nota SES.hdf5 file
+        oq_by = {'???': oq}  # parent is not a SES.hdf5 file
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker

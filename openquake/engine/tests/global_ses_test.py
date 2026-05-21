@@ -105,6 +105,7 @@ def test_one_site():
     eur = calc.oq_by['EUR'].maximum_distance['default'][0]
     assert mie == [5, 300]
     assert eur == [5, 250]
+    assert not hasattr(calc.oqparam, 'maximum_distance')
 
 
 def test_sites():  # 5 sites

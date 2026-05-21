@@ -28,6 +28,7 @@ import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
+import h5py
 import psutil
 import numpy
 import pandas
@@ -762,50 +763,48 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         parent = datastore.read(oq.hazard_calculation_id)
-        oqp = datastore.get_oq(parent)
-        if 'weights' in parent:
-            weights = numpy.unique(parent['weights'][:])
-            if (oq.job_type == 'risk' and oq.collect_rlzs and
-                    len(weights) > 1):
-                raise ValueError(
-                    'collect_rlzs=true can be specified only if '
-                    'the realizations have identical weights')
-        if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
-            check_imtls(oq.imtls, oq.imtls)
-        self.check_precalc(oqp.calculation_mode)
         self.datastore.parent = parent
+        oqp = parent['oqparam']
+        if not isinstance(oqp, h5py.Group):  # from SES.hdf5
+            if 'weights' in parent:
+                weights = numpy.unique(parent['weights'][:])
+                if (oq.job_type == 'risk' and oq.collect_rlzs and
+                        len(weights) > 1):
+                    raise ValueError(
+                        'collect_rlzs=true can be specified only if '
+                        'the realizations have identical weights')
+            if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
+                check_imtls(oq.imtls, oq.imtls)
+            self.check_precalc(oqp.calculation_mode)
 
-        # copy missing parameters from the parent
-        if 'concurrent_tasks' not in vars(self.oqparam):
-            self.oqparam.concurrent_tasks = (
-                self.oqparam.__class__.concurrent_tasks.default)
-        params = {name: value for name, value in
-                  vars(datastore.get_oq(parent)).items()
-                  if name not in vars(self.oqparam)
-                  and name != 'ground_motion_fields'}
-        if params:
-            self.save_params(**params)
+            # copy missing parameters from the parent
+            if 'concurrent_tasks' not in vars(self.oqparam):
+                self.oqparam.concurrent_tasks = (
+                    self.oqparam.__class__.concurrent_tasks.default)
+            self.oqparam = oq = oq.from_parent(oqp)
+            self.save_params()
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.investigation_time and oqp.eff_time != oq.eff_time:
+                raise ValueError(
+                    'The parent calculation was using eff_time=%s'
+                    ' != %s' % (oqp.eff_time, oq.eff_time))
+            hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
+            if hstats != rstats:
+                raise ValueError(
+                    'The parent calculation had stats %s != %s' %
+                    (hstats, rstats))
+            sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
+            missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
+            if oqp.imtls and missing_imts:
+                raise ValueError(
+                    'The parent calculation is missing the IMT(s) %s' %
+                    ', '.join(missing_imts))
+
         with self.monitor('importing inputs', measuremem=True):
             self.read_inputs()
-        if oqp.investigation_time != oq.investigation_time:
-            raise ValueError(
-                'The parent calculation was using investigation_time=%s'
-                ' != %s' % (oqp.investigation_time, oq.investigation_time))
-        if oqp.investigation_time and oqp.eff_time != oq.eff_time:
-            raise ValueError(
-                'The parent calculation was using eff_time=%s'
-                ' != %s' % (oqp.eff_time, oq.eff_time))
-        hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
-        if hstats != rstats:
-            raise ValueError(
-                'The parent calculation had stats %s != %s' %
-                (hstats, rstats))
-        sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
-        missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-        if oqp.imtls and missing_imts:
-            raise ValueError(
-                'The parent calculation is missing the IMT(s) %s' %
-                ', '.join(missing_imts))
         self.save_crmodel()
 
     def init(self):
