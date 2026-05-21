@@ -378,7 +378,8 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         if isinstance(grp, h5py.Group):
             oq_by = {}
             for model in grp:
-                oq_by[model] = oq.from_parent(dstore[f'oqparam/{model}'], True)
+                oq_by[model] = oq.from_parent(
+                    dstore.parent[f'oqparam/{model}'], new=True)
                 oq_by[model].mags_by_trt = AccumDict(accum=set())
         else:
             oq_by = {'???': oq}

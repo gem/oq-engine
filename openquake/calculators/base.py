@@ -768,7 +768,7 @@ class HazardCalculator(BaseCalculator):
         if isinstance(oqp, h5py.Group) and len(oqp) == 1:
             [name] = list(oqp)
             oqp = parent[f'oqparam/{name}']
-        if not isinstance(oqp, h5py.Group):  # from SES.hdf5
+        if not isinstance(oqp, h5py.Group):  # not from SES.hdf5
             if 'weights' in parent:
                 weights = numpy.unique(parent['weights'][:])
                 if (oq.job_type == 'risk' and oq.collect_rlzs and
@@ -777,7 +777,7 @@ class HazardCalculator(BaseCalculator):
                         'collect_rlzs=true can be specified only if '
                         'the realizations have identical weights')
             if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
-                check_imtls(oq.imtls, oq.imtls)
+                check_imtls(oq.imtls, oqp.imtls)
             self.check_precalc(oqp.calculation_mode)
 
             # copy missing parameters from the parent
