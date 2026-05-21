@@ -1330,7 +1330,7 @@ def extract_mfd(dstore, what):
     Compare n_occ/eff_time with occurrence_rate.
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     R = len(base.get_weights(oq, dstore))
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     try:
@@ -1662,7 +1662,7 @@ def extract_rupture_info(dstore, what):
         min_mag = 0
     [bounds] = qdict.get('boundaries', ['yes'])
     # bound is yes for the plugin and no for the exporter
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     try:
         info = dstore['source_info']
         source_id = info['source_id']

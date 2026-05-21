@@ -20,6 +20,7 @@ import os
 import re
 import ast
 import sys
+import copy
 import json
 import inspect
 import logging
@@ -2550,7 +2551,25 @@ class OqParam(valid.ParamSet):
         # newlines can break the checksum, so we remove them
         return ini.strip().replace('\n\n', '\n')
 
+    def from_parent(self, oqparent, new=False):
+        """
+        :returns: updated instance with missing parameters copied from oqparent
+        """
+        params = {name: value for name, value in
+                  vars(oqparent).items()
+                  if name not in vars(self)
+                  and name != 'ground_motion_fields'}
+        if new:
+            oqc = copy.copy(self)
+            vars(oqc).update(params)
+            return oqc
+        vars(self).update(params)
+        return self
+        
     def __toh5__(self):
+        if hasattr(self, 'mags_by_trt'):
+            for trt, mags in self.mags_by_trt.items():
+                self.mags_by_trt[trt] = sorted(mags)
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
