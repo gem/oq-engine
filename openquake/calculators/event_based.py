@@ -414,15 +414,6 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     return allargs, oq_by
 
 
-def sort_mags(oq):
-    if isinstance(oq, dict):
-        for v in oq.values():
-            sort_mags(v)
-    else:
-        for trt, mags in oq.mags_by_trt.items():
-            oq.mags_by_trt[trt] = sorted(mags)
-
-
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     """
     Run a conditioned scenario calculation amd store the GMFs

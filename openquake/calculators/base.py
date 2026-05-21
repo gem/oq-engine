@@ -765,6 +765,9 @@ class HazardCalculator(BaseCalculator):
         parent = datastore.read(oq.hazard_calculation_id)
         self.datastore.parent = parent
         oqp = parent['oqparam']
+        if isinstance(oqp, h5py.Group) and len(oqp) == 1:
+            [name] = list(oqp)
+            oqp = parent[f'oqparam/{name}']
         if not isinstance(oqp, h5py.Group):  # from SES.hdf5
             if 'weights' in parent:
                 weights = numpy.unique(parent['weights'][:])

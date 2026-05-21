@@ -2567,6 +2567,9 @@ class OqParam(valid.ParamSet):
         return self
         
     def __toh5__(self):
+        if hasattr(self, 'mags_by_trt'):
+            for trt, mags in self.mags_by_trt.items():
+                self.mags_by_trt[trt] = sorted(mags)
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
