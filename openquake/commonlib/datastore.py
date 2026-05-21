@@ -98,7 +98,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
     else:
         dstore = _read(calc_id, datadir, mode)
     try:
-        hc_id = dstore['oqparam'].hazard_calculation_id
+        hc_id = get_oq(dstore).hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
     if read_parent and isinstance(hc_id, int) or (
@@ -138,8 +138,21 @@ def create_job_dstore(description='custom calculation', parent=(), ini=None):
     dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
     dstore.parent = parent
     if parent:
-        dstore._export_dir = parent['oqparam'].export_dir
+        dstore._export_dir = get_oq(parent).export_dir
     return log, dstore
+
+
+def get_oq(hdf5):
+    """
+    Extract 'oqparam' from the HDF5 file. It if is a datagroup, get the first
+    dataset.
+    """
+    oq = hdf5['oqparam']
+    if not hasattr(oq, 'hazard_calculation_id'):
+        # oqparam is a datagroup containing an oq instance for each dataset
+        firstname = list(oq)[0]
+        oq = hdf5[f'oqparam/{firstname}']
+    return oq
 
 
 def read_hc_id(hdf5):
@@ -147,15 +160,11 @@ def read_hc_id(hdf5):
     Getting the hazard_calculation_id, if any
     """
     try:
-        oq = hdf5['oqparam']
+        oq = get_oq(hdf5)
     except KeyError:  # oqparam not saved yet
         return
     except OSError:  # file open by another process with oqparam not flushed
         return
-    if not hasattr(oq, 'hazard_calculation_id'):
-        # oqparam is a datagroup containing an oq instance for each dataset
-        firstname = list(oq)[0]
-        oq = hdf5[f'oqparam/{firstname}']
     return oq.hazard_calculation_id
 
 
@@ -228,7 +237,7 @@ class DataStore(collections.abc.MutableMapping):
         """
         Return the underlying export directory
         """
-        edir = getattr(self, '_export_dir', None) or self['oqparam'].export_dir
+        edir = getattr(self, '_export_dir', None) or get_oq(self).export_dir
         return edir
 
     @export_dir.setter
