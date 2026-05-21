@@ -109,11 +109,9 @@ class Allen2022(GMPE):
         Australian Craton from plate-margin earthquakes.
         Bull. Seismol. Soc. Am. 112, 1041-1059. doi: 10.1785/0120210191
 
-    Application range:
-        - Hypocentral distances: ~500-1500 km
-        - Magnitudes: up to Mw 8.0
-        - Sites within the North Australian Craton (NAC)
-        - Subduction interface and intraslab sources in the Banda Sea region
+    **Application range:** hypocentral distances ~500-1500 km, magnitudes up
+    to Mw 8.0, sites within the North Australian Craton (NAC), subduction
+    interface and intraslab sources in the Banda Sea region.
 
     Note on PGA sigma [Equation 10, p. 1051]:
         sigma_PGA = sqrt(tau_PGA^2 + phi_PGA^2 + lambda_PGA^2)
