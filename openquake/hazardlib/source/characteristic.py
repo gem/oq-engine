@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -94,8 +95,12 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         rupture with a surface always equal to the given surface.
         """
         step = kwargs.get('step', 1)
+        only_rates = kwargs.get('rates')
         hypocenter = self.surface.get_middle_point()
         for mag, occ_rate in self.get_annual_occurrence_rates()[::step]:
+            if only_rates:
+                yield numpy.full(1, occ_rate)
+                continue
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, occ_rate, self.temporal_occurrence_model)

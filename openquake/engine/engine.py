@@ -458,8 +458,8 @@ class _Workflow:
             if k not in os.environ:
                 os.environ[k] = str(v)
 
-        # replace feature for multi-workflows
-        repl = defaults.get('workflow', {}).get('replace', {})
+        # override feature for multi-workflows
+        repl = defaults.get('workflow', {}).get('override', {})
         if repl:
             for _, dic in ddic.items():
                 for name in dic:
@@ -640,8 +640,8 @@ def prepare_workflow(params, workflow_toml, pdb):
         names = numpy.concatenate([wf.names for wf in workflows])
         n = len(names)
         check_unique(names, workflow_toml)
-        logging.info('Running %d workflows: %s', n,
-                     [list(wf.names) for wf in workflows])
+        logging.info('Running %d workflows: %s', len(workflows),
+                     [[str(x) for x in wf.names] for wf in workflows])
 
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
