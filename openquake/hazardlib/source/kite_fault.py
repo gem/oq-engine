@@ -169,7 +169,11 @@ class KiteFaultSource(ParametricSeismicSource):
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
         step = kwargs.get('step', 1)
+        only_rates = kwargs.get('rates')
         for mag, occ_rate, meshes in self._gen_meshes():
+            if only_rates:
+                yield np.full(len(meshes[::step]), occ_rate)
+                continue
             for msh in meshes[::step]:
                 surf = KiteSurface(msh)
                 hypocenter = surf.get_center()
