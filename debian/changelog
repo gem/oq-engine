@@ -1,3 +1,9 @@
+  [Thuany Costa de Lima]
+  * Fix Allen (2022) depth truncation bug: hypocentral depth is now
+    clamped to [10, 500] km before evaluating the cubic log-depth
+    scaling term, as recommended in the original paper (Eq. 4, p. 1049).
+  * Updated test CSVs to reflect the corrected implementation.
+
   [Michele Simionato]
   * Extended use_rates to work also with IMT-dependent weights
 
