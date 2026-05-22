@@ -506,7 +506,7 @@ def view_portfolio_losses(token, dstore):
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
-    return text_table(array, fmt='%.5E')
+    return text_table(array, fmt='%.5E', ext='org')
 
 
 @view.add('portfolio_loss')
