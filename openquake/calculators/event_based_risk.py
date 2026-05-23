@@ -468,7 +468,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     oq.gsim == '[FromFile]'):
                 raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
                                   % oq.inputs['job_ini'])
-            elif not hasattr(oq, 'maximum_distance'):
+            elif oq.hazard_calculation_id is None and not hasattr(
+                    oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             rup0 = self.datastore['ruptures'][0]
