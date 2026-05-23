@@ -133,7 +133,7 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
 
 
-def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
+def ses(mosaic_dir, out, models=['ALL'],
         number_of_logic_tree_samples: int = 2000,
         ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5):
     "Build SES.toml"
@@ -158,15 +158,16 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
-            #elif model in ("PAC", "NZL", "TEM", "ZAF"):
-            #    lst.append('ses_per_logic_tree_path='
-            #               f'{ses_per_logic_tree_path*10}')
-            #    lst.append('number_of_logic_tree_samples='
-            #               f'{number_of_logic_tree_samples//10}')
+            elif model in ("PAC", "NZL", "TEM", "ZAF"):
+                # avoid running out of memory
+                lst.append('ses_per_logic_tree_path='
+                           f'{ses_per_logic_tree_path*10}')
+                lst.append('number_of_logic_tree_samples='
+                           f'{number_of_logic_tree_samples//10}')
 
     if not lst:
         raise RuntimeError(f'{models} not in {MODELS=}')
-    return save(mosaic_dir, 'SES.toml',
+    return save(mosaic_dir, os.path.join(os.path.dirname(out), 'SES.toml'),
                 TOML.format(number_of_logic_tree_samples,
                             ses_per_logic_tree_path,
                             minimum_magnitude,
