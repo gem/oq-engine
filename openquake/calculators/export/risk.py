@@ -44,6 +44,35 @@ U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
+def _parent_investigation_time(dstore):
+    """
+    :returns: the parent investigation_time if there is a single value
+    """
+    parent = getattr(dstore, 'parent', None)
+    if not parent:
+        return None
+    oqparam = parent['oqparam']
+    if hasattr(oqparam, 'hazard_calculation_id'):
+        return oqparam.investigation_time
+    itimes = {parent[f'oqparam/{name}'].investigation_time
+              for name in oqparam}
+    if len(itimes) == 1:
+        return itimes.pop()
+
+
+def _risk_metadata(dstore):
+    oq = dstore['oqparam']
+    md = dstore.metadata
+    investigation_time = (
+        oq.investigation_time or _parent_investigation_time(dstore))
+    if investigation_time is not None:
+        md['investigation_time'] = investigation_time
+    risk_time = oq.risk_investigation_time or investigation_time
+    if risk_time is not None:
+        md['risk_investigation_time'] = risk_time
+    return md
+
+
 def get_rup_data(ebruptures):
     dic = {}
     for ebr in ebruptures:
@@ -127,10 +156,7 @@ def export_aggrisk(ekey, dstore):
     """
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time or
-                   oq.investigation_time))
+    md = _risk_metadata(dstore)
 
     aggrisk = dstore.read_df('aggrisk')
     dest = dstore.build_fname('aggrisk-{}', '', 'csv')
@@ -224,10 +250,7 @@ def export_avg_losses(ekey, dstore):
         dstore, dskey, oq.ext_loss_types, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time
-                   or oq.investigation_time))
+    md = _risk_metadata(dstore)
     for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, ros, 'csv')
         array = numpy.zeros(len(values), dt)
@@ -259,10 +282,7 @@ def export_src_loss_table(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time or
-                   oq.investigation_time))
+    md = _risk_metadata(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for lt in dstore['src_loss_table']:
         aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table/' + lt])
@@ -284,9 +304,7 @@ def export_event_loss_table(ekey, dstore):
     dest = dstore.build_fname('risk_by_event', '', 'csv')
     md = dstore.metadata
     if 'scenario' not in oq.calculation_mode:
-        md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time
-                       or oq.investigation_time))
+        md.update(_risk_metadata(dstore))
     events = dstore.read_df('events', 'id')
     R = post_risk.fix_investigation_time(oq, dstore)
     if oq.investigation_time:
@@ -430,9 +448,11 @@ def export_damages_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
-    if oq.investigation_time:
-        rit = oq.risk_investigation_time or oq.investigation_time
-        md.update(dict(investigation_time=oq.investigation_time,
+    investigation_time = (
+        oq.investigation_time or _parent_investigation_time(dstore))
+    if investigation_time:
+        rit = oq.risk_investigation_time or investigation_time
+        md.update(dict(investigation_time=investigation_time,
                        risk_investigation_time=rit))
     R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
@@ -664,12 +684,13 @@ def export_aggcurves_csv(ekey, dstore):
                     if _fix(col) in scientific.KNOWN_CONSEQUENCES]
     dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    md = dstore.metadata
-    md['risk_investigation_time'] = (oq.risk_investigation_time or
-                                     oq.investigation_time)
+    md = _risk_metadata(dstore)
     md['num_events'] = E
-    md['effective_time'] = (
-        oq.investigation_time * oq.ses_per_logic_tree_path * R)
+    investigation_time = (
+        oq.investigation_time or _parent_investigation_time(dstore))
+    if investigation_time is not None:
+        md['effective_time'] = (
+            investigation_time * oq.ses_per_logic_tree_path * R)
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves

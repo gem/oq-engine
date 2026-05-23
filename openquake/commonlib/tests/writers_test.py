@@ -21,6 +21,7 @@ import unittest
 import tempfile
 from io import BytesIO
 import psutil
+from openquake.baselib import hdf5
 from openquake.baselib.writers import write_csv
 from openquake.baselib.performance import memory_rss
 from openquake.baselib.node import Node, tostring, StreamingXMLWriter
@@ -128,3 +129,12 @@ class WriteCsvTestCase(unittest.TestCase):
         self.assert_export(
             a, 'A~PGA:3,A~PGV:4,B~PGA:3,B~PGV:4,'
             'idx\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')
+
+    def test_comment_discard_none(self):
+        fname = tempfile.NamedTemporaryFile(suffix='.csv').name
+        array = numpy.array([(1.,)], [('loss', float)])
+        comment = dict(investigation_time=None, risk_investigation_time=1.)
+        write_csv(fname, array, comment=comment)
+        aw = hdf5.read_csv(fname, {'loss': float})
+        self.assertFalse(hasattr(aw, 'investigation_time'))
+        self.assertEqual(aw.risk_investigation_time, 1.)
