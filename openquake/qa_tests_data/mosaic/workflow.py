@@ -167,7 +167,7 @@ def ses(mosaic_dir, out, models=['ALL'],
 
     if not lst:
         raise RuntimeError(f'{models} not in {MODELS=}')
-    return save(mosaic_dir, os.path.join(os.path.dirname(out), 'SES.toml'),
+    return save(mosaic_dir, 'SES.toml',
                 TOML.format(number_of_logic_tree_samples,
                             ses_per_logic_tree_path,
                             minimum_magnitude,
