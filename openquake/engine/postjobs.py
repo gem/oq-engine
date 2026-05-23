@@ -40,6 +40,7 @@ def build_ses(dstore, calcs, out_file):
     with performance.Monitor(measuremem=True, h5=dstore) as mon:
         df = dstore.read_df('workflow', 'calc_id')
         names = list(df.loc[calcs].name)
+        logging.info(f'Importing {" ".join(names)}')
         dstores = [datastore.read(calc) for calc in calcs]
         fnames = [ds.filename for ds in dstores]
         logging.warning(f'Saving {out_file}')
