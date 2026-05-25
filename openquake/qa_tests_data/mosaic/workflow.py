@@ -15,10 +15,11 @@ number_of_logic_tree_samples = {}
 ses_per_logic_tree_path = {}
 minimum_magnitude = {}
 
+{}
+
 [success]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "{}"
-{}
 '''
 
 
@@ -135,15 +136,19 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
 
 def ses(mosaic_dir, out, models=['ALL'],
         number_of_logic_tree_samples: int = 2000,
-        ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5):
+        ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5,
+        toml: bool=False):
     "Build SES.toml"
     lst = []
     if models == ['ALL']:
         models = MODELS
     for model in models:
+        lst.append(f'checkout.{model} = "v2026_updates"')
+
+    for model in models:
         base = os.path.abspath(os.path.join(mosaic_dir, model))
         if not os.path.exists(base):
-            raise RuntimeError(r'Missing repository {base}')
+            raise RuntimeError(f'Missing repository {base}')
         ini = os.path.join(base, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             ext = '_vs30.ini'
@@ -153,8 +158,11 @@ def ses(mosaic_dir, out, models=['ALL'],
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job{ext}"')
-            lst.append('postproc_func = "dummy.main"')
-            if model in ("JPN", "KOR"):
+            if model == "AUS":
+                # reduce mesh spacing to avoid ValueError: source_id='310;0':
+                # At least two distinct points are needed for a line!
+                lst.append('rupture_mesh_spacing=2')
+            elif model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
@@ -167,11 +175,13 @@ def ses(mosaic_dir, out, models=['ALL'],
 
     if not lst:
         raise RuntimeError(f'{models} not in {MODELS=}')
-    return save(mosaic_dir, 'SES.toml',
-                TOML.format(number_of_logic_tree_samples,
-                            ses_per_logic_tree_path,
-                            minimum_magnitude,
-                            out, '\n'.join(lst)))
+    code = TOML.format(number_of_logic_tree_samples,
+                       ses_per_logic_tree_path,
+                       minimum_magnitude,
+                       '\n'.join(lst), out)
+    if toml:
+        return code
+    return save(mosaic_dir, 'SES.toml', code)
 
 
 main = dict(AELO=aelo, GHM=ghm, GRM=grm, SES=ses)
