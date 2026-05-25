@@ -24,6 +24,8 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.commonlib import datastore, logs
 
+DATA = os.path.join(os.path.dirname(__file__), 'data')
+
 
 class DataStoreTestCase(unittest.TestCase):
     """
@@ -164,3 +166,9 @@ class DataStoreTestCase(unittest.TestCase):
         print(aw2)
         print(self.dstore.getitem('aw/taxonomy'))
         print(self.dstore.getitem('aw2/taxonomy'))
+
+    def test_import_csv(self):
+        # test that a file with investigation_time=None can be imported
+        fname = os.path.join(DATA, 'avg_losses.csv')
+        fields = ['asset_id', 'taxonomy', 'MACRO_TAXONOMY']
+        self.dstore.import_csv(fname, 'avg_losses', fields)
