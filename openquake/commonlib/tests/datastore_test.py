@@ -170,5 +170,5 @@ class DataStoreTestCase(unittest.TestCase):
     def test_import_csv(self):
         # test that a file with investigation_time=None can be imported
         fname = os.path.join(DATA, 'avg_losses.csv')
-        fields = ['asset_id', 'taxonomy', 'MACRO_TAXONOMY']
+        fields = ['asset_id', 'MACRO_TAXONOMY']
         self.dstore.import_csv(fname, 'avg_losses', fields)
