@@ -522,7 +522,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.assetcol = ds.parent['assetcol']
             base.save_agg_values(
                 ds, self.assetcol, oq.loss_types, oq.aggregate_by)
-            aggby = ds.parent['oqparam'].aggregate_by
+            aggby = datastore.get_oq(ds.parent).aggregate_by
             self.reaggreate = (aggby and oq.aggregate_by and
                                set(oq.aggregate_by[0]) < set(aggby[0]))
             if self.reaggreate:
@@ -659,7 +659,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)
                 if dloss['delta'].mean() > .1:  # more than 10% variation
-                    logging.warning(
+                    logging.info(
                         'A big variation in the %s losses is expected: try'
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)

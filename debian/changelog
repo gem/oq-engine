@@ -1,4 +1,15 @@
+  [Thuany Costa de Lima]
+  * Fix Allen (2022) depth truncation bug: hypocentral depth is now
+    clamped to [10, 500] km before evaluating the cubic log-depth
+    scaling term, as recommended in the original paper (Eq. 4, p. 1049).
+  * Updated test CSVs to reflect the corrected implementation.
+  * Added Bayless and Somerville (2024) GMM for Australia:
+    BaylessSomerville2024Cratonic and BaylessSomerville2024NonCratonic.
+
   [Michele Simionato]
+  * Changed `postjobs.build_ses` to store `oqparam/{model}`
+  * Saved memory in the rupture sampling algorithm for fault sources
+    (simple, complex, characteristic)
   * Extended use_rates to work also with IMT-dependent weights
 
   [Christopher Brooks]
