@@ -400,6 +400,7 @@ def _build_groups(full_lt, smdict):
     groups = []
     frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
+        logging.debug(f'Building source groups for {rlz=}')
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
