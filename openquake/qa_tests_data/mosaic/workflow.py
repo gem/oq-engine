@@ -15,10 +15,11 @@ number_of_logic_tree_samples = {}
 ses_per_logic_tree_path = {}
 minimum_magnitude = {}
 
+{}
+
 [success]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "{}"
-{}
 '''
 
 
@@ -142,6 +143,9 @@ def ses(mosaic_dir, out, models=['ALL'],
     if models == ['ALL']:
         models = MODELS
     for model in models:
+        lst.append(f'checkout.{model} = "v2026_updates"')
+
+    for model in models:
         base = os.path.abspath(os.path.join(mosaic_dir, model))
         if not os.path.exists(base):
             raise RuntimeError(f'Missing repository {base}')
@@ -170,7 +174,7 @@ def ses(mosaic_dir, out, models=['ALL'],
     code = TOML.format(number_of_logic_tree_samples,
                        ses_per_logic_tree_path,
                        minimum_magnitude,
-                       out, '\n'.join(lst))
+                       '\n'.join(lst), out)
     if toml:
         return code
     return save(mosaic_dir, 'SES.toml', code)
