@@ -149,15 +149,10 @@ def ses(mosaic_dir, out, models=['ALL'],
         base = os.path.abspath(os.path.join(mosaic_dir, model))
         if not os.path.exists(base):
             raise RuntimeError(f'Missing repository {base}')
-        ini = os.path.join(base, 'in', 'job_vs30.ini')
-        if os.path.exists(ini):
-            ext = '_vs30.ini'
-        else:
-            ext = '.ini'
-            ini = os.path.join(base, 'in', 'job.ini')
+        ini = os.path.join(base, 'in', 'job.ini')
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
-            lst.append(f'ini = "{model}/in/job{ext}"')
+            lst.append(f'ini = "{model}/in/job.ini"')
             if model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
