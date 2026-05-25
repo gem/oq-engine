@@ -161,7 +161,7 @@ def ses(mosaic_dir, out, models=['ALL'],
             if model == "AUS":
                 # reduce mesh spacing to avoid ValueError: source_id='310;0':
                 # At least two distinct points are needed for a line!
-                lst.append('rupture_mesh_spacing=3')
+                lst.append('rupture_mesh_spacing=2')
             elif model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
