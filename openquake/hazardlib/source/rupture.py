@@ -155,7 +155,8 @@ def get_ebr(rec, geom, trt):
                 for array in arrays])
         else:
             # assume KiteSurfaces
-            surface.__init__([geo.KiteSurface(RectangularMesh(*array))
+            surface.__init__([geo.KiteSurface(
+                RectangularMesh(F32(array[0]), F32(array[1]), F32(array[2])))
                               for array in arrays])
 
     elif surface_cls is geo.GriddedSurface:
