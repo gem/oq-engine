@@ -32,8 +32,8 @@ def main(workflow_toml, hard=False):
                 git(repo_dir, ['fetch'])
                 git(repo_dir, ['clean', '-f'])
                 git(repo_dir, ['reset', '--hard', f'origin/{tag}'])
-            else:
-                git(repo_dir, ['checkout', tag])
+            git(repo_dir, ['checkout', tag])
+            git(repo_dir, ['pull'])
 
 main.workflow_toml = "TOML file associated to a workflow"
 main.hard = "If given, clean all the files and do a reset --hard"
