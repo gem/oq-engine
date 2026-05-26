@@ -2562,8 +2562,6 @@ class OqParam(valid.ParamSet):
         """
         :returns: updated instance with missing parameters copied from oqparent
         """
-        if not oqparent:
-            return self
         params = {name: value for name, value in
                   vars(oqparent).items()
                   if name not in vars(self)

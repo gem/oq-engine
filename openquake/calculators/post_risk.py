@@ -20,6 +20,7 @@ import os
 import getpass
 import logging
 import itertools
+import h5py
 import numpy
 import pandas
 
@@ -58,7 +59,13 @@ def fix_investigation_time(oq, dstore):
                 oq.investigation_time = inv_time
                 oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
         elif dstore.parent:
-            oq.from_parent(dstore.parent)
+            oqp = dstore.parent['oqparam']
+            if isinstance(oq, h5py.Group):
+                for name in oqp:
+                    if name[-3:] == oq.mosaic_model:
+                        oq.investigation_time = oqp[name].investigation_time
+    if oq.investigation_time is None:
+        assert oq.calculation_mode.startswith('scenario'), 'no investigation_time'
     return R
 
 
