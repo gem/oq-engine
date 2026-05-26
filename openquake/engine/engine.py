@@ -755,8 +755,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         success['dstore'] = dstore
                         success['calcs'] = calcs
                         sap.run_func(success)
-                logging.warning(f'{wf.workflow_toml}: finished step '
-                                f'{wf_no+1} of {n_wfs}')
+                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                f'finished step {wf_no+1} of {n_wfs}')
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
