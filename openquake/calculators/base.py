@@ -194,7 +194,10 @@ def fix_hc_id(oq):
             oq.hazard_calculation_id, int):
         # there is nothing to fix
         return oq.hazard_calculation_id
-    path = os.path.join(oq.base_path, oq.hazard_calculation_id)
+    path = oq.hazard_calculation_id
+    if not os.path.isabs(path):
+        path = os.path.abspath(os.path.normpath(
+            os.path.join(oq.base_path, oq.hazard_calculation_id)))
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
