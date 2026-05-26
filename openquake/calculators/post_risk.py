@@ -45,17 +45,20 @@ class FakeBuilder:
 
 def fix_investigation_time(oq, dstore):
     """
-    If starting from GMFs, fix oq.investigation_time.
+    If starting from GMFs or ruptures, fix oq.investigation_time.
     :returns: the number of hazard realizations
     """
     R = oq.number_of_logic_tree_samples or len(dstore['weights'])
-    if 'gmfs' in oq.inputs and not oq.investigation_time:
-        attrs = dstore['gmf_data'].attrs
-        inv_time = attrs['investigation_time']
-        eff_time = attrs['effective_time']
-        if inv_time:  # is zero in scenarios
-            oq.investigation_time = inv_time
-            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+    if oq.investigation_time is None:
+        if 'gmfs' in oq.inputs:
+            attrs = dstore['gmf_data'].attrs
+            inv_time = attrs['investigation_time']
+            eff_time = attrs['effective_time']
+            if inv_time:  # is zero in scenarios
+                oq.investigation_time = inv_time
+                oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+        elif dstore.parent:
+            oq.from_parent(dstore.parent)
     return R
 
 
