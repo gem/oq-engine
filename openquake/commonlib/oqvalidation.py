@@ -1626,6 +1626,10 @@ class OqParam(valid.ParamSet):
         """
         super().validate()
         self.check_source_model()
+        if isinstance(self.hazard_calculation_id, str):
+            path = os.path.abspath(os.path.normpath(
+                os.path.join(self.base_path, self.hazard_calculation_id)))
+            self.hazard_calculation_id = path
         if 'post_loss_amplification' in self.inputs:
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
