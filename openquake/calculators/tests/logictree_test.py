@@ -764,6 +764,15 @@ hazard_uhs-std.csv
         [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(fname_em, fname_ex)
 
+    def test_case_83_eb(self):
+        self.run_calc(case_83.__file__, 'job_eb.ini')
+        
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
+        
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname)
+
     def test_case_84(self):
         # test maxMagGRRelativeNoMoBalance
         self.run_calc(case_84.__file__, 'job.ini')
