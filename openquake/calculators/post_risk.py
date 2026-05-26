@@ -61,7 +61,7 @@ def fix_investigation_time(oq, dstore):
                     oq.investigation_time * R)
         elif dstore.parent:
             oqp = dstore.parent['oqparam']
-            if isinstance(oqp, h5py.Group):  # in GRM compurations
+            if isinstance(oqp, h5py.Group):  # in GRM computations
                 first = list(oqp)[0]
                 oqp = dstore.parent[f'oqparam/{first}']  # get the first model
                 # the product investigation_time * ses_per_logic_tree_path
