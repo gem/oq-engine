@@ -62,7 +62,7 @@ def fix_investigation_time(oq, dstore):
         elif dstore.parent:
             oqp = dstore.parent['oqparam']
             if isinstance(oqp, h5py.Group):
-                oqp = oqp[next(oqp)]  # get the first mosaic model
+                oqp = oqp[list(oqp)[0]]  # get the first mosaic model
                 # the product investigation_time * ses_per_logic_tree_path
                 # will be the same for all models
             oq.investigation_time = oqp.investigation_time
