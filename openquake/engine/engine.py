@@ -451,10 +451,27 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
+
+        # set the passed environment variables if not already set
+        env = defaults.get('workflow', {}).get('env', {})
+        for k, v in env.items():
+            if k not in os.environ:
+                os.environ[k] = str(v)
+
+        # override feature for multi-workflows
+        repl = defaults.get('workflow', {}).get('override', {})
+        if repl:
+            for _, dic in ddic.items():
+                for name in dic:
+                    if name in repl:
+                        dic[name] = repl[name]
+
+        # check the repositories exist
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
+
         inis = []
         names = []
         self.success = []
@@ -490,7 +507,8 @@ class _Workflow:
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = path = os.path.join(self.workflow_dir, val)
+                    dic[key] = path = os.path.abspath(
+                        os.path.join(self.workflow_dir, val))
                     if 'out' in key and not os.path.exists(path):
                         open(path, 'w').close()  # touch the file
 
@@ -546,18 +564,23 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflow_toml, params={}, validate=True):
+def read_many(workflow_toml, params, validate=True):
     """
-    Read the workflow file and returns a list a workflow dictionary.
+    Read the workflow file and returns a list of workflow dictionaries.
     Set 'workflow_dir', 'success' and 'inis' on each.
     Also expand relative paths to absolute paths for parameters following
     the `_file` name convention.
+
+    :param workflow_toml: path to a workflow file
+    :param params: dictionary containg at least workflow_id
+    :param validate: if True, validate the OqParam object
     """
     out = []
     prefix = ''
     try:
         with open(workflow_toml, encoding='utf8') as f:
             wfdict = toml.load(f)
+
         if 'multi' in wfdict:
             multi = wfdict.pop('multi')
 
@@ -565,7 +588,7 @@ def read_many(workflow_toml, params={}, validate=True):
             fnames = multi['workflow'].pop('include', [])
             if fnames:
                 for fname in fnames:
-                    out.extend(read_many(fname, multi, validate))
+                    out.extend(read_many(fname, multi | params, validate))
                 return out
 
             # regular case
@@ -602,13 +625,13 @@ def prepare_workflow(params, workflow_toml, pdb):
     """
     try:
         # retrieve an old workflow
-        workflow_id = params.pop('workflow_id')
+        workflow_id = params['workflow_id']
     except KeyError:
         # create a new workflow
         [wfjob] = create_jobs([{
             'calculation_mode': 'workflow',
             'description': os.path.basename(workflow_toml)}], pdb=pdb)
-        workflow_id = wfjob.calc_id
+        workflow_id = params['workflow_id'] = wfjob.calc_id
         new = True
     else:
         wfjob = logs.init({'job_id': workflow_id})
@@ -618,6 +641,9 @@ def prepare_workflow(params, workflow_toml, pdb):
         names = numpy.concatenate([wf.names for wf in workflows])
         n = len(names)
         check_unique(names, workflow_toml)
+        logging.info('Running %d workflows: %s', len(workflows),
+                     [[str(x) for x in wf.names] for wf in workflows])
+
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
         if new:
@@ -676,11 +702,13 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     successes = success_dset[:]  # array of lists
     expected_failures = set()
     with dstore:
+        n_wfs = len(wfjob.workflows)
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
-                dstore['oqparam'] = OqParam(**kw)
+                with wfjob:
+                    dstore['oqparam'] = OqParam(**kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
@@ -693,10 +721,12 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     new.append(ini)
                     new_names.append(name)
             if new:
-                jobs = create_jobs(new, log_level=logging.INFO if
-                                   concurrent_jobs == 1 else logging.WARNING,
-                                   workflow_id=wfjob.calc_id)
-                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                one_job = concurrent_jobs == 1 or len(wf.names) == 1
+                with wfjob:
+                    jobs = create_jobs(new, log_level=logging.INFO if
+                                       one_job else logging.WARNING,
+                                       workflow_id=wfjob.calc_id)
+                    run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
@@ -725,6 +755,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         success['dstore'] = dstore
                         success['calcs'] = calcs
                         sap.run_func(success)
+                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                f'finished step {wf_no+1} of {n_wfs}')
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
