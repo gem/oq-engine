@@ -706,7 +706,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
-                dstore['oqparam'] = OqParam(**kw)
+                with wfjob:
+                    dstore['oqparam'] = OqParam(**kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
