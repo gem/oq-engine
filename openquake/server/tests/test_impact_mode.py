@@ -262,6 +262,10 @@ class ImpactModeTestCase(django.test.TestCase):
             for iso3 in impact_iso3_list:
                 ret = self.c.get(
                     f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                self.assertEqual(ret.status_code == 200)
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}&format=png')
+                self.assertEqual(ret.status_code == 200)
 
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission

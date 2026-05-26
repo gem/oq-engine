@@ -211,6 +211,15 @@ class CountryReportBuilder:
                 "In order to create an Impact PDF report,"
                 " 'reportlab' should be installed"
                 ) from exc
+        try:
+            import fitz  # PyMuPDF
+        except ImportError as exc:
+            raise RuntimeError(
+                "In order to save an Impact report as PNG,"
+                " 'PyMuPDF' should be installed"
+                ) from exc
+
+        self.fitz = fitz
         self.reportlab = reportlab
         self.SimpleDocTemplate = platypus.SimpleDocTemplate
         self.Paragraph = platypus.Paragraph
@@ -709,10 +718,23 @@ class CountryReportBuilder:
         doc.build([master_layout])
 
         buffer.seek(0)
-        report_path = f'impact/{self.iso3}/report_pdf'
-        self.dstore[report_path] = buffer.getvalue()
+        pdf_bytes = buffer.getvalue()
+        pdf_path = f'impact/{self.iso3}/report_pdf'
+        self.dstore[pdf_path] = pdf_bytes
         logging.info(
-            f'The report was saved into the datastore as {report_path}')
+            f'The report PDF was saved into the datastore as {pdf_path}')
+
+        # Generate and save an exact PNG duplicate of the layout
+        pdf_doc = self.fitz.open(stream=pdf_bytes, filetype="pdf")
+        # NOTE: this grid is hard-coded to a single A4 page
+        page = pdf_doc.load_page(0)
+        # Render to a crisp image at 3.0x scaling (~300 DPI equivalent)
+        pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
+        png_path = f'impact/{self.iso3}/report_png'
+        self.dstore[png_path] = pix.tobytes("png")
+        pdf_doc.close()
+        logging.info(
+            f'The report PNG was saved into the datastore as {png_path}')
 
 
 def make_report_for_country(

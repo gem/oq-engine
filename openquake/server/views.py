@@ -1400,11 +1400,11 @@ def impact_run_with_shakemap(request):
     return _run_impact_job(request, post, rupture_path=post.get('rupture_file'))
 
 
-def extract_pdf_from_datastore(dstore, iso3):
+def extract_report_from_datastore(dstore, iso3, file_format):
     impact_group = dstore['impact']
     if iso3 not in impact_group:
         raise ValueError(f"ISO3 '{iso3}' not found")
-    data = impact_group[iso3]['report_pdf'][()]
+    data = impact_group[iso3][f'report_{file_format}'][()]
     return bytes(data)
 
 
@@ -1420,9 +1420,14 @@ def impact_report(request, calc_id):
     iso3 = request.GET.get("iso3")
     if not iso3:
         return HttpResponse("Missing iso3 parameter", status=400)
+    file_format = request.GET.get("format", "pdf").lower()
+    if file_format not in ["pdf", "png"]:
+        return HttpResponse(
+            f'Invalid format parameter "{file_format}".'
+            f' Choose "pdf" or "png".', status=400)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            pdf_bytes = extract_pdf_from_datastore(ds, iso3)
+            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -1430,8 +1435,14 @@ def impact_report(request, calc_id):
             content_type='text/plain',
             status=400
         )
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f"inline; filename=impact_report_{iso3}.pdf"
+    if file_format == "png":
+        response = HttpResponse(report_bytes, content_type="image/png")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.png")
+    else:
+        response = HttpResponse(report_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.pdf")
     return response
 
 
