@@ -62,7 +62,8 @@ def fix_investigation_time(oq, dstore):
         elif dstore.parent:
             oqp = dstore.parent['oqparam']
             if isinstance(oqp, h5py.Group):
-                oqp = oqp[list(oqp)[0]]['oqparam']  # get the first model
+                first = list(oqp)[0][-3:]
+                oqp = oqp[f'oqparam/{first}']  # get the first model
                 # the product investigation_time * ses_per_logic_tree_path
                 # will be the same for all models
             oq.investigation_time = oqp.investigation_time
