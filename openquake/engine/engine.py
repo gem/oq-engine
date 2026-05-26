@@ -588,7 +588,7 @@ def read_many(workflow_toml, params, validate=True):
             fnames = multi['workflow'].pop('include', [])
             if fnames:
                 for fname in fnames:
-                    out.extend(read_many(fname, multi, validate))
+                    out.extend(read_many(fname, multi | params, validate))
                 return out
 
             # regular case
