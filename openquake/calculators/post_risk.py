@@ -62,9 +62,11 @@ def fix_investigation_time(oq, dstore):
         elif dstore.parent:
             oqp = dstore.parent['oqparam']
             if isinstance(oqp, h5py.Group):
-                for name in oqp:
-                    if name[-3:] == oq.mosaic_model:
-                        oq.investigation_time = oqp[name].investigation_time
+                oqp = oqp[next(oqp)]  # get the first mosaic model
+                # the product investigation_time * ses_per_logic_tree_path
+                # will be the same for all models
+            oq.investigation_time = oqp.investigation_time
+            oq.ses_per_logic_tree_path = oqp.ses_per_logic_tree_path
     if oq.investigation_time is None:
         assert oq.calculation_mode.startswith('scenario'), 'no investigation_time'
     return R
@@ -552,6 +554,8 @@ class PostRiskCalculator(base.RiskCalculator):
         R = fix_investigation_time(oq, self.datastore)
         if oq.investigation_time:
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+        else:
+            eff_time = 0
 
         if 'reinsurance' in oq.inputs:
             logging.warning('Reinsurance calculations are still experimental')
@@ -586,7 +590,7 @@ class PostRiskCalculator(base.RiskCalculator):
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
 
-        if oq.investigation_time and oq.return_periods != [0]:
+        if eff_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
             if eff_time < 2:
                 logging.warning(
