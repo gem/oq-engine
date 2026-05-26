@@ -138,7 +138,6 @@ def poisson_sample(src, eff_num_ses, seed):
                     rates.append(mag_occ_rate * np_prob * hc_prob)
     eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
     occurs = rng.poisson(eff_rates)
-    print(src, occurs)
     for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
         if num_occ:
             (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,

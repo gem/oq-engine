@@ -507,7 +507,8 @@ class _Workflow:
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = path = os.path.join(self.workflow_dir, val)
+                    dic[key] = path = os.path.abspath(
+                        os.path.join(self.workflow_dir, val))
                     if 'out' in key and not os.path.exists(path):
                         open(path, 'w').close()  # touch the file
 
@@ -705,7 +706,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
-                dstore['oqparam'] = OqParam(**kw)
+                with wfjob:
+                    dstore['oqparam'] = OqParam(**kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
@@ -719,9 +721,10 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     new_names.append(name)
             if new:
                 one_job = concurrent_jobs == 1 or len(wf.names) == 1
-                jobs = create_jobs(new, log_level=logging.INFO if
-                                   one_job else logging.WARNING,
-                                   workflow_id=wfjob.calc_id)
+                with wfjob:
+                    jobs = create_jobs(new, log_level=logging.INFO if
+                                       one_job else logging.WARNING,
+                                       workflow_id=wfjob.calc_id)
                 run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
