@@ -702,6 +702,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     successes = success_dset[:]  # array of lists
     expected_failures = set()
     with dstore:
+        n_wfs = len(wfjob.workflows)
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
@@ -725,7 +726,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     jobs = create_jobs(new, log_level=logging.INFO if
                                        one_job else logging.WARNING,
                                        workflow_id=wfjob.calc_id)
-                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                    run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
@@ -754,6 +755,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         success['dstore'] = dstore
                         success['calcs'] = calcs
                         sap.run_func(success)
+                logging.warning(f'{wf.workflow_toml}: finished step '
+                                f'{wf_no+1} of {n_wfs}')
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
