@@ -57,10 +57,11 @@ def fix_investigation_time(oq, dstore):
             eff_time = attrs['effective_time']
             if inv_time:  # is zero in scenarios
                 oq.investigation_time = inv_time
-                oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+                oq.ses_per_logic_tree_path = eff_time / (
+                    oq.investigation_time * R)
         elif dstore.parent:
             oqp = dstore.parent['oqparam']
-            if isinstance(oq, h5py.Group):
+            if isinstance(oqp, h5py.Group):
                 for name in oqp:
                     if name[-3:] == oq.mosaic_model:
                         oq.investigation_time = oqp[name].investigation_time
