@@ -507,7 +507,8 @@ class _Workflow:
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = path = os.path.join(self.workflow_dir, val)
+                    dic[key] = path = os.path.abspath(
+                        os.path.join(self.workflow_dir, val))
                     if 'out' in key and not os.path.exists(path):
                         open(path, 'w').close()  # touch the file
 
