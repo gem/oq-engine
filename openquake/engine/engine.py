@@ -317,6 +317,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
 
 
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
+    print(f'================== Using {concurrent_jobs=} ===================')
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
