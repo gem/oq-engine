@@ -149,6 +149,29 @@ def read_hparams(job_ini):
     return params
 
 
+def _smlt_from_script(script_path, hparams, sourceID):
+    """
+    Import ``script_path`` and call its ``get_source_model_lt()`` function,
+    returning a :class:`RuntimeSourceModelLT` built from the result.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('_rt_smlt', script_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not hasattr(mod, 'get_source_model_lt'):
+        raise RuntimeError(
+            '%s must define a get_source_model_lt() function' % script_path)
+    branches = mod.get_source_model_lt()
+    return logictree.RuntimeSourceModelLT(
+        branches,
+        script_path=script_path,
+        seed=hparams.get('random_seed', 42),
+        num_samples=hparams.get('number_of_logic_tree_samples', 0),
+        sampling_method=hparams.get('sampling_method', 'early_weights'),
+        source_id=sourceID,
+    )
+
+
 def get_smlt(hparams, sourceID=''):
     """
     :param hparams:
@@ -157,7 +180,10 @@ def get_smlt(hparams, sourceID=''):
         :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
     """
     if 'source_model_logic_tree' in hparams['inputs']:
-        args = (hparams['inputs']['source_model_logic_tree'],
+        fname = hparams['inputs']['source_model_logic_tree']
+        if fname.endswith('.py'):
+            return _smlt_from_script(fname, hparams, sourceID)
+        args = (fname,
                 hparams.get('random_seed', 42),
                 hparams.get('number_of_logic_tree_samples', 0),
                 hparams.get('sampling_method', 'early_weights'),

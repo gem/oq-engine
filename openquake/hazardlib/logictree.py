@@ -966,6 +966,133 @@ class SourceModelLogicTree(object):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
 
 
+class RuntimeSourceModelLT(object):
+    """
+    In-memory SSC logic tree built from a Python script at runtime.
+
+    Accepts an arbitrary number of branches (no BASE183 limit) because
+    branch data is supplied directly as (name, weight, xml_str) triples
+    rather than being parsed from an XML logic-tree file.
+
+    The script referenced by ``source_model_logic_tree_file`` in job.ini
+    must expose a top-level function::
+
+        def get_source_model_lt():
+            # Returns list of (name: str, weight: float, xml_str: str)
+            # xml_str must be a complete NRML 0.5 sourceModel XML string.
+            # Weights must sum to 1.0.
+
+    Branch XML strings are parsed in-memory via nrml; no source XML files
+    are written to or read from disk.
+    """
+
+    def __init__(self, branches, script_path, seed=0, num_samples=0,
+                 sampling_method='early_weights', source_id=''):
+        import io
+        self.filename = script_path
+        self.basepath = os.path.dirname(os.path.abspath(script_path))
+        self.seed = int(seed)
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
+        self.source_id = source_id
+        self.branchID = ''
+        self.is_source_specific = False
+        self.tectonic_region_types = set()
+        self.info = Info([], [], collections.defaultdict(list))
+
+        self._branch_xmls = {}    # branch_id -> xml_str
+        self._branch_weights = {} # branch_id -> weight
+
+        src_data = []
+        src_flt = source_id.split('!')[0].split('@')[0]
+        for i, (name, weight, xml_str) in enumerate(branches):
+            branch_id = 'sm_%d' % i
+            sentinel = '__rt__%s' % branch_id
+            self._branch_xmls[branch_id] = xml_str
+            self._branch_weights[branch_id] = weight
+            trt_by_src = get_trt_by_src(io.StringIO(xml_str), src_flt)
+            for sid, trt in trt_by_src.items():
+                src_data.append((branch_id, trt, sentinel, sid))
+                self.tectonic_region_types.add(trt)
+
+        self.source_data = numpy.array(src_data, source_dt)
+        self.num_paths = len(branches)
+
+    def get_num_paths(self):
+        return self.num_samples if self.num_samples else self.num_paths
+
+    def bset_values(self, lt_path):
+        # Single-level LT: no downstream branchset modifications.
+        return []
+
+    def __iter__(self):
+        if self.num_samples:
+            raise NotImplementedError(
+                'Sampling is not yet supported for RuntimeSourceModelLT')
+        for i, branch_id in enumerate(sorted(self._branch_weights)):
+            sentinel = '__rt__%s' % branch_id
+            yield Realization(
+                value=[sentinel],
+                weight=self._branch_weights[branch_id],
+                ordinal=i,
+                lt_path=(branch_id,),
+            )
+
+    def build_smdict(self, converter):
+        """
+        Parse all in-memory XML strings and return an smdict compatible
+        with source_reader.get_csm().  Keys are absolute sentinel paths
+        matching what _groups_ids constructs from rlz.value[0].
+        """
+        import io
+        smdict = {}
+        for branch_id, xml_str in self._branch_xmls.items():
+            sentinel = '__rt__%s' % branch_id
+            abs_path = os.path.abspath(
+                os.path.join(self.basepath, sentinel))
+            t0 = time.time()
+            [node_] = nrml.read(io.BytesIO(xml_str.encode('utf-8')))
+            sm = nrml.node_to_obj(node_, sentinel, converter)
+            sm.fname = sentinel
+            sm.branch = branch_id
+            sm.rtime = time.time() - t0
+            smdict[abs_path] = sm
+        return smdict
+
+    def __toh5__(self):
+        tbl = []
+        for branch_id, weight in self._branch_weights.items():
+            sentinel = '__rt__%s' % branch_id
+            tbl.append(('bs_rt', branch_id, 'sourceModel', sentinel, weight))
+        attrs = dict(
+            bsetdict='{"bs_rt": {"uncertaintyType": "sourceModel"}}',
+            seed=self.seed,
+            num_samples=self.num_samples,
+            sampling_method=self.sampling_method,
+            filename=self.filename,
+            num_paths=self.num_paths,
+            is_source_specific=False,
+            source_id=self.source_id,
+            branchID='',
+            tectonic_region_types=','.join(sorted(self.tectonic_region_types)),
+        )
+        return numpy.array(tbl, branch_dt), attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self._branch_xmls = {}
+        self._branch_weights = {}
+        self.info = Info([], [], collections.defaultdict(list))
+        trt_str = attrs.get('tectonic_region_types', '')
+        self.tectonic_region_types = (
+            set(trt_str.split(',')) if trt_str else set())
+        for rec in array:
+            rec = fix_bytes(rec)
+            self._branch_weights[rec['branch']] = float(rec['weight'])
+        self.source_data = numpy.array([], source_dt)
+        self.basepath = os.path.dirname(os.path.abspath(self.filename))
+
+
 def capitalize(words):
     """
     Capitalize words separated by spaces.
