@@ -18,8 +18,10 @@
 
 """
 Module :mod:`openquake.hazardlib.scalerel.thingbaijam2017` implements
-:class:`Thingbaijam2017_Interface`
-:class:`Thingbaijam2017_Crustal`
+:class:`ThingbaijamInterface`
+:class:`ThingbaijamStrikeSlip`
+:class:`ThingbaijamNormalFault`
+:class:`ThingbaijamReverseFault`
 """
 
 from numpy import log10
@@ -32,58 +34,41 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
     Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of
     America, 107(5), pp 2225-2946, doi: 10.1785/0120170017.
 
-    Implements magnitude-area, area-magnitude,length-magnitude,
-    width-magnitude scaling relations.
+    Implements moment magnitude-rupture area, rupture area-moment magnitude, 
+    rupture length-magnitude, rupture width-magnitude scaling relations 
+    for subduction interface.
     """
 
     def get_median_area(self, mag, rake):
-        """
-        Calculates median fault area from magnitude.
-        """
+        """Calculates median area from magnitude."""
         return 10**(-3.292 + 0.949 * mag)
 
     def get_std_dev_area(self, mag, rake):
-        """
-        Returns std
-        """
+        """Returns std for rupture area."""
         return 0.150
 
     def get_median_mag(self, area, rake):
-        """
-        Returns magnitude for a given fault area
-        """
+        """Calculates median magnitude from area."""
         return (log10(area) + 3.292) / 0.949
 
     def get_std_dev_mag(self, area, rake):
-        """
-        Returns std
-        """
+        """Returns std for magnitude."""
         return 0.150
 
     def get_median_length(self, mag):
-        """
-        Get median length of the rupture given moment magnitude
-        """
+        """Calculates median length from magnitude."""
         return 10.0 ** (-2.412 + 0.583 * mag)
 
     def get_std_dev_length(self, mag):
-        """
-        Get median length standard deviation of the rupture given moment
-        magnitude
-        """
+        """Returns std for rupture length."""
         return 0.107
 
     def get_median_width(self, mag):
-        """
-        Get median width of the rupture given moment magnitude
-        """
+        """Calculates median width from magnitude."""
         return 10.0 ** (-0.880 + 0.366 * mag)
 
     def get_std_dev_width(self, mag):
-        """
-        Get median width standard deviation of the rupture given moment
-        magnitude
-        """
+        """Returns std for rupture width."""
         return 0.099
 
 
@@ -93,39 +78,42 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
     Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of
     America, 107(5), pp 2225-2946, doi: 10.1785/0120170017.
 
-    Implements both magnitude-area and area-magnitude scaling relationships.
+    Implements moment magnitude-rupture area, rupture area-moment magnitude, 
+    rupture length-magnitude, rupture width-magnitude scaling relations 
+    for strike-slip faulting.
     """
 
     def get_median_area(self, mag, rake):
-        """
-        Calculates median fault area from magnitude.
-        """
+        """Calculates median area from magnitude."""
         return 10**(-3.486 + 0.942 * mag)
 
     def get_std_dev_area(self, mag, rake):
-        """
-        Returns std
-        """
+        """Returns std for rupture area."""
         return 0.184
 
     def get_median_mag(self, area, rake):
-        """
-        Returns magnitude for a given fault area
-        """
+        """Calculates median magnitude from area."""
         return (log10(area) + 3.486) / 0.942
 
     def get_std_dev_mag(self, area, rake):
-        """
-        Returns std
-        """
+        """Returns std for magnitude."""
         return 0.184
+    
+    def get_median_length(self, mag):
+        """Calculates median length from magnitude."""
+        return 10.0 ** (-2.943 + 0.681 * mag)
+
+    def get_std_dev_length(self, mag):
+        """RReturns std for rupture length."""
+        return 0.151
+    
+    def get_median_width(self, mag):
+        """Calculates median width from magnitude."""
+        return 10.0 ** (-0.543 + 0.261 * mag)
 
     def get_std_dev_width(self, mag):
-        """
-        Get median width standard deviation of the rupture given moment
-        magnitude
-        """
-        return 0.099
+        """Returns std for rupture width."""
+        return 0.105
 
 
 class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
@@ -134,32 +122,42 @@ class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
     Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of
     America, 107(5), pp 2225-2946, doi: 10.1785/0120170017.
 
-    Implements both magnitude-area and area-magnitude scaling relationships.
+    Implements moment magnitude-rupture area, rupture area-moment magnitude, 
+    rupture length-magnitude, rupture width-magnitude scaling relations 
+    for normal faulting.
     """
 
     def get_median_area(self, mag, rake):
-        """
-        Calculates median fault area from magnitude.
-        """
+        """Calculates median area from magnitude."""
         return 10**(-2.551 + 0.808 * mag)
 
     def get_std_dev_area(self, mag, rake):
-        """
-        Returns std
-        """
+        """Returns std for rupture area."""
         return 0.181
 
     def get_median_mag(self, area, rake):
-        """
-        Returns magnitude for a given fault area
-        """
+        """Calculates median magnitude from area."""
         return (log10(area) + 2.551) / 0.808
 
     def get_std_dev_mag(self, area, rake):
-        """
-        Returns std
-        """
+        """Returns std for magnitude."""
         return 0.181
+    
+    def get_median_length(self, mag):
+        """Calculates median length from magnitude."""
+        return 10.0 ** (-1.722 + 0.485 * mag)
+
+    def get_std_dev_length(self, mag):
+        """Returns std for rupture length."""
+        return 0.128
+
+    def get_median_width(self, mag):
+        """Calculates median width from magnitude."""
+        return 10.0 ** (-0.829 + 0.323 * mag)
+
+    def get_std_dev_width(self, mag):
+        """Returns std for rupture width."""
+        return 0.128
 
 
 class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
@@ -168,29 +166,39 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
     Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of
     America, 107(5), pp 2225-2946, doi: 10.1785/0120170017.
 
-    Implements both magnitude-area and area-magnitude scaling relationships.
+    Implements moment magnitude-rupture area, rupture area-moment magnitude, 
+    rupture length-magnitude, rupture width-magnitude scaling relations 
+    for reverse faulting.
     """
 
     def get_median_area(self, mag, rake):
-        """
-        Calculates median fault area from magnitude.
-        """
+        """Calculates median area from magnitude."""
         return 10**(-4.362 + 1.049 * mag)
 
     def get_std_dev_area(self, mag, rake):
-        """
-        Returns std
-        """
+        """Returns std for rupture area."""
         return 0.121
 
     def get_median_mag(self, area, rake):
-        """
-        Returns magnitude for a given fault area
-        """
+        """Calculates median magnitude from area."""
         return (log10(area) + 4.362) / 1.049
 
     def get_std_dev_mag(self, area, rake):
-        """
-        Returns std
-        """
+        """Returns std for magnitude."""
         return 0.121
+
+    def get_median_length(self, mag):
+        """Calculates median length from magnitude."""
+        return 10.0 ** (-2.693 + 0.614 * mag)
+
+    def get_std_dev_length(self, mag):
+        """Returns std for rupture length."""
+        return 0.083
+
+    def get_median_width(self, mag):
+        """Calculates median width from magnitude."""
+        return 10.0 ** (-1.669 + 0.435 * mag)
+
+    def get_std_dev_width(self, mag):
+        """Returns std for rupture width."""
+        return 0.087
