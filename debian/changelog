@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Implemented a workflow to run the 2026 Global Risk Model
+
   [Thuany Costa de Lima]
   * Fix Allen (2022) depth truncation bug: hypocentral depth is now
     clamped to [10, 500] km before evaluating the cubic log-depth

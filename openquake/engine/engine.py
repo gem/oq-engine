@@ -335,8 +335,11 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(ctx,) for ctx in jobctxs]
-            names = [ctx.params['mosaic_model'] or None for ctx in jobctxs]
+            args = [(job,) for job in jobctxs]
+            names = []
+            for job in jobctxs:
+                name = f"{job.params['mosaic_model']}{job.calc_id}"
+                names.append(name)
             parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
         else:
             for jobctx in jobctxs:
@@ -588,7 +591,7 @@ def read_many(workflow_toml, params, validate=True):
             fnames = multi['workflow'].pop('include', [])
             if fnames:
                 for fname in fnames:
-                    out.extend(read_many(fname, multi, validate))
+                    out.extend(read_many(fname, multi | params, validate))
                 return out
 
             # regular case
@@ -702,6 +705,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     successes = success_dset[:]  # array of lists
     expected_failures = set()
     with dstore:
+        n_wfs = len(wfjob.workflows)
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
@@ -725,7 +729,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     jobs = create_jobs(new, log_level=logging.INFO if
                                        one_job else logging.WARNING,
                                        workflow_id=wfjob.calc_id)
-                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                    run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
@@ -754,6 +758,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         success['dstore'] = dstore
                         success['calcs'] = calcs
                         sap.run_func(success)
+                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                f'finished step {wf_no+1} of {n_wfs}')
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
