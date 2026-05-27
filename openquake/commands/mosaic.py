@@ -134,14 +134,14 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
-        dstore = datastore.read(logctx.calc_id)
-        try:
-            asce[model + '07'] = views.view('asce:07', dstore)
-            asce[model + '41'] = views.view('asce:41', dstore)
-        except KeyError:
-            # AELO results could not be computed due to some error,
-            # so the asce data is missing in the datastore
-            pass
+        with datastore.read(logctx.calc_id) as dstore:
+            try:
+                asce[model + '07'] = views.view('asce:07', dstore)
+                asce[model + '41'] = views.view('asce:41', dstore)
+            except KeyError:
+                # AELO results could not be computed due to some error,
+                # so the asce data is missing in the datastore
+                pass
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
