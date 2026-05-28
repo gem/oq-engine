@@ -7103,3 +7103,6 @@ python-oq-engine (0.3.9-1) natty; urgency=low
   * Upstream OpenQuake python sources.
 
  -- Muharem Hrnjadovic <mh@foldr3.com>  Mon, 06 Jun 2011 11:42:24 +0200
+
+  [Fahrettin Kuran]
+  * The new MSRs added here to the existing thingbaijam2017.py
