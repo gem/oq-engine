@@ -217,6 +217,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    samples = 1
     smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
@@ -275,18 +276,18 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             else:
                 yield rup.surface.mesh
 
-    def sample_ruptures(self, eff_num_ses, ses_seed):
+    def sample_ruptures(self, num_ses, ses_seed):
         """
-        :param eff_num_ses: number of stochastic event sets * number of samples
+        :param num_ses: number of stochastic event sets
         :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        for rup, rupid, num_occ in sample(self, eff_num_ses, seed):
-            if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
+        for rup, rupid, num_occ in sample(self, self.samples * num_ses, seed):
+            if hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
-                # tested only in oq-risk-tests etna0
+                # tested in oq-risk-tests etna0 and case_83_eb
                 rup.occurrence_rate *= self.smweight
             ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
                             seed=rupid + TWO30 * self.id + ses_seed)
