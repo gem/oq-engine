@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <logicTree logicTreeID="lt1">
@@ -6,403 +6,83 @@
                         branchSetID="bs1">
       <logicTreeBranch branchID="b000">
         <uncertaintyModel>ssm_000.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b001">
         <uncertaintyModel>ssm_001.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b002">
         <uncertaintyModel>ssm_002.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b003">
         <uncertaintyModel>ssm_003.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b004">
         <uncertaintyModel>ssm_004.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b005">
         <uncertaintyModel>ssm_005.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b006">
         <uncertaintyModel>ssm_006.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b007">
         <uncertaintyModel>ssm_007.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b008">
         <uncertaintyModel>ssm_008.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b009">
         <uncertaintyModel>ssm_009.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b010">
         <uncertaintyModel>ssm_010.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b011">
         <uncertaintyModel>ssm_011.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b012">
         <uncertaintyModel>ssm_012.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b013">
         <uncertaintyModel>ssm_013.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b014">
         <uncertaintyModel>ssm_014.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b015">
         <uncertaintyModel>ssm_015.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b016">
         <uncertaintyModel>ssm_016.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b017">
         <uncertaintyModel>ssm_017.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b018">
         <uncertaintyModel>ssm_018.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b019">
         <uncertaintyModel>ssm_019.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b020">
-        <uncertaintyModel>ssm_020.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b021">
-        <uncertaintyModel>ssm_021.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b022">
-        <uncertaintyModel>ssm_022.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b023">
-        <uncertaintyModel>ssm_023.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b024">
-        <uncertaintyModel>ssm_024.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b025">
-        <uncertaintyModel>ssm_025.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b026">
-        <uncertaintyModel>ssm_026.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b027">
-        <uncertaintyModel>ssm_027.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b028">
-        <uncertaintyModel>ssm_028.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b029">
-        <uncertaintyModel>ssm_029.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b030">
-        <uncertaintyModel>ssm_030.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b031">
-        <uncertaintyModel>ssm_031.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b032">
-        <uncertaintyModel>ssm_032.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b033">
-        <uncertaintyModel>ssm_033.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b034">
-        <uncertaintyModel>ssm_034.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b035">
-        <uncertaintyModel>ssm_035.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b036">
-        <uncertaintyModel>ssm_036.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b037">
-        <uncertaintyModel>ssm_037.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b038">
-        <uncertaintyModel>ssm_038.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b039">
-        <uncertaintyModel>ssm_039.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b040">
-        <uncertaintyModel>ssm_040.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b041">
-        <uncertaintyModel>ssm_041.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b042">
-        <uncertaintyModel>ssm_042.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b043">
-        <uncertaintyModel>ssm_043.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b044">
-        <uncertaintyModel>ssm_044.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b045">
-        <uncertaintyModel>ssm_045.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b046">
-        <uncertaintyModel>ssm_046.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b047">
-        <uncertaintyModel>ssm_047.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b048">
-        <uncertaintyModel>ssm_048.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b049">
-        <uncertaintyModel>ssm_049.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b050">
-        <uncertaintyModel>ssm_050.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b051">
-        <uncertaintyModel>ssm_051.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b052">
-        <uncertaintyModel>ssm_052.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b053">
-        <uncertaintyModel>ssm_053.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b054">
-        <uncertaintyModel>ssm_054.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b055">
-        <uncertaintyModel>ssm_055.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b056">
-        <uncertaintyModel>ssm_056.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b057">
-        <uncertaintyModel>ssm_057.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b058">
-        <uncertaintyModel>ssm_058.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b059">
-        <uncertaintyModel>ssm_059.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b060">
-        <uncertaintyModel>ssm_060.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b061">
-        <uncertaintyModel>ssm_061.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b062">
-        <uncertaintyModel>ssm_062.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b063">
-        <uncertaintyModel>ssm_063.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b064">
-        <uncertaintyModel>ssm_064.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b065">
-        <uncertaintyModel>ssm_065.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b066">
-        <uncertaintyModel>ssm_066.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b067">
-        <uncertaintyModel>ssm_067.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b068">
-        <uncertaintyModel>ssm_068.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b069">
-        <uncertaintyModel>ssm_069.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b070">
-        <uncertaintyModel>ssm_070.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b071">
-        <uncertaintyModel>ssm_071.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b072">
-        <uncertaintyModel>ssm_072.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b073">
-        <uncertaintyModel>ssm_073.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b074">
-        <uncertaintyModel>ssm_074.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b075">
-        <uncertaintyModel>ssm_075.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b076">
-        <uncertaintyModel>ssm_076.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b077">
-        <uncertaintyModel>ssm_077.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b078">
-        <uncertaintyModel>ssm_078.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b079">
-        <uncertaintyModel>ssm_079.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b080">
-        <uncertaintyModel>ssm_080.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b081">
-        <uncertaintyModel>ssm_081.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b082">
-        <uncertaintyModel>ssm_082.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b083">
-        <uncertaintyModel>ssm_083.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b084">
-        <uncertaintyModel>ssm_084.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b085">
-        <uncertaintyModel>ssm_085.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b086">
-        <uncertaintyModel>ssm_086.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b087">
-        <uncertaintyModel>ssm_087.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b088">
-        <uncertaintyModel>ssm_088.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b089">
-        <uncertaintyModel>ssm_089.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b090">
-        <uncertaintyModel>ssm_090.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b091">
-        <uncertaintyModel>ssm_091.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b092">
-        <uncertaintyModel>ssm_092.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b093">
-        <uncertaintyModel>ssm_093.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b094">
-        <uncertaintyModel>ssm_094.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b095">
-        <uncertaintyModel>ssm_095.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b096">
-        <uncertaintyModel>ssm_096.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b097">
-        <uncertaintyModel>ssm_097.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b098">
-        <uncertaintyModel>ssm_098.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b099">
-        <uncertaintyModel>ssm_099.xml</uncertaintyModel>
-        <uncertaintyWeight>0.01</uncertaintyWeight>
+        <uncertaintyWeight>0.05</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
   </logicTree>

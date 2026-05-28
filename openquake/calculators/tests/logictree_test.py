@@ -799,7 +799,7 @@ mag
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
 
-        # 10 samples, same seed: both approaches must give identical curves
+        # 5 samples, same seed: both approaches must give identical curves
         self.run_calc(case_34.__file__, 'job_runtime_sampling.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)

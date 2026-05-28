@@ -20,7 +20,7 @@
 Example script that can be read within RunTimeSourceModelLT to construct
 an SSC logic tree at runtime instead of reading in from XMLs.
 
-Builds a simple 100 branch logic tree (10 b-values x 10 activity rates) from
+Builds a simple 20 branch logic tree (2 b-values x 10 activity rates) from
 CSV data files by returning a list of (name, weight, xml_str) triples.
 
 Each branch contains one area source and one simple fault source.
