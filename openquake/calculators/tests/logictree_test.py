@@ -807,3 +807,12 @@ mag
         self.run_calc(case_34.__file__, 'job_xml_sampling.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)
+
+        # disagg_by_src: runtime and XML must give identical results
+        self.run_calc(case_34.__file__, 'job_runtime_disagg.ini')
+        [f] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_disagg.ini')
+        [f] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', f)

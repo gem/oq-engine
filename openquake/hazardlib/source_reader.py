@@ -191,6 +191,30 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
+def _read_smdict(smlt, converter, dstore):
+    # NB: the source models file must be in the shared directory
+    # NB: dstore is None in logictree_test.py
+    allargs = []
+    sdata = smlt.source_data
+    allpaths = set(smlt.info.smpaths)
+    dic = general.group_array(sdata, 'fname')
+    smpaths = []
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    applied = set()
+    for srcs in smlt.info.applytosources.values():
+        applied.update(srcs)
+    for fname, rows in dic.items():
+        path = os.path.abspath(os.path.join(smlt.basepath, fname))
+        smpaths.append(path)
+        allargs.append((path, rows[0]['branch'], converter, applied, ss))
+    for path in allpaths - set(smpaths):  # geometry models
+        allargs.append((path, '', converter, applied, ss))
+    smdict = parallel.Starmap(read_source_model, allargs,
+                              h5=dstore if dstore else None).reduce()
+    parallel.Starmap.shutdown()  # save memory
+    return smdict
+
+
 def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and to store
@@ -216,26 +240,7 @@ def get_csm(oq, full_lt, dstore=None):
         smdict = smlt.build_smdict(converter)
     else:
         logging.info('Reading the source model(s) in parallel')
-        # NB: the source models file must be in the shared directory
-        # NB: dstore is None in logictree_test.py
-        allargs = []
-        sdata = smlt.source_data
-        allpaths = set(smlt.info.smpaths)
-        dic = general.group_array(sdata, 'fname')
-        smpaths = []
-        ss = os.environ.get('OQ_SAMPLE_SOURCES')
-        applied = set()
-        for srcs in smlt.info.applytosources.values():
-            applied.update(srcs)
-        for fname, rows in dic.items():
-            path = os.path.abspath(os.path.join(smlt.basepath, fname))
-            smpaths.append(path)
-            allargs.append((path, rows[0]['branch'], converter, applied, ss))
-        for path in allpaths - set(smpaths):  # geometry models
-            allargs.append((path, '', converter, applied, ss))
-        smdict = parallel.Starmap(read_source_model, allargs,
-                                  h5=dstore if dstore else None).reduce()
-        parallel.Starmap.shutdown()  # save memory
+        smdict = _read_smdict(smlt, converter, dstore)
 
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:

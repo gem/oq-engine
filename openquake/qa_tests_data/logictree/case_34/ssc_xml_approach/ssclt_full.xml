@@ -6,83 +6,43 @@
                         branchSetID="bs1">
       <logicTreeBranch branchID="b000">
         <uncertaintyModel>ssm_000.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b001">
         <uncertaintyModel>ssm_001.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b002">
         <uncertaintyModel>ssm_002.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b003">
         <uncertaintyModel>ssm_003.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b004">
         <uncertaintyModel>ssm_004.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b005">
         <uncertaintyModel>ssm_005.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b006">
         <uncertaintyModel>ssm_006.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b007">
         <uncertaintyModel>ssm_007.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b008">
         <uncertaintyModel>ssm_008.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b009">
         <uncertaintyModel>ssm_009.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b010">
-        <uncertaintyModel>ssm_010.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b011">
-        <uncertaintyModel>ssm_011.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b012">
-        <uncertaintyModel>ssm_012.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b013">
-        <uncertaintyModel>ssm_013.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b014">
-        <uncertaintyModel>ssm_014.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b015">
-        <uncertaintyModel>ssm_015.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b016">
-        <uncertaintyModel>ssm_016.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b017">
-        <uncertaintyModel>ssm_017.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b018">
-        <uncertaintyModel>ssm_018.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b019">
-        <uncertaintyModel>ssm_019.xml</uncertaintyModel>
-        <uncertaintyWeight>0.05</uncertaintyWeight>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
   </logicTree>
