@@ -211,6 +211,9 @@ def collect_info(smltpath, branchID=''):
     :param branchID: if given, consider only that branch
     :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
+    if smltpath.endswith('.py'):
+        # Runtime script: all sources are built in-memory, no file paths
+        return Info(set(), set(), collections.defaultdict(list))
     n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
@@ -1017,26 +1020,56 @@ class RuntimeSourceModelLT(object):
 
         self.source_data = numpy.array(src_data, source_dt)
         self.num_paths = len(branches)
+        self.shortener = {
+            bid: BASE183[i % len(BASE183)] + '0'
+            for i, bid in enumerate(sorted(self._branch_weights))
+        }
 
     def get_num_paths(self):
         return self.num_samples if self.num_samples else self.num_paths
+
+    @property
+    def branchsets(self):
+        # No traditional branchsets; branch IDs are auto-generated and unique.
+        return []
 
     def bset_values(self, lt_path):
         # Single-level LT: no downstream branchset modifications.
         return []
 
     def __iter__(self):
+        from openquake.hazardlib import lt as lt_mod
+        branch_ids = sorted(self._branch_weights)
+        weights = numpy.array(
+            [self._branch_weights[bid] for bid in branch_ids])
         if self.num_samples:
-            raise NotImplementedError(
-                'Sampling is not yet supported for RuntimeSourceModelLT')
-        for i, branch_id in enumerate(sorted(self._branch_weights)):
-            sentinel = '__rt__%s' % branch_id
-            yield Realization(
-                value=[sentinel],
-                weight=self._branch_weights[branch_id],
-                ordinal=i,
-                lt_path=(branch_id,),
-            )
+            probs = lt_mod.random(
+                self.num_samples, self.seed, self.sampling_method)
+            cdf = numpy.cumsum(weights)
+            idxs = numpy.clip(
+                numpy.searchsorted(cdf, probs), 0, len(branch_ids) - 1)
+            for i, idx in enumerate(idxs):
+                branch_id = branch_ids[int(idx)]
+                sentinel = '__rt__%s' % branch_id
+                if self.sampling_method.startswith('early_'):
+                    w = 1. / self.num_samples
+                else:
+                    w = float(weights[idx])
+                yield Realization(
+                    value=[sentinel],
+                    weight=w,
+                    ordinal=i,
+                    lt_path=(branch_id,),
+                )
+        else:
+            for i, (branch_id, w) in enumerate(zip(branch_ids, weights)):
+                sentinel = '__rt__%s' % branch_id
+                yield Realization(
+                    value=[sentinel],
+                    weight=float(w),
+                    ordinal=i,
+                    lt_path=(branch_id,),
+                )
 
     def build_smdict(self, converter):
         """
