@@ -104,7 +104,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         return 10.0 ** (-2.943 + 0.681 * mag)
 
     def get_std_dev_length(self, mag):
-        """RReturns std for rupture length."""
+        """Returns std for rupture length."""
         return 0.151
     
     def get_median_width(self, mag):
