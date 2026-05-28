@@ -279,10 +279,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     def sample_ruptures(self, num_ses, ses_seed):
         """
         :param num_ses: number of stochastic event sets
-        :yields: triples (rupture, trt_smr, num_occurrences)
+        :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
+        ebrs = []
         for rup, rupid, num_occ in sample(self, self.samples * num_ses, seed):
             if hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
@@ -291,7 +292,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 rup.occurrence_rate *= self.smweight
             ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
                             seed=rupid + TWO30 * self.id + ses_seed)
-            yield ebr
+            ebrs.append(ebr)
+        return ebrs
 
     def get_mags(self):
         """
