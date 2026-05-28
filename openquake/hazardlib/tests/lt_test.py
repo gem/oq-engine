@@ -586,7 +586,7 @@ def _assert_src_params(src_rt, src_xml):
     ae(src_rt.mfd.max_mag, src_xml.mfd.max_mag)
 
 
-class RuntimeSourceModelLTTEstCase(unittest.TestCase):
+class RuntimeSourceModelLTTestCase(unittest.TestCase):
     """
     Tests for RuntimeSourceModelLT SSC LT class, with identical
     results expected against if the same logic tree was defined
@@ -662,7 +662,7 @@ class RuntimeSourceModelLTTEstCase(unittest.TestCase):
     def test_build_smdict(self):
         """
         Check that build_smdict (i.e., parsing the in-memory xml strings)
-        versus nrml.read_source_models (i.e., parsing the same XML but 
+        versus nrml.read_source_models (i.e., parsing the same XML but
         from a real XML file on disk) provides same values.
         """
         # Get dict of the source model made using runtime class
