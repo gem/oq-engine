@@ -77,7 +77,9 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
-    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
+    asce_dir = os.path.join(mosaic_dir, 'asce')
+    if not os.path.exists(asce_dir):
+        os.mkdir(asce_dir)
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -151,7 +153,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         # serious problem to debug
         breakpoint()
     for name, table in asce.items():
-        fname = os.path.abspath(f'asce/{name}.org')
+        fname = os.path.abspath(f'{asce_dir}/{name}.org')
         with open(fname, 'w') as f:
             print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
