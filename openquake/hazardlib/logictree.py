@@ -1008,8 +1008,10 @@ class RuntimeSourceModelLT(object):
 
         src_data = []
         src_flt = source_id.split('!')[0].split('@')[0]
+        branches = list(branches)
+        pad = len(str(max(len(branches) - 1, 1)))
         for i, (name, weight, xml_str) in enumerate(branches):
-            branch_id = 'sm_%d' % i
+            branch_id = ('sm_%%0%dd' % pad) % i
             sentinel = '__rt__%s' % branch_id
             self._branch_xmls[branch_id] = xml_str
             self._branch_weights[branch_id] = weight
@@ -1043,23 +1045,28 @@ class RuntimeSourceModelLT(object):
         weights = numpy.array(
             [self._branch_weights[bid] for bid in branch_ids])
         if self.num_samples:
+            # Build a BranchSet so we call the exact same bset.sample()
+            # code path as CompositeLogicTree.__iter__, guaranteeing that
+            # the same seed selects the same branches as the XML SSC LT
+            bset = lt_mod.BranchSet('sourceModel', {})
+            bset.ordinal = 0
+            for bid, w in zip(branch_ids, weights):
+                br = lt_mod.Branch(bid, '__rt__%s' % bid, float(w))
+                bset.branches.append(br)
             probs = lt_mod.random(
-                self.num_samples, self.seed, self.sampling_method)
-            cdf = numpy.cumsum(weights)
-            idxs = numpy.clip(
-                numpy.searchsorted(cdf, probs), 0, len(branch_ids) - 1)
-            for i, idx in enumerate(idxs):
-                branch_id = branch_ids[int(idx)]
-                sentinel = '__rt__%s' % branch_id
+                (self.num_samples, 1), self.seed, self.sampling_method)
+            for i, branches in enumerate(
+                    bset.sample(probs, self.sampling_method)):
+                br = branches[0]
                 if self.sampling_method.startswith('early_'):
                     w = 1. / self.num_samples
                 else:
-                    w = float(weights[idx])
+                    w = float(br.weight)
                 yield Realization(
-                    value=[sentinel],
+                    value=[br.value],
                     weight=w,
                     ordinal=i,
-                    lt_path=(branch_id,),
+                    lt_path=(br.branch_id,),
                 )
         else:
             for i, (branch_id, w) in enumerate(zip(branch_ids, weights)):

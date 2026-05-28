@@ -33,9 +33,9 @@ from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_28,
-    case_30, case_31, case_32, case_33, case_36, case_39, case_45, case_46,
-    case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
-    case_79, case_80, case_83, case_84)
+    case_30, case_31, case_32, case_33, case_34, case_36, case_39, case_45,
+    case_46, case_52, case_56, case_58, case_59, case_67, case_68, case_71,
+    case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -788,3 +788,22 @@ mag
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/trt_gsim.csv', f)
+
+    def test_case_34(self):
+        # full enumeration: runtime and XML must give identical curves
+        self.run_calc(case_34.__file__, 'job_runtime.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+
+        # 10 samples, same seed: both approaches must give identical curves
+        self.run_calc(case_34.__file__, 'job_runtime_sampling.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_sampling.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)
