@@ -640,11 +640,16 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         shutil.rmtree(cls.tmpdir)
 
     def test_toh5_fromh5(self):
+        """
+        Test __toh5__ and __fromh5__ methods
+        """
         rt = self.rt_smlt
         tmp = gettemp(suffix='.hdf5')
         with hdf5.File(tmp, 'w') as f:
+            # Calls __toh5__
             f['smlt'] = rt
         with hdf5.File(tmp, 'r') as f:
+            # Calls __fromh5_-
             rt2 = f['smlt']
         ae(rt2._branch_weights, rt._branch_weights)
         ae(rt2.seed, rt.seed)
