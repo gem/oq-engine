@@ -1031,6 +1031,7 @@ class RuntimeSourceModelLT(object):
                 '%s: branch weights sum to %s, expected 1.0'
                 % (script_path, total))
         self.shortener = {
+            # TODO: still bound by 183 limit here
             bid: BASE183[i % len(BASE183)] + '0'
             for i, bid in enumerate(sorted(self._branch_weights))
         }
