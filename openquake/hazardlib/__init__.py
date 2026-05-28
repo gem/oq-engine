@@ -151,17 +151,15 @@ def read_hparams(job_ini):
 
 def _smlt_from_script(script_path, hparams, sourceID):
     """
-    Import ``script_path`` and call its ``get_source_model_lt()`` function,
+    Run ``script_path`` and call its ``get_source_model_lt()`` function,
     returning a :class:`RuntimeSourceModelLT` built from the result.
     """
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('_rt_smlt', script_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    if not hasattr(mod, 'get_source_model_lt'):
+    import runpy
+    globs = runpy.run_path(script_path)
+    if 'get_source_model_lt' not in globs:
         raise RuntimeError(
             '%s must define a get_source_model_lt() function' % script_path)
-    branches = mod.get_source_model_lt()
+    branches = globs['get_source_model_lt']()
     return logictree.RuntimeSourceModelLT(
         branches,
         script_path=script_path,
