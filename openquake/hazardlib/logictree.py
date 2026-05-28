@@ -1100,7 +1100,7 @@ class RuntimeSourceModelLT(object):
         if self.num_samples:
             # Build a BranchSet so we call the exact same bset.sample()
             # code path as CompositeLogicTree.__iter__, guaranteeing that
-            # the same seed selects the same branches as the XML SSC LT
+            # the same seed selects the same branches as an XML SSC LT
             # --> This is checked in qa_test_data/logictree/case_34
             bset = lt_mod.BranchSet('sourceModel', {})
             bset.ordinal = 0
