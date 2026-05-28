@@ -1028,9 +1028,8 @@ class RuntimeSourceModelLT(object):
         src_data = []
         src_flt = source_id.split('!')[0].split('@')[0]
         branches = list(branches)
-        pad = len(str(max(len(branches) - 1, 1)))
-        for i, (name, weight, xml_str) in enumerate(branches):
-            branch_id = ('sm_%%0%dd' % pad) % i
+        for name, weight, xml_str in branches:
+            branch_id = name
             sentinel = '__rt__%s' % branch_id
             self._branch_xmls[branch_id] = xml_str
             self._branch_weights[branch_id] = weight
