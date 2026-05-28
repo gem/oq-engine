@@ -145,7 +145,7 @@ class SampleRupturesTestCase(unittest.TestCase):
     </pointSource>''')
         mags_rates = list(ps.get_annual_occurrence_rates())
         mags, rates = zip(*mags_rates)
-        ebrs = list(ps.sample_ruptures(eff_num_ses=100, ses_seed=42))
+        ebrs = list(ps.sample_ruptures(num_ses=100, ses_seed=42))
         dic = dict(mag=[ebr.mag for ebr in ebrs],
                    freq=[ebr.n_occ / 50 / 100 for ebr in ebrs],
                    rate=rates[:len(ebrs)])
