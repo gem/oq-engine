@@ -274,6 +274,13 @@ def read_source_groups(fname):
     return src_groups
 
 
+class _RuntimeShortener(dict):
+    """
+    Marker: shortener whose values are raw branch
+    names (RuntimeSourceModelLT).
+    """
+
+
 def shorten(path_tuple, shortener, kind):
     """
     :param path: sequence of strings
@@ -292,8 +299,17 @@ def shorten(path_tuple, shortener, kind):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            # shortener[key] has the form letter+number
-            chars.append(shortener[key][0])
+            val = shortener[key]
+            if val == key:
+                # Key == value in RuntimeSourceModelLT to circumvent the
+                # B183 limit given cannot use extra branching levels in
+                # this case (each branch must be explicitly defined in
+                # the builder script specified by the user instead)
+                assert isinstance(shortener, _RuntimeShortener)
+                chars.append(val)
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(val[0])
     return ''.join(chars)
 
 
@@ -1030,11 +1046,10 @@ class RuntimeSourceModelLT(object):
             raise ValueError(
                 '%s: branch weights sum to %s, expected 1.0'
                 % (script_path, total))
-        self.shortener = {
-            # TODO: still bound by 183 limit here
-            bid: BASE183[i % len(BASE183)] + '0'
-            for i, bid in enumerate(sorted(self._branch_weights))
-        }
+        # Use branch names as shortener values so shorten() uses the full
+        # name, giving unique branch_path values regardless of branch count
+        self.shortener = _RuntimeShortener(
+            {bid: bid for bid in self._branch_weights})
 
     def get_num_paths(self):
         return self.num_samples if self.num_samples else self.num_paths
