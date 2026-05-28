@@ -977,8 +977,8 @@ class RuntimeSourceModelLT(object):
     branch data is supplied directly as (name, weight, xml_str) triples
     rather than being parsed from an XML logic-tree file.
 
-    The script referenced by ``source_model_logic_tree_file`` in job.ini
-    must expose a top-level function::
+    The script referenced by ``source_model_logic_tree_file`` in the job
+    file must contain a top-level function of:
 
         def get_source_model_lt():
             # Returns list of (name: str, weight: float, xml_str: str)
@@ -987,6 +987,9 @@ class RuntimeSourceModelLT(object):
 
     Branch XML strings are parsed in-memory via nrml; no source XML files
     are written to or read from disk.
+
+    NOTE: An example of this feature (including a simple builder script) can
+    be found in oq-engine/qa_test_data/ logictree/case_34/.
     """
 
     def __init__(self, branches, script_path, seed=0, num_samples=0,
@@ -1022,6 +1025,11 @@ class RuntimeSourceModelLT(object):
 
         self.source_data = numpy.array(src_data, source_dt)
         self.num_paths = len(branches)
+        total = sum(self._branch_weights.values())
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(
+                '%s: branch weights sum to %s, expected 1.0'
+                % (script_path, total))
         self.shortener = {
             bid: BASE183[i % len(BASE183)] + '0'
             for i, bid in enumerate(sorted(self._branch_weights))
