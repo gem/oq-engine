@@ -17,23 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Builds 100 branches (10 b-values x 10 activity rates) from CSV data files
-for construction of RunTimeSourceModelLT.
+Example script that can be read within RunTimeSourceModelLT to construct
+an SSC logic tree at runtime instead of reading in from XMLs.
+
+Builds a simple 100 branch logic tree (10 b-values x 10 activity rates) from
+CSV data files by returning a list of (name, weight, xml_str) triples.
 
 Each branch contains one area source and one simple fault source.
 """
-
 import os
 import numpy as np
 import csv
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'ssc_runtime_input_data')
-TRT = 'Active Shallow Crust'
-XML_HEADER = (
-    '<?xml version="1.0" encoding="utf-8"?>\n'
-    '<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"\n'
-    '      xmlns:gml="http://www.opengis.net/gml">'
-)
 
 
 def _load_csv(fname):
@@ -41,7 +37,7 @@ def _load_csv(fname):
         return list(csv.DictReader(f))
 
 
-def _poslist(rows):
+def _get_coords(rows):
     return ' '.join(f'{r["lon"]} {r["lat"]}' for r in rows)
 
 
@@ -50,23 +46,25 @@ def _a_value(rate, b_value, ref_mag):
 
 
 def _build_xml(branch_idx, area_rows, fault_rows, b, ref_mag, rate):
-    area_poslist = _poslist(area_rows)
-    fault_poslist = _poslist(fault_rows)
+    area_coords = _get_coords(area_rows)
+    fault_coords = _get_coords(fault_rows)
     a_area = _a_value(0.9 * rate, b, ref_mag)
     a_fault = _a_value(0.1 * rate, b, ref_mag)
     return (
-        f'{XML_HEADER}\n'
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"\n'
+        '      xmlns:gml="http://www.opengis.net/gml">\n'
         f'    <sourceModel name="branch_{branch_idx:03d}">\n'
         f'        <sourceGroup name="grp_1"'
-        f' tectonicRegion="{TRT}">\n'
+        f' tectonicRegion="Active Shallow Crust">\n'
         f'            <areaSource id="as1" name="area_src"'
-        f' tectonicRegion="{TRT}">\n'
+        f' tectonicRegion="Active Shallow Crust">\n'
         f'                <areaGeometry>\n'
         f'                    <gml:Polygon>\n'
         f'                        <gml:exterior>\n'
         f'                            <gml:LinearRing>\n'
         f'                                <gml:posList>'
-        f'{area_poslist}</gml:posList>\n'
+        f'{area_coords}</gml:posList>\n'
         f'                            </gml:LinearRing>\n'
         f'                        </gml:exterior>\n'
         f'                    </gml:Polygon>\n'
@@ -88,11 +86,11 @@ def _build_xml(branch_idx, area_rows, fault_rows, b, ref_mag, rate):
         f'                </hypoDepthDist>\n'
         f'            </areaSource>\n'
         f'            <simpleFaultSource id="fs1" name="fault_src"'
-        f' tectonicRegion="{TRT}">\n'
+        f' tectonicRegion="Active Shallow Crust">\n'
         f'                <simpleFaultGeometry>\n'
         f'                    <gml:LineString>\n'
         f'                        <gml:posList>'
-        f'{fault_poslist}</gml:posList>\n'
+        f'{fault_coords}</gml:posList>\n'
         f'                    </gml:LineString>\n'
         f'                    <dip>60.0</dip>\n'
         f'                    <upperSeismoDepth>0.0</upperSeismoDepth>\n'
@@ -117,13 +115,33 @@ def get_source_model_lt():
     the realisations on a source-by-source basis, each represented
     by an XML string.
 
-    Returns list of (name, weight, xml_str) triples. The weights
-    summing to 1.0 is checked as for regular XML-based SSC LTs
-    inside the engine.
+    Returns list of (name, weight, xml_str) triples. The regular
+    checks on the logic tree such as the weights of the branches
+    summing to 1.0 is still checked as for regular XML-based SSC
+    LTs inside the engine.
+
+    NOTE: A function with exactly this name is checked for within
+    RuntimeSourceModelLT and it is expected to retun the list of
+    (name, weight, xml_str) triples. If this function is missing
+    or does not return the expected triples the engine will raise
+    an error.
+
+    NOTE: The runtime approach demonstrated in this QA test only
+    currently supports the specification of each branch as a seperate
+    XML (i.e., the use of branching levels which consider features
+    such as applyToSources to apply epistemic uncertainties is not
+    possible). However, the point of this feature is to support the
+    generation of complex logic trees at runtime, so it is expected
+    that the user is comfortable with fully describing their logic tree
+    on a branch-by-branch basis using a python script if they are
+    exploring this capability.
     """
+    # Load the data
     area_rows = _load_csv('area_polygon.csv')
     fault_rows = _load_csv('fault_trace.csv')
     recurset = _load_csv('recurset.csv')
+
+    # Build the sources
     branches = []
     for i, row in enumerate(recurset):
         b = float(row['b_value'])
@@ -133,4 +151,4 @@ def get_source_model_lt():
         xml_str = _build_xml(i, area_rows, fault_rows, b, ref_mag, rate)
         branches.append((f'branch_{i:03d}', weight, xml_str))
 
-    return branches
+    return branches # Fed into RuntimeSourceModelLT
