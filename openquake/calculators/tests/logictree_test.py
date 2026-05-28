@@ -790,7 +790,7 @@ mag
         self.assertEqualFiles('expected/trt_gsim.csv', f)
 
     def test_case_34(self):
-        # full enumeration: runtime and XML must give identical curves
+        # Full enumeration: runtime and XML must give identical curves
         self.run_calc(case_34.__file__, 'job_runtime.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
