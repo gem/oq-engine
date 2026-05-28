@@ -1039,12 +1039,41 @@ class RuntimeSourceModelLT(object):
         return self.num_samples if self.num_samples else self.num_paths
 
     @property
+    def branches(self):
+        return {
+            bid: Branch(bid, '__rt__%s' % bid, float(w))
+            for bid, w in self._branch_weights.items()
+        }
+
+    def reduce(self, source_id, num_samples=None):
+        num_samples = (self.num_samples if num_samples is None
+                       else num_samples)
+        branches = [
+            (bid, self._branch_weights[bid], xml_str)
+            for bid, xml_str in self._branch_xmls.items()
+        ]
+        return RuntimeSourceModelLT(
+            branches,
+            script_path=self.filename,
+            seed=self.seed,
+            num_samples=num_samples,
+            sampling_method=self.sampling_method,
+            source_id=source_id,
+        )
+
+    @property
     def branchsets(self):
-        # No traditional branchsets; branch IDs are auto-generated and unique.
-        return []
+        # Build a single BranchSet from _branch_weights so that compose()
+        # gets the correct SSC level when constructing a CompositeLogicTree.
+        bset = BranchSet('sourceModel', {})
+        bset.ordinal = 0
+        for bid, w in sorted(self._branch_weights.items()):
+            bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
+        return [bset]
 
     def bset_values(self, lt_path):
-        # Single-level LT: no downstream branchset modifications.
+        # Single-level LT: no downstream branchset modifications so need
+        # to return an empty list for when it's called in source_reader
         return []
 
     def __iter__(self):
@@ -1090,7 +1119,7 @@ class RuntimeSourceModelLT(object):
     def build_smdict(self, converter):
         """
         Parse all in-memory XML strings and return an smdict compatible
-        with source_reader.get_csm().  Keys are absolute sentinel paths
+        with source_reader.get_csm(). Keys are absolute sentinel paths
         matching what _groups_ids constructs from rlz.value[0].
         """
         import io
