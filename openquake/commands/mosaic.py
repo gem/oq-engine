@@ -124,7 +124,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    engine.run_jobs(logctxs)
+    engine.run_jobs(logctxs, concurrent_jobs)
     out = []
     count_errors = 0
     asce = {}
@@ -189,7 +189,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     if slowest:
         engine_profile(jobctx, slowest or 40)
     else:
-        engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
+        engine.run_jobs([jobctx], concurrent_jobs)
     return [jobctx.calc_id]
 
 
