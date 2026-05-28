@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="branch_039">
+        <sourceGroup name="grp_1" tectonicRegion="Active Shallow Crust">
+            <areaSource id="as1" name="area_src" tectonicRegion="Active Shallow Crust">
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>9.5 44.5 10.5 44.5 10.5 45.5 9.5 45.5 9.5 44.5</gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>20.0</lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.9160" bValue="0.92" minMag="5.0" maxMag="7.5"/>
+                <nodalPlaneDist>
+                    <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth probability="1.0" depth="10.0"/>
+                </hypoDepthDist>
+            </areaSource>
+            <simpleFaultSource id="fs1" name="fault_src" tectonicRegion="Active Shallow Crust">
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>9.80 44.80 9.95 44.95 10.10 45.10 10.25 45.25</gml:posList>
+                    </gml:LineString>
+                    <dip>60.0</dip>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.9617" bValue="0.92" minMag="5.0" maxMag="7.5"/>
+                <rake>0.0</rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
