@@ -151,9 +151,9 @@ def read_hparams(job_ini):
 
 def _smlt_from_script(script_path, hparams, sourceID):
     """
-    Run script_path and call its get_source_model_lt() function to
-    return a list of triples of (name, weight, xml_str) which are
-    then used here to build a :class:`RuntimeSourceModelLT` logic tree.
+    Run the builder script (script_path) and call its get_source_model_lt()
+    function to return a list of triples of (name, weight, xml_str) which
+    are then used here to build a :class:`RuntimeSourceModelLT` logic tree.
     """
     import runpy
     globs = runpy.run_path(script_path)
