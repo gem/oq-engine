@@ -98,7 +98,8 @@ def _filter_mag(srcs, min_mag):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        ss.num_ruptures
+        if ss.num_ruptures > 100_000:
+            raise RuntimeError('%s has too many ruptures' % ss)
     return out
 
 
