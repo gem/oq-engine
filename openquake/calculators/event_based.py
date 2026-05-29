@@ -671,7 +671,8 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        logging.info('Building ruptures')
+        logging.info('Building ruptures from %d groups',
+                     len(self.csm.src_groups))
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
             if not sg.sources:
