@@ -399,8 +399,13 @@ def log(db, job_id, timestamp, level, process, message):
     :param message:
         message to store in the log record
     """
-    db('INSERT INTO log (job_id, timestamp, level, process, message) '
-       'VALUES (?X)', (job_id, timestamp, level, process, message))
+    try:
+        db('INSERT INTO log (job_id, timestamp, level, process, message) '
+           'VALUES (?X)', (job_id, timestamp, level, process, message))
+    except Exception as exc:
+        # not so serious to break the calculation
+        print(exc)
+
 
 
 def get_log(db, job_id):
