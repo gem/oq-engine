@@ -1306,7 +1306,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        step = 1 if src.code in b'pP' else 4
+        step = 1 if src.code in b'pP' else max(src.num_ruptures // 100, 4)
         C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
