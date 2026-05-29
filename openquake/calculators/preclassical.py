@@ -35,7 +35,8 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 27_000  # so that the drouet calculation runs
+# temp fix to circumvent rup limit issue
+MAX_NUM_RUPTURES = 10000000000000000000000  # so that the drouet calculation runs
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
