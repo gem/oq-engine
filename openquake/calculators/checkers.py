@@ -107,7 +107,11 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
                     df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
-        assert_close(tbl, outdir / bname, atol, rtol)
+        expected = outdir / bname
+        if os.environ.get('OQ_OVERWRITE'):
+            with open(expected, 'w', encoding='utf-8') as f:
+                f.write(tbl)
+        assert_close(tbl, expected, atol, rtol)
     return calc, log
 
 

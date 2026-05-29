@@ -36,15 +36,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
-class AristotleValidateTestCase(unittest.TestCase):
-    @classmethod
-    def setUp(cls):
-        try:
-            import timezonefinder
-        except ImportError:
-            raise unittest.SkipTest('Missing timezonefinder')
-        else:
-            del timezonefinder
+class ImpactValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
@@ -104,8 +96,8 @@ class AristotleValidateTestCase(unittest.TestCase):
             _rup, rupdic, params, err = impact_validate(
                 POST, user, rupture_file, stations)
             expected = {
-                # hypocenter was outside the rupture surface and it is moved to the
-                # center of the surface
+                # hypocenter was outside the rupture surface and it is
+                # moved to the center of the surface
                 'dep': 35.0,
                 'lat': 28.04196,
                 'lon': 84.67006,
@@ -120,16 +112,17 @@ class AristotleValidateTestCase(unittest.TestCase):
                                  'Himalayan Thrust',
                                  'Craton',
                                  'Deep Crust 1',
-                                 'Active-Stable Shallow Crust'],
-                         'IND': ['active shallow crust normal',
-                                 'active shallow crust strike-slip reverse',
+                                 'Active-Stable Shallow Crust',
+                                 'Active Shallow Crust TWN'],
+                         'IND': ['active shallow crust',
+                                 'Himalayan Thrust',
+                                 'stable shallow crust',
                                  'intraplate margin lower',
                                  'intraplate margin upper',
-                                 'stable shallow crust',
+                                 'subduction intraslab',
                                  'subduction interface',
-                                 'subduction interface megathrust',
-                                 'subduction intraslab Himalayas',
-                                 'subduction intraslab']},
+                                 'Oceanic Crust without Volcanism',
+                                 'Oceanic Crust with Volcanism']},
                 'usgs_id': 'FromFile'}
             for key in expected:
                 assert rupdic[key] == expected[key], key
@@ -151,7 +144,8 @@ class AristotleValidateTestCase(unittest.TestCase):
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
-        self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
+        self.assertEqual(rupdic['local_timestamp'],
+                         '2024-08-18 07:10:26+12:00')
         self.assertEqual(err, {})
 
     def test_5(self):
