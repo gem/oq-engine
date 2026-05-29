@@ -63,7 +63,7 @@ SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
     'LON LAT SVEL MMI PGA PGV PSA03 PSA06 PSA10 PSA30 '
-    'STDMMI STDPGA STDPSA03 STDPSA06 STDPSA10 STDPSA30'
+    'STDMMI STDPGA STDPGV STDPSA03 STDPSA06 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
@@ -78,6 +78,7 @@ FIELDMAP = {
     'PSA30': ('val', 'SA(3.0)'),
     'STDMMI': ('std', 'MMI'),
     'STDPGA': ('std', 'PGA'),
+    'STDPGV': ('std', 'PGV'),
     'STDPSA03': ('std', 'SA(0.3)'),
     'STDPSA06': ('std', 'SA(0.6)'),
     'STDPSA10': ('std', 'SA(1.0)'),

@@ -1688,6 +1688,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
@@ -1700,14 +1701,16 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         data = numpy.zeros(E*N, oq.gmf_data_dt())
         try:
             mag = oq.rupture_dict['mag']
-            print(mag)
         except KeyError:
             raise RuntimeError('TODO: extract the magnitude from the ShakeMap!')
+        for sec_peril in sec_perils:
+            out = sec_peril.compute(mag, zip(imts, gmfs), sitecol)
+            print(out)
+                
         i = 0
         for ei, event in enumerate(events):
             for s in numpy.arange(N, dtype=U32):
                 # populate a tuple like (sid, eid, PGA, SA(0.3), SA(1.0))
-                breakpoint()
                 data[i] = (sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                 i += 1
         create_gmf_data(
