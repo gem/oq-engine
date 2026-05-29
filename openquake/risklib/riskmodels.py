@@ -146,7 +146,7 @@ class RiskFuncList(list):
             ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
         if len(set(num_perils.values())) > 1:
-             raise ValueError(f'{num_perils=}')
+            raise ValueError(f'{num_perils=}')
         return ddic
 
 
@@ -510,7 +510,8 @@ def get_riskcomputer(dic, limit_states=()):
         for rf in rfs[riskid]:
             by_peril[rf.peril].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
+                       {peril: group_by_lt(by_peril[peril])
+                        for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rc[riskid] = rm
@@ -682,7 +683,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if missing:
                     for fname, ids in missing.items():
                         raise InvalidFile(
-                            '%s: missing %s %s' % (fname, peril, ' '.join(ids)))
+                            '%s: missing %s %s' % (
+                                fname, peril, ' '.join(ids)))
 
     def compute_csq(self, assets, dd5, tmap_df, oq):
         """

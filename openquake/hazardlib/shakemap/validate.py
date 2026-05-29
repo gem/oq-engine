@@ -266,9 +266,10 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    inputdic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-                    mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
-                    strike=None, description=None, notes=None)
+    inputdic = dict(
+        approach=None, usgs_id=None, lon=None, lat=None, dep=None,
+        mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+        strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -372,7 +373,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
             mosaic_models = get_close_regions(
                 rupdic['lon'], rupdic['lat'], 5, region_kind='mosaic_model')
         except ValueError as exc:
-            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model'
+            # e.g.:
+            # '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
             err = {"status": "failed", "error_msg": str(exc)}
             return rup, rupdic, params, err
     for mosaic_model in mosaic_models:
