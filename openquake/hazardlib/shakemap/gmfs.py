@@ -279,7 +279,7 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
                 for im in imts if im in shakemap['std'].dtype.names]
 
     # OQ_DISTRIBUTE=no OQ_APPLICATION_MODE=IMPACT pytest -vs openquake/server/tests/test_impact_mode.py -k success
-    breakpoint()
+
     # FIXME
     # if sec_imts is not None:
     #     imts.extend(sec_imts)

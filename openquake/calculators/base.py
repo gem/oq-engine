@@ -1698,10 +1698,16 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         events = store_events(calc.datastore, E)
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.zeros(E*N, oq.gmf_data_dt())
+        try:
+            mag = oq.rupture_dict['mag']
+            print(mag)
+        except KeyError:
+            raise RuntimeError('TODO: extract the magnitude from the ShakeMap!')
         i = 0
         for ei, event in enumerate(events):
             for s in numpy.arange(N, dtype=U32):
                 # populate a tuple like (sid, eid, PGA, SA(0.3), SA(1.0))
+                breakpoint()
                 data[i] = (sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                 i += 1
         create_gmf_data(
