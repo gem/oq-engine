@@ -567,6 +567,17 @@ class SourceModelLogicTree(object):
         self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
 
+    @property
+    def extend_model(self):
+        """
+        True if there are branchsets of kind extendModel
+        """
+        for bs in self.branchsets:
+            if bs.uncertainty_type == 'extendModel':
+                if any(br.value for br in bs.branches):
+                    return True
+        return False
+
     def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.

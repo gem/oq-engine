@@ -147,7 +147,7 @@ def check_branchID(branchID):
         raise InvalidFile('branchID %r contains an invalid ";"' % branchID)
 
 
-def check_duplicates(smdict, strict):
+def check_duplicates(smdict, strict, extend_model):
     # check_duplicates in the same file
     for sm in smdict.values():
         srcids = []
@@ -175,7 +175,7 @@ def check_duplicates(smdict, strict):
             fnames.append(sm.fname)
         check_unique(srcids, 'in branch %s' % branch, strict=strict)
 
-    found = find_false_duplicates(smdict)
+    found = find_false_duplicates(smdict, extend_model)
     if found:
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
@@ -233,7 +233,8 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:
         save_read_times(dstore, smdict.values())
-    check_duplicates(smdict, strict=oq.disagg_by_src)
+    check_duplicates(smdict, oq.disagg_by_src,
+                     full_lt.source_model_lt.extend_model)
 
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
@@ -283,18 +284,24 @@ def get_csm(oq, full_lt, dstore=None):
     return csm
 
 
-def add_checksums(srcs):
+def add_checksums(srcs, single=False):
     """
-    Build and attach a checksum to each source
+    Build and attach a checksum to each source; if single is Truem
+    copy the checksum of the first source to all the others
     """
-    for src in srcs:
+    for i, src in enumerate(srcs):
         dic = {k: v for k, v in vars(src).items()
                if k not in 'source_id trt_smr smweight samples branch'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+        if single and i == 0:
+            # copy N-1 times the same checksum
+            for s in srcs[1:]:
+                s.checksum = src.checksum
+            break
 
 
 # called before _fix_dupl_ids
-def find_false_duplicates(smdict):
+def find_false_duplicates(smdict, single_checksum):
     """
     Discriminate different sources with same ID (false duplicates)
     and put a question mark in their source ID
@@ -319,10 +326,10 @@ def find_false_duplicates(smdict):
             if any(getattr(src, 'mutex_weight', 0) for src in srcs):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
-            add_checksums(srcs)
+            add_checksums(srcs, single_checksum)
             gb = general.AccumDict(accum=[])
             for src in srcs:
-                gb[checksum(src)].append(src)
+                gb[src.checksum].append(src)
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
@@ -449,7 +456,9 @@ def reduce_sources(sources_with_same_id, full_lt):
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
-    add_checksums(sources_with_same_id)
+    # in case of extendModel assume same ID == same source
+    single_checksum = full_lt.source_model_lt.extend_model
+    add_checksums(sources_with_same_id, single_checksum)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]

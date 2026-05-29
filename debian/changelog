@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * When using extendModel, we now assume that same ID means same source
   * Added command `oq info db` to extract the path to the sqlite file
   * Implemented a workflow to run the 2026 Global Risk Model
 
