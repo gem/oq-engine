@@ -116,7 +116,7 @@ def sample_cluster(group, num_ses, ses_seed):
 
     # Set the parameters required to compute the number of occurrences
     # of the cluster
-    samples = getattr(group[0], 'samples', 1)
+    samples = group[0].samples
     tom = group.temporal_occurrence_model
     rate = getattr(tom, 'occurrence_rate', None)
 
@@ -385,10 +385,9 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                     rup_array=get_rup_array(eb_ruptures, magdist),
                     source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
-            samples = getattr(src, 'samples', 1)
             t0 = time.time()
             eb_ruptures.extend(
-                src.sample_ruptures(samples * num_ses, param['ses_seed']))
+                src.sample_ruptures(num_ses, param['ses_seed']))
             dt = time.time() - t0
             source_data['src_id'].append(src.source_id)
             source_data['nctxs'].append(src.nsites * nr)

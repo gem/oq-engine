@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2015-2024 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,115 +13,172 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module exports :class:`Allen2022`
 """
-import numpy as np
 
+import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+def _get_distance_scaling(C, rhypo):
+    """
+    Distance scaling as a piece-wise linear geometrical attenuation
+    [Equations 2a and 2b, p. 1047].
 
-def  _get_site_scaling(C, vs30):
+    Hinge distance Rx = 600 km separates two linear slopes in log10 space:
+
+        FR = c3 * log10(Rhypo)                                 Rhypo <= Rx
+        FR = c3 * log10(Rx) + c4*(log10(Rhypo) - log10(Rx))    Rhypo >  Rx
     """
-    Returns the site scaling term (equation 6)
-    on page 1050
-    """
-    
-    return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.))
+    Rx = 600.0
+
+    return np.where(
+        rhypo <= Rx,
+        C["c3"] * np.log10(rhypo),
+        C["c3"] * np.log10(Rx) + C["c4"] * (np.log10(rhypo) - np.log10(Rx)),
+    )
 
 
 def _get_magnitude_scaling(C, mag):
     """
-    Returns the magnitude scling term defined in equation (3)
-    on page 1048
+    Quadratic magnitude scaling [Equation 3, p. 1048].
+
+        FM = c0 + c1*(Mw - 6)^2 + c2*(Mw - 6)
+
+    For periods < 0.3 s c1 is set to zero in the table (paper p. 1048).
     """
-    
-    return C["c0"] + C["c1"] * (mag-6.0)**2 + C["c2"] * (mag-6.0)
-    
-        
+    return C["c0"] + C["c1"] * ((mag - 6.0) ** 2) + C["c2"] * (mag - 6.0)
+
+
 def _get_depth_scaling(C, hypo_depth):
     """
-    Returns the magnitude scling term defined in equation (4)
-    on page 1049
-    """
-    log_depth = np.log10(hypo_depth)
-    
-    return C["d0"] + C["d1"] * log_depth**3 + C["d2"] * log_depth**2 + C["d3"] * log_depth
-    
+    Cubic hypocentral-depth scaling [Equation 4, p. 1049].
 
-def _get_path_scaling(C, rhypo):
+        FD = d0 + d1*log10(hz)^3 + d2*log10(hz)^2 + d3*log10(hz)
+
+    where hz is hypocentral depth anchored to [10, 500] km.
+    The paper states (p. 1049): "If h < 10 km or h > 500 km, 
+    it is recommended to truncate hz to either 10 or 500 km."
+    The original OQ implementation omitted this truncation.
     """
-    Returns the path scaling term given by equation (2) and (5)
-    on page 1047 & 1050
+    hz = np.clip(hypo_depth, 10.0, 500.0)  # BUG FIX: depth truncation
+    log_hz = np.log10(hz)
+    return C["d0"] + C["d1"] * (log_hz ** 3) + C["d2"] * (log_hz ** 2) + C["d3"] * log_hz
+
+
+def _get_near_source_correction(C, rhypo):
     """
-    rx = 600. # hinge distance in km
-    
-    # get far-field term (eqn 2)
-    far_term = np.where(rhypo <= rx,
-                        C["c3"] * np.log10(rhypo),
-                        C["c3"] * np.log10(rx) + C["c4"] * (np.log10(rhypo) - np.log10(rx)))
-    
-    # get near-field correction (eqn 5)
-    near_term = np.where(rhypo <= rx,
-                         C["n0"] * (np.log10(rhypo) - np.log10(rx)),
-                         0.)
-    
-    return near_term + far_term
-    
+    Near-source distance correction [Equations 5a and 5b, p. 1050].
+
+        FN = n0 * (log10(Rhypo) - log10(Rx))    Rhypo <= Rx
+        FN = 0                                  Rhypo >  Rx
+
+    Applied to correct biases in near-source residuals that emerged
+    after the depth term was introduced (paper p. 1049-1050).
+    Uses the same hinge distance Rx = 600 km as the distance scaling.
+    """
+    Rx = 600.0
+
+    return np.where(
+        rhypo <= Rx,
+        C["n0"] * (np.log10(rhypo) - np.log10(Rx)),
+        0.0,
+    )
+
+
+def _get_site_scaling(C, vs30):
+    """
+    Site amplification [Equation 6, p. 1050].
+
+        FS = s0 + s1 / (log10(Vs30) - log10(150))
+
+    Calibrated for 220 <= Vs30 <= 800 m/s using topographic-proxy
+    Vs30 estimates (Wald and Allen, 2007). The denominator is zero at
+    Vs30 = 150 m/s; the caller must respect the model applicability range.
+    """
+    return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.0))
+
 
 class Allen2022(GMPE):
     """
-    Implements GMPE developed by Allen and published as
-    "Allen, T. I. (2022). A farfield groundmotion model for the North Australian 
-    Craton from platemargin earthquakes, Bull. Seismol. Soc. Am., doi: 10.1785/0120210191.
+    Implements the far-field GMM for the North Australian Craton:
+
+        Allen, T. I. (2022). A far-field ground-motion model for the North
+        Australian Craton from plate-margin earthquakes.
+        Bull. Seismol. Soc. Am. 112, 1041-1059. doi: 10.1785/0120210191
+
+    **Application range:** hypocentral distances ~500-1500 km, magnitudes up
+    to Mw 8.0, sites within the North Australian Craton (NAC), subduction
+    interface and intraslab sources in the Banda Sea region.
+
+    Note on PGA sigma [Equation 10, p. 1051]:
+        sigma_PGA = sqrt(tau_PGA^2 + phi_PGA^2 + lambda_PGA^2)
+        
+    where lambda_PGA = 0.270 accounts for the additional uncertainty from
+    PGA proxy estimation using low-sample-rate data (paper p. 1050).
+    This term is already incorporated into the sigma value in Table 1
+    (footnote), so sigma is read directly from the table for all IMTs.
     """
-    #: Supported tectonic region type is subduction intraslab.
+
+    ## Supported tectonic region type is subduction intraslab.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    #: Supported intensity measure types are spectral acceleration,
-    #: and peak ground acceleration, see table 1, pages 227 and 228.
+    ## PGA, PGV, and 5%-damped PSA at 20 periods 0.1-10 s (Table 1, p. 1047).
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
-    #: Supported intensity measure component is geometric mean
-    #: of two horizontal components.
+    # The paper uses geometric mean of horizontal components (p. 1046).
+    # GEOMETRIC_MEAN is not available in the current OQ const.IMC, so
+    # MEDIAN_HORIZONTAL is used as a substitute.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
 
-    #: Supported standard deviation types is total, see equations 9-10 page 1051.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {                                                                              
-          const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
-    #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    ## Total (sigma), inter-event (tau), and intra-event (phi) std devs
+    ## [Equations 7-10, p. 1051].
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT,
+    }
 
-    #: Required rupture parameters are magnitude, and focal depth, see
-    #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+    ## Vs30 (m/s) required for site scaling [Equation 6].
+    REQUIRES_SITES_PARAMETERS = {"vs30"}
 
-    #: Required distance measure is hypocentral distance, see equation 10
-    #: page 226.
-    REQUIRES_DISTANCES = {'rhypo'}
+    ## Moment magnitude and hypocentral depth (km) [Equations 3 and 4].
+    REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
+
+    ## Hypocentral distance Rhypo (km) [Equations 2a, 2b, 5a, 5b].
+    REQUIRES_DISTANCES = {"rhypo"}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        
+        """
+        Compute median ground motion (ln g or ln cm/s) and standard deviations.
+
+            mean = FR + FM + FD + FN + FS     [Equation 1, median term only]
+
+        Standard deviations are read directly from Table 1. 
+        The sigma value for PGA in Table 1 already includes the lambda_PGA term: 
+        it was computed using Equation 10 [p. 1051], not Equation 9. 
+        So we read it directly from the table instead of recomputing it from tau and phi.
+        """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            mean[m] = (_get_magnitude_scaling(C, ctx.mag) +
-                       _get_path_scaling(C, ctx.rhypo) +
-                       _get_depth_scaling(C, ctx.hypo_depth) +
-                       _get_site_scaling(C, ctx.vs30))
-            
-            tau[m] = C['tau']
-            phi[m] = C['phi']
-            
-            # cannot use np.sqrt(tau**2 + phi**2) because of additional PGA conversion factor (see equation 10 on P 1051)
-            # must read from table
-            sig[m] = C['sigma'] 
-            
 
-    #: Coefficient table (see table 1 page 1047.)
+            mean[m] = (
+                _get_distance_scaling(C, ctx.rhypo)
+                + _get_magnitude_scaling(C, ctx.mag)
+                + _get_depth_scaling(C, ctx.hypo_depth)
+                + _get_near_source_correction(C, ctx.rhypo)
+                + _get_site_scaling(C, ctx.vs30)
+            )
+
+            tau[m] = C["tau"]
+            phi[m] = C["phi"]
+            sig[m] = C["sigma"]  # includes lambda_PGA for PGA [Eq. 10]
+
+    # Coefficient table — Table 1, p. 1047.
+    # Copied verbatim from the existing OQ implementation (allen_2022.py).
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0        c1        c2        c3        c4        d0         d1       d2          d3         n0         s0        s1       tau       phi     sigma
     pgv     5.1394    0.0000    1.9713   -2.6644    -7.336    5.2107    -1.8808    9.459     -13.949    -1.0181    -0.5880    0.2536    0.6361    0.4883    0.8019

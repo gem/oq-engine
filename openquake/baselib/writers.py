@@ -122,7 +122,8 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
        optional comment dictionary
     """
     if comment is not None:
-        comment = ', '.join(convert_item(item) for item in comment.items())
+        comment = ', '.join(convert_item(item) for item in comment.items()
+                            if item[1] is not None)
     close = True
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')

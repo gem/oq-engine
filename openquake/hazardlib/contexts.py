@@ -1923,7 +1923,7 @@ def get_unique_inverse(all_trt_smrs):
 
 def get_cmakers(all_trt_smrs, full_lt, oq):
     """
-    :params all_trt_smrs: a list of arrays
+    :params all_trt_smrs: a list of arrays, one per source group
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups

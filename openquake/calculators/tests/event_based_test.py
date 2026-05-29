@@ -17,9 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import os
 import math
+from unittest.mock import patch
 import pandas
-
 import numpy.testing
 
 from openquake.baselib.hdf5 import read_csv
@@ -188,7 +189,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
     def test_case_1_ruptures(self):
-        self.run_calc(case_1.__file__, 'job_ruptures.ini')
+        with patch.dict(os.environ, {'OQ_SAMPLES': '.1'}):
+            self.run_calc(case_1.__file__, 'job_ruptures.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 4)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)

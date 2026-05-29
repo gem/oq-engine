@@ -28,6 +28,7 @@ import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
+import h5py
 import psutil
 import numpy
 import pandas
@@ -193,7 +194,10 @@ def fix_hc_id(oq):
             oq.hazard_calculation_id, int):
         # there is nothing to fix
         return oq.hazard_calculation_id
-    path = os.path.join(oq.base_path, oq.hazard_calculation_id)
+    path = oq.hazard_calculation_id
+    if not os.path.isabs(path):
+        path = os.path.abspath(os.path.normpath(
+            os.path.join(oq.base_path, oq.hazard_calculation_id)))
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
@@ -762,50 +766,51 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         parent = datastore.read(oq.hazard_calculation_id)
-        oqparent = parent['oqparam']
-        if 'weights' in parent:
-            weights = numpy.unique(parent['weights'][:])
-            if (oq.job_type == 'risk' and oq.collect_rlzs and
-                    len(weights) > 1):
-                raise ValueError(
-                    'collect_rlzs=true can be specified only if '
-                    'the realizations have identical weights')
-        if oqparent.imtls and oq.calculation_mode in ('classical', 'disagg'):
-            check_imtls(oq.imtls, oqparent.imtls)
-        self.check_precalc(oqparent.calculation_mode)
         self.datastore.parent = parent
-        # copy missing parameters from the parent
-        if 'concurrent_tasks' not in vars(self.oqparam):
-            self.oqparam.concurrent_tasks = (
-                self.oqparam.__class__.concurrent_tasks.default)
-        params = {name: value for name, value in
-                  vars(parent['oqparam']).items()
-                  if name not in vars(self.oqparam)
-                  and name != 'ground_motion_fields'}
-        if params:
-            self.save_params(**params)
+        oqp = parent['oqparam']
+        if isinstance(oqp, h5py.Group) and len(oqp) == 1:
+            [name] = list(oqp)
+            oqp = parent[f'oqparam/{name}']
+        if not isinstance(oqp, h5py.Group):  # not from SES.hdf5
+            if 'weights' in parent:
+                weights = numpy.unique(parent['weights'][:])
+                if (oq.job_type == 'risk' and oq.collect_rlzs and
+                        len(weights) > 1):
+                    raise ValueError(
+                        'collect_rlzs=true can be specified only if '
+                        'the realizations have identical weights')
+            if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
+                check_imtls(oq.imtls, oqp.imtls)
+            self.check_precalc(oqp.calculation_mode)
+
+            # copy missing parameters from the parent
+            if 'concurrent_tasks' not in vars(self.oqparam):
+                self.oqparam.concurrent_tasks = (
+                    self.oqparam.__class__.concurrent_tasks.default)
+            self.oqparam = oq = oq.from_parent(oqp)
+            self.save_params()
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.investigation_time and oqp.eff_time != oq.eff_time:
+                raise ValueError(
+                    'The parent calculation was using eff_time=%s'
+                    ' != %s' % (oqp.eff_time, oq.eff_time))
+            hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
+            if hstats != rstats:
+                raise ValueError(
+                    'The parent calculation had stats %s != %s' %
+                    (hstats, rstats))
+            sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
+            missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
+            if oqp.imtls and missing_imts:
+                raise ValueError(
+                    'The parent calculation is missing the IMT(s) %s' %
+                    ', '.join(missing_imts))
+
         with self.monitor('importing inputs', measuremem=True):
             self.read_inputs()
-        oqp = parent['oqparam']
-        if oqp.investigation_time != oq.investigation_time:
-            raise ValueError(
-                'The parent calculation was using investigation_time=%s'
-                ' != %s' % (oqp.investigation_time, oq.investigation_time))
-        if oqp.investigation_time and oqp.eff_time != oq.eff_time:
-            raise ValueError(
-                'The parent calculation was using eff_time=%s'
-                ' != %s' % (oqp.eff_time, oq.eff_time))
-        hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
-        if hstats != rstats:
-            raise ValueError(
-                'The parent calculation had stats %s != %s' %
-                (hstats, rstats))
-        sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
-        missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-        if oqp.imtls and missing_imts:
-            raise ValueError(
-                'The parent calculation is missing the IMT(s) %s' %
-                ', '.join(missing_imts))
         self.save_crmodel()
 
     def init(self):
@@ -815,8 +820,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if not oq.risk_imtls:
             if self.datastore.parent:
-                oq.risk_imtls = (
-                    self.datastore.parent['oqparam'].risk_imtls)
+                oqp = datastore.get_oq(self.datastore.parent)
+                oq.risk_imtls = oqp.risk_imtls
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         elif 'full_lt' in self.datastore:
@@ -997,7 +1002,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
 
-        oq_hazard = (self.datastore.parent['oqparam']
+        oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
@@ -1863,7 +1868,7 @@ def run_calc(job_ini, **kw):
         fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
-        return calc
+    return calc
 
 
 def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):

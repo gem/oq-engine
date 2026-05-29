@@ -54,3 +54,4 @@ def get_portable_gsims():
         if 'ctx' not in cls.compute.__annotations__:
             portable[cls.__name__] = cls
     return portable
+

@@ -105,10 +105,13 @@ def poisson_sample(src, eff_num_ses, seed):
                     hypo, sfc, src.occur_rates[i], tom)
                 yield rup, rupids[i], num_occ
         else:  # simple or complex fault
-            ruptures = list(src.iter_ruptures())
-            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            iruptures = src.iter_ruptures()  # not kept in memory
+            rates = numpy.concatenate(list(src.iter_ruptures(rates=True)))
             occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, rupid, num_occ in zip(ruptures, rupids, occurs):
+            # NB: the algorithm could be smarter, since we are looping
+            # over all ruptures just to discard most of them, but it is
+            # efficient enough, since only the rates are kept in memory
+            for rup, rupid, num_occ in zip(iruptures, rupids, occurs):
                 if num_occ:
                     yield rup, rupid, num_occ
         return
@@ -214,6 +217,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
+    samples = 1
     smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
@@ -272,22 +276,24 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             else:
                 yield rup.surface.mesh
 
-    def sample_ruptures(self, eff_num_ses, ses_seed):
+    def sample_ruptures(self, num_ses, ses_seed):
         """
-        :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: triples (rupture, trt_smr, num_occurrences)
+        :param num_ses: number of stochastic event sets
+        :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        for rup, rupid, num_occ in sample(self, eff_num_ses, seed):
-            if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
+        ebrs = []
+        for rup, rupid, num_occ in sample(self, self.samples * num_ses, seed):
+            if hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
-                # tested only in oq-risk-tests etna0
+                # tested in oq-risk-tests etna0 and case_83_eb
                 rup.occurrence_rate *= self.smweight
             ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
                             seed=rupid + TWO30 * self.id + ses_seed)
-            yield ebr
+            ebrs.append(ebr)
+        return ebrs
 
     def get_mags(self):
         """

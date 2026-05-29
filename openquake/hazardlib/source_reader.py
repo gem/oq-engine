@@ -241,8 +241,8 @@ def get_csm(oq, full_lt, dstore=None):
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
-        logging.info('Applied {:_d} changes to the composite source model'.
-                     format(changes))
+        logging.info('Applied {:_d} changes to {:_d} source groups'.
+                     format(changes, len(groups)))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     csm = _get_csm(oq, full_lt, groups, is_event_based)
     out = []
@@ -400,6 +400,7 @@ def _build_groups(full_lt, smdict):
     groups = []
     frac = 1. / len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
+        logging.debug(f'Building source groups for {rlz.lt_path}')
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
