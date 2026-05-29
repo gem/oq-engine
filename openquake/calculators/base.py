@@ -1696,12 +1696,14 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
                              oq.random_seed, oq.imtls)
         N, E, _M = gmfs.shape
         events = store_events(calc.datastore, E)
-        # convert into an array of dtype gmv_data_dt
-        lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for ei, event in enumerate(events)
-               for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
-        data = numpy.array(lst, oq.gmf_data_dt())
+        data = numpy.zeros(E*N, oq.gmf_data_dt())
+        i = 0
+        for ei, event in enumerate(events):
+            for s in numpy.arange(N, dtype=U32):
+                # populate a tuple like (sid, eid, PGA, SA(0.3), SA(1.0))
+                data[i] = (sitecol.sids[s], ei) + tuple(gmfs[s, ei])
+                i += 1
         create_gmf_data(
             calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
