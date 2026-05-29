@@ -37,6 +37,7 @@ from collections import defaultdict
 from xml.parsers.expat import ExpatError
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from timezonefinder import TimezoneFinder
 
 from shapely.geometry import shape, Point, Polygon
 import pandas as pd
@@ -466,12 +467,7 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
     """
     utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
-    try:
-        from timezonefinder import TimezoneFinder
-    except ImportError:
-        timezone_str = None
-    else:
-        timezone_str = TimezoneFinder().timezone_at(lng=lon, lat=lat)
+    timezone_str = TimezoneFinder().timezone_at(lng=lon, lat=lat)
     if timezone_str is None:
         logging.warning('Could not determine the timezone. Using the UTC time')
         return utc_time

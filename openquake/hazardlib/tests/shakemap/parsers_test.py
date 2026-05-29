@@ -29,14 +29,6 @@ user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
-    @classmethod
-    def setUp(cls):
-        try:
-            import timezonefinder
-        except ImportError:
-            raise unittest.SkipTest('Missing timezonefinder')
-        else:
-            del timezonefinder
 
     def test_utc_to_local_time(self):
         loctime = utc_to_local_time('2011-01-01T12:00:00.0Z', 10., 45.)
