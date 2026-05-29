@@ -1458,8 +1458,8 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
     contents, properties, shakemap, shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                      shakemap_version)
+        _contents_properties_shakemap(
+            usgs_id, user, get_grid, monitor, shakemap_version)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
@@ -1487,16 +1487,13 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
                         usgs_id, user, monitor)
                     if err:
                         return None, None, err
-            else:
-                # 'use_shakemap_from_usgs'
-                # or 'use_shakemap_fault_rup_from_usgs'
+            else:  # use_shakemap_from_usgs or use_shakemap_fault_rup_from_usgs
                 with monitor('Downloading rupture json'):
                     rup_data, rupture_file = download_shakemap_rupture_data(
                         usgs_id, contents, user)
             if rupture_file:
                 rup, rupdic, updated_rup_data, rupture_issue = \
-                    _convert_rupture_file(inputdic, rupture_file,
-                                          usgs_id, user)
+                    _convert_rupture_file(inputdic, rupture_file, usgs_id, user)
                 if updated_rup_data:
                     rup_data = updated_rup_data
             elif approach in ['use_shakemap_fault_rup_from_usgs',
