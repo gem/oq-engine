@@ -36,7 +36,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
-class AristotleValidateTestCase(unittest.TestCase):
+class ImpactValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
