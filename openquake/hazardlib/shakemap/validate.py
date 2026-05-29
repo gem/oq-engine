@@ -34,7 +34,7 @@ MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
 
 @dataclass
-class AristotleParam:
+class ImpactParam:
     rupture_dict: dict
     time_event: str
     maximum_distance: float
@@ -218,14 +218,16 @@ IMPACT_APPROACHES = {
     'use_shakemap_from_usgs': 'Use ShakeMap from the USGS',
     'use_pnt_rup_from_usgs': 'Use point rupture from the USGS',
     'build_rup_from_usgs': 'Build rupture from USGS nodal plane solutions',
-    'use_shakemap_fault_rup_from_usgs': 'Use ShakeMap fault rupture from the USGS',
+    'use_shakemap_fault_rup_from_usgs': (
+        'Use ShakeMap fault rupture from the USGS'),
     'use_finite_fault_model_from_usgs': 'Use finite fault model from the USGS',
     'provide_rup': 'Provide earthquake rupture in OpenQuake NRML format',
     'provide_rup_params': 'Provide earthquake rupture parameters',
 }
 
 
-msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
+msr_choices = [msr.__class__.__name__
+               for msr in get_available_magnitude_scalerel()]
 
 validators = {
     'approach': valid.Choice(*IMPACT_APPROACHES),
@@ -258,9 +260,10 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    inputdic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
-               strike=None, description=None)
+    inputdic = dict(
+        approach=None, usgs_id=None, lon=None, lat=None, dep=None,
+        mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+        strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -357,14 +360,15 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
             rupdic[k] = round(v, 5)
 
     trts = {}
-    expo = getattr(AristotleParam, 'exposure_hdf5',
+    expo = getattr(ImpactParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_mosaic_models'):
         try:
             mosaic_models = readinput.get_close_mosaic_models(
                 rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
-            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
+            # e.g.:
+            # '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
             err = {"status": "failed", "error_msg": str(exc)}
             return rup, rupdic, params, err
     for mosaic_model in mosaic_models:
@@ -380,7 +384,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['station_data_file'] = station_data_file
         params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
-            ap = AristotleParam(**params)
+            ap = ImpactParam(**params)
             try:
                 oqparams = ap.get_oqparams(
                     inputdic['usgs_id'], mosaic_models, trts, use_shakemap)

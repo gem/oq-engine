@@ -36,15 +36,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
-class AristotleValidateTestCase(unittest.TestCase):
-    @classmethod
-    def setUp(cls):
-        try:
-            import timezonefinder
-        except ImportError:
-            raise unittest.SkipTest('Missing timezonefinder')
-        else:
-            del timezonefinder
+class ImpactValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
@@ -104,8 +96,8 @@ class AristotleValidateTestCase(unittest.TestCase):
             _rup, rupdic, params, err = impact_validate(
                 POST, user, rupture_file, stations)
             expected = {
-                # hypocenter was outside the rupture surface and it is moved to
-                # the center of the surface
+                # hypocenter was outside the rupture surface and it is
+                # moved to the center of the surface
                 'dep': 35.0,
                 'lat': 28.04196,
                 'lon': 84.67006,
