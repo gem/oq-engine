@@ -35,6 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
+MAX_NUM_RUPTURES = 27_000  # so that the drouet calculation runs
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -98,7 +99,8 @@ def _filter_mag(srcs, min_mag):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        ss.num_ruptures
+        if ss.num_ruptures > MAX_NUM_RUPTURES:
+            raise RuntimeError('%s has too many ruptures' % ss)
     return out
 
 
