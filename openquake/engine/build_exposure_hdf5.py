@@ -137,10 +137,12 @@ def build_site_model(grm_dir):
     """
     factor = float(os.environ.get('OQ_SAMPLE_ASSETS', 1))
     dfs = []
-    for cwd, dirs, files in os.walk(grm_dir):
+    # NOTE: assuming the site-models repository is cloned inside the grm_dir
+    site_models_dir = os.path.join(grm_dir, 'site-models')
+    for cwd, dirs, files in os.walk(site_models_dir):
         # skip os.walk subtrees that don't belong to a known region
-        if not any(cwd == os.path.join(grm_dir, region) or
-                   cwd.startswith(os.path.join(grm_dir, region, ''))
+        if not any(cwd == os.path.join(site_models_dir, region) or
+                   cwd.startswith(os.path.join(site_models_dir, region, ''))
                    for region in REGIONS):
             continue
         for f in files:
