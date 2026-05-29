@@ -35,9 +35,10 @@ MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
 
 @dataclass
-class AristotleParam:
+class ImpactParam:
     rupture_dict: dict
     time_event: str
+    maximum_distance: float
     truncation_level: float
     number_of_ground_motion_fields: int
     asset_hazard_distance: float
@@ -84,6 +85,7 @@ class AristotleParam:
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
             time_event=self.time_event,
+            maximum_distance=str(self.maximum_distance),
             mosaic_model=self.mosaic_model,
             tectonic_region_type=self.trt,
             truncation_level=str(self.truncation_level),
@@ -366,14 +368,15 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
             rupdic[k] = round(v, 5)
 
     trts = {}
-    expo = getattr(AristotleParam, 'exposure_hdf5',
+    expo = getattr(ImpactParam, 'exposure_hdf5',
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_mosaic_models'):
         try:
             mosaic_models = readinput.get_close_mosaic_models(
                 rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
-            # e.g. '(-139.0, 35.0) is farther than 5 deg from any mosaic model'
+            # e.g.:
+            # '(-139.0, 35.0) is farther than 5 deg from any mosaic model!'
             err = {"status": "failed", "error_msg": str(exc)}
             return rup, rupdic, params, err
     for mosaic_model in mosaic_models:
@@ -389,7 +392,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['station_data_file'] = station_data_file
         params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
-            ap = AristotleParam(**params)
+            ap = ImpactParam(**params)
             try:
                 oqparams = ap.get_oqparams(
                     inputdic['usgs_id'], mosaic_models, trts, use_shakemap)

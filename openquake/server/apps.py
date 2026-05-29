@@ -54,25 +54,17 @@ class ServerConfig(AppConfig):
             raise ValueError(
                 f'Invalid application mode: "{settings.APPLICATION_MODE}".'
                 f' It must be one of {settings.APPLICATION_MODES}')
-        if settings.APPLICATION_MODE == 'IMPACT':
-            try:
-                # NOTE: optional dependency needed for IMPACT
-                from timezonefinder import TimezoneFinder  # noqa
-            except ImportError:
-                raise ImportError(
-                    'The python package "timezonefinder" is not installed.'
-                    ' It is required in order to convert the UTC time to'
-                    ' the local time of the event. You can install it'
-                    ' running: pip install timezonefinder==6.5.2')
         if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
             if settings.EMAIL_BACKEND is None:
                 raise NameError('If authentication is enabled (without PAM) an'
                                 ' email backend must be defined')
-            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
-                required_email_settings = ('EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USE_TLS',
-                                           'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD')
+            if settings.EMAIL_BACKEND == (
+                    'django.core.mail.backends.smtp.EmailBackend'):
+                required_email_settings = (
+                    'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USE_TLS',
+                    'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD')
                 for email_setting in required_email_settings:
                     if getattr(settings, email_setting) is None:
                         raise NameError(
