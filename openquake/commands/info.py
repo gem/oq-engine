@@ -233,7 +233,7 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'cfg', 'consequences', 'site_params',
-           'gsim', 'imt', 'views', 'exports', 'disagg',
+           'gsim', 'imt', 'views', 'exports', 'disagg', 'db',
            'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv',
            'loss_types', 'uncertainty_types']
 
@@ -319,6 +319,8 @@ def main(what, report=False):
         print_subclass(what, BaseMSR)
     elif what.startswith('geohash'):
         print_geohash(what)
+    elif what == 'db':
+        print(config.dbserver.file)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':

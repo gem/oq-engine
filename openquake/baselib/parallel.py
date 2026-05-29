@@ -188,6 +188,7 @@ import time
 import socket
 import signal
 import pickle
+import sqlite3
 import getpass
 import inspect
 import logging
@@ -455,6 +456,9 @@ class Result(object):
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
+            if isinstance(val, sqlite3.Cursor):
+                # happens when the DbServer performs an UPDATE command
+                val = val.lastrowid
             res = Result(val, mon)
         return res
 

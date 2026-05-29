@@ -52,11 +52,23 @@ class ThingbaijamInterfaceTestCase(BaseMSRTestCase):
         self._test_get_median_mag(19952.6231496888, None, 8.00, places=2)
         self._test_get_median_mag(2243.8819237828, None, 7.00, places=2)
 
+    def test_length_and_width(self):
+        """
+        Tests length and width relationships
+        """
+        msr = ThingbaijamInterface()
+        numpy.testing.assert_allclose(msr.get_median_length(7.0), 46.665938, rtol=0.0001)
+        numpy.testing.assert_allclose(msr.get_median_width(7.0), 48.083934, rtol=0.0001)
+        
+        # Test of standard deviations for length and width
+        self.assertEqual(msr.get_std_dev_length(7.0), 0.107)
+        self.assertEqual(msr.get_std_dev_width(7.0), 0.099)
+
 
 class ThingbaijamStrikeSlipTestCase(BaseMSRTestCase):
     '''
     Tests for the magnitude-scaling relationship Thingbaijam et al. (2017) for
-    interface events.
+    strike-slip events.
     '''
 
     MSR_CLASS = ThingbaijamStrikeSlip
@@ -81,4 +93,16 @@ class ThingbaijamStrikeSlipTestCase(BaseMSRTestCase):
         """
         self._test_get_median_mag(11220.184543, None, 8.00, places=2)
         self._test_get_median_mag(1282.33058266, None, 7.00, places=2)
+
+    def test_length_and_width(self):
+        """
+        Tests length and width relationships
+        """
+        msr = ThingbaijamStrikeSlip()
+        numpy.testing.assert_allclose(msr.get_median_length(7.0), 66.6806769, rtol=0.0001)
+        numpy.testing.assert_allclose(msr.get_median_width(7.0), 19.2309173, rtol=0.0001)
+        
+        # Test of standard deviations for length and width
+        self.assertEqual(msr.get_std_dev_length(7.0), 0.151)
+        self.assertEqual(msr.get_std_dev_width(7.0), 0.105)
 
