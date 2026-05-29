@@ -128,6 +128,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
 
 class HazusLiquefaction(SecondaryPeril):
     peril = 'liquefaction'
+    inputs = ["liq_susc_cat", "gwd"]
     outputs = ["LiqProb"]
 
     def __init__(self, map_proportion_flag=True):
@@ -155,6 +156,7 @@ class HazusDeformation(SecondaryPeril):
     Computes PGDMax or PGDGeomMean from PGA
     """
     peril = 'liquefaction'
+    inputs = ["liq_susc_cat"]
     outputs = ["PGDMax"]
 
     def __init__(
@@ -200,6 +202,7 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["cti"]
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -234,6 +237,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["dr", "dc", "precip"]
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -279,6 +283,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["dw", "gwd", "precip"]
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -324,6 +329,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["dw", "gwd", "precip"]
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -383,6 +389,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["dw", "gwd", "precip"]
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -443,6 +450,7 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
     peril = 'liquefaction'
+    inputs = ["cti"]
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -478,6 +486,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
     occurrence.
     """
     peril = 'liquefaction'
+    inputs = ["dw", "gwd", "precip"]
     outputs = ["LiqOccur", "LiqProb"]
 
     def prepare(self, sites=None):
@@ -536,6 +545,7 @@ class Jibson2007ALandslides(SecondaryPeril):
     as function of pga and critical acceleration.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -566,6 +576,7 @@ class Jibson2007BLandslides(SecondaryPeril):
     5.3 and 7.6.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -601,6 +612,7 @@ class ChoRathje2022Landslides(SecondaryPeril):
     pgv and considering the slope fundamental period.
     '''
     peril = 'landslide'
+    inputs = ["tslope", "crit_accel", "hratio"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -623,6 +635,7 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     pgv and moment magnitude.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -642,6 +655,7 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     pga and moment magnitude.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -661,6 +675,7 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     the landslide critical acceleration) and moment magnitude.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -680,6 +695,7 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     pga
     '''    
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -714,6 +730,7 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
     Computes earthquake-induced displacements from pga and pgv
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
         
@@ -745,6 +762,7 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
     magnitude
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -763,6 +781,7 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
     to Jibson et al. (2000) as function of arias intensity.
     '''
     peril = 'landslide'
+    inputs = ["crit_accel"]
     outputs = ["Disp", "DispProb"]
     prepare = prepare
 
@@ -782,6 +801,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
     Computes the landslide probability from PGV and areal coverage.
     """
     peril = 'landslide'
+    inputs = ["slope", "lithology", "landcover", "cti"]
     outputs = ["LsProb", "LSE"]
 
     def __init__(
@@ -841,6 +861,7 @@ class AllstadtEtAl2022Landslides(SecondaryPeril):
     Corrects LSE according to Allstadt et al. (2022).
     """
     peril = 'landslide'
+    inputs = ["slope", "lithology", "landcover", "cti"]
     outputs = ["LsProb", "LSE"]
 
     def __init__(
@@ -954,6 +975,7 @@ class Volcanic(SecondaryPeril):
     Import ASH, LAVA, LAHAR, PYRO from CSV files
     """
     peril = 'volcanic'
+    inputs = []
     outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
 
     def prepare(self, sites=None):
