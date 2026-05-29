@@ -96,8 +96,8 @@ class AristotleValidateTestCase(unittest.TestCase):
             _rup, rupdic, params, err = impact_validate(
                 POST, user, rupture_file, stations)
             expected = {
-                # hypocenter was outside the rupture surface and it is moved to the
-                # center of the surface
+                # hypocenter was outside the rupture surface and it is
+                # moved to the center of the surface
                 'dep': 35.0,
                 'lat': 28.04196,
                 'lon': 84.67006,
@@ -143,7 +143,8 @@ class AristotleValidateTestCase(unittest.TestCase):
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
-        self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
+        self.assertEqual(rupdic['local_timestamp'],
+                         '2024-08-18 07:10:26+12:00')
         self.assertEqual(err, {})
 
     def test_5(self):
