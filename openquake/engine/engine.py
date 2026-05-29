@@ -317,6 +317,8 @@ def notify_job_complete(job_id, notify_to, exc=None):
 
 
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
+    if concurrent_jobs > 1:
+        print(f'================ Using {concurrent_jobs=} ==================')
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -724,7 +726,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     new.append(ini)
                     new_names.append(name)
             if new:
-                one_job = concurrent_jobs == 1 or len(wf.names) == 1
+                one_job = len(wf.names) == 1
                 with wfjob:
                     jobs = create_jobs(new, log_level=logging.INFO if
                                        one_job else logging.WARNING,

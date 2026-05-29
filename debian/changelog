@@ -2,6 +2,7 @@
   * Added additional magnitude-scaling relationships to thingbaijam2017.py
 
   [Michele Simionato]
+  * Added command `oq info db` to extract the path to the sqlite file
   * Implemented a workflow to run the 2026 Global Risk Model
 
   [Thuany Costa de Lima]
