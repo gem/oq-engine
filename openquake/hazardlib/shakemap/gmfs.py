@@ -259,7 +259,7 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
 
 
 def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
-            num_gmfs, seed, imts=None):
+            num_gmfs, seed, imts=None, sec_imts=None):
     """
     :param shakemap: site coordinates with shakemap values
     :param gmf_dict: a dictionary key -> arrays
@@ -268,6 +268,7 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
     :param imts: list of IMT-strings for which gmfs are generated
+    :param sec_imts: FIXME
     :returns: list of IMT-objects, array of GMFs of shape (N, E, M)
     """
     # create list of imts
@@ -277,6 +278,12 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
         imts = [imt.from_string(im)
                 for im in imts if im in shakemap['std'].dtype.names]
 
+    # OQ_DISTRIBUTE=no OQ_APPLICATION_MODE=IMPACT pytest -vs openquake/server/tests/test_impact_mode.py -k success
+    breakpoint()
+    # FIXME
+    # if sec_imts is not None:
+    #     imts.extend(sec_imts)
+
     # assign iterators
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
@@ -284,6 +291,8 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     # generate standard normal random variables of shape (M*N, E)
     Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
+
+    # FIXME: how to handle the secondary perils data?
 
     # build array of mean values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]

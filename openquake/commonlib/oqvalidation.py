@@ -424,7 +424,7 @@ inputs:
 
 intensity_measure_types:
   List of intensity measure types in an event based calculation.
-  Example: *intensity_measure_types = PGA SA(0.1)*.
+  Example: *intensity_measure_types = PGA, SA(0.1)*.
   Default: empty list
 
 intensity_measure_types_and_levels:

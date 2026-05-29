@@ -1267,6 +1267,13 @@ def get_uploaded_file_path(request, filename):
 
 
 def create_impact_job(request, params, email_file_path):
+    # NOTE: params['rupture_dict'] is a string representation of a
+    # dictionary, not a JSON string, so we can't use json.loads
+    rupdic = ast.literal_eval(params['rupture_dict'])
+    if rupdic['approach'] == 'use_shakemap_from_usgs':
+        params['secondary_perils'] = (
+            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
+        params['intensity_measure_types'] = 'PGA, PGV'
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
         user_name=utils.get_username(request))

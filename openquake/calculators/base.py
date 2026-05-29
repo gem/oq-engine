@@ -1693,7 +1693,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
-                             oq.random_seed, oq.imtls)
+                             oq.random_seed, oq.imtls, oq.sec_imts)
         N, E, _M = gmfs.shape
         events = store_events(calc.datastore, E)
         # convert into an array of dtype gmv_data_dt

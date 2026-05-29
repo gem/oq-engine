@@ -61,7 +61,7 @@ QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL MMI PGA PSA03 PSA06 PSA10 PSA30 '
+    'LON LAT SVEL MMI PGA PGV PSA03 PSA06 PSA10 PSA30 '
     'STDMMI STDPGA STDPSA03 STDPSA06 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
@@ -70,6 +70,7 @@ FIELDMAP = {
     'SVEL': 'vs30',
     'MMI': ('val', 'MMI'),
     'PGA': ('val', 'PGA'),
+    'PGV': ('val', 'PGV'),
     'PSA03': ('val', 'SA(0.3)'),
     'PSA06': ('val', 'SA(0.6)'),
     'PSA10': ('val', 'SA(1.0)'),
