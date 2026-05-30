@@ -62,8 +62,7 @@ class ServerConfig(AppConfig):
                 raise ImportError(
                     'The python package "timezonefinder" is not installed.'
                     ' It is required in order to convert the UTC time to'
-                    ' the local time of the event. You can install it'
-                    ' running: pip install timezonefinder==6.5.2')
+                    ' the local time of the event.')
         if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
