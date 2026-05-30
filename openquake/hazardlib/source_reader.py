@@ -217,7 +217,7 @@ def _read_smdict(smlt, converter, dstore):
 
 def get_csm(oq, full_lt, dstore=None):
     """
-    Build source models from the logic tree and to store
+    Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
     """
     from openquake.hazardlib.logictree import RuntimeSourceModelLT
@@ -247,6 +247,28 @@ def get_csm(oq, full_lt, dstore=None):
         save_read_times(dstore, smdict.values())
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
+    # checking ps_grid_spacing
+    pointlike_sources = 0
+    for sm in smdict.values():
+        for sg in sm.src_groups:
+            for src in sg:
+                if src.code in b'PAM':
+                    pointlike_sources += 1
+                    break
+    if (oq.strict and oq.mosaic_model and pointlike_sources and
+        'classical' in oq.calculation_mode and oq.ps_grid_spacing == 0
+        and not oq.sites):
+        raise InvalidFile(f'{oq.inputs["job_ini"]}: '
+                          'missing ps_grid_spacing')
+
+    return build_csm(oq, full_lt, smdict, dstore)
+
+
+def build_csm(oq, full_lt, smdict, dstore):
+    """
+    Applies uncertainties, builds the source groups and returns
+    a CompositeSourceModel instance
+    """
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
