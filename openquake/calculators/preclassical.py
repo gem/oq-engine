@@ -35,7 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 20_000  # only on fault sources
+MAX_NUM_RUPTURES = 20_000  # tentative
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -94,12 +94,13 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter_mag(srcs, min_mag):
+def _filter_mag(srcs, min_mag, strict):
     # filter by magnitude and count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        if ss.num_ruptures > MAX_NUM_RUPTURES and ss.code in b'FSCXKN':
+        if ss.num_ruptures > MAX_NUM_RUPTURES and strict and not hasattr(
+                ss, 'location'):  # same condition as in `get_ctxs`
             raise RuntimeError('%s has too many ruptures' % ss)
     return out
 
@@ -109,6 +110,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     Filter and weight the sources. Also split them, except for
     pointlike and multifault sources, which have been split already.
     """
+    oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
@@ -118,7 +120,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     splits = []
     for src in srcs:
         if src.code == b'F':
-            if N and N <= cmaker.max_sites_disagg:
+            if N and N <= oq.max_sites_disagg:
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
@@ -136,14 +138,14 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if cmaker.split_sources and src.nsites and src.code != b'F':
+        if oq.split_sources and src.nsites and src.code != b'F':
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
 
     # filter by magnitude and count ruptures
-    splits = _filter_mag(splits, cmaker.oq.minimum_magnitude)
+    splits = _filter_mag(splits, oq.minimum_magnitude, oq.strict)
     if not splits:
         return {}
 
