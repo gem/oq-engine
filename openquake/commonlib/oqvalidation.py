@@ -855,6 +855,11 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+strict:
+  Enable strict checking on fault sources and ps_grid_spacing
+  Example: *strict = false*
+  Default: True
+
 tectonic_region_type:
    Used to specify a tectonic region type.
    Example: *tectonic_region_type = Active Shallow Crust*.
@@ -1230,6 +1235,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
+    strict = valid.Param(valid.boolean, True)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
