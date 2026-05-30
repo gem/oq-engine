@@ -1048,6 +1048,8 @@ class ContextMaker(object):
             with self.ir_mon:
                 allrups = list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step))
+                if src.code == b'A':
+                    breakpoint()
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = sorted([rup for rup in allrups
