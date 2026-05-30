@@ -478,6 +478,10 @@ class _Workflow:
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
 
+        self.inis, self.names = self._inis_names(ddic, prefix)
+        check_unique(self.names, workflow_toml)
+
+    def _inis_names(self, ddic, prefix):
         inis = []
         names = []
         self.success = []
@@ -500,35 +504,7 @@ class _Workflow:
             self.fix_paths([dic])
             inis.append(dic)
             names.append(prefix + k)
-
-        self.inis, self.names, self.success = self._ini_name_success(
-            ddic, prefix)
-        check_unique(self.names, workflow_toml)
-
-    def _ini_name_success(self, ddic, prefix):
-        inis = []
-        names = []
-        success = []
-        for k, dic in ddic.items():
-            assert len(k) <= 20, k
-            if k == 'success':
-                if isinstance(dic, dict):
-                    self.success = [dic]
-                elif isinstance(dic, list):
-                    self.success = dic
-                else:
-                    raise ValueError('"success": %s', dic)
-                for s in self.success:
-                    s['func']  # each success dictionary must contain a func
-                self.fix_paths(self.success)
-                continue
-
-            assert k[0].isupper(), k
-            assert isinstance(dic, dict), dic
-            self.fix_paths([dic])
-            inis.append(dic)
-            names.append(prefix + k)
-        return numpy.array(inis), numpy.array(names), success
+        return numpy.array(inis), numpy.array(names)
 
     def fix_paths(self, dicts):
         """
