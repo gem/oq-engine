@@ -2,7 +2,7 @@
 description = "multi-workflow"
 env.OQ_SAMPLE_ASSETS = 0.1
 may_fail = ["riskJob"]
-replace = {out_file="SES.hdf5", hazard_calculation_id="SES.hdf5"}
+override = {out_file="SES.hdf5", hazard_calculation_id="SES.hdf5"}
 
 [hazard.Job]
 ini = "job_hazard.ini"

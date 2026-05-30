@@ -449,6 +449,7 @@ OVERRIDABLE_PARAMS = (
 
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
+    # prefix is empty unless we are in a multi-workflow
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
         self.workflow_dir = os.path.dirname(workflow_toml)
@@ -456,20 +457,21 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
+        self.env = defaults.pop('env', {})
+        self.override = defaults.pop('override', {})
 
         # set the passed environment variables if not already set
-        env = defaults.get('env', {})
-        for k, v in env.items():
+        for k, v in self.env.items():
             if k not in os.environ:
                 os.environ[k] = str(v)
 
-        # override feature for multi-workflows
-        repl = defaults.get('workflow', {}).get('override', {})
-        if repl:
+        # override feature
+        if self.override:
+            breakpoint()
             for _, dic in ddic.items():
                 for name in dic:
-                    if name in repl:
-                        dic[name] = repl[name]
+                    if name in self.override:
+                        dic[name] = self.override[name]
 
         # check the repositories exist
         for value in self.checkout:
@@ -500,9 +502,34 @@ class _Workflow:
             inis.append(dic)
             names.append(prefix + k)
 
-        check_unique(names, workflow_toml)
-        self.inis = numpy.array(inis)
-        self.names = numpy.array(names)
+        self.inis, self.names, self.success = self._ini_name_success(
+            ddic, prefix)
+        check_unique(self.names, workflow_toml)
+
+    def _ini_name_success(self, ddic, prefix):
+        inis = []
+        names = []
+        success = []
+        for k, dic in ddic.items():
+            assert len(k) <= 20, k
+            if k == 'success':
+                if isinstance(dic, dict):
+                    self.success = [dic]
+                elif isinstance(dic, list):
+                    self.success = dic
+                else:
+                    raise ValueError('"success": %s', dic)
+                for s in self.success:
+                    s['func']  # each success dictionary must contain a func
+                self.fix_paths(self.success)
+                continue
+
+            assert k[0].isupper(), k
+            assert isinstance(dic, dict), dic
+            self.fix_paths([dic])
+            inis.append(dic)
+            names.append(prefix + k)
+        return numpy.array(inis), numpy.array(names), success
 
     def fix_paths(self, dicts):
         """
