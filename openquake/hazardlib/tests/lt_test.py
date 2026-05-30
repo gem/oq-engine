@@ -520,7 +520,7 @@ OQ = types.SimpleNamespace(
     source_id=(), discard_trts='', floating_x_step=0, floating_y_step=0,
     source_nodes=(), infer_occur_rates=False, ses_seed=42,
     disagg_by_src=False, calculation_mode='classical', use_rates=False,
-    strict=False
+    strict=True, mosaic_model=False
     )
 
 
