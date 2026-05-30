@@ -545,7 +545,8 @@ class Jibson2007ALandslides(SecondaryPeril):
     as function of pga and critical acceleration.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -576,7 +577,8 @@ class Jibson2007BLandslides(SecondaryPeril):
     5.3 and 7.6.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -612,7 +614,8 @@ class ChoRathje2022Landslides(SecondaryPeril):
     pgv and considering the slope fundamental period.
     '''
     peril = 'landslide'
-    inputs = ["tslope", "crit_accel", "hratio"]
+    inputs = ["tslope", "slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness", "hratio"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -635,7 +638,8 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     pgv and moment magnitude.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -655,7 +659,8 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     pga and moment magnitude.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -675,7 +680,8 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     the landslide critical acceleration) and moment magnitude.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -695,7 +701,8 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     pga
     '''    
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -730,7 +737,8 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
     Computes earthquake-induced displacements from pga and pgv
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
         
@@ -762,7 +770,8 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
     magnitude
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp"]
     prepare = prepare
 
@@ -781,7 +790,8 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
     to Jibson et al. (2000) as function of arias intensity.
     '''
     peril = 'landslide'
-    inputs = ["crit_accel"]
+    inputs = ["slope", "cohesion_mid", "friction_mid", "saturation",
+              "dry_density", "slab_thickness"]
     outputs = ["Disp", "DispProb"]
     prepare = prepare
 

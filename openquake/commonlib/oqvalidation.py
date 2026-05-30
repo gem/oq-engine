@@ -1448,6 +1448,7 @@ class OqParam(valid.ParamSet):
             self.raise_invalid('Missing gsim or gsim_logic_tree_file')
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
+        self.sec_imts  # populate req_site_params
         self.req_site_params = sorted(self.req_site_params)
 
     def check_risk(self):
@@ -2042,6 +2043,7 @@ class OqParam(valid.ParamSet):
         """
         outs = []
         for sp in self.get_sec_perils():
+            self.req_site_params.update(sp.inputs)
             for out in sp.outputs:
                 outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
