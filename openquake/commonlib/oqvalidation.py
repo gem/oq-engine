@@ -35,7 +35,7 @@ import itertools
 from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
-    DictArray, AccumDict, cached_property, engine_version, count_lines)
+    DictArray, AccumDict, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -1022,6 +1022,18 @@ def check_increasing(dframe, *columns):
     for col in columns:
         arr = dframe[col].to_numpy()
         assert (numpy.diff(arr) >= 0).all(), arr
+
+
+def extend(lst, values):
+    """
+    Extend the lst with the values, skipping duplicates (use small lists)
+    """
+    if isinstance(lst, set):
+        lst.update(values)
+        return
+    for value in values:
+        if value not in lst:
+            lst.append(value)
 
 
 class OqParam(valid.ParamSet):
@@ -2042,14 +2054,14 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(
             self.secondary_perils, self.sec_peril_params, self)
 
-    @cached_property
+    @property
     def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
         outs = []
         for sp in self.get_sec_perils():
-            self.req_site_params.update(sp.inputs)
+            extend(self.req_site_params, sp.inputs)
             for out in sp.outputs:
                 outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
