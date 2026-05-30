@@ -458,7 +458,7 @@ class _Workflow:
         self.may_fail = self.defaults.pop('may_fail', [])
 
         # set the passed environment variables if not already set
-        env = defaults.get('workflow', {}).get('env', {})
+        env = defaults.get('env', {})
         for k, v in env.items():
             if k not in os.environ:
                 os.environ[k] = str(v)
