@@ -35,7 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 27_000  # only on fault sources
+MAX_NUM_RUPTURES = 27_000  # so that the drouet calculation run
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
