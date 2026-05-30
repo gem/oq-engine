@@ -193,7 +193,7 @@ def save_read_times(dstore, source_models):
 
 def get_csm(oq, full_lt, dstore=None):
     """
-    Build source models from the logic tree and to store
+    Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
     """
     converter = sourceconverter.SourceConverter(
@@ -249,6 +249,14 @@ def get_csm(oq, full_lt, dstore=None):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
+    return build_csm(oq, full_lt, smdict, dstore)
+
+
+def build_csm(oq, full_lt, smdict, dstore):
+    """
+    Applies uncertainties, builds the source groups and returns
+    a CompositeSourceModel instance
+    """
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
