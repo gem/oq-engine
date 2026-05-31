@@ -1066,8 +1066,8 @@ class ContextMaker(object):
         ctxs = self.gen_contexts(rups_sites, src_id)
         with self.ctx_mon:
             if len(rups_sites) == 1 and not self.minimum_distance:
-                return list(ctxs)
-            return [self.recarray([c]) for c in ctxs]
+                return ctxs
+            return (self.recarray([c]) for c in ctxs)
 
     def max_intensity(self, sitecol1, mags, dists):
         """

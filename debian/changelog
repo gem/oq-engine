@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Saved memory in classical calculation in case of sources with many
+    ruptures affecting many sites by yieldings contexts
+
   [Fahrettin Kuran]
   * Added additional magnitude-scaling relationships to thingbaijam2017.py
 
