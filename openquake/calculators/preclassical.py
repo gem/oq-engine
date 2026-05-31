@@ -35,7 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 20_000  # tentative
+MAX_NUM_RUPTURES = 25_000  # tentative
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -67,11 +67,13 @@ def check_maxmag(pointlike):
     """
     Check for pointlike sources with high magnitudes
     """
+    logged = False
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
-        if maxmag >= 9.:
+        if maxmag >= 9. and not logged:
             logging.info('%s %s has maximum magnitude %s',
                          src.__class__.__name__, src.source_id, maxmag)
+            logged = True  # avoid logging thousands of messages
 
 
 def collapse_nphc(src):
