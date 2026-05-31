@@ -72,11 +72,14 @@ def aelo(mosaic_dir):
     return save(mosaic_dir, 'AELO.toml', '\n'.join(lst))
 
 
-def ghm(mosaic_dir, legacy=False):
+def ghm(mosaic_dir, models, legacy=False):
     "Build GHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
-    add_checkout(lst, MODELS)
-    for mod in MODELS:
+    if models == ['ALL']:
+        models = MODELS
+    
+    add_checkout(lst, models)
+    for mod in models:
         if legacy:  # to support unzipped_mosaic_run
             if mod == 'CND':
                 mod = 'CAN'
