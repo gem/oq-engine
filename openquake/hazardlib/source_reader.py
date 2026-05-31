@@ -236,8 +236,8 @@ def get_csm(oq, full_lt, dstore=None):
     smlt = full_lt.source_model_lt
     if isinstance(smlt, RuntimeSourceModelLT):
         logging.info(
-            'Building runtime source model in-memory', # 1 branching lvl only
-                     smlt.num_paths)
+            'Building runtime source model in-memory (%d paths)',
+            smlt.num_paths)
         smdict = smlt.build_smdict(converter)
     else:
         logging.info('Reading the source model(s) in parallel')
