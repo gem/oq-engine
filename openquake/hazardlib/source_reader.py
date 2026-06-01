@@ -465,7 +465,7 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def reduce_sources(sources_with_same_id, full_lt):
+def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
     :returns: a list of truly unique sources, ordered by trt_smr
@@ -477,6 +477,9 @@ def reduce_sources(sources_with_same_id, full_lt):
         src = srcs[0]
         if len(srcs) > 1:  # happens in logictree/case_07
             src.trt_smr = tuple(s.trt_smr for s in srcs)
+            if event_based:
+                src.samples = tuple(s.samples for s in srcs)
+                src.smweight = tuple(s.smweight for s in srcs)
         else:
             src.trt_smr = src.trt_smr,
         out.append(src)
@@ -511,8 +514,8 @@ def _get_csm(oq, full_lt, groups, event_based):
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             # NB: not reducing the sources in event based
-            if len(srcs) > 1 and not event_based:
-                srcs = reduce_sources(srcs, full_lt)
+            if len(srcs) > 1:
+                srcs = reduce_sources(srcs, full_lt, event_based)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):
