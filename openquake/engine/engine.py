@@ -449,6 +449,7 @@ OVERRIDABLE_PARAMS = (
 
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
+    # prefix is empty unless we are in a multi-workflow
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
         self.workflow_dir = os.path.dirname(workflow_toml)
@@ -456,20 +457,20 @@ class _Workflow:
         self.description = defaults.pop('description')
         self.checkout = self.defaults.pop('checkout', {})  # repo->branch
         self.may_fail = self.defaults.pop('may_fail', [])
+        self.env = defaults.pop('env', {})
+        self.override = defaults.pop('override', {})
 
         # set the passed environment variables if not already set
-        env = defaults.get('workflow', {}).get('env', {})
-        for k, v in env.items():
+        for k, v in self.env.items():
             if k not in os.environ:
                 os.environ[k] = str(v)
 
-        # override feature for multi-workflows
-        repl = defaults.get('workflow', {}).get('override', {})
-        if repl:
+        # override feature
+        if self.override:
             for _, dic in ddic.items():
                 for name in dic:
-                    if name in repl:
-                        dic[name] = repl[name]
+                    if name in self.override:
+                        dic[name] = self.override[name]
 
         # check the repositories exist
         for value in self.checkout:
@@ -477,6 +478,10 @@ class _Workflow:
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
 
+        self.inis, self.names = self._inis_names(ddic, prefix)
+        check_unique(self.names, workflow_toml)
+
+    def _inis_names(self, ddic, prefix):
         inis = []
         names = []
         self.success = []
@@ -499,10 +504,7 @@ class _Workflow:
             self.fix_paths([dic])
             inis.append(dic)
             names.append(prefix + k)
-
-        check_unique(names, workflow_toml)
-        self.inis = numpy.array(inis)
-        self.names = numpy.array(names)
+        return numpy.array(inis), numpy.array(names)
 
     def fix_paths(self, dicts):
         """
@@ -760,8 +762,9 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         success['dstore'] = dstore
                         success['calcs'] = calcs
                         sap.run_func(success)
-                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
-                                f'finished step {wf_no+1} of {n_wfs}')
+                if n_wfs > 1:
+                    logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                    f'finished step {wf_no+1} of {n_wfs}')
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
