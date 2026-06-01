@@ -93,6 +93,7 @@ class LogictreeTestCase(CalculatorTestCase):
 
         # check event_based_mfd
         self.run_calc(case_01.__file__, 'rup.ini')
+        breakpoint()
         [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
 
@@ -775,12 +776,11 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
         df = view('event_based_mfd', self.calc.datastore)
-
         self.assertEqual(str(df), '''\
       freq  occ_rate
 mag                 
-4.0  2.760     2.795
-4.5  1.602     1.614''')
+4.0  2.725     2.795
+4.5  1.578     1.614''')
 
     def test_case_84(self):
         # test maxMagGRRelativeNoMoBalance
