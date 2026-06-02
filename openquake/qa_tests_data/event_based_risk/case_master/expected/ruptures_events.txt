@@ -1,9 +1,9 @@
 +--------------------------+-----------------+
-| Total number of ruptures | 10              |
+| Total number of ruptures | 9               |
 +--------------------------+-----------------+
-| Total number of events   | 39              |
+| Total number of events   | 73              |
 +--------------------------+-----------------+
-| Rupture multiplicity     | 3.90000         |
+| Rupture multiplicity     | 8.1110          |
 +--------------------------+-----------------+
-| Events by rlz            | 11 12 4 9 1 1 1 |
+| Events by rlz            | 12 20 18 21 1 1 |
 +--------------------------+-----------------+

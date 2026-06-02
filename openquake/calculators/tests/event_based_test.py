@@ -494,7 +494,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
     def test_case_25(self):
-        # logic tree common + extra
+        # logic tree common + extra, without extendModel
         # common1.xml contains "5" "6"
         # common2.xml contains "1" "2"
         # extra1.xml contains "3"
@@ -505,9 +505,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
 
     def test_case_25_bis(self):
+        # this is the equivalent of case_25 but using extendModel
         self.run_calc(case_25.__file__, 'job2.ini')
         mean = export(('hcurves', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+        self.assertEqualFiles('expected/hazard_curve2-PGA.csv', mean)
 
     def test_case_25_tris(self):
         # test with common1.xml present into branchs and sampling

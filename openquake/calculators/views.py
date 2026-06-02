@@ -1510,22 +1510,17 @@ def view_rupture(token, dstore):
     return get_ebrupture(dstore, rup_id)
 
 
-@view.add('event_rates')
-def view_event_rates(token, dstore):
+@view.add('events_by_rlz')
+def view_events_rlz(token, dstore):
     """
-    Show the number of events per realization multiplied by risk_time/eff_time
+    Show the number of events per realization
     """
-    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
-    if oq.calculation_mode != 'event_based_damage':
-        return numpy.ones(R)
-    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
-        oq.ses_per_logic_tree_path * oq.investigation_time)
-    if oq.collect_rlzs:
-        return numpy.array([len(dstore['events']) * time_ratio / R])
-    else:
-        rlzs = dstore['events']['rlz_id']
-        return numpy.bincount(rlzs, minlength=R) * time_ratio
+    out = numpy.zeros(R, [('rlz', U32), ('num_events', U32)])
+    rlzs = dstore['events']['rlz_id']
+    out['rlz'] = numpy.arange(R)
+    out['num_events'] = numpy.bincount(rlzs, minlength=R)
+    return out
 
 
 def tup2str(tups):

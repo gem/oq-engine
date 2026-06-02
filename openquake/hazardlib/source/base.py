@@ -217,7 +217,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
-    samples = 1
+    samples = 1  # set by the engine
     smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
@@ -283,16 +283,23 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
+        mul = len(self.trt_smrs)  # how many times the source is multiplied
+        if mul > 1:
+            triplet = (self.samples, self.smweight, self.trt_smrs)
+        else:
+            triplet = ([self.samples], [self.smweight], self.trt_smrs)
         ebrs = []
-        for rup, rupid, num_occ in sample(self, self.samples * num_ses, seed):
-            if hasattr(rup, 'occurrence_rate'):
-                # defined only for poissonian sources
-                # needed to get convergency of the frequency to the rate
-                # tested in oq-risk-tests etna0 and case_83_eb
-                rup.occurrence_rate *= self.smweight
-            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
-                            seed=rupid + TWO30 * self.id + ses_seed)
-            ebrs.append(ebr)
+        for i, (samples, smweight, trt_smr) in enumerate(zip(*triplet)):
+            for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
+                rupid = rid + i * self.num_ruptures
+                if hasattr(rup, 'occurrence_rate'):
+                    # defined only for poissonian sources
+                    # needed to get convergency of the frequency to the rate
+                    # tested only in oq-risk-tests etna0
+                    rup.occurrence_rate *= smweight
+                ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
+                                seed=rupid + TWO30 * self.id + ses_seed)
+                ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):
