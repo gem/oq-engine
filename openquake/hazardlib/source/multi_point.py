@@ -113,8 +113,8 @@ class MultiPointSource(ParametricSeismicSource):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`
         for description of parameters and return value.
         """
-        src = next(iter(self))  # assume the number of mags is constant
-        return (len(self) * len(src.get_annual_occurrence_rates()) *
+        mfd = next(iter(self.mfd))  # assume the number of mags is constant
+        return (len(self) * len(mfd.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
