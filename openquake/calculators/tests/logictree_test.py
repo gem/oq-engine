@@ -93,13 +93,12 @@ class LogictreeTestCase(CalculatorTestCase):
 
         # check event_based_mfd
         self.run_calc(case_01.__file__, 'rup.ini')
-        breakpoint()
         [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
 
         # check that the occurrence rates are the expected ones
         # NB: in engine < 3.17 this check fails
-        src, src = self.calc.csm.get_sources()
+        [src] = self.calc.csm.get_sources()
         occrates = src.mfd.occurrence_rates
         self.assertEqual(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
         df = self.calc.datastore.read_df('ruptures', 'id')[
