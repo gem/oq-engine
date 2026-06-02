@@ -28,6 +28,7 @@ from openquake.baselib import (
     config, hdf5, parallel, general, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import imt, valid, logictree, InvalidFile
+from openquake.hazardlib.countries import ALIASES
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
@@ -379,6 +380,8 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
             oq_by = {}
             for name in grp:
                 model = name[-3:]  # i.e. AfricaNAF -> NAF
+                if model in ALIASES:
+                    model = ALIASES[model]  # TWN -> TEM
                 oq_by[model] = oq.from_parent(
                     dstore.parent[f'oqparam/{name}'], new=True)
                 oq_by[model].mags_by_trt = AccumDict(accum=set())
