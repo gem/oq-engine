@@ -34,7 +34,8 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -377,6 +378,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         # populate oq_by when the parent is a SES.hdf5 file
         grp = dstore.parent['oqparam']
         if isinstance(grp, h5py.Group):
+            # tested in global_ses_test
             oq_by = {}
             for name in grp:
                 model = name[-3:]  # i.e. AfricaNAF -> NAF
@@ -676,14 +678,11 @@ class EventBasedCalculator(base.HazardCalculator):
         allargs = []
         logging.info('Building ruptures from %d groups',
                      len(self.csm.src_groups))
-        g_index = 0
-        for sg_id, sg in enumerate(self.csm.src_groups):
-            if not sg.sources:
-                continue
-            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
-            cmaker = ContextMaker(sg.trt, rgb, oq)
-            cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
-            g_index += len(rgb)
+        trt_smrs = self.csm.get_trt_smrs()
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        for sg_id, cmaker in cmakers.enumerate():
+            sg = self.csm.src_groups[sg_id]
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
