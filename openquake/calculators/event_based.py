@@ -377,6 +377,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         # populate oq_by when the parent is a SES.hdf5 file
         grp = dstore.parent['oqparam']
         if isinstance(grp, h5py.Group):
+            # tested in global_ses_test
             oq_by = {}
             for name in grp:
                 model = name[-3:]  # i.e. AfricaNAF -> NAF
