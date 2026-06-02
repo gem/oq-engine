@@ -20,6 +20,7 @@ hazardlib stands for Hazard Library.
 """
 import os
 import ast
+import logging
 import operator
 import itertools
 import configparser
@@ -156,6 +157,8 @@ def _smlt_from_script(script_path, hparams, sourceID):
     are then used here to build a :class:`RuntimeSourceModelLT` logic tree.
     """
     import runpy
+    logging.info(
+        'Building runtime source model in-memory from %s', script_path)
     globs = runpy.run_path(script_path)
     if 'get_source_model_lt' not in globs:
         raise RuntimeError(
