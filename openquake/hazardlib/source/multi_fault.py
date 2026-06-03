@@ -310,7 +310,7 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
 # NB: as side effect delete _rupture_idxs,
 # add .hdf5path and possibly .rupids_by_tag
 def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
-                   del_rupture_idxs=True):
+                   del_rupture_idxs=True, split=True):
     """
     Serialize MultiFaultSources
  
@@ -351,9 +351,11 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
             if hasattr(src, 'rupids_by_tag'):
                 items = [(f'{src.source_id}@{tag}', idxs)
                          for tag, idxs in src.rupids_by_tag.items()]
-            else:
+            elif split:
                 items = [(tag, np.arange(slc.start, slc.stop))
                          for tag, slc in src.gen_slices()]
+            else:
+                items = [(src.source_id, np.arange(len(src.num_ruptures)))]
             for source_id, rupids in items:
                 split = copy.copy(src)
                 split.source_id = source_id

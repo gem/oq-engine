@@ -301,7 +301,8 @@ def build_csm(oq, full_lt, smdict, dstore):
     # must be called *after* _fix_dupl_ids
     fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
-        sitecol if oq.disagg_by_src and oq.use_rates else None)
+        sitecol if oq.disagg_by_src and oq.use_rates else None,
+        split=not oq.calculation_mode.startswith('event_based'))
     return csm
 
 
@@ -368,7 +369,8 @@ def replace(lst, splitdic, key):
     lst[:] = new
 
 
-def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
+def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
+                          split=True):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -399,7 +401,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
                     mfsources.append(src)
         if mfsources:
             split_dic, secparams = save_and_split(
-                mfsources, sections, hdf5path, site1)
+                mfsources, sections, hdf5path, site1, split)
             for sg in src_groups:
                 replace(sg.sources, split_dic, 'source_id')
             return secparams
