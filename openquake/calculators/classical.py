@@ -53,6 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
+RATES_BATCH_SIZE = 100  # Every RATES_BATCH_SIZE tasks concat + write to hdf5
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
@@ -422,14 +423,27 @@ class ClassicalCalculator(base.HazardCalculator):
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates
-            with self.monitor('storing rates', measuremem=True):
-                chunkno = dic.get('chunkno')  # None with the current impl.
-                _store(rmap, self.num_chunks, self.datastore, chunkno)
+            self._rates_buffer.append(rmap)
+            if len(self._rates_buffer) >= RATES_BATCH_SIZE:
+                self._write_rates_buffer()
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap[grp_id] += rmap
         return acc
+
+    def _write_rates_buffer(self):
+        """
+        Every RATES_BATCH_SIZE concatenate the rates arrays and write
+        to the hdf5 in a single _store call and clear list - this is
+        to reduce I/O when using many base sources (far more than the 
+        BASE183 limit as can occur in RuntimeSourceModelLT approach).
+        """
+        if not self._rates_buffer:
+            return
+        with self.monitor('storing rates', measuremem=True):
+            rates = numpy.concatenate(self._rates_buffer)
+            _store(rates, self.num_chunks, self.datastore)
+        self._rates_buffer = []
 
     def create_rup(self):
         """
@@ -497,6 +511,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.num_chunks = getters.get_num_chunks(self.datastore)
         logging.info('Using num_chunks=%d', self.num_chunks)
+        self._rates_buffer = []
 
         # create empty dataframes
         self.datastore.create_df(
@@ -650,7 +665,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self._post_execute(acc)
 
     def _post_execute(self, acc):
-        # save the rates and performs some checks
+        # flush any buffered rates before processing self.rmap
+        self._write_rates_buffer()
         oq = self.oqparam
         size_mb = sum(rmap.size_mb for rmap in self.rmap.values())
         if size_mb > 100:
