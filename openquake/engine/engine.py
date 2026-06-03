@@ -460,11 +460,6 @@ class _Workflow:
         self.env = defaults.pop('env', {})
         self.override = defaults.pop('override', {})
 
-        # set the passed environment variables if not already set
-        for k, v in self.env.items():
-            if k not in os.environ:
-                os.environ[k] = str(v)
-
         # override feature
         if self.override:
             for _, dic in ddic.items():
@@ -644,7 +639,7 @@ def prepare_workflow(params, workflow_toml, pdb):
         wfjob = logs.init({'job_id': workflow_id})
         new = False
     with wfjob:
-        workflows = read_many(workflow_toml, params)
+        workflows = read_many(workflow_toml, params, validate=True)
         names = numpy.concatenate([wf.names for wf in workflows])
         n = len(names)
         check_unique(names, workflow_toml)
@@ -654,7 +649,7 @@ def prepare_workflow(params, workflow_toml, pdb):
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
         if new:
-            descr = workflows[0].description
+            descr = ' '.join(wf.description for wf in workflows)
             dstore = datastore.read(workflow_id, 'w')
             wf_df = pandas.DataFrame(
                 dict(name=names,
@@ -711,6 +706,10 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     with dstore:
         n_wfs = len(wfjob.workflows)
         for wf_no, wf in enumerate(wfjob.workflows):
+            # set the passed environment variables
+            for k, v in wf.env.items():
+                os.environ[k] = str(v)
+
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
@@ -765,6 +764,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if n_wfs > 1:
                     logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
                                     f'finished step {wf_no+1} of {n_wfs}')
+            if failed:
+                break
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
