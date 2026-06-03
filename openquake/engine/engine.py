@@ -648,7 +648,7 @@ def prepare_workflow(params, workflow_toml, pdb):
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
         if new:
-            descr = ' '.join(wf.description for wf in workflows)
+            descr = workflows[0].description
             dstore = datastore.read(workflow_id, 'w')
             wf_df = pandas.DataFrame(
                 dict(name=names,
