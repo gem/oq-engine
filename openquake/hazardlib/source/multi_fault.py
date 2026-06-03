@@ -213,7 +213,7 @@ class MultiFaultSource(BaseSeismicSource):
             yield self.source_id, slice(0, len(self.mags))
             return
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
-            yield '%s.%d' % (self.source_id, i), slc
+            yield '%s-%d' % (self.source_id, i), slc
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE or hasattr(self, 'rupids_by_tag'):
