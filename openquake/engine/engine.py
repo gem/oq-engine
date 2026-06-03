@@ -584,10 +584,10 @@ def read_many(workflow_toml, params, validate=True):
             wfdict = toml.load(f)
 
         if 'multi' in wfdict:
-            multi = wfdict.pop('multi')
+            multi = wfdict.pop('multi')['workflow']
 
             # include case
-            fnames = multi['workflow'].pop('include', [])
+            fnames = multi.pop('include', [])
             if fnames:
                 for fname in fnames:
                     out.extend(read_many(fname, multi | params, validate))
@@ -600,8 +600,7 @@ def read_many(workflow_toml, params, validate=True):
                     raise SyntaxError(
                         f'{workflow_toml}: missing ini in {prefix}.{key}')
 
-                wf = _Workflow(workflow_toml, multi['workflow'] | params,
-                               ddic, prefix)
+                wf = _Workflow(workflow_toml, multi | params, ddic, prefix)
                 if validate:
                     wf.validate()
                 out.append(wf)
