@@ -707,7 +707,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
         for wf_no, wf in enumerate(wfjob.workflows):
             # set the passed environment variables
             for k, v in wf.env.items():
-                os.environ[k] = str(v)
+                if k not in os.environ:  # explicitly set variable must win
+                    os.environ[k] = str(v)
 
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
@@ -763,7 +764,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if n_wfs > 1:
                     logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
                                     f'finished step {wf_no+1} of {n_wfs}')
-            if failed:
+            if failed and 'OQ_SAMPLES' not in wf.env:
                 break
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
