@@ -142,9 +142,8 @@ def build_site_model(grm_dir):
     for region in REGIONS:
         impact_dir = os.path.join(site_models_dir, region, 'Impact')
         if not os.path.isdir(impact_dir):
-            logging.warning(
-                f'Folder "{impact_dir}" was not found. Skipping')
-            continue
+            raise FileNotFoundError(
+                f'Folder "{impact_dir}" was not found.')
         for f in os.listdir(impact_dir):
             if re.fullmatch(r'Site_model_[A-Z]{3}\.csv', f):
                 print('Reading %s' % f)
