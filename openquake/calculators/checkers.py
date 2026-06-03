@@ -93,7 +93,7 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
         calc_id = calc.datastore.calc_id
         fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
-            tbl = view(what, calc.datastore)
+            tbl = text_table(view(what, calc.datastore), ext='org')
         except KeyError:
             try:
                 dset = calc.datastore[what]

@@ -66,9 +66,9 @@ def setup_module():
 
     with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
         evs = parent['events'][:]
-        ae(evs['id'], numpy.arange(33967))  # sequential indices
+        ae(evs['id'], numpy.arange(31032))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
+        ae(e0s[-3:], [20194, 20195, 20196])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
@@ -132,11 +132,11 @@ def test_site_model():  # 5 sites
     assert len(df) == 65
     assert df.index.max() < 5
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
-    assert len(rdf) == 15875
+    assert len(rdf) == 13078
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16595
+    assert len(edf) == 13666
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
-    assert len(rel_rups) == 15875
+    assert len(rel_rups) == len(rdf)
 
     op_df = calc.datastore.read_df('operations')
     ae(list(op_df.columns), ['calc_id', 'model', 'sample_ruptures',
