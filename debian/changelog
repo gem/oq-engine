@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Changed the rupture sampling algorithm so that the source groups are
+    consistent between event based and classical calculations; removed
+    useless copies of the sources and improved the performance and memory usage
+
   [Fahrettin Kuran]
   * Added additional magnitude-scaling relationships to thingbaijam2017.py
 
