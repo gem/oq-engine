@@ -7,10 +7,6 @@ ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
 NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM USA WAF ZAF PAN PAR'''.split())
 ALIASES = dict(TWN='TEM')  # manage change of name
 
-MODEL_IDX = {mod: idx for idx, mod in enumerate(MODELS)}
-for alias, name in ALIASES.items():
-    MODEL_IDX[alias] = MODEL_IDX[name]
-
 REGIONS = """\
 Africa
 Caribbean_Central_America
