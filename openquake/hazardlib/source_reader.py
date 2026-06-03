@@ -401,7 +401,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
                     mfsources.append(src)
         if mfsources:
             split_dic, secparams = save_and_split(
-                mfsources, sections, hdf5path, site1, split)
+                mfsources, sections, hdf5path, site1, split=split)
             for sg in src_groups:
                 replace(sg.sources, split_dic, 'source_id')
             return secparams
