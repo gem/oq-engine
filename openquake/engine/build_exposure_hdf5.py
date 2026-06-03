@@ -139,16 +139,16 @@ def build_site_model(grm_dir):
     dfs = []
     # NOTE: assuming the site-models repository is cloned inside the grm_dir
     site_models_dir = os.path.join(grm_dir, 'site-models')
-    for cwd, dirs, files in os.walk(site_models_dir):
-        # skip os.walk subtrees that don't belong to a known region
-        if not any(cwd == os.path.join(site_models_dir, region) or
-                   cwd.startswith(os.path.join(site_models_dir, region, ''))
-                   for region in REGIONS):
+    for region in REGIONS:
+        impact_dir = os.path.join(site_models_dir, region, 'Impact')
+        if not os.path.isdir(impact_dir):
+            logging.warning(
+                f'Folder "{impact_dir}" was not found. Skipping')
             continue
-        for f in files:
+        for f in os.listdir(impact_dir):
             if re.fullmatch(r'Site_model_[A-Z]{3}\.csv', f):
                 print('Reading %s' % f)
-                df = pandas.read_csv(os.path.join(cwd, f))
+                df = pandas.read_csv(os.path.join(impact_dir, f))
                 if factor < 1:
                     df = general.random_filter(df, factor*10)
                 if len(df):
