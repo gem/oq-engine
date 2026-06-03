@@ -1076,7 +1076,9 @@ def get_composite_source_model(oqparam, dstore=None):
     :param dstore:
          an open datastore where to save the source info
     """
-    if 'source_model_logic_tree' in oqparam.inputs:
+    if ('source_model_logic_tree' in oqparam.inputs and
+        # If using runtime SSC builder script don't log here
+        oqparam.inputs['source_model_logic_tree'].endswith(".py")):
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
