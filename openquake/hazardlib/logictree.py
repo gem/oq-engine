@@ -304,7 +304,9 @@ def shorten(path_tuple, shortener, kind):
                 # Key == value in RuntimeSourceModelLT to circumvent the
                 # B183 limit given cannot use extra branching levels in
                 # this case (each branch must be explicitly defined in
-                # the builder script specified by the user instead)
+                # the builder script specified by the user instead). So
+                # the branch_path in hdf5 could be <branch_name>~A where
+                # "A" is the regular BASE183 encoding for the first GMM
                 assert isinstance(shortener, _RuntimeShortener)
                 chars.append(val)
             else:
