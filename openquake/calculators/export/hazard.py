@@ -752,11 +752,9 @@ def export_event_based_mfd(ekey, dstore):
         return []
     aw = extract(dstore, 'event_based_mfd?')
     path = dstore.export_path('event_based_mfd.csv')
-    magfreq = numpy.zeros(len(aw.mag),
-                          [('mag', float), ('freq', float), ('rate', float)])
+    magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
     magfreq['mag'] = numpy.round(aw.mag, 1)
     magfreq['freq'] = aw.freq
-    magfreq['rate'] = aw.occ_rate
     writers.write_csv(path, magfreq, fmt='%.7e', comment=dstore.metadata)
     return [path]
 
