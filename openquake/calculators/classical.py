@@ -53,7 +53,8 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
-RATES_BATCH_SIZE = 100  # Every RATES_BATCH_SIZE tasks concat + write to hdf5
+RATES_BATCH_SIZE = 183  # Every RATES_BATCH_SIZE tasks concat + write to hdf5
+                        # with it set to prevent changes in initial BASE183
 
 
 def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
