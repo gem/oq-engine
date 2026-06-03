@@ -306,7 +306,8 @@ def shorten(path_tuple, shortener, kind):
                 # this case (each branch must be explicitly defined in
                 # the builder script specified by the user instead). So
                 # the branch_path in hdf5 could be <branch_name>~A where
-                # "A" is the regular BASE183 encoding for the first GMM
+                # branch_name is the key and "A" is the regular BASE183
+                # encoding for the first GMM in the GMC logic tree
                 assert isinstance(shortener, _RuntimeShortener)
                 chars.append(val)
             else:
