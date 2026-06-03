@@ -460,11 +460,6 @@ class _Workflow:
         self.env = defaults.pop('env', {})
         self.override = defaults.pop('override', {})
 
-        # set the passed environment variables if not already set
-        for k, v in self.env.items():
-            if k not in os.environ:
-                os.environ[k] = str(v)
-
         # override feature
         if self.override:
             for _, dic in ddic.items():
@@ -589,10 +584,10 @@ def read_many(workflow_toml, params, validate=True):
             wfdict = toml.load(f)
 
         if 'multi' in wfdict:
-            multi = wfdict.pop('multi')
+            multi = wfdict.pop('multi')['workflow']
 
             # include case
-            fnames = multi['workflow'].pop('include', [])
+            fnames = multi.pop('include', [])
             if fnames:
                 for fname in fnames:
                     out.extend(read_many(fname, multi | params, validate))
@@ -605,8 +600,7 @@ def read_many(workflow_toml, params, validate=True):
                     raise SyntaxError(
                         f'{workflow_toml}: missing ini in {prefix}.{key}')
 
-                wf = _Workflow(workflow_toml, multi['workflow'] | params,
-                               ddic, prefix)
+                wf = _Workflow(workflow_toml, multi | params, ddic, prefix)
                 if validate:
                     wf.validate()
                 out.append(wf)
@@ -644,7 +638,7 @@ def prepare_workflow(params, workflow_toml, pdb):
         wfjob = logs.init({'job_id': workflow_id})
         new = False
     with wfjob:
-        workflows = read_many(workflow_toml, params)
+        workflows = read_many(workflow_toml, params, validate=True)
         names = numpy.concatenate([wf.names for wf in workflows])
         n = len(names)
         check_unique(names, workflow_toml)
@@ -711,6 +705,11 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     with dstore:
         n_wfs = len(wfjob.workflows)
         for wf_no, wf in enumerate(wfjob.workflows):
+            # set the passed environment variables
+            for k, v in wf.env.items():
+                if k not in os.environ:  # explicitly set variable must win
+                    os.environ[k] = str(v)
+
             if wf_no == 0:  # at first step
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
@@ -765,6 +764,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if n_wfs > 1:
                     logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
                                     f'finished step {wf_no+1} of {n_wfs}')
+            if failed and 'OQ_SAMPLES' not in wf.env:
+                break
     for wf_no, succ in enumerate(successes):
         success_dset[wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
