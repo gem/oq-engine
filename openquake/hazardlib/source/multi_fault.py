@@ -357,16 +357,16 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
             else:
                 items = [(src.source_id, np.arange(src.count_ruptures()))]
             for source_id, rupids in items:
-                split = copy.copy(src)
-                split.source_id = source_id
-                split.probs_occur = src.probs_occur[rupids]
-                split.mags = src.mags[rupids]
-                split.rakes = src.rakes[rupids]
+                segment = copy.copy(src)
+                segment.source_id = source_id
+                segment.probs_occur = src.probs_occur[rupids]
+                segment.mags = src.mags[rupids]
+                segment.rakes = src.rakes[rupids]
                 h5.save_vlen(f'{source_id}/rupture_idxs',
                              [rids[rupid] for rupid in rupids])
-                h5[f'{source_id}/probs_occur'] = split.probs_occur
-                h5[f'{source_id}/mags'] = split.mags
-                h5[f'{source_id}/rakes'] = split.rakes
+                h5[f'{source_id}/probs_occur'] = segment.probs_occur
+                h5[f'{source_id}/mags'] = segment.mags
+                h5[f'{source_id}/rakes'] = segment.rakes
 
                 # save attributes
                 attrs = h5[f'{source_id}'].attrs
@@ -374,7 +374,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 attrs['tectonic_region_type'] = src.tectonic_region_type
                 attrs['investigation_time'] = src.investigation_time
                 attrs['infer_occur_rates'] = src.infer_occur_rates
-                split_dic[src.source_id].append(split)
+                split_dic[src.source_id].append(segment)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
         h5['secparams'] = secparams = build_secparams(sectiondict.values())
