@@ -355,7 +355,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 items = [(tag, np.arange(slc.start, slc.stop))
                          for tag, slc in src.gen_slices()]
             else:
-                items = [(src.source_id, np.arange(src.num_ruptures))]
+                items = [(src.source_id, np.arange(src.count_ruptures()))]
             for source_id, rupids in items:
                 split = copy.copy(src)
                 split.source_id = source_id
