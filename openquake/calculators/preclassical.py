@@ -35,7 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 25_000  # tentative
+MAX_NUM_RUPTURES = 50_000  # tentative
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
