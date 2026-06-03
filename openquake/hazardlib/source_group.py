@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import config, hdf5, performance
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, groupby)
-from openquake.hazardlib.calc.filters import split_source
+from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -251,19 +251,12 @@ class SourceGroup(collections.abc.Sequence):
         if self.atomic:
             return [self]
 
-        # split multipoint/multifault in advance
-        sources = []
-        for src in self:
-            if src.code in b'MF':
-                sources.extend(split_source(src))
-            else:
-                sources.append(src)
         out = []
         def weight(src):
             if src.code == b'F':  # consider it much heavier
                 return src.num_ruptures * 25
             return src.num_ruptures
-        for block in block_splitter(sources, maxweight, weight):
+        for block in block_splitter(self, maxweight, weight):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
@@ -403,9 +396,13 @@ class CompositeSourceModel:
             for src in sg:
                 if src.code == b'M':
                     # fast lane for MultiPointSources, assuming thet have
-                    # all the same magstrs
-                    src = next(iter(src))
-                mags[sg.trt].update(src.get_magstrs())
+                    # all the same mfd
+                    mfd = next(iter(src.mfd))
+                    magstrs = {magstr(item[0]) for item in
+                               mfd.get_annual_occurrence_rates()}
+                else:
+                    magstrs = src.get_magstrs()
+                mags[sg.trt].update(magstrs)
         out = {}
         for trt in mags:
             minmag = maximum_distance(trt).x[0]

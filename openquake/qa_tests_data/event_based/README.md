@@ -30,6 +30,7 @@
 | case_27             |                                                                                                                                                                                                  |
 | case_28             | Test the add between and within std in the modifiable GMPE                                                                                                                                       |
 | case_29             | Export and import ruptures from multiFault sources                                                                                                                                               |
+| case_35             | Sampling multi point source                                                                                                                                                                      |
 | mutex               | Test the use of a source model with mutually exclusive sources                                                                                                                                   |
 | spatial_correlation | Test the use spatial_correlation for the calculation of GMFs                                                                                                                                     |
 | gmep_tables         | Test the usage of GMPETable                                                                                                                                                                      |

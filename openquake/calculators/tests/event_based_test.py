@@ -41,7 +41,7 @@ from openquake.qa_tests_data.event_based import (
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
     case_25, case_26, case_27, case_28, case_29, case_30, case_31, case_32,
-    case_33, case_34, src_mutex)
+    case_33, case_34, case_35, src_mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -494,7 +494,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
     def test_case_25(self):
-        # logic tree common + extra
+        # logic tree common + extra, without extendModel
         # common1.xml contains "5" "6"
         # common2.xml contains "1" "2"
         # extra1.xml contains "3"
@@ -505,9 +505,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
 
     def test_case_25_bis(self):
+        # this is the equivalent of case_25 but using extendModel
         self.run_calc(case_25.__file__, 'job2.ini')
         mean = export(('hcurves', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+        self.assertEqualFiles('expected/hazard_curve2-PGA.csv', mean)
 
     def test_case_25_tris(self):
         # test with common1.xml present into branchs and sampling
@@ -656,3 +657,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_34.__file__, 'job.ini', exports='csv')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+    def test_35(self):
+        # sampling multiPointSource
+        self.run_calc(case_35.__file__, 'job.ini')
+        [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
