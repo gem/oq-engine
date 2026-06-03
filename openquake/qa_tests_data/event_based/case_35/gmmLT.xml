@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="gmpeModel"
+                      branchSetID="GROUP_C"
+                      applyToTectonicRegionType="Tectonic_Type_C">
+    
+    <logicTreeBranch branchID="GROUP_C_GMPE1">
+      <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_C_GMPE2">
+      <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_C_GMPE3">
+      <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_C_GMPE4">
+      <uncertaintyModel>PezeshkEtAl2011NEHRPBC</uncertaintyModel>
+      <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
