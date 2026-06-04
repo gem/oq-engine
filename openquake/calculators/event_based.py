@@ -700,7 +700,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     allargs.append((others, param))
             else:
                 for block in block_splitter(
-                        sg.sources, maxw, lambda src: src.num_ruptures):
+                        sg.sources, maxw, lambda src: src.weight):
                     allargs.append((block, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
