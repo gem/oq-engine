@@ -21,7 +21,7 @@ import copy
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5, performance, general, config
+from openquake.baselib import hdf5, parallel, performance, general, config
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -184,7 +184,7 @@ class MultiFaultSource(BaseSeismicSource):
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        sec = self.get_sections()  # read KiteSurfaces, very fast
+        sec = self.get_sections()  # read KiteSurfaces
         rupture_idxs = self.rupture_idxs
         msparams = self.msparams
         if self.infer_occur_rates:
@@ -347,6 +347,7 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
     split_dic = general.AccumDict(accum=[])
 
     with hdf5.File(hdf5path, 'w') as h5:
+        performance.init_performance(h5)
         for src, rids in zip(mfsources, all_rids):
             if hasattr(src, 'rupids_by_tag'):
                 items = [(f'{src.source_id}@{tag}', idxs)
@@ -377,8 +378,11 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 split_dic[src.source_id].append(segment)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
-        h5['secparams'] = secparams = build_secparams(sectiondict.values())
-
+        spdict = parallel.Starmap.apply(
+            build_secparams, (sectiondict.items(),), h5=h5
+        ).reduce()
+        h5['secparams'] = secparams = np.array(
+            [spdict[k] for k in sectiondict])
     return split_dic, secparams
 
 

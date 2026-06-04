@@ -34,12 +34,18 @@ MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
 MS_DT = [(p, np.float32) for p in MSPARAMS] + [('hypo', (F32, 3))]
 
 
-# really fast
-def build_secparams(sections):
+# can be slow for KiteFaults
+def build_secparams(sections_or_items, mon=Monitor()):
     """
-    :returns: an array of section parameters
+    :params sections_or_items: list of sections or [(key, sect), ...]
+    :returns: an array of section parameters or a dict
     """
-    secparams = np.zeros(len(sections), MS_DT)
+    secparams = np.zeros(len(sections_or_items), MS_DT)
+    pairs = isinstance(sections_or_items[0], tuple)
+    if pairs:
+        keys, sections = zip(*sections_or_items)
+    else:
+        sections = sections_or_items
     for sparam, sec in zip(secparams, sections):
         sparam['area'] = sec.get_area()
         sparam['dip'] = sec.get_dip()
@@ -60,6 +66,9 @@ def build_secparams(sections):
 
         mid = sec.get_middle_point()
         sparam['hypo'] = (mid.x, mid.y, mid.z)
+
+    if pairs:  # called in parallel
+        return dict(zip(keys, secparams))
     return secparams
 
 

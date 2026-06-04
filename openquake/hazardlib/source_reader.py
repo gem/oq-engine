@@ -24,7 +24,7 @@ import operator
 import logging
 import numpy
 
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source_group import CompositeSourceModel
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -257,9 +257,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     Applies uncertainties, builds the source groups and returns
     a CompositeSourceModel instance
     """
-    logging.info('Applying uncertainties')
-    groups = _build_groups(full_lt, smdict)
-
+    groups = _build_groups(full_lt, smdict)  # fast
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
@@ -299,10 +297,12 @@ def build_csm(oq, full_lt, smdict, dstore):
         if len(lonlats) > 1:
             sitecol = None
     # must be called *after* _fix_dupl_ids
+    t0 = time.time()
     fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
+    logging.info('Spent %.1f seconds in fix_geometry_sections', time.time()-t0)
     return csm
 
 
@@ -512,16 +512,20 @@ def _get_csm(oq, full_lt, groups, event_based):
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
+    mon = performance.Monitor('redce_sources')
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             # NB: not reducing the sources in event based
             if len(srcs) > 1:
-                srcs = reduce_sources(srcs, full_lt, event_based)
+                with mon:
+                    srcs = reduce_sources(srcs, full_lt, event_based)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):
                 src_groups.append(sourceconverter.SourceGroup(trt, grp))
+    if mon.dt:
+        logging.info('Spent %.1f seconds in reduce_sources', mon.dt)
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
