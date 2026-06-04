@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized reading multiFaultSources (i.e. for the New Zealand model
+    from XXX to XXX seconds);
   * Saved memory in classical calculations with large sources affecting many
     sites, by yieldings contexts
   * Changed the rupture sampling algorithm so that the source groups are

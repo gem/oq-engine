@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
 import copy
+import logging
 import numpy as np
 from typing import Union
 
@@ -307,15 +308,7 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
         src.rupids_by_tag['off_rupids'] = off_rupids
 
 
-# NB: as side effect delete _rupture_idxs,
-# add .hdf5path and possibly .rupids_by_tag
-def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
-                   del_rupture_idxs=True, split=True):
-    """
-    Serialize MultiFaultSources
- 
-    :returns: (split_dic, secparams)
-    """
+def _prepare(mfsources, sectiondict, hdf5path, site1, del_rupture_idxs):
     assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
@@ -342,8 +335,22 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
     for src in mfsources:
         if del_rupture_idxs:
             delattr(src, '_rupture_idxs')
+    return all_rids
 
-    # save split sources
+
+# NB: as side effect delete _rupture_idxs,
+# add .hdf5path and possibly .rupids_by_tag
+def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
+                   del_rupture_idxs=True, split=True):
+    """
+    Serialize MultiFaultSources
+
+    :returns: (split_dic, secparams)
+    """
+    with performance.Monitor('prepare rids', measuremem=True) as mon:
+        all_rids = _prepare(mfsources, sectiondict, hdf5path, site1,
+                            del_rupture_idxs)
+    logging.info(mon)
     split_dic = general.AccumDict(accum=[])
 
     with hdf5.File(hdf5path, 'w') as h5:
