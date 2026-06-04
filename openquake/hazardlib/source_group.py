@@ -26,8 +26,7 @@ import functools
 import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
-from openquake.baselib.general import (
-    block_splitter, split_in_blocks, AccumDict, groupby)
+from openquake.baselib.general import split_in_blocks, AccumDict, groupby
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
@@ -241,27 +240,6 @@ class SourceGroup(collections.abc.Sequence):
         :returns: the .trt_smr attribute of the underlying sources
         """
         return self.sources[0].trt_smr
-
-    # used only in event_based, where weight = num_ruptures
-    def split(self, maxweight):
-        """
-        Split the group in subgroups with weight <= maxweight, unless it
-        it atomic.
-        """
-        if self.atomic:
-            return [self]
-
-        out = []
-        def weight(src):
-            if src.code == b'F':  # consider it much heavier
-                return src.num_ruptures * 25
-            return src.num_ruptures
-        for block in block_splitter(self, maxweight, weight):
-            sg = copy.copy(self)
-            sg.sources = block
-            out.append(sg)
-        logging.info('Produced %d subgroup(s) of %s', len(out), self)
-        return out
 
     def get_tom_toml(self, time_span):
         """

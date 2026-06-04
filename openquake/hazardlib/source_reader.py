@@ -257,9 +257,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     Applies uncertainties, builds the source groups and returns
     a CompositeSourceModel instance
     """
-    logging.info('Applying uncertainties')
-    groups = _build_groups(full_lt, smdict)
-
+    groups = _build_groups(full_lt, smdict)  # fast
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
@@ -299,10 +297,12 @@ def build_csm(oq, full_lt, smdict, dstore):
         if len(lonlats) > 1:
             sitecol = None
     # must be called *after* _fix_dupl_ids
+    t0 = time.time()
     fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
+    logging.info('Spent %.1f seconds in fix_geometry_sections', time.time()-t0)
     return csm
 
 
@@ -422,9 +422,12 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
-    frac = 1. / len(full_lt.sm_rlzs)
+    R = len(full_lt.sm_rlzs)
+    dt = numpy.zeros((2, R))
     for rlz in full_lt.sm_rlzs:
-        logging.debug(f'Building source groups for {rlz.lt_path}')
+        if rlz.ordinal % 10 == 0:
+            logging.info('Building source groups for rlz'
+                         f'#{rlz.ordinal}: {rlz.lt_path}')
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
@@ -444,12 +447,17 @@ def _build_groups(full_lt, smdict):
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
+            t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
+            t1 = time.time()
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
+            t2 = time.time()
+            dt[0, rlz.ordinal] += t1 - t0
+            dt[1, rlz.ordinal] += t2 - t1
             for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else frac
+                src.smweight = rlz.weight if full_lt.num_samples else 1/R
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -464,6 +472,8 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
+    logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
+                 dt.sum(axis=1))
     return groups
 
 
@@ -515,8 +525,7 @@ def _get_csm(oq, full_lt, groups, event_based):
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
-            # NB: not reducing the sources in event based
-            if len(srcs) > 1:
+            if len(srcs) > 1:  # reduce_sources is ultra-fast
                 srcs = reduce_sources(srcs, full_lt, event_based)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
