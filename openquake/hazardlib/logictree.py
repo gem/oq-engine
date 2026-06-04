@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -1023,7 +1024,6 @@ class RuntimeSourceModelLT(object):
 
     def __init__(self, branches, script_path, seed=0, num_samples=0,
                  sampling_method='early_weights', source_id=''):
-        import io
         self.filename = script_path
         self.basepath = os.path.dirname(os.path.abspath(script_path))
         self.seed = int(seed)
@@ -1150,7 +1150,6 @@ class RuntimeSourceModelLT(object):
         with source_reader.get_csm(). Keys are absolute sentinel paths
         matching what _groups_ids constructs from rlz.value[0].
         """
-        import io
         smdict = {}
         for branch_id, xml_str in self._branch_xmls.items():
             sentinel = '__rt__%s' % branch_id
