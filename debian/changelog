@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized reading and sampling multiFaultSources
   * Saved memory in classical calculations with large sources affecting many
     sites, by yieldings contexts
   * Changed the rupture sampling algorithm so that the source groups are
