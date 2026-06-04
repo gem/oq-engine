@@ -505,6 +505,16 @@ class SourceModelLogicTree(object):
         logging.debug('Validated source model logic tree with %d underlying '
                       'files in %.2f seconds', len(unique), dt)
 
+    def is_extend_model(self):
+        """
+        True if there are branchsets of kind extendModel
+        """
+        for bs in self.branchsets:
+            if bs.uncertainty_type == 'extendModel':
+                if any(br.value for br in bs.branches):
+                    return True
+        return False
+
     def parse_branchset(self, branchset_node, bsno):
         """
         :param branchset_ node:

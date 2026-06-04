@@ -392,6 +392,7 @@ def main(what, report=False):
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
+                print(f"site parameters: {','.join(oq.req_site_params)}")
                 print('input size: %s' % size)
                 for bset in ltree.branchsets:
                     pprint(bset)
