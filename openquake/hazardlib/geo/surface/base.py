@@ -31,13 +31,10 @@ F32 = numpy.float32
 
 
 def _get_finite_mesh(mesh):
-    lons = mesh.lons
-    if not numpy.issubdtype(lons.dtype, numpy.floating):
-        return mesh  # integers cannot be NaN/Inf
-    ok = numpy.isfinite(lons) & numpy.isfinite(mesh.lats)
+    ok = numpy.isfinite(F32(mesh.lons))
     if numpy.all(ok):
         return mesh
-    return Mesh(lons[ok], mesh.lats[ok], mesh.depths[ok])
+    return Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
 
 
 def _find_turning_points(mesh, tol=1.0):
