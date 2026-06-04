@@ -1194,6 +1194,8 @@ class RuntimeSourceModelLT(object):
         for rec in array:
             rec = fix_bytes(rec)
             self._branch_weights[rec['branch']] = float(rec['weight'])
+        self.shortener = _RuntimeShortener(
+            {bid: bid for bid in self._branch_weights})
         self.source_data = numpy.array([], source_dt)
         self.basepath = os.path.dirname(os.path.abspath(self.filename))
 
