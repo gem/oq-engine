@@ -429,7 +429,7 @@ def _build_groups(full_lt, smdict):
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 10 == 0:
             logging.info('Building source groups for rlz'
-                         f'#{rlz.ordinal}: {rlz.lt_path}')
+                         f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
         bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
