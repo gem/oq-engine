@@ -331,7 +331,8 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        tut, _uut = self.tor.get_tu(mesh.lons.astype(F32), mesh.lats.astype(F32))
+        tut, _uut = self.tor.get_tu(np.array(mesh.lons, dtype=float),
+                                    np.array(mesh.lats, dtype=float))
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 

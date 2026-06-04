@@ -538,7 +538,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('avg_gmf.csv', fname)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
         # check hazard maps and hazard curves, as requested by Catarina
         [hmap] = export(('hmaps', 'csv'), self.calc.datastore)
