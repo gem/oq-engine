@@ -672,7 +672,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        maxweight = self.counting_ruptures()
+        self.counting_ruptures()
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
@@ -687,8 +687,7 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
-            for src_group in sg.split(maxweight):
-                allargs.append((src_group, param))
+            allargs.append((sg, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)

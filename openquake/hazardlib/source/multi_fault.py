@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
 import copy
-import logging
 import numpy as np
 from typing import Union
 
@@ -347,12 +346,9 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
 
     :returns: (split_dic, secparams)
     """
-    with performance.Monitor('prepare rids', measuremem=True) as mon:
-        all_rids = _prepare(mfsources, sectiondict, hdf5path, site1,
-                            del_rupture_idxs)
-    logging.info(mon)
+    all_rids = _prepare(mfsources, sectiondict, hdf5path, site1,
+                        del_rupture_idxs)  # ultra-fast
     split_dic = general.AccumDict(accum=[])
-
     with hdf5.File(hdf5path, 'w') as h5:
         performance.init_performance(h5)
         for src, rids in zip(mfsources, all_rids):
