@@ -969,6 +969,8 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
+    if oqparam.calculation_mode.startswith('scenario'):
+        return logictree.SourceModelLogicTree.fake()
     smlt = get_smlt(vars(oqparam))
     for bset in smlt.branchsets:
         bset.check_duplicates(smlt.filename)
