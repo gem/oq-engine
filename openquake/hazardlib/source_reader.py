@@ -24,7 +24,7 @@ import operator
 import logging
 import numpy
 
-from openquake.baselib import parallel, performance, general, hdf5
+from openquake.baselib import parallel, general, hdf5
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source_group import CompositeSourceModel
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -422,10 +422,11 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
-    frac = 1. / len(full_lt.sm_rlzs)
+    R = len(full_lt.sm_rlzs)
+    dt = numpy.zeros(R)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 10 == 0:
-            logging.info('Building source groups for '
+            logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {rlz.lt_path}')
         src_groups, source_ids = _groups_ids(
             smlt_dir, smdict, rlz.value[0].split())
@@ -440,6 +441,7 @@ def _build_groups(full_lt, smdict):
                     '%s contains source(s) %s already present in %s' %
                     (value, common, rlz.value))
             src_groups.extend(extra)
+        t0 = time.time()
         for src_group in src_groups:
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
@@ -451,10 +453,11 @@ def _build_groups(full_lt, smdict):
             for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else frac
+                src.smweight = rlz.weight if full_lt.num_samples else 1/R
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
+        dt[rlz.ordinal] = time.time() - t0
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
@@ -466,6 +469,7 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
+    logging.info('Spent %.1f seconds in apply_uncertainties', dt.sum())
     return groups
 
 
@@ -514,20 +518,15 @@ def _get_csm(oq, full_lt, groups, event_based):
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
-    mon = performance.Monitor('redce_sources')
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
-            # NB: not reducing the sources in event based
-            if len(srcs) > 1:
-                with mon:
-                    srcs = reduce_sources(srcs, full_lt, event_based)
+            if len(srcs) > 1:  # reduce_sources is ultra-fast
+                srcs = reduce_sources(srcs, full_lt, event_based)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):
                 src_groups.append(sourceconverter.SourceGroup(trt, grp))
-    if mon.dt:
-        logging.info('Spent %.1f seconds in reduce_sources', mon.dt)
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
