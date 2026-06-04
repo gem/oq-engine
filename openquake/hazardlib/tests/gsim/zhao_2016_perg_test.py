@@ -116,15 +116,13 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     ctxm_perg = ContextMaker(
         gmm_perg.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm_perg], oqp)
 
-    ctxs_perg = ctxm_perg.get_ctxs([rup], sites)
-    ctxs_perg = ctxs_perg[0]
+    ctxs_perg = next(ctxm_perg.get_ctxs([rup], sites))
     mean_perg, _std_perg, _tau_perg, _phi_perg = ctxm_perg.get_mean_stds(
         [ctxs_perg])
 
     # Get non-perg version ground-motions
     ctxm = ContextMaker(gmm.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm], oqp)
-    ctxs = ctxm.get_ctxs([rup], sites)
-    ctxs = ctxs[0]
+    ctxs = next(ctxm.get_ctxs([rup], sites))
 
     ctxs.occurrence_rate = 0.0
     mean, _std, _tau, _phi = ctxm.get_mean_stds([ctxs])

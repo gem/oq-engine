@@ -217,7 +217,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         cm = ContextMaker('*', [gmm], param)
 
         # extract magnitude 7 context
-        ctx = cm.get_ctxs(self.src, self.sitec)[-1]
+        ctx = list(cm.get_ctxs(self.src, self.sitec))[-1]
         self.ctx = ctx[ctx.mag == 7.0]
 
         # extract magnitude 7 rupture
