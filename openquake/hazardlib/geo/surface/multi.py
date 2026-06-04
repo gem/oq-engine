@@ -41,7 +41,7 @@ def build_secparams(sections_or_items, mon=Monitor()):
     :returns: an array of section parameters or a dict
     """
     secparams = np.zeros(len(sections_or_items), MS_DT)
-    pairs = isinstance(sections_or_items[0], tuple)
+    pairs = isinstance(next(iter(sections_or_items)), tuple)
     if pairs:
         keys, sections = zip(*sections_or_items)
     else:
