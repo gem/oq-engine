@@ -687,7 +687,17 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
-            allargs.append((sg, param))
+            mfs = [src for src in sg if src.code == b'F']
+            if mfs:
+                # send one multifault source at the time
+                # tested in event_based case_29
+                for mf in mfs:
+                    allargs.append(([mf], param))
+                others = [src for src in sg if src.code != b'F']
+                if others:
+                    allargs.append((others, param))
+            else:
+                allargs.append((sg, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
