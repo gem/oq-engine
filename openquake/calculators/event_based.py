@@ -672,7 +672,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        self.counting_ruptures()
+        maxw = self.counting_ruptures()
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
@@ -688,7 +688,9 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
             mfs = [src for src in sg if src.code == b'F']
-            if mfs:
+            if sg.atomic:
+                allargs.append((sg, param))
+            elif mfs:
                 # send one multifault source at the time
                 # tested in event_based case_29
                 for mf in mfs:
@@ -697,7 +699,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 if others:
                     allargs.append((others, param))
             else:
-                allargs.append((sg, param))
+                for block in block_splitter(
+                        sg.sources, maxw, lambda src: src.num_ruptures):
+                    allargs.append((block, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
