@@ -429,6 +429,7 @@ OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'cache',
     'concurrent_tasks',
+    'complex_fault_mesh_spacing',
     'discard_assets',
     'ground_motion_fields',
     'hazard_calculation_id',
@@ -442,6 +443,7 @@ OVERRIDABLE_PARAMS = (
     'postrisk_func',
     'postrisk_args',
     'return_periods',
+    'rupture_mesh_spacing'
     'ses_seed',
     'sites',
     'siteid')
