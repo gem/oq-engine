@@ -308,11 +308,13 @@ def build_csm(oq, full_lt, smdict, dstore):
             sitecol = None
     # must be called *after* _fix_dupl_ids
     t0 = time.time()
-    fix_geometry_sections(
+    secparams = fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
-    logging.info('Spent %.1f seconds in fix_geometry_sections', time.time()-t0)
+    if len(secparams):
+        logging.info('Spent %.1f seconds in fix_geometry_sections',
+                     time.time()-t0)
     return csm
 
 
