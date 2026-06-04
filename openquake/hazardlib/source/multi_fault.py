@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
 import copy
+import h5py
 import numpy as np
 from typing import Union
 
@@ -396,20 +397,19 @@ def load(hdf5path):
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
         for key in list(h5):
-            if key in ('multi_fault_sections', 'secparams'):
-                continue
             data = h5[key]
-            name = data.attrs['name']
-            trt = data.attrs['tectonic_region_type']
-            itime = data.attrs['investigation_time']
-            infer = data.attrs['infer_occur_rates']
-            mags = data['mags'][:]
-            rakes = data['rakes'][:]
-            probs = data['probs_occur'][:]
-            src = MultiFaultSource(key, name, trt,
-                                   data['rupture_idxs'][:],
-                                   probs, mags, rakes,
-                                   itime, infer)
-            src.hdf5path = hdf5path
-            srcs.append(src)
+            if isinstance(data, h5py.Group):
+                name = data.attrs['name']
+                trt = data.attrs['tectonic_region_type']
+                itime = data.attrs['investigation_time']
+                infer = data.attrs['infer_occur_rates']
+                mags = data['mags'][:]
+                rakes = data['rakes'][:]
+                probs = data['probs_occur'][:]
+                src = MultiFaultSource(key, name, trt,
+                                       data['rupture_idxs'][:],
+                                       probs, mags, rakes,
+                                       itime, infer)
+                src.hdf5path = hdf5path
+                srcs.append(src)
     return srcs

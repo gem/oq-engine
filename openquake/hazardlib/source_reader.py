@@ -423,7 +423,7 @@ def _build_groups(full_lt, smdict):
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
-    dt = numpy.zeros(R)
+    dt = numpy.zeros((2, R))
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 10 == 0:
             logging.info('Building source groups for rlz'
@@ -441,15 +441,19 @@ def _build_groups(full_lt, smdict):
                     '%s contains source(s) %s already present in %s' %
                     (value, common, rlz.value))
             src_groups.extend(extra)
-        t0 = time.time()
         for src_group in src_groups:
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
+            t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
+            t1 = time.time()
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
+            t2 = time.time()
+            dt[0, rlz.ordinal] += t1 - t0
+            dt[1, rlz.ordinal] += t2 - t1
             for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna
@@ -457,7 +461,6 @@ def _build_groups(full_lt, smdict):
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
-        dt[rlz.ordinal] = time.time() - t0
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
@@ -469,7 +472,8 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    logging.info('Spent %.1f seconds in apply_uncertainties', dt.sum())
+    logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
+                 dt.sum(axis=1))
     return groups
 
 

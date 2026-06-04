@@ -699,6 +699,7 @@ class EventBasedCalculator(base.HazardCalculator):
             else:
                 allargs.append((sg, param))
         self.datastore.swmr_on()
+        return
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
