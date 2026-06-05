@@ -198,8 +198,8 @@ def split_mps(sources):
     """    
     split_mps = []
     for src in sources:
-        if src.code == b'M' and len(src) > 10_000:
-            for i, slc in enumerate(gen_slices(0, len(src), 1000)):
+        if src.code == b'M' and len(src) > 5_000:
+            for i, slc in enumerate(gen_slices(0, len(src), 5_000)):
                 segment = source.MultiPointSource(
                     source_id=f'{src.source_id}-{i}',
                     name=src.name,
