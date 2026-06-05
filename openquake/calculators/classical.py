@@ -52,6 +52,8 @@ TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 GZIP = 'gzip'
+# Max sites for the in-memory batched RuntimeSourceModelLT path
+_RT_MAX_SITES = 100
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -584,10 +586,12 @@ class ClassicalCalculator(base.HazardCalculator):
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
 
-        # Batched path for large RuntimeSourceModelLTs with few sites
+        # Batched path for large RuntimeSourceModelLTs with few sites.
+        # Use N <= _RT_MAX_SITES rather than self.few_sites so that the
+        # path triggers regardless of the max_sites_disagg setting.
         from openquake.hazardlib.logictree import RuntimeSourceModelLT
         smlt = self.full_lt.source_model_lt
-        if self.few_sites and isinstance(smlt, RuntimeSourceModelLT):
+        if self.N <= _RT_MAX_SITES and isinstance(smlt, RuntimeSourceModelLT):
             batch_size = _rt_batch_size(self.full_lt, self.sitecol, oq)
             if smlt.num_paths > batch_size:
                 logging.info(
