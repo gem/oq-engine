@@ -507,6 +507,8 @@ def _build_groups(full_lt, smdict):
                                             rlz.value[0].split()))
     logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
                  dt.sum(axis=1))
+    for grp in groups:
+        split_mps(grp.sources)
     return groups
 
 
@@ -569,6 +571,5 @@ def _get_csm(oq, full_lt, groups, event_based):
 
     # split multipoint and sort by source_id
     for sg in src_groups:
-        split_mps(sg.sources)
         sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(oq, full_lt, src_groups)
