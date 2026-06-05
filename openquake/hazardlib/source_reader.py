@@ -264,6 +264,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         logging.info('Applied {:_d} changes to {:_d} source groups'.
                      format(changes, len(groups)))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+    logging.info('Building CompositeSourceModel')
     csm = _get_csm(oq, full_lt, groups, is_event_based)
     out = []
     probs = []
