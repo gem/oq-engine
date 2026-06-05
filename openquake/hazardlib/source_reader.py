@@ -46,7 +46,8 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def split_mps(sources, blocksize=2000):
+# NB: blocksize is chosen so that event_based/case_35 works
+def split_mps(sources, blocksize=1000):
     """
     Split the MultiPointSources to avoid oceanic sources with 160M ruptures
     hanging during rupture sampling
@@ -69,6 +70,7 @@ def split_mps(sources, blocksize=2000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
+                segment.trt_smr = src.trt_smr
                 split_mps.append(segment)
         else:
             split_mps.append(src)
@@ -507,8 +509,6 @@ def _build_groups(full_lt, smdict):
                                             rlz.value[0].split()))
     logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
                  dt.sum(axis=1))
-    for grp in groups:
-        split_mps(grp.sources)
     return groups
 
 
@@ -551,6 +551,7 @@ def _get_csm(oq, full_lt, groups, event_based):
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
+        split_mps(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)
         elif grp:
