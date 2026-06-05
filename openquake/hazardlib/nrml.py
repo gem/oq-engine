@@ -250,8 +250,8 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         sg = converter.convert_node(src_group)
-        split_mps(sg.sources)
         if sg and len(sg):
+            split_mps(sg.sources)
             # a source group can be empty if source_id filtering is on
             for src in sg:
                 source_ids.append(src.source_id)
