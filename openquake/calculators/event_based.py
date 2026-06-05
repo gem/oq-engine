@@ -1033,4 +1033,3 @@ class EventBasedCalculator(base.HazardCalculator):
                             'Relative difference with the classical '
                             'mean curves: %d%% at site index %d, imt=%s',
                             self.rdiff * 100, index, im)
-                        
