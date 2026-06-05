@@ -25,7 +25,8 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib import (
+    geo, nrml, source, sourceconverter, InvalidFile, calc)
 from openquake.hazardlib.source_group import CompositeSourceModel
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
@@ -43,6 +44,39 @@ source_info_dt = numpy.dtype([
     ('num_ruptures', numpy.uint32),    # 6
     ('weight', numpy.float32),         # 7
 ])
+
+
+# NB: blocksize is chosen so that event_based/case_35 works
+def split_mps(sources, blocksize=1000):
+    """
+    Split the MultiPointSources to avoid oceanic sources with 160M ruptures
+    hanging during rupture sampling
+    """    
+    split_mps = []
+    for src in sources:
+        if src.code == b'M' and len(src) > blocksize:
+            for i, slc in enumerate(general.gen_slices(0, len(src), blocksize)):
+                segment = source.MultiPointSource(
+                    source_id=f'{src.source_id}@{i}',
+                    name=src.name,
+                    tectonic_region_type=src.tectonic_region_type,
+                    mfd=src.mfd[slc],
+                    magnitude_scaling_relationship=(
+                        src.magnitude_scaling_relationship),
+                    rupture_aspect_ratio=src.rupture_aspect_ratio,
+                    upper_seismogenic_depth=src.upper_seismogenic_depth,
+                    lower_seismogenic_depth=src.lower_seismogenic_depth,
+                    nodal_plane_distribution=src.nodal_plane_distribution,
+                    hypocenter_distribution=src.hypocenter_distribution,
+                    mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
+                    temporal_occurrence_model=src.temporal_occurrence_model)
+                segment.trt_smr = src.trt_smr
+                segment.samples = src.samples
+                segment.smweight = src.smweight
+                split_mps.append(segment)
+        else:
+            split_mps.append(src)
+    sources[:] = split_mps
 
 
 def check_unique(ids, msg='', strict=True):
@@ -264,6 +298,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         logging.info('Applied {:_d} changes to {:_d} source groups'.
                      format(changes, len(groups)))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+    logging.info('Building CompositeSourceModel')
     csm = _get_csm(oq, full_lt, groups, is_event_based)
     out = []
     probs = []
@@ -518,6 +553,7 @@ def _get_csm(oq, full_lt, groups, event_based):
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
+        split_mps(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)
         elif grp:
@@ -536,7 +572,7 @@ def _get_csm(oq, full_lt, groups, event_based):
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
 
-    # sort by source_id
+    # split multipoint and sort by source_id
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(oq, full_lt, src_groups)
