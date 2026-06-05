@@ -87,7 +87,8 @@ def load_admin_boundaries(
         raise AttributeError(
             f'config.directory.admin{adm_level}_boundaries_file is missing')
     # NOTE: be careful not mutating the cached object
-    #       (in case we need to mutate it, we should make a copy right after reading)
+    #       (in case we need to mutate it, we should make a copy
+    #       right after reading)
     gdf = _read_admin_layer(fname)
     if "shapeID" in gdf.columns:  # geoBoundaries
         iso3_col = "shapeGroup"
@@ -147,7 +148,8 @@ def build_classifiers(df, *, breaks):
         import mapclassify
     except ImportError as exc:
         raise RuntimeError(
-            "In order to build map classifiers 'mapclassify' should be installed."
+            "In order to build map classifiers 'mapclassify' should"
+            " be installed."
         ) from exc
     return {meta["label"]: mapclassify.UserDefined(df[meta["label"]],
                                                    bins=breaks)
@@ -273,7 +275,8 @@ class CountryReportBuilder:
 
         # family_name -> font file prefix
         font_families = {
-            "NotoSans":      "NotoSansSC",  # default: Latin, Cyrillic, Greek, Chinese
+            "NotoSans":      "NotoSansSC",  # default: Latin, Cyrillic,
+                                            #          Greek, Chinese
             "NotoSans-TC":   "NotoSansTC",  # Traditional Chinese
             "NotoSans-JP":   "NotoSansJP",  # Japanese
             "NotoSans-KR":   "NotoSansKR",  # Korean
@@ -521,7 +524,7 @@ class CountryReportBuilder:
             oq_basedir
             / "doc"
             / "_static"
-            / "OQ-Logo-Standard-RGB-72DPI-01.png"  # FIXME: is this the right one?
+            / "OQ-Logo-Standard-RGB-72DPI-01.png"  # FIXME: is this logo ok?
         )
 
         logo_img = self._scaled_image(
@@ -561,7 +564,8 @@ class CountryReportBuilder:
     # NOTE: passing images explicitly to avoid implicit ordering dependency
     def _build_grid(self, images):
         # Determine column header based on uncertainty
-        col_header = "Estimated losses" if self.no_uncertainty else "Range of losses"
+        col_header = ("Estimated losses" if self.no_uncertainty
+                      else "Range of losses")
         table_data = [["", col_header]] + [
             [meta["label"], self.summary_data[meta["label"]]]
             for meta in LOSS_METADATA.values()
@@ -587,7 +591,8 @@ class CountryReportBuilder:
             # Span the last row across both columns and italicize
             last_row_idx = len(table_data) - 1
             style_cmds.append(("SPAN", (0, last_row_idx), (1, last_row_idx)))
-            style_cmds.append(("FONTNAME", (0, last_row_idx), (0, last_row_idx),
+            style_cmds.append(("FONTNAME",
+                               (0, last_row_idx), (0, last_row_idx),
                                "Helvetica-Oblique"))
 
         summary_table.setStyle(self.TableStyle(style_cmds))
@@ -740,7 +745,8 @@ class CountryReportBuilder:
 def make_report_for_country(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_data,
-        basemap_path, adm_level, dstore, hypocenter, threshold_deg, no_uncertainty):
+        basemap_path, adm_level, dstore, hypocenter, threshold_deg,
+        no_uncertainty):
     builder = CountryReportBuilder(
         iso3, event_name, event_date, shakemap_version, time_of_calc,
         disclaimer_txt, notes_txt, losses_df, summary_data, basemap_path,
@@ -812,9 +818,11 @@ def main(dstore, adm_level=1, threshold_deg=None):
     else:
         calc_id = dstore.calc_id
     adm_level = int(adm_level)
-    basemap_path = config.directory.basemap_file
-    if not basemap_path:
-        raise AttributeError('config.directory.basemap_file is missing')
+    try:
+        basemap_path = config.directory.basemap_file
+    except AttributeError:
+        basemap_path = None
+        logging.error('config.directory.basemap_file is missing!')
     dstore.close()
     dstore.open('r+')
     dstore.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
@@ -830,11 +838,12 @@ def main(dstore, adm_level=1, threshold_deg=None):
     )
     hypocenter = (lon, lat)
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
-    # Use the median (quantile-0.5) as the representative point estimate for the
-    # spatial loss maps, consistent with how _get_impact_summary_data displays the
-    # central value.  Fall back to the mean only if the median is unavailable
-    # (e.g. a calculation run without quantile outputs).
-    if hasattr(avg_losses, 'quantile-0.5') and avg_losses['quantile-0.5'] is not None:
+    # Use the median (quantile-0.5) as the representative point estimate for
+    # the spatial loss maps, consistent with how _get_impact_summary_data
+    # displays the central value.  Fall back to the mean only if the median is
+    # unavailable (e.g. a calculation run without quantile outputs).
+    if hasattr(avg_losses, 'quantile-0.5') and avg_losses[
+            'quantile-0.5'] is not None:
         losses_df = pd.DataFrame(avg_losses['quantile-0.5'])
     elif hasattr(avg_losses, 'mean') and avg_losses.mean is not None:
         logging.warning(
