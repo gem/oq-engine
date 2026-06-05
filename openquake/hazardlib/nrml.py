@@ -201,7 +201,7 @@ def split_mps(sources):
         if src.code == b'M' and len(src) > 10_000:
             for i, slc in enumerate(gen_slices(0, len(src), 1000)):
                 segment = source.MultiPointSource(
-                    source_id=f'{src.id}-{i}',
+                    source_id=f'{src.source_id}-{i}',
                     name=src.name,
                     tectonic_region_type=src.tectonic_region_type,
                     mfd=src.mfd[slc],
