@@ -81,10 +81,12 @@ import collections.abc
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby, gettemp
+from openquake.baselib.general import (
+    CallableDict, groupby, gettemp, gen_slices)
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
-from openquake.hazardlib import valid, sourceconverter, InvalidFile
+from openquake.hazardlib import (
+    valid, sourceconverter, InvalidFile, geo, source)
 
 F64 = numpy.float64
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
@@ -189,6 +191,35 @@ def get_geometry_model(node, fname, converter):
     return GeometryModel(converter.convert_node(node))
 
 
+def split_mps(sources):
+    """
+    Split the MultiPointSources to avoid oceanic sources with 160M ruptures
+    hanging during rupture sampling
+    """    
+    split_mps = []
+    for src in sources:
+        if src.code == b'M' and len(src) > 10_000:
+            for i, slc in enumerate(gen_slices(0, len(src), 1000)):
+                segment = source.MultiPointSource(
+                    source_id=f'{src.id}-{i}',
+                    name=src.name,
+                    tectonic_region_type=src.tectonic_region_type,
+                    mfd=src.mfd[slc],
+                    magnitude_scaling_relationship=(
+                        src.magnitude_scaling_relationship),
+                    rupture_aspect_ratio=src.rupture_aspect_ratio,
+                    upper_seismogenic_depth=src.upper_seismogenic_depth,
+                    lower_seismogenic_depth=src.lower_seismogenic_depth,
+                    nodal_plane_distribution=src.nodal_plane_distribution,
+                    hypocenter_distribution=src.hypocenter_distribution,
+                    mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
+                    temporal_occurrence_model=src.temporal_occurrence_model)
+                split_mps.append(segment)
+        else:
+            split_mps.append(src)
+    sources[:] = split_mps
+
+
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
 def get_source_model_04(node, fname, converter=default):
     sources = []
@@ -198,6 +229,7 @@ def get_source_model_04(node, fname, converter=default):
         if src is None:
             continue
         sources.append(src)
+    split_mps(sources)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(
@@ -218,8 +250,9 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         sg = converter.convert_node(src_group)
+        split_mps(sg.sources)
         if sg and len(sg):
-            # a source group can be empty if the source_id filtering is on
+            # a source group can be empty if source_id filtering is on
             for src in sg:
                 source_ids.append(src.source_id)
             groups.append(sg)
