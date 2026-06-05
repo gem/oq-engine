@@ -1066,6 +1066,29 @@ class RuntimeSourceModelLT(object):
     def get_num_paths(self):
         return self.num_samples if self.num_samples else self.num_paths
 
+    def iter_batches(self, batch_size):
+        """
+        Yield (sub_smlt, batch_weight) pairs covering all branches in
+        chunks of at most batch_size. Each sub_smlt has its branch
+        weights re-normalised to sum to 1.0; batch_weight is the
+        un-normalised sum used for global weighted combination.
+        """
+        branch_ids = sorted(self._branch_weights)
+        for start in range(0, self.num_paths, batch_size):
+            batch_ids = branch_ids[start:start + batch_size]
+            branches = [(bid, self._branch_weights[bid],
+                         self._branch_xmls[bid])
+                        for bid in batch_ids]
+            W = sum(w for _, w, _ in branches)
+            normalized = [(name, w / W, xml)
+                          for name, w, xml in branches]
+            sub_smlt = RuntimeSourceModelLT(
+                normalized, self.filename,
+                seed=self.seed, num_samples=0,
+                sampling_method=self.sampling_method,
+                source_id=self.source_id)
+            yield sub_smlt, float(W)
+
     @property
     def branches(self):
         return {

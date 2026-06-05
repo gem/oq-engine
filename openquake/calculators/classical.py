@@ -31,11 +31,14 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
-from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
+from openquake.hazardlib.contexts import (
+    get_cmakers, read_full_lt_by_label, get_unique_inverse)
+from openquake.hazardlib.source_reader import get_csm as src_get_csm
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
+    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks,
+    compute_hazard_maps)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -99,6 +102,25 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         h5.flush()
         h5.close()
         return fname
+
+
+def _rt_batch_size(full_lt, sitecol, oq):
+    """
+    Derive the number of RuntimeSourceModelLT branches to process per
+    batch so that peak RAM stays below a quarter of the machine limit.
+
+    Peak memory per batch branch:
+      - one RateMap entry: N * L * G * 4 bytes
+      - one per-rlz hcurve: N * M * L1 * 4 bytes
+    """
+    N = len(sitecol)
+    L = oq.imtls.size
+    M = len(oq.imtls)
+    L1 = L // M
+    G = full_lt.gsim_lt.get_num_paths()
+    avail = min(psutil.virtual_memory().available, config.memory.limit)
+    bytes_per_branch = (N * L * G + N * M * L1) * 4
+    return max(1, int(avail / bytes_per_branch / 4))
 
 
 class Set(set):
@@ -188,6 +210,21 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
             for srcs in groupby(grp, valid.basename).values():
                 result = baseclassical(srcs, sites, cmaker, remove_zeros=False)
                 yield result
+
+
+def classical_rt_batch(sg, sites, cmaker, monitor):
+    """
+    Classical hazard task for RuntimeSourceModelLT batched execution.
+    Takes a source group and site collection in-memory so no HDF5
+    reads are needed (the main datastore stores the full CSM, not the
+    batch CSM).
+    """
+    cmaker.init_monitoring(monitor)
+    if sg.atomic:
+        yield baseclassical([sg], sites, cmaker, remove_zeros=False)
+    else:
+        for srcs in groupby(sg, valid.basename).values():
+            yield baseclassical(srcs, sites, cmaker, remove_zeros=False)
 
 
 def _split_src(srcs, n):
@@ -546,6 +583,20 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
+
+        # Batched path for large RuntimeSourceModelLTs with few sites
+        from openquake.hazardlib.logictree import RuntimeSourceModelLT
+        smlt = self.full_lt.source_model_lt
+        if self.few_sites and isinstance(smlt, RuntimeSourceModelLT):
+            batch_size = _rt_batch_size(self.full_lt, self.sitecol, oq)
+            if smlt.num_paths > batch_size:
+                logging.info(
+                    'RuntimeSourceModelLT: using batched execution '
+                    '(%d branches, batch_size=%d)',
+                    smlt.num_paths, batch_size)
+                self._execute_rt_batched(smlt, batch_size)
+                return True
+
         sgs, ds = self._pre_execute()
         self._execute(sgs, ds)
         if self.cfactor[0] == 0:
@@ -565,6 +616,237 @@ class ClassicalCalculator(base.HazardCalculator):
                          self.source_mb)
         self.build_curves_maps()
         return True
+
+    def _rt_curves_from_rmap(self, N, L, M, L1, unique_trt_smrs):
+        """
+        Convert self.rmap (rates accumulated for one batch) into
+        per-realisation hazard curves for the batch.
+
+        :returns: (rlz_curves, rlz_weights) where
+            rlz_curves has shape (N, R_batch, M, L1) F32 and
+            rlz_weights has shape (R_batch,) F32 summing to 1.
+        """
+        trt_rlzs = self.full_lt.get_trt_rlzs(unique_trt_smrs)
+        R_batch = self.full_lt.get_num_paths()
+
+        # Accumulate rates into array[N, L, Gt]
+        sid2idx = {int(s): i for i, s in enumerate(self.sitecol.sids)}
+        rates = numpy.zeros((N, L, len(trt_rlzs)), F64)
+        for rmap in self.rmap.values():
+            sidx = numpy.array([sid2idx[int(s)] for s in rmap.sids])
+            for g, j in rmap.gdic.items():
+                rates[sidx, :, g] += rmap.array[:, :, j].astype(F64)
+
+        # Build per-rlz hazard curves
+        rlz_curves = numpy.zeros((N, R_batch, M, L1), F32)
+        for n in range(N):
+            r0 = numpy.zeros((L, R_batch), F64)
+            for g, t_rlzs in enumerate(trt_rlzs):
+                rlz_idxs = t_rlzs % TWO24  # ordinals within batch
+                r0[:, rlz_idxs] += rates[n, :, g][:, numpy.newaxis]
+            hcurve = disagg.to_probs(r0)  # (L, R_batch)
+            rlz_curves[n] = F32(hcurve.T.reshape(R_batch, M, L1))
+
+        rlz_weights = F32([float(rlz.weight[-1])
+                           for rlz in self.full_lt.get_realizations()])
+        return rlz_curves, rlz_weights
+
+    def _compute_rt_quantiles(self, hstats, M, L1, global_weights,
+                              rlz_dset):
+        """
+        Compute quantile hcurves-stats from stored per-rlz curves.
+
+        :param hstats: ordered dict {statname: stat_function}
+        :param M: number of IMTs
+        :param L1: number of intensity levels per IMT
+        :param global_weights: F32 array of shape (R_full,)
+        :param rlz_dset: name of HDF5 dataset containing rlz curves
+            of shape (N, R_full, M, L1)
+        """
+        oq = self.oqparam
+        N = self.N
+        R_full = len(global_weights)
+
+        class _Wget:
+            def __init__(self, weights):
+                self.weights = weights[:, numpy.newaxis]  # (R, 1)
+
+            def __call__(self, _sid, _imt=None):
+                return self.weights[:, -1]
+
+        wget = _Wget(global_weights)
+        for s, (statname, stat) in enumerate(hstats.items()):
+            if statname == 'mean':
+                continue
+            for n in range(N):
+                # (R_full, M, L1) -> (L, R_full)
+                hcurve = (self.datastore[rlz_dset][n]
+                          .reshape(R_full, M * L1).T.astype(F64))
+                sc = getters.build_stat_curve(
+                    hcurve, oq.imtls, stat, wget)
+                self.datastore['hcurves-stats'][n, s] = (
+                    F32(sc).reshape(M, L1))
+
+    def _execute_rt_batched(self, smlt, batch_size):
+        """
+        Run a RuntimeSourceModelLT calculation one batch of branches at a
+        time.  Replaces the _pre_execute / _execute / store_info /
+        build_curves_maps sequence for the few-sites case.
+        """
+        oq = self.oqparam
+        N = self.N
+        L = oq.imtls.size
+        M = len(oq.imtls)
+        L1 = L // M
+        hstats = oq.hazard_stats()
+
+        # Set up rup/ datasets (uses full cmdict, GSIM params unchanged)
+        self._pre_execute()
+
+        # Store full-smlt weights before any swap so _create_hcurves_maps
+        # finds the correct R in self.datastore['weights']
+        self.store_rlz_info({})
+        R_full = len(self.datastore['weights'])
+
+        # Create hcurves-stats / hcurves-rlzs / hmaps datasets.
+        # In the batched path we always need per-rlz curves: either for
+        # individual_rlzs output or for quantile computation.  Force
+        # individual_rlzs on for the _create_hcurves_maps call so that
+        # hcurves-rlzs is always allocated (it holds the only copy of the
+        # per-rlz data we accumulate across batches).
+        has_quantiles = any(s != 'mean' for s in hstats)
+        _saved_rlzs = oq.individual_rlzs
+        if has_quantiles:
+            oq.individual_rlzs = True  # ensure hcurves-rlzs is created
+        self._create_hcurves_maps()
+        oq.individual_rlzs = _saved_rlzs
+        need_rlzs = self.R == 1 or oq.individual_rlzs  # recompute after restore
+        S = len(hstats)
+        rlz_dset = 'hcurves-rlzs'
+
+        self.datastore.swmr_on()  # no new datasets after this
+
+        mean_rates = numpy.zeros((N, M, L1), F64)
+        all_weights = []   # global per-rlz weights
+        rlz_offset = 0
+        num_batches = -(-smlt.num_paths // batch_size)  # ceiling div
+
+        for b_idx, (sub_smlt, batch_weight) in enumerate(
+                smlt.iter_batches(batch_size)):
+            logging.info(
+                'RT batch %d/%d (branches %d..%d, weight=%.4f)',
+                b_idx + 1, num_batches,
+                b_idx * batch_size,
+                min((b_idx + 1) * batch_size, smlt.num_paths) - 1,
+                batch_weight)
+
+            # Swap smlt and re-initialise full_lt for this batch
+            self.full_lt.source_model_lt = sub_smlt
+            self.full_lt.init()
+            self.full_lt._rlzs_by = ()
+
+            # Build batch CSM without writing to HDF5 (SWMR is on)
+            batch_csm = src_get_csm(oq, self.full_lt)
+
+            # Build cmakers and collect unique trt_smrs for this batch
+            trt_smrs_raw = batch_csm.get_trt_smrs()
+            batch_cmdict = {
+                'Default': get_cmakers(trt_smrs_raw, self.full_lt, oq)}
+            unique_trt_smrs, _ = get_unique_inverse(trt_smrs_raw)
+
+            # Set up self.rmap and build task arguments.
+            # Use classical_rt_batch (sources in-memory) because the main
+            # datastore's _csm keys correspond to the full CSM, not this batch.
+            self.rmap = {}
+            allargs = []
+            sg_by_id = {sg.grp_id: sg for sg in batch_csm.src_groups}
+            data = get_allargs(batch_csm, batch_cmdict, self.sitecol,
+                               self.max_weight, 1, tiling=False)
+            for cmaker, tilegetters, grp_keys, _ in data:
+                grp_id = int(grp_keys[0].split('-')[0])
+                self.rmap[grp_id] = RateMap(
+                    self.sitecol.sids, L, cmaker.gid)
+                sg = sg_by_id[grp_id]
+                for tgetter in tilegetters:
+                    sites = tgetter(self.sitecol, cmaker.ilabel)
+                    if len(sites) > 0:
+                        allargs.append((sg, sites, cmaker))
+
+            if allargs:
+                parallel.Starmap(
+                    classical_rt_batch, allargs,
+                    h5=self.datastore.hdf5,
+                ).reduce(self.agg_dicts, AccumDict(accum=0.))
+
+            # Convert rmap to per-rlz hazard curves
+            rlz_curves, rlz_weights = self._rt_curves_from_rmap(
+                N, L, M, L1, unique_trt_smrs)
+            R_batch = rlz_curves.shape[1]
+
+            # Accumulate weighted mean rates
+            for n in range(N):
+                # rlz_curves[n]: (R_batch, M, L1) -> probs
+                rates_n = disagg.to_rates(
+                    F64(rlz_curves[n].reshape(R_batch, M * L1)).T)
+                mean_rates[n] += batch_weight * (
+                    rates_n @ F64(rlz_weights)).reshape(M, L1)
+
+            # Store per-rlz curves if hcurves-rlzs was created
+            if 'hcurves-rlzs' in self.datastore:
+                slc = slice(rlz_offset, rlz_offset + R_batch)
+                self.datastore[rlz_dset][:, slc] = rlz_curves
+
+            if need_rlzs and oq.poes:
+                # Compute and store hmaps-rlzs for this batch
+                for r in range(R_batch):
+                    for m, imt in enumerate(oq.imtls):
+                        data_hm = compute_hazard_maps(
+                            rlz_curves[:, r, m, :],
+                            oq.imtls[imt], oq.poes)  # (N, P)
+                        self.datastore['hmaps-rlzs'][
+                            :, rlz_offset + r, m, :] = F32(data_hm)
+
+            all_weights.extend(batch_weight * float(w)
+                                for w in rlz_weights)
+            rlz_offset += R_batch
+            self.rmap = {}
+
+        # Restore original smlt
+        self.full_lt.source_model_lt = smlt
+        self.full_lt.init()
+        self.full_lt._rlzs_by = ()
+
+        # Store mean hcurves-stats (stat index 0 = mean)
+        if hstats:
+            for n in range(N):
+                self.datastore['hcurves-stats'][n, 0] = F32(
+                    disagg.to_probs(
+                        mean_rates[n].reshape(M * L1)
+                    ).reshape(M, L1))
+
+            # Quantile stats from stored per-rlz curves
+            if has_quantiles:
+                global_weights = F32(all_weights)
+                self._compute_rt_quantiles(
+                    hstats, M, L1, global_weights, rlz_dset)
+
+            # hmaps-stats from hcurves-stats
+            if oq.poes:
+                hcurves_s = self.datastore['hcurves-stats'][:]  # (N,S,M,L1)
+                for s in range(S):
+                    for m, imt in enumerate(oq.imtls):
+                        data_hm = compute_hazard_maps(
+                            hcurves_s[:, s, m, :],
+                            oq.imtls[imt], oq.poes)  # (N, P)
+                        self.datastore['hmaps-stats'][
+                            :, s, m, :] = F32(data_hm)
+
+        # Weights were already stored before the batch loop; pass empty
+        # rel_ruptures to skip check_discardable (batch grp_ids don't map
+        # to the full CSM's groups).
+        self.store_rlz_info({})
+        self.store_source_info(self.source_data)
+        logging.info('Saved hcurves for %d realizations', rlz_offset)
 
     def _pre_execute(self):
         oq = self.oqparam
