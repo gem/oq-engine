@@ -47,12 +47,12 @@ source_info_dt = numpy.dtype([
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
-def split_mps(sources, blocksize=1000):
+def splitMF(sources, blocksize=1000):
     """
     Split the MultiPointSources to avoid oceanic sources with 160M ruptures
     hanging during rupture sampling
     """    
-    split_mps = []
+    splitMF = []
     for src in sources:
         if src.code == b'M' and len(src) > blocksize:
             for i, slc in enumerate(general.gen_slices(0, len(src), blocksize)):
@@ -73,16 +73,16 @@ def split_mps(sources, blocksize=1000):
                 segment.trt_smr = src.trt_smr
                 segment.samples = src.samples
                 segment.smweight = src.smweight
-                split_mps.append(segment)
-        #elif src.code == b'F':
-        #    for segment in src:
-        #        segment.trt_smr = src.trt_smr
-        #        segment.samples = src.samples
-        #        segment.smweight = src.smweight
-        #        split_mps.append(segment)
+                splitMF.append(segment)
+        elif src.code == b'F':
+            for segment in src:
+                segment.trt_smr = src.trt_smr
+                segment.samples = src.samples
+                segment.smweight = src.smweight
+                splitMF.append(segment)
         else:
-            split_mps.append(src)
-    sources[:] = split_mps
+            splitMF.append(src)
+    sources[:] = splitMF
 
 
 def check_unique(ids, msg='', strict=True):
@@ -559,7 +559,7 @@ def _get_csm(oq, full_lt, groups, event_based):
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
-        split_mps(grp.sources)
+        splitMF(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)
         elif grp:

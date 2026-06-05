@@ -232,6 +232,7 @@ class MultiFaultSource(BaseSeismicSource):
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc],
+                self.faults,
                 self.investigation_time,
                 self.infer_occur_rates)
             src.hdf5path = self.hdf5path
