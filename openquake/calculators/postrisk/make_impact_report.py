@@ -192,19 +192,25 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
     summary_data = {}
     for label, lt in mapping.items():
         r = rows.loc[rows['loss_type'] == lt].iloc[0]
+        matching_rows = rows.loc[rows['loss_type'] == lt]
+        if not matching_rows.empty:
+            r = matching_rows.iloc[0]
+            q50, q05, q95 = (int(round(r.get('q50', 0))),
+                             int(round(r.get('q05', 0))),
+                             int(round(r.get('q95', 0))))
+        else:
+            q50 = q05 = q95 = 0
         if no_uncertainty:
             # Display only the central value
-            summary_data[label] = f"{int(round(r.q50))}"
+            summary_data[label] = f"{q50}"
         else:
             # Display the range
-            summary_data[label] = f"{int(round(r.q05))} - {int(round(r.q95))}"
-    # Return None if all mean losses are approximately zero
+            summary_data[label] = f"{q05} - {q95}"
     if all(r.lossmea < 1e-5 for _, r in
            rows.loc[rows['loss_type'].isin(mapping.values())].iterrows()):
         logging.info(
             f"Estimated losses for country {iso3} are negligible"
-            f" (all lossmea < 1e-5). Skipping report.")
-        return None
+            f" (all lossmea < 1e-5). Generating report anyway.")
     return summary_data
 
 
