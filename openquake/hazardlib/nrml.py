@@ -191,15 +191,15 @@ def get_geometry_model(node, fname, converter):
     return GeometryModel(converter.convert_node(node))
 
 
-def split_mps(sources):
+def split_mps(sources, blocksize=2000):
     """
     Split the MultiPointSources to avoid oceanic sources with 160M ruptures
     hanging during rupture sampling
     """    
     split_mps = []
     for src in sources:
-        if src.code == b'M' and len(src) > 5_000:
-            for i, slc in enumerate(gen_slices(0, len(src), 5_000)):
+        if src.code == b'M' and len(src) > blocksize:
+            for i, slc in enumerate(gen_slices(0, len(src), blocksize)):
                 segment = source.MultiPointSource(
                     source_id=f'{src.source_id}-{i}',
                     name=src.name,
