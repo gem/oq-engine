@@ -431,13 +431,15 @@ def _groups_ids(smlt_dir, smdict, fnames):
 
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
+    from openquake.hazardlib.logictree import RuntimeSourceModelLT
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
     dt = numpy.zeros((2, R))
     for rlz in full_lt.sm_rlzs:
-        if rlz.ordinal % 10 == 0:
+        if rlz.ordinal % 10 == 0 and not isinstance(
+                full_lt.source_model_lt, RuntimeSourceModelLT):
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {rlz.lt_path}')
         src_groups, source_ids = _groups_ids(
