@@ -74,12 +74,12 @@ def split_mps(sources, blocksize=1000):
                 segment.samples = src.samples
                 segment.smweight = src.smweight
                 split_mps.append(segment)
-        elif src.code == b'F':
-            for segment in src:
-                segment.trt_smr = src.trt_smr
-                segment.samples = src.samples
-                segment.smweight = src.smweight
-                split_mps.append(segment)
+        #elif src.code == b'F':
+        #    for segment in src:
+        #        segment.trt_smr = src.trt_smr
+        #        segment.samples = src.samples
+        #        segment.smweight = src.smweight
+        #        split_mps.append(segment)
         else:
             split_mps.append(src)
     sources[:] = split_mps
