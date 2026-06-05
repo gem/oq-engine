@@ -141,6 +141,19 @@ class MultiMFD(BaseMFD):
             raise ValueError('%s of size %d, expected 1 or %d' %
                              (field, len(values), self.size))
 
+    def __getitem__(self, slc):
+        """
+        Extract a slice of MultiMFD
+        """
+        size = slc.stop - slc.start
+        kwargs = {}
+        for k, v in self.kwargs.items():
+            if len(v) == 1:
+                kwargs[k] = v
+            else:
+                kwargs[k] = v[slc]
+        return self.__class__(self.kind, size, self.width_of_mfd_bin, **kwargs)
+
     def __iter__(self):
         """
         Yield the underlying MFDs instances
