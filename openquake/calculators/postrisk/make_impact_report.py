@@ -24,7 +24,7 @@ from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
 from shapely.validation import make_valid, explain_validity
-
+from dataclasses import dataclass
 from PIL import Image as PILImage
 import pandas as pd
 import geopandas as gpd
@@ -57,6 +57,25 @@ LOSS_METADATA = {
     },
 }
 LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
+
+
+@dataclass
+class EventContext:
+    """Metadata related to the seismic event."""
+    name: str
+    date: str
+    hypocenter: tuple[float, float]
+    shakemap_version: str = None
+
+
+@dataclass
+class ReportOptions:
+    """Visual, text, and threshold configurations for the report."""
+    disclaimer_txt: str
+    notes_txt: str
+    basemap_path: str
+    threshold_deg: float
+    no_uncertainty: bool
 
 
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded
@@ -202,9 +221,8 @@ class CountryReportBuilder:
     LOGO_W = 100
 
     def __init__(
-            self, iso3, event_name, event_date, shakemap_version, time_of_calc,
-            disclaimer_txt, notes_txt, losses_df, summary_data, basemap_path,
-            adm_level, dstore, hypocenter, threshold_deg, no_uncertainty):
+            self, iso3, adm_level, event: EventContext, options: ReportOptions,
+            losses_df, summary_data, dstore, time_of_calc):
         try:
             import reportlab
             from reportlab import platypus
@@ -237,20 +255,24 @@ class CountryReportBuilder:
         self.A4 = reportlab.lib.pagesizes.A4
 
         self.iso3 = iso3
-        self.event_name = event_name
-        self.event_date = event_date
-        self.shakemap_version = shakemap_version
-        self.time_of_calc = time_of_calc
-        self.disclaimer_txt = disclaimer_txt
-        self.notes_txt = notes_txt
+        self.adm_level = adm_level
         self.losses_df = losses_df
         self.summary_data = summary_data
-        self.basemap_path = basemap_path
-        self.adm_level = adm_level
         self.dstore = dstore
-        self.hypocenter = hypocenter
-        self.threshold_deg = threshold_deg
-        self.no_uncertainty = no_uncertainty
+        self.time_of_calc = time_of_calc
+
+        # Unpacking EventContext
+        self.event_name = event.name
+        self.event_date = event.date
+        self.shakemap_version = event.shakemap_version
+        self.hypocenter = event.hypocenter
+
+        # Unpacking ReportOptions
+        self.disclaimer_txt = options.disclaimer_txt
+        self.notes_txt = options.notes_txt
+        self.basemap_path = options.basemap_path
+        self.threshold_deg = options.threshold_deg
+        self.no_uncertainty = options.no_uncertainty
 
         self.styles = self.getSampleStyleSheet()
 
@@ -743,14 +765,11 @@ class CountryReportBuilder:
 
 
 def make_report_for_country(
-        iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_data,
-        basemap_path, adm_level, dstore, hypocenter, threshold_deg,
-        no_uncertainty):
+        iso3, adm_level, event, options, losses_df, summary_data,
+        dstore, time_of_calc):
     builder = CountryReportBuilder(
-        iso3, event_name, event_date, shakemap_version, time_of_calc,
-        disclaimer_txt, notes_txt, losses_df, summary_data, basemap_path,
-        adm_level, dstore, hypocenter, threshold_deg, no_uncertainty)
+        iso3, adm_level, event, options, losses_df, summary_data,
+        dstore, time_of_calc)
     builder.build()
 
 
@@ -883,14 +902,27 @@ def main(dstore, adm_level=1, threshold_deg=None):
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
+
+    event_ctx = EventContext(
+        name=event_name,
+        date=event_date,
+        hypocenter=hypocenter,
+        shakemap_version=shakemap_version
+    )
+    report_opts = ReportOptions(
+        disclaimer_txt=disclaimer_txt,
+        notes_txt=notes_txt,
+        basemap_path=basemap_path,
+        threshold_deg=threshold_deg,
+        no_uncertainty=no_uncertainty
+    )
+
     for iso3 in iso3_codes:
         summary_data = _get_impact_summary_data(dstore, iso3, no_uncertainty)
         if summary_data is not None:
             make_report_for_country(
-                iso3, event_name, event_date, shakemap_version, time_of_calc,
-                disclaimer_txt, notes_txt, losses_df, summary_data,
-                basemap_path, adm_level, dstore, hypocenter,
-                threshold_deg, no_uncertainty)
+                iso3, adm_level, event_ctx, report_opts,
+                losses_df, summary_data, dstore, time_of_calc)
 
 
 if __name__ == '__main__':
