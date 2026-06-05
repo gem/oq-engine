@@ -742,7 +742,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # Swap smlt and re-initialise full_lt for this batch
             self.full_lt.source_model_lt = sub_smlt
-            self.full_lt.init()
+            self.full_lt.init(log_rlzs=False)
             self.full_lt._rlzs_by = ()
 
             # Build batch CSM without writing to HDF5 (SWMR is on)
@@ -813,7 +813,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # Restore original smlt
         self.full_lt.source_model_lt = smlt
-        self.full_lt.init()
+        self.full_lt.init(log_rlzs=False)
         self.full_lt._rlzs_by = ()
 
         # Store mean hcurves-stats (stat index 0 = mean)

@@ -1334,7 +1334,7 @@ class FullLogicTree(object):
                 'gsim_lt': self.gsim_lt,
                 'oversampling': self.oversampling}
 
-    def init(self):
+    def init(self, log_rlzs=True):
         if self.source_model_lt.num_samples:
             # NB: the number of effective rlzs can be less than the number
             # of realizations in case of sampling
@@ -1350,7 +1350,8 @@ class FullLogicTree(object):
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
         R = self.get_num_paths()
-        logging.info('Building {:_d} realizations'.format(R))
+        if log_rlzs:
+            logging.info('Building {:_d} realizations'.format(R))
         self.weights = ws = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
         self.gsim_lt.wget.weights = ws
