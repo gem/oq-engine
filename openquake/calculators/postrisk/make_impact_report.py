@@ -31,7 +31,7 @@ import geopandas as gpd
 from openquake import baselib
 from openquake.baselib import config, sap
 from openquake.calculators.extract import extract
-from openquake.calculators.postproc.plots import plot_variable
+from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.commonlib import logs
 from openquake.commonlib.calc import get_close_regions
 
@@ -493,13 +493,20 @@ class CountryReportBuilder:
         images = {}
         for meta in LOSS_METADATA.values():
             label = meta["label"]
-            fig, ax = plot_variable(
-                aggloss_df, admin_boundaries, label, classifiers[label],
-                meta["colors"], country_name=self.country_name,
+            elements = MapDataElements(
                 plot_title=meta["title"],
-                legend_title=label, cities=self.cities,
-                x_limits=self.x_limits, y_limits=self.y_limits,
-                basemap_path=self.basemap_path, epicenter=self.hypocenter)
+                legend_title=label,
+                cities=self.cities,
+                x_limits=self.x_limits,
+                y_limits=self.y_limits,
+                basemap_path=self.basemap_path,
+                epicenter=self.hypocenter
+            )
+            fig, ax = plot_variable(
+                aggloss_df, admin_boundaries, label,
+                classifiers[label], meta["colors"],
+                elements=elements
+            )
             buf = BytesIO()
             fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
             plt.close(fig)

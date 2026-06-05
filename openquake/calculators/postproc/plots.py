@@ -22,6 +22,8 @@ import base64
 import numpy
 from pathlib import Path
 from shapely.geometry import Polygon, box
+from dataclasses import dataclass
+from typing import Any, Optional, Tuple, Union, Dict
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -612,99 +614,91 @@ def _overlay_cities(ax, cities, city_font_size):
         pass
 
 
+@dataclass
+class MapStyleConfig:
+    """
+    Encapsulates sizing, text fonts, and styling properties for rendering.
+    """
+    font_size: Union[int, float] = 18
+    city_font_size: Union[int, float] = 10
+    legend_font_size: Union[int, float] = 10
+    title_font_size: Union[int, float] = 20
+    figsize: Tuple[float, float] = (10, 10)
+    region_alpha: float = 0.7
+    legend_digits: int = 0
+
+
+@dataclass
+class MapDataElements:
+    """
+    Groups optional geographical annotations, basemaps, and layout limits.
+    """
+    plot_title: Optional[str] = None
+    legend_title: Optional[str] = None
+    cities: Optional[Dict[str, Tuple[float, float]]] = None
+    x_limits: Optional[Tuple[float, float]] = None
+    y_limits: Optional[Tuple[float, float]] = None
+    basemap_path: Optional[Any] = None
+    epicenter: Optional[Tuple[float, float]] = None
+
+
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
-                  country_name=None, plot_title=None, legend_title=None,
-                  cities=None, legend_digits=0, x_limits=None, y_limits=None,
-                  basemap_path=None, font_size=18, city_font_size=10,
-                  legend_font_size=10, title_font_size=20, figsize=(10, 10),
-                  region_alpha=0.7, epicenter=None):
+                  elements: MapDataElements = None,
+                  style: MapStyleConfig = None):
     """
     Plot a classified geospatial variable with optional basemap
     and annotations.
-
-    :param df: geopandas.GeoDataFrame
-        Input data with geometry column.
-    :param admin_boundaries: geopandas.GeoDataFrame
-        Administrative boundaries to overlay.
-    :param column: str
-        Column to classify and plot.
-    :param classifier: mapclassify classifier
-        Fitted classifier (e.g. NaturalBreaks).
-    :param colors: list[str]
-        One color per class (length must at least the same as classifier.k).
-    :param country_name: str, optional
-        Used only for output naming or titles.
-    :param plot_title: str, optional
-        Figure title.
-    :param legend_title: str, optional
-        Legend title.
-    :param cities: dict[str, tuple[float, float]], optional
-        Mapping of city name -> (lon, lat).
-    :param legend_digits: int
-        Decimal digits for legend bin labels.
-    :param x_limits, y_limits: tuple, optional
-        Axis limits.
-    :param basemap_path: Path or str, optional
-        Raster basemap path.
-    :param font_size: int or float
-        Base font size for axis labels.
-    :param city_font_size: int or float
-        Font size for city name annotations.
-    :param legend_font_size: int or float
-        Font size for legend entries.
-    :param title_font_size: int or float
-        Font size for the main plot title.
-    :param figsize: tuple(float, float)
-        Width and height of the figure in inches.
-    :param region_alpha: float
-        Transparency of the classified region fill, between 0 (fully
-        transparent) and 1 (fully opaque)
-    :param epicenter: tuple(float, float), optional
-        Coordinates (lon, lat) of the earthquake epicenter to be
-        plotted as a yellow star.
     """
     plt = import_plt()
     import matplotlib.patches as mpatches
 
+    # Fallback to defaults if no custom styles/elements are passed
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+
+    # Pre-process using the helper functions we built previously
     df, colors = _prepare_classified_data(
         df, admin_boundaries, column, classifier, colors)
-    labels = _build_legend_labels(classifier, legend_digits)
+    labels = _build_legend_labels(classifier, style.legend_digits)
 
-    fig, ax = plt.subplots(figsize=figsize)
-    _overlay_basemap(ax, basemap_path, df.crs)
+    fig, ax = plt.subplots(figsize=style.figsize)
+    _overlay_basemap(ax, elements.basemap_path, df.crs)
 
     # Plot each class with its corresponding color
     for i, color in enumerate(colors):
         subset = df[df["class"] == i]
         if not subset.empty:
             subset.plot(ax=ax, color=color, edgecolor="none",
-                        alpha=region_alpha)
+                        alpha=style.region_alpha)
 
     epicenter_handle = None
-    if epicenter is not None:
-        lon, lat = epicenter
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
         epicenter_handle = ax.scatter(
             lon, lat, marker='*', s=150, color='yellow',
             edgecolor='black', linewidth=1, zorder=10, label='Epicenter'
         )
 
-    # Create legend handles based on color and label
+    # Create legend handles
     handles = [mpatches.Patch(color=col, label=lab)
                for col, lab in zip(colors, labels)]
     if epicenter_handle is not None:
         handles.append(epicenter_handle)
-    ax.legend(handles=handles, title=legend_title, framealpha=0.7,
-              title_fontsize=font_size, fontsize=legend_font_size, loc="best")
 
-    admin_boundaries.plot(
-        ax=ax, alpha=0.4, edgecolor="black", facecolor="none", linewidth=0.4)
-    _resolve_limits(ax, x_limits, y_limits, epicenter)
-    _overlay_cities(ax, cities, city_font_size)
+    ax.legend(handles=handles, title=elements.legend_title, framealpha=0.7,
+              title_fontsize=style.font_size,
+              fontsize=style.legend_font_size, loc="best")
 
-    if plot_title:
-        ax.set_title(plot_title, fontsize=title_font_size)
+    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
+                          facecolor="none", linewidth=0.4)
+    _resolve_limits(ax, elements.x_limits, elements.y_limits,
+                    elements.epicenter)
+    _overlay_cities(ax, elements.cities, style.city_font_size)
 
-    ax.set_xlabel("Longitude", fontsize=font_size)
-    ax.set_ylabel("Latitude", fontsize=font_size)
+    if elements.plot_title:
+        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
+
+    ax.set_xlabel("Longitude", fontsize=style.font_size)
+    ax.set_ylabel("Latitude", fontsize=style.font_size)
     fig.tight_layout()
     return fig, ax
