@@ -19,7 +19,6 @@ import os
 import numpy
 from openquake.baselib import config, general
 from openquake.commonlib import datastore
-from openquake.hazardlib.stats import compute_stats2
 
 F32 = numpy.float32
 read = datastore.read
