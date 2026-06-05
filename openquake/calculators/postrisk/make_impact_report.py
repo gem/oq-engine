@@ -599,23 +599,19 @@ class CountryReportBuilder:
             [meta["label"], self.summary_data[meta["label"]]]
             for meta in LOSS_METADATA.values()
         ]
-
         if self.no_uncertainty:
             table_data.append(["No uncertainty was included", ""])
-
         summary_table = self.Table(
             table_data,
             colWidths=[self.col_w * 0.45, self.col_w * 0.45],
             hAlign="LEFT",
         )
-
         style_cmds = [
             ("GRID", (0, 0), (-1, -1), 0.5, self.colors.grey),
             ("BACKGROUND", (0, 0), (-1, 0), self.colors.whitesmoke),
             ("SIZE", (0, 0), (-1, -1), 9),
             ("PADDING", (0, 0), (-1, -1), 4),
         ]
-
         if self.no_uncertainty:
             # Span the last row across both columns and italicize
             last_row_idx = len(table_data) - 1
@@ -623,13 +619,10 @@ class CountryReportBuilder:
             style_cmds.append(("FONTNAME",
                                (0, last_row_idx), (0, last_row_idx),
                                "Helvetica-Oblique"))
-
         summary_table.setStyle(self.TableStyle(style_cmds))
-
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
-
         left_bundle = [
             self.Paragraph(
                 f"<b>Summary of impact for {self.country_name}:</b>",
@@ -649,25 +642,21 @@ class CountryReportBuilder:
                 leftIndent=15,
             ),
         ]
-
         img_top_right = self._scaled_image_from_bytes(
             images[LOSS_METADATA['number']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
-
         img_bot_left = self._scaled_image_from_bytes(
             images[LOSS_METADATA['occupants']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
-
         img_bot_right = self._scaled_image_from_bytes(
             images[LOSS_METADATA['residents']['label']],
             self.col_w - 10,
             self.row_h - 10,
         )
-
         tbl = self.Table(
             [
                 [left_bundle, img_top_right],
@@ -676,7 +665,6 @@ class CountryReportBuilder:
             colWidths=[self.col_w, self.col_w],
             rowHeights=[self.row_h, self.row_h],
         )
-
         tbl.setStyle(self.TableStyle([
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("ALIGN", (1, 0), (1, 1), "CENTER"),
@@ -684,7 +672,6 @@ class CountryReportBuilder:
             ("TOPPADDING", (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]))
-
         return tbl
 
     def _build_notes(self):
@@ -909,21 +896,13 @@ def main(dstore, adm_level=1, threshold_deg=None):
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
-
     event_ctx = EventContext(
-        name=event_name,
-        date=event_date,
-        hypocenter=hypocenter,
-        shakemap_version=shakemap_version
-    )
+        name=event_name, date=event_date, hypocenter=hypocenter,
+        shakemap_version=shakemap_version)
     report_opts = ReportOptions(
-        disclaimer_txt=disclaimer_txt,
-        notes_txt=notes_txt,
-        basemap_path=basemap_path,
-        threshold_deg=threshold_deg,
-        no_uncertainty=no_uncertainty
-    )
-
+        disclaimer_txt=disclaimer_txt, notes_txt=notes_txt,
+        basemap_path=basemap_path, threshold_deg=threshold_deg,
+        no_uncertainty=no_uncertainty)
     for iso3 in iso3_codes:
         summary_data = _get_impact_summary_data(dstore, iso3, no_uncertainty)
         if summary_data is not None:
