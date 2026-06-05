@@ -266,7 +266,7 @@ class ScenarioTestCase(CalculatorTestCase):
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'PGA SA(0.3) SA(0.6) SA(1.0)'.split():
             for g1, g2 in zip(df0[gmv], df1[gmv]):
-                assert abs(g1-g2) < 1E-5, (gmv, g1, g2)
+                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
 
     def test_case_22_bis(self):
         # check that exported GMFs are importable, with custom_site_id
