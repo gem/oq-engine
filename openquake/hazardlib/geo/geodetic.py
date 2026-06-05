@@ -283,11 +283,11 @@ def spherical_to_cartesian(lons, lats, depths=None):
 
     See also :func:`cartesian_to_spherical`.
     """
-    phi = np.radians(np.asarray(lons, dtype=float))
-    theta = np.radians(np.asarray(lats, dtype=float))
+    phi = np.radians(np.asarray(lons, dtype=F32))
+    theta = np.radians(np.asarray(lats, dtype=F32))
     if depths is None:
         depths = np.zeros_like(phi)
-    rr = EARTH_RADIUS - np.asarray(depths, dtype=float)
+    rr = EARTH_RADIUS - np.asarray(depths, dtype=F32)
     cos_theta_r = rr * np.cos(theta)
     arr = np.zeros(phi.shape + (3,))
     arr[..., 0] = cos_theta_r * np.cos(phi)
