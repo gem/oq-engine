@@ -20,7 +20,7 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
-      when: ansible_os_family == 'Debian'
+      when: ansible_facts['os_family'] == 'Debian'
 
     - name: Install required extra system packages for Debian based
       apt:
@@ -38,7 +38,7 @@
          - strace
          - htop
          - lsof
-      when: ansible_os_family == 'Debian'
+      when: ansible_facts['os_family'] == 'Debian'
 
 
     - name: Enable dnf-plugins-core on Rocky
