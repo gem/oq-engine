@@ -71,6 +71,8 @@ def split_mps(sources, blocksize=1000):
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
                 segment.trt_smr = src.trt_smr
+                segment.samples = src.samples
+                segment.smweight = src.smweight
                 split_mps.append(segment)
         else:
             split_mps.append(src)
