@@ -197,7 +197,7 @@ def _split_src(srcs, n):
             yield blk
 
 
-def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+def classical(grp_keys, tilegetter, cmaker, dstore, num_chunks, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case
@@ -209,9 +209,12 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
-        # return raw array that will be stored immediately
+        # Write rates to a per-worker tmp file to avoid serialising
+        # the array back to the main process and appending to the
+        # growing main HDF5 file on every task completion
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
-        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+        _store(result['rmap'].to_array(cmaker.gid), num_chunks, None, monitor)
+        result['rmap'] = None
         yield result
     elif len(grps) == 1 and len(grps[0]) >= 2 and not grps[0].multifault:
         # NB: multifaults are not split to avoid transferring the dparam cache
@@ -421,11 +424,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if rmap is None:
             # already stored in the workers, case_22
             pass
-        elif isinstance(rmap, numpy.ndarray):
-            # store the rates
-            with self.monitor('storing rates', measuremem=True):
-                chunkno = dic.get('chunkno')  # None with the current impl.
-                _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
             # aggregating rates is ultra-fast compared to storing
             self.rmap[grp_id] += rmap
@@ -645,7 +643,10 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(
                 classical_disagg, allargs, h5=self.datastore.hdf5)
         else:
-            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+            # Append num_chunks so workers can write per-task tmp files
+            allargs = [a + (self.num_chunks,) for a in allargs]
+            smap = parallel.Starmap(
+                classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
 
