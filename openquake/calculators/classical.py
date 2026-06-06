@@ -106,25 +106,6 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         return fname
 
 
-def _rt_batch_size(full_lt, sitecol, oq):
-    """
-    Derive the number of RuntimeSourceModelLT branches to process per
-    batch so that peak RAM stays below a quarter of the machine limit.
-
-    Peak memory per batch branch:
-      - one RateMap entry: N * L * G * 4 bytes
-      - one per-rlz hcurve: N * M * L1 * 4 bytes
-    """
-    N = len(sitecol)
-    L = oq.imtls.size
-    M = len(oq.imtls)
-    L1 = L // M
-    G = full_lt.gsim_lt.get_num_paths()
-    avail = min(psutil.virtual_memory().available, config.memory.limit)
-    bytes_per_branch = (N * L * G + N * M * L1) * 4
-    return max(1, int(avail / bytes_per_branch / 4))
-
-
 class Set(set):
     __iadd__ = set.__ior__
 
@@ -589,10 +570,13 @@ class ClassicalCalculator(base.HazardCalculator):
         # Batched path for large RuntimeSourceModelLTs with few sites.
         # Use N <= _RT_MAX_SITES rather than self.few_sites so that the
         # path triggers regardless of the max_sites_disagg setting.
+        # Batch size is capped at len(BASE183)=183 so the path always triggers
+        # when a RuntimeSourceModelLT exceeds the standard BASE183 branch limit.
         from openquake.hazardlib.logictree import RuntimeSourceModelLT
+        from openquake.baselib.general import BASE183
         smlt = self.full_lt.source_model_lt
         if self.N <= _RT_MAX_SITES and isinstance(smlt, RuntimeSourceModelLT):
-            batch_size = _rt_batch_size(self.full_lt, self.sitecol, oq)
+            batch_size = len(BASE183)
             if smlt.num_paths > batch_size:
                 logging.info(
                     'RuntimeSourceModelLT: using batched execution '
