@@ -145,7 +145,7 @@ class ComplexFaultSurface(BaseSurface):
         ul, ur, bl, br = spherical_to_cartesian(
             [ul.longitude, u1.longitude, bl.longitude, b1.longitude],
             [ul.latitude, u1.latitude, bl.latitude, b1.latitude],
-            [ul.depth, b1.depth, bl.depth, b1.depth])
+            [ul.depth, u1.depth, bl.depth, b1.depth])
 
         top_edge = ur - ul
         left_edge = bl - ul
