@@ -573,10 +573,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # Batch size is capped at len(BASE183)=183 so the path always triggers
         # when a RuntimeSourceModelLT exceeds the standard BASE183 branch limit.
         from openquake.hazardlib.logictree import RuntimeSourceModelLT
-        from openquake.baselib.general import BASE183
         smlt = self.full_lt.source_model_lt
         if self.N <= _RT_MAX_SITES and isinstance(smlt, RuntimeSourceModelLT):
-            batch_size = len(BASE183)
+            batch_size = len(general.BASE183)
             if smlt.num_paths > batch_size:
                 logging.info(
                     'RuntimeSourceModelLT: using batched execution '
@@ -655,14 +654,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = self.N
         R_full = len(global_weights)
 
-        class _Wget:
-            def __init__(self, weights):
-                self.weights = weights[:, numpy.newaxis]  # (R, 1)
-
-            def __call__(self, _sid, _imt=None):
-                return self.weights[:, -1]
-
-        wget = _Wget(global_weights)
+        wget = lambda _sid, _imt=None: global_weights
         for s, (statname, stat) in enumerate(hstats.items()):
             if statname == 'mean':
                 continue
@@ -694,7 +686,6 @@ class ClassicalCalculator(base.HazardCalculator):
         # Store full-smlt weights before any swap so _create_hcurves_maps
         # finds the correct R in self.datastore['weights']
         self.store_rlz_info({})
-        R_full = len(self.datastore['weights'])
 
         # Create hcurves-stats / hcurves-rlzs / hmaps datasets.
         # In the batched path we always need per-rlz curves: either for
