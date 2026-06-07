@@ -43,6 +43,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -59,9 +65,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Returns std for rupture area.
-        
-        Magnitude is ignored.
+        Returns std for rupture area. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -76,7 +80,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.22
 
-
     def get_median_mag(self, area, rake):
         """
         Calculates median magnitude from area.
@@ -85,6 +88,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param area:
+            Area in square km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -101,9 +110,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag(self, area, rake):
         """
-        Returns std for magnitude.
-        
-        Area is ignored.
+        Returns std for magnitude. Area is ignored.
         """
         if rake is None:
             # their "All" case
@@ -118,7 +125,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.25
 
-
     def get_median_srl(self, mag, rake):
         """
         Calculates median surface rupture length from magnitude.
@@ -127,6 +133,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -143,9 +155,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_srl(self, mag, rake):
         """
-        Returns std for surface rupture length.
-        
-        Magnitude is ignored.
+        Returns std for surface rupture length. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -160,7 +170,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.21
 
-
     def get_median_mag_from_srl(self, srl, rake):
         """
         Calculates median magnitude from surface rupture length.
@@ -169,6 +178,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param srl:
+            Surface rupture length in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -185,9 +200,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag_from_srl(self, srl, rake):
         """
-        Returns std for magnitude.
-        
-        Surface rupture length is ignored.
+        Returns std for magnitude. Surface rupture length is ignored.
         """
         if rake is None:
             # their "All" case
@@ -202,7 +215,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.34
 
-
     def get_median_rld(self, mag, rake):
         """
         Calculates median subsurface rupture length from magnitude.
@@ -211,6 +223,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -227,9 +245,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_rld(self, mag, rake):
         """
-        Returns std for subsurface rupture length.
-        
-        Magnitude is ignored.
+        Returns std for subsurface rupture length. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -244,7 +260,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.17
 
-
     def get_median_mag_from_rld(self, rld, rake):
         """
         Calculates median magnitude from subsurface rupture length.
@@ -253,6 +268,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param rld:
+            Subsurface rupture length in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -269,9 +290,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag_from_rld(self, rld, rake):
         """
-        Returns std for magnitude.
-        
-        Subsurface rupture length is ignored.
+        Returns std for magnitude. Subsurface rupture length is ignored.
         """
         if rake is None:
             # their "All" case
@@ -285,7 +304,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         else:
             # normal
             return 0.31
-        
 
     def get_median_rw(self, mag, rake):
         """
@@ -295,6 +313,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -311,9 +335,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_rw(self, mag, rake):
         """
-        Returns std for rupture width.
-        
-        Magnitude is ignored.
+        Returns std for rupture width. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -328,7 +350,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.12
 
-
     def get_median_mag_from_rw(self, rw, rake):
         """
         Calculates median magnitude from rupture width.
@@ -337,6 +358,12 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param rw:
+            Rupture width in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -353,9 +380,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag_from_rw(self, rw, rake):
         """
-        Returns std for magnitude.
-        
-        Rupture width is ignored.
+        Returns std for magnitude. Rupture width is ignored.
         """
         if rake is None:
             # their "All" case
@@ -369,4 +394,4 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         else:
             # normal
             return 0.31
-        
+    
