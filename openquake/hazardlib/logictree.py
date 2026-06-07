@@ -1095,7 +1095,7 @@ class RuntimeSourceModelLT(object):
         # gets the correct SSC level when constructing a CompositeLogicTree.
         bset = BranchSet('sourceModel', {})
         bset.ordinal = 0
-        for bid, w in sorted(self._branch_weights.items()):
+        for bid, w in self._branch_weights.items():
             bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
         return [bset]
 
@@ -1106,7 +1106,7 @@ class RuntimeSourceModelLT(object):
 
     def __iter__(self):
         from openquake.hazardlib import lt as lt_mod
-        branch_ids = sorted(self._branch_weights)
+        branch_ids = list(self._branch_weights)
         weights = numpy.array(
             [self._branch_weights[bid] for bid in branch_ids])
         if self.num_samples:
