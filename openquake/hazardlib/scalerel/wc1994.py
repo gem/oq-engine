@@ -25,7 +25,7 @@ from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
 class WC1994(BaseMSRSigma, BaseASRSigma):
     """
-    Wells and Coppersmith magnitude -- rupture relationships,
+    Wells and Coppersmith magnitude -- rupture parameters relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.
 
     Implements scaling relationships for:
@@ -65,7 +65,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Returns std for rupture area. Magnitude is ignored.
+        Returns std of the logarithm of rupture area. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -155,7 +155,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_srl(self, mag, rake):
         """
-        Returns std for surface rupture length. Magnitude is ignored.
+        Returns std of the logarithm of surface rupture length. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -245,7 +245,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_rld(self, mag, rake):
         """
-        Returns std for subsurface rupture length. Magnitude is ignored.
+        Returns std of the logarithm of subsurface rupture length. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -335,7 +335,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_rw(self, mag, rake):
         """
-        Returns std for rupture width. Magnitude is ignored.
+        Returns std of the logarithm of rupture width. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
