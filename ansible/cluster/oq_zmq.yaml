@@ -104,7 +104,6 @@
         home: "{{ shared_nfs }}/ci_user"
         shell: /bin/bash
         state: present
-
     when: "'master' in group_names"
 
 - hosts: master
@@ -120,12 +119,22 @@
     - name: check keys
       debug: msg="{{ ssh_keys.stdout }}"
 
-    - name: deploy keys on all servers
-      authorized_key: user=openquake key="{{ item[0] }}"
+    #- name: deploy keys on all servers
+    #  authorized_key: user=openquake key="{{ item[0] }}"
+    #  delegate_to: "{{ item[1] }}"
+    #  with_nested:
+    #    - "{{ ssh_keys.stdout }}"
+    #    - "{{groups['worker']}}"
+
+    - name: Deploy keys on all servers
+      ansible.posix.authorized_key:
+        user: openquake
+        key: "{{ item[0] }}"
       delegate_to: "{{ item[1] }}"
-      with_nested:
-        - "{{ ssh_keys.stdout }}"
-        - "{{groups['worker']}}"
+      loop: "{{ q('nested', [ssh_keys.stdout], groups['worker']) }}"
+
+
+
 
     - name: execute ssh for first time with openquake user
       shell: |
