@@ -23,6 +23,7 @@ import os
 import re
 import ast
 import sys
+import copy
 import json
 import time
 import pickle
@@ -516,7 +517,6 @@ class _Workflow:
                     if 'out' in key and not os.path.exists(path):
                         open(path, 'w').close()  # touch the file
 
-
     def validate(self):
         """
         Convert the .inis dictionaries into validated oqparam instances
@@ -555,6 +555,18 @@ class _Workflow:
             dic[name] = ini
         dic['success'] = self.success
         return toml.dumps(dic)
+
+    def kfilter(self, regex):
+        """
+        Reduce the workflow to the jobs matched by the regular expression
+        """
+        new = copy.copy(self)
+        new.inis, new.names = [], []
+        for ini, name in zip(self.inis, self.names):
+            if regex.search(name):
+                new.inis.append(ini)
+                new.names.append(name)
+        return new
 
     def __repr__(self):
         return '<Workflow %s>' % self.workflow_toml
@@ -621,7 +633,7 @@ def read_many(workflow_toml, params, validate=True):
     return out
 
 
-def prepare_workflow(params, workflow_toml, pdb):
+def prepare_workflow(params, workflow_toml, pdb, kfilter):
     """
     Create or retrieve a workflow record and create or update
     the workflow database
@@ -641,11 +653,20 @@ def prepare_workflow(params, workflow_toml, pdb):
         new = False
     with wfjob:
         workflows = read_many(workflow_toml, params, validate=True)
+        if kfilter:
+            rx = re.compile(kfilter)
+            workflows = [wf.kfilter(rx) for wf in workflows]
+            oks = numpy.array([bool(wf.names) for wf in workflows])
+            if not any(oks):
+                sys.exit(f'No matches for {kfilter}')
+        else:
+            oks = numpy.ones(len(workflows), bool)
         names = numpy.concatenate([wf.names for wf in workflows])
         n = len(names)
         check_unique(names, workflow_toml)
-        logging.info('Running %d workflows: %s', len(workflows),
-                     [[str(x) for x in wf.names] for wf in workflows])
+        logging.info('Running %d workflows: %s', sum(oks),
+                     [[str(x) for x in wf.names] for wf in workflows
+                      if wf.names])
 
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
@@ -660,7 +681,8 @@ def prepare_workflow(params, workflow_toml, pdb):
             ).set_index('name')
             dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
             dstore.create_df('workflow', wf_df.reset_index())
-            dstore.create_dset('success', hdf5.vstr, len(workflows))
+            arr = numpy.array(['[]' for _ in range(len(workflows))], hdf5.vstr)
+            dstore.create_dset('success', arr)
         else:
             # continue an existing workflow
             wfdic['job_id'] = workflow_id
@@ -671,7 +693,7 @@ def prepare_workflow(params, workflow_toml, pdb):
     
     logs.dbcmd('update_job', workflow_id,
                {'description': f'{os.path.basename(workflow_toml)}: {descr}'})
-    return wfjob, dstore, names
+    return wfjob, dstore, names, oks
 
 
 def format_dic(success):
@@ -690,33 +712,39 @@ def format_dic(success):
 
 
 def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
-                 sbatch=False, notify_to=None, pdb=False):
+                 sbatch=False, notify_to=None, pdb=False, kfilter=''):
     """
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
     t0 = time.time()
-    wfjob, dstore, names = prepare_workflow(params, workflow_toml, pdb)
+    wfjob, dstore, names, oks = prepare_workflow(
+        params, workflow_toml, pdb, kfilter)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
     size_dset = dstore['workflow/size_mb']
-    success_dset = dstore['success']
-    successes = success_dset[:]  # array of lists
+    success_array = dstore['success'][oks]
+    successes = [ast.literal_eval(s.decode('utf8')) for s in success_array]
     expected_failures = set()
     with dstore:
-        n_wfs = len(wfjob.workflows)
+        n_wfs = oks.sum()
         for wf_no, wf in enumerate(wfjob.workflows):
+            # skip workflows not selected
+            if not oks[wf_no]:
+                continue
+
             # set the passed environment variables
             for k, v in wf.env.items():
                 if k not in os.environ:  # explicitly set variable must win
                     os.environ[k] = str(v)
 
-            if wf_no == 0:  # at first step
+            if 'oqparam' not in dstore:  # new workflow
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
                 with wfjob:
                     dstore['oqparam'] = OqParam(**kw)
+
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
@@ -748,11 +776,6 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
-            literal_dics = successes[wf_no].decode('ascii')
-            if literal_dics:
-                successes[wf_no] = ast.literal_eval(literal_dics)
-            else:
-                successes[wf_no] = []
             with wfjob:
                 for success in wf.success:
                     if success in successes[wf_no]:
@@ -769,7 +792,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if failed and 'OQ_SAMPLES' not in wf.env:
                 break
     for wf_no, succ in enumerate(successes):
-        success_dset[wf_no] = str(succ)  # list of dictionaries
+        dstore['success'][wf_no] = str(succ)  # list of dictionaries
     dt = (time.time() - t0) / 3600.
     with wfjob:
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
