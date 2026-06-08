@@ -136,6 +136,8 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.userlevel = 'User level'
+main = main_cmd
+
 
 if __name__ == '__main__':
     sap.run(main_cmd)
