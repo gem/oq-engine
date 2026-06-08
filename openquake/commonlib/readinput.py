@@ -1078,7 +1078,8 @@ def get_composite_source_model(oqparam, dstore=None):
     :param dstore:
          an open datastore where to save the source info
     """
-    if 'source_model_logic_tree' in oqparam.inputs:
+    if ('source_model_logic_tree' in oqparam.inputs and not
+        oqparam.inputs['source_model_logic_tree'].endswith(".py")):
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
@@ -1304,8 +1305,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     sitecol.extend(lons, lats)
     logging.info('Extended complete site collection from %d to %d sites',
                  nsites, len(sitecol.complete))
-    dic = {(lo, la): sid
-           for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
+    dic = {(lo, la): sid # lons/lats arrays for const. of keys with sids dict
+           for lo, la, sid in zip(lons, lats, sitecol.complete['sids'])}
     sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats, strict=True)])
 
     # Identify the columns with IM values
