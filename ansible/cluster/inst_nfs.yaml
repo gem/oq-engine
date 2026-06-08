@@ -22,7 +22,7 @@
     ping:
 
   - name: check OS and get variable
-    debug: msg={{ansible_facts['distribution']}}-{{ansible_facts['distribution']_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
+    debug: msg={{ansible_facts['distribution']}}-{{ansible_facts['distribution']}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
 
   - name: check OS and get eth1 information
     debug: msg={{ top_nfs }}_{{ ansible_eth1.ipv4.address }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}
