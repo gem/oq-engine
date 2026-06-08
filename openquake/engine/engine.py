@@ -666,7 +666,7 @@ def prepare_workflow(params, workflow_toml, pdb, kfilter):
         check_unique(names, workflow_toml)
         logging.info('Running %d workflows: %s', sum(oks),
                      [[str(x) for x in wf.names] for wf in workflows
-                      if wf.names])
+                      if len(wf.names)])
 
         wfdic = dict(base_path=os.path.dirname(workflow_toml),
                      calculation_mode='workflow')
@@ -693,7 +693,7 @@ def prepare_workflow(params, workflow_toml, pdb, kfilter):
     
     logs.dbcmd('update_job', workflow_id,
                {'description': f'{os.path.basename(workflow_toml)}: {descr}'})
-    return wfjob, dstore, names, oks
+    return wfjob, dstore, oks
 
 
 def format_dic(success):
@@ -718,8 +718,9 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     workflow files.
     """
     t0 = time.time()
-    wfjob, dstore, names, oks = prepare_workflow(
+    wfjob, dstore, oks = prepare_workflow(
         params, workflow_toml, pdb, kfilter)
+    names = numpy.concatenate([wf.names for wf in wfjob.workflows])
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
