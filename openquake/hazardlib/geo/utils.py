@@ -83,7 +83,7 @@ class PolygonPlotter(object):
         self.maxys = []
 
     def add(self, poly, **kw):
-        from openquake.hmtk.plotting.patch import PolygonPatch
+        from openquake.hazardlib.geo.patch import PolygonPatch
         minx, miny, maxx, maxy = poly.bounds
         self.minxs.append(minx)
         self.maxxs.append(maxx)
