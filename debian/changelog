@@ -1,3 +1,6 @@
+  [Christopher Brooks]
+  * Fix a bug in the Aki and Richard's convention check in complex faults.
+  
   [Michele Simionato]
   * Optimized reading and sampling multiFaultSources
   * Saved memory in classical calculations with large sources affecting many
