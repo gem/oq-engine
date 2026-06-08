@@ -46,7 +46,7 @@
         name: dnf-command(config-manager)
         state: latest
         update_cache: yes
-      when: ansible_distribution == 'Rocky'
+      when: ansible_facts['distribution'] == 'Rocky'
 
     - name: Enable EPEL Repository on Rocky
       dnf:
@@ -54,12 +54,12 @@
         state: latest
         update_cache: yes
       when:
-        - ansible_distribution == 'Rocky'
+        - ansible_facts['distribution'] == 'Rocky'
 
     - name: Enable PowerTools (crb) on Rocky 9
       command: dnf config-manager --enable crb
       when:
-        - ansible_distribution == 'Rocky'
+        -  ansible_facts['distribution'] == 'Rocky'
         - ansible_distribution_major_version == "9"
 
     - name: Install required extra system packages
@@ -80,7 +80,7 @@
         state: latest
         update_cache: yes
       when:
-        - ansible_distribution == 'Rocky'
+        - ansible_facts['distribution'] == 'Rocky'
   
     - name: Config and Start sshd
       systemd:

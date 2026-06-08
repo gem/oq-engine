@@ -22,7 +22,7 @@
     ping:
 
   - name: check OS and get variable
-    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
+    debug: msg={{ansible_facts['distribution']}}-{{ansible_facts['distribution']_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
 
   - name: check OS and get eth1 information
     debug: msg={{ top_nfs }}_{{ ansible_eth1.ipv4.address }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}
@@ -66,7 +66,7 @@
 
 #### Setup NFS server on master and worker
 #
-  - when: "'master' in group_names and ansible_distribution == 'Debian' "
+  - when: "'master' in group_names and ansible_facts['distribution'] == 'Debian' "
     block:
 
       - name: Ensure NFS utilities are installed on Debian master
@@ -112,7 +112,7 @@
       name: "{{ item }}"
       state: latest
     loop:  [nfs-common, netbase, net-tools, vim]
-    when: "'worker' in group_names and ansible_distribution == 'Debian' "
+    when: "'worker' in group_names and ansible_facts['distribution'] == 'Debian' "
 
   - name: Disable rpcbind service on Debian worker
     systemd:
@@ -120,10 +120,10 @@
       enabled: no
       masked: yes
     loop:  [rpcbind.service, rpcbind.socket]
-    when: "'worker' in group_names and ansible_distribution == 'Debian' "
+    when: "'worker' in group_names and ansible_facts['distribution'] == 'Debian' "
     
 ### Rocky
-  - when: "'master' in group_names and ansible_distribution == 'Rocky' "
+  - when: "'master' in group_names and ansible_facts['distribution'] == 'Rocky' "
     block:
     
       - name: Disable firewalld service on Rocky NFS Server
