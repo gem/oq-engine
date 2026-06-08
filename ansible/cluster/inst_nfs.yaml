@@ -165,7 +165,7 @@
       - name: "Add export line for NFS server for shared folder"
         lineinfile:
           path: /etc/exports
-          line: "{{ top_nfs }}  {{ ansible_eth1.ipv4.network }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}"
+          line: "{{ top_nfs }}  {{ ansible_facts['eth1']['ipv4']['network'] }}/{{ ansible_facts['eth1']['ipv4']['netmask'] }}{{ nfs_serv_opts }}"
 
 
 
