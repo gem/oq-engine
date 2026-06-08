@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added `--kfilter` capability to `oq run workflow.toml`
   * Optimized reading and sampling multiFaultSources
   * Saved memory in classical calculations with large sources affecting many
     sites, by yieldings contexts

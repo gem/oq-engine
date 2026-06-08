@@ -724,8 +724,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
     size_dset = dstore['workflow/size_mb']
-    success_array = dstore['success'][oks]
-    successes = [ast.literal_eval(s.decode('utf8')) for s in success_array]
+    successes = [ast.literal_eval(s.decode('utf8')) for s in dstore['success']]
     expected_failures = set()
     with dstore:
         n_wfs = oks.sum()
