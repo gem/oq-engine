@@ -24,7 +24,7 @@
     ping:
 
   - name: check OS and get variable
-    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}
+    debug: msg: "{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}-{{ ansible_host }}"
 
   - name: Echo my_env_var again
     shell: "echo $HDF5_USE_FILE_LOCKING"
