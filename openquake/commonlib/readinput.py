@@ -1305,9 +1305,11 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     sitecol.extend(lons, lats)
     logging.info('Extended complete site collection from %d to %d sites',
                  nsites, len(sitecol.complete))
-    dic = {(lo, la): sid
+    # 5dp matches the precision sitecol.extend uses for deduplication
+    dic = {(round(float(lo), 5), round(float(la), 5)): sid
            for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats, strict=True)])
+    sids = U32([dic[round(float(lon), 5), round(float(lat), 5)]
+                for lon, lat in zip(lons, lats, strict=True)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
