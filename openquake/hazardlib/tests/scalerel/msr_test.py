@@ -109,5 +109,43 @@ class WC1994MSRTestCase(BaseMSRTestCase):
         self.assertEqual(self.msr.get_std_dev_area(None, 50), 0.26)
         self.assertEqual(self.msr.get_std_dev_area(None, -130), 0.22)
 
+    def test_median_length_and_width_all(self):
+        self.assertAlmostEqual(self.msr.get_median_srl(5.9, None), 7.0957776, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rld(5.9, None), 10.9900583, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rw(5.9, None), 7.5509227, places=6)
+
+    def test_median_length_and_width_strike_slip(self):
+        self.assertAlmostEqual(self.msr.get_median_srl(6.2, 0.0), 10.9144033, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rld(6.2, 180.0), 18.7931681, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rw(6.2, -15.0), 8.2035154, places=6)
+
+    def test_median_length_and_width_thrust(self):
+        self.assertAlmostEqual(self.msr.get_median_srl(5.8, 65.0), 6.2230028, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rld(5.8, 90.0), 8.7902251, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rw(5.8, 75.0), 5.8613816, places=6)
+
+    def test_median_length_and_width_normal(self):
+        self.assertAlmostEqual(self.msr.get_median_srl(6.1, -50.0), 10.9647819, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rld(6.1, -90.0), 14.7910838, places=6)
+        self.assertAlmostEqual(self.msr.get_median_rw(6.1, -125.0), 9.8855309, places=6)
+
+    def test_get_std_dev_length_and_width(self):
+        # all
+        self.assertEqual(self.msr.get_std_dev_srl(None, None), 0.22)
+        self.assertEqual(self.msr.get_std_dev_rld(None, None), 0.16)
+        self.assertEqual(self.msr.get_std_dev_rw(None, None), 0.15)
+        # strike slip
+        self.assertEqual(self.msr.get_std_dev_srl(None, -135.0), 0.23)
+        self.assertEqual(self.msr.get_std_dev_rld(None, 35.0), 0.15)
+        self.assertEqual(self.msr.get_std_dev_rw(None, 270.0), 0.14)
+        # reverse
+        self.assertEqual(self.msr.get_std_dev_srl(None, 90.0), 0.20)
+        self.assertEqual(self.msr.get_std_dev_rld(None, 65.0), 0.16)
+        self.assertEqual(self.msr.get_std_dev_rw(None, 125.0), 0.15)
+        # normal
+        self.assertEqual(self.msr.get_std_dev_srl(None, -50.0), 0.21)
+        self.assertEqual(self.msr.get_std_dev_rld(None, -95.0), 0.17)
+        self.assertEqual(self.msr.get_std_dev_rw(None, -115.0), 0.12)
+
     def test_string(self):
         self.assertEqual(str(self.msr), "WC1994")

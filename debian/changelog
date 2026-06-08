@@ -12,6 +12,7 @@
     useless copies of the sources and improved the performance and memory usage
 
   [Fahrettin Kuran]
+  * Added additional magnitude-scaling relationships to wc1994.py
   * Added additional magnitude-scaling relationships to thingbaijam2017.py
 
   [Michele Simionato]
