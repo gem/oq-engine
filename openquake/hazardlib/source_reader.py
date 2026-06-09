@@ -52,7 +52,7 @@ def splitMF(sources, blocksize=1000):
     Split the MultiPointSources to avoid oceanic sources with 160M ruptures
     hanging during rupture sampling
     """    
-    splitMF = []
+    splits = []
     for src in sources:
         if src.code == b'M' and len(src) > blocksize:
             for i, slc in enumerate(general.gen_slices(0, len(src), blocksize)):
@@ -73,16 +73,16 @@ def splitMF(sources, blocksize=1000):
                 segment.trt_smr = src.trt_smr
                 segment.samples = src.samples
                 segment.smweight = src.smweight
-                splitMF.append(segment)
+                splits.append(segment)
         elif src.code == b'F':
             for segment in src:
                 segment.trt_smr = src.trt_smr
                 segment.samples = src.samples
                 segment.smweight = src.smweight
-                splitMF.append(segment)
+                splits.append(segment)
         else:
-            splitMF.append(src)
-    sources[:] = splitMF
+            splits.append(src)
+    sources[:] = splits
 
 
 def check_unique(ids, msg='', strict=True):
