@@ -1701,10 +1701,13 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         data = numpy.zeros(E*N, oq.gmf_data_dt())
         field2idx = {name: idx for idx, name in enumerate(data.dtype.names)}
         F = len(field2idx)
-        try:
-            mag = oq.rupture_dict['mag']
-        except KeyError:
-            raise RuntimeError('TODO: extract the magnitude from the ShakeMap!')
+        if sec_perils:
+            # the mag is needed only to compute the secondary perils
+            try:
+                mag = oq.rupture_dict['mag']
+            except KeyError:
+                raise RuntimeError(
+                    'TODO: extract the magnitude from the ShakeMap!')
         i = 0
         for ei, event in enumerate(events):
             arr = numpy.zeros((N, F))  # (num_sites, num_fields)
