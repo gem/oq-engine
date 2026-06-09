@@ -1,3 +1,6 @@
+  [Catarina Costa]
+  * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
+
   [Michele Simionato]
   * Fixed missing weight in AvgPoeGMPE breaking the realization exporter
 
