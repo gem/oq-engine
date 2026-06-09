@@ -1710,20 +1710,21 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
             arr = numpy.zeros((N, F))  # (num_sites, num_fields)
             arr[:, 0] = sitecol.sids
             arr[:, 1] = ei
-            for m in range(M):
-                arr[:, m + 2] = gmfs[:, ei, m]
+            for m, imt in enumerate(imts):
+                arr[:, field2idx[imt.string]] = gmfs[:, ei, m]
             for sec_peril in sec_perils:
                 imt_gmf = [(imt, gmfs[:, ei, m]) for m, imt in enumerate(imts)]
                 outs = sec_peril.compute(mag, imt_gmf, sitecol)
-                for out, out_type in zip(outs, sec_peril.outputs):
-                    i = field2idx[f'{sec_peril.__class__.__name__}_{out_type}']
-                    arr[:, i] = out
+                for out, key in zip(outs, sec_peril.outputs):
+                    idx = field2idx[f'{sec_peril.__class__.__name__}_{key}']
+                    arr[:, idx] = out
             for s in numpy.arange(N, dtype=U32):
-                # tuple (sid, eid, PGA, SA(0.3), SA(1.0), sec_imt, ...)
+                # tuple (sid, eid, PGA, SA(0.3), SA(1.0), SA(3.0), sec_imt, ..)
                 data[i] = tuple(arr[s])
                 i += 1
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+            calc.datastore, imts, oq.sec_imts, data=data,
+            N=len(sitecol.complete), R=1)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         calc.datastore['weights'] = numpy.ones(1)
 

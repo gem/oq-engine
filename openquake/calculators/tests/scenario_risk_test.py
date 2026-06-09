@@ -301,7 +301,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (6,))
         self.assertEqual(
             gmfa.dtype.names,
-            ('custom_site_id', 'lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
+            ('custom_site_id', 'lon', 'lat',
+             'PGA', 'PGV', 'SA(0.3)', 'SA(1.0)',
+             'AllstadtEtAl2022Landslides_LsProb',
+             'AllstadtEtAl2022Landslides_LSE',
+             'AllstadtEtAl2022Liquefaction_LiqProb',
+             'AllstadtEtAl2022Liquefaction_LiqOccur',
+             'AllstadtEtAl2022Liquefaction_LSE'))
+
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
