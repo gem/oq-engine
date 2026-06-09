@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import pathlib
 import tempfile
 import logging
 import functools
@@ -35,6 +37,7 @@ from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.commonlib import logs
 from openquake.commonlib.calc import get_close_regions
 
+cd = pathlib.Path(__file__).parent
 
 LOSS_METADATA = {
     "occupants": {
@@ -299,7 +302,14 @@ class CountryReportBuilder:
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
-        font_dir = Path(config.directory.fonts_dir)
+        fonts_dir = config.directory.fonts_dir
+        if not fonts_dir:
+            # checking if the directory is present in oq-engine
+            if not os.path.exists(
+                    fonts_dir := cd.parent.parent.parent / 'fonts'):
+                raise AttributeError(
+                    'config.directory.fonts_dir is missing')
+        fonts_dir = Path(fonts_dir)
 
         # family_name -> font file prefix
         font_families = {
@@ -314,8 +324,8 @@ class CountryReportBuilder:
             "NotoSans-Thai": "NotoSansThai",        # Thai
         }
         for family, name in font_families.items():
-            regular = font_dir / f"{name}-Regular.ttf"
-            bold = font_dir / f"{name}-Bold.ttf"
+            regular = fonts_dir / f"{name}-Regular.ttf"
+            bold = fonts_dir / f"{name}-Bold.ttf"
             if not regular.exists():
                 logging.warning(f"Font not found: {regular}, skipping")
                 continue
@@ -432,8 +442,12 @@ class CountryReportBuilder:
     def _load_country_info(self):
         countries_info_file = config.directory.countries_info_file
         if not countries_info_file:
-            raise AttributeError(
-                'config.directory.countries_info_file is missing')
+            # checking if the file is present in oq-engine
+            if not os.path.exists(
+                    countries_info_file := cd.parent.parent.parent /
+                    'countries_info.csv'):
+                raise AttributeError(
+                    'config.directory.countries_info_file is missing')
         df = pd.read_csv(countries_info_file)
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
@@ -445,8 +459,12 @@ class CountryReportBuilder:
         """
         world_cities_file = config.directory.world_cities_file
         if not world_cities_file:
-            raise AttributeError(
-                'config.directory.world_cities_file is missing')
+            # checking if the file is present in oq-engine
+            if not os.path.exists(
+                    world_cities_file := cd.parent.parent.parent /
+                    'worldcities.csv'):
+                raise AttributeError(
+                    'config.directory.world_cities_file is missing')
         df = pd.read_csv(world_cities_file)
         # NOTE: assuming that the CSV uses 'lng' for longitude
         if 'lng' not in df:
