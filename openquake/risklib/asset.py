@@ -1281,9 +1281,9 @@ class Exposure(object):
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 # tested in scenario_risk/case_13
-                df = general.random_filter(df, sa)
-                if len(df) == 0:
-                    continue
+                rdf = general.random_filter(df, sa)
+                if len(rdf):  # reduce only if there are samples
+                    df = rdf
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))
             yield fname, df.set_index('id')
