@@ -180,7 +180,12 @@ class MetaGSIM(abc.ABCMeta):
 
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
-        self = type.__call__(cls, **kwargs)
+        if 'weight' in kwargs:  # AvgPoeGMPE
+            w = kwargs.pop('weight')
+            self = type.__call__(cls, **kwargs)
+            kwargs['weight'] = w
+        else:
+            self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
         self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
