@@ -280,12 +280,6 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
         imts = [imt.from_string(im)
                 for im in imts if im in shakemap['std'].dtype.names]
 
-    # OQ_DISTRIBUTE=no OQ_APPLICATION_MODE=IMPACT pytest -vs openquake/server/tests/test_impact_mode.py -k success
-
-    # FIXME
-    # if sec_imts is not None:
-    #     imts.extend(sec_imts)
-
     # assign iterators
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
@@ -293,8 +287,6 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     # generate standard normal random variables of shape (M*N, E)
     Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
-
-    # FIXME: how to handle the secondary perils data?
 
     # build array of mean values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
