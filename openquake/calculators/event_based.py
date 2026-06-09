@@ -50,7 +50,7 @@ from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.calculators import base, views
+from openquake.calculators import base, views, preclassical
 from openquake.calculators.getters import sig_eps_dt, get_ebrupture
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
@@ -681,6 +681,7 @@ class EventBasedCalculator(base.HazardCalculator):
         trt_smrs = self.csm.get_trt_smrs()
         cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
             param = {}

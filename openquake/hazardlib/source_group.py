@@ -500,9 +500,11 @@ class CompositeSourceModel:
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         # cmakers is a dictionary label -> array of cmakers
         with_labels = len(cmdict) > 1
+        N = len(sitecol)
         for idx, label in enumerate(cmdict):
             cms = cmdict[label].to_array(grp_ids)
             for cmaker, grp_id in zip(cms, grp_ids, strict=True):
+                mb_per_gsim = cmaker.oq.imtls.size * N * 4 / 1024**2
                 sg = self.src_groups[grp_id]
                 if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
@@ -516,14 +518,14 @@ class CompositeSourceModel:
                     if with_labels:
                         cmaker.ilabel = idx
                     yield self.split_sg(
-                        cmaker, sg, sites, max_weight, num_chunks, tiling)
+                        cmaker, sg, sites, max_weight, mb_per_gsim,
+                        num_chunks, tiling)
 
-    def split_sg(self, cmaker, sg, sitecol, max_weight,
+    def split_sg(self, cmaker, sg, sitecol, max_weight, mb_per_gsim,
                  num_chunks=1, tiling=False):
         N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
-        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
         if sg.multifault and N / splits > 2_500:
