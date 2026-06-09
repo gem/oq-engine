@@ -302,8 +302,9 @@ class CountryReportBuilder:
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
-        fonts_dir = config.directory.fonts_dir
-        if not fonts_dir:
+        try:
+            fonts_dir = config.directory.fonts_dir
+        except AttributeError:
             # checking if the directory is present in oq-engine
             if not os.path.exists(
                     fonts_dir := cd.parent.parent.parent / 'fonts'):
@@ -440,8 +441,9 @@ class CountryReportBuilder:
         )
 
     def _load_country_info(self):
-        countries_info_file = config.directory.countries_info_file
-        if not countries_info_file:
+        try:
+            countries_info_file = config.directory.countries_info_file
+        except AttributeError:
             # checking if the file is present in oq-engine
             if not os.path.exists(
                     countries_info_file := cd.parent.parent.parent /
@@ -457,8 +459,9 @@ class CountryReportBuilder:
         Finds Top num_cities cities within the map viewport belonging
         to the current country
         """
-        world_cities_file = config.directory.world_cities_file
-        if not world_cities_file:
+        try:
+            world_cities_file = config.directory.world_cities_file
+        except AttributeError:
             # checking if the file is present in oq-engine
             if not os.path.exists(
                     world_cities_file := cd.parent.parent.parent /
