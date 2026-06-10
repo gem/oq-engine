@@ -47,6 +47,13 @@ def imt2tup(string):
     """
     s = string.strip()
     name, *rest = s.split('(')
+
+    if name not in globals() and '_' in name:
+        # e.g. AllstadtEtAl2022Landslides_LsProb -> 'LsProb'
+        suffix = name.split('_')[-1]
+        if suffix in globals():
+            name = suffix
+
     if name not in globals():
         raise KeyError(name)
     elif len(name) > 12:
