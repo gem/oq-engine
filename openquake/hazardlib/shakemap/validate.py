@@ -29,6 +29,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.nrml import validators as nrml_validators
+from openquake.hazardlib.calc.filters import DEFAULT_INTEGRATION_DISTANCE
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -46,6 +47,7 @@ class ImpactParam:
     rupture_file: str = None
     station_data_file: str = None
     mmi_file: str = None
+    maximum_distance: float = None
     maximum_distance_stations: float = None
     mosaic_model: str = None
     trt: str = None
@@ -99,6 +101,8 @@ class ImpactParam:
             params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
             params['local_timestamp'] = self.local_timestamp
+        if self.maximum_distance is not None:
+            params['maximum_distance'] = str(self.maximum_distance)
         if self.maximum_distance_stations is not None:
             params['maximum_distance_stations'] = str(
                 self.maximum_distance_stations)
@@ -110,6 +114,9 @@ class ImpactParam:
                 params['description'] = (
                     f'{rupdic["usgs_id"]}: M {rupdic["mag"]}'
                     f' ({rupdic["lat"]}, {rupdic["lon"]})')
+        if self.maximum_distance is None:
+            md = DEFAULT_INTEGRATION_DISTANCE[self.trt]
+            params['maximum_distance'] = str({self.trt: md})
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
         _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
@@ -198,7 +205,7 @@ IMPACT_FORM_DEFAULTS = {
     'time_event': 'day',
     'dip': '90',
     'strike': '0',
-    'maximum_distance': '300',
+    'maximum_distance': '',
     'truncation_level': '3',
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
@@ -218,8 +225,8 @@ IMPACT_APPROACHES = {
     'use_shakemap_from_usgs': 'Use ShakeMap from the USGS',
     'use_pnt_rup_from_usgs': 'Use point rupture from the USGS',
     'build_rup_from_usgs': 'Build rupture from USGS nodal plane solutions',
-    'use_shakemap_fault_rup_from_usgs': (
-        'Use ShakeMap fault rupture from the USGS'),
+    'use_shakemap_fault_rup_from_usgs':
+        'Use ShakeMap fault rupture from the USGS',
     'use_finite_fault_model_from_usgs': 'Use finite fault model from the USGS',
     'provide_rup': 'Provide earthquake rupture in OpenQuake NRML format',
     'provide_rup_params': 'Provide earthquake rupture parameters',
@@ -270,7 +277,8 @@ def _validate(POST):
         try:
             value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable = ['dip', 'strike', 'maximum_distance_stations',
+            blankable = ['dip', 'strike',
+                         'maximum_distance', 'maximum_distance_stations',
                          'local_timestamp']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
