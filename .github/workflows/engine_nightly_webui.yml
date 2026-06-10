@@ -54,9 +54,15 @@ jobs:
           set -x
           date
           wget https://downloads.openquake.org/test_data/exposure.hdf5
+          curl https://downloads.openquake.org/test_data/worldcities.csv
+          curl https://downloads.openquake.org/test_data/countries_info.csv
+          curl https://downloads.openquake.org/test_data/fonts.zip
+          unzip fonts.zip
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
+          PY_VER=$(echo "${{ matrix.python-version }}" | tr -d '.')
+          pip install -r requirements-impact-py${PY_VER}-linux64.txt
           oq engine --upgrade-db
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
@@ -75,6 +81,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-impact-python${{ matrix.python-version }}-{{ matrix.os }}
+          name: playwright-artifacts-impact-python${{ matrix.python-version }}-${{ matrix.os }}
           path: test-results
           retention-days: 7

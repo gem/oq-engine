@@ -1094,7 +1094,7 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
-    exclude_from_print = ['rupture_from_usgs']
+    exclude_from_print = ['rupture_from_usgs', 'postrisk_func', 'export_dir']
     if 'shakemap_uri' in params:
         exclude_from_print.extend([
             'station_data_file', 'station_data_issue',
@@ -1113,9 +1113,13 @@ def impact_callback(
                     if rupkey not in exclude_from_print:
                         if rupkey == 'approach':
                             rupval = IMPACT_APPROACHES[rupval]
-                        params_to_print += f'{rupkey}: {rupval}\n'
+                        if rupval is not None and str(rupval).strip() != '':
+                            if rupkey not in params:
+                                # e.g. avoid writing the description twice
+                                params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
-                params_to_print += f'{key}: {val}\n'
+                if val is not None and str(val).strip() != '':
+                    params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
         with open(params['inputs']['station_data'], 'r',
                   encoding='utf-8') as file:
@@ -1134,7 +1138,6 @@ def impact_callback(
         for warning in warnings:
             body += warning + '\n'
     if exc:
-        job_id = job_id
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
@@ -1168,7 +1171,7 @@ def impact_get_rupture_data(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (6.3, 6.3)
+        figsize = (5.4, 5.4)
         # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
@@ -1306,6 +1309,18 @@ def create_impact_job(request, params, email_file_path):
     return response_data
 
 
+def _run_impact_job(request, post_data, rupture_path=None, station_data_file=None):
+    _rup, _rupdic, params, err = impact_validate(
+        post_data, request.user, rupture_path, station_data_file)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    params['postrisk_func'] = 'make_impact_report.main'
+    email_file_path = request.POST.get('email_file_path')
+    response_data = create_impact_job(request, params, email_file_path)
+    return JsonResponse(response_data, status=200)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1341,16 +1356,11 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, _rupdic, params, err = impact_validate(
-        request.POST, request.user, rupture_path, station_data_file)
-    if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    post = request.POST.copy()
     if station_source is not None:
-        params['station_source'] = station_source
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+        post['station_source'] = station_source
+    return _run_impact_job(request, post, rupture_path=rupture_path,
+                           station_data_file=station_data_file)
 
 
 @csrf_exempt
@@ -1372,33 +1382,68 @@ def impact_run_with_shakemap(request):
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
     if 'shakemap_version' in request.POST:
-        shakemap_version = request.POST['shakemap_version']
-        post['shakemap_version'] = shakemap_version
+        post['shakemap_version'] = request.POST['shakemap_version']
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
     if 'time_event' in request.POST:
         post['time_event'] = request.POST['time_event']
-    post['approach'] = 'use_shakemap_from_usgs'
-    post['use_shakemap'] = 'true'
-    if 'shakemap_version' in request.POST:
-        post['shakemap_version'] = shakemap_version
     maxdist = request.POST.get('maximum_distance')
     if maxdist:  # set in the _success test for speed
         post['maximum_distance'] = maxdist
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(
-        post, request.user, post['rupture_file'])
-    if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+    return _run_impact_job(request, post, rupture_path=post.get('rupture_file'))
+
+
+def extract_report_from_datastore(dstore, iso3, file_format):
+    impact_group = dstore['impact']
+    if iso3 not in impact_group:
+        raise ValueError(f"ISO3 '{iso3}' not found")
+    data = impact_group[iso3][f'report_{file_format}'][()]
+    return bytes(data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def impact_report(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    iso3 = request.GET.get("iso3")
+    if not iso3:
+        return HttpResponse("Missing iso3 parameter", status=400)
+    file_format = request.GET.get("format", "pdf").lower()
+    if file_format not in ["pdf", "png"]:
+        return HttpResponse(
+            f'Invalid format parameter "{file_format}".'
+            f' Choose "pdf" or "png".', status=400)
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content=f'{exc.__class__.__name__}: {exc}\n{tb}',
+            content_type='text/plain',
+            status=400
+        )
+    if file_format == "png":
+        response = HttpResponse(report_bytes, content_type="image/png")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.png")
+    else:
+        response = HttpResponse(report_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.pdf")
+    return response
 
 
 def aelo_validate(request):
@@ -2051,7 +2096,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
     elif application_mode == 'IMPACT':
-        kwargs['warnings'] = get_aristotle_warnings(ds)
+        kwargs['warnings'] = get_impact_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 
 
@@ -2254,7 +2299,7 @@ def determine_precision(weights):
     return max_decimal_places
 
 
-def get_aristotle_warnings(ds):
+def get_impact_warnings(ds):
     warnings = None
     if 'warnings' in ds:
         warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
@@ -2299,8 +2344,12 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
+        if 'impact' in ds:
+            impact_iso3_list = list(ds['impact'])
+        else:
+            impact_iso3_list = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    warnings = get_aristotle_warnings(ds)
+    warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
@@ -2326,7 +2375,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
-                       aggrisk_tags=aggrisk_tags)
+                       aggrisk_tags=aggrisk_tags,
+                       impact_iso3_list=impact_iso3_list)
                   )
 
 

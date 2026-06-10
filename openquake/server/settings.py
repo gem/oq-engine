@@ -279,20 +279,21 @@ if STANDALONE and WEBUI:
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
     TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
-try:
-    # Try to load a local_settings.py from the current folder; this is useful
-    # when packages are used. A custom local_settings.py can be placed in
-    # /usr/share/openquake/engine, avoiding changes inside the python package
-    from local_settings import *  # noqa
-except ImportError:
-    # If no local_settings.py is availble in the current folder let's try to
-    # load it from openquake/server/local_settings.py
+if not TEST:
     try:
-        from openquake.server.local_settings import *  # noqa
+        # Try to load a local_settings.py from the current folder; this is useful
+        # when packages are used. A custom local_settings.py can be placed in
+        # /usr/share/openquake/engine, avoiding changes inside the python package
+        from local_settings import *  # noqa
     except ImportError:
-        # If a local_setting.py does not exist
-        # settings in this file only will be used
-        pass
+        # If no local_settings.py is availble in the current folder let's try to
+        # load it from openquake/server/local_settings.py
+        try:
+            from openquake.server.local_settings import *  # noqa
+        except ImportError:
+            # If a local_setting.py does not exist
+            # settings in this file only will be used
+            pass
 
 if SUPPRESS_PERMISSION_DENIED_WARNINGS:
     class SuppressPermissionDeniedWarnings(logging.Filter):

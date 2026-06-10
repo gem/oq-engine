@@ -941,7 +941,7 @@ def get_rupture(oqparam):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
         # NB: this is tested in aristotle_run
-    if rupture_model and rupture_model.endswith('.xml'):
+    elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
@@ -1893,7 +1893,7 @@ def read_mosaic_df(mosaic_dir=''):
         if not os.path.exists(mosaic_boundaries_file):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
-    print(f'Reading {mosaic_boundaries_file}')
+    logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
     codes = sorted(df.code.unique())
     assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
@@ -1906,10 +1906,15 @@ def read_countries_df():
     """
     :returns: a DataFrame of geometries for the world countries
     """
-    logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
-    fname = os.path.join(os.path.dirname(global_risk.__file__),
-                         'geoBoundariesCGAZ_ADM0.gpkg')
-    return read_geometries(fname, 'shapeGroup')
+    country_boundaries_file = None
+    if hasattr(config.directory, 'admin0_boundaries_file'):
+        country_boundaries_file = config.directory.admin0_boundaries_file
+    if not country_boundaries_file:
+        country_boundaries_file = os.path.join(
+            os.path.dirname(global_risk.__file__),
+            'geoBoundariesCGAZ_ADM0.gpkg')
+    logging.info(f'Reading {country_boundaries_file}')
+    return read_geometries(country_boundaries_file, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',

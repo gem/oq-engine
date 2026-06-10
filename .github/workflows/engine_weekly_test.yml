@@ -431,6 +431,9 @@ jobs:
           else
             python install.py devel --version master
           fi
+          PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
+          echo $PY_VER
+          pip3 install -r requirements-impact-$PY_VER-linux64.txt
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
@@ -441,6 +444,10 @@ jobs:
           set -x
           date
           wget https://downloads.openquake.org/test_data/exposure.hdf5
+          curl https://downloads.openquake.org/test_data/worldcities.csv
+          curl https://downloads.openquake.org/test_data/countries_info.csv
+          curl https://downloads.openquake.org/test_data/fonts.zip
+          unzip fonts.zip
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate

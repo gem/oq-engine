@@ -20,8 +20,10 @@ import io
 import os
 import base64
 import numpy
-# import descartes
+from pathlib import Path
 from shapely.geometry import Polygon, box
+from dataclasses import dataclass
+from typing import Any, Optional, Tuple, Union, Dict
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -47,7 +49,8 @@ def auto_limits(ax):
 
 
 def adjust_limits(ax, xlim, ylim, padding=1):
-    # Add some padding around the given limits and give a square aspect to the plot
+    # Add some padding around the given limits and give a square aspect to the
+    # plot
     x_min, x_max = xlim
     y_min, y_max = ylim
     x_min, x_max = x_min - padding, x_max + padding
@@ -125,7 +128,8 @@ def add_borders(
                 clipped = geom.intersection(viewport)
                 if clipped.is_empty:
                     continue
-                parts = clipped.geoms if hasattr(clipped, 'geoms') else [clipped]
+                parts = (clipped.geoms if hasattr(clipped, 'geoms')
+                         else [clipped])
                 for part in parts:
                     if isinstance(part, Polygon):
                         path = _polygon_to_path(part)
@@ -303,11 +307,12 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
                       cmap='jet', s=marker_size)
 
-    fig.colorbar(coll, ax=ax, shrink=0.8)
+    fig.colorbar(coll, ax=ax, shrink=0.6)
 
     if rupture is not None:
-        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-                    surf_facecolor='none', surf_linestyle='-', zorder=4)
+        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8,
+                    surf_alpha=0.9, surf_facecolor='none',
+                    surf_linestyle='-', zorder=4)
 
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
@@ -482,3 +487,218 @@ def get_assetcol(calc_id):
         except AttributeError:
             assetcol = dstore['assetcol'].array
         return assetcol
+
+
+def _resolve_limits(ax, x_limits, y_limits, epicenter=None, buffer_ratio=0.05):
+    """
+    Resolve axis limits ensuring epicenter visibility with a margin.
+    :param buffer_ratio: fraction of axis span to use as padding
+    """
+    # Start from user limits or current limits
+    xmin, xmax = x_limits if x_limits else ax.get_xlim()
+    ymin, ymax = y_limits if y_limits else ax.get_ylim()
+
+    if epicenter is not None:
+        lon, lat = epicenter
+
+        xmin = min(xmin, lon)
+        xmax = max(xmax, lon)
+        ymin = min(ymin, lat)
+        ymax = max(ymax, lat)
+
+        xspan = xmax - xmin
+        yspan = ymax - ymin
+
+        # Handle degenerate spans (e.g. single point)
+        if xspan == 0:
+            xspan = 1e-6
+        if yspan == 0:
+            yspan = 1e-6
+
+        # Apply buffer
+        xpad = xspan * buffer_ratio
+        ypad = yspan * buffer_ratio
+
+        xmin -= xpad
+        xmax += xpad
+        ymin -= ypad
+        ymax += ypad
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+
+
+def _prepare_classified_data(df, admin_boundaries, column, classifier, colors):
+    """
+    Validates CRS and color counts, then applies classification mapping.
+    """
+    if len(colors) > classifier.k:
+        colors = colors[:classifier.k]
+    elif len(colors) < classifier.k:
+        raise ValueError(
+            f"Not enough colors: got {len(colors)}, need {classifier.k}. "
+            f"Please supply at least as many colors as classifier bins."
+        )
+    if df.crs != admin_boundaries.crs:
+        raise ValueError("df and admin_boundaries CRS do not match")
+    df = df.copy()
+    df["class"] = classifier(df[column])
+    return df, colors
+
+
+def _build_legend_labels(classifier, legend_digits):
+    """
+    Generates the range strings for the map classification legend.
+    """
+    bins = numpy.round(classifier.bins, legend_digits)
+    labels = [f"≤ {bins[0]:.{legend_digits}f}"]
+    labels += [
+        f"{bins[i-1]:.{legend_digits}f} – {bins[i]:.{legend_digits}f}"
+        for i in range(1, len(bins))
+    ]
+    labels[-1] = f"> {bins[-2]:.{legend_digits}f}"
+    if len(labels) != classifier.k:
+        raise RuntimeError("Generated labels do not match number of classes")
+    return labels
+
+
+def _overlay_basemap(ax, basemap_path, target_crs):
+    """
+    Safely handles rasterio imports and displays the basemap overlay.
+    """
+    if basemap_path is None:
+        return
+    try:
+        import rasterio
+    except ImportError as exc:
+        raise RuntimeError(
+            "In order to plot raster basemaps, 'rasterio' should be installed"
+        ) from exc
+    from rasterio.plot import show
+    with rasterio.open(Path(basemap_path)) as src:
+        if src.crs != target_crs:
+            raise ValueError("Raster CRS does not match vector CRS")
+        show(src, ax=ax, alpha=0.8)
+
+
+def _overlay_cities(ax, cities, city_font_size):
+    """
+    Plots city markers and dynamically adjusts text placements to prevent
+    collisions.
+    """
+    if not cities:
+        return
+    import matplotlib.patheffects as path_effects
+    city_scatters = []
+    texts = []
+    for city, (x, y) in cities.items():
+        sc = ax.scatter(x, y, color='black', marker='o', s=8, zorder=6)
+        city_scatters.append(sc)
+        t = ax.text(x, y, city, fontsize=city_font_size, color="black",
+                    zorder=7)
+        t.set_path_effects([
+            path_effects.Stroke(linewidth=1.5, foreground="white"),
+            path_effects.Normal()
+        ])
+        texts.append(t)
+    try:
+        from adjustText import adjust_text
+        if texts:
+            legend = ax.get_legend()
+            adjust_text(
+                texts, ax=ax, add_objects=city_scatters + [legend],
+                arrowprops=None, force_text=(0.1, 0.2),
+                expand_points=(1.2, 1.2), save_steps=False
+            )
+    except ImportError:
+        pass
+
+
+@dataclass
+class MapStyleConfig:
+    """
+    Encapsulates sizing, text fonts, and styling properties for rendering.
+    """
+    font_size: Union[int, float] = 18
+    city_font_size: Union[int, float] = 10
+    legend_font_size: Union[int, float] = 10
+    title_font_size: Union[int, float] = 20
+    figsize: Tuple[float, float] = (10, 10)
+    region_alpha: float = 0.7
+    legend_digits: int = 0
+
+
+@dataclass
+class MapDataElements:
+    """
+    Groups optional geographical annotations, basemaps, and layout limits.
+    """
+    plot_title: Optional[str] = None
+    legend_title: Optional[str] = None
+    cities: Optional[Dict[str, Tuple[float, float]]] = None
+    x_limits: Optional[Tuple[float, float]] = None
+    y_limits: Optional[Tuple[float, float]] = None
+    basemap_path: Optional[Any] = None
+    epicenter: Optional[Tuple[float, float]] = None
+
+
+def plot_variable(df, admin_boundaries, column, classifier, colors, *,
+                  elements: MapDataElements = None,
+                  style: MapStyleConfig = None):
+    """
+    Plot a classified geospatial variable with optional basemap
+    and annotations.
+    """
+    plt = import_plt()
+    import matplotlib.patches as mpatches
+
+    # Fallback to defaults if no custom styles/elements are passed
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+
+    # Pre-process using the helper functions we built previously
+    df, colors = _prepare_classified_data(
+        df, admin_boundaries, column, classifier, colors)
+    labels = _build_legend_labels(classifier, style.legend_digits)
+
+    fig, ax = plt.subplots(figsize=style.figsize)
+    _overlay_basemap(ax, elements.basemap_path, df.crs)
+
+    # Plot each class with its corresponding color
+    for i, color in enumerate(colors):
+        subset = df[df["class"] == i]
+        if not subset.empty:
+            subset.plot(ax=ax, color=color, edgecolor="none",
+                        alpha=style.region_alpha)
+
+    epicenter_handle = None
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
+        epicenter_handle = ax.scatter(
+            lon, lat, marker='*', s=150, color='yellow',
+            edgecolor='black', linewidth=1, zorder=10, label='Epicenter'
+        )
+
+    # Create legend handles
+    handles = [mpatches.Patch(color=col, label=lab)
+               for col, lab in zip(colors, labels)]
+    if epicenter_handle is not None:
+        handles.append(epicenter_handle)
+
+    ax.legend(handles=handles, title=elements.legend_title, framealpha=0.7,
+              title_fontsize=style.font_size,
+              fontsize=style.legend_font_size, loc="best")
+
+    admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
+                          facecolor="none", linewidth=0.4)
+    _resolve_limits(ax, elements.x_limits, elements.y_limits,
+                    elements.epicenter)
+    _overlay_cities(ax, elements.cities, style.city_font_size)
+
+    if elements.plot_title:
+        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
+
+    ax.set_xlabel("Longitude", fontsize=style.font_size)
+    ax.set_ylabel("Latitude", fontsize=style.font_size)
+    fig.tight_layout()
+    return fig, ax

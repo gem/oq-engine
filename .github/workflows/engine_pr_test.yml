@@ -36,7 +36,7 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k "not classical"
 
@@ -68,7 +68,8 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          pip install -r requirements-aelo-py-linux64.txt
+          pip install pyshp pytest flake8 ruff
           oq engine --upgrade-db
           ruff check openquake
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
@@ -106,9 +107,15 @@ jobs:
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install -r requirements-impact-py311-linux64.txt
+          pip install -r requirements-aelo-py-linux64.txt
           pip install pytest-playwright
           playwright install
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
+          curl https://downloads.openquake.org/test_data/worldcities.csv
+          curl https://downloads.openquake.org/test_data/countries_info.csv
+          curl https://downloads.openquake.org/test_data/fonts.zip
+          unzip fonts.zip
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py
@@ -137,6 +144,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
+          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-${{ matrix.os }}
           path: test-results
           retention-days: 7
