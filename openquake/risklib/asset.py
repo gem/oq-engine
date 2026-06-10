@@ -575,6 +575,97 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
+    def get_lse_values(self, aggregate_by, gmf_df):
+        """
+        :param aggregate_by:
+            a list of lists of tag names (e.g., [['ID_0']])
+        :param gmf_df:
+            The DataFrame containing ground motion/secondary peril fields
+            (columns: sid, eid, AllstadtEtAl2022Liquefaction_LSE, etc.)
+        :returns:
+            Two DataFrames (liquefaction_df, landslide_df) containing
+            aggregated exposure metrics grouped by Geo-tags and LSE tiers.
+        """
+        # liquefaction tiers and labels
+        liq_bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+        liq_labels = [
+            "<0.005",
+            "0.005-0.01",
+            "0.01-0.02",
+            "0.02-0.05",
+            "0.05-0.1",
+            "0.1-0.2",
+            ">0.2",
+        ]
+        # landslide tiers and labels
+        land_bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+        land_labels = [
+            "<0.002",
+            "0.002-0.01",
+            "0.01-0.02",
+            "0.02-0.05",
+            "0.05-0.1",
+            "0.1-0.2",
+            ">0.2",
+        ]
+        # Bin continuous LSE data
+        gmf_df = gmf_df.copy()
+        gmf_df["liquefaction_tier"] = pandas.cut(
+            gmf_df["AllstadtEtAl2022Liquefaction_LSE"],
+            bins=liq_bins,
+            labels=liq_labels,
+            right=False,
+        )
+        gmf_df["landslide_tier"] = pandas.cut(
+            gmf_df["AllstadtEtAl2022Landslides_LSE"],
+            bins=land_bins,
+            labels=land_labels,
+            right=False,
+        )
+        # Create DataFrame and target true exposure columns
+        exp_df = pandas.DataFrame(self.array)
+        raw_exposure_cols = [col for col in exp_df.columns
+                             if col.startswith("value-")]
+        # Clean the prefix from the columns
+        exp_df = exp_df.rename(
+            columns={col: col.replace("value-", "") for col in exp_df.columns})
+        # Track the cleaned names for the pandas groupby aggregation
+        exposure_cols = [col.replace("value-", "")
+                         for col in raw_exposure_cols]
+        # Map integer geographic IDs to actual string tags
+        _aggids, aggtags = self.build_aggids(aggregate_by)
+        geo_columns = aggregate_by[0]  # e.g., ['ID_0']
+        geo_col = geo_columns[0]  # e.g., 'ID_0'
+        geo_tags_df = pandas.DataFrame(aggtags, columns=geo_columns)
+        geo_tags_df["agg_id"] = geo_tags_df.index
+        # Create a dictionary to map the integer code to the string tag
+        tag_map = dict(zip(geo_tags_df["agg_id"], geo_tags_df[geo_col]))
+        # Replace the integer column in exp_df with the string labels
+        exp_df[geo_col] = exp_df[geo_col].map(tag_map)
+        # Merge exposure and hazard data
+        merged_df = pandas.merge(
+            exp_df, gmf_df, left_on="site_id", right_on="sid")
+        # Perform aggregation (excluding eid)
+        liq_groupby_keys = geo_columns + ["liquefaction_tier"]
+        land_groupby_keys = geo_columns + ["landslide_tier"]
+        liq_df = (
+            merged_df.groupby(liq_groupby_keys, observed=False)[exposure_cols]
+            .sum()
+            .reset_index()
+        )
+        land_df = (
+            merged_df.groupby(land_groupby_keys, observed=False)[exposure_cols]
+            .sum()
+            .reset_index()
+        )
+        # Rename tier columns to match a clean output layout
+        liq_df = liq_df.rename(columns={"liquefaction_tier": "lse_tier"})
+        land_df = land_df.rename(columns={"landslide_tier": "lse_tier"})
+        return (
+            liq_df[liq_df["number"] > 0],
+            land_df[land_df["number"] > 0],
+        )
+
     def agg_by_site(self):
         """
         :returns: an AssetCollection aggregated by site_id, taxonomy

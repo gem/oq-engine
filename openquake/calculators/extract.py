@@ -866,6 +866,20 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
+@extract.add('lse_by_tier')
+def extract_lse_by_tier(dstore, what):
+    """
+    Aggregates secondary perils LSE by tier.
+    Use it as /extract/lse_by_tier?
+    """
+    gmf_df = dstore.read_df('gmf_data')
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    liq_df, land_df = assetcol.get_lse_values(oq.aggregate_by, gmf_df)
+    breakpoint()
+    return df
+
+
 # tested in impact_test and partially in case_1_ins
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
@@ -1090,7 +1104,8 @@ def extract_losses_by_site(dstore, what):
     sitecol.make_complete()  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
     ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
-    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
+    dic = {'lon': F32(sitecol.lons[ok_sids]),
+           'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
