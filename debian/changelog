@@ -1,4 +1,8 @@
+  [Catarina Costa]
+  * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
+
   [Michele Simionato]
+  * Splitting multifault and multipoint sources with the colon convention
   * Fixed missing weight in AvgPoeGMPE breaking the realization exporter
 
   [Christopher Brooks]

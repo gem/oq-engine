@@ -57,7 +57,7 @@ def splitMF(sources, blocksize=1000):
         if src.code == b'M' and len(src) > blocksize:
             for i, slc in enumerate(general.gen_slices(0, len(src), blocksize)):
                 segment = source.MultiPointSource(
-                    source_id=f'{src.source_id}@{i}',
+                    source_id=f'{src.source_id}:{i}',
                     name=src.name,
                     tectonic_region_type=src.tectonic_region_type,
                     mfd=src.mfd[slc],
@@ -74,7 +74,8 @@ def splitMF(sources, blocksize=1000):
                 segment.samples = src.samples
                 segment.smweight = src.smweight
                 splits.append(segment)
-        elif src.code == b'F':
+        elif src.code == b'F' and not src.faults:
+            # use the colon convention only in absence of kendra-splitting
             for segment in src:
                 segment.trt_smr = src.trt_smr
                 segment.samples = src.samples

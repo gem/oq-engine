@@ -459,7 +459,7 @@ def view_totlosses(token, dstore):
             name = 'avg_losses-rlzs/' + ltype
             tot = dstore[name][()].sum(axis=0)
         tot_losses += tot
-    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+    return tot_losses.view(oq.loss_dt(F32))
 
 
 def alt_to_many_columns(alt, loss_types):
