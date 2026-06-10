@@ -227,7 +227,7 @@ def save_version_checksum(oq, dstore):
                  f'(total size {general.humansize(size)})')
     return checksum
 
-        
+
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -1688,7 +1688,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
-    sec_perils = oq.get_sec_perils() # FIXME: it should be in calc.sec_perils
+    sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,

@@ -38,6 +38,7 @@ def positivefloat(val):
 
 def imt2tup(string):
     """
+    Used in sort_by_imt -> from_string to sort keys by period
     >>> imt2tup('PGA')
     ('PGA',)
     >>> imt2tup('SA(1.0)')
