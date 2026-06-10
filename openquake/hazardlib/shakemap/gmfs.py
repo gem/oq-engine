@@ -261,7 +261,7 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
 
 
 def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
-            num_gmfs, seed, imts=None, sec_imts=None):
+            num_gmfs, seed, imts=None):
     """
     :param shakemap: site coordinates with shakemap values
     :param gmf_dict: a dictionary key -> arrays
@@ -270,7 +270,6 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
     :param imts: list of IMT-strings for which gmfs are generated
-    :param sec_imts: FIXME
     :returns: list of IMT-objects, array of GMFs of shape (N, E, M)
     """
     # create list of imts
