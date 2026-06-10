@@ -1471,9 +1471,6 @@ def import_ruptures_hdf5(h5, fnames):
     """
     rups = []
     h5.create_dataset(
-        'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,
-        compression='gzip')
-    h5.create_dataset(
         'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
     E = 0
     offset = 0
@@ -1483,6 +1480,10 @@ def import_ruptures_hdf5(h5, fnames):
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
+            if fileno == 0:  # first time
+                h5.create_dataset(
+                    'events', (0,), events.dtype, maxshape=(None,), chunks=True,
+                    compression='gzip')
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))

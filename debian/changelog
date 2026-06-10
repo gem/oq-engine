@@ -2,6 +2,7 @@
   * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
 
   [Michele Simionato]
+  * Saving `year` and `ses_id` in the events dataset of SES.hdf5 files
   * Splitting multifault and multipoint sources with the colon convention
   * Fixed missing weight in AvgPoeGMPE breaking the realization exporter
 

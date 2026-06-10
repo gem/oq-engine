@@ -66,6 +66,7 @@ def setup_module():
 
     with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
         evs = parent['events'][:]
+        assert evs.dtype.names == ('id', 'rup_id', 'rlz_id', 'year', 'ses_id')
         ae(evs['id'], numpy.arange(32999))  # sequential indices
         e0s = parent['ruptures']['e0']
         ae(e0s[-3:], [22161, 22162, 22163])  # large enough e0
