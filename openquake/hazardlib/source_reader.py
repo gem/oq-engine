@@ -57,7 +57,7 @@ def splitMF(sources, blocksize=1000):
         if src.code == b'M' and len(src) > blocksize:
             for i, slc in enumerate(general.gen_slices(0, len(src), blocksize)):
                 segment = source.MultiPointSource(
-                    source_id=f'{src.source_id}@{i}',
+                    source_id=f'{src.source_id}:{i}',
                     name=src.name,
                     tectonic_region_type=src.tectonic_region_type,
                     mfd=src.mfd[slc],
