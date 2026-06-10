@@ -1273,7 +1273,8 @@ def create_impact_job(request, params, email_file_path):
     if rupdic['approach'] == 'use_shakemap_from_usgs':
         params['secondary_perils'] = (
             'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
-        params['intensity_measure_types'] = 'PGA, PGV, SA(0.3), SA(1.0)'
+        params['intensity_measure_types'] = (
+            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
         user_name=utils.get_username(request))
