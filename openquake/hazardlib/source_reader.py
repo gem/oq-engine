@@ -74,7 +74,8 @@ def splitMF(sources, blocksize=1000):
                 segment.samples = src.samples
                 segment.smweight = src.smweight
                 splits.append(segment)
-        elif src.code == b'F':
+        elif src.code == b'F' and not src.faults:
+            # use the colon convention only in absence of kendra-splitting
             for segment in src:
                 segment.trt_smr = src.trt_smr
                 segment.samples = src.samples
