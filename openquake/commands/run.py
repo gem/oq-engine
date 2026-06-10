@@ -24,7 +24,7 @@ import getpass
 
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput
+from openquake.commonlib import logs, readinput, datastore
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs, run_workflow
@@ -76,7 +76,8 @@ def main(job_ini,
          loglevel='info',
          nodes: int = 1,
          workflow_id=None,
-         kfilter=''):
+         kfilter='',
+         atexit=''):
     """
     Run a set of calculations or a workflow
     """
@@ -137,8 +138,11 @@ def main(job_ini,
     else:  # toml
         if workflow_id:
            params['workflow_id'] = int(workflow_id)
-        return run_workflow(job_ini, params, nodes=nodes, pdb=pdb,
-                            kfilter=kfilter)
+        wf_id = run_workflow(job_ini, params, nodes=nodes, pdb=pdb,
+                             kfilter=kfilter)
+        if atexit:
+            tbl = views.view(atexit, datastore.read(wf_id))
+            print(views.text_table(tbl))
 
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
@@ -152,3 +156,4 @@ main.loglevel = dict(help='logging level',
 main.nodes=dict(help='number of worker nodes to start')
 main.workflow_id = "ID of a previous workflow or description of a new workflow"
 main.kfilter = "Filter workflow jobs with a regex"
+main.atexit = 'View to show at the end of the workflow'

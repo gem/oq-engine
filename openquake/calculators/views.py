@@ -1916,3 +1916,13 @@ def view_assets_events(token, dstore):
     arr = numpy.array(out, dtlist)
     arr.sort(order='a*e')
     return arr[-10:]
+
+
+@view.add('collect_errors')
+def view_collect_errors(token, dstore):
+    """
+    Displays the failed job in a workflow
+    """
+    df = dstore.read_df('workflow', 'name')
+    df = df[df.status == 'failed']
+    return df
