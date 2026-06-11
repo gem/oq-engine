@@ -517,7 +517,7 @@ def _build_groups(full_lt, smdict):
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
     logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
-                 dt.sum(axis=1))
+                 numpy.round(dt.sum(axis=1), 2))
     return groups
 
 
