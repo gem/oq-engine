@@ -33,17 +33,23 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+U32 = numpy.uint32
+F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
+sampling_dt = numpy.dtype([
+    ('samples', U32),
+    ('smweight', F32),
+    ('trt_smr', U32)])
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
-    ('calc_time', numpy.float32),      # 3
+    ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
     ('est_ctxs', numpy.uint64),        # 5
-    ('num_ruptures', numpy.uint32),    # 6
-    ('weight', numpy.float32),         # 7
+    ('num_ruptures', U32),             # 6
+    ('weight', F32),                   # 7
 ])
 
 
@@ -497,12 +503,11 @@ def _build_groups(full_lt, smdict):
             sg = apply_uncertainties(bset_values, src_group)
             dt[rlz.ordinal] += time.time() - t0
             for src in sg:
-                src.trt_smr = trti * TWO24 + rlz.ordinal
-            for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna or case_83_eb
                 src.smweight = rlz.weight
                 src.samples = rlz.samples
+                src.trt_smr = trti * TWO24 + rlz.ordinal
             groups.append(sg)
 
         # check applyToSources
