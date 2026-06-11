@@ -1,3 +1,6 @@
+  [Paolo Tormene, Michele Simionato]
+  * Implemented secondary perils for ShakeMap calculations
+
   [Catarina Costa]
   * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
 
