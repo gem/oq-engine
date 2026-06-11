@@ -587,8 +587,8 @@ class AssetCollection(object):
         :param secondary_peril:
             either "liquefaction" or "landslide"
         :returns:
-            A single DataFrame containing aggregated exposure metrics
-            grouped by Geo-tags and the chosen LSE peril tiers.
+            a DataFrame with aggregated exposure metrics grouped by
+            geo-tags and the chosen LSE peril tiers
         """
         if secondary_peril == "liquefaction":
             hazard_col = "AllstadtEtAl2022Liquefaction_LSE"
@@ -617,62 +617,53 @@ class AssetCollection(object):
                 ">0.2",
             ]
         else:
-            raise NotImplementedError(
+            raise ValueError(
                 "secondary_peril must be either 'liquefaction' or 'landslide'")
-        # Extract mean values (Axis 0 = 0) for the targeted peril
+        # Extract mean values (axis 0 = mean) for the targeted peril.
         hazard_idx = all_imts.index(hazard_col)
-        hazard_hazard = avg_gmf_array[0, :, hazard_idx]
-        # Reconstruct a flat hazard DataFrame for mapping
+        lse_values = avg_gmf_array[0, :, hazard_idx]
+        # Build a site-level hazard DataFrame.
         gmf_df = pandas.DataFrame(
             {
-                "sid": numpy.arange(avg_gmf_array.shape[1]),
-                hazard_col: hazard_hazard,
+                "site_id": numpy.arange(avg_gmf_array.shape[1]),
+                hazard_col: lse_values,
             }
         )
-        # Bin continuous LSE hazard data
+        # Bin continuous LSE values into discrete tiers.
         gmf_df[tier_col] = pandas.cut(
             gmf_df[hazard_col],
             bins=bins,
             labels=labels,
             right=False,
         )
-        # Load exposure from columns starting with 'value-'
-        # and strip the 'value-' prefix
-        exp_df = pandas.DataFrame(self.array)
-        raw_exposure_cols = [
-            col for col in exp_df.columns if col.startswith("value-")
-        ]
-        exp_df = exp_df.rename(
-            columns={
-                col: col.replace("value-", "") for col in exp_df.columns
-            }
-        )
-        exposure_cols = [
-            col.replace("value-", "") for col in raw_exposure_cols
-        ]
-        # Map integer geographic IDs to actual string tags
-        _aggids, aggtags = self.build_aggids(aggregate_by)
-        geo_columns = aggregate_by[0]  # e.g., ['ID_0']
-        geo_col = geo_columns[0]  # e.g., 'ID_0'
-
-        geo_tags_df = pandas.DataFrame(aggtags, columns=geo_columns)
-        geo_tags_df["agg_id"] = geo_tags_df.index
-        tag_map = dict(zip(geo_tags_df["agg_id"], geo_tags_df[geo_col]))
-        exp_df[geo_col] = exp_df[geo_col].map(tag_map)
-        # Merge exposure and hazard data
-        merged_df = pandas.merge(
-            exp_df, gmf_df, left_on="site_id", right_on="sid"
-        )
-        # Perform multi-dimensional aggregation
+        # Build the exposure DataFrame
+        geo_columns = aggregate_by[0]  # e.g. ['ID_0'] or ['ID_0', 'ID_1']
+        dic = {"site_id": self.array["site_id"]}
+        # Decode integer tag indices to string values by indexing into tagcol
+        # directly.  self.array[col] holds 1-based integers; tagcol lists start
+        # at index 0 with '?' so tagcol[i] gives the correct string for tag
+        # index i.
+        # The loop covers every column in geo_columns, so multi-tag groups are
+        # handled correctly.
+        for col in geo_columns:
+            tag_values = numpy.array(getattr(self.tagcol, col))
+            dic[col] = tag_values[self.array[col]]
+        for field in self.fields:
+            dic[field] = self.array["value-" + field]
+        exp_df = pandas.DataFrame(dic)
+        exposure_cols = list(self.fields)  # e.g. ['number', 'structural', ...]
+        # Merge on the shared 'site_id' column.
+        merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
+        # Aggregate: observed=False keeps every tier bin in the output even
+        # when no assets fall in it
         groupby_keys = geo_columns + [tier_col]
         result_df = (
             merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
             .sum()
             .reset_index()
         )
-        # Ignore tiers without buildings
-        result_df = result_df[result_df["number"] > 0]
-        return result_df
+        # Return only rows with at least one building.
+        return result_df[result_df["number"] > 0]
 
     def agg_by_site(self):
         """
