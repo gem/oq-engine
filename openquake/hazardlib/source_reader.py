@@ -18,7 +18,6 @@
 
 import time
 import zlib
-import copy
 import os.path
 import pickle
 import operator
@@ -505,22 +504,14 @@ def _build_groups(full_lt, smdict):
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             t0 = time.time()
-            if bset_values:
-                # make copies of the sources, slow for NZL
-                sg = apply_uncertainties(bset_values, src_group)
-                for src in sg:  # tested in case_83_eb
-                    src.sampling = sampling(
-                        rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
-            else:
-                # don't do copies of the sources
-                sg = copy.copy(src_group)
-                for src in sg:  # tested in case_83_eb
-                    sampl = sampling(
-                        rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
-                    if src.sampling is None:
-                        src.sampling = [sampl]
-                    else:
-                        src.sampling.append(sampl)
+            sg = apply_uncertainties(bset_values, src_group)
+            for src in sg:  # tested in case_83_eb
+                sampl = sampling(
+                    rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
+                if src.sampling is None:
+                    src.sampling = [sampl]
+                else:
+                    src.sampling.append(sampl)
             dt[rlz.ordinal] += time.time() - t0
             groups.append(sg)
 
@@ -550,7 +541,6 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
         # the simplest test featuring the same source in two
         # source models is logictree/case_01
         src = srcs[0]
-        # breakpoint()
         if len(srcs) > 1 and len(src.sampling) == 1:
             # happens in logictree/case_07
             src.sampling = numpy.concatenate([s.sampling for s in srcs])
