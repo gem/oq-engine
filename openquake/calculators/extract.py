@@ -866,19 +866,19 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
-@extract.add('lse_by_tier')
-def extract_lse_by_tier(dstore, what):
+@extract.add('exposure_by_lse')
+def extract_exposure_by_lse(dstore, what):
     """
-    Aggregates secondary perils LSE by tier.
-    Use it as /extract/lse_by_tier?
+    Aggregates exposure by secondary peril LSE tiers and tags.
+    Use it as /extract/exposure_by_lse?secondary_peril=landslide
     """
-    gmf_df = dstore.read_df('gmf_data')
+    qdict = parse(what)
+    [secondary_peril] = qdict['secondary_peril']
+    avg_gmf_array = dstore['avg_gmf'][:]
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    event_agg = 'mean'  # or 'max'
-    liq_df, land_df = assetcol.get_lse_values(
-        oq.aggregate_by, gmf_df, event_agg=event_agg)
-    breakpoint()
+    df = assetcol.aggregate_exposure_by_lse_tier(
+        oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril)
     return df
 
 

@@ -575,51 +575,69 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
-    def get_lse_values(self, aggregate_by, gmf_df, event_agg="mean"):
+    def aggregate_exposure_by_lse_tier(
+            self, aggregate_by, avg_gmf_array, all_imts, secondary_peril):
         """
         :param aggregate_by:
             a list of lists of tag names (e.g., [['ID_0']])
-        :param gmf_df:
-            The DataFrame containing ground motion/secondary peril fields
-        :param event_agg:
-            String indicating how to aggregate across multiple events.
-            Options: 'mean' (default) or 'max'.
+        :param avg_gmf_array:
+            a 3D numpy array from dstore['avg_gmf'][:]
+        :param all_imts:
+            IMT names including secondary perils
+        :param secondary_peril:
+            either "liquefaction" or "landslide"
         :returns:
-            Two DataFrames (liquefaction_df, landslide_df) containing
-            aggregated exposure metrics grouped by Geo-tags and LSE.
+            A single DataFrame containing aggregated exposure metrics
+            grouped by Geo-tags and the chosen LSE peril tiers.
         """
-        liq_bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-        liq_labels = [
-            "<0.005",
-            "0.005-0.01",
-            "0.01-0.02",
-            "0.02-0.05",
-            "0.05-0.1",
-            "0.1-0.2",
-            ">0.2"]
-        land_bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-        land_labels = [
-            "<0.002",
-            "0.002-0.01",
-            "0.01-0.02",
-            "0.02-0.05",
-            "0.05-0.1",
-            "0.1-0.2",
-            ">0.2"]
-        gmf_df = gmf_df.copy()
-        gmf_df["liquefaction_tier"] = pandas.cut(
-            gmf_df["AllstadtEtAl2022Liquefaction_LSE"],
-            bins=liq_bins,
-            labels=liq_labels,
+        if secondary_peril == "liquefaction":
+            hazard_col = "AllstadtEtAl2022Liquefaction_LSE"
+            tier_col = "liquefaction_lse_tier"
+            bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+            labels = [
+                "<0.005",
+                "0.005-0.01",
+                "0.01-0.02",
+                "0.02-0.05",
+                "0.05-0.1",
+                "0.1-0.2",
+                ">0.2",
+            ]
+        elif secondary_peril == "landslide":
+            hazard_col = "AllstadtEtAl2022Landslides_LSE"
+            tier_col = "landslide_lse_tier"
+            bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+            labels = [
+                "<0.002",
+                "0.002-0.01",
+                "0.01-0.02",
+                "0.02-0.05",
+                "0.05-0.1",
+                "0.1-0.2",
+                ">0.2",
+            ]
+        else:
+            raise NotImplementedError(
+                "secondary_peril must be either 'liquefaction' or 'landslide'")
+        # Extract mean values (Axis 0 = 0) for the targeted peril
+        hazard_idx = all_imts.index(hazard_col)
+        hazard_hazard = avg_gmf_array[0, :, hazard_idx]
+        # Reconstruct a flat hazard DataFrame for mapping
+        gmf_df = pandas.DataFrame(
+            {
+                "sid": numpy.arange(avg_gmf_array.shape[1]),
+                hazard_col: hazard_hazard,
+            }
+        )
+        # Bin continuous LSE hazard data
+        gmf_df[tier_col] = pandas.cut(
+            gmf_df[hazard_col],
+            bins=bins,
+            labels=labels,
             right=False,
         )
-        gmf_df["landslide_tier"] = pandas.cut(
-            gmf_df["AllstadtEtAl2022Landslides_LSE"],
-            bins=land_bins,
-            labels=land_labels,
-            right=False,
-        )
-        # Create DataFrame and target exposure columns like "value-"
+        # Load exposure from columns starting with 'value-'
+        # and strip the 'value-' prefix
         exp_df = pandas.DataFrame(self.array)
         raw_exposure_cols = [
             col for col in exp_df.columns if col.startswith("value-")
@@ -641,80 +659,20 @@ class AssetCollection(object):
         geo_tags_df["agg_id"] = geo_tags_df.index
         tag_map = dict(zip(geo_tags_df["agg_id"], geo_tags_df[geo_col]))
         exp_df[geo_col] = exp_df[geo_col].map(tag_map)
-
+        # Merge exposure and hazard data
         merged_df = pandas.merge(
             exp_df, gmf_df, left_on="site_id", right_on="sid"
         )
-
-        # Sum assets per event first
-        liq_groupby_keys = ["eid"] + geo_columns + ["liquefaction_tier"]
-        land_groupby_keys = ["eid"] + geo_columns + ["landslide_tier"]
-
-        liq_per_event = (
-            merged_df.groupby(liq_groupby_keys, observed=False)[exposure_cols]
+        # Perform multi-dimensional aggregation
+        groupby_keys = geo_columns + [tier_col]
+        result_df = (
+            merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
             .sum()
             .reset_index()
         )
-        land_per_event = (
-            merged_df.groupby(land_groupby_keys, observed=False)[
-                exposure_cols
-            ]
-            .sum()
-            .reset_index()
-        )
-
-        # Rename tier columns for the final step
-        liq_per_event = liq_per_event.rename(
-            columns={"liquefaction_tier": "lse_tier"}
-        )
-        land_per_event = land_per_event.rename(
-            columns={"landslide_tier": "lse_tier"}
-        )
-
-        # Aggregate across events
-        final_keys = geo_columns + ["lse_tier"]
-        num_events = gmf_df["eid"].nunique()
-
-        if event_agg == "max":
-            # Find the highest exposure value across any single event
-            liq_df = (
-                liq_per_event.groupby(final_keys, observed=False)[
-                    exposure_cols
-                ]
-                .max()
-                .reset_index()
-            )
-            land_df = (
-                land_per_event.groupby(final_keys, observed=False)[
-                    exposure_cols
-                ]
-                .max()
-                .reset_index()
-            )
-        else:
-            # Default to "mean": Total sum divided by total distinct events.
-            # This safely accounts for events where exposure was zero.
-            liq_df = (
-                liq_per_event.groupby(final_keys, observed=False)[
-                    exposure_cols
-                ]
-                .sum()
-                .reset_index()
-            )
-            land_df = (
-                land_per_event.groupby(final_keys, observed=False)[
-                    exposure_cols
-                ]
-                .sum()
-                .reset_index()
-            )
-            liq_df[exposure_cols] = liq_df[exposure_cols] / num_events
-            land_df[exposure_cols] = land_df[exposure_cols] / num_events
-
-        return (
-            liq_df[liq_df["number"] > 0],
-            land_df[land_df["number"] > 0],
-        )
+        # Ignore tiers without buildings
+        result_df = result_df[result_df["number"] > 0]
+        return result_df
 
     def agg_by_site(self):
         """
