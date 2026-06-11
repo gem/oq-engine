@@ -303,6 +303,20 @@ def get_csm(oq, full_lt, dstore=None):
     return build_csm(oq, full_lt, smdict, dstore)
 
 
+def log_num_mul(groups):
+    """
+    Logging the total number of sources and the total multiplicity
+    """
+    num = 0
+    mul = 0
+    for grp in groups:
+        for src in grp:
+            print(src)
+            num += 1
+            mul += len(src.sampling)
+    logging.info(f'tot_num_sources={num:_d}, tot_multiplicity={mul:_d}')
+
+
 def build_csm(oq, full_lt, smdict, dstore):
     """
     Applies uncertainties, builds the source groups and returns
@@ -312,19 +326,15 @@ def build_csm(oq, full_lt, smdict, dstore):
     with mon:
         groups = _build_groups(full_lt, smdict)  # fast
     logging.info(mon)
-
-    # checking the changes
-    changes = sum(sg.changes for sg in groups)
-    if changes:
-        logging.info('Applied {:_d} changes to {:_d} source groups'.
-                     format(changes, len(groups)))
+    log_num_mul(groups)
 
     logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    mon = performance.Monitor('_get_csm', measuremem=True)
+    mon = performance.Monitor('_build_csm', measuremem=True)
     with mon:
-        csm = _get_csm(oq, full_lt, groups, is_event_based)
+        csm = _build_csm(oq, full_lt, groups, is_event_based)
     logging.info(mon)
+    log_num_mul(csm.src_groups)
 
     out = []
     probs = []
@@ -347,7 +357,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         lst = [('grp_id', int), ('probability', float)]
         dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
-    # split multifault sources if there is a single site
+    # add rupids_by_tag to multifault sources if there is a single site
     try:
         sitecol = dstore['sitecol']
     except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
@@ -516,8 +526,10 @@ def _build_groups(full_lt, smdict):
                 sampl = sampling(
                     rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
                 if src.sampling is None:
+                    # the first time
                     src.sampling = [sampl]
                 else:
+                    # if the same source belongs to multiple realizations
                     src.sampling.append(sampl)
             groups.append(sg)
 
@@ -531,6 +543,11 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
+    # checking the changes
+    changes = sum(sg.changes for sg in groups)
+    if changes:
+        logging.info('Applied {:_d} changes to {:_d} source groups'.
+                     format(changes, len(groups)))
     return groups
 
 
@@ -564,7 +581,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _get_csm(oq, full_lt, groups, event_based):
+def _build_csm(oq, full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
