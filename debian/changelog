@@ -1,3 +1,10 @@
+  [Michele Simionato]
+  * Avoided copying sources when building the CompositeSourceModel,
+    thus reducing the memory occupation by 75% for preclassical NZL
+
+  [Paolo Tormene, Michele Simionato]
+  * Implemented secondary perils for ShakeMap calculations
+
   [Catarina Costa]
   * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
 

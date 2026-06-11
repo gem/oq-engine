@@ -207,14 +207,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     id = -1  # to be set
-    trt_smr = 0  # set by the engine
+    sampling = None  # set by the engine
     nsites = 1  # set when filtering the source
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
-    trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
     samples = 1  # set by the engine
@@ -237,10 +236,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def trt_smrs(self):
         """
-        :returns: a list of integers (usually of 1 element)
+        :returns: a tuple of integers (usually of 1 element)
         """
-        trt_smr = self.trt_smr
-        return (trt_smr,) if isinstance(trt_smr, int) else trt_smr
+        if self.sampling is None:  # in hazardlib
+            return (0,)
+        return tuple(self.sampling['trt_smr'])
 
     def serial(self, ses_seed):
         """
@@ -283,13 +283,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        mul = len(self.trt_smrs)  # how many times the source is multiplied
-        if mul > 1:
-            triplet = (self.samples, self.smweight, self.trt_smrs)
-        else:
-            triplet = ([self.samples], [self.smweight], self.trt_smrs)
         ebrs = []
-        for i, (samples, smweight, trt_smr) in enumerate(zip(*triplet)):
+        for i, (samples, smweight, trt_smr) in enumerate(self.sampling):
             for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
                 rupid = rid + i * self.num_ruptures
                 if hasattr(rup, 'occurrence_rate'):

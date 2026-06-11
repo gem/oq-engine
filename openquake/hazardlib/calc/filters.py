@@ -301,8 +301,6 @@ def split_source(src):
     if len(splits) == 1:
         return [src]
     has_hdf5 = hasattr(src, 'hdf5path')
-    has_samples = hasattr(src, 'samples')
-    has_smweight = hasattr(src, 'smweight')
     has_scaling_rate = hasattr(src, 'scaling_rate')
     has_grp_id = hasattr(src, 'grp_id')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
@@ -310,21 +308,16 @@ def split_source(src):
     for i, split in enumerate(splits):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
-        split.trt_smr = src.trt_smr
+        split.sampling = src.sampling
         split.grp_id = grp_id
         split.id = src.id
         if has_hdf5:
             split.hdf5path = src.hdf5path
-        if has_samples:
-            split.samples = src.samples
-        if has_smweight:
-            split.smweight = src.smweight
         if has_scaling_rate:
             split.scaling_rate = src.scaling_rate
         if has_grp_id:
             split.grp_id = src.grp_id
         offset += split.num_ruptures
-        #split.nsites = src.nsites
     return splits
 
 

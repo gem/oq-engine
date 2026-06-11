@@ -1443,7 +1443,8 @@ class FullLogicTree(object):
             trti = self.trti[src.tectonic_region_type]
             if ';' in src.source_id:
                 # assume <base_id>;<smr> like in logictree/case_05
-                src.trt_smr = trti * TWO24 + _get_smr(src.source_id)
+                smr = _get_smr(src.source_id)
+                src.sampling['trt_smr'] = trti * TWO24 + smr
             else:  # regular case
                 srcid = srcid.split('@')[0]
                 try:
@@ -1459,7 +1460,7 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-                src.trt_smr = tup  # realizations impacted by the source
+                src.sampling['trt_smr'] = tup  # realizations impacted
             out.append(src)
         return out
 
