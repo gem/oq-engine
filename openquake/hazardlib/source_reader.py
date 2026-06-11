@@ -55,6 +55,9 @@ source_info_dt = numpy.dtype([
 
 
 def sampling(samples, smweight, trt_smr):
+    """
+    :returns: a structured array (samples, smweight, trt_smr) of length 1
+    """
     return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
 
 
@@ -493,6 +496,7 @@ def _build_groups(full_lt, smdict):
                     '%s contains source(s) %s already present in %s' %
                     (value, common, rlz.value))
             src_groups.extend(extra)
+        smweight = rlz.weight if full_lt.num_samples else 1/R
         for src_group in src_groups:
             trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
@@ -506,13 +510,13 @@ def _build_groups(full_lt, smdict):
                 sg = apply_uncertainties(bset_values, src_group)
                 for src in sg:  # tested in case_83_eb
                     src.sampling = sampling(
-                        rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
+                        rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
             else:
                 # don't do copies of the sources
                 sg = copy.copy(src_group)
                 for src in sg:  # tested in case_83_eb
                     sampl = sampling(
-                        rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
+                        rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
                     if src.sampling is None:
                         src.sampling = [sampl]
                     else:
