@@ -1201,13 +1201,11 @@ class FullLogicTree(object):
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
 
-    # NB: called by the source_reader with smr and by
-    # .reduce_groups with source_id
+    # NB: called by reduce_groups with source_id
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
         :param source_id: base source ID
-        :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
         if not self.trti:  # empty gsim_lt

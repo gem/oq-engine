@@ -32,6 +32,7 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
+TWO24 = 2**24
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 source_info_dt = numpy.dtype([
@@ -494,7 +495,12 @@ def _build_groups(full_lt, smdict):
             t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
             t1 = time.time()
-            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
+            if full_lt.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
+                trti = 0
+            else:
+                trti = full_lt.trti[sg.trt]
+            for src in sg:
+                src.trt_smr = trti * TWO24 + rlz.ordinal
             t2 = time.time()
             dt[0, rlz.ordinal] += t1 - t0
             dt[1, rlz.ordinal] += t2 - t1
