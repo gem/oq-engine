@@ -487,6 +487,7 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
@@ -495,10 +496,6 @@ def _build_groups(full_lt, smdict):
             t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
             dt[rlz.ordinal] += time.time() - t0
-            if full_lt.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
-                trti = 0
-            else:
-                trti = full_lt.trti[sg.trt]
             for src in sg:
                 src.trt_smr = trti * TWO24 + rlz.ordinal
             for src in sg:
