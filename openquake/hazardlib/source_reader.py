@@ -504,9 +504,11 @@ def _build_groups(full_lt, smdict):
             dt[rlz.ordinal] += time.time() - t0
             for src in sg:
                 # the smweight is used in event based sampling:
-                # see oq-risk-tests etna or case_83_eb
+                # see oq-risk-tests etna0 for full enum, else case_83_eb
                 src.sampling = sampling(
-                    rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
+                    rlz.samples,
+                    rlz.weight if full_lt.num_samples else 1/R,
+                    trti * TWO24 + rlz.ordinal)
             groups.append(sg)
 
         # check applyToSources
