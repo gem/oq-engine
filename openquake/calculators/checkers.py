@@ -85,7 +85,8 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
     calc, log = get_calc_log(ini, hc_id)
-    calc.run(export_dir='/tmp', close=False, tiling=tiling)
+    with log:
+        calc.run(export_dir='/tmp', close=False, tiling=tiling)
     if exports:
         calc.export(exports)
     print('Spent %.1f seconds' % (time.time() - t0))

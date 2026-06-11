@@ -528,15 +528,12 @@ class SourceModelLogicTree(object):
         logging.debug('Validated source model logic tree with %d underlying '
                       'files in %.2f seconds', len(unique), dt)
 
-    def is_extend_model(self):
+    @property
+    def utypes(self):
         """
-        True if there are branchsets of kind extendModel
+        Returns the uncertainty types for each branchset
         """
-        for bs in self.branchsets:
-            if bs.uncertainty_type == 'extendModel':
-                if any(br.value for br in bs.branches):
-                    return True
-        return False
+        return [bs.uncertainty_type for bs in self.branchsets]
 
     def parse_branchset(self, branchset_node, bsno):
         """
@@ -1428,13 +1425,11 @@ class FullLogicTree(object):
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
 
-    # NB: called by the source_reader with smr and by
-    # .reduce_groups with source_id
-    def set_trt_smr(self, srcs, source_id=None, smr=None):
+    # NB: called by reduce_groups with source_id
+    def set_trt_smr(self, srcs, source_id):
         """
         :param srcs: source objects
         :param source_id: base source ID
-        :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
         if not self.trti:  # empty gsim_lt
@@ -1445,14 +1440,11 @@ class FullLogicTree(object):
             srcid = valid.corename(src)
             if source_id and srcid != source_id:
                 continue  # filter
-            if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
-                trti = 0
-            else:
-                trti = self.trti[src.tectonic_region_type]
-            if smr is None and ';' in src.source_id:
-                # assume <base_id>;<smr>
-                smr = _get_smr(src.source_id)
-            if smr is None:  # called by .reduce_groups
+            trti = self.trti[src.tectonic_region_type]
+            if ';' in src.source_id:
+                # assume <base_id>;<smr> like in logictree/case_05
+                src.trt_smr = trti * TWO24 + _get_smr(src.source_id)
+            else:  # regular case
                 srcid = srcid.split('@')[0]
                 try:
                     # check if ambiguous source ID
@@ -1467,10 +1459,7 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-            else:
-                tup = trti * TWO24 + smr
-            # print('Setting %s on %s' % (tup, src))
-            src.trt_smr = tup  # realizations impacted by the source
+                src.trt_smr = tup  # realizations impacted by the source
             out.append(src)
         return out
 
