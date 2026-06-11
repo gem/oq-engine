@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
+import numpy
 import pandas
 
 from openquake.hazardlib import const
@@ -26,6 +27,7 @@ from openquake.hazardlib.geo import Polygon, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.source_reader import sampling_dt
 
 
 class FakeSource(ParametricSeismicSource):
@@ -143,6 +145,7 @@ class SampleRupturesTestCase(unittest.TestCase):
         <hypoDepth depth="4" probability="1"/>
       </hypoDepthDist>
     </pointSource>''')
+        ps.sampling = numpy.array([(1, 1, 0)], sampling_dt)
         mags_rates = list(ps.get_annual_occurrence_rates())
         mags, rates = zip(*mags_rates)
         ebrs = list(ps.sample_ruptures(num_ses=100, ses_seed=42))

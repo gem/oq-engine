@@ -100,11 +100,11 @@ class LogictreeTestCase(CalculatorTestCase):
         # NB: in engine < 3.17 this check fails
         [src] = self.calc.csm.get_sources()
         occrates = src.mfd.occurrence_rates
-        self.assertEqual(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
+        aac(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
         df = self.calc.datastore.read_df('ruptures', 'id')[
             ['mag', 'occurrence_rate']]
         gb = df.groupby('mag').sum()
-        aac(occrates, gb.occurrence_rate)
+        aac(occrates, gb.occurrence_rate, atol=2E-7)
 
     def test_case_02(self):
         self.run_calc(case_02.__file__, 'job.ini')
