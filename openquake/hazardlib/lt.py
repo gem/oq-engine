@@ -475,8 +475,8 @@ def apply_uncertainties(bset_values, src_group):
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
-            # copy.copy is ultra-fast except for the NZL model
-            sg.sources.append(copy.copy(source))
+            # no copy
+            sg.sources.append(source)
     return sg
 
 # ######################### sampling ######################## #
