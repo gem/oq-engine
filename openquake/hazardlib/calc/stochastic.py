@@ -112,11 +112,11 @@ def sample_cluster(group, num_ses, ses_seed):
     # ses_seed
     seed = group[0].serial(ses_seed)
     rng = numpy.random.default_rng(seed)
-    [trt_smr] = set(src.trt_smr for src in group)
+    [trt_smr] = set(src.sampling['trt_smr'][0] for src in group)
 
     # Set the parameters required to compute the number of occurrences
     # of the cluster
-    samples = group[0].samples
+    samples = group[0].sampling['samples'][0]
     tom = group.temporal_occurrence_model
     rate = getattr(tom, 'occurrence_rate', None)
 

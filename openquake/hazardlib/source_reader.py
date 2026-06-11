@@ -53,6 +53,10 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def sampling(samples, smweight, trt_smr):
+    return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
+
+
 # NB: blocksize is chosen so that event_based/case_35 works
 def splitMF(sources, blocksize=1000):
     """
@@ -77,16 +81,12 @@ def splitMF(sources, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
-                segment.trt_smr = src.trt_smr
-                segment.samples = src.samples
-                segment.smweight = src.smweight
+                segment.sampling = src.sampling
                 splits.append(segment)
         elif src.code == b'F' and not src.faults:
             # use the colon convention only in absence of kendra-splitting
             for segment in src:
-                segment.trt_smr = src.trt_smr
-                segment.samples = src.samples
-                segment.smweight = src.smweight
+                segment.sampling = src.sampling
                 splits.append(segment)
         else:
             splits.append(src)
@@ -363,7 +363,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples branch'}
+               if k not in 'source_id sampling branch'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -505,9 +505,8 @@ def _build_groups(full_lt, smdict):
             for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna or case_83_eb
-                src.smweight = rlz.weight
-                src.samples = rlz.samples
-                src.trt_smr = trti * TWO24 + rlz.ordinal
+                src.sampling = sampling(
+                    rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
             groups.append(sg)
 
         # check applyToSources
@@ -535,14 +534,9 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in logictree/case_07
-            src.trt_smr = tuple(s.trt_smr for s in srcs)
-            if event_based:
-                src.samples = tuple(s.samples for s in srcs)
-                src.smweight = tuple(s.smweight for s in srcs)
-        else:
-            src.trt_smr = src.trt_smr,
+            src.sampling = numpy.concatenate([s.sampling for s in srcs])
         out.append(src)
-    out.sort(key=operator.attrgetter('trt_smr'))
+    out.sort(key=operator.attrgetter('trt_smrs'))
     return out
 
 
