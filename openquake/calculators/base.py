@@ -227,7 +227,7 @@ def save_version_checksum(oq, dstore):
                  f'(total size {general.humansize(size)})')
     return checksum
 
-        
+
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -1689,24 +1689,46 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
-        N, E, _M = gmfs.shape
+        N, E, M = gmfs.shape
         events = store_events(calc.datastore, E)
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.zeros(E*N, oq.gmf_data_dt())
+        field2idx = {name: idx for idx, name in enumerate(data.dtype.names)}
+        F = len(field2idx)
+        if sec_perils:
+            # the mag is needed only to compute the secondary perils
+            try:
+                mag = oq.rupture_dict['mag']
+            except KeyError:
+                raise RuntimeError(
+                    'TODO: extract the magnitude from the ShakeMap!')
         i = 0
         for ei, event in enumerate(events):
+            arr = numpy.zeros((N, F))  # (num_sites, num_fields)
+            arr[:, 0] = sitecol.sids
+            arr[:, 1] = ei
+            for m, imt in enumerate(imts):
+                arr[:, field2idx[imt.string]] = gmfs[:, ei, m]
+            for sec_peril in sec_perils:
+                imt_gmf = [(imt, gmfs[:, ei, m]) for m, imt in enumerate(imts)]
+                outs = sec_peril.compute(mag, imt_gmf, sitecol)
+                for out, key in zip(outs, sec_peril.outputs):
+                    idx = field2idx[f'{sec_peril.__class__.__name__}_{key}']
+                    arr[:, idx] = out
             for s in numpy.arange(N, dtype=U32):
-                # populate a tuple like (sid, eid, PGA, SA(0.3), SA(1.0))
-                data[i] = (sitecol.sids[s], ei) + tuple(gmfs[s, ei])
+                # tuple (sid, eid, PGA, SA(0.3), SA(1.0), SA(3.0), sec_imt, ..)
+                data[i] = tuple(arr[s])
                 i += 1
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+            calc.datastore, imts, oq.sec_imts, data=data,
+            N=len(sitecol.complete), R=1)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         calc.datastore['weights'] = numpy.ones(1)
 
