@@ -468,7 +468,7 @@ def _build_groups(full_lt, smdict):
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
-    dt = numpy.zeros((2, R))
+    dt = numpy.zeros(R)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 10 == 0:
             logging.info('Building source groups for rlz'
@@ -494,16 +494,13 @@ def _build_groups(full_lt, smdict):
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
-            t1 = time.time()
+            dt[rlz.ordinal] += time.time() - t0
             if full_lt.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
                 trti = full_lt.trti[sg.trt]
             for src in sg:
                 src.trt_smr = trti * TWO24 + rlz.ordinal
-            t2 = time.time()
-            dt[0, rlz.ordinal] += t1 - t0
-            dt[1, rlz.ordinal] += t2 - t1
             for src in sg:
                 # the smweight is used in event based sampling:
                 # see oq-risk-tests etna
@@ -522,8 +519,7 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
-                 numpy.round(dt.sum(axis=1), 2))
+    logging.info(f'Seconds in apply_uncertainties: {dt.sum():.2f}')
     return groups
 
 
