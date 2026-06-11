@@ -500,10 +500,9 @@ def _build_groups(full_lt, smdict):
                 src.trt_smr = trti * TWO24 + rlz.ordinal
             for src in sg:
                 # the smweight is used in event based sampling:
-                # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else 1/R
-                if rlz.samples > 1:
-                    src.samples = rlz.samples
+                # see oq-risk-tests etna or case_83_eb
+                src.smweight = rlz.weight
+                src.samples = rlz.samples
             groups.append(sg)
 
         # check applyToSources
