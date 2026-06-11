@@ -575,6 +575,11 @@ def _get_csm(oq, full_lt, groups, event_based):
             if isinstance(src.sampling, list):
                 src.sampling = numpy.concatenate(
                     src.sampling, dtype=sampling_dt)
+            else:
+                # already concatenated at the previous iteration,
+                # happens for sources belonging to multiple groups,
+                # such as <AreaSource 002> in classical case_10
+                pass
         splitMF(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)
