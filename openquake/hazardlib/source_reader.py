@@ -54,6 +54,9 @@ source_info_dt = numpy.dtype([
 
 
 def sampling(samples, smweight, trt_smr):
+    """
+    :returns: a structured array (samples, smweight, trt_smr) of length 1
+    """
     return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
 
 
