@@ -295,7 +295,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 if hasattr(rup, 'occurrence_rate'):
                     # defined only for poissonian sources
                     # needed to get convergency of the frequency to the rate
-                    # tested only in oq-risk-tests etna0
+                    # tested in case_83_eb
                     rup.occurrence_rate *= smweight
                 ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
                                 seed=rupid + TWO30 * self.id + ses_seed)

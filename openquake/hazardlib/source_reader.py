@@ -32,17 +32,24 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
+TWO24 = 2**24
+U32 = numpy.uint32
+F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
+sampling_dt = numpy.dtype([
+    ('samples', U32),
+    ('smweight', F32),
+    ('trt_smr', U32)])
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
-    ('calc_time', numpy.float32),      # 3
+    ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
     ('est_ctxs', numpy.uint64),        # 5
-    ('num_ruptures', numpy.uint32),    # 6
-    ('weight', numpy.float32),         # 7
+    ('num_ruptures', U32),             # 6
+    ('weight', F32),                   # 7
 ])
 
 
@@ -467,7 +474,7 @@ def _build_groups(full_lt, smdict):
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
-    dt = numpy.zeros((2, R))
+    dt = numpy.zeros(R)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 10 == 0:
             logging.info('Building source groups for rlz'
@@ -486,6 +493,7 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
@@ -493,17 +501,13 @@ def _build_groups(full_lt, smdict):
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
-            t1 = time.time()
-            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
-            t2 = time.time()
-            dt[0, rlz.ordinal] += t1 - t0
-            dt[1, rlz.ordinal] += t2 - t1
+            dt[rlz.ordinal] += time.time() - t0
             for src in sg:
                 # the smweight is used in event based sampling:
-                # see oq-risk-tests etna
+                # see oq-risk-tests etna0 for full enum, else case_83_eb
                 src.smweight = rlz.weight if full_lt.num_samples else 1/R
-                if rlz.samples > 1:
-                    src.samples = rlz.samples
+                src.samples = rlz.samples
+                src.trt_smr = trti * TWO24 + rlz.ordinal
             groups.append(sg)
 
         # check applyToSources
@@ -516,8 +520,7 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
-                 numpy.round(dt.sum(axis=1), 2))
+    logging.info(f'Seconds in apply_uncertainties: {dt.sum():.2f}')
     return groups
 
 
