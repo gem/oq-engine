@@ -1460,7 +1460,16 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-                src.sampling['trt_smr'] = tup  # realizations impacted
+                # Rebuild sampling; len(tup) may exceed len(src.sampling)
+                # when called from a reduced FullLogicTree on sources not
+                # merged by reduce_sources (distinct checksums per branch,
+                # e.g. RuntimeSourceModelLT in test_case_34)
+                samp = src.sampling
+                new = numpy.zeros(len(tup), samp.dtype)
+                new['samples'] = samp['samples'][0]
+                new['smweight'] = samp['smweight'][0]
+                new['trt_smr'] = tup
+                src.sampling = new  # realizations impacted
             out.append(src)
         return out
 
