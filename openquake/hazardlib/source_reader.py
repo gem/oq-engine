@@ -24,7 +24,7 @@ import operator
 import logging
 import numpy
 
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
 from openquake.hazardlib.source_group import CompositeSourceModel
@@ -32,18 +32,32 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
+TWO24 = 2**24
+U32 = numpy.uint32
+F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
+sampling_dt = numpy.dtype([
+    ('samples', U32),
+    ('smweight', F32),
+    ('trt_smr', U32)])
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
-    ('calc_time', numpy.float32),      # 3
+    ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
     ('est_ctxs', numpy.uint64),        # 5
-    ('num_ruptures', numpy.uint32),    # 6
-    ('weight', numpy.float32),         # 7
+    ('num_ruptures', U32),             # 6
+    ('weight', F32),                   # 7
 ])
+
+
+def sampling(samples, smweight, trt_smr):
+    """
+    :returns: a structured array (samples, smweight, trt_smr) of length 1
+    """
+    return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -70,16 +84,12 @@ def splitMF(sources, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
-                segment.trt_smr = src.trt_smr
-                segment.samples = src.samples
-                segment.smweight = src.smweight
+                segment.sampling = src.sampling
                 splits.append(segment)
         elif src.code == b'F' and not src.faults:
             # use the colon convention only in absence of kendra-splitting
             for segment in src:
-                segment.trt_smr = src.trt_smr
-                segment.samples = src.samples
-                segment.smweight = src.smweight
+                segment.sampling = src.sampling
                 splits.append(segment)
         else:
             splits.append(src)
@@ -298,15 +308,24 @@ def build_csm(oq, full_lt, smdict, dstore):
     Applies uncertainties, builds the source groups and returns
     a CompositeSourceModel instance
     """
-    groups = _build_groups(full_lt, smdict)  # fast
+    mon = performance.Monitor('_build_groups', measuremem=True)
+    with mon:
+        groups = _build_groups(full_lt, smdict)  # fast
+    logging.info(mon)
+
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
         logging.info('Applied {:_d} changes to {:_d} source groups'.
                      format(changes, len(groups)))
-    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+
     logging.info('Building CompositeSourceModel')
-    csm = _get_csm(oq, full_lt, groups, is_event_based)
+    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+    mon = performance.Monitor('_get_csm', measuremem=True)
+    with mon:
+        csm = _get_csm(oq, full_lt, groups, is_event_based)
+    logging.info(mon)
+
     out = []
     probs = []
     for sg in csm.src_groups:
@@ -356,7 +375,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples branch'}
+               if k not in 'source_id sampling branch'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -467,9 +486,8 @@ def _build_groups(full_lt, smdict):
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
-    dt = numpy.zeros((2, R))
     for rlz in full_lt.sm_rlzs:
-        if rlz.ordinal % 10 == 0:
+        if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
         src_groups, source_ids = _groups_ids(
@@ -485,25 +503,22 @@ def _build_groups(full_lt, smdict):
                     '%s contains source(s) %s already present in %s' %
                     (value, common, rlz.value))
             src_groups.extend(extra)
+        smweight = rlz.weight if full_lt.num_samples else 1/R
         for src_group in src_groups:
+            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
-            t1 = time.time()
-            full_lt.set_trt_smr(sg, smr=rlz.ordinal)
-            t2 = time.time()
-            dt[0, rlz.ordinal] += t1 - t0
-            dt[1, rlz.ordinal] += t2 - t1
-            for src in sg:
-                # the smweight is used in event based sampling:
-                # see oq-risk-tests etna
-                src.smweight = rlz.weight if full_lt.num_samples else 1/R
-                if rlz.samples > 1:
-                    src.samples = rlz.samples
+            for src in sg:  # tested in case_83_eb
+                sampl = sampling(
+                    rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
+                if src.sampling is None:
+                    src.sampling = [sampl]
+                else:
+                    src.sampling.append(sampl)
             groups.append(sg)
 
         # check applyToSources
@@ -516,8 +531,6 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    logging.info('Seconds in [apply_uncertainties, set_trt_smr]: %s',
-                 dt.sum(axis=1))
     return groups
 
 
@@ -530,16 +543,14 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
+        # the simplest test featuring the same source in two
+        # source models is logictree/case_01
         src = srcs[0]
-        if len(srcs) > 1:  # happens in logictree/case_07
-            src.trt_smr = tuple(s.trt_smr for s in srcs)
-            if event_based:
-                src.samples = tuple(s.samples for s in srcs)
-                src.smweight = tuple(s.smweight for s in srcs)
-        else:
-            src.trt_smr = src.trt_smr,
+        if len(srcs) > 1 and len(src.sampling) == 1:
+            # happens in logictree/case_07
+            src.sampling = numpy.concatenate([s.sampling for s in srcs])
         out.append(src)
-    out.sort(key=operator.attrgetter('trt_smr'))
+    out.sort(key=operator.attrgetter('trt_smrs'))
     return out
 
 
@@ -560,6 +571,15 @@ def _get_csm(oq, full_lt, groups, event_based):
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
+        for src in grp:
+            if isinstance(src.sampling, list):
+                src.sampling = numpy.concatenate(
+                    src.sampling, dtype=sampling_dt)
+            else:
+                # already concatenated at the previous iteration,
+                # happens for sources belonging to multiple groups,
+                # such as <AreaSource 002> in classical case_10
+                pass
         splitMF(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)

@@ -56,6 +56,27 @@ sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
 
+#### Configuring the DbServer host
+
+If the database file is on the local machine, there is nothing to do
+since the universal installer already writes in the `openquake.cfg`
+file a section
+
+```
+[dbserver]
+host = localhost
+file = /path/to/db.sqlite3
+```
+
+If the database is on a different machine, you have to edit the file and
+specify the correct host name.
+
+NB: setting `host=127.0.0.1` is a mistake, since it will result on the
+database being accessed directly bypassing the DbServer, which is a problem,
+since regular users will not have write permission to it. `host=127.0.0.1`
+instead is correct for single-user installations and correctly set by
+the universal installer.
+
 #### Upgrade the database to host users and sessions
 
 ```console
