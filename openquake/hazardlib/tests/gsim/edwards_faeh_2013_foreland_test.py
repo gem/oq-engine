@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.edwards_fah_2013f import (
+    EdwardsFah2013Foreland3Bars,
     EdwardsFah2013Foreland10Bars,
     EdwardsFah2013Foreland20Bars,
     EdwardsFah2013Foreland30Bars,
@@ -26,6 +27,18 @@ from openquake.hazardlib.gsim.edwards_fah_2013f import (
     EdwardsFah2013Foreland90Bars,
     EdwardsFah2013Foreland120Bars)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
+
+class EdwardsFah2013Foreland3BarsTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EdwardsFah2013Foreland3Bars
+
+    def test_mean(self):
+        self.check('EF13f/for_sd3_table.csv',
+                   max_discrep_percentage=0.55)
+
+    def test_std_total(self):
+        self.check('EF13f/ef_2013_phis_ss_embeded.csv',
+                   max_discrep_percentage=0.80)
 
 
 class EdwardsFah2013Foreland10BarsTestCase(BaseGSIMTestCase):
