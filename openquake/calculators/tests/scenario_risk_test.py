@@ -315,6 +315,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # # exposure_by_lse
+        # df = extract(self.calc.datastore,
+        #              'exposure_by_lse?secondary_peril=liquefaction')
+        # fname = gettemp(text_table(df, ext='org'))
+        # self.assertEqualFiles('expected/exposure_by_lse.org',
+        #                       fname, delta=1E-3)
+
     def test_case_shapefile(self):
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
         pre_id = str(self.calc.datastore.calc_id)

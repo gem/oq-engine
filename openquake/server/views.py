@@ -147,6 +147,7 @@ EXTRACTABLE_RESOURCES = [
     'events',
     'exposure_metadata',
     'exposure_by_location',
+    'exposure_by_lse',
     'gmf_data',
     'hcurves',
     'hmaps',
@@ -1865,6 +1866,41 @@ def exposure_by_mmi(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
+def exposure_by_lse(request, calc_id):
+    """
+    Return exposure aggregated by secondary peril LSE tiers and tags,
+    by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            # FIXME parametric secondary peril
+            df = _extract(ds, 'exposure_by_lse?secondary_peril=liquefaction')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'exposure_by_lse', tb),
+            content_type='text/plain', status=400)
+    # FIXME: different field description
+    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
+                     'exposure_by_lse': df.to_dict()}
+    return JsonResponse(response_data)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
     Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
@@ -2387,6 +2423,9 @@ def can_extract(request, resource):
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
     summarize = get_bool_param(request, 'summarize')
+    secondary_peril = request.GET.get('secondary_peril')
+    if secondary_peril:
+        name += f'?secondary_peril={secondary_peril}'
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -2407,7 +2446,8 @@ def extract_html_table(request, calc_id, name):
                      'mmi_tags': 'Exposure by MMI',
                      'losses_by_site': 'Losses by site',
                      'losses_by_location': 'Losses by location',
-                     'exposure_by_location': 'Exposure by location'}
+                     'exposure_by_location': 'Exposure by location',
+                     'exposure_by_lse': 'Exposure by LSE'}
     table_name = display_names[name] if name in display_names else name
     table_header = []
     for short_name in table.columns:

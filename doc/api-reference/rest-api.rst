@@ -156,6 +156,30 @@ A JSON object containing:
   "occupants_avg",  "mmi".
 - a 'column_descriptions' dictionary containing a description for each exposure type.
 
+*****************************************
+GET /v1/calc/:calc_id/exposure_by_lse
+*****************************************
+
+# FIXME: replace with the actual description
+Get exposure aggregated by MMI regions and tags.
+
+NB: this URL is valid only for ShakeMap based calculations downloading
+the MMI regions from the USGS service.
+
+Otherwise it returns a BadRequest error with HTTP code 400.
+
+Parameters: None
+
+Response:
+
+A JSON object containing:
+
+- an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
+  columns are "ID_2", "number", "contents", "nonstructural", "structural",
+  "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
+  "occupants_avg",  "mmi".
+- a 'column_descriptions' dictionary containing a description for each exposure type.
+
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
 ***********************************

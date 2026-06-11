@@ -231,6 +231,7 @@ class ImpactModeTestCase(django.test.TestCase):
         ret = self.get('%s/download_aggrisk' % job_id)
         ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
         ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
+        ret = self.get('%s/extract_html_table/exposure_by_lse' % job_id)
         ret = self.get('%s/extract/losses_by_asset' % job_id)
         content = self.get_response_content(ret)
         losses_by_asset_mean = numpy.load(BytesIO(content))['rlz-000']
