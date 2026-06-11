@@ -575,18 +575,19 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
-    def get_lse_values(self, aggregate_by, gmf_df):
+    def get_lse_values(self, aggregate_by, gmf_df, event_agg="mean"):
         """
         :param aggregate_by:
             a list of lists of tag names (e.g., [['ID_0']])
         :param gmf_df:
             The DataFrame containing ground motion/secondary peril fields
-            (columns: sid, eid, AllstadtEtAl2022Liquefaction_LSE, etc.)
+        :param event_agg:
+            String indicating how to aggregate across multiple events.
+            Options: 'mean' (default) or 'max'.
         :returns:
             Two DataFrames (liquefaction_df, landslide_df) containing
-            aggregated exposure metrics grouped by Geo-tags and LSE tiers.
+            aggregated exposure metrics grouped by Geo-tags and LSE.
         """
-        # liquefaction tiers and labels
         liq_bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
         liq_labels = [
             "<0.005",
@@ -595,9 +596,7 @@ class AssetCollection(object):
             "0.02-0.05",
             "0.05-0.1",
             "0.1-0.2",
-            ">0.2",
-        ]
-        # landslide tiers and labels
+            ">0.2"]
         land_bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
         land_labels = [
             "<0.002",
@@ -606,9 +605,7 @@ class AssetCollection(object):
             "0.02-0.05",
             "0.05-0.1",
             "0.1-0.2",
-            ">0.2",
-        ]
-        # Bin continuous LSE data
+            ">0.2"]
         gmf_df = gmf_df.copy()
         gmf_df["liquefaction_tier"] = pandas.cut(
             gmf_df["AllstadtEtAl2022Liquefaction_LSE"],
@@ -622,45 +619,98 @@ class AssetCollection(object):
             labels=land_labels,
             right=False,
         )
-        # Create DataFrame and target true exposure columns
+        # Create DataFrame and target exposure columns like "value-"
         exp_df = pandas.DataFrame(self.array)
-        raw_exposure_cols = [col for col in exp_df.columns
-                             if col.startswith("value-")]
-        # Clean the prefix from the columns
+        raw_exposure_cols = [
+            col for col in exp_df.columns if col.startswith("value-")
+        ]
         exp_df = exp_df.rename(
-            columns={col: col.replace("value-", "") for col in exp_df.columns})
-        # Track the cleaned names for the pandas groupby aggregation
-        exposure_cols = [col.replace("value-", "")
-                         for col in raw_exposure_cols]
+            columns={
+                col: col.replace("value-", "") for col in exp_df.columns
+            }
+        )
+        exposure_cols = [
+            col.replace("value-", "") for col in raw_exposure_cols
+        ]
         # Map integer geographic IDs to actual string tags
         _aggids, aggtags = self.build_aggids(aggregate_by)
         geo_columns = aggregate_by[0]  # e.g., ['ID_0']
         geo_col = geo_columns[0]  # e.g., 'ID_0'
+
         geo_tags_df = pandas.DataFrame(aggtags, columns=geo_columns)
         geo_tags_df["agg_id"] = geo_tags_df.index
-        # Create a dictionary to map the integer code to the string tag
         tag_map = dict(zip(geo_tags_df["agg_id"], geo_tags_df[geo_col]))
-        # Replace the integer column in exp_df with the string labels
         exp_df[geo_col] = exp_df[geo_col].map(tag_map)
-        # Merge exposure and hazard data
+
         merged_df = pandas.merge(
-            exp_df, gmf_df, left_on="site_id", right_on="sid")
-        # Perform aggregation (excluding eid)
-        liq_groupby_keys = geo_columns + ["liquefaction_tier"]
-        land_groupby_keys = geo_columns + ["landslide_tier"]
-        liq_df = (
+            exp_df, gmf_df, left_on="site_id", right_on="sid"
+        )
+
+        # Sum assets per event first
+        liq_groupby_keys = ["eid"] + geo_columns + ["liquefaction_tier"]
+        land_groupby_keys = ["eid"] + geo_columns + ["landslide_tier"]
+
+        liq_per_event = (
             merged_df.groupby(liq_groupby_keys, observed=False)[exposure_cols]
             .sum()
             .reset_index()
         )
-        land_df = (
-            merged_df.groupby(land_groupby_keys, observed=False)[exposure_cols]
+        land_per_event = (
+            merged_df.groupby(land_groupby_keys, observed=False)[
+                exposure_cols
+            ]
             .sum()
             .reset_index()
         )
-        # Rename tier columns to match a clean output layout
-        liq_df = liq_df.rename(columns={"liquefaction_tier": "lse_tier"})
-        land_df = land_df.rename(columns={"landslide_tier": "lse_tier"})
+
+        # Rename tier columns for the final step
+        liq_per_event = liq_per_event.rename(
+            columns={"liquefaction_tier": "lse_tier"}
+        )
+        land_per_event = land_per_event.rename(
+            columns={"landslide_tier": "lse_tier"}
+        )
+
+        # Aggregate across events
+        final_keys = geo_columns + ["lse_tier"]
+        num_events = gmf_df["eid"].nunique()
+
+        if event_agg == "max":
+            # Find the highest exposure value across any single event
+            liq_df = (
+                liq_per_event.groupby(final_keys, observed=False)[
+                    exposure_cols
+                ]
+                .max()
+                .reset_index()
+            )
+            land_df = (
+                land_per_event.groupby(final_keys, observed=False)[
+                    exposure_cols
+                ]
+                .max()
+                .reset_index()
+            )
+        else:
+            # Default to "mean": Total sum divided by total distinct events.
+            # This safely accounts for events where exposure was zero.
+            liq_df = (
+                liq_per_event.groupby(final_keys, observed=False)[
+                    exposure_cols
+                ]
+                .sum()
+                .reset_index()
+            )
+            land_df = (
+                land_per_event.groupby(final_keys, observed=False)[
+                    exposure_cols
+                ]
+                .sum()
+                .reset_index()
+            )
+            liq_df[exposure_cols] = liq_df[exposure_cols] / num_events
+            land_df[exposure_cols] = land_df[exposure_cols] / num_events
+
         return (
             liq_df[liq_df["number"] > 0],
             land_df[land_df["number"] > 0],

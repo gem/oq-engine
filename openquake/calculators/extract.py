@@ -875,7 +875,9 @@ def extract_lse_by_tier(dstore, what):
     gmf_df = dstore.read_df('gmf_data')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    liq_df, land_df = assetcol.get_lse_values(oq.aggregate_by, gmf_df)
+    event_agg = 'mean'  # or 'max'
+    liq_df, land_df = assetcol.get_lse_values(
+        oq.aggregate_by, gmf_df, event_agg=event_agg)
     breakpoint()
     return df
 
