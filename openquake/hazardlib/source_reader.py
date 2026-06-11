@@ -480,7 +480,7 @@ def _build_groups(full_lt, smdict):
     R = len(full_lt.sm_rlzs)
     dt = numpy.zeros(R)
     for rlz in full_lt.sm_rlzs:
-        if rlz.ordinal % 10 == 0:
+        if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
         src_groups, source_ids = _groups_ids(
