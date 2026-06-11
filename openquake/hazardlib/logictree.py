@@ -505,15 +505,12 @@ class SourceModelLogicTree(object):
         logging.debug('Validated source model logic tree with %d underlying '
                       'files in %.2f seconds', len(unique), dt)
 
-    def is_extend_model(self):
+    @property
+    def utypes(self):
         """
-        True if there are branchsets of kind extendModel
+        Returns the uncertainty types for each branchset
         """
-        for bs in self.branchsets:
-            if bs.uncertainty_type == 'extendModel':
-                if any(br.value for br in bs.branches):
-                    return True
-        return False
+        return [bs.uncertainty_type for bs in self.branchsets]
 
     def parse_branchset(self, branchset_node, bsno):
         """
@@ -1228,7 +1225,7 @@ class FullLogicTree(object):
             if smr is None and ';' in src.source_id:
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
-            if smr is None:  # called by .reduce_groups
+            if smr is None:  # called by .reduce_groups in disagg_by_src
                 srcid = srcid.split('@')[0]
                 try:
                     # check if ambiguous source ID
@@ -1243,9 +1240,8 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-            else:
+            else:  # called by source_reader
                 tup = trti * TWO24 + smr
-            # print('Setting %s on %s' % (tup, src))
             src.trt_smr = tup  # realizations impacted by the source
             out.append(src)
         return out
