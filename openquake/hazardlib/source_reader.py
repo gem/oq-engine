@@ -18,6 +18,7 @@
 
 import time
 import zlib
+import copy
 import os.path
 import pickle
 import operator
@@ -500,13 +501,23 @@ def _build_groups(full_lt, smdict):
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             t0 = time.time()
-            sg = apply_uncertainties(bset_values, src_group)
+            if bset_values:
+                # make copies of the sources, slow for NZL
+                sg = apply_uncertainties(bset_values, src_group)
+                for src in sg:  # tested in case_83_eb
+                    src.sampling = sampling(
+                        rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
+            else:
+                # don't do copies of the sources
+                sg = copy.copy(src_group)
+                for src in sg:  # tested in case_83_eb
+                    sampl = sampling(
+                        rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
+                    if src.sampling is None:
+                        src.sampling = [sampl]
+                    else:
+                        src.sampling.append(sampl)
             dt[rlz.ordinal] += time.time() - t0
-            for src in sg:
-                # the smweight is used in event based sampling:
-                # see oq-risk-tests etna or case_83_eb
-                src.sampling = sampling(
-                    rlz.samples, rlz.weight, trti * TWO24 + rlz.ordinal)
             groups.append(sg)
 
         # check applyToSources
@@ -557,6 +568,10 @@ def _get_csm(oq, full_lt, groups, event_based):
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
+        for src in grp:
+            if isinstance(src.sampling, list):
+                src.sampling = numpy.concatenate(
+                    src.sampling, dtype=sampling_dt)
         splitMF(grp.sources)
         if grp and grp.atomic:
             atomic.append(grp)
