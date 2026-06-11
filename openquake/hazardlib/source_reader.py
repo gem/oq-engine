@@ -548,7 +548,8 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
-        if len(srcs) > 1:  # happens in logictree/case_07
+        if len(srcs) > 1 and len(src.sampling) == 1:
+            # happens in logictree/case_07
             src.sampling = numpy.concatenate([s.sampling for s in srcs])
         out.append(src)
     out.sort(key=operator.attrgetter('trt_smrs'))
