@@ -24,7 +24,7 @@ import operator
 import logging
 import numpy
 
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
 from openquake.hazardlib.source_group import CompositeSourceModel
@@ -308,15 +308,24 @@ def build_csm(oq, full_lt, smdict, dstore):
     Applies uncertainties, builds the source groups and returns
     a CompositeSourceModel instance
     """
-    groups = _build_groups(full_lt, smdict)  # fast
+    mon = performance.Monitor('_build_groups', measuremem=True)
+    with mon:
+        groups = _build_groups(full_lt, smdict)  # fast
+    logging.info(mon)
+
     # checking the changes
     changes = sum(sg.changes for sg in groups)
     if changes:
         logging.info('Applied {:_d} changes to {:_d} source groups'.
                      format(changes, len(groups)))
-    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+
     logging.info('Building CompositeSourceModel')
-    csm = _get_csm(oq, full_lt, groups, is_event_based)
+    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
+    mon = performance.Monitor('_get_csm', measuremem=True)
+    with mon:
+        csm = _get_csm(oq, full_lt, groups, is_event_based)
+    logging.info(mon)
+
     out = []
     probs = []
     for sg in csm.src_groups:
@@ -477,7 +486,6 @@ def _build_groups(full_lt, smdict):
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
     R = len(full_lt.sm_rlzs)
-    dt = numpy.zeros(R)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
@@ -503,7 +511,6 @@ def _build_groups(full_lt, smdict):
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            t0 = time.time()
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:  # tested in case_83_eb
                 sampl = sampling(
@@ -512,7 +519,6 @@ def _build_groups(full_lt, smdict):
                     src.sampling = [sampl]
                 else:
                     src.sampling.append(sampl)
-            dt[rlz.ordinal] += time.time() - t0
             groups.append(sg)
 
         # check applyToSources
@@ -525,7 +531,6 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    logging.info(f'Seconds in apply_uncertainties: {dt.sum():.2f}')
     return groups
 
 
