@@ -238,6 +238,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a tuple of integers (usually of 1 element)
         """
+        if self.sampling is None:  # in hazardlib
+            return (0,)
         return tuple(self.sampling['trt_smr'])
 
     def serial(self, ses_seed):
