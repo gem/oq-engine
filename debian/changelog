@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Cached the multifault sections, with a 10x speedup when sampling the
+  * Cached the multifault sections, with a 6x speedup when sampling the
     sampling of the NZL model
   * Avoided copying sources when building the CompositeSourceModel,
     thus reducing the memory occupation and time by 75% for NZL
