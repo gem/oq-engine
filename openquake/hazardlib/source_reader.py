@@ -38,9 +38,10 @@ F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 sampling_dt = numpy.dtype([
+    ('trt_smr', U32),
     ('samples', U32),
-    ('smweight', F32),
-    ('trt_smr', U32)])
+    ('smweight', F32)])
+
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
@@ -57,7 +58,7 @@ def sampling(samples, smweight, trt_smr):
     """
     :returns: a structured array (samples, smweight, trt_smr) of length 1
     """
-    return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
+    return numpy.array([(trt_smr, samples, smweight)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -170,20 +171,26 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     return {fname: sm}
 
 
-# NB: in classical this is called after reduce_sources, so ";" is not
-# added if the same source appears multiple times, len(srcs) == 1
-# in event based instead identical sources can appear multiple times
-# but will have different seeds and produce different rupture sets
-def _fix_dupl_ids(src_groups):
+# NB:this is called after reduce_sources, so ";" is not added
+# if the same source appears multiple times, i.e. len(srcs) == 1
+def add_semicolons(src_groups):
+    """
+    Add semicolons to differentiate different sources with the same source_id
+    and then sort the sources in each group by extended source_id
+    """
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
-        for src in sg.sources:
+        for src in sg:
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
             # happens in logictree/case_01/rup.ini
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
+    for sg in src_groups:
+        sg.sources.sort(key=operator.attrgetter('source_id'))
+    # tested in logictree/case_05 with 9 variations of
+    # AreaSource 1 and SimpleFaultSource 2
 
 
 def check_branchID(branchID):
@@ -323,17 +330,11 @@ def build_csm(oq, full_lt, smdict, dstore):
         groups = _build_groups(full_lt, smdict)  # fast
     logging.info(mon)
 
-    # checking the changes
-    changes = sum(sg.changes for sg in groups)
-    if changes:
-        logging.info('Applied {:_d} changes to {:_d} source groups'.
-                     format(changes, len(groups)))
-
     logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    mon = performance.Monitor('_get_csm', measuremem=True)
+    mon = performance.Monitor('_build_csm', measuremem=True)
     with mon:
-        csm = _get_csm(oq, full_lt, groups, is_event_based)
+        csm = _build_csm(oq, full_lt, groups, is_event_based)
     logging.info(mon)
 
     out = []
@@ -357,7 +358,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         lst = [('grp_id', int), ('probability', float)]
         dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
-    # split multifault sources if there is a single site
+    # add rupids_by_tag to multifault sources if there is a single site
     try:
         sitecol = dstore['sitecol']
     except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
@@ -367,7 +368,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         lonlats = set(zip(sitecol.lons, sitecol.lats))
         if len(lonlats) > 1:
             sitecol = None
-    # must be called *after* _fix_dupl_ids
+    # must be called *after* add_semicolons
     t0 = time.time()
     secparams = fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
@@ -379,6 +380,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     return csm
 
 
+# called by reduce_sources
 def add_checksums(srcs):
     """
     Build and attach a checksum to each source
@@ -389,7 +391,7 @@ def add_checksums(srcs):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
-# called before _fix_dupl_ids
+# called before add_semicolons
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
@@ -526,8 +528,10 @@ def _build_groups(full_lt, smdict):
                 sampl = sampling(
                     rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
                 if src.sampling is None:
+                    # the first time
                     src.sampling = [sampl]
                 else:
+                    # if the same source belongs to multiple realizations
                     src.sampling.append(sampl)
             groups.append(sg)
 
@@ -547,20 +551,24 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :returns: a list of truly unique sources, ordered by trt_smr
+    :returns: a list of truly unique sources
     """
+    # first reduce identical sources having the same id(src)
+    # tested in LogictreeTestCase.test_case_08, where <PoinstSource 2>
+    # appears 3 times
+    unique = {}
+    for src in sources_with_same_id:
+        unique[id(src)] = src
     out = []
-    add_checksums(sources_with_same_id)
-    for srcs in general.groupby(sources_with_same_id, checksum).values():
-        # duplicate sources: same id, same checksum
-        # the simplest test featuring the same source in two
-        # source models is logictree/case_01
+    add_checksums(unique.values())
+    for srcs in general.groupby(unique.values(), checksum).values():
+        # NB: the simplest test featuring the same source in two
+        # different source models is logictree/case_01
         src = srcs[0]
-        if len(srcs) > 1 and len(src.sampling) == 1:
-            # happens in logictree/case_07
+        if len(srcs) > 1:
+            assert len(src.sampling) == 1, src  # sanity check
             src.sampling = numpy.concatenate([s.sampling for s in srcs])
         out.append(src)
-    out.sort(key=operator.attrgetter('trt_smrs'))
     return out
 
 
@@ -574,19 +582,19 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _get_csm(oq, full_lt, groups, event_based):
-    # 1. extract a single source from multiple sources with the same ID
-    # 2. regroup the sources in non-atomic groups by TRT
-    # 3. reorder the sources by source_id
-    atomic = []
+def _build_csm(oq, full_lt, groups, event_based):
     acc = general.AccumDict(accum=[])
+    atomic = []
+    changes = 0
+    # concatenate sampling records, split MF sources, single out atomic groups
     for grp in groups:
+        changes += grp.changes
         for src in grp:
             if isinstance(src.sampling, list):
                 src.sampling = numpy.concatenate(
                     src.sampling, dtype=sampling_dt)
             else:
-                # already concatenated at the previous iteration,
+                # already concatenated at the previous iteration;
                 # happens for sources belonging to multiple groups,
                 # such as <AreaSource 002> in classical case_10
                 pass
@@ -595,6 +603,12 @@ def _get_csm(oq, full_lt, groups, event_based):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
+    if changes:
+        logging.info(f'Applied {changes:_d} changes to '
+                     f'{len(groups):_d} source groups')
+
+    # reduce identical sources by concatenating the sampling records,
+    # then regroup by trt_smrs
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
     for trt in acc:
@@ -607,9 +621,7 @@ def _get_csm(oq, full_lt, groups, event_based):
             for grp in split_by_tom(sources):
                 src_groups.append(sourceconverter.SourceGroup(trt, grp))
     src_groups.extend(atomic)
-    _fix_dupl_ids(src_groups)
 
-    # split multipoint and sort by source_id
-    for sg in src_groups:
-        sg.sources.sort(key=operator.attrgetter('source_id'))
-    return CompositeSourceModel(oq, full_lt, src_groups)
+    add_semicolons(src_groups)
+    csm = CompositeSourceModel(oq, full_lt, src_groups)
+    return csm

@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Avoided copying sources when building the CompositeSourceModel,
-    thus reducing the memory occupation by 75% for preclassical NZL
+    thus reducing the memory occupation and time by 75% for NZL
 
   [Paolo Tormene, Michele Simionato]
   * Implemented secondary perils for ShakeMap calculations
