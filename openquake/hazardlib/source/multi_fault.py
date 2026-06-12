@@ -42,10 +42,9 @@ U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
 BLOCKSIZE = int(config.memory.max_multi_fault_ruptures)
+SECTIONS = {}  # global dictionary hdf5path -> multifault sections
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
-# NB: if too large, very few sources will be generated and a lot of
-# memory will be used
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -163,13 +162,21 @@ class MultiFaultSource(BaseSeismicSource):
         :param idxs: indices of the surfaces to return (default all)
         :returns: the underlying sections as KiteSurfaces
         """
+        if idxs is None:  # in event_based use the cache
+            try:
+                sections = SECTIONS[self.hdf5path]
+            except KeyError:
+                with hdf5.File(self.hdf5path, 'r') as f:
+                    sections = [general.zunpik(arr) for arr in f['mf_sections']]
+                SECTIONS[self.hdf5path] = sections
+                for idx, sec in enumerate(sections):
+                    sec.idx = idx
+            return sections
+
+        # in classical read only the specified sections
         with hdf5.File(self.hdf5path, 'r') as f:
             dset = f['mf_sections']
-            if idxs is None:
-                idxs = range(len(dset))
-                sections = [general.zunpik(arr) for arr in dset[:]]
-            else:
-                sections = [general.zunpik(dset[idx]) for idx in idxs]
+            sections = [general.zunpik(dset[idx]) for idx in idxs]
         for sec, idx in zip(sections, idxs):
             sec.idx = idx
         return sections

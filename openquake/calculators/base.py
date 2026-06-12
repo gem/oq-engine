@@ -48,7 +48,7 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
@@ -358,6 +358,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 if shutdown:
                     parallel.Starmap.shutdown()
                 # cleanup globals
+                multi_fault.SECTIONS.clear()
                 if ct == 0:  # restore OQ_DISTRIBUTE
                     if oq_distribute is None:  # was not set
                         del os.environ['OQ_DISTRIBUTE']
