@@ -239,7 +239,8 @@ def store_csm(dstore, csm, sitecol, cmakers):
         avail_gb = psutil.virtual_memory().available / 1024**3
         if required_gb > avail_gb:
             raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
-        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
+        if 'classical' in oq.calculation_mode:
+            logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
     dstore.create_dset('source_groups', data,
