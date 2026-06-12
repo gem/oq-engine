@@ -555,10 +555,9 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
         src = srcs[0]
-        if len(srcs) > 1 and len(src.sampling) == 1:
+        if len(srcs) > 1:
+            assert len(src.sampling) == 1, src  # sanity check
             src.sampling = numpy.concatenate([s.sampling for s in srcs])
-            # NB: len(src.sampling) can be > 1 already due to the operation
-            # in _build_csm (see for instance classical case_10)
         out.append(src)
     return out
 
