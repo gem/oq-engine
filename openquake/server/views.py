@@ -2512,13 +2512,16 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+    table_rows = [list(zip(table_header, row)) for row in table_contents]
+    string_columns = [col for col in table_header if col.startswith('ID')]
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,
                    'is_summary': summarize,
                    'internal_name': name,
                    'table_name': table_name,
                    'table_header': table_header,
-                   'table_contents': table_contents})
+                   'table_rows': table_rows,
+                   'string_columns': string_columns})
 
 
 @csrf_exempt
