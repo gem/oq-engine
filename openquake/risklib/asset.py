@@ -637,7 +637,8 @@ class AssetCollection(object):
             right=False,
         )
         # Build the exposure DataFrame
-        geo_columns = aggregate_by[0]  # e.g. ['ID_0'] or ['ID_0', 'ID_1']
+        # aggregate_by is for instance [['ID_0'], ['ID_2']]
+        geo_columns = [col for group in aggregate_by for col in group]
         dic = {"site_id": self.array["site_id"]}
         # Decode integer tag indices to string values by indexing into tagcol
         # directly.  self.array[col] holds 1-based integers; tagcol lists start
