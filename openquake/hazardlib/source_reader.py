@@ -38,9 +38,10 @@ F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 sampling_dt = numpy.dtype([
+    ('trt_smr', U32),
     ('samples', U32),
-    ('smweight', F32),
-    ('trt_smr', U32)])
+    ('smweight', F32)])
+
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
@@ -57,7 +58,7 @@ def sampling(samples, smweight, trt_smr):
     """
     :returns: a structured array (samples, smweight, trt_smr) of length 1
     """
-    return numpy.array([(samples, smweight, trt_smr)], sampling_dt)
+    return numpy.array([(trt_smr, samples, smweight)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -543,6 +544,12 @@ def reduce_sources(sources_with_same_id, full_lt, event_based, opt_same_id):
     """
     if opt_same_id:
         # assume sources with the same id are identical, so get the first only
+        sampl = numpy.concatenate([s.sampling for s in sources_with_same_id],
+                                  dtype=sampling_dt)
+        src = sources_with_same_id[0]
+        src.sampling = numpy.unique(sampl)
+        return [src]
+
         return [sources_with_same_id[0]]
     out = []
     add_checksums(sources_with_same_id)
