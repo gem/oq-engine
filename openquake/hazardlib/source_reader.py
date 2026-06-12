@@ -541,20 +541,19 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :returns: a list of truly unique sources, ordered by trt_smr
+    :returns: a list of truly unique sources
     """
     out = []
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
-        # duplicate sources: same id, same checksum
-        # the simplest test featuring the same source in two
-        # source models is logictree/case_01
+        # NB: the simplest test featuring the same source in two
+        # different source models is logictree/case_01
         src = srcs[0]
         if len(srcs) > 1 and len(src.sampling) == 1:
-            # happens in logictree/case_07
             src.sampling = numpy.concatenate([s.sampling for s in srcs])
+            # NB: len(src.sampling) can be > 1 already due to the operation
+            # in _build_csm (see for instance classical case_10)
         out.append(src)
-    out.sort(key=operator.attrgetter('trt_smrs'))
     return out
 
 
