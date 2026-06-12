@@ -122,7 +122,7 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
             ' of assets is subjected'),
-    'embodied_carbon': 'Embodied carbon (FIXME unit)',
+    'embodied_carbon': 'Embodied carbon',
 }
 
 

@@ -2464,24 +2464,31 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     display_names = {'aggrisk_tags': 'Impact',
-                     'mmi_tags': 'Exposure by MMI',
                      'losses_by_site': 'Losses by site',
                      'losses_by_location': 'Losses by location',
+                     'mmi_tags': 'Exposure by MMI',
                      'exposure_by_location': 'Exposure by location',
                      'exposure_by_lse?secondary_peril=liquefaction': (
                         'Exposure by liquefaction LSE'),
                      'exposure_by_lse?secondary_peril=landslide': (
                         'Exposure by landslide LSE'),
                      }
+    loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
+    exposure_names = ['mmi_tags', 'exposure_by_location',
+                      'exposure_by_lse?secondary_peril=liquefaction',
+                      'exposure_by_lse?secondary_peril=landslide']
     table_name = display_names[name] if name in display_names else name
     table_header = []
     for short_name in table.columns:
-        if short_name in AGGRISK_FIELD_DESCRIPTION:
+        display_name = ''
+        if name in loss_names and short_name in AGGRISK_FIELD_DESCRIPTION:
             display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
-        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
-            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
-        else:
-            display_name = ''
+        elif name in exposure_names:
+            clean_name = short_name
+            if short_name.startswith('value-'):
+                clean_name = short_name.split('value-')[1]
+            if clean_name in EXPOSURE_FIELD_DESCRIPTION:
+                display_name = EXPOSURE_FIELD_DESCRIPTION[clean_name]
         # avoiding to show the internal short names when showing
         # the summary table
         if summarize and name == 'aggrisk_tags':
