@@ -537,20 +537,11 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def reduce_sources(sources_with_same_id, full_lt, event_based, opt_same_id):
+def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
     :returns: a list of truly unique sources, ordered by trt_smr
     """
-    if opt_same_id:
-        # assume sources with the same id are identical, so get the first only
-        sampl = numpy.concatenate([s.sampling for s in sources_with_same_id],
-                                  dtype=sampling_dt)
-        src = sources_with_same_id[0]
-        src.sampling = numpy.unique(sampl)
-        return [src]
-
-        return [sources_with_same_id[0]]
     out = []
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
@@ -599,16 +590,14 @@ def _build_csm(oq, full_lt, groups, event_based):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
-    if oq.optimize_same_id_sources:
-        assert not changes, 'optimize_same_id_sources cannot work!'
+
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:  # reduce_sources is ultra-fast
-                srcs = reduce_sources(srcs, full_lt, event_based,
-                                      oq.optimize_same_id_sources)
+                srcs = reduce_sources(srcs, full_lt, event_based)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):

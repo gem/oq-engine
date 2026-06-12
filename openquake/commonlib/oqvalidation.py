@@ -598,12 +598,6 @@ number_of_logic_tree_samples:
   Example: *number_of_logic_tree_samples = 0*.
   Default: 0
 
-optimize_same_id_sources:
-  Tell the engine that sources with the same ID are identical, without needing
-  to check, thus saving time when building the composite source model.
-  Example: *optimize_same_id_sources = true*
-  Default: False
-
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
   calculations; when equal to "tolerate" do not raise the error (the default).
@@ -1187,7 +1181,6 @@ class OqParam(valid.ParamSet):
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
-    optimize_same_id_sources = valid.Param(valid.boolean, False)
     oversampling = valid.Param(valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
