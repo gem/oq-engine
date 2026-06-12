@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import gc
 import os
 import sys
 import abc
@@ -366,7 +367,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname):
-                    multi_fault.SECTIONS.clear()  # if any
+                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
+                    gc.collect()  # just in case
                     if remove and oq.calculation_mode != 'preclassical':
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
