@@ -30,8 +30,6 @@ from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
-from openquake.hazardlib.geo.surface.kite_fault import (
-    geom_to_kite, kite_to_geom)
 from openquake.hazardlib.geo.surface.multi import (
     MultiSurface, build_msparams, build_secparams)
 from openquake.hazardlib.geo.utils import (
@@ -166,10 +164,12 @@ class MultiFaultSource(BaseSeismicSource):
         :returns: the underlying sections as KiteSurfaces
         """
         with hdf5.File(self.hdf5path, 'r') as f:
-            geoms = f['multi_fault_sections'][:]  # small
-        if idxs is None:
-            idxs = range(len(geoms))
-        sections = [geom_to_kite(geom) for geom in geoms[idxs]]
+            dset = f['mf_sections']
+            if idxs is None:
+                idxs = range(len(dset))
+                sections = [general.zunpik(arr) for arr in dset[:]]
+            else:
+                sections = [general.zunpik(dset[idx]) for idx in idxs]
         for sec, idx in zip(sections, idxs):
             sec.idx = idx
         return sections
@@ -381,8 +381,8 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 attrs['investigation_time'] = src.investigation_time
                 attrs['infer_occur_rates'] = src.infer_occur_rates
                 split_dic[src.source_id].append(segment)
-        h5.save_vlen('multi_fault_sections',
-                     [kite_to_geom(sec) for sec in sectiondict.values()])
+        h5.save_vlen('mf_sections', [
+            general.zpik(sec) for sec in sectiondict.values()])
         spdict = parallel.Starmap.apply(
             build_secparams, (sectiondict.items(),), h5=h5
         ).reduce()
