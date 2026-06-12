@@ -357,8 +357,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
-                # cleanup globals
-                multi_fault.SECTIONS.clear()
+
                 if ct == 0:  # restore OQ_DISTRIBUTE
                     if oq_distribute is None:  # was not set
                         del os.environ['OQ_DISTRIBUTE']
@@ -367,6 +366,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname):
+                    multi_fault.SECTIONS.clear()  # if any
                     if remove and oq.calculation_mode != 'preclassical':
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
