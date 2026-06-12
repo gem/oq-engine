@@ -2358,6 +2358,21 @@ def web_engine_get_outputs_impact(request, calc_id):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
+    # NOTE: exposure_by_lse are not available as attributes of the datastore
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            _extract(ds, 'exposure_by_lse?secondary_peril=liquefaction')
+    except KeyError:
+        exposure_by_liq_lse = False
+    else:
+        exposure_by_liq_lse = True
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            _extract(ds, 'exposure_by_lse?secondary_peril=landslide')
+    except KeyError:
+        exposure_by_land_lse = False
+    else:
+        exposure_by_land_lse = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -2374,7 +2389,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
-                       aggrisk_tags=aggrisk_tags)
+                       aggrisk_tags=aggrisk_tags,
+                       exposure_by_liq_lse=exposure_by_liq_lse,
+                       exposure_by_land_lse=exposure_by_land_lse)
                   )
 
 
@@ -2451,7 +2468,11 @@ def extract_html_table(request, calc_id, name):
                      'losses_by_site': 'Losses by site',
                      'losses_by_location': 'Losses by location',
                      'exposure_by_location': 'Exposure by location',
-                     'exposure_by_lse': 'Exposure by LSE'}
+                     'exposure_by_lse?secondary_peril=liquefaction': (
+                        'Exposure by liquefaction LSE'),
+                     'exposure_by_lse?secondary_peril=landslide': (
+                        'Exposure by landslide LSE'),
+                     }
     table_name = display_names[name] if name in display_names else name
     table_header = []
     for short_name in table.columns:
