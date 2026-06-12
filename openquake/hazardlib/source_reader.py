@@ -171,20 +171,24 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     return {fname: sm}
 
 
-# NB: in classical this is called after reduce_sources, so ";" is not
-# added if the same source appears multiple times, len(srcs) == 1
-# in event based instead identical sources can appear multiple times
-# but will have different seeds and produce different rupture sets
-def _fix_dupl_ids(src_groups):
+# NB:this is called after reduce_sources, so ";" is notadded
+# if the same source appears multiple times, i.e. len(srcs) == 1
+def add_semicolons(src_groups):
+    """
+    Add semicolons to differentiate different sources with the same source_id
+    and then sort the sources in each group by extended source_id
+    """
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
-        for src in sg.sources:
+        for src in sg:
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
             # happens in logictree/case_01/rup.ini
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
+    for sg in src_groups:
+        sg.sources.sort(key=operator.attrgetter('source_id'))
 
 
 def check_branchID(branchID):
@@ -352,7 +356,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         lonlats = set(zip(sitecol.lons, sitecol.lats))
         if len(lonlats) > 1:
             sitecol = None
-    # must be called *after* _fix_dupl_ids
+    # must be called *after* add_semicolons
     t0 = time.time()
     secparams = fix_geometry_sections(
         smdict, csm.src_groups, dstore.tempname if dstore else '',
@@ -375,7 +379,7 @@ def add_checksums(srcs):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
-# called before _fix_dupl_ids
+# called before add_semicolons
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
@@ -529,11 +533,6 @@ def _build_groups(full_lt, smdict):
                     " please fix applyToSources in %s or the "
                     "source model(s) %s" % (srcid, smlt_file,
                                             rlz.value[0].split()))
-    # checking the changes
-    changes = sum(sg.changes for sg in groups)
-    if changes:
-        logging.info('Applied {:_d} changes to {:_d} source groups'.
-                     format(changes, len(groups)))
     return groups
 
 
@@ -568,12 +567,10 @@ def split_by_tom(sources):
 
 
 def _build_csm(oq, full_lt, groups, event_based):
-    # 1. extract a single source from multiple sources with the same ID
-    # 2. regroup the sources in non-atomic groups by TRT
-    # 3. reorder the sources by source_id
-    atomic = []
     acc = general.AccumDict(accum=[])
+    atomic = []
     changes = 0
+    # concatenate sampling records, split MF sources, single out atomic groups
     for grp in groups:
         changes += grp.changes
         for src in grp:
@@ -581,7 +578,7 @@ def _build_csm(oq, full_lt, groups, event_based):
                 src.sampling = numpy.concatenate(
                     src.sampling, dtype=sampling_dt)
             else:
-                # already concatenated at the previous iteration,
+                # already concatenated at the previous iteration;
                 # happens for sources belonging to multiple groups,
                 # such as <AreaSource 002> in classical case_10
                 pass
@@ -590,7 +587,12 @@ def _build_csm(oq, full_lt, groups, event_based):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
+    if changes:
+        logging.info(f'Applied {changes:_d} changes to '
+                     f'{len(groups):_d} source groups')
 
+    # reduce identical sources by concatenating the sampling records,
+    # then regroup by trt_smrs
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
     for trt in acc:
@@ -603,10 +605,7 @@ def _build_csm(oq, full_lt, groups, event_based):
             for grp in split_by_tom(sources):
                 src_groups.append(sourceconverter.SourceGroup(trt, grp))
     src_groups.extend(atomic)
-    _fix_dupl_ids(src_groups)
 
-    # split multipoint and sort by source_id
-    for sg in src_groups:
-        sg.sources.sort(key=operator.attrgetter('source_id'))
+    add_semicolons(src_groups)
     csm = CompositeSourceModel(oq, full_lt, src_groups)
     return csm
