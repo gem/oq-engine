@@ -284,7 +284,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         ebrs = []
-        for i, (samples, smweight, trt_smr) in enumerate(self.sampling):
+        for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
             for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
                 rupid = rid + i * self.num_ruptures
                 if hasattr(rup, 'occurrence_rate'):
