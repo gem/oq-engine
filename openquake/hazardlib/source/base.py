@@ -276,6 +276,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             else:
                 yield rup.surface.mesh
 
+    @property
+    def multiplicity(self):
+        """
+        How many source model realizations the source belongs to
+        """
+        if self.sampling is None:
+            return 1
+        return len(self.sampling)
+
     def sample_ruptures(self, num_ses, ses_seed):
         """
         :param num_ses: number of stochastic event sets

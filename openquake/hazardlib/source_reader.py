@@ -33,6 +33,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
@@ -44,13 +45,14 @@ sampling_dt = numpy.dtype([
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_id', numpy.uint16),          # 1
+    ('grp_id', U16),                   # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
     ('est_ctxs', numpy.uint64),        # 5
     ('num_ruptures', U32),             # 6
     ('weight', F32),                   # 7
+    ('multiplicity', U16),             # 8
 ])
 
 
