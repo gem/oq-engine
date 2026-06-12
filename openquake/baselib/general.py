@@ -1952,6 +1952,22 @@ def decompress(cbytes):
     """
     return pickle.loads(zlib.decompress(cbytes))
 
+
+def zpik(obj):
+    """
+    zip and pickle a python object
+    """
+    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.frombuffer(gz, numpy.uint8)
+
+
+def zunpik(data):
+    """
+    unzip and unpickle some data array
+    """
+    return pickle.loads(zlib.decompress(data.tobytes()))
+
+
 # ########################### dumpa/loada ############################## #
 
 # the functions below as useful to avoid data transfer, to be used as
