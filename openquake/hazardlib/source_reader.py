@@ -543,9 +543,15 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
     :param sources_with_same_id: a list of sources with the same source_id
     :returns: a list of truly unique sources
     """
+    # first reduce identical sources having the same id(src)
+    # tested in LogictreeTestCase.test_case_08, where <PoinstSource 2>
+    # appears 3 times
+    unique = {}
+    for src in sources_with_same_id:
+        unique[id(src)] = src
     out = []
-    add_checksums(sources_with_same_id)
-    for srcs in general.groupby(sources_with_same_id, checksum).values():
+    add_checksums(unique.values())
+    for srcs in general.groupby(unique.values(), checksum).values():
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
         src = srcs[0]
