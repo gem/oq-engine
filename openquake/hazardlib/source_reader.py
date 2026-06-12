@@ -171,7 +171,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     return {fname: sm}
 
 
-# NB:this is called after reduce_sources, so ";" is notadded
+# NB:this is called after reduce_sources, so ";" is not added
 # if the same source appears multiple times, i.e. len(srcs) == 1
 def add_semicolons(src_groups):
     """
@@ -189,6 +189,8 @@ def add_semicolons(src_groups):
                 src.source_id = '%s;%d' % (src.source_id, i)
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
+    # tested in logictree/case_05 with 9 variations of
+    # AreaSource 1 and SimpleFaultSource 2
 
 
 def check_branchID(branchID):
