@@ -1,3 +1,8 @@
+  [Savas Ceylan]
+  * Added EdwardsFah2013Foreland3Bars, BindiEtAl2011Rhypo,
+    ECOS2009VariableDepth and ECOS2009FixedDepth GSIMs with
+    verification tests.
+
   [Michele Simionato]
   * Avoided copying sources when building the CompositeSourceModel,
     thus reducing the memory occupation and time by 75% for NZL
