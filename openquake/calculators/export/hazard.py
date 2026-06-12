@@ -538,18 +538,14 @@ def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     if dstore.parent:
         sitecol = dstore.parent['sitecol']
-        if 'complete' in dstore.parent:
-            sitecol.complete = dstore.parent['complete']
     else:
         sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.complete.sids)
-    dic['lon'] = sitecol.complete.lons
-    dic['lat'] = sitecol.complete.lats
+        dic = dict(site_id=sitecol.sids)
+    dic['lon'] = sitecol.lons
+    dic['lat'] = sitecol.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, C)
     imts = list(oq.imtls)
     for m, imt in enumerate(oq.all_imts()):
