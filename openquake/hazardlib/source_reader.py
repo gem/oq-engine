@@ -303,20 +303,6 @@ def get_csm(oq, full_lt, dstore=None):
     return build_csm(oq, full_lt, smdict, dstore)
 
 
-def log_num_mul(groups):
-    """
-    Logging the total number of sources and the total multiplicity
-    """
-    num = 0
-    mul = 0
-    for grp in groups:
-        for src in grp:
-            print(src)
-            num += 1
-            mul += len(src.sampling)
-    logging.info(f'tot_num_sources={num:_d}, tot_multiplicity={mul:_d}')
-
-
 def build_csm(oq, full_lt, smdict, dstore):
     """
     Applies uncertainties, builds the source groups and returns
@@ -326,7 +312,6 @@ def build_csm(oq, full_lt, smdict, dstore):
     with mon:
         groups = _build_groups(full_lt, smdict)  # fast
     logging.info(mon)
-    log_num_mul(groups)
 
     logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
@@ -334,7 +319,6 @@ def build_csm(oq, full_lt, smdict, dstore):
     with mon:
         csm = _build_csm(oq, full_lt, groups, is_event_based)
     logging.info(mon)
-    log_num_mul(csm.src_groups)
 
     out = []
     probs = []
@@ -379,6 +363,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     return csm
 
 
+# called by reduce_sources
 def add_checksums(srcs):
     """
     Build and attach a checksum to each source
@@ -551,11 +536,14 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def reduce_sources(sources_with_same_id, full_lt, event_based):
+def reduce_sources(sources_with_same_id, full_lt, event_based, opt_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
     :returns: a list of truly unique sources, ordered by trt_smr
     """
+    if opt_same_id:
+        # assume sources with the same id are identical, so get the first only
+        return [sources_with_same_id[0]]
     out = []
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
@@ -587,7 +575,9 @@ def _build_csm(oq, full_lt, groups, event_based):
     # 3. reorder the sources by source_id
     atomic = []
     acc = general.AccumDict(accum=[])
+    changes = 0
     for grp in groups:
+        changes += grp.changes
         for src in grp:
             if isinstance(src.sampling, list):
                 src.sampling = numpy.concatenate(
@@ -602,13 +592,16 @@ def _build_csm(oq, full_lt, groups, event_based):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
+    if oq.optimize_same_id_sources:
+        assert not changes, 'optimize_same_id_sources cannot work!'
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:  # reduce_sources is ultra-fast
-                srcs = reduce_sources(srcs, full_lt, event_based)
+                srcs = reduce_sources(srcs, full_lt, event_based,
+                                      oq.optimize_same_id_sources)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):
@@ -619,4 +612,5 @@ def _build_csm(oq, full_lt, groups, event_based):
     # split multipoint and sort by source_id
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
-    return CompositeSourceModel(oq, full_lt, src_groups)
+    csm = CompositeSourceModel(oq, full_lt, src_groups)
+    return csm
