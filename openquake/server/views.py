@@ -1879,22 +1879,26 @@ def exposure_by_lse(request, calc_id):
         a JSON object as documented in rest-api.rst
     """
     job = logs.dbcmd('get_job', int(calc_id))
+    secondary_peril = request.GET['secondary_peril']
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            # FIXME parametric secondary peril
-            df = _extract(ds, 'exposure_by_lse?secondary_peril=liquefaction')
+            df = _extract(
+                ds, f'exposure_by_lse?secondary_peril={secondary_peril}')
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'exposure_by_lse', tb),
             content_type='text/plain', status=400)
-    # FIXME: different field description
-    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
+    column_description = {
+        col: description
+        for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
+        if col in df.columns}
+    response_data = {'column_descriptions': column_description,
                      'exposure_by_lse': df.to_dict()}
     return JsonResponse(response_data)
 
