@@ -22,7 +22,7 @@ Implements the tests for Bindi et al. (2011) GMPE for macroseismic intensity
 Test data generated from source code provided by Philippe Roth
 """
 from openquake.hazardlib.gsim.bindi_2011_ipe import (
-    BindiEtAl2011RepiFixedH, BindiEtAl2011Repi)
+    BindiEtAl2011RepiFixedH, BindiEtAl2011Repi, BindiEtAl2011Rhypo)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
@@ -49,6 +49,19 @@ class BindiEtAl2011RepiFixedHTestCase(BaseGSIMTestCase):
     MEAN_FILE = "bindi_2011_ipe/Bindi_RepiFixedH_mean.csv"
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "bindi_2011_ipe/Bindi_RepiFixedH_stDev.csv"
+
+    def test_all(self):
+        self.check(self.MEAN_FILE, self.STD_FILE,
+                   max_discrep_percentage=MEAN_DISCREP,
+                   std_discrep_percentage=STDDEV_DISCREP)
+
+
+class BindiEtAl2011RhypoTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = BindiEtAl2011Rhypo
+    # File containing the results for the Mean
+    MEAN_FILE = "bindi_2011_ipe/Bindi2011_Rhypo_mean.csv"
+    # File contaning the results for the Total Standard Deviation
+    STD_FILE = "bindi_2011_ipe/Bindi2011_Rhypo_stDev.csv"
 
     def test_all(self):
         self.check(self.MEAN_FILE, self.STD_FILE,

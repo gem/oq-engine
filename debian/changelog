@@ -1,3 +1,8 @@
+  [Savas Ceylan]
+  * Added EdwardsFah2013Foreland3Bars, BindiEtAl2011Rhypo,
+    ECOS2009VariableDepth and ECOS2009FixedDepth GSIMs with
+    verification tests.
+
   [Michele Simionato]
   * Cached the multifault sections, with a 6x speedup when sampling the
     ruptures of the NZL model
