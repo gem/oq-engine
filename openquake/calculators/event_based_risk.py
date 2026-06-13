@@ -477,9 +477,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 self.add_sec_perils(oq)
             event_based.run(ebrisk, oq, rup0, self)
             if self.gmf_bytes == 0:
-                raise RuntimeError(
+                logging.error(
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
+                return 1
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs

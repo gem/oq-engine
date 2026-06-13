@@ -33,6 +33,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
@@ -44,13 +45,14 @@ sampling_dt = numpy.dtype([
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_id', numpy.uint16),          # 1
+    ('grp_id', U16),                   # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
     ('est_ctxs', numpy.uint64),        # 5
     ('num_ruptures', U32),             # 6
     ('weight', F32),                   # 7
+    ('mul', U16),                      # 8
 ])
 
 
@@ -551,6 +553,8 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
+    :param full_lt: FullLogicTree instance
+    :param event_based: flag True for event_based calculations
     :returns: a list of truly unique sources
     """
     # first reduce identical sources having the same id(src)
@@ -561,6 +565,8 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
         unique[id(src)] = src
     out = []
     add_checksums(unique.values())
+    # in LogicTreeCase2ClassicalPSHA there 81 unique sources
+    # grouped in 9 groups of 9 sources each with the same checksum
     for srcs in general.groupby(unique.values(), checksum).values():
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
@@ -610,17 +616,19 @@ def _build_csm(oq, full_lt, groups, event_based):
     # then regroup by trt_smrs
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
+    red_sources = 0
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:  # reduce_sources is ultra-fast
                 srcs = reduce_sources(srcs, full_lt, event_based)
+                red_sources += 1
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
             for grp in split_by_tom(sources):
                 src_groups.append(sourceconverter.SourceGroup(trt, grp))
     src_groups.extend(atomic)
-
+    logging.info('reduce_sources was called %d times', red_sources)
     add_semicolons(src_groups)
     csm = CompositeSourceModel(oq, full_lt, src_groups)
     return csm
