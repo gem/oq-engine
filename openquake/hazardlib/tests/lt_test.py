@@ -17,16 +17,23 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
+import tempfile
+import types
 import filecmp
 import difflib
 import unittest
 import collections
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import (
-    nrml, lt, sourceconverter, calc, site, valid, contexts)
+    nrml, lt, logictree, sourceconverter, calc, site, valid, contexts,
+    _smlt_from_script)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.source_reader import get_csm
 
 CDIR = os.path.dirname(__file__)
 ae = numpy.testing.assert_equal
@@ -504,3 +511,220 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         cnt = collections.Counter(paths)
         assert cnt == {'A': 64, 'B': 36}
 
+
+### TESTS FOR SSC AT RUNTIME TESTS (NO-XML APPROACH) ###
+OQ = types.SimpleNamespace(
+    investigation_time=50., rupture_mesh_spacing=5.,
+    complex_fault_mesh_spacing=None, width_of_mfd_bin=0.1,
+    area_source_discretization=None, minimum_magnitude={'default': 0},
+    source_id=(), discard_trts='', floating_x_step=0, floating_y_step=0,
+    source_nodes=(), infer_occur_rates=False, ses_seed=42,
+    disagg_by_src=False, calculation_mode='classical', use_rates=False,
+    strict=True, mosaic_model=False
+    )
+
+
+BUILDER_SCRIPT = '''\
+_B_VALUES = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7]
+_PS_XML = """\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="{name}">
+    <sourceGroup tectonicRegion="Active Shallow Crust">
+      <pointSource id="ps1" name="ps1"
+                   tectonicRegion="Active Shallow Crust">
+        <pointGeometry>
+          <gml:Point><gml:pos>1.0 0.0</gml:pos></gml:Point>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>10.0</lowerSeismoDepth>
+        </pointGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>1.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="3.0"
+          bValue="{b_value:.1f}" minMag="5.0" maxMag="7.0"/>
+        <nodalPlaneDist>
+          <nodalPlane probability="1.0" strike="0.0"
+            dip="90.0" rake="0.0"/>
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth probability="1.0" depth="5.0"/>
+        </hypoDepthDist>
+      </pointSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>
+"""
+
+
+def get_source_model_lt():
+    return [
+        (f"sm_{i}", 0.1, _PS_XML.format(name=f"sm_{i}", b_value=b))
+        for i, b in enumerate(_B_VALUES)
+    ]
+'''
+
+
+def _sorted_srcs(src_groups):
+    return sorted(
+        (src for sg in src_groups for src in sg),
+        key=lambda s: s.mfd.b_val)
+
+
+def _assert_src_params(src_rt, src_xml):
+    ae(src_rt.source_id, src_xml.source_id)
+    ae(src_rt.tectonic_region_type, src_xml.tectonic_region_type)
+    ae(src_rt.location.longitude, src_xml.location.longitude)
+    ae(src_rt.location.latitude, src_xml.location.latitude)
+    ae(src_rt.upper_seismogenic_depth, src_xml.upper_seismogenic_depth)
+    ae(src_rt.lower_seismogenic_depth, src_xml.lower_seismogenic_depth)
+    ae(src_rt.rupture_aspect_ratio, src_xml.rupture_aspect_ratio)
+    numpy.testing.assert_allclose(
+        src_rt.mfd.a_val, src_xml.mfd.a_val, atol=1e-10)
+    numpy.testing.assert_allclose(
+        src_rt.mfd.b_val, src_xml.mfd.b_val, atol=1e-10)
+    ae(src_rt.mfd.min_mag, src_xml.mfd.min_mag)
+    ae(src_rt.mfd.max_mag, src_xml.mfd.max_mag)
+
+
+class RuntimeSourceModelLTTestCase(unittest.TestCase):
+    """
+    Tests for RuntimeSourceModelLT SSC LT class, with identical
+    results expected against if the same logic tree was defined
+    using the XML approach.
+    """
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.mkdtemp()
+
+        # Build the runtime LT via the script defined in BUILDER_SCRIPT
+        script_path = os.path.join(cls.tmpdir, 'script.py')
+        with open(script_path, 'w') as fh:
+            fh.write(BUILDER_SCRIPT)
+        cls.rt_smlt = _smlt_from_script(script_path, {}, '')
+
+        # Write XMLs
+        for branch_id, xml_str in cls.rt_smlt._branch_xmls.items():
+            fname = os.path.join(cls.tmpdir, f'{branch_id}.xml')
+            with open(fname, 'w') as fh:
+                fh.write(xml_str)
+
+        # Make SSC LT XML text
+        smlt_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">\n'
+            '  <logicTree logicTreeID="lt1">\n'
+            '    <logicTreeBranchSet uncertaintyType="sourceModel"'
+            ' branchSetID="bs1">\n'
+            + '\n'.join(
+                f'      <logicTreeBranch branchID="{bid}">\n'
+                f'        <uncertaintyModel>{bid}.xml'
+                f'</uncertaintyModel>\n'
+                f'        <uncertaintyWeight>0.1</uncertaintyWeight>\n'
+                f'      </logicTreeBranch>'
+                for bid in sorted(cls.rt_smlt._branch_xmls)
+            )
+            + '\n    </logicTreeBranchSet>\n'
+            '  </logicTree>\n</nrml>\n'
+        )
+
+        # Write to tmp file
+        smlt_path = os.path.join(cls.tmpdir, 'smlt.xml')
+        with open(smlt_path, 'w') as fh:
+            fh.write(smlt_xml)
+
+        # Get the XML-based SSC LT
+        cls.xml_smlt = logictree.SourceModelLogicTree(smlt_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmpdir)
+
+    def test_toh5_fromh5(self):
+        """
+        Test __toh5__ and __fromh5__ methods
+        """
+        rt = self.rt_smlt
+        tmp = gettemp(suffix='.hdf5')
+        with hdf5.File(tmp, 'w') as f:
+            # Calls __toh5__
+            f['smlt'] = rt
+        with hdf5.File(tmp, 'r') as f:
+            # Calls __fromh5_-
+            rt2 = f['smlt']
+        ae(rt2._branch_weights, rt._branch_weights)
+        ae(rt2.seed, rt.seed)
+        ae(rt2.num_samples, rt.num_samples)
+        ae(rt2.filename, rt.filename)
+        ae(rt2._branch_xmls, {})  # xml strings not stored in hdf5
+        bsets = rt2.branchsets
+        ae(len(bsets), 1)
+        ae(len(bsets[0].branches), 10)
+        brs = rt2.branches
+        ae(len(brs), 10)
+        numpy.testing.assert_allclose(
+            sorted(brs[b].weight for b in brs), [0.1] * 10)
+
+    def test_build_smdict(self):
+        """
+        Check that build_smdict (i.e., parsing the in-memory xml strings)
+        versus nrml.read_source_models (i.e., parsing the same XML but
+        from a real XML file on disk) provides same values.
+        """
+        # Get dict of the source model made using runtime class
+        converter = sourceconverter.SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=5.)
+        smdict_rt = self.rt_smlt.build_smdict(converter)
+        ae(len(smdict_rt), 10)
+
+        # Get the "on-disk" XMLs
+        xml_fnames = [
+            os.path.join(self.tmpdir, f'sm_{i}.xml') for i in range(10)]
+        
+        # Make an equivalent dict using read_source_models
+        smdict_xml = {
+            sm.fname: sm
+            for sm in nrml.read_source_models(xml_fnames, converter)}
+
+        # Check equal params in both cases
+        ae(len(smdict_rt), len(smdict_xml))
+        srcs_rt = _sorted_srcs(
+            sg for sm in smdict_rt.values() for sg in sm.src_groups)
+        srcs_xml = _sorted_srcs(
+            sg for sm in smdict_xml.values() for sg in sm.src_groups)
+        for src_rt, src_xml in zip(srcs_rt, srcs_xml):
+            _assert_src_params(src_rt, src_xml)
+
+    def test_get_csm(self):
+        """
+        Check that get_composite_source_model provides same
+        sources from XML and runtime SSC Lts
+        """
+        # Build Runtime LT
+        rt_full_lt = logictree.FullLogicTree(
+            self.rt_smlt, GsimLogicTree.from_('[SadighEtAl1997]'))
+        
+        # Build XML LT
+        xml_full_lt = logictree.FullLogicTree(
+            self.xml_smlt, GsimLogicTree.from_('[SadighEtAl1997]'))
+        
+        # Get the composite source models
+        csm_rt = get_csm(OQ, rt_full_lt)
+        csm_xml = get_csm(OQ, xml_full_lt)
+
+        ae(len(csm_rt.src_groups), len(csm_xml.src_groups))
+        srcs_rt = _sorted_srcs(csm_rt.src_groups)
+        srcs_xml = _sorted_srcs(csm_xml.src_groups)
+        for src_rt, src_xml in zip(srcs_rt, srcs_xml):
+            _assert_src_params(src_rt, src_xml)
+            numpy.testing.assert_allclose(
+                src_rt.smweight, src_xml.smweight, atol=1e-10)
+
+    def test_bad_weights(self):
+        """
+        Check incorrect weights raise error
+        """
+        xmls = list(self.rt_smlt._branch_xmls.values())
+        bad = [('br_0', 0.5, xmls[0]), ('br_1', 0.3, xmls[1])]
+        with self.assertRaises(ValueError):
+            logictree.RuntimeSourceModelLT(bad, script_path='test.py')

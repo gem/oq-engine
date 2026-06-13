@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -211,6 +212,9 @@ def collect_info(smltpath, branchID=''):
     :param branchID: if given, consider only that branch
     :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
+    if smltpath.endswith('.py'):
+        # Runtime script: all sources are built in-memory, no file paths
+        return Info(set(), set(), collections.defaultdict(list))
     n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
@@ -271,6 +275,13 @@ def read_source_groups(fname):
     return src_groups
 
 
+class _RuntimeShortener(dict):
+    """
+    Marker: shortener whose values are raw branch
+    names (RuntimeSourceModelLT).
+    """
+
+
 def shorten(path_tuple, shortener, kind):
     """
     :param path: sequence of strings
@@ -289,8 +300,20 @@ def shorten(path_tuple, shortener, kind):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            # shortener[key] has the form letter+number
-            chars.append(shortener[key][0])
+            val = shortener[key]
+            if val == key:
+                # Key == value in RuntimeSourceModelLT to circumvent the
+                # B183 limit given cannot use extra branching levels in
+                # this case (each branch must be explicitly defined in
+                # the builder script specified by the user instead). So
+                # the branch_path in hdf5 could be <branch_name>~A where
+                # branch_name is the key and "A" is the regular BASE183
+                # encoding for the first GMM in the GMC logic tree
+                assert isinstance(shortener, _RuntimeShortener)
+                chars.append(val)
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(val[0])
     return ''.join(chars)
 
 
@@ -973,6 +996,207 @@ class SourceModelLogicTree(object):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
 
 
+class RuntimeSourceModelLT(object):
+    """
+    In-memory SSC logic tree built from a Python script at runtime.
+
+    Accepts an arbitrary number of branches (no BASE183 limit) because
+    branch data is supplied directly as (name, weight, xml_str) triples
+    rather than being parsed from an XML logic-tree file.
+
+    The script referenced by ``source_model_logic_tree_file`` in the job
+    file must contain a top-level function of:
+
+        def get_source_model_lt():
+            # Returns list of (name: str, weight: float, xml_str: str)
+            # xml_str must be a complete NRML 0.5 sourceModel XML string.
+            # Weights must sum to 1.0.
+
+    Branch XML strings are parsed in-memory via nrml; no source XML files
+    are written to or read from disk.
+
+    NOTE: An example of this feature (including a simple builder script) can
+    be found in oq-engine/qa_test_data/ logictree/case_34/.
+    """
+
+    def __init__(self, branches, script_path, seed=0, num_samples=0,
+                 sampling_method='early_weights', source_id=''):
+        self.filename = script_path
+        self.basepath = os.path.dirname(os.path.abspath(script_path))
+        self.seed = int(seed)
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
+        self.source_id = source_id
+        self.branchID = ''
+        self.is_source_specific = False
+        self.tectonic_region_types = set()
+        self.info = Info([], [], collections.defaultdict(list))
+
+        self._branch_xmls = {}    # branch_id -> xml_str
+        self._branch_weights = {} # branch_id -> weight
+
+        src_data = []
+        src_flt = source_id.split('!')[0].split('@')[0]
+        branches = list(branches)
+        for name, weight, xml_str in branches:
+            branch_id = name
+            sentinel = '__rt__%s' % branch_id
+            self._branch_xmls[branch_id] = xml_str
+            self._branch_weights[branch_id] = weight
+            trt_by_src = get_trt_by_src(io.StringIO(xml_str), src_flt)
+            for sid, trt in trt_by_src.items():
+                src_data.append((branch_id, trt, sentinel, sid))
+                self.tectonic_region_types.add(trt)
+
+        self.source_data = numpy.array(src_data, source_dt)
+        self.num_paths = len(branches)
+        total = sum(self._branch_weights.values())
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(
+                '%s: branch weights sum to %s, expected 1.0'
+                % (script_path, total))
+        # Use branch names as shortener values so shorten() uses the full
+        # name, giving unique branch_path values regardless of branch count
+        self.shortener = _RuntimeShortener(
+            {bid: bid for bid in self._branch_weights})
+
+    def get_num_paths(self):
+        return self.num_samples if self.num_samples else self.num_paths
+
+    @property
+    def branches(self):
+        return {
+            bid: Branch(bid, '__rt__%s' % bid, float(w))
+            for bid, w in self._branch_weights.items()
+        }
+
+    def reduce(self, source_id, num_samples=None):
+        num_samples = (self.num_samples if num_samples is None
+                       else num_samples)
+        branches = [
+            (bid, self._branch_weights[bid], xml_str)
+            for bid, xml_str in self._branch_xmls.items()
+        ]
+        return RuntimeSourceModelLT(
+            branches,
+            script_path=self.filename,
+            seed=self.seed,
+            num_samples=num_samples,
+            sampling_method=self.sampling_method,
+            source_id=source_id,
+        )
+
+    @property
+    def branchsets(self):
+        # Build a single BranchSet from _branch_weights so that compose()
+        # gets the correct SSC level when constructing a CompositeLogicTree.
+        bset = BranchSet('sourceModel', {})
+        bset.ordinal = 0
+        for bid, w in self._branch_weights.items():
+            bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
+        return [bset]
+
+    def bset_values(self, lt_path):
+        # Single-level LT: no downstream branchset modifications so need
+        # to return an empty list for when it's called in source_reader
+        return []
+
+    def __iter__(self):
+        from openquake.hazardlib import lt as lt_mod
+        branch_ids = list(self._branch_weights)
+        weights = numpy.array(
+            [self._branch_weights[bid] for bid in branch_ids])
+        if self.num_samples:
+            # Build a BranchSet so we call the exact same bset.sample()
+            # code path as CompositeLogicTree.__iter__, guaranteeing that
+            # the same seed selects the same branches as an XML SSC LT
+            # --> This is checked in qa_test_data/logictree/case_34
+            bset = lt_mod.BranchSet('sourceModel', {})
+            bset.ordinal = 0
+            for bid, w in zip(branch_ids, weights):
+                br = lt_mod.Branch(bid, '__rt__%s' % bid, float(w))
+                bset.branches.append(br)
+            probs = lt_mod.random(
+                (self.num_samples, 1), self.seed, self.sampling_method)
+            for i, branches in enumerate(
+                    bset.sample(probs, self.sampling_method)):
+                br = branches[0]
+                if self.sampling_method.startswith('early_'):
+                    w = 1. / self.num_samples
+                else:
+                    w = float(br.weight)
+                yield Realization(
+                    value=[br.value],
+                    weight=w,
+                    ordinal=i,
+                    lt_path=(br.branch_id,),
+                )
+        else:
+            for i, (branch_id, w) in enumerate(zip(branch_ids, weights)):
+                sentinel = '__rt__%s' % branch_id
+                yield Realization(
+                    value=[sentinel],
+                    weight=float(w),
+                    ordinal=i,
+                    lt_path=(branch_id,),
+                )
+
+    def build_smdict(self, converter):
+        """
+        Parse all in-memory XML strings and return an smdict compatible
+        with source_reader.get_csm(). Keys are absolute sentinel paths
+        matching what _groups_ids constructs from rlz.value[0].
+        """
+        smdict = {}
+        for branch_id, xml_str in self._branch_xmls.items():
+            sentinel = '__rt__%s' % branch_id
+            abs_path = os.path.abspath(
+                os.path.join(self.basepath, sentinel))
+            t0 = time.time()
+            [node_] = nrml.read(io.BytesIO(xml_str.encode('utf-8')))
+            sm = nrml.node_to_obj(node_, sentinel, converter)
+            sm.fname = sentinel
+            sm.branch = branch_id
+            sm.rtime = time.time() - t0
+            smdict[abs_path] = sm
+        return smdict
+
+    def __toh5__(self):
+        tbl = []
+        for branch_id, weight in self._branch_weights.items():
+            sentinel = '__rt__%s' % branch_id
+            tbl.append(('bs_rt', branch_id, 'sourceModel', sentinel, weight))
+        attrs = dict(
+            bsetdict='{"bs_rt": {"uncertaintyType": "sourceModel"}}',
+            seed=self.seed,
+            num_samples=self.num_samples,
+            sampling_method=self.sampling_method,
+            filename=self.filename,
+            num_paths=self.num_paths,
+            is_source_specific=False,
+            source_id=self.source_id,
+            branchID='',
+            tectonic_region_types=','.join(sorted(self.tectonic_region_types)),
+        )
+        return numpy.array(tbl, branch_dt), attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self._branch_xmls = {}
+        self._branch_weights = {}
+        self.info = Info([], [], collections.defaultdict(list))
+        trt_str = attrs.get('tectonic_region_types', '')
+        self.tectonic_region_types = (
+            set(trt_str.split(',')) if trt_str else set())
+        for rec in array:
+            rec = fix_bytes(rec)
+            self._branch_weights[rec['branch']] = float(rec['weight'])
+        self.shortener = _RuntimeShortener(
+            {bid: bid for bid in self._branch_weights})
+        self.source_data = numpy.array([], source_dt)
+        self.basepath = os.path.dirname(os.path.abspath(self.filename))
+
+
 def capitalize(words):
     """
     Capitalize words separated by spaces.
@@ -1236,7 +1460,16 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-                src.sampling['trt_smr'] = tup  # realizations impacted
+                # Rebuild sampling; len(tup) may exceed len(src.sampling)
+                # when called from a reduced FullLogicTree on sources not
+                # merged by reduce_sources (distinct checksums per branch,
+                # e.g. RuntimeSourceModelLT in test_case_34)
+                samp = src.sampling
+                new = numpy.zeros(len(tup), samp.dtype)
+                new['samples'] = samp['samples'][0]
+                new['smweight'] = samp['smweight'][0]
+                new['trt_smr'] = tup
+                src.sampling = new  # realizations impacted
             out.append(src)
         return out
 

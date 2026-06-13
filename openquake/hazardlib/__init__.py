@@ -20,6 +20,7 @@ hazardlib stands for Hazard Library.
 """
 import os
 import ast
+import logging
 import operator
 import itertools
 import configparser
@@ -149,6 +150,43 @@ def read_hparams(job_ini):
     return params
 
 
+def _smlt_from_script(script_path, hparams, sourceID):
+    """
+    Run the builder script (script_path) and call its get_source_model_lt()
+    function to return a list of triples of (name, weight, xml_str) which
+    are then used here to build a :class:`RuntimeSourceModelLT` logic tree.
+    """
+    import runpy
+    logging.info(
+        'Building runtime source model in-memory from %s', script_path)
+    globs = runpy.run_path(script_path)
+    if 'get_source_model_lt' not in globs:
+        raise RuntimeError(
+            '%s must define a get_source_model_lt() function' % script_path)
+    branches = globs['get_source_model_lt']()
+    if not (isinstance(branches, list)
+            and all(isinstance(b, tuple) and len(b) == 3
+                    for b in branches)):
+        raise RuntimeError(
+            '%s: get_source_model_lt() must return a list of'
+            ' (name, weight, xml_str) triples' % script_path)
+    names = [b[0] for b in branches]
+    if len(names) != len(set(names)):
+        dupes = [n for n in set(names) if names.count(n) > 1]
+        # The names become the rlz identifiers so must be unique
+        raise RuntimeError(
+            '%s: get_source_model_lt() returned duplicate branch'
+            ' names: %s' % (script_path, dupes))
+    return logictree.RuntimeSourceModelLT(
+        branches,
+        script_path=script_path,
+        seed=hparams.get('random_seed', 42),
+        num_samples=hparams.get('number_of_logic_tree_samples', 0),
+        sampling_method=hparams.get('sampling_method', 'early_weights'),
+        source_id=sourceID,
+    )
+
+
 def get_smlt(hparams, sourceID=''):
     """
     :param hparams:
@@ -157,7 +195,10 @@ def get_smlt(hparams, sourceID=''):
         :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
     """
     if 'source_model_logic_tree' in hparams['inputs']:
-        args = (hparams['inputs']['source_model_logic_tree'],
+        fname = hparams['inputs']['source_model_logic_tree']
+        if fname.endswith('.py'):
+            return _smlt_from_script(fname, hparams, sourceID)
+        args = (fname,
                 hparams.get('random_seed', 42),
                 hparams.get('number_of_logic_tree_samples', 0),
                 hparams.get('sampling_method', 'early_weights'),

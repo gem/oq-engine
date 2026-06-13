@@ -251,11 +251,36 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
+def _read_smdict(smlt, converter, dstore):
+    # NB: the source models file must be in the shared directory
+    # NB: dstore is None in logictree_test.py
+    allargs = []
+    sdata = smlt.source_data
+    allpaths = set(smlt.info.smpaths)
+    dic = general.group_array(sdata, 'fname')
+    smpaths = []
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    applied = set()
+    for srcs in smlt.info.applytosources.values():
+        applied.update(srcs)
+    for fname, rows in dic.items():
+        path = os.path.abspath(os.path.join(smlt.basepath, fname))
+        smpaths.append(path)
+        allargs.append((path, rows[0]['branch'], converter, applied, ss))
+    for path in allpaths - set(smpaths):  # geometry models
+        allargs.append((path, '', converter, applied, ss))
+    smdict = parallel.Starmap(read_source_model, allargs,
+                              h5=dstore if dstore else None).reduce()
+    parallel.Starmap.shutdown()  # save memory
+    return smdict
+
+
 def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
     """
+    from openquake.hazardlib.logictree import RuntimeSourceModelLT
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
@@ -267,29 +292,14 @@ def get_csm(oq, full_lt, dstore=None):
         source_nodes=oq.source_nodes,
         infer_occur_rates=oq.infer_occur_rates)
     full_lt.ses_seed = oq.ses_seed
-    logging.info('Reading the source model(s) in parallel')
 
-    # NB: the source models file must be in the shared directory
-    # NB: dstore is None in logictree_test.py
-    allargs = []
-    sdata = full_lt.source_model_lt.source_data
-    allpaths = set(full_lt.source_model_lt.info.smpaths)
-    dic = general.group_array(sdata, 'fname')
-    smpaths = []
-    ss = os.environ.get('OQ_SAMPLE_SOURCES')
-    applied = set()
-    for srcs in full_lt.source_model_lt.info.applytosources.values():
-        applied.update(srcs)
-    for fname, rows in dic.items():
-        path = os.path.abspath(
-            os.path.join(full_lt.source_model_lt.basepath, fname))
-        smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter, applied, ss))
-    for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter, applied, ss))
-    smdict = parallel.Starmap(read_source_model, allargs,
-                              h5=dstore if dstore else None).reduce()
-    parallel.Starmap.shutdown()  # save memory
+    smlt = full_lt.source_model_lt
+    if isinstance(smlt, RuntimeSourceModelLT):
+        smdict = smlt.build_smdict(converter)
+    else:
+        logging.info('Reading the source model(s) in parallel')
+        smdict = _read_smdict(smlt, converter, dstore)
+
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:
         save_read_times(dstore, smdict.values())
