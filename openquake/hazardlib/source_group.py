@@ -563,7 +563,7 @@ class CompositeSourceModel:
                    0, 0, 0,  # CALC_TIME, NUM_CTXS, EST_CTXS
                    sum(s.num_ruptures for s in srcs),
                    sum(s.weight for s in srcs),
-                   sum(s.multiplicity for s in srcs)]
+                   sum(s.multiplicity for s in srcs) / len(srcs)]
             data[srcid] = row
         logging.info('There are %d groups and %d sources with '
                      'len(trt_smrs)=%.2f', len(self.src_groups), len(data),
