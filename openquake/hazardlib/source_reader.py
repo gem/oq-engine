@@ -235,7 +235,7 @@ def check_duplicates(smdict, strict):
             fnames.append(sm.fname)
         check_unique(srcids, 'in branch %s' % branch, strict=strict)
 
-    found = find_false_duplicates(smdict)
+    found = add_bangs(smdict)
     if found:
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
@@ -384,10 +384,10 @@ def add_checksums(srcs):
 
 
 # called before add_semicolons
-def find_false_duplicates(smdict):
+def add_bangs(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
-    and put a question mark in their source ID
+    and put an exclamation mark in their source ID
     """
     acc = general.AccumDict(accum=[])
     atomic = set()
