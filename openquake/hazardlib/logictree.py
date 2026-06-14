@@ -1222,17 +1222,15 @@ class FullLogicTree(object):
                 smr = _get_smr(src.source_id)
                 src.sampling['trt_smr'] = trti * TWO24 + smr
             else:  # regular case
-                srcid = srcid.split('@')[0]
+                srcid = valid.basename(src.source_id, '@:.')
                 try:
                     # check if ambiguous source ID
-                    srcid, fname = srcid.rsplit('!')
+                    srcid, brid = srcid.rsplit('!')
                 except ValueError:
                     # non-ambiguous source ID
-                    fname = ''
-                    ok = slice(None)
+                    brids = set(sd[srcid]['branch'])
                 else:
-                    ok = [fname in string for string in sd[srcid]['fname']]
-                brids = set(sd[srcid]['branch'][ok])
+                    brids = set(sd[srcid]['branch']) & {brid}
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
