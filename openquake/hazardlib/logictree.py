@@ -1230,7 +1230,7 @@ class FullLogicTree(object):
                     # non-ambiguous source ID
                     brids = set(sd[srcid]['branch'])
                 else:
-                    brids = set(sd[srcid]['branch']) & {brid}
+                    brids = {brid}
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
