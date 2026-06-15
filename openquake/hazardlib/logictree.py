@@ -286,13 +286,6 @@ def read_source_groups(fname):
     return src_groups
 
 
-class _RuntimeShortener(dict):
-    """
-    Marker: shortener whose values are raw branch
-    names (RuntimeSourceModelLT).
-    """
-
-
 def shorten(path_tuple, shortener, kind):
     """
     :param path: sequence of strings
@@ -320,7 +313,6 @@ def shorten(path_tuple, shortener, kind):
                 # the branch_path in hdf5 could be <branch_name>~A where
                 # branch_name is the key and "A" is the regular BASE183
                 # encoding for the first GMM in the GMC logic tree
-                assert isinstance(shortener, _RuntimeShortener)
                 chars.append(val)
             else:
                 # shortener[key] has the form letter+number
@@ -1069,8 +1061,7 @@ class RuntimeSourceModelLT(object):
                 % (script_path, total))
         # Use branch names as shortener values so shorten() uses the full
         # name, giving unique branch_path values regardless of branch count
-        self.shortener = _RuntimeShortener(
-            {bid: bid for bid in self._branch_weights})
+        self.shortener = {bid: bid for bid in self._branch_weights}
         self._bset = self._build_bset()
 
     def _build_bset(self):
@@ -1204,8 +1195,7 @@ class RuntimeSourceModelLT(object):
             bid = rec['branch']
             self._branch_weights[bid] = float(rec['weight'])
             self._branch_xmls[bid] = decode(rec['xml'])
-        self.shortener = _RuntimeShortener(
-            {bid: bid for bid in self._branch_weights})
+        self.shortener = {bid: bid for bid in self._branch_weights}
         self.source_data = numpy.array([], source_dt)
         self.basepath = os.path.dirname(os.path.abspath(self.filename))
         self._bset = self._build_bset()
