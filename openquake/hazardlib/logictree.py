@@ -1039,9 +1039,20 @@ class RuntimeSourceModelLT(object):
         self._branch_xmls = {}    # branch_id -> xml_str
         self._branch_weights = {} # branch_id -> weight
 
+        branches = list(branches)
+        if not all(isinstance(b, tuple) and len(b) == 3 for b in branches):
+            raise ValueError(
+                '%s: branches must be a list of (name, weight, xml_str)'
+                ' triples' % script_path)
+        names = [b[0] for b in branches]
+        dupes = [n for n in set(names) if names.count(n) > 1]
+        if dupes:
+            # Names become rlz identifiers, so must be unique
+            raise ValueError(
+                '%s: duplicate branch names: %s' % (script_path, dupes))
+
         src_data = []
         src_flt = source_id.split('!')[0].split('@')[0]
-        branches = list(branches)
         for name, weight, xml_str in branches:
             branch_id = name
             sentinel = '__rt__%s' % branch_id

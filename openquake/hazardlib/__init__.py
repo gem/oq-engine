@@ -164,19 +164,6 @@ def _smlt_from_script(script_path, hparams, sourceID):
         raise RuntimeError(
             '%s must define a get_source_model_lt() function' % script_path)
     branches = globs['get_source_model_lt']()
-    if not (isinstance(branches, list)
-            and all(isinstance(b, tuple) and len(b) == 3
-                    for b in branches)):
-        raise RuntimeError(
-            '%s: get_source_model_lt() must return a list of'
-            ' (name, weight, xml_str) triples' % script_path)
-    names = [b[0] for b in branches]
-    if len(names) != len(set(names)):
-        dupes = [n for n in set(names) if names.count(n) > 1]
-        # The names become the rlz identifiers so must be unique
-        raise RuntimeError(
-            '%s: get_source_model_lt() returned duplicate branch'
-            ' names: %s' % (script_path, dupes))
     return logictree.RuntimeSourceModelLT(
         branches,
         script_path=script_path,

@@ -737,3 +737,20 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         bad = [('br_0', 0.5, xmls[0]), ('br_1', 0.3, xmls[1])]
         with self.assertRaises(ValueError):
             logictree.RuntimeSourceModelLT(bad, script_path='test.py')
+
+    def test_bad_shape(self):
+        """
+        Direct construction with a non-3-tuple branch raises
+        """
+        bad = [('br_0', 1.0)]  # missing xml_str
+        with self.assertRaises(ValueError):
+            logictree.RuntimeSourceModelLT(bad, script_path='test.py')
+
+    def test_duplicate_names(self):
+        """
+        Direct construction with duplicate branch names raises
+        """
+        xmls = list(self.rt_smlt._branch_xmls.values())
+        bad = [('br_0', 0.5, xmls[0]), ('br_0', 0.5, xmls[1])]
+        with self.assertRaises(ValueError):
+            logictree.RuntimeSourceModelLT(bad, script_path='test.py')
