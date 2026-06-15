@@ -18,14 +18,13 @@
 
 import toml
 import copy
-import zlib
-import pickle
 import logging
 import operator
 import functools
 import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
+from openquake.baselib.general import zpik, zunpik
 from openquake.baselib.general import split_in_blocks, AccumDict, groupby
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
@@ -563,7 +562,8 @@ class CompositeSourceModel:
             row = [srcid, src.grp_id, src.code,
                    0, 0, 0,  # CALC_TIME, NUM_CTXS, EST_CTXS
                    sum(s.num_ruptures for s in srcs),
-                   sum(s.weight for s in srcs)]
+                   sum(s.weight for s in srcs),
+                   sum(s.multiplicity for s in srcs) / len(srcs)]
             data[srcid] = row
         logging.info('There are %d groups and %d sources with '
                      'len(trt_smrs)=%.2f', len(self.src_groups), len(data),
@@ -645,21 +645,6 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
 
 
 # ################## read/write utilities ##################### # 
-
-def zpik(obj):
-    """
-    zip and pickle a python object
-    """
-    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
-    return numpy.frombuffer(gz, numpy.uint8)
-
-
-def zunpik(data):
-    """
-    unzip and unpickle some data array
-    """
-    return pickle.loads(zlib.decompress(data.tobytes())) 
-            
 
 def read_src_group(hdf5, key, mon=performance.Monitor()):
     """

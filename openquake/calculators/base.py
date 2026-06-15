@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import gc
 import os
 import sys
 import abc
@@ -48,7 +49,7 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
@@ -357,7 +358,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
-                # cleanup globals
+
                 if ct == 0:  # restore OQ_DISTRIBUTE
                     if oq_distribute is None:  # was not set
                         del os.environ['OQ_DISTRIBUTE']
@@ -366,6 +367,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname):
+                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
+                    gc.collect()  # just in case
                     if remove and oq.calculation_mode != 'preclassical':
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
