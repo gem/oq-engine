@@ -878,8 +878,7 @@ def extract_exposure_by_lse(dstore, what):
     /extract/exposure_by_lse?secondary_peril=liquefaction?discard_empty=0
     """
     qdict = parse(what)
-    # FIXME: landslide or liquefaction as default?
-    [secondary_peril] = qdict.get('secondary_peril', ['landslide'])
+    [secondary_peril] = qdict['secondary_peril']
     discard_empty = qdict.get('discard_empty', [1])[0] == 1
     avg_gmf_array = dstore['avg_gmf'][:]
     oq = dstore['oqparam']

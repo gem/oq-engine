@@ -2363,18 +2363,10 @@ def web_engine_get_outputs_impact(request, calc_id):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
-    # NOTE: exposure_by_lse items are not attributes of the datastore
-    # Calling the extractor only once and assuming that either both are
-    # available or both are unavailable
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            _extract(ds, 'exposure_by_lse')
-    except KeyError:
-        exposure_by_land_lse = False
-        exposure_by_liq_lse = False
-    else:
-        exposure_by_land_lse = True
-        exposure_by_liq_lse = True
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        gmf_cols = ds.read_df('gmf_data').columns
+        exposure_by_land_lse = "AllstadtEtAl2022Landslides_LSE" in gmf_cols
+        exposure_by_liq_lse = "AllstadtEtAl2022Liquefaction_LSE" in gmf_cols
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
