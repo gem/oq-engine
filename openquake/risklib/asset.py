@@ -638,9 +638,7 @@ class AssetCollection(object):
         gmf_df[tier_col] = pandas.cut(gmf_df[lse_col], bins=bins,
                                       labels=labels, right=False)
         # Build the exposure DataFrame
-        # FIXME: check if it's ok to flatten aggregate_by from a
-        # list of lists, e.g. [['ID_0'], ['ID_2']] to ['ID_0', 'ID_2']
-        geo_columns = [col for group in aggregate_by for col in group]
+        geo_columns = list(tagset(aggregate_by))
         dic = {"site_id": self.array["site_id"]}
         # Decode integer tag indices to string values by indexing into tagcol
         # directly.  self.array[col] holds 1-based integers; tagcol lists start
@@ -656,8 +654,10 @@ class AssetCollection(object):
         # self.array['value-structural'] is the corresponding numeric column
         for field in self.fields:
             dic[field] = self.array["value-" + field]
+        for field in self.occfields:
+            dic[field] = self.array[field]
         exp_df = pandas.DataFrame(dic)
-        exposure_cols = list(self.fields)  # e.g. ['number', 'structural', ...]
+        exposure_cols = list(self.fields) + list(self.occfields)
         # Merge on the shared 'site_id' column. Every asset row gets the
         # tier_col value of its site.
         merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
