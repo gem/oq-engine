@@ -576,8 +576,8 @@ hazard_uhs-std.csv
 
         # event_based with RuntimeSourceModelLT (sampling) - no XML-based
         # SSC LT comparison because source_id embeds the branch name, making
-        # crc32(source_id, ses_seed) in source/base.py differ between approaches
-        # and producing different ruptures
+        # zlib.crc32(source_id, ses_seed) in source/base.py differ between
+        # approaches and producing different ruptures
         self.run_calc(case_34.__file__, 'job_runtime_eb_sampling.ini')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures_eb_sampling.csv', f)
