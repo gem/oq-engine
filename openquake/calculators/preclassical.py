@@ -35,7 +35,8 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
+# MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
+MAX_NUM_RUPTURES = 72_000  # to support SFS-active_417 in MIE
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -320,6 +321,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
             logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
+        elif sites:
+            sf = SourceFilter(sites, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
         atomic_sources = []
