@@ -800,8 +800,8 @@ def view_task_eb(token, dstore):
     return msg
 
 
-@view.add('task_cl')
-def view_task_cl(token, dstore):
+
+def view_task(token, dstore, taskname):
     """
     Display info about a given task. Here are a few examples of usage::
 
@@ -811,7 +811,7 @@ def view_task_cl(token, dstore):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=b'classical')
+    data = get_array(dstore['task_info'][()], taskname=taskname.encode('ascii'))
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
@@ -834,6 +834,28 @@ def view_task_cl(token, dstore):
     msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
         % df
     return msg
+
+
+@view.add('task_cl')
+def view_task_cl(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical')
+
+
+@view.add('task_cd')
+def view_task_cd(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cd:0  # the fastest task
+     $ oq show task_cd:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical_disagg')
 
 
 @view.add('source_data')
