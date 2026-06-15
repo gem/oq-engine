@@ -656,8 +656,8 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         ae(rt2.seed, rt.seed)
         ae(rt2.num_samples, rt.num_samples)
         ae(rt2.filename, rt.filename)
-        # xml strings are preserved so build_smdict() works
-        # on multiple round-trips
+        # xml strings are preserved so build_smdict()
+        # works on multiple round-trips (to/from hdf5)
         ae(rt2._branch_xmls, rt._branch_xmls)
         bsets = rt2.branchsets
         ae(len(bsets), 1)

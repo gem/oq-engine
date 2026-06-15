@@ -48,7 +48,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty)
+    dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1070,16 +1070,22 @@ class RuntimeSourceModelLT(object):
         # name, giving unique branch_path values regardless of branch count
         self.shortener = _RuntimeShortener(
             {bid: bid for bid in self._branch_weights})
+        self._bset = self._build_bset()
+
+    def _build_bset(self):
+        # Canonical BranchSet shared by branches, branchsets and __iter__
+        bset = BranchSet('sourceModel', {})
+        bset.ordinal = 0
+        for bid, w in self._branch_weights.items():
+            bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
+        return bset
 
     def get_num_paths(self):
         return self.num_samples if self.num_samples else self.num_paths
 
     @property
     def branches(self):
-        return {
-            bid: Branch(bid, '__rt__%s' % bid, float(w))
-            for bid, w in self._branch_weights.items()
-        }
+        return {br.branch_id: br for br in self._bset.branches}
 
     def reduce(self, source_id, num_samples=None):
         num_samples = (self.num_samples if num_samples is None
@@ -1099,13 +1105,9 @@ class RuntimeSourceModelLT(object):
 
     @property
     def branchsets(self):
-        # Build a single BranchSet from _branch_weights so that compose()
-        # gets the correct SSC level when constructing a CompositeLogicTree.
-        bset = BranchSet('sourceModel', {})
-        bset.ordinal = 0
-        for bid, w in self._branch_weights.items():
-            bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
-        return [bset]
+        # Wrap the cached BranchSet so compose() gets the correct
+        # SSC level when constructing a CompositeLogicTree instance
+        return [self._bset]
 
     def bset_values(self, lt_path):
         # Single-level LT: no downstream branchset modifications so need
@@ -1113,24 +1115,15 @@ class RuntimeSourceModelLT(object):
         return []
 
     def __iter__(self):
-        from openquake.hazardlib import lt as lt_mod
-        branch_ids = list(self._branch_weights)
-        weights = numpy.array(
-            [self._branch_weights[bid] for bid in branch_ids])
         if self.num_samples:
-            # Build a BranchSet so we call the exact same bset.sample()
-            # code path as CompositeLogicTree.__iter__, guaranteeing that
-            # the same seed selects the same branches as an XML SSC LT
-            # --> This is checked in qa_test_data/logictree/case_34
-            bset = lt_mod.BranchSet('sourceModel', {})
-            bset.ordinal = 0
-            for bid, w in zip(branch_ids, weights):
-                br = lt_mod.Branch(bid, '__rt__%s' % bid, float(w))
-                bset.branches.append(br)
-            probs = lt_mod.random(
+            # Reuse the cached BranchSet so we go through the same
+            # bset.sample() code path as CompositeLogicTree.__iter__,
+            # guaranteeing the same seed picks the same branches as an
+            # XML SSC LT --> checked in qa_test_data/logictree/case_34
+            probs = random(
                 (self.num_samples, 1), self.seed, self.sampling_method)
             for i, branches in enumerate(
-                    bset.sample(probs, self.sampling_method)):
+                    self._bset.sample(probs, self.sampling_method)):
                 br = branches[0]
                 if self.sampling_method.startswith('early_'):
                     w = 1. / self.num_samples
@@ -1143,13 +1136,12 @@ class RuntimeSourceModelLT(object):
                     lt_path=(br.branch_id,),
                 )
         else:
-            for i, (branch_id, w) in enumerate(zip(branch_ids, weights)):
-                sentinel = '__rt__%s' % branch_id
+            for i, br in enumerate(self._bset.branches):
                 yield Realization(
-                    value=[sentinel],
-                    weight=float(w),
+                    value=[br.value],
+                    weight=float(br.weight),
                     ordinal=i,
-                    lt_path=(branch_id,),
+                    lt_path=(br.branch_id,),
                 )
 
     def build_smdict(self, converter):
@@ -1210,6 +1202,7 @@ class RuntimeSourceModelLT(object):
             {bid: bid for bid in self._branch_weights})
         self.source_data = numpy.array([], source_dt)
         self.basepath = os.path.dirname(os.path.abspath(self.filename))
+        self._bset = self._build_bset()
 
 
 def capitalize(words):
