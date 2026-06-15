@@ -1019,7 +1019,7 @@ class RuntimeSourceModelLT(object):
     file must contain a top-level function of:
 
         def get_source_model_lt():
-            # Returns list of (name: str, weight: float, xml_str: str)
+            # Returns list of (name, weight, xml_str) triples;
             # xml_str must be a complete NRML 0.5 sourceModel XML string.
             # Weights must sum to 1.0.
 
@@ -1029,6 +1029,9 @@ class RuntimeSourceModelLT(object):
     NOTE: An example of this feature (including a simple builder script) can
     be found in oq-engine/qa_test_data/ logictree/case_34/.
     """
+    # Single-level LT with one sourceModel branchset, no applyToSources
+    branchID = ''
+    is_source_specific = False
 
     def __init__(self, branches, script_path, seed=0, num_samples=0,
                  sampling_method='early_weights', source_id=''):
@@ -1038,8 +1041,6 @@ class RuntimeSourceModelLT(object):
         self.num_samples = num_samples
         self.sampling_method = sampling_method
         self.source_id = source_id
-        self.branchID = ''
-        self.is_source_specific = False
         self.tectonic_region_types = set()
         self.info = Info([], [], collections.defaultdict(list))
 
@@ -1082,6 +1083,13 @@ class RuntimeSourceModelLT(object):
 
     def get_num_paths(self):
         return self.num_samples if self.num_samples else self.num_paths
+
+    def __repr__(self):
+        # Useful
+        return '<%s %d branches from %s>' % (
+            self.__class__.__name__,
+            len(self._branch_weights),
+            os.path.basename(self.filename))
 
     @property
     def branches(self):
@@ -1178,9 +1186,7 @@ class RuntimeSourceModelLT(object):
             sampling_method=self.sampling_method,
             filename=self.filename,
             num_paths=self.num_paths,
-            is_source_specific=False,
             source_id=self.source_id,
-            branchID='',
             tectonic_region_types=','.join(sorted(self.tectonic_region_types)),
         )
         return numpy.array(tbl, rt_branch_dt), attrs
