@@ -101,7 +101,7 @@ def _filter_mag(srcs, min_mag, strict):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        if (ss.num_ruptures > MAX_NUM_RUPTURES and strict and
+        if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
             ss.code in b'FSCNXK'):  # only for fault sources
             raise RuntimeError('%s has too many ruptures' % ss)
     return out
@@ -320,6 +320,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
             logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
+        elif sites:
+            sf = SourceFilter(sites, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
         atomic_sources = []
