@@ -93,6 +93,17 @@ branch_dt = numpy.dtype([
     ('weight', float),
 ])
 
+# Adds an "xml" column so RuntimeSourceModelLT round-trips
+# its in-memory source XML strings through HDF5
+rt_branch_dt = numpy.dtype([
+    ('branchset', hdf5.vstr),
+    ('branch', hdf5.vstr),
+    ('utype', hdf5.vstr),
+    ('uvalue', hdf5.vstr),
+    ('weight', float),
+    ('xml', hdf5.vstr),
+])
+
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
@@ -1165,7 +1176,9 @@ class RuntimeSourceModelLT(object):
         tbl = []
         for branch_id, weight in self._branch_weights.items():
             sentinel = '__rt__%s' % branch_id
-            tbl.append(('bs_rt', branch_id, 'sourceModel', sentinel, weight))
+            xml = self._branch_xmls.get(branch_id, '')
+            tbl.append(
+                ('bs_rt', branch_id, 'sourceModel', sentinel, weight, xml))
         attrs = dict(
             bsetdict='{"bs_rt": {"uncertaintyType": "sourceModel"}}',
             seed=self.seed,
@@ -1178,7 +1191,7 @@ class RuntimeSourceModelLT(object):
             branchID='',
             tectonic_region_types=','.join(sorted(self.tectonic_region_types)),
         )
-        return numpy.array(tbl, branch_dt), attrs
+        return numpy.array(tbl, rt_branch_dt), attrs
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
@@ -1190,7 +1203,9 @@ class RuntimeSourceModelLT(object):
             set(trt_str.split(',')) if trt_str else set())
         for rec in array:
             rec = fix_bytes(rec)
-            self._branch_weights[rec['branch']] = float(rec['weight'])
+            bid = rec['branch']
+            self._branch_weights[bid] = float(rec['weight'])
+            self._branch_xmls[bid] = decode(rec['xml'])
         self.shortener = _RuntimeShortener(
             {bid: bid for bid in self._branch_weights})
         self.source_data = numpy.array([], source_dt)

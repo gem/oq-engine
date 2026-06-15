@@ -656,7 +656,9 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         ae(rt2.seed, rt.seed)
         ae(rt2.num_samples, rt.num_samples)
         ae(rt2.filename, rt.filename)
-        ae(rt2._branch_xmls, {})  # xml strings not stored in hdf5
+        # xml strings are preserved so build_smdict() works
+        # on multiple round-trips
+        ae(rt2._branch_xmls, rt._branch_xmls)
         bsets = rt2.branchsets
         ae(len(bsets), 1)
         ae(len(bsets[0].branches), 10)
@@ -664,6 +666,13 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         ae(len(brs), 10)
         numpy.testing.assert_allclose(
             sorted(brs[b].weight for b in brs), [0.1] * 10)
+
+        # build_smdict must succeed after the round-trip
+        converter = sourceconverter.SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=5.)
+        smdict_rt = self.rt_smlt.build_smdict(converter)
+        smdict_rt2 = rt2.build_smdict(converter)
+        ae(sorted(smdict_rt), sorted(smdict_rt2))
 
     def test_build_smdict(self):
         """
