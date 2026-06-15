@@ -1318,10 +1318,6 @@ class ContextMaker(object):
             C *= step
         src.nctxs = C * srcfilter.multiplier
         weight = src.nctxs / N
-        #if (N <= self.oq.max_sites_disagg or self.oq.disagg_by_src
-        #    ) and src.code in 'pPAM':
-        #    print(src)
-        #    weight /= 10.
         return weight
 
     def set_weight(self, sources, srcfilter):

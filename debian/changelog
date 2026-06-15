@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed the slow tasks in AELO, due to accidental disabling of the filtering
+
   [Savas Ceylan]
   * Added EdwardsFah2013Foreland3Bars, BindiEtAl2011Rhypo,
     ECOS2009VariableDepth and ECOS2009FixedDepth GSIMs with
