@@ -608,6 +608,8 @@ def _build_csm(oq, full_lt, groups, event_based):
             atomic.append(grp)
         elif grp:
             acc[grp.trt].extend(grp)
+    if atomic:
+        logging.info('Found %d atomic groups', len(atomic))
     if changes:
         logging.info(f'Applied {changes:_d} changes to '
                      f'{len(groups):_d} source groups')
