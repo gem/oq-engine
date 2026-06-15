@@ -29,6 +29,7 @@ from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
 from openquake.hazardlib.source_group import CompositeSourceModel
 from openquake.hazardlib.source.multi_fault import save_and_split
+from openquake.hazardlib.logictree import RuntimeSourceModelLT
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
 
@@ -280,7 +281,6 @@ def get_csm(oq, full_lt, dstore=None):
     Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
     """
-    from openquake.hazardlib.logictree import RuntimeSourceModelLT
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
