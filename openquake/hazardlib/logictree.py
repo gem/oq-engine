@@ -1021,9 +1021,11 @@ class RuntimeSourceModelLT(object):
     NOTE: An example of this feature (including a simple builder script) can
     be found in oq-engine/qa_test_data/ logictree/case_34/.
     """
-    # Single-level LT with one sourceModel branchset, no applyToSources
+    # Single-level LT with one sourceModel branchset (i.e., it's flat)
     branchID = ''
-    is_source_specific = False
+    is_source_specific = False # Can't use "fast path" in set_num_paths
+                               # given flat LT (decompose groups XMLs only
+                               # if applyToSources but not available here)
 
     def __init__(self, branches, script_path, seed=0, num_samples=0,
                  sampling_method='early_weights', source_id=''):
