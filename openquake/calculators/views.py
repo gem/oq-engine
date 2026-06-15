@@ -459,7 +459,7 @@ def view_totlosses(token, dstore):
             name = 'avg_losses-rlzs/' + ltype
             tot = dstore[name][()].sum(axis=0)
         tot_losses += tot
-    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+    return tot_losses.view(oq.loss_dt(F32))
 
 
 def alt_to_many_columns(alt, loss_types):
@@ -800,8 +800,8 @@ def view_task_eb(token, dstore):
     return msg
 
 
-@view.add('task_cl')
-def view_task_cl(token, dstore):
+
+def view_task(token, dstore, taskname):
     """
     Display info about a given task. Here are a few examples of usage::
 
@@ -811,7 +811,7 @@ def view_task_cl(token, dstore):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=b'classical')
+    data = get_array(dstore['task_info'][()], taskname=taskname.encode('ascii'))
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
@@ -834,6 +834,28 @@ def view_task_cl(token, dstore):
     msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
         % df
     return msg
+
+
+@view.add('task_cl')
+def view_task_cl(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical')
+
+
+@view.add('task_cd')
+def view_task_cd(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cd:0  # the fastest task
+     $ oq show task_cd:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical_disagg')
 
 
 @view.add('source_data')
@@ -1510,22 +1532,17 @@ def view_rupture(token, dstore):
     return get_ebrupture(dstore, rup_id)
 
 
-@view.add('event_rates')
-def view_event_rates(token, dstore):
+@view.add('events_by_rlz')
+def view_events_rlz(token, dstore):
     """
-    Show the number of events per realization multiplied by risk_time/eff_time
+    Show the number of events per realization
     """
-    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
-    if oq.calculation_mode != 'event_based_damage':
-        return numpy.ones(R)
-    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
-        oq.ses_per_logic_tree_path * oq.investigation_time)
-    if oq.collect_rlzs:
-        return numpy.array([len(dstore['events']) * time_ratio / R])
-    else:
-        rlzs = dstore['events']['rlz_id']
-        return numpy.bincount(rlzs, minlength=R) * time_ratio
+    out = numpy.zeros(R, [('rlz', U32), ('num_events', U32)])
+    rlzs = dstore['events']['rlz_id']
+    out['rlz'] = numpy.arange(R)
+    out['num_events'] = numpy.bincount(rlzs, minlength=R)
+    return out
 
 
 def tup2str(tups):

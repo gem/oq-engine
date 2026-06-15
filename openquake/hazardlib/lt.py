@@ -473,9 +473,10 @@ def apply_uncertainties(bset_values, src_group):
                         srcs.append(src)
                     apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
+            sg.sources.extend(srcs)
         else:
-            srcs = [copy.copy(source)]  # this is ultra-fast
-        sg.sources.extend(srcs)
+            # no copy
+            sg.sources.append(source)
     return sg
 
 # ######################### sampling ######################## #

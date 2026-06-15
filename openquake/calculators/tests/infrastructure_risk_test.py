@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import shutil
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.qa_tests_data.infrastructure_risk import (
@@ -42,11 +41,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             expected_path = os.path.join(
                 os.path.dirname(testcase.__file__), expected_fname)
             [got_path] = export(('infra-' + output, 'csv'), datastore)
-            if os.environ.get('OQ_OVERWRITE'):
-                shutil.copy2(got_path, expected_path)
-            else:
-                self.assertEqualFiles(
-                    got_path, expected_path, check_text=True)
+            self.assertEqualFiles(got_path, expected_path, check_text=True)
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')

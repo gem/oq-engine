@@ -18,6 +18,7 @@
 Module exports :
 class:`BindiEtAl2011Repi`,
 class:`BindiEtAl2011RepiFixedH`,
+class:`BindiEtAl2011Rhypo`
 
 """
 from __future__ import division
@@ -39,6 +40,25 @@ def _get_term01(C, repi, hypo_depth):
     term_repi = np.sqrt((repi**2 + h**2) / h**2)
     term_h = np.sqrt(repi**2 + h**2) - h
     return -C['a3'] * np.log10(term_repi) - C['a4'] * term_h
+
+
+def _convert_mw_to_ms20(mag):
+    """
+    Convert Mw to MS(20) for the hypocentral-distance equation.
+    """
+    return np.where(mag <= 6.5, 6.5 - (6.5 - mag) * 1.5, mag)
+
+
+def _compute_mean_rhypo(C, mag, rhypo):
+    """
+    Compute mean value for MSK-64 with hypocentral distance.
+    """
+    ms20 = _convert_mw_to_ms20(mag)
+    return C['a1'] * ms20 + C['a2'] + _get_term01_rhypo(C, rhypo)
+
+
+def _get_term01_rhypo(C, rhypo):
+    return -C['a3'] * np.log10(rhypo / 10.) - C['a4'] * (rhypo - 10.)
 
 
 class BindiEtAl2011Repi(GMPE):
@@ -112,4 +132,49 @@ class BindiEtAl2011RepiFixedH(BindiEtAl2011Repi):
     COEFFS = CoeffsTable(table="""\
     IMT         a1     a2     a3          a4    sigma
     MMI      1.049  0.686  2.706   0.0001811    0.689
+    """)
+
+
+class BindiEtAl2011Rhypo(GMPE):
+    """
+    Implements IPE developed by Dino Bindi et al. 2011 and published
+    as "Intensity prediction equations for Central Asia"
+    (Geo-physical journal international, 2011, 187,327-337).
+
+    Model implemented by laurentiu.danciu@gmail.com
+    """
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {MMI}
+
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+
+    REQUIRES_SITES_PARAMETERS = set()
+
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+
+    #: Required distance rhypo
+    REQUIRES_DISTANCES = {'rhypo'}
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean_rhypo(C, ctx.mag, ctx.rhypo)
+            sig[m] = np.sqrt(C['be'] ** 2 + C['we'] ** 2)
+            tau[m] = C['be']
+            phi[m] = C['we']
+
+    #: Coefficient table constructed from the electronic suplements of the
+    #: original paper.Table 1 .page 331
+    COEFFS = CoeffsTable(table="""\
+    IMT       a1     a2      a3           a4   sigma     we      be
+    MMI      1.071  1.003  2.621   0.0005567   0.710   0.227   0.373
     """)

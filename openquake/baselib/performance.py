@@ -459,10 +459,10 @@ class Monitor(object):
         msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
                               self.operation, self.username)
         if self.measuremem:
-            return '<%s, duration=%ss, memory=%s>' % (
+            return '<%s, duration=%.4fs, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))
         elif self.duration:
-            return '<%s, duration=%ss, counts=%s>' % (
+            return '<%s, duration=%.4fs, counts=%s>' % (
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg

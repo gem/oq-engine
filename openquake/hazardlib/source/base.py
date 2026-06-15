@@ -207,17 +207,16 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     id = -1  # to be set
-    trt_smr = 0  # set by the engine
+    sampling = None  # set by the engine
     nsites = 1  # set when filtering the source
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
-    trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
-    samples = 1
+    samples = 1  # set by the engine
     smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
@@ -237,10 +236,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def trt_smrs(self):
         """
-        :returns: a list of integers (usually of 1 element)
+        :returns: a tuple of integers (usually of 1 element)
         """
-        trt_smr = self.trt_smr
-        return (trt_smr,) if isinstance(trt_smr, int) else trt_smr
+        if self.sampling is None:  # in hazardlib
+            return (0,)
+        return tuple(self.sampling['trt_smr'])
 
     def serial(self, ses_seed):
         """
@@ -276,6 +276,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             else:
                 yield rup.surface.mesh
 
+    @property
+    def multiplicity(self):
+        """
+        How many source model realizations the source belongs to
+        """
+        if self.sampling is None:
+            return 1
+        return len(self.sampling)
+
     def sample_ruptures(self, num_ses, ses_seed):
         """
         :param num_ses: number of stochastic event sets
@@ -284,15 +293,17 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         ebrs = []
-        for rup, rupid, num_occ in sample(self, self.samples * num_ses, seed):
-            if hasattr(rup, 'occurrence_rate'):
-                # defined only for poissonian sources
-                # needed to get convergency of the frequency to the rate
-                # tested in oq-risk-tests etna0 and case_83_eb
-                rup.occurrence_rate *= self.smweight
-            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid,
-                            seed=rupid + TWO30 * self.id + ses_seed)
-            ebrs.append(ebr)
+        for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
+            for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
+                rupid = rid + i * self.num_ruptures
+                if hasattr(rup, 'occurrence_rate'):
+                    # defined only for poissonian sources
+                    # needed to get convergency of the frequency to the rate
+                    # tested in case_83_eb
+                    rup.occurrence_rate *= smweight
+                ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
+                                seed=rupid + TWO30 * self.id + ses_seed)
+                ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):

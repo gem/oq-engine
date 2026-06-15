@@ -28,12 +28,14 @@ from openquake.baselib import (
     config, hdf5, parallel, general, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import imt, valid, logictree, InvalidFile
+from openquake.hazardlib.countries import ALIASES
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -48,7 +50,7 @@ from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.calculators import base, views
+from openquake.calculators import base, views, preclassical
 from openquake.calculators.getters import sig_eps_dt, get_ebrupture
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
@@ -376,9 +378,12 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         # populate oq_by when the parent is a SES.hdf5 file
         grp = dstore.parent['oqparam']
         if isinstance(grp, h5py.Group):
+            # tested in global_ses_test
             oq_by = {}
             for name in grp:
                 model = name[-3:]  # i.e. AfricaNAF -> NAF
+                if model in ALIASES:
+                    model = ALIASES[model]  # TWN -> TEM
                 oq_by[model] = oq.from_parent(
                     dstore.parent[f'oqparam/{name}'], new=True)
                 oq_by[model].mags_by_trt = AccumDict(accum=set())
@@ -667,26 +672,37 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        maxweight = self.counting_ruptures()
+        maxw = self.counting_ruptures()
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
         logging.info('Building ruptures from %d groups',
                      len(self.csm.src_groups))
-        g_index = 0
-        for sg_id, sg in enumerate(self.csm.src_groups):
-            if not sg.sources:
-                continue
-            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
-            cmaker = ContextMaker(sg.trt, rgb, oq)
-            cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
-            g_index += len(rgb)
+        trt_smrs = self.csm.get_trt_smrs()
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
+        for sg_id, cmaker in cmakers.enumerate():
+            sg = self.csm.src_groups[sg_id]
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
-            for src_group in sg.split(maxweight):
-                allargs.append((src_group, param))
+            mfs = [src for src in sg if src.code == b'F']
+            if sg.atomic:
+                allargs.append((sg, param))
+            elif mfs:
+                # send one multifault source at the time
+                # tested in event_based case_29
+                for mf in mfs:
+                    allargs.append(([mf], param))
+                others = [src for src in sg if src.code != b'F']
+                if others:
+                    allargs.append((others, param))
+            else:
+                for block in block_splitter(
+                        sg.sources, maxw, lambda src: src.weight):
+                    allargs.append((block, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)

@@ -66,9 +66,10 @@ def setup_module():
 
     with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
         evs = parent['events'][:]
-        ae(evs['id'], numpy.arange(33967))  # sequential indices
+        assert evs.dtype.names == ('id', 'rup_id', 'rlz_id', 'year', 'ses_id')
+        ae(evs['id'], numpy.arange(32999))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
+        ae(e0s[-3:], [22161, 22162, 22163])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
@@ -83,8 +84,9 @@ def setup_module():
         b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
         b'IF-CFS-3', b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
         b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
-        b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
-        b'SSC-mps-4'])
+        b'SSC-mps-0', b'SSC-mps-1:0', b'SSC-mps-1:1', b'SSC-mps-1:2',
+        b'SSC-mps-1:3', b'SSC-mps-2', b'SSC-mps-3:0', b'SSC-mps-3:1',
+        b'SSC-mps-4:0', b'SSC-mps-4:1'])
 
 
 def test_one_site():
@@ -132,11 +134,11 @@ def test_site_model():  # 5 sites
     assert len(df) == 65
     assert df.index.max() < 5
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
-    assert len(rdf) == 15875
+    assert len(rdf) == 14944
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16595
+    assert len(edf) == 15625
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
-    assert len(rel_rups) == 15875
+    assert len(rel_rups) == len(rdf)
 
     op_df = calc.datastore.read_df('operations')
     ae(list(op_df.columns), ['calc_id', 'model', 'sample_ruptures',

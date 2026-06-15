@@ -38,6 +38,7 @@ def positivefloat(val):
 
 def imt2tup(string):
     """
+    Used in sort_by_imt -> from_string to sort keys by period
     >>> imt2tup('PGA')
     ('PGA',)
     >>> imt2tup('SA(1.0)')
@@ -47,6 +48,13 @@ def imt2tup(string):
     """
     s = string.strip()
     name, *rest = s.split('(')
+
+    if name not in globals() and '_' in name:
+        # e.g. AllstadtEtAl2022Landslides_LsProb -> 'LsProb'
+        suffix = name.split('_')[-1]
+        if suffix in globals():
+            name = suffix
+
     if name not in globals():
         raise KeyError(name)
     elif len(name) > 12:
