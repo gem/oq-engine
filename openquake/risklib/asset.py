@@ -576,7 +576,8 @@ class AssetCollection(object):
         return df[df.number > 0]
 
     def aggregate_exposure_by_lse_tier(
-            self, aggregate_by, avg_gmf_array, all_imts, secondary_peril):
+            self, aggregate_by, avg_gmf_array, all_imts, secondary_peril,
+            discard_empty=True):
         """
         :param aggregate_by:
             a list of lists of tag names (e.g., [['ID_0']])
@@ -586,6 +587,9 @@ class AssetCollection(object):
             IMT names including secondary perils
         :param secondary_peril:
             either "liquefaction" or "landslide"
+        :param discard_empty:
+            if True, discard from the output all tier bins with no assets
+            (default: True)
         :returns:
             a DataFrame with aggregated exposure metrics grouped by
             geo-tags and the chosen LSE peril tiers
@@ -662,11 +666,12 @@ class AssetCollection(object):
         # tier_col value of its site.
         merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
         # Sum all exposure value fields for each unique (ID_0, ID_2, tier)
-        # combination. observed=False keeps every tier bin in the output even
-        # when no assets fall in it
+        # combination. observed=True keeps tier bins in the output only if
+        # any assets fall in it
         groupby_keys = geo_columns + [tier_col]
         result_df = (
-            merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
+            merged_df.groupby(groupby_keys,
+                              observed=discard_empty)[exposure_cols]
             .sum()
             .reset_index()
         )

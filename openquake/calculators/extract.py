@@ -871,14 +871,22 @@ def extract_exposure_by_lse(dstore, what):
     """
     Aggregates exposure by secondary peril LSE tiers and tags.
     Use it as /extract/exposure_by_lse?secondary_peril=landslide
+    or        /extract/exposure_by_lse?secondary_peril=liquefaction
+    To keep also tier bins with no assets:
+    /extract/exposure_by_lse?secondary_peril=landslide?discard_empty=0
+    or
+    /extract/exposure_by_lse?secondary_peril=liquefaction?discard_empty=0
     """
     qdict = parse(what)
-    [secondary_peril] = qdict['secondary_peril']
+    # FIXME: landslide or liquefaction as default?
+    [secondary_peril] = qdict.get('secondary_peril', ['landslide'])
+    discard_empty = qdict.get('discard_empty', [1])[0] == 1
     avg_gmf_array = dstore['avg_gmf'][:]
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
     df = assetcol.aggregate_exposure_by_lse_tier(
-        oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril)
+        oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
+        discard_empty=discard_empty)
     return df
 
 
