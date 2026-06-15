@@ -591,7 +591,7 @@ class AssetCollection(object):
             geo-tags and the chosen LSE peril tiers
         """
         if secondary_peril == "liquefaction":
-            hazard_col = "AllstadtEtAl2022Liquefaction_LSE"
+            lse_col = "AllstadtEtAl2022Liquefaction_LSE"
             tier_col = "liquefaction_lse_tier"
             bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
             labels = [
@@ -604,7 +604,7 @@ class AssetCollection(object):
                 ">0.2",
             ]
         elif secondary_peril == "landslide":
-            hazard_col = "AllstadtEtAl2022Landslides_LSE"
+            lse_col = "AllstadtEtAl2022Landslides_LSE"
             tier_col = "landslide_lse_tier"
             bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
             labels = [
@@ -620,24 +620,26 @@ class AssetCollection(object):
             raise ValueError(
                 "secondary_peril must be either 'liquefaction' or 'landslide'")
         # Extract mean values (axis 0 = mean) for the targeted peril.
-        hazard_idx = all_imts.index(hazard_col)
-        lse_values = avg_gmf_array[0, :, hazard_idx]
-        # Build a site-level hazard DataFrame.
-        gmf_df = pandas.DataFrame(
-            {
-                "site_id": numpy.arange(avg_gmf_array.shape[1]),
-                hazard_col: lse_values,
-            }
-        )
+        # avg_gmf_array has shape (statistics, sites, imts), so lse_values will
+        # be a 1D array of length n_sites
+        n_stats, n_sites, n_imts = avg_gmf_array.shape
+        lse_idx = all_imts.index(lse_col)
+        lse_values = avg_gmf_array[0, :, lse_idx]
+        # Build a site-level DataFrame.
+        # numpy.arange(n_sites) will match self.array['site_id']
+        gmf_df = pandas.DataFrame({
+                "site_id": numpy.arange(n_sites),
+                lse_col: lse_values,
+        })
         # Bin continuous LSE values into discrete tiers.
-        gmf_df[tier_col] = pandas.cut(
-            gmf_df[hazard_col],
-            bins=bins,
-            labels=labels,
-            right=False,
-        )
+        # right=False makes each bin left-colsed and right-open
+        # e.g. [0.005, 0.01)
+        # resulting in a pandas Categorical column.
+        gmf_df[tier_col] = pandas.cut(gmf_df[lse_col], bins=bins,
+                                      labels=labels, right=False)
         # Build the exposure DataFrame
-        # aggregate_by is for instance [['ID_0'], ['ID_2']]
+        # FIXME: check if it's ok to flatten aggregate_by from a
+        # list of lists, e.g. [['ID_0'], ['ID_2']] to ['ID_0', 'ID_2']
         geo_columns = [col for group in aggregate_by for col in group]
         dic = {"site_id": self.array["site_id"]}
         # Decode integer tag indices to string values by indexing into tagcol
@@ -649,13 +651,18 @@ class AssetCollection(object):
         for col in geo_columns:
             tag_values = numpy.array(getattr(self.tagcol, col))
             dic[col] = tag_values[self.array[col]]
+        # self.fields contains names like 'structural', 'number' (i.e. the
+        # exposure value columns)
+        # self.array['value-structural'] is the corresponding numeric column
         for field in self.fields:
             dic[field] = self.array["value-" + field]
         exp_df = pandas.DataFrame(dic)
         exposure_cols = list(self.fields)  # e.g. ['number', 'structural', ...]
-        # Merge on the shared 'site_id' column.
+        # Merge on the shared 'site_id' column. Every asset row gets the
+        # tier_col value of its site.
         merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
-        # Aggregate: observed=False keeps every tier bin in the output even
+        # Sum all exposure value fields for each unique (ID_0, ID_2, tier)
+        # combination. observed=False keeps every tier bin in the output even
         # when no assets fall in it
         groupby_keys = geo_columns + [tier_col]
         result_df = (
@@ -663,8 +670,7 @@ class AssetCollection(object):
             .sum()
             .reset_index()
         )
-        # Return only rows with at least one building.
-        return result_df[result_df["number"] > 0]
+        return result_df
 
     def agg_by_site(self):
         """
