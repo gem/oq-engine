@@ -100,7 +100,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
-    'embodied_carbon': 'Embodied carbon loss',
+    'embodied_carbon': 'Embodied carbon loss (tCO<sub>2</sub>e)',
     'value': 'Value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
@@ -122,7 +122,7 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
             ' of assets is subjected'),
-    'embodied_carbon': 'Embodied carbon',
+    'embodied_carbon': 'Embodied carbon (tCO<sub>2</sub>e)',
 }
 
 
