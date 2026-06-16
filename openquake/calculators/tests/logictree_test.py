@@ -574,11 +574,17 @@ hazard_uhs-std.csv
         [f] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mean_disagg_by_src.csv', f)
 
-        # event_based with RuntimeSourceModelLT (sampling) - no XML-based
-        # SSC LT comparison because source_id embeds the branch name, making
-        # zlib.crc32(source_id, ses_seed) in source/base.py differ between
-        # approaches and producing different ruptures
+        # event_based: runtime and XML must give identical ruptures and GMFs
+        # NOTE: Because of zlib.crc32(source_id, ses_seed) in source/base.py
+        # the equivalency holds ONLY if same branch name is provided by the
+        # builder script and specified in the SSC logic tree XML file
         self.run_calc(case_34.__file__, 'job_runtime_eb_sampling.ini')
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures_eb_sampling.csv', f)
+        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data_eb_sampling.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_eb_sampling.ini')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures_eb_sampling.csv', f)
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
