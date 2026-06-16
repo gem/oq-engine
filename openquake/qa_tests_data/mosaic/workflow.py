@@ -81,8 +81,9 @@ def extract(basedir, job_ini):
     """
     out = []
     for cwd, dirs, files in os.walk(basedir):
-        if '.git' in dirs:
-            dirs.remove('.git')
+        for skipdir in [".git", "padding"]:
+            if skipdir in dirs:
+                dirs.remove(skipdir)
         for model, mod in zip(MODELS, MODELDIRS):
             for dirname in dirs:                    
                 if dirname == mod:
