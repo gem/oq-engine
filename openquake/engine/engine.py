@@ -777,6 +777,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     else:
                         calcs.append(job.calc_id)
             with wfjob:
+                may_fails = [name in wf.may_fail for name in new_names]
                 for success in wf.success:
                     if success in successes[wf_no]:
                         logging.info(f'{format_dic(success)} already called')
@@ -785,7 +786,9 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         successes[wf_no].append(success.copy())
                         success['dstore'] = dstore
                         success['calcs'] = calcs
+                        success['may_fails'] = may_fails
                         sap.run_func(success)
+
                 if n_wfs > 1:
                     logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
                                     f'finished step {wf_no+1} of {n_wfs}')
