@@ -147,7 +147,8 @@ EXTRACTABLE_RESOURCES = [
     'events',
     'exposure_metadata',
     'exposure_by_location',
-    'exposure_by_lse',
+    'exposure_by_lse?secondary_peril=liquefaction',
+    'exposure_by_lse?secondary_peril=landslide',
     'gmf_data',
     'hcurves',
     'hmaps',
@@ -1920,11 +1921,11 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    if not can_extract(request, what):
-        return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
+    if not can_extract(request, what + query_string):
+        return HttpResponseForbidden()
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2434,6 +2435,10 @@ def can_extract(request, resource):
     return False
 
 
+def _decode(v):
+    return v.decode('utf-8') if isinstance(v, bytes) else v
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2472,6 +2477,14 @@ def extract_html_table(request, calc_id, name):
                       'exposure_by_lse?secondary_peril=liquefaction',
                       'exposure_by_lse?secondary_peril=landslide']
     table_name = display_names[name] if name in display_names else name
+
+    # Identify string columns from dtype before formatting the headers.
+    string_short_names = {
+        col for col in table.columns
+        if str(table[col].dtype).startswith('S') or
+        table[col].dtype == object
+    }
+
     table_header = []
     for short_name in table.columns:
         display_name = ''
@@ -2489,6 +2502,16 @@ def extract_html_table(request, calc_id, name):
             table_header.append(display_name)
         else:
             table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+
+    # string_columns must contain the formatted header strings that actually
+    # appear in table_header so that `header in string_columns` in the
+    # template matches correctly.
+    string_columns = {
+        header
+        for header, short_name in zip(table_header, table.columns)
+        if short_name in string_short_names
+    }
+
     table_contents = table.to_numpy()
     if summarize and name == 'aggrisk_tags':  # the impact table
         table_header = table_header[1:-1]
@@ -2506,8 +2529,13 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
-    table_rows = [list(zip(table_header, row)) for row in table_contents]
-    string_columns = [col for col in table_header if col.startswith('ID')]
+
+    # Decode byte strings to plain str
+    table_rows = [
+        list(zip(table_header, [_decode(v) for v in row]))
+        for row in table_contents
+    ]
+
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,
                    'is_summary': summarize,
