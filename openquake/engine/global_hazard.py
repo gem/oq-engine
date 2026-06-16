@@ -32,7 +32,7 @@ def main(mosaic_dir, toml:bool=False, *, cache:str='false', kfilter:str=''):
     if toml:
         print(ghm_toml)
         return
-    with (patch.dict(config.directory, {'mosaic_dir': mosaic_dir}),
+    with (patch.dict(config.directory, mosaic_dir=mosaic_dir),
           patch.dict(os.environ, OQ_SAMPLE_SITES=".001")):
         calc_id = engine.run_workflow(
             ghm_toml, {'cache': cache, 'kfilter': kfilter})
