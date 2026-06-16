@@ -61,7 +61,7 @@ def build_ses(dstore, calcs, out_file, may_fails=()):
     print(mon)
 
 
-def _export_import(name, calc_id, output_type, dstore):
+def _export_import(name, calc_id, output_type, may_fail, dstore):
     # export the CSV files associated to the output type from the
     # calculation and import them in the workflow datastore
     with datastore.read(calc_id) as calc_ds:
@@ -76,8 +76,8 @@ def _export_import(name, calc_id, output_type, dstore):
         try:
             fnames = export.export((output_type, 'csv'), calc_ds)
         except Exception as exc:
-            if os.environ.get('OQ_SAMPLES'):
-                # in the test environment errors are expected
+            if may_fail or os.environ.get('OQ_SAMPLES'):
+                # errors are expected
                 logging.info(f'{name}: {output_type}#{calc_id} not imported')
                 return
             else:
@@ -103,13 +103,7 @@ def import_outputs(dstore, calcs, out_types, may_fails=()):
         for calc_id, may_fail in zip(calcs, may_fails):
             name = wf.loc[calc_id]['name']
             for out_type in out_types:
-                try:
-                    _export_import(name, calc_id, out_type, dstore)
-                except KeyError:
-                    if may_fail:
-                        pass
-                    else:
-                        raise
+                _export_import(name, calc_id, out_type, may_fail, dstore)
     logging.info(f'Saved outputs in workflow {dstore.filename}')
     print(mon)
 
