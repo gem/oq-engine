@@ -6,6 +6,8 @@ from openquake.hazardlib.countries import (
     MODELS, ALIASES, REGIONS, country2code)
 from openquake.commonlib.readinput import read_mosaic_df
 
+MODELDIRS = [ALIASES.get(model, model) for model in MODELS]  # JPN->JPA
+
 
 TOML = '''\
 [workflow]
@@ -33,9 +35,9 @@ def save(mosaic_dir, name, toml):
     return fname
 
 
-def add_checkout(lst, models):
-    for mod in models:
-        lst.append(f'checkout.{mod} = "master"')
+def add_checkout(lst, repos, branch="v2026_updates"):
+    for repo in repos:
+        lst.append(f'checkout.{repo} = "{branch}"')
     lst.append('')
 
 
@@ -61,7 +63,7 @@ def aelo(mosaic_dir):
     sites, siteid = get_aelo_sites(site_file)
     lst = ['[workflow]\ndescription="AELO"']
     models = [mod for mod in MODELS if mod not in {'USA', 'ALS', 'HAW'}]
-    add_checkout(lst, models)
+    add_checkout(lst, MODELDIRS)
     for mod in models:
         if mod == 'CND':
             mod = 'CAN'
@@ -79,15 +81,11 @@ def extract(basedir, job_ini):
     """
     out = []
     for cwd, dirs, files in os.walk(basedir):
-        for model in MODELS:
-            if model in ALIASES:
-                mod = ALIASES[model]
-            else:
-                mod = model
+        for model, mod in zip(MODELS, MODELDIRS):
             for dirname in dirs:
                 if dirname == mod:
                     out.append((model, os.path.join(cwd, mod, job_ini)))
-    return out
+    return sorted(out)
 
 
 def ghm(basedir):
