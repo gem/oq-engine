@@ -83,6 +83,9 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     params['mosaic_model'] = models[0]
     # NB: or the description is passed explicitly or it is generated from
     # the siteid, which must be a valid custom_site_id
+    if 'siteid' not in inputs:
+        inputs['siteid'] = 'SITE' + inputs['sites'].replace(' ', '_')
+        inputs['vs30'] = str(inputs['vs30'])
     if 'description' in inputs:
         params['description'] = inputs['description']
         params['siteid'] = readinput.get_custom_site_id(inputs['description'])

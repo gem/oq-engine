@@ -23,23 +23,26 @@ from openquake.baselib import sap, config
 from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
 
-def main(mosaic_dir, models='ALL', toml:bool=False, cache:str='false'):
+
+def main(mosaic_dir, toml:bool=False, cache:str='false', kfilter:str=''):
     """
-    Storing global SES
+    Storing global hazard mosaic
     """
-    ghm_toml = workflow.ghm(mosaic_dir, models.split(','), toml)
+    ghm_toml = workflow.ghm(mosaic_dir)
     if toml:
         print(ghm_toml)
         return
     with patch.dict(config.directory, {'mosaic_dir': mosaic_dir}):
-        calc_id = engine.run_workflow(ghm_toml, {'cache': cache})
+        calc_id = engine.run_workflow(
+            ghm_toml, {'cache': cache, 'kfilter': kfilter})
     os.remove(ghm_toml)
     return calc_id
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
-main.models = 'Models to consider (comma-separated)'
-main.cache = 'Use the cache to avoid repeating correct calculations'
 main.toml = 'Just print the TOML code'
+main.cache = 'Use the cache to avoid repeating correct calculations'
+main.kfilter = 'Run only a subset of the calculations'
+
 
 if __name__ == '__main__':
     sap.run(main)

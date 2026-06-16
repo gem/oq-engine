@@ -2,7 +2,8 @@ import os
 import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import geolocate
-from openquake.hazardlib.countries import MODELS, REGIONS, country2code
+from openquake.hazardlib.countries import (
+    MODELS, ALIASES, REGIONS, country2code)
 from openquake.commonlib.readinput import read_mosaic_df
 
 
@@ -72,28 +73,34 @@ def aelo(mosaic_dir):
     return save(mosaic_dir, 'AELO.toml', '\n'.join(lst))
 
 
-def ghm(mosaic_dir, models, legacy=False):
+def extract(basedir, job_ini):
+    """
+    Extract job.ini files from a base directory, recursively
+    """
+    out = []
+    for cwd, dirs, files in os.walk(basedir):
+        for model in MODELS:
+            if model in ALIASES:
+                mod = ALIASES[model]
+            else:
+                mod = model
+            for dirname in dirs:
+                if dirname == mod:
+                    out.append((model, os.path.join(cwd, mod, job_ini)))
+    return out
+
+
+def ghm(basedir):
     "Build GHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
-    if models == ['ALL']:
-        models = MODELS
-    
-    add_checkout(lst, models)
-    for mod in models:
-        if legacy:  # to support unzipped_mosaic_run
-            if mod == 'CND':
-                mod = 'CAN'
-            elif mod in 'GLD OAT OPA':
-                continue
-        lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
-        if legacy and mod == 'ARB':
-            # speedup slow sources
-            lst.append('area_source_discretization = 50')
+    add_checkout(lst, MODELS)
+    for mod, ini in extract(basedir, 'job.ini'):
+        lst.append(f'[{mod}]\nini = "{ini}"')
 
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
     lst.append('out_types = ["hcurves", "hmaps-stats"]')
-    return save(mosaic_dir, 'GHM.toml', '\n'.join(lst))
+    return save(basedir, 'GHM.toml', '\n'.join(lst))
 
 
 def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
