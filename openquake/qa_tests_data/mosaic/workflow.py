@@ -37,7 +37,7 @@ def save(mosaic_dir, name, toml):
 
 def add_checkout(lst, repos, branch="v2026_updates"):
     for repo in repos:
-        lst.append(f'checkout.{repo} = "{branch}"')
+        lst.append(f'checkout."{repo}" = "{branch}"')
     lst.append('')
 
 
@@ -79,23 +79,24 @@ def extract(basedir, job_ini):
     """
     Extract job.ini files from a base directory, recursively
     """
-    out = []
+    out = {}
     for cwd, dirs, files in os.walk(basedir):
-        for skipdir in [".git", "padding"]:
+        for skipdir in [".git", "padding", "scenarios"]:
             if skipdir in dirs:
                 dirs.remove(skipdir)
         for model, mod in zip(MODELS, MODELDIRS):
             for dirname in dirs:                    
                 if dirname == mod:
-                    out.append((model, os.path.join(cwd, mod, 'in', job_ini)))
-    return sorted(out)
+                    out[model] = os.path.join(cwd, mod, 'in', job_ini)
+    return sorted(out.items())
 
 
 def ghm(basedir):
     "Build generatedGHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
-    add_checkout(lst, MODELDIRS)
-    for mod, ini in extract(basedir, 'job.ini'):
+    mod_inis = extract(basedir, 'job.ini')
+    add_checkout(lst, [os.path.dirname(ini) for _mod, ini in mod_inis])
+    for mod, ini in mod_inis:
         lst.append(f'[{mod}]\nini = "{ini}"')
 
     lst.append('\n[success]')
