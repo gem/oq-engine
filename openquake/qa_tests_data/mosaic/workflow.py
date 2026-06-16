@@ -100,7 +100,7 @@ def ghm(basedir):
 
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
-    lst.append('out_types = ["hcurves", "hmaps-stats"]')
+    lst.append('out_types = ["hmaps-stats"]')
     return save(basedir, 'GHM.toml', '\n'.join(lst))
 
 
