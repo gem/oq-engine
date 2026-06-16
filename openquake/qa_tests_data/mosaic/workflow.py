@@ -81,8 +81,10 @@ def extract(basedir, job_ini):
     """
     out = []
     for cwd, dirs, files in os.walk(basedir):
+        if '.git' in dirs:
+            dirs.remove('.git')
         for model, mod in zip(MODELS, MODELDIRS):
-            for dirname in dirs:
+            for dirname in dirs:                    
                 if dirname == mod:
                     out.append((model, os.path.join(cwd, mod, job_ini)))
     return sorted(out)
@@ -91,7 +93,7 @@ def extract(basedir, job_ini):
 def ghm(basedir):
     "Build GHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
-    add_checkout(lst, MODELS)
+    add_checkout(lst, MODELDIRS)
     for mod, ini in extract(basedir, 'job.ini'):
         lst.append(f'[{mod}]\nini = "{ini}"')
 
