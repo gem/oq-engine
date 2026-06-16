@@ -177,8 +177,8 @@ Response:
 A JSON object containing:
 
 - an 'exposure_by_lse' key corresponding to a pandas DataFrame; the names of the columns dynamically
-include geographic tags (e.g., "ID_0", "ID_1"), exposure values (e.g., "number", "structural", "occupants_day", etc.),
-and the calculated tier column ("liquefaction_lse_tier" or "landslide_lse_tier" depending on the chosen peril).
+  include geographic tags (e.g., "ID_0", "ID_1"), exposure values (e.g., "number", "structural", "occupants_day", etc.),
+  and the calculated tier column ("liquefaction_lse_tier" or "landslide_lse_tier" depending on the chosen peril).
 - a 'column_descriptions' dictionary containing a description for each exposure type present in the DataFrame.
 
 
