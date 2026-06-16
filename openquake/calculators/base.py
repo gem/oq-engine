@@ -303,7 +303,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, remove=False,
-            shutdown=False, **kw):
+            shutdown=False, name='JOB', **kw):
         """
         Run the calculation and return the exported outputs.
 
@@ -373,7 +373,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
                         os.remove(self.datastore.tempname)
-        return getattr(self, 'exported', {})
+        exportdic = getattr(self, 'exported', {})
+        exportdic[name] = name
+        return exportdic
 
     def core_task(*args):
         """

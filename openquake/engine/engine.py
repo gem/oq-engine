@@ -218,7 +218,7 @@ def run_calc(log):
         workflow = oqparam.calculation_mode == 'workflow'
         set_concurrent_tasks_default(calc, 1 if workflow else 2)
         t0 = time.time()
-        calc.run(shutdown=True)
+        calc.run(shutdown=True, name=getattr(log, 'name', 'JOB{log.calc_id}'))
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         calc.datastore.close()
@@ -338,12 +338,11 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(job,) for job in jobctxs]
-            names = []
+            allargs = []
             for job in jobctxs:
-                name = f"{job.params['mosaic_model']}{job.calc_id}"
-                names.append(name)
-            parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
+                job.name = f"{job.params['mosaic_model']}{job.calc_id}"
+                allargs.append((job,))
+            parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
