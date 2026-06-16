@@ -92,7 +92,7 @@ def extract(basedir, job_ini):
 
 
 def ghm(basedir):
-    "Build GHM.toml"
+    "Build generatedGHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
     add_checkout(lst, MODELDIRS)
     for mod, ini in extract(basedir, 'job.ini'):
@@ -101,7 +101,7 @@ def ghm(basedir):
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
     lst.append('out_types = ["hmaps-stats"]')
-    return save(basedir, 'GHM.toml', '\n'.join(lst))
+    return save(basedir, 'generatedGHM.toml', '\n'.join(lst))
 
 
 def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
