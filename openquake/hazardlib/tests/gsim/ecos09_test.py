@@ -21,7 +21,8 @@ Implements the tests for ECOS (2009) GMPE for macroseismic intensity
 
 Test data generated from source code provided by Philippe Roth
 """
-from openquake.hazardlib.gsim.ecos_2009 import ECOS2009, ECOS2009Highest
+from openquake.hazardlib.gsim.ecos_2009 import (
+    ECOS2009, ECOS2009Highest, ECOS2009VariableDepth, ECOS2009FixedDepth)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Discrepency percentages to be applied to all tests
@@ -48,3 +49,19 @@ class ECOS2009HighestTestCase(ECOS2009TestCase):
     MEAN_FILE = "ecos_2009/ecos09_H_mean.csv"
     # File contaning the results for the Total Standard Deviation
     STD_FILE = "ecos_2009/ecos09_H_stDev.csv"
+
+
+class ECOS2009VariableDepthTestCase(ECOS2009TestCase):
+    GSIM_CLASS = ECOS2009VariableDepth
+    # File containing the results for the Mean
+    MEAN_FILE = "ecos_2009/ecos09_VD_mean.csv"
+    # File contaning the results for the Total Standard Deviation
+    STD_FILE = "ecos_2009/ecos09_VD_stDev.csv"
+
+
+class ECOS2009FixedDepthTestCase(ECOS2009TestCase):
+    GSIM_CLASS = ECOS2009FixedDepth
+    # File containing the results for the Mean
+    MEAN_FILE = "ecos_2009/ecos09_FD_mean.csv"
+    # File contaning the results for the Total Standard Deviation
+    STD_FILE = "ecos_2009/ecos09_FD_stDev.csv"

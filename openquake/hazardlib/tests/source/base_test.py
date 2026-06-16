@@ -145,7 +145,7 @@ class SampleRupturesTestCase(unittest.TestCase):
         <hypoDepth depth="4" probability="1"/>
       </hypoDepthDist>
     </pointSource>''')
-        ps.sampling = numpy.array([(1, 1, 0)], sampling_dt)
+        ps.sampling = numpy.array([(0, 1, 1)], sampling_dt)
         mags_rates = list(ps.get_annual_occurrence_rates())
         mags, rates = zip(*mags_rates)
         ebrs = list(ps.sample_ruptures(num_ses=100, ses_seed=42))

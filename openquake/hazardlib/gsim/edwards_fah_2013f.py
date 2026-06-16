@@ -18,6 +18,7 @@
 
 """
 Module exports
+:class:`EdwardsFah2013Foreland3Bars`,
 :class:`EdwardsFah2013Foreland10Bars`,
 :class:`EdwardsFah2013Foreland20Bars`,
 :class:`EdwardsFah2013Foreland30Bars`,
@@ -28,12 +29,26 @@ Module exports
 :class:`EdwardsFah2013Foreland120Bars`
 """
 
+import numpy as np
+from scipy.constants import g
+
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
-    EdwardsFah2013Alpine10Bars)
+    EdwardsFah2013Alpine10Bars, _compute_mean, _compute_term_d)
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
-    COEFFS_FORELAND_10Bars, COEFFS_FORELAND_20Bars, COEFFS_FORELAND_30Bars,
-    COEFFS_FORELAND_50Bars, COEFFS_FORELAND_60Bars, COEFFS_FORELAND_75Bars,
+    COEFFS_FORELAND_3Bars, COEFFS_FORELAND_10Bars,
+    COEFFS_FORELAND_20Bars, COEFFS_FORELAND_30Bars, COEFFS_FORELAND_50Bars,
+    COEFFS_FORELAND_60Bars, COEFFS_FORELAND_75Bars,
     COEFFS_FORELAND_90Bars, COEFFS_FORELAND_120Bars)
+
+
+def _get_cmag1(cmag35, cmag41, cmag51, mag):
+    mag = np.asarray(mag)
+    return np.where(mag <= 4, cmag35, np.where(mag <= 5, cmag41, cmag51))
+
+
+def _get_cmag2(cmag4, cmag5, cmag6, mag):
+    mag = np.asarray(mag)
+    return np.where(mag <= 4, cmag4, np.where(mag <= 5, cmag5, cmag6))
 
 
 class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
@@ -48,6 +63,47 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
     therefore this GMPE is region specific".
     """
     COEFFS = COEFFS_FORELAND_10Bars
+
+
+class EdwardsFah2013Foreland3Bars(EdwardsFah2013Foreland10Bars):
+    """
+    This class extends :class:`EdwardsFah2013Foreland10Bars`
+    and implements the 3.3Bars Model :class:`EdwardsFah2013Foreland3Bars`
+    """
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        super().compute(ctx, imts, mean, sig, tau, phi)
+
+        for m, imt in enumerate(imts):
+            C3 = COEFFS_FORELAND_3Bars[imt]
+            C10 = self.COEFFS[imt]
+
+            cmag1 = _get_cmag1(
+                C3['cmag35'], C3['cmag41'], C3['cmag51'], ctx.mag)
+            cmag2 = _get_cmag2(
+                C3['cmag4'], C3['cmag5'], C3['cmag6'], ctx.mag)
+            term_dist = _compute_term_d(C10, ctx.mag, ctx.rrup)
+            mean_10bars = _compute_mean(C10, ctx.mag, term_dist)
+            c0 = cmag1 + cmag2 * ctx.mag
+            mean_adjustment = (
+                C3['c1'] + C3['c2'] * term_dist +
+                C3['c3'] * term_dist ** 2 +
+                C3['c4'] * term_dist ** 3 +
+                C3['c5'] * term_dist ** 4)
+            log10_mean_3bar = mean_10bars + c0 - mean_adjustment
+
+            # Convert all IMTs to natural log of g for consistency with OpenQuake's internal
+            # representation. Note that PGV is recomputed and overwritten in this method. So,
+            # we need to take the log10 again.
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log(10 ** log10_mean_3bar / (g * 100.))
+            else:
+                mean[m] = np.log(10 ** log10_mean_3bar)
 
 
 class EdwardsFah2013Foreland20Bars(EdwardsFah2013Foreland10Bars):
