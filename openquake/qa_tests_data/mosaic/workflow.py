@@ -87,7 +87,7 @@ def extract(basedir, job_ini):
         for model, mod in zip(MODELS, MODELDIRS):
             for dirname in dirs:                    
                 if dirname == mod:
-                    out.append((model, os.path.join(cwd, mod, job_ini)))
+                    out.append((model, os.path.join(cwd, mod, 'in', job_ini)))
     return sorted(out)
 
 
