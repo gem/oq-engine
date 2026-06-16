@@ -24,7 +24,7 @@ from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
 
 
-def main(mosaic_dir, toml:bool=False, cache:str='false', kfilter:str=''):
+def main(mosaic_dir, toml:bool=False, *, cache:str='false', kfilter:str=''):
     """
     Storing global hazard mosaic
     """
