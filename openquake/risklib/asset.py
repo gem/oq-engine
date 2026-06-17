@@ -610,7 +610,7 @@ class AssetCollection(object):
         :param secondary_peril:
             either "liquefaction" or "landslide"
         :param exposure_hdf5:
-            a HDF5 file to read region names from
+            a HDF5 file to read region names from (default: None)
         :param discard_empty:
             if True, discard from the output all tier bins with no assets
             (default: True)
@@ -622,28 +622,14 @@ class AssetCollection(object):
             lse_col = "AllstadtEtAl2022Liquefaction_LSE"
             tier_col = "liquefaction_lse_tier"
             bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-            labels = [
-                "<0.005",
-                "0.005-0.01",
-                "0.01-0.02",
-                "0.02-0.05",
-                "0.05-0.1",
-                "0.1-0.2",
-                ">0.2",
-            ]
+            labels = ["<0.005", "0.005-0.01", "0.01-0.02", "0.02-0.05",
+                      "0.05-0.1", "0.1-0.2", ">0.2"]
         elif secondary_peril == "landslide":
             lse_col = "AllstadtEtAl2022Landslides_LSE"
             tier_col = "landslide_lse_tier"
             bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-            labels = [
-                "<0.002",
-                "0.002-0.01",
-                "0.01-0.02",
-                "0.02-0.05",
-                "0.05-0.1",
-                "0.1-0.2",
-                ">0.2",
-            ]
+            labels = ["<0.002", "0.002-0.01", "0.01-0.02", "0.02-0.05",
+                      "0.05-0.1", "0.1-0.2", ">0.2"]
         else:
             raise ValueError(
                 "secondary_peril must be either 'liquefaction' or 'landslide'")
