@@ -50,7 +50,7 @@ from django.shortcuts import render
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -2435,10 +2435,6 @@ def can_extract(request, resource):
     return False
 
 
-def _decode(v):
-    return v.decode('utf-8') if isinstance(v, bytes) else v
-
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2532,7 +2528,7 @@ def extract_html_table(request, calc_id, name):
 
     # Decode byte strings to plain str
     table_rows = [
-        list(zip(table_header, [_decode(v) for v in row]))
+        list(zip(table_header, [decode(v) for v in row]))
         for row in table_contents
     ]
 
