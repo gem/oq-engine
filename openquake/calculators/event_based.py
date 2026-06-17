@@ -605,7 +605,7 @@ def in_mosaic(rup_array):
 
 def identical_to_any(group, groups):
     """
-    :returns: True if the grp is contained in the grps
+    :returns: True if the grp is contained in the groups
     """
     identical = numpy.ones(len(groups), bool)
     for g, grp in enumerate(groups):
@@ -702,6 +702,8 @@ class EventBasedCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[sg_id]
             if sent and identical_to_any(sg, sent):
                 # do not send twice the same group, happens only in kor_small
+                # TODO: see if we can improve this logic, for instance by
+                # not keeping the duplicated groups in the first place
                 continue
             sent.append(sg)
 
