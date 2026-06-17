@@ -153,7 +153,10 @@ def save_performance(dstore, calcs, operations):
 
 def main(postjob: str, workflow_id: int, calc_id: int, arg: str):
     """
-    Useful for debugging errors in postjobs
+    Useful for debugging errors in postjobs. Here is an example for
+    hazard curves in mosaic calculations:
+
+    $ oq shell openquake.engine.postjobs import_outputs 319 330 '["hcurves"]'
     """
     postjob = globals()[postjob]
     with datastore.read(workflow_id, 'r+') as dstore:
