@@ -699,12 +699,6 @@ class AssetCollection(object):
             .sum()
             .reset_index()
         )
-        # Cast string columns to fixed-width numpy byte strings so the
-        # resulting structured array is serializable without allow_pickle=True.
-        # dtype('O') object columns always require pickle; '|S<n>' does not.
-        for col in geo_columns + [tier_col]:
-            max_len = int(result_df[col].str.len().max())
-            result_df[col] = result_df[col].to_numpy().astype(f'S{max_len}')
         # Add region names
         if exposure_hdf5:
             name_map = self.get_name_map(geo_columns, exposure_hdf5)
@@ -715,6 +709,12 @@ class AssetCollection(object):
                         lambda v: mapping.get(
                             v.decode('utf-8') if isinstance(v, bytes) else v,
                             '')))
+        # Cast string columns to fixed-width numpy byte strings so the
+        # resulting structured array is serializable without allow_pickle=True.
+        # dtype('O') object columns always require pickle; '|S<n>' does not.
+        for col in geo_columns + [tier_col]:
+            max_len = int(result_df[col].str.len().max())
+            result_df[col] = result_df[col].to_numpy().astype(f'S{max_len}')
         return result_df
 
     def agg_by_site(self):
