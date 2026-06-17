@@ -98,6 +98,8 @@ def ghm(basedir, job_ini='job.ini'):
     add_checkout(lst, [os.path.dirname(os.path.dirname(ini))
                        for _mod, ini in mod_inis])
     for mod, ini in mod_inis:
+        if mod == 'JPN':
+            mod = "JPA"
         lst.append(f'[{mod}]\nini = "{ini}"')
 
     lst.append('\n[success]')
