@@ -715,8 +715,9 @@ class AssetCollection(object):
         string_cols = geo_columns + [tier_col] + list(
             name_map.keys() if exposure_hdf5 else [])
         for col in string_cols:
-            max_len = int(result_df[col].str.len().max())
-            result_df[col] = result_df[col].to_numpy().astype(f'S{max_len}')
+            encoded = result_df[col].astype(str).str.encode('utf-8')
+            max_len = int(encoded.str.len().max())  # length in bytes
+            result_df[col] = encoded.to_numpy().astype(f'S{max_len}')
         return result_df
 
     def agg_by_site(self):
