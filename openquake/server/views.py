@@ -2528,7 +2528,7 @@ def extract_html_table(request, calc_id, name):
 
     # Decode byte strings to plain str
     table_rows = [
-        list(zip(table_header, [decode(v) for v in row]))
+        list(zip(table_header, decode(row)))
         for row in table_contents
     ]
 
