@@ -440,7 +440,7 @@ class CompositeSourceModel:
             for src in srcs:
                 src.id = src_id
                 src.offset = offset
-                offset += src.num_ruptures
+                offset += src.num_ruptures * src.multiplicity
                 if src.num_ruptures >= TWO30:
                     raise ValueError(
                         '%s contains more than 2**30 ruptures' % src)
