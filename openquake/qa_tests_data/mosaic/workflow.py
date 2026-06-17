@@ -85,6 +85,8 @@ def extract(basedir, job_ini):
             if skipdir in dirs:
                 dirs.remove(skipdir)
         for model, mod in zip(MODELS, MODELDIRS):
+            if mod == 'JPN':
+                mod = 'JPA'
             for dirname in dirs:                    
                 if dirname == mod:
                     out[model] = os.path.join(cwd, mod, 'in', job_ini)
@@ -95,7 +97,8 @@ def ghm(basedir, job_ini='job.ini'):
     "Build generatedGHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
     mod_inis = extract(basedir, job_ini)
-    add_checkout(lst, [os.path.dirname(ini) for _mod, ini in mod_inis])
+    add_checkout(lst, [os.path.dirname(os.path.dirname(ini))
+                       for _mod, ini in mod_inis])
     for mod, ini in mod_inis:
         lst.append(f'[{mod}]\nini = "{ini}"')
 
