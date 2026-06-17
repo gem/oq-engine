@@ -883,9 +883,13 @@ def extract_exposure_by_lse(dstore, what):
     avg_gmf_array = dstore['avg_gmf'][:]
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
+    if 'exposure' in oq.inputs:
+        exposure_hdf5 = oq.inputs['exposure'][0]
+    else:
+        exposure_hdf5 = None
     df = assetcol.aggregate_exposure_by_lse_tier(
         oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
-        discard_empty=discard_empty)
+        exposure_hdf5=exposure_hdf5, discard_empty=discard_empty)
     return df
 
 

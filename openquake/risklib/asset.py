@@ -575,9 +575,31 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
+    def get_name_map(self, geo_columns, exposure_hdf5):
+        """
+        For each ID_* column in geo_columns, look up the corresponding NAME_*
+        array in exposure_hdf5 (if it exists) and return a dict:
+            { 'NAME_2': {id2_str: name2_str, ...}, ... }
+        """
+        name_map = {}
+        with hdf5.File(exposure_hdf5) as f:
+            for col in geo_columns:
+                if not col.startswith('ID_'):
+                    continue
+                name_col = col.replace('ID_', 'NAME_', 1)
+                if name_col not in f:
+                    continue
+                ids = f[f'tagcol/{col}'][:]  # e.g. ['ET-AF', 'ET-AM', ...]
+                names = f[name_col][:]       # e.g. ['Afar', 'Amhara', ...]
+                name_map[name_col] = {
+                    i.decode('utf-8'): n.decode('utf-8')
+                    for i, n in zip(ids, names)
+                }
+        return name_map
+
     def aggregate_exposure_by_lse_tier(
             self, aggregate_by, avg_gmf_array, all_imts, secondary_peril,
-            discard_empty=True):
+            exposure_hdf5=None, discard_empty=True):
         """
         :param aggregate_by:
             a list of lists of tag names (e.g., [['ID_0']])
@@ -587,6 +609,8 @@ class AssetCollection(object):
             IMT names including secondary perils
         :param secondary_peril:
             either "liquefaction" or "landslide"
+        :param exposure_hdf5:
+            a HDF5 file to read region names from
         :param discard_empty:
             if True, discard from the output all tier bins with no assets
             (default: True)
@@ -681,6 +705,16 @@ class AssetCollection(object):
         for col in geo_columns + [tier_col]:
             max_len = int(result_df[col].str.len().max())
             result_df[col] = result_df[col].to_numpy().astype(f'S{max_len}')
+        # Add region names
+        if exposure_hdf5:
+            name_map = self.get_name_map(geo_columns, exposure_hdf5)
+            for name_col, mapping in name_map.items():
+                id_col = name_col.replace('NAME_', 'ID_', 1)
+                result_df[name_col] = (
+                    result_df[id_col].apply(
+                        lambda v: mapping.get(
+                            v.decode('utf-8') if isinstance(v, bytes) else v,
+                            '')))
         return result_df
 
     def agg_by_site(self):
