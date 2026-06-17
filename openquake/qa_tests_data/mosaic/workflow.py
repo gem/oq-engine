@@ -95,7 +95,8 @@ def ghm(basedir, job_ini='job.ini'):
     "Build generatedGHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
     mod_inis = extract(basedir, job_ini)
-    add_checkout(lst, [os.path.dirname(ini) for _mod, ini in mod_inis])
+    add_checkout(lst, [os.path.dirname(os.path.dirname(ini))
+                       for _mod, ini in mod_inis])
     for mod, ini in mod_inis:
         lst.append(f'[{mod}]\nini = "{ini}"')
 
