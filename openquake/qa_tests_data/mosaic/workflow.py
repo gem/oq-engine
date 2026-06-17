@@ -85,6 +85,8 @@ def extract(basedir, job_ini):
             if skipdir in dirs:
                 dirs.remove(skipdir)
         for model, mod in zip(MODELS, MODELDIRS):
+            if mod == 'JPN':
+                mod = 'JPA'
             for dirname in dirs:                    
                 if dirname == mod:
                     out[model] = os.path.join(cwd, mod, 'in', job_ini)
@@ -98,8 +100,6 @@ def ghm(basedir, job_ini='job.ini'):
     add_checkout(lst, [os.path.dirname(os.path.dirname(ini))
                        for _mod, ini in mod_inis])
     for mod, ini in mod_inis:
-        if mod == 'JPN':
-            mod = "JPA"
         lst.append(f'[{mod}]\nini = "{ini}"')
 
     lst.append('\n[success]')
