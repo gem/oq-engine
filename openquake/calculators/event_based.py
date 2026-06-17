@@ -603,6 +603,20 @@ def in_mosaic(rup_array):
     return slice(None)
 
 
+def identical_to_any(group, groups):
+    """
+    :returns: True if the grp is contained in the groups
+    """
+    identical = numpy.ones(len(groups), bool)
+    for g, grp in enumerate(groups):
+        if len(group) != len(grp):
+            identical[g] = False
+        else:
+            for src1, src2 in zip(grp, group):
+                identical[g] *= src1 is src2
+    return identical.any()
+
+
 @base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -682,8 +696,17 @@ class EventBasedCalculator(base.HazardCalculator):
         cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
+
+        sent = []
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
+            if sent and identical_to_any(sg, sent):
+                # do not send twice the same group, happens in kor_small
+                # TODO: see if we can improve this logic, for instance by
+                # not keeping the duplicated groups in the first place
+                continue
+            sent.append(sg)
+
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed

@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
-from openquake.hazardlib.source_group import CompositeSourceModel
+from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
@@ -185,6 +185,7 @@ def add_semicolons(src_groups):
         for src in sg:
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
+        srcs = get_unique(srcs)
         if len(srcs) > 1:
             # happens in logictree/case_01/rup.ini
             for i, src in enumerate(srcs):
@@ -550,14 +551,12 @@ def reduce_sources(sources_with_same_id, full_lt, event_based):
     # first reduce identical sources having the same id(src)
     # tested in LogictreeTestCase.test_case_08, where <PoinstSource 2>
     # appears 3 times
-    unique = {}
-    for src in sources_with_same_id:
-        unique[id(src)] = src
+    unique = get_unique(sources_with_same_id)
     out = []
-    add_checksums(unique.values())
+    add_checksums(unique)
     # in LogicTreeCase2ClassicalPSHA there 81 unique sources
     # grouped in 9 groups of 9 sources each with the same checksum
-    for srcs in general.groupby(unique.values(), checksum).values():
+    for srcs in general.groupby(unique, checksum).values():
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
         src = srcs[0]
