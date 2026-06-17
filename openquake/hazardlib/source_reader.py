@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
-from openquake.hazardlib.source_group import CompositeSourceModel
+from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.logictree import RuntimeSourceModelLT
 from openquake.hazardlib.lt import apply_uncertainties
@@ -551,16 +551,6 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def get_unique(sources):
-    """
-    :returns: remove redundant identical sources
-    """
-    unique = {}
-    for src in sources:
-        unique[id(src)] = src
-    return unique.values()
-
-    
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
