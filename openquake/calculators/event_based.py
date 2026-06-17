@@ -701,7 +701,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
             if sent and identical_to_any(sg, sent):
-                # do not send twice the same group, happens only in kor_small
+                # do not send twice the same group, happens in kor_small
                 # TODO: see if we can improve this logic, for instance by
                 # not keeping the duplicated groups in the first place
                 continue
