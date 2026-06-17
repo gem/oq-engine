@@ -621,13 +621,13 @@ class AssetCollection(object):
         if secondary_peril == "liquefaction":
             lse_col = "AllstadtEtAl2022Liquefaction_LSE"
             tier_col = "liquefaction_lse_tier"
-            bins = [-numpy.inf, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+            bins = [0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
             labels = ["<0.005", "0.005-0.01", "0.01-0.02", "0.02-0.05",
                       "0.05-0.1", "0.1-0.2", ">0.2"]
         elif secondary_peril == "landslide":
             lse_col = "AllstadtEtAl2022Landslides_LSE"
             tier_col = "landslide_lse_tier"
-            bins = [-numpy.inf, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
+            bins = [0, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
             labels = ["<0.002", "0.002-0.01", "0.01-0.02", "0.02-0.05",
                       "0.05-0.1", "0.1-0.2", ">0.2"]
         else:
@@ -636,7 +636,7 @@ class AssetCollection(object):
         # Extract mean values (axis 0 = mean) for the targeted peril.
         # avg_gmf_array has shape (statistics, sites, imts), so lse_values will
         # be a 1D array of length n_sites
-        n_stats, n_sites, n_imts = avg_gmf_array.shape
+        _n_stats, n_sites, _n_imts = avg_gmf_array.shape
         lse_idx = all_imts.index(lse_col)
         lse_values = avg_gmf_array[0, :, lse_idx]
         # Build a site-level DataFrame.
@@ -646,7 +646,7 @@ class AssetCollection(object):
                 lse_col: lse_values,
         })
         # Bin continuous LSE values into discrete tiers.
-        # right=False makes each bin left-colsed and right-open
+        # right=False makes each bin left-closed and right-open
         # e.g. [0.005, 0.01)
         # resulting in a pandas Categorical column.
         gmf_df[tier_col] = pandas.cut(gmf_df[lse_col], bins=bins,
