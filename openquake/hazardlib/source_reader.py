@@ -550,7 +550,13 @@ def get_unique(sources):
         unique[id(src)] = src
     return unique.values()
 
-    
+
+def assert_unique(sources):
+    n = len(sources)
+    nu = len(get_unique(sources))
+    assert nu == n, (nu, n)
+
+
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
@@ -632,4 +638,6 @@ def _build_csm(oq, full_lt, groups, event_based):
     logging.info('reduce_sources was called %d times', red_sources)
     add_semicolons(src_groups)
     csm = CompositeSourceModel(oq, full_lt, src_groups)
+    for sg in csm.src_groups:  # sanity check
+        assert_unique(sg)
     return csm
