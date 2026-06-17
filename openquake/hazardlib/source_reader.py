@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
-from openquake.hazardlib.source_group import CompositeSourceModel
+from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.valid import basename
@@ -541,22 +541,6 @@ def _build_groups(full_lt, smdict):
     return groups
 
 
-def get_unique(sources):
-    """
-    :returns: remove redundant identical sources
-    """
-    unique = {}
-    for src in sources:
-        unique[id(src)] = src
-    return unique.values()
-
-
-def assert_unique(sources):
-    n = len(sources)
-    nu = len(get_unique(sources))
-    assert nu == n, (nu, n)
-
-
 def reduce_sources(sources_with_same_id, full_lt, event_based):
     """
     :param sources_with_same_id: a list of sources with the same source_id
@@ -638,6 +622,4 @@ def _build_csm(oq, full_lt, groups, event_based):
     logging.info('reduce_sources was called %d times', red_sources)
     add_semicolons(src_groups)
     csm = CompositeSourceModel(oq, full_lt, src_groups)
-    for sg in csm.src_groups:  # sanity check
-        assert_unique(sg)
     return csm

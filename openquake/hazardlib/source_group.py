@@ -50,6 +50,25 @@ def _grp_id(blk):
     return src if isinstance(src, U16) else src.grp_id
 
 
+def get_unique(sources):
+    """
+    :returns: remove redundant identical sources
+    """
+    unique = {}
+    for src in sources:
+        unique[id(src)] = src
+    return unique.values()
+
+
+def assert_unique(sources):
+    """
+    Raise an error if there are identical sources
+    """
+    n = len(sources)
+    nu = len(get_unique(sources))
+    assert nu == n, (nu, n)
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -318,6 +337,7 @@ class CompositeSourceModel:
         self.code = {}  # srcid -> code
         for grp_id, sg in enumerate(self.src_groups):
             assert len(sg)  # sanity check
+            assert_unique(sg)
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
@@ -430,11 +450,12 @@ class CompositeSourceModel:
 
     def fix_src_offset(self):
         """
-        Set the src.offset field for each source
+        Set the src.offset field for each source with the same basename
         """
         src_id = 0
-        for srcs in groupby(self.get_sources(), self.basename).values():
-            offset = 0
+        unique = get_unique(self.get_sources())
+        for srcs in groupby(unique, self.basename).values():
+            offset = 0  # TODO: why not before the loop?
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
             for src in srcs:

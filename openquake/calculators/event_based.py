@@ -603,6 +603,18 @@ def in_mosaic(rup_array):
     return slice(None)
 
 
+def is_identical(grp, orig_grp):
+    """
+    :returns: True if the two groups contains identical sources
+    """
+    if len(grp) != len(orig_grp):
+        return False
+    identical = True
+    for src1, src2 in zip(grp, orig_grp):
+        identical *= src1 is src2
+    return identical
+
+
 @base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -682,8 +694,13 @@ class EventBasedCalculator(base.HazardCalculator):
         cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
+
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
+            if sg_id and is_identical(sg, self.csm.src_groups[sg_id - 1]):
+                # do not send twice the same group, happens only in KOR
+                continue
+
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed

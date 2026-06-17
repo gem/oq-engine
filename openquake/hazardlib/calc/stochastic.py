@@ -120,9 +120,15 @@ def sample_cluster(group, num_ses, ses_seed):
     eb_ruptures = []
     sampling = unique_sampling(group)
     seed = group[0].serial(ses_seed)
+    offset = 0
+    print(group, group.grp_id)
     for trt_smr, samples, _smweight in sampling:
-        eb_ruptures.extend(_sample_cluster(
-            group, trt_smr, samples, num_ses, seed, ses_seed))
+        for src in group:
+            src.offset = offset
+            offset += src.num_ruptures
+        ebrs = _sample_cluster(
+            group, trt_smr, samples, num_ses, seed, ses_seed)
+        eb_ruptures.extend(ebrs)
     return eb_ruptures
 
 
@@ -138,19 +144,16 @@ def _sample_cluster(group, trt_smr, samples, num_ses, seed, ses_seed):
     # Compute the number of occurrences of the cluster
     if rate is None:  # time dependent cluster
         if hasattr(group, 'grp_probability'):
-            grp_p = getattr(group, 'grp_probability')
-            tmp = rng.random(samples * num_ses)
-            tot_num_occ = numpy.sum(tmp < grp_p)
+            grp_p = group.grp_probability
+            tot_num_occ = (rng.random(samples*num_ses) < grp_p).sum()
         else:
-            msg = 'Rate or Cluster probability of occurrence not defined'
-            raise ValueError(msg)
+            raise ValueError('Rate or cluster probability not defined')
     else:  # poissonian sources with ClusterPoissonTOM
-        tmp = rng.poisson(rate * tom.time_span * samples, num_ses)
-        tot_num_occ = numpy.sum(tmp)
+        tot_num_occ = rng.poisson(rate*tom.time_span*samples, num_ses).sum()
 
     # Check number of occurrences of the cluster
     if tot_num_occ < 1:
-        return eb_ruptures
+        return []
 
     # Now process the sources included in the cluster. Possible cases:
     # * Traditional cluster -> all the sources occur
@@ -165,12 +168,10 @@ def _sample_cluster(group, trt_smr, samples, num_ses, seed, ses_seed):
 
         # Loop over the sources in the cluster and add them to 'allrups'
         for src in group:
-            cnt = 0
             for rup in src.iter_ruptures():
                 rup.src_id = src.id
                 allrups.append(rup)
-                cnt += 1
-            rupids.extend(src.offset + numpy.arange(cnt))
+            rupids.extend(src.offset + numpy.arange(src.num_ruptures))
 
         # Create the EB ruptures
         for rup, rupid in zip(allrups, rupids):
@@ -200,8 +201,8 @@ def _sample_cluster(group, trt_smr, samples, num_ses, seed, ses_seed):
     return eb_ruptures
 
 
-def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
-
+def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr,
+                             seed, ses_seed):
     eb_ruptures = []
 
     # Compute the number of occurrences of each (mutex) source. One source
@@ -218,7 +219,6 @@ def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
     # Find the index of the ruptures generated at each occurrence of
     # a source and create the EBRuptures
     for src, src_nocc in zip(group, src_noccs):
-
         if src_nocc < 1:
             continue
 
@@ -260,11 +260,11 @@ def _get_rups_from_mutex_src(group, tot_num_occ, trt_smr, seed, ses_seed):
                 ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
                 ebr.seed = ebr.id + ses_seed
                 eb_ruptures.append(ebr)
-
     return eb_ruptures
 
 
-def _get_rups_from_indep_src(group, tot_num_occ, trt_smr, seed, ses_seed):
+def _get_rups_from_indep_src(group, tot_num_occ, trt_smr,
+                             seed, ses_seed):
 
     eb_ruptures = []
 
@@ -278,7 +278,6 @@ def _get_rups_from_indep_src(group, tot_num_occ, trt_smr, seed, ses_seed):
 
     # Create the EBRuptures
     for nocc, src in zip(occ_per_src, group):
-
         if nocc < 1:
             continue
 
