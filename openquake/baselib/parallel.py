@@ -198,6 +198,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+from multiprocessing.connection import wait
 import multiprocessing.shared_memory as shmem
 import psutil
 import numpy
@@ -1101,14 +1102,38 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
     :param logfinish: if True, log a progress message
     :param names: optionally, give names to the spawned processes
     """
+    if names:
+        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
         return
+    tot = len(allargs)
+    allargs = allargs[::-1]  # so that the first argument is submitted first
+    procs = {}  # sentinel -> process
+    n = 1
+    while allargs:
+        args = allargs.pop()
+        name = names.pop() if names else None
+        proc = mp_context.Process(target=func, args=args, name=name)
+        proc.start()
+        procs[proc.sentinel] = proc
+        while len(procs) >= nprocs:  # wait for something to finish
+            for finished in wait(procs):
+                procs[finished].join()
+                del procs[finished]
+                if logfinish:
+                    logging.info('Finished job %s [%d of %d]', name, n, tot)
+                n += 1
 
-    with mp_context.Pool(nprocs) as pool:
-        for res in pool.imap_unordered(func, allargs):
-            logging.info('Finished %(name)s' % res)
+    while procs:
+        for finished in wait(procs):
+            name = procs[finished].name or ''
+            procs[finished].join()
+            del procs[finished]
+            if logfinish:
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
+            n += 1
 
 
 if oq_distribute() == 'slurm':
