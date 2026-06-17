@@ -603,16 +603,18 @@ def in_mosaic(rup_array):
     return slice(None)
 
 
-def is_identical(grp, orig_grp):
+def identical_to_any(group, groups):
     """
-    :returns: True if the two groups contains identical sources
+    :returns: True if the grp is contained in the grps
     """
-    if len(grp) != len(orig_grp):
-        return False
-    identical = True
-    for src1, src2 in zip(grp, orig_grp):
-        identical *= src1 is src2
-    return identical
+    identical = numpy.ones(len(groups), bool)
+    for g, grp in enumerate(groups):
+        if len(group) != len(grp):
+            identical[g] = False
+        else:
+            for src1, src2 in zip(grp, group):
+                identical[g] *= src1 is src2
+    return identical.any()
 
 
 @base.calculators.add('event_based', 'scenario')
@@ -695,11 +697,13 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
 
+        sent = []
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
-            if sg_id and is_identical(sg, self.csm.src_groups[sg_id - 1]):
-                # do not send twice the same group, happens only in KOR
+            if sent and identical_to_any(sg, sent):
+                # do not send twice the same group, happens only in kor_small
                 continue
+            sent.append(sg)
 
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
