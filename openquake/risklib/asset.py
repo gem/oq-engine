@@ -712,7 +712,9 @@ class AssetCollection(object):
         # Cast string columns to fixed-width numpy byte strings so the
         # resulting structured array is serializable without allow_pickle=True.
         # dtype('O') object columns always require pickle; '|S<n>' does not.
-        for col in geo_columns + [tier_col]:
+        string_cols = geo_columns + [tier_col] + list(
+            name_map.keys() if exposure_hdf5 else [])
+        for col in string_cols:
             max_len = int(result_df[col].str.len().max())
             result_df[col] = result_df[col].to_numpy().astype(f'S{max_len}')
         return result_df
