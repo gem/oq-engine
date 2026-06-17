@@ -1893,7 +1893,7 @@ def read_mosaic_df(mosaic_dir=''):
         if not os.path.exists(mosaic_boundaries_file):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
-    print(f'Reading {mosaic_boundaries_file}')
+    logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
     codes = sorted(df.code.unique())
     assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
