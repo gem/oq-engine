@@ -121,7 +121,6 @@ def sample_cluster(group, num_ses, ses_seed):
     sampling = unique_sampling(group)
     seed = group[0].serial(ses_seed)
     offset = 0
-    print(group, group.grp_id)
     for trt_smr, samples, _smweight in sampling:
         for src in group:
             src.offset = offset
