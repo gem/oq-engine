@@ -673,8 +673,9 @@ class AssetCollection(object):
         # tier_col value of its site.
         merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
         # Sum all exposure value fields for each unique combination
-        # like (ID_0, ID_2, tier). observed=True keeps tier bins in the
-        # output only if any assets fall in it
+        # like (ID_0, ID_2, tier). observed=False keeps tier bins in the
+        # output even if no assets fall in it; the exporter has a
+        # parameter to filter them out if desired.
         groupby_keys = geo_columns + [tier_col]
         result_df = (
             merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
