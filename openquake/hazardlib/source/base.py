@@ -316,11 +316,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         ebrs = []
         for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
             occs = partition(tot_occ, probs)
-            for i, (trt_smr, occ) in enumerate(zip(self.sampling['trt_smr'], occs)):
-                rupid = rid + i * self.num_ruptures
-                ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
-                                seed=rupid + TWO30 * self.id + ses_seed)
-                ebrs.append(ebr)
+            for i, (trt_smr, occ) in enumerate(
+                    zip(self.sampling['trt_smr'], occs)):
+                if occ:
+                    rupid = rid + i * self.num_ruptures
+                    ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
+                                    seed=rupid + TWO30 * self.id + ses_seed)
+                    ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):
