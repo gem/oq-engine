@@ -50,7 +50,7 @@ from django.shortcuts import render
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -147,6 +147,8 @@ EXTRACTABLE_RESOURCES = [
     'events',
     'exposure_metadata',
     'exposure_by_location',
+    'exposure_by_lse?secondary_peril=liquefaction',
+    'exposure_by_lse?secondary_peril=landslide',
     'gmf_data',
     'hcurves',
     'hmaps',
@@ -1865,6 +1867,50 @@ def exposure_by_mmi(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
+def exposure_by_lse(request, calc_id):
+    """
+    Return exposure aggregated by secondary peril LSE tiers and tags,
+    by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    secondary_peril = request.GET.get('secondary_peril')
+    assert secondary_peril in ['liquefaction', 'landslide'], (
+        'Please specify secondary_peril: "landslide" or "liquefaction"')
+    discard_empty = request.GET.get('discard_empty', ['1'])[0] == '1'
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(
+                ds,
+                f'exposure_by_lse?secondary_peril={secondary_peril}'
+                f'&discard_empty={discard_empty}')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'exposure_by_lse', tb),
+            content_type='text/plain', status=400)
+    column_description = {
+        col: description
+        for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
+        if col in df.columns}
+    response_data = {'column_descriptions': column_description,
+                     'exposure_by_lse': df.to_dict()}
+    return JsonResponse(response_data)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
     Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
@@ -1875,11 +1921,11 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    if not can_extract(request, what):
-        return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
+    if not can_extract(request, what + query_string):
+        return HttpResponseForbidden()
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2318,6 +2364,10 @@ def web_engine_get_outputs_impact(request, calc_id):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        gmf_cols = ds.read_df('gmf_data').columns
+        exposure_by_land_lse = "AllstadtEtAl2022Landslides_LSE" in gmf_cols
+        exposure_by_liq_lse = "AllstadtEtAl2022Liquefaction_LSE" in gmf_cols
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -2334,7 +2384,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
-                       aggrisk_tags=aggrisk_tags)
+                       aggrisk_tags=aggrisk_tags,
+                       exposure_by_liq_lse=exposure_by_liq_lse,
+                       exposure_by_land_lse=exposure_by_land_lse)
                   )
 
 
@@ -2387,6 +2439,9 @@ def can_extract(request, resource):
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
     summarize = get_bool_param(request, 'summarize')
+    secondary_peril = request.GET.get('secondary_peril')
+    if secondary_peril:
+        name += f'?secondary_peril={secondary_peril}'
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -2404,25 +2459,55 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     display_names = {'aggrisk_tags': 'Impact',
-                     'mmi_tags': 'Exposure by MMI',
                      'losses_by_site': 'Losses by site',
                      'losses_by_location': 'Losses by location',
-                     'exposure_by_location': 'Exposure by location'}
+                     'mmi_tags': 'Exposure by MMI',
+                     'exposure_by_location': 'Exposure by location',
+                     'exposure_by_lse?secondary_peril=liquefaction': (
+                        'Exposure by liquefaction LSE'),
+                     'exposure_by_lse?secondary_peril=landslide': (
+                        'Exposure by landslide LSE'),
+                     }
+    loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
+    exposure_names = ['mmi_tags', 'exposure_by_location',
+                      'exposure_by_lse?secondary_peril=liquefaction',
+                      'exposure_by_lse?secondary_peril=landslide']
     table_name = display_names[name] if name in display_names else name
+
+    # Identify string columns from dtype before formatting the headers.
+    string_short_names = {
+        col for col in table.columns
+        if str(table[col].dtype).startswith('S') or
+        table[col].dtype == object
+    }
+
     table_header = []
     for short_name in table.columns:
-        if short_name in AGGRISK_FIELD_DESCRIPTION:
+        display_name = ''
+        if name in loss_names and short_name in AGGRISK_FIELD_DESCRIPTION:
             display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
-        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
-            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
-        else:
-            display_name = ''
+        elif name in exposure_names:
+            clean_name = short_name
+            if short_name.startswith('value-'):
+                clean_name = short_name.split('value-')[1]
+            if clean_name in EXPOSURE_FIELD_DESCRIPTION:
+                display_name = EXPOSURE_FIELD_DESCRIPTION[clean_name]
         # avoiding to show the internal short names when showing
         # the summary table
         if summarize and name == 'aggrisk_tags':
             table_header.append(display_name)
         else:
             table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+
+    # string_columns must contain the formatted header strings that actually
+    # appear in table_header so that `header in string_columns` in the
+    # template matches correctly.
+    string_columns = {
+        header
+        for header, short_name in zip(table_header, table.columns)
+        if short_name in string_short_names
+    }
+
     table_contents = table.to_numpy()
     if summarize and name == 'aggrisk_tags':  # the impact table
         table_header = table_header[1:-1]
@@ -2440,13 +2525,21 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+
+    # Decode byte strings to plain str
+    table_rows = [
+        list(zip(table_header, decode(row)))
+        for row in table_contents
+    ]
+
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,
                    'is_summary': summarize,
                    'internal_name': name,
                    'table_name': table_name,
                    'table_header': table_header,
-                   'table_contents': table_contents})
+                   'table_rows': table_rows,
+                   'string_columns': string_columns})
 
 
 @csrf_exempt
