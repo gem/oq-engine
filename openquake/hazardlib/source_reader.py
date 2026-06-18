@@ -40,8 +40,7 @@ bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 sampling_dt = numpy.dtype([
     ('trt_smr', U32),
-    ('samples', U32),
-    ('smweight', F32)])
+    ('samples', U32)])
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -56,11 +55,11 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def sampling(samples, smweight, trt_smr):
+def sampling(samples, trt_smr):
     """
-    :returns: a structured array (samples, smweight, trt_smr) of length 1
+    :returns: a structured array (trt_smr, samples) of length 1
     """
-    return numpy.array([(trt_smr, samples, smweight)], sampling_dt)
+    return numpy.array([(trt_smr, samples)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -490,7 +489,6 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
-    R = len(full_lt.sm_rlzs)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
@@ -508,7 +506,6 @@ def _build_groups(full_lt, smdict):
                     '%s contains source(s) %s already present in %s' %
                     (value, common, rlz.value))
             src_groups.extend(extra)
-        smweight = rlz.weight if full_lt.num_samples else 1/R
         for src_group in src_groups:
             trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
@@ -518,8 +515,7 @@ def _build_groups(full_lt, smdict):
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:  # tested in case_83_eb
-                sampl = sampling(
-                    rlz.samples, smweight, trti * TWO24 + rlz.ordinal)
+                sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
                 if src.sampling is None:
                     # the first time
                     src.sampling = [sampl]

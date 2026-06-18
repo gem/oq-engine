@@ -222,7 +222,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
     samples = 1  # set by the engine
-    smweight = 1.  # set by the engine
     dt = 0  # set by the engine
 
     @abc.abstractproperty
@@ -298,7 +297,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         ebrs = []
-        for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
+        for i, (trt_smr, samples) in enumerate(self.sampling):
             for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
                 rupid = rid + i * self.num_ruptures
                 ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
