@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+import copy
 import zlib
 from dataclasses import dataclass
 import numpy
@@ -304,17 +305,21 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
 
     def sample_ruptures(self, num_ses, ses_seed):
         """
-        :param num_ses: number of stochastic event sets
+        :param num_ses: ses_per_logic_tree_path
+        :param ses_seed: ses_seed coming from the job.ini
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         samples = self.sampling['samples'].sum()
         triples = list(sample(self, num_ses * samples, seed))
-        probs = self.sampling['samples'] / samples
         array = chosen_array(self.sampling)
-        chosens = numpy.random.default_rng(seed).choice(
-            array, len(triples), p=probs)
+        if self.multiplicity > 1:
+            probs = self.sampling['samples'] / samples
+            chosens = numpy.random.default_rng(seed).choice(
+                array, len(triples), p=probs)
+        else:
+            chosens = [array] * len(triples)
         ebrs = []
         for (rup, rid, num_occ), chosen in zip(triples, chosens):
             rupid = rid + chosen['i'] * self.num_ruptures
@@ -322,6 +327,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
                 # tested in case_83_eb
+                rup = copy.copy(rup)
                 rup.occurrence_rate *= chosen['smweight']
             ebr = EBRupture(rup, self.id, chosen['trt_smr'], num_occ, rupid,
                             seed=rupid + TWO30 * self.id + ses_seed)
