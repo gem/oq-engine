@@ -775,7 +775,7 @@ hazard_uhs-std.csv
 
         fname = general.gettemp(str(view(
             'occ_by_trt_smr', self.calc.datastore)))
-        self.assertEqualFiles('expected/occ_by_trt_smr.csv', fname)
+        self.assertEqualFiles('expected/occ_by_trt_smr', fname)
         
         fname = general.gettemp(str(view(
             'event_based_mfd', self.calc.datastore)))
