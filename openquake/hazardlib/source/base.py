@@ -34,9 +34,12 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
 
+U32 = numpy.uint32
+F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
+chosen_dt = [('trt_smr', U32), ('i', U32), ('smweight', F32)]
 
 
 @dataclass
@@ -198,6 +201,15 @@ def timedep_sample(src, eff_num_ses, seed):
                 yield rup, rupid, num_occ
 
 
+def chosen_array(sampling_array):
+    """
+    Convert array (trt_smr, samples, smweight) -> (trt_smr, i, smweight)
+    """
+    arr = sampling_array.astype(chosen_dt)
+    arr['i'] = numpy.arange(len(arr))
+    return arr
+
+
 class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     Base class representing a seismic source, that is a structure generating
@@ -296,34 +308,24 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
+        sample = poisson_sample if is_poissonian(self) else timedep_sample
+        samples = self.sampling['samples'].sum()
+        triples = list(sample(self, num_ses * samples, seed))
+        probs = self.sampling['samples'] / samples
+        array = chosen_array(self.sampling)
+        chosens = numpy.random.default_rng(seed).choice(
+            array, len(triples), p=probs)
         ebrs = []
-        if is_poissonian(self):
-            for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
-                for rup, rid, num_occ in poisson_sample(
-                        self, num_ses*samples, seed + i):
-                    rupid = rid + i * self.num_ruptures
-                    if hasattr(rup, 'occurrence_rate'):
-                        # defined only for poissonian sources
-                        # needed to get convergency of the frequency to the rate
-                        # tested in case_83_eb
-                        rup.occurrence_rate *= smweight
-                    ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
-                                    seed=rupid + TWO30 * self.id + ses_seed)
-                    ebrs.append(ebr)
-        else:
-            for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
-                for rup, rid, num_occ in timedep_sample(
-                        self, num_ses*samples, seed + i):
-                    rupid = rid + i * self.num_ruptures
-                    if hasattr(rup, 'occurrence_rate'):
-                        # defined only for poissonian sources
-                        # needed to get convergency of the frequency to the rate
-                        # tested in case_83_eb
-                        rup.occurrence_rate *= smweight
-                    ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
-                                    seed=rupid + TWO30 * self.id + ses_seed)
-                    ebrs.append(ebr)
-
+        for (rup, rid, num_occ), chosen in zip(triples, chosens):
+            rupid = rid + chosen['i'] * self.num_ruptures
+            if hasattr(rup, 'occurrence_rate'):
+                # defined only for poissonian sources
+                # needed to get convergency of the frequency to the rate
+                # tested in case_83_eb
+                rup.occurrence_rate *= chosen['smweight']
+            ebr = EBRupture(rup, self.id, chosen['trt_smr'], num_occ, rupid,
+                            seed=rupid + TWO30 * self.id + ses_seed)
+            ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):
