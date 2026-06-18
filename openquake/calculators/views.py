@@ -32,7 +32,7 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg, sum_records)
+    get_array, group_array, fast_agg, fast_agg3, sum_records)
 from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.general import encode, decode
@@ -968,6 +968,18 @@ class GmpeExtractor(object):
             trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
+
+
+@view.add('occ_by_trt_smr')
+def view_occ_by_trt_smr(token, dstore):
+    """
+    Display the number of occurrences per trt_smr
+    """
+    try:
+        rups = dstore['filtered_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
+    return fast_agg3(rups, 'trt_smr', ['n_occ'])
 
 
 @view.add('extreme_gmvs')
