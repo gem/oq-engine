@@ -57,6 +57,18 @@
                   Show exposure by MMI table</a>
               </div>
               {% endif %}
+              {% if exposure_by_liq_lse %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/exposure_by_lse?secondary_peril=liquefaction" class="btn btn-sm">
+                  Show exposure by liquefaction LSE table</a>
+              </div>
+              {% endif %}
+              {% if exposure_by_land_lse %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/exposure_by_lse?secondary_peril=landslide" class="btn btn-sm">
+                  Show exposure by landslide LSE table</a>
+              </div>
+              {% endif %}
               {% endif %}
             </div>
             <div class="outputs-general-btns-center"></div>

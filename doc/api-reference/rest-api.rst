@@ -156,6 +156,32 @@ A JSON object containing:
   "occupants_avg",  "mmi".
 - a 'column_descriptions' dictionary containing a description for each exposure type.
 
+*****************************************
+GET /v1/calc/:calc_id/exposure_by_lse
+*****************************************
+
+Get exposure aggregated by secondary peril LSE (Liquefaction Spatial Extent or Landslide Spatial Extent) tiers and tags.
+
+NB: this URL is valid only for calculations that include the specified secondary peril.
+
+Otherwise, or if an invalid secondary_peril is provided, it returns a BadRequest error with HTTP code 400.
+It will return HTTP code 404 if the calculation ID is not found, and HTTP code 403 if the user lacks permission.
+
+Parameters:
+
+- secondary_peril (string, required): Must be exactly "liquefaction" or "landslide".
+- discard_empty (boolean/integer, optional): Pass 0 to keep tier bins with no assets. Defaults to 1 (true/discard empty bins).
+
+Response:
+
+A JSON object containing:
+
+- an 'exposure_by_lse' key corresponding to a pandas DataFrame; the names of the columns dynamically
+  include geographic tags (e.g., "ID_0", "ID_1"), exposure values (e.g., "number", "structural", "occupants_day", etc.),
+  and the calculated tier column ("liquefaction_lse_tier" or "landslide_lse_tier" depending on the chosen peril).
+- a 'column_descriptions' dictionary containing a description for each exposure type present in the DataFrame.
+
+
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
 ***********************************
