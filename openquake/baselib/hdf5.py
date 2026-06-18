@@ -405,17 +405,15 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
-    def import_df(self, name, df, calc_id=None):
+    def import_df(self, groupname, df):
         """
         Import a DataFrame in the File
         """
-        if calc_id is not None:
-            df['calc_id'] = calc_id
-        if name not in self:
-            self.create_df(name, df, 'gzip')
+        if groupname not in self:
+            self.create_df(groupname, df, 'gzip')
         else:
             for col in df.columns:
-                dset = self[f'{name}/{col}']
+                dset = self[f'{groupname}/{col}']
                 extend(dset, df[col].to_numpy())
 
     def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
