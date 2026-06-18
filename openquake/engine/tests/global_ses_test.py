@@ -146,6 +146,9 @@ def test_site_model():  # 5 sites
 
 
 def teardown_module():
+    dstore = read(RUP_HDF5)
+    occ_df = dstore.read_df('occ_by_trt_smr')
+    assert list(occ_df.columns) == ['trt_smr', 'n_occ', 'calc_id']
     if os.path.exists(RUP_HDF5):
         os.remove(RUP_HDF5)
     if last_job:

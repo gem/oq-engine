@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: storing `occ_by_trt_smr` in the SES.hdf5 file
   * Introduced `strict` flag to disable checks which are possibly too strict
   * Internal: storing the real `occurrence_rate` in the `ruptures` dataset,
     not multiplied by `smweight`
