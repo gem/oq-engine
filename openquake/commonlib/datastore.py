@@ -406,7 +406,7 @@ class DataStore(collections.abc.MutableMapping):
         if extra:
             for col, val in extra.items():
                 df[col] = val
-        hdf5.import_df(self, name, df)
+        self.hdf5.import_df(name, df)
 
     def flush(self):
         """
