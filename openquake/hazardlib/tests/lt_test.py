@@ -725,9 +725,12 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         srcs_rt = _sorted_srcs(csm_rt.src_groups)
         srcs_xml = _sorted_srcs(csm_xml.src_groups)
         for src_rt, src_xml in zip(srcs_rt, srcs_xml):
+            # Check the src params in each src group
             _assert_src_params(src_rt, src_xml)
+            # Sanity check of total computational cost per src
+            # being same between the approaches
             numpy.testing.assert_allclose(
-                src_rt.smweight, src_xml.smweight, atol=1e-10)
+                src_rt.weight, src_xml.weight, atol=1e-10)
 
     def test_bad_weights(self):
         """
