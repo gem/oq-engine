@@ -779,7 +779,7 @@ hazard_uhs-std.csv
         
         fname = general.gettemp(str(view(
             'event_based_mfd', self.calc.datastore)))
-        self.assertEqualFiles('expected/event_based_mfd.csv', fname)
+        self.assertEqualFiles('expected/event_based_mfd', fname)
 
     def test_case_84(self):
         # test maxMagGRRelativeNoMoBalance

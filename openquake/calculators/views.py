@@ -981,7 +981,10 @@ def view_occ_by_trt_smr(token, dstore):
         rups = dstore['ruptures'][:]
     arr = fast_agg3(rups, 'trt_smr', ['n_occ'])
     arr.sort(order='n_occ')
-    return arr
+    df = pandas.DataFrame(
+        dict(trt_smr=arr['trt_smr'], n_occ=arr['n_occ'])
+    ).set_index('trt_smr')
+    return df
 
 
 @view.add('extreme_gmvs')
