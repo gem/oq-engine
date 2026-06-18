@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: storing the real `occurrence_rate` in the `ruptures` dataset,
+    not multiplied by `smweight`
   * Fixed the slow tasks in AELO, due to accidental disabling of the filtering
 
   [Savas Ceylan]
