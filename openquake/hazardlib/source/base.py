@@ -38,7 +38,6 @@ U32 = numpy.uint32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
-chosen_dt = [('trt_smr', U32), ('i', U32)]
 
 
 @dataclass
@@ -200,13 +199,16 @@ def timedep_sample(src, eff_num_ses, seed):
                 yield rup, rupid, num_occ
 
 
-def chosen_array(sampling_array):
+def partition(tot_occ, probs):
     """
-    Convert array (trt_smr, samples) -> (trt_smr, i)
+    >>> partition(568, [.1, .2, .3, .4])
+    array([ 57, 114, 170, 227], dtype=uint32)
     """
-    arr = sampling_array.astype(chosen_dt)
-    arr['i'] = numpy.arange(len(arr))
-    return arr
+    out = numpy.zeros(len(probs), U32)
+    for i, prob in enumerate(probs[:-1]):
+        out[i] = round(tot_occ * prob)
+    out[-1] = tot_occ - out.sum()
+    return out
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -310,20 +312,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         samples = self.sampling['samples'].sum()
-        triples = list(sample(self, num_ses * samples, seed))
-        array = chosen_array(self.sampling)
-        if self.multiplicity > 1:
-            probs = self.sampling['samples'] / samples
-            chosens = numpy.random.default_rng(seed).choice(
-                array, len(triples), p=probs)
-        else:
-            chosens = [array] * len(triples)
+        probs = self.sampling['samples'] / samples
         ebrs = []
-        for (rup, rid, num_occ), chosen in zip(triples, chosens):
-            rupid = rid + chosen['i'] * self.num_ruptures
-            ebr = EBRupture(rup, self.id, chosen['trt_smr'], num_occ, rupid,
-                            seed=rupid + TWO30 * self.id + ses_seed)
-            ebrs.append(ebr)
+        for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
+            occs = partition(tot_occ, probs)
+            for i, (trt_smr, occ) in enumerate(zip(self.sampling['trt_smr'], occs)):
+                rupid = rid + i * self.num_ruptures
+                ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
+                                seed=rupid + TWO30 * self.id + ses_seed)
+                ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):
