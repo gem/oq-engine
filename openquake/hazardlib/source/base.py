@@ -296,19 +296,34 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
-        sample = poisson_sample if is_poissonian(self) else timedep_sample
         ebrs = []
-        for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
-            for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
-                rupid = rid + i * self.num_ruptures
-                if hasattr(rup, 'occurrence_rate'):
-                    # defined only for poissonian sources
-                    # needed to get convergency of the frequency to the rate
-                    # tested in case_83_eb
-                    rup.occurrence_rate *= smweight
-                ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
-                                seed=rupid + TWO30 * self.id + ses_seed)
-                ebrs.append(ebr)
+        if is_poissonian(self):
+            for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
+                for rup, rid, num_occ in poisson_sample(
+                        self, num_ses*samples, seed + i):
+                    rupid = rid + i * self.num_ruptures
+                    if hasattr(rup, 'occurrence_rate'):
+                        # defined only for poissonian sources
+                        # needed to get convergency of the frequency to the rate
+                        # tested in case_83_eb
+                        rup.occurrence_rate *= smweight
+                    ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
+                                    seed=rupid + TWO30 * self.id + ses_seed)
+                    ebrs.append(ebr)
+        else:
+            for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
+                for rup, rid, num_occ in timedep_sample(
+                        self, num_ses*samples, seed + i):
+                    rupid = rid + i * self.num_ruptures
+                    if hasattr(rup, 'occurrence_rate'):
+                        # defined only for poissonian sources
+                        # needed to get convergency of the frequency to the rate
+                        # tested in case_83_eb
+                        rup.occurrence_rate *= smweight
+                    ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
+                                    seed=rupid + TWO30 * self.id + ses_seed)
+                    ebrs.append(ebr)
+
         return ebrs
 
     def get_mags(self):
