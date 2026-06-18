@@ -652,7 +652,7 @@ class AssetCollection(object):
         geo_columns = list(tagset(aggregate_by))
         dic = {"site_id": self.array["site_id"]}
         # Decode integer tag indices to string values by indexing into tagcol
-        # directly.  self.array[col] holds 1-based integers; tagcol lists start
+        # directly. self.array[col] holds 1-based integers; tagcol lists start
         # at index 0 with '?' so tagcol[i] gives the correct string for tag
         # index i.
         # The loop covers every column in geo_columns, so multi-tag groups are
@@ -692,15 +692,8 @@ class AssetCollection(object):
                         lambda v: mapping.get(
                             v.decode('utf-8') if isinstance(v, bytes) else v,
                             '')))
-        # Cast string columns to fixed-width numpy byte strings so the
-        # resulting structured array is serializable without allow_pickle=True.
-        # dtype('O') object columns always require pickle; '|S<n>' does not.
-        string_cols = geo_columns + [tier_col] + list(
-            name_map.keys() if exposure_hdf5 else [])
-        for col in string_cols:
-            encoded = result_df[col].astype(str).str.encode('utf-8')
-            max_len = int(encoded.str.len().max())  # length in bytes
-            result_df[col] = encoded.to_numpy().astype(f'S{max_len}')
+        # the casting to fixed-width numpy byte strings necessary to
+        # use allow_pickle=False will be done at extraction time
         return result_df
 
     def agg_by_site(self):

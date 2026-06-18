@@ -866,6 +866,23 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
+def ensure_npy_serializable(df):
+    """
+    Cast object-dtype (str/bytes) columns of df to fixed-width
+    numpy byte strings (dtype '|S<n>') so a structured array built from df
+    is serializable with allow_pickle=False
+    """
+    string_cols = [c for c in df.columns if df[c].dtype == object]
+    for col in string_cols:
+        decoded_series = df[col].map(decode)
+        encoded_series = decoded_series.str.encode('utf-8')
+        # Guard against empty dataframes or completely null columns
+        raw_max = encoded_series.str.len().max()
+        max_len = max(int(raw_max) if pandas.notna(raw_max) else 1, 1)
+        df[col] = encoded_series.to_numpy().astype(f'S{max_len}')
+    return df
+
+
 @extract.add('exposure_by_lse')
 def extract_exposure_by_lse(dstore, what):
     """
@@ -895,9 +912,8 @@ def extract_exposure_by_lse(dstore, what):
         raise ValueError('{peril_ds_key} not found in the datastore')
     df = dstore.read_df(peril_ds_key)
     if discard_empty:
-        return df[df['number'] > 0]
-    else:
-        return df
+        df = df[df['number'] > 0]
+    return ensure_npy_serializable(df)
 
 
 # tested in impact_test and partially in case_1_ins
