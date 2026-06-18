@@ -301,11 +301,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         for i, (trt_smr, samples, smweight) in enumerate(self.sampling):
             for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
                 rupid = rid + i * self.num_ruptures
-                if hasattr(rup, 'occurrence_rate'):
-                    # defined only for poissonian sources
-                    # needed to get convergency of the frequency to the rate
-                    # tested in case_83_eb
-                    rup.occurrence_rate *= smweight
                 ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
                                 seed=rupid + TWO30 * self.id + ses_seed)
                 ebrs.append(ebr)

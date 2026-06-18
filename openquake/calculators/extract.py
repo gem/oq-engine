@@ -1327,7 +1327,7 @@ def extract_damages_stats_npz(dstore, what):
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """
-    Compare n_occ/eff_time with occurrence_rate.
+    The number of ruptures / eff_time per magnitude.
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = datastore.get_oq(dstore)
@@ -1339,11 +1339,10 @@ def extract_mfd(dstore, what):
         rup_df = dstore.read_df('filtered_ruptures', 'id')
     rup_df = rup_df[['mag', 'n_occ', 'occurrence_rate']]
     rup_df.mag = numpy.round(rup_df.mag, 1)
-    dic = dict(mag=[], freq=[], occ_rate=[])
+    dic = dict(mag=[], freq=[])
     for mag, df in rup_df.groupby('mag'):
         dic['mag'].append(mag)
         dic['freq'].append(df.n_occ.sum() / eff_time)
-        dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
