@@ -817,12 +817,13 @@ hazard_uhs-std.csv
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
-        df = view('event_based_mfd', self.calc.datastore)
-        self.assertEqual(str(df), '''\
-      freq
-mag       
-4.0  2.725
-4.5  1.578''')
+        fname = general.gettemp(str(view(
+            'occ_by_trt_smr', self.calc.datastore)))
+        self.assertEqualFiles('expected/occ_by_trt_smr', fname)
+        
+        fname = general.gettemp(str(view(
+            'event_based_mfd', self.calc.datastore)))
+        self.assertEqualFiles('expected/event_based_mfd', fname)
 
     def test_case_84(self):
         # test maxMagGRRelativeNoMoBalance
