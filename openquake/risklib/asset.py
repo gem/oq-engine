@@ -599,7 +599,7 @@ class AssetCollection(object):
 
     def aggregate_exposure_by_lse_tier(
             self, aggregate_by, avg_gmf_array, all_imts, secondary_peril,
-            exposure_hdf5=None, discard_empty=True):
+            exposure_hdf5=None):
         """
         :param aggregate_by:
             a list of lists of tag names (e.g., [['ID_0']])
@@ -611,9 +611,6 @@ class AssetCollection(object):
             either "liquefaction" or "landslide"
         :param exposure_hdf5:
             a HDF5 file to read region names from (default: None)
-        :param discard_empty:
-            if True, discard from the output all tier bins with no assets
-            (default: True)
         :returns:
             a DataFrame with aggregated exposure metrics grouped by
             geo-tags and the chosen LSE peril tiers
@@ -680,8 +677,7 @@ class AssetCollection(object):
         # output only if any assets fall in it
         groupby_keys = geo_columns + [tier_col]
         result_df = (
-            merged_df.groupby(groupby_keys,
-                              observed=discard_empty)[exposure_cols]
+            merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
             .sum()
             .reset_index()
         )

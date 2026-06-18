@@ -1653,6 +1653,30 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
         dstore['avg_gmf'] = avg_gmf
 
 
+def create_exposure_by_lse(dstore):
+    oq = dstore['oqparam']
+    peril_imt2name = {
+        'AllstadtEtAl2022Landslides_LSE': 'landslide',
+        'AllstadtEtAl2022Liquefaction_LSE': 'liquefaction',
+    }
+    if not any(imt in oq.sec_imts for imt in peril_imt2name):
+        return
+    avg_gmf_array = dstore['avg_gmf'][:]
+    assetcol = dstore['assetcol']
+    if 'exposure' in oq.inputs:
+        exposure_hdf5 = oq.inputs['exposure'][0]
+    else:
+        exposure_hdf5 = None
+    for sec_imt in oq.sec_imts:
+        if sec_imt not in peril_imt2name:
+            continue
+        secondary_peril = peril_imt2name[sec_imt]
+        df = assetcol.aggregate_exposure_by_lse_tier(
+            oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
+            exposure_hdf5=exposure_hdf5)
+        dstore.create_df(f'exposure_by_{secondary_peril}_lse', df)
+
+
 def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
@@ -1732,6 +1756,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         create_gmf_data(
             calc.datastore, imts, oq.sec_imts, data=data,
             N=len(sitecol.complete), R=1)
+        create_exposure_by_lse(calc.datastore)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         calc.datastore['weights'] = numpy.ones(1)
 
