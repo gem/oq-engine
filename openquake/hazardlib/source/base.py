@@ -119,6 +119,26 @@ def poisson_sample(src, eff_num_ses, seed):
     # else (multi)point sources and area sources
     usd = src.upper_seismogenic_depth
     lsd = src.lower_seismogenic_depth
+    rup_args, rates = _rup_args_rates(src)
+    num_occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
+    for num_occ, args, rupid, rate in zip(num_occurs, rup_args, rupids, rates):
+        if num_occ:
+            (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,
+             dip_frac, ps) = args
+            hc = Point(lon, lat, hc_depth)
+            hdd = numpy.array([(1., hc.depth)])
+            dip_fracs = numpy.array([dip_frac])
+            [[[planar]]] = build_planar(
+                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
+                usd, lsd, ps.get_aspect_ratio(mag), dip_fracs=dip_fracs)
+            rup = ParametricProbabilisticRupture(
+                mag, np.rake, ps.tectonic_region_type, hc,
+                PlanarSurface.from_(planar), rate, tom)
+            yield rup, rupid, num_occ
+
+
+def _rup_args_rates(src):
+    # keep in memory potentially millions of rupture arguments and rates
     rup_args = []
     rates = []
     for ps in split_source(src):
@@ -136,22 +156,7 @@ def poisson_sample(src, eff_num_ses, seed):
                             mag, np, lon, lat, hc_depth, dip_frac, ps)
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
-    eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-    occurs = rng.poisson(eff_rates)
-    for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
-        if num_occ:
-            (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,
-             dip_frac, ps) = args
-            hc = Point(lon, lat, hc_depth)
-            hdd = numpy.array([(1., hc.depth)])
-            dip_fracs = numpy.array([dip_frac])
-            [[[planar]]] = build_planar(
-                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
-                usd, lsd, ps.get_aspect_ratio(mag), dip_fracs=dip_fracs)
-            rup = ParametricProbabilisticRupture(
-                mag, np.rake, ps.tectonic_region_type, hc,
-                PlanarSurface.from_(planar), rate, tom)
-            yield rup, rupid, num_occ
+    return rup_args, numpy.array(rates)
 
 
 def timedep_sample(src, eff_num_ses, seed):
