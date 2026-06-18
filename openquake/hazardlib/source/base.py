@@ -199,15 +199,16 @@ def timedep_sample(src, eff_num_ses, seed):
                 yield rup, rupid, num_occ
 
 
-def partition(tot_occ, probs):
+def partition(tot_occ, probs, rng):
     """
     >>> partition(568, [.1, .2, .3, .4])
     array([ 57, 114, 170, 227], dtype=uint32)
     """
-    out = numpy.zeros(len(probs), U32)
-    for i, prob in enumerate(probs[:-1]):
-        out[i] = round(tot_occ * prob)
-    out[-1] = tot_occ - out.sum()
+    P = len(probs)
+    choices = rng.choice(numpy.arange(P), tot_occ, p=probs)
+    idxs, counts = numpy.unique(choices, return_counts=1)
+    out = numpy.zeros(P, U32)
+    out[idxs] = counts
     return out
 
 
@@ -310,13 +311,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
+        rng = numpy.random.default_rng(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         samples = self.sampling['samples'].sum()
         probs = self.sampling['samples'] / samples
         ebrs = []
         for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
             if tot_occ:
-                occs = partition(tot_occ, probs)
+                occs = partition(tot_occ, probs, rng)
                 for i, (trt_smr, occ) in enumerate(
                         zip(self.sampling['trt_smr'], occs)):
                     if occ:
