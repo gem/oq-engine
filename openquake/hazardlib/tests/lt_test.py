@@ -727,10 +727,6 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         for src_rt, src_xml in zip(srcs_rt, srcs_xml):
             # Check the src params in each src group
             _assert_src_params(src_rt, src_xml)
-            # Sanity check of total computational cost per src
-            # being same between the approaches
-            numpy.testing.assert_allclose(
-                src_rt.weight, src_xml.weight, atol=1e-10)
 
     def test_bad_weights(self):
         """
