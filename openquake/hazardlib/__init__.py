@@ -304,7 +304,6 @@ class Input(object):
                 src.grp_id = grp_id
                 src.trt_smr = grp_id
                 src.samples = num_rlzs
-                src.smweight = 1. / num_rlzs
                 idx += 1
                 if hasattr(src, 'trt_smrs'):
                     trt_smrs.append(src.trt_smrs)

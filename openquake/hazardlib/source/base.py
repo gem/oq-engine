@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import copy
 import zlib
 from dataclasses import dataclass
 import numpy
@@ -36,11 +35,10 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 U32 = numpy.uint32
-F32 = numpy.float32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
-chosen_dt = [('trt_smr', U32), ('i', U32), ('smweight', F32)]
+chosen_dt = [('trt_smr', U32), ('i', U32)]
 
 
 @dataclass
@@ -204,7 +202,7 @@ def timedep_sample(src, eff_num_ses, seed):
 
 def chosen_array(sampling_array):
     """
-    Convert array (trt_smr, samples, smweight) -> (trt_smr, i, smweight)
+    Convert array (trt_smr, samples) -> (trt_smr, i)
     """
     arr = sampling_array.astype(chosen_dt)
     arr['i'] = numpy.arange(len(arr))
@@ -323,12 +321,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         ebrs = []
         for (rup, rid, num_occ), chosen in zip(triples, chosens):
             rupid = rid + chosen['i'] * self.num_ruptures
-            if hasattr(rup, 'occurrence_rate'):
-                # defined only for poissonian sources
-                # needed to get convergency of the frequency to the rate
-                # tested in case_83_eb
-                rup = copy.copy(rup)
-                rup.occurrence_rate *= chosen['smweight']
             ebr = EBRupture(rup, self.id, chosen['trt_smr'], num_occ, rupid,
                             seed=rupid + TWO30 * self.id + ses_seed)
             ebrs.append(ebr)

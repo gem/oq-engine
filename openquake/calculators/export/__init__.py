@@ -94,13 +94,13 @@ AGGRISK_FIELD_DESCRIPTION = {
     'structural': 'Structural loss (USD)',
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
-    'area': 'Floor area lost (m2)',
+    'area': 'Floor area lost (m²)',
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
-    'embodied_carbon': 'Embodied carbon loss',
+    'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
@@ -115,13 +115,14 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'nonstructural': 'Nonstructural value (USD)',
     'structural': 'Structural value (USD)',
     'residents': 'Residents',
-    'area': 'Floor area (m2)',
+    'area': 'Floor area (m²)',
     'occupants_day': 'Occupants day',
     'occupants_night': 'Occupants night',
     'occupants_transit': 'Occupants transit hours',
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
             ' of assets is subjected'),
+    'embodied_carbon': 'Embodied carbon (tCO₂e)',
 }
 
 
