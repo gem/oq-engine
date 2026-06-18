@@ -406,12 +406,7 @@ class DataStore(collections.abc.MutableMapping):
         if extra:
             for col, val in extra.items():
                 df[col] = val
-        if name not in self:
-            self.create_df(name, df, 'gzip')
-        else:
-            for col in df.columns:
-                dset = self[f'{name}/{col}']
-                hdf5.extend(dset, df[col].to_numpy())
+        self.hdf5.import_df(name, df)
 
     def flush(self):
         """

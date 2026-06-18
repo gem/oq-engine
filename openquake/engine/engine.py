@@ -536,9 +536,9 @@ class _Workflow:
         if 'classical' in oq.calculation_mode:
             for oq in oqs[1:]:
                 if oq.retperiods != oqs[0].retperiods:
-                    raise NameError(
-                        f'Expected return_periods = {oqs[0].retperiods}, '
-                        f'got {oq.retperiods}')
+                    raise InvalidFile(
+                        f'{oq.inputs["job_ini"]}: expected return_periods = '
+                        f'{oqs[0].retperiods}, got {oq.retperiods}')
         if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
             for oq in oqs[1:]:
                 if oq.eff_time != oqs[0].eff_time:

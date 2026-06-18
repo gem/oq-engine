@@ -56,6 +56,9 @@ def build_ses(dstore, calcs, out_file, may_fails=()):
                                      'total count_ruptures'])
         for name, ds in zip(names, dstores):
             h5[f'oqparam/{name}'] = ds['oqparam']
+            df = views.view('occ_by_trt_smr', ds)
+            df['name'] = name
+            h5.import_df('occ_by_trt_smr', df.reset_index())
 
 
 def _export_import(name, calc_id, output_type, may_fail, dstore):
