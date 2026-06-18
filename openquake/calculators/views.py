@@ -979,7 +979,9 @@ def view_occ_by_trt_smr(token, dstore):
         rups = dstore['filtered_ruptures'][:]
     except KeyError:
         rups = dstore['ruptures'][:]
-    return fast_agg3(rups, 'trt_smr', ['n_occ'])
+    arr = fast_agg3(rups, 'trt_smr', ['n_occ'])
+    arr.sort(order='n_occ')
+    return arr
 
 
 @view.add('extreme_gmvs')
