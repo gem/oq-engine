@@ -869,7 +869,7 @@ def extract_mmi_tags(dstore, what):
 def ensure_npy_serializable(df):
     """
     Cast object-dtype (str/bytes) columns of df to fixed-width
-    numpy byte strings (dtype '|S<n>') so a structured array built from df
+    numpy byte strings (dtype ``|S<n>``) so a structured array built from df
     is serializable with allow_pickle=False
     """
     string_cols = [c for c in df.columns if df[c].dtype == object]
