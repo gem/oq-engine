@@ -127,7 +127,7 @@ def _fix(operation):
     return operation.replace(' ', '_').replace('total_', '')
 
 
-def save_performance(dstore, calcs, operations):
+def save_performance(dstore, calcs, operations, may_fails=()):
     """
     Save the runtimes of the given operations, one entry per calculation
     """
