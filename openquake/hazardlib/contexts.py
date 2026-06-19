@@ -1070,30 +1070,16 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
-    def _try_geom_cache(self, src, sitecol, step):
-        """
-        Decide whether the geometry cache applies to src and if
-        so then look it up. If src has no geom_label the cache is
-        not used and (None, None) is returned.
-        
-        Otherwise the lookup runs and returns (cache_key, ctxs) where
-        ctxs is the cached rupture contexts on a hit, or None on a miss
-        (in which case the caller is expected to populate the cache after
-        computing the contexts itself).
-        """
-        geom_label = getattr(src, 'geom_label', None)
-        if geom_label is None:
-            return None, None
-        return self._check_geom_cache(src, sitecol, geom_label, step)
-
-    def _check_geom_cache(self, src, sitecol, geom_label, step):
+    def _check_geom_cache(self, src, sitecol, step):
         """
         Look up GEOM_CACHE for given src and return (cache_key, ctxs):
 
-            --> (None, None): Preclassical subsample pass (step != 1) -
-                              caching is skipped to avoid mixing a
-                              subsampled rupture set with the full
-                              classical pass.
+            --> (None, None): caching does not apply - either src
+                              carries no geom_label OR this is
+                              preclassical's subsampled pass (step != 1)
+                              and caching is skipped to avoid mixing a
+                              subsampled rupture set with the full classical
+                              pass.
 
             --> (cache_key, None): Miss - the caller must populate
                                    GEOM_CACHE[cache_key] after
@@ -1105,14 +1091,9 @@ class ContextMaker(object):
 
         On a hit self.geom_cache_key is also set so the cached_mean_stds
         method can reuse the entry's mean/sigma.
-
-        The no geom_label case is handled upstream by _try_geom_cache method
-        and never reaches this method.
         """
-        # A step value > 1 is used by preclassical to subsample ruptures
-        # for weight estimation so that rupture set is different from the
-        # full classical pass (skip if not classical phase)
-        if step != 1:
+        geom_label = getattr(src, 'geom_label', None)
+        if geom_label is None or step != 1:
             return None, None
         
         # Get a key for caching of the given branch's fragment
@@ -1231,11 +1212,8 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         # Check if geometry label (RuntimeSourceModelLT) 
-        geom_label = getattr(src, 'geom_label', None)
-        cache_key, cached_ctxs = None, None
-        if geom_label is not None: # Geom labels used so check cache
-            cache_key, cached_ctxs = self._check_geom_cache(
-                src, sitecol, geom_label, step)
+        # Try the geom cache (RuntimeSourceModelLT sibling sharing)
+        cache_key, cached_ctxs = self._check_geom_cache(src, sitecol, step)
         if cached_ctxs is not None:
             return iter(cached_ctxs) # Found a cached entry for the branch
 
