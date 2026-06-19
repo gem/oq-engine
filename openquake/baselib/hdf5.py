@@ -405,6 +405,17 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
+    def import_df(self, groupname, df):
+        """
+        Import a DataFrame in the File
+        """
+        if groupname not in self:
+            self.create_df(groupname, df, 'gzip')
+        else:
+            for col in df.columns:
+                dset = self[f'{groupname}/{col}']
+                extend(dset, df[col].to_numpy())
+
     def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset

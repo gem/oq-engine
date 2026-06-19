@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Internal: storing `occ_by_trt_smr` in the SES.hdf5 file
+  * Introduced `strict` flag to disable checks which are possibly too strict
+  * Internal: storing the real `occurrence_rate` in the `ruptures` dataset,
+    not multiplied by `smweight`
   * Fixed the slow tasks in AELO, due to accidental disabling of the filtering
 
   [Savas Ceylan]
