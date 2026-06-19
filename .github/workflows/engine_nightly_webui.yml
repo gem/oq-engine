@@ -54,9 +54,9 @@ jobs:
           set -x
           date
           wget https://downloads.openquake.org/test_data/exposure.hdf5
-          curl https://downloads.openquake.org/test_data/worldcities.csv
-          curl https://downloads.openquake.org/test_data/countries_info.csv
-          curl https://downloads.openquake.org/test_data/fonts.zip
+          wget https://downloads.openquake.org/test_data/worldcities.csv
+          wget https://downloads.openquake.org/test_data/countries_info.csv
+          wget https://downloads.openquake.org/test_data/fonts.zip
           unzip fonts.zip
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
