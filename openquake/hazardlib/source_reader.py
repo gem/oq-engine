@@ -64,7 +64,7 @@ def sampling(samples, trt_smr):
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
-def splitMF(sources, blocksize=1000):
+def splitMF(sources, disagg_by_src, blocksize=1000):
     """
     Split the MultiPointSources to avoid oceanic sources with 160M ruptures
     hanging during rupture sampling
@@ -89,7 +89,7 @@ def splitMF(sources, blocksize=1000):
                     temporal_occurrence_model=src.temporal_occurrence_model)
                 segment.sampling = src.sampling
                 splits.append(segment)
-        elif src.code == b'F' and not src.faults:
+        elif src.code == b'F' and not disagg_by_src:
             # use the colon convention only in absence of kendra-splitting
             for segment in src:
                 segment.sampling = src.sampling
@@ -598,7 +598,7 @@ def _build_csm(oq, full_lt, groups, event_based):
                 # happens for sources belonging to multiple groups,
                 # such as <AreaSource 002> in classical case_10
                 pass
-        splitMF(grp.sources)
+        splitMF(grp.sources, oq.disagg_by_src)
         if grp and grp.atomic:
             atomic.append(grp)
         elif grp:
