@@ -1072,11 +1072,14 @@ class ContextMaker(object):
 
     def _try_geom_cache(self, src, sitecol, step):
         """
-        Thin gate around :meth:`_check_geom_cache`. If ``src`` carries
-        no ``geom_label`` the cache doesn't apply; return
-        ``(None, None)`` without touching it. Otherwise delegate to
-        ``_check_geom_cache`` and return its ``(cache_key, ctxs)``
-        tuple.
+        Decide whether the geometry cache applies to src and if
+        so then look it up. If src has no geom_label the cache is
+        not used and (None, None) is returned.
+        
+        Otherwise the lookup runs and returns (cache_key, ctxs) where
+        ctxs is the ached rupture contexts on a hit, or None on a miss
+        (in which case the caller is expected to populate the cache after
+        computing the contexts itself).
         """
         geom_label = getattr(src, 'geom_label', None)
         if geom_label is None:
