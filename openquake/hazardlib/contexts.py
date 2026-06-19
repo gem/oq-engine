@@ -72,8 +72,8 @@ bymag = operator.attrgetter('mag')
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
-# Dict for caching RuntimeSourceModelLT siblings (same rup
-# set as informed by the geom_label)
+# Dict for caching sibling branch ctxs (same rup
+# set as informedby the geom_label)
 # --> Key of (geom_label, src_basename, cmaker_signature)
 # --> Value of GeomCacheEntry object
 GEOM_CACHE = {}
@@ -81,9 +81,9 @@ GEOM_CACHE = {}
 
 class GeomCacheEntry(object):
     """
-    Cached per-source ctx and mean_stds shared by RuntimeSourceModelLT
-    sibling branches with the same geom_label (must have same rupture
-    set - i.e., same rupture geometries and thus same distances).
+    Cached per-source ctx and mean_stds shared by sibling branches with
+    the same geom_label (must have same rupture set - i.e., same rupture
+    geometries and thus same distances).
 
     :param ctxs:
         list of recarrays returned by ContextMaker.get_ctxs for the
@@ -576,8 +576,7 @@ class ContextMaker(object):
     source_mb = 0  # set in build_dparam
     dt = 0
     geom_cache_key = None # Set by RmapMaker when processing a src
-                          # that has a geom_label from a use of
-                          # RuntimeSourceModelLT - it is used to share
+                          # that has a geom_label - it is used to share
                           # GMPE mean/sigma across sibling branches via
                           # GEOM_CACHE
 
@@ -1211,8 +1210,7 @@ class ContextMaker(object):
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
-        # Check if geometry label (RuntimeSourceModelLT) 
-        # Try the geom cache (RuntimeSourceModelLT sibling sharing)
+        # Check if geometry label and if so use caching of ctxs
         cache_key, cached_ctxs = self._check_geom_cache(src, sitecol, step)
         if cached_ctxs is not None:
             return iter(cached_ctxs) # Found a cached entry for the branch
