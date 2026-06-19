@@ -1077,7 +1077,7 @@ class ContextMaker(object):
         not used and (None, None) is returned.
         
         Otherwise the lookup runs and returns (cache_key, ctxs) where
-        ctxs is the ached rupture contexts on a hit, or None on a miss
+        ctxs is the cached rupture contexts on a hit, or None on a miss
         (in which case the caller is expected to populate the cache after
         computing the contexts itself).
         """
