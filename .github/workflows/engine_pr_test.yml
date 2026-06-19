@@ -114,7 +114,7 @@ jobs:
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
           wget https://downloads.openquake.org/test_data/worldcities.csv
           wget https://downloads.openquake.org/test_data/countries_info.csv
-          wget https://downloads.openquake.org/test_data/World_Adm1_updated.csv
+          wget https://downloads.openquake.org/test_data/World_Adm1_updated.gpkg
           wget https://downloads.openquake.org/test_data/fonts.zip
           unzip fonts.zip
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
