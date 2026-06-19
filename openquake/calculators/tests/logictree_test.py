@@ -589,6 +589,18 @@ hazard_uhs-std.csv
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data_eb_sampling.csv', f)
 
+        # The geometry labelled (ctx caching for same rupture sets) run
+        # and the unlabelled (no-cache) run must produce identical mean
+        # hazard curves.
+        contexts.GEOM_CACHE.clear()
+        with unittest.mock.patch.dict(
+                # Set use of geom labels to false (by default in the
+                # buidler script it is True)
+                'os.environ', {'OQ_CASE34_USE_GEOM_LABEL': '0'}):
+            self.run_calc(case_34.__file__, 'job_runtime.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
         # testing also split_by_gsim

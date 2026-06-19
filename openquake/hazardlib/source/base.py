@@ -223,6 +223,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     seed = None  # set by the engine
     samples = 1  # set by the engine
     dt = 0  # set by the engine
+    geom_label = None # Geometry-sharing label for
+                      # RuntimeSourceModelLT sibling 
+                      # caching (same rupture sets). A
+                      # value of None means does not
+                      # share contexts across branches
 
     @abc.abstractproperty
     def MODIFICATIONS(self):

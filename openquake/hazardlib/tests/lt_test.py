@@ -739,7 +739,8 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
 
     def test_bad_shape(self):
         """
-        Direct construction with a non-3-tuple branch raises
+        Direct construction with a non-triple or non-4 tuple
+        branch raises.
         """
         bad = [('br_0', 1.0)]  # missing xml_str
         with self.assertRaises(ValueError):
@@ -753,3 +754,45 @@ class RuntimeSourceModelLTTestCase(unittest.TestCase):
         bad = [('br_0', 0.5, xmls[0]), ('br_0', 0.5, xmls[1])]
         with self.assertRaises(ValueError):
             logictree.RuntimeSourceModelLT(bad, script_path='test.py')
+
+    def test_geom_labels(self):
+        """
+        Sanity checks for the geom_label feature of RuntimeSourceModelLT:
+        """
+        xmls = list(self.rt_smlt._branch_xmls.values())
+
+        # 1) A uniform 4-tuple list populates _branch_labels correctly,
+        #    including the per-branch None opt-out (no caching for this
+        #    source is applied)
+        labelled = [
+            ('br_0', 0.5, xmls[0], 'geom_A'),
+            ('br_1', 0.3, xmls[1], 'geom_A'),
+            ('br_2', 0.2, xmls[2], None),
+        ]
+        smlt = logictree.RuntimeSourceModelLT(labelled, script_path='test.py')
+        self.assertEqual(smlt._branch_labels,
+                         {'br_0': 'geom_A',
+                          'br_1': 'geom_A',
+                          'br_2': None}
+                          )
+
+        # 2) Mixing 3- and 4-tuples in one list raises ValueError
+        mixed = [
+            ('br_0', 0.5, xmls[0], 'geom_A'),
+            ('br_1', 0.5, xmls[1]),
+        ]
+        with self.assertRaises(ValueError):
+            logictree.RuntimeSourceModelLT(mixed, script_path='test.py')
+
+        # 3) A non-string, non-None label raises ValueError
+        bad_label = [('br_0', 1.0, xmls[0], 42)]
+        with self.assertRaises(ValueError):
+            logictree.RuntimeSourceModelLT(bad_label, script_path='test.py')
+
+        # 4) The labels survive an HDF5 round-trip
+        tmp = gettemp(suffix='.hdf5')
+        with hdf5.File(tmp, 'w') as h:
+            h['smlt'] = smlt # to hdf5
+        with hdf5.File(tmp, 'r') as h:
+            restored = h['smlt'] # from hdf5
+        self.assertEqual(restored._branch_labels, smlt._branch_labels)

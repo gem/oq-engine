@@ -20,10 +20,16 @@
 Example script that can be read within RunTimeSourceModelLT to construct
 an SSC logic tree at runtime instead of reading in from XMLs.
 
-Builds a simple 10 branch logic tree (1 b-value x 10 activity rates) from
-CSV data files by returning a list of (name, weight, xml_str) triples.
+Builds a simple 10 branch logic tree across 2 source geometries (5
+branches per geom_A/geom_B; 1 b-value x 5 activity rates each) from CSV
+files by returning a list of (name, weight, xml_str, geom_label) 4-tuples.
 
 Each branch contains one area source and one simple fault source.
+Sibling branches sharing a geom_label produce the same rupture set per
+source (same surfaces, mags, nodal planes, hypocenters); only the
+per-rupture occurrence rates differ. The engine uses the label to share
+the GMPE mean/sigma across siblings via a process-level cache, avoiding
+redundant compute method calls for the same rupture sets.
 """
 import os
 import numpy as np
@@ -109,22 +115,32 @@ def _build_xml(branch_idx, area_rows, fault_rows, b, ref_mag, rate):
     )
 
 
+# Turn on/off the geometry labels w/o needing another builder script
+USE_GEOM_LABEL_ = os.environ.get('OQ_CASE34_USE_GEOM_LABEL') != '0'
+
+
 def get_source_model_lt():
     """
     Entry-point for RuntimeSourceModelLT which in effect creates
     the realisations on a source-by-source basis, each represented
     by an XML string.
 
-    Returns list of (name, weight, xml_str) triples. The regular
-    checks on the logic tree such as the weights of the branches
-    summing to 1.0 is still checked as for regular XML-based SSC
-    LTs inside the engine.
+    Returns list of (name, weight, xml_str, geom_label) 4-tuples. The
+    regular checks on the logic tree such as the weights of the
+    branches summing to 1.0 is still checked as for regular XML-based
+    SSC LTs inside the engine.
+    
+    The fourth output "geom_label" is optional and is used by the
+    engine to share contexts and GMPE mean/sigma across sibling
+    branches with the same label (which must enumerate the same
+    rupture set per source). Omit it or pass None to not use this
+    caching feature.
 
     NOTE: A function with exactly this name is checked for within
     RuntimeSourceModelLT and it is expected to retun the list of
-    (name, weight, xml_str) triples. If this function is missing
-    or does not return the expected triples the engine will raise
-    an error.
+    (name, weight, xml_str) triples or (name, weight, xml_str,
+    geom_label) 4-tuples. If this function is missing or does not
+    return the expected tuples the engine will raise an error.
 
     NOTE: The runtime approach demonstrated in this QA test only
     currently supports the specification of each branch as a seperate
@@ -137,18 +153,29 @@ def get_source_model_lt():
     exploring this capability.
     """
     # Load the data
-    area_rows = _load_csv('area_polygon.csv')
-    fault_rows = _load_csv('fault_trace.csv')
     recurset = _load_csv('recurset.csv')
+    geoms = {}  # geom_label -> (area_rows, fault_rows)
 
     # Build the sources
     branches = []
     for i, row in enumerate(recurset):
+        label = row['geom']
+        if label not in geoms:
+            geoms[label] = (
+                _load_csv(f'area_polygon_{label}.csv'),
+                _load_csv(f'fault_trace_{label}.csv'),
+            )
+        area_rows, fault_rows = geoms[label]
         b = float(row['b_value'])
         ref_mag = float(row['ref_mag'])
         rate = float(row['rate'])
         weight = float(row['weight'])
         xml_str = _build_xml(i, area_rows, fault_rows, b, ref_mag, rate)
-        branches.append((f'branch_{i:03d}', weight, xml_str))
+        if USE_GEOM_LABEL_:
+            # Return the geom label too for the GMPE mean/sig
+            # caching for same rup set sources
+            branches.append((f'branch_{i:03d}', weight, xml_str, label))
+        else:
+            branches.append((f'branch_{i:03d}', weight, xml_str))
 
     return branches # Fed into RuntimeSourceModelLT

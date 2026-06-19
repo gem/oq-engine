@@ -19,6 +19,7 @@
 import abc
 import copy
 import time
+import hashlib
 import logging
 import warnings
 import itertools
@@ -71,6 +72,52 @@ bymag = operator.attrgetter('mag')
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
+# Dict for caching RuntimeSourceModelLT siblings (same rup
+# set as informed by the geom_label)
+# --> Key of (geom_label, src_basename, cmaker_signature)
+# --> Value of GeomCacheEntry object
+GEOM_CACHE = {}
+
+
+class GeomCacheEntry(object):
+    """
+    Cached per-source ctx and mean_stds shared by RuntimeSourceModelLT
+    sibling branches with the same geom_label (must have same rupture
+    set - i.e., same rupture geometries and thus same distances).
+
+    :param ctxs:
+        list of recarrays returned by ContextMaker.get_ctxs for the
+        first source seen with this (label, basename) key.
+        The ``occurrence_rate`` column is replaced per-branch on reuse.
+    :param mean_stds:
+        dict {ctx_idx: mean_stdt array} caching the output of 
+        ContextMaker.get_mean_stds keyed by the position in ctxs.
+        It depends only on the ctx and the gsims, so it is shared across
+        siblings.
+    """
+    __slots__ = ('ctxs', 'mean_stds')
+
+    def __init__(self, ctxs):
+        self.ctxs = ctxs
+        self.mean_stds = {}
+
+
+def _get_cmaker_cache_sig(cmaker, sids):
+    """
+    Generate a signature identifying the cmaker context used to validate
+    cache entries across cmakers (i.e., give a unique fingerprint to each
+    cmaker in cache).
+        
+    We include the trt (can have same GMM in different TRT's GMM LTs), gsim
+    class names, IMTL names + level counts and a hash of the site ids.
+    """
+    gsim_sig = tuple(type(g).__name__ for g in cmaker.gsims)
+    
+    imtl_sig = tuple((imt, len(cmaker.imtls[imt])) for imt in cmaker.imtls)
+    
+    sids_sig = hashlib.sha1(sids.tobytes()).digest()
+
+    return (cmaker.trt, gsim_sig, imtl_sig, sids_sig)
 
 
 def _get(surfaces, param, dparam, mask=slice(None)):
@@ -528,6 +575,11 @@ class ContextMaker(object):
     cluster = None  # set in RmapMaker
     source_mb = 0  # set in build_dparam
     dt = 0
+    geom_cache_key = None # Set by RmapMaker when processing a src
+                          # that has a geom_label from a use of
+                          # RuntimeSourceModelLT - it is used to share
+                          # GMPE mean/sigma across sibling branches via
+                          # GEOM_CACHE
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1018,6 +1070,138 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
+    def _try_geom_cache(self, src, sitecol, step):
+        """
+        Thin gate around :meth:`_check_geom_cache`. If ``src`` carries
+        no ``geom_label`` the cache doesn't apply; return
+        ``(None, None)`` without touching it. Otherwise delegate to
+        ``_check_geom_cache`` and return its ``(cache_key, ctxs)``
+        tuple.
+        """
+        geom_label = getattr(src, 'geom_label', None)
+        if geom_label is None:
+            return None, None
+        return self._check_geom_cache(src, sitecol, geom_label, step)
+
+    def _check_geom_cache(self, src, sitecol, geom_label, step):
+        """
+        Look up GEOM_CACHE for given src with (cache_key, ctxs):
+
+            --> (None, None): Caching does not apply to this src.
+            
+            --> (cache_key, None): Applies but no caching yet - the caller 
+                                   must populate for this key later.
+
+            --> (cache_key, ctxs): Cache exists so caller will yield ctxs
+                                   instead of recomputing distances and
+                                   re-running the GMPE.
+
+        On a cache hit self.geom_cache_key is also set so the
+        cached_mean_stds method can reuse the entry's mean/sigma.
+        """
+        # A step value > 1 is used by preclassical to subsample ruptures
+        # for weight estimation so that rupture set is different from the
+        # full classical pass (skip if not classical phase)
+        if step != 1:
+            return None, None
+        
+        # Get a key for caching of the given branch's fragment
+        cache_key = (geom_label,            # --> The geometry label
+                     valid.corename(src),   # --> Base source ID
+                     valid.fragmentno(src), # --> Fragment of the src
+                     _get_cmaker_cache_sig( # --> Cmaker identity
+                         self, sitecol.complete.sids)
+                     )
+        
+        # Check if cache for this branch fragment's ctxs
+        entry = GEOM_CACHE.get(cache_key)
+        if entry is None:
+            # No cache = need to compute for ctxs for this cache_key
+            return cache_key, None
+        
+        # Stash the cache key so cached_mean_stds can later reuse
+        # entry.mean_stds and skip the GMPE call too
+        self.geom_cache_key = cache_key
+        
+        return cache_key, self._load_cached_ctxs(src, entry, step)
+
+    def _load_cached_ctxs(self, src, entry, step):
+        """
+        Load list of ctxs for src by copying the cached ctxs and substituting
+        the per-rupture occurrence_rate and rup_id values from this branch's
+        ruptures.
+        """
+        # Get min and max mags
+        minmag = self.maximum_distance.x[0]
+        maxmag = self.maximum_distance.x[-1]
+
+        # Iter rups
+        with self.ir_mon: # Monitor rup iteration
+            rups = list(
+                src.iter_ruptures(shift_hypo=self.shift_hypo, step=step))
+            for i, rup in enumerate(rups):
+                # Get a unique ID for each rup in the branch
+                rup.rup_id = src.offset + i
+            # Sort the rups by mag to ensure alignment
+            rups = sorted(
+                [r for r in rups if minmag <= r.mag <= maxmag], key=bymag)
+            
+        # Sanity check that the same number of ruptures
+        if len(rups) != len(entry.ctxs):
+            raise ValueError(
+                'geom_label %r: source %s has %d ruptures but the '
+                'cached sibling has %d; sibling branches must enumerate '
+                'an identical rupture set' % (
+                    src.geom_label, src.source_id,
+                    len(rups), len(entry.ctxs)))
+        
+        # And now assign ctx to each mirror rup in sibling branch
+        new_ctxs = []
+        for rup, cached in zip(rups, entry.ctxs):
+            # cached.mag was rounded to 3 dp by get_rparams but rup.mag
+            # is raw MFD value, so compare with an atol
+            if abs(rup.mag - float(cached.mag[0])) > 1e-3:
+                raise ValueError(  # Sanity check on rup alignment
+                    'geom_label %r: source %s rupture mag %s does not '
+                    'match cached sibling mag %s' % (
+                        src.geom_label, src.source_id,
+                        rup.mag, cached.mag[0]))
+            new = cached.copy() # Stop recarray potentially mutating
+            new['occurrence_rate'] = rup.occurrence_rate
+            new['rup_id'] = rup.rup_id
+            new_ctxs.append(new)
+        
+        return new_ctxs
+
+    def cached_mean_stds(self, ctx):
+        """
+        Wrapper around get_mean_stds method that checks the
+        GEOM_CACHE for given branch.
+        
+        NOTE: The caller (the _gen_poes method) only invokes this
+        when self.geom_cache_key is set.
+        """
+        # Get the key for given geometry group
+        entry = GEOM_CACHE.get(self.geom_cache_key)
+        
+        # Lookup for given mag
+        mag_key = round(float(ctx.mag[0]), 3)
+        cached = entry.mean_stds.get(mag_key)
+        
+        if cached is not None: 
+            # Skip get_means_stds because sibling branch already
+            # computed means and stds for this mag (i.e., rupture)
+            return cached
+        
+        # If here it's not cached so have to compute means and stds
+        mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+
+        # And now cache for other sibling branches to use next time
+        # for this rupture
+        entry.mean_stds[mag_key] = mean_stdt
+        
+        return mean_stdt
+
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -1036,9 +1220,23 @@ class ContextMaker(object):
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
+        # Check if geometry label (RuntimeSourceModelLT) 
+        geom_label = getattr(src, 'geom_label', None)
+        cache_key, cached_ctxs = None, None
+        if geom_label is not None: # Geom labels used so check cache
+            cache_key, cached_ctxs = self._check_geom_cache(
+                src, sitecol, geom_label, step)
+        if cached_ctxs is not None:
+            return iter(cached_ctxs) # Found a cached entry for the branch
+
         if getattr(src, 'location', None):
             with self.pla_mon:
-                return genctxs_Pp(src, sitecol, self)
+                result = genctxs_Pp(src, sitecol, self)
+                # NOTE: genctxs_Pp does not populate the geom cache so
+                # clear the key in case a previous labelled src left it
+                # set so _gen_poes does not route to a wrong cache entry
+                self.geom_cache_key = None
+                return result
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1054,6 +1252,7 @@ class ContextMaker(object):
                                   if minmag <= rup.mag <= maxmag],
                                  key=bymag)
                 if not allrups:
+                    self.geom_cache_key = None # Clear the key
                     return iter([])
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
@@ -1064,10 +1263,22 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
+        self.geom_cache_key = None
         with self.ctx_mon:
             if len(rups_sites) == 1 and not self.minimum_distance:
-                return ctxs
-            return (self.recarray([c]) for c in ctxs)
+                if cache_key is None:
+                    return ctxs
+                ctxs = list(ctxs)
+            elif cache_key is None:
+                return (self.recarray([c]) for c in ctxs)
+            else:
+                ctxs = [self.recarray([c]) for c in ctxs]
+        
+        # There was no cache already so store it for sibling branches
+        GEOM_CACHE[cache_key] = GeomCacheEntry(ctxs)
+        self.geom_cache_key = cache_key
+
+        return iter(ctxs)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1130,7 +1341,10 @@ class ContextMaker(object):
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
-            mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+            if self.geom_cache_key is None:
+                mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+            else:
+                mean_stdt = self.cached_mean_stds(ctx)
 
         if len(ctx) < 100:
             # do not split in slices to make debugging easier
@@ -1512,6 +1726,36 @@ class RmapMaker(object):
                 self.rupdata.append(ctx)
             yield ctx
 
+    def _update_labelled_src(self, src, cm, pnemap, allctxs):
+        """
+        Fold one geometry-labelled source's rupture contributions
+        into pnemap, processing the source on its own (rather
+        than batching it with neighbouring sources) so the cached
+        GMPE mean/sigma is looked up against the right source's
+        cache entry instead of a neighbour's.
+        
+        Any contexts already waiting in the shared batch buffer are
+        flushed first, and the cmaker's cache key is cleared on the
+        way out so the next source starts fresh.
+
+        :returns: number of rupture rows this source contributed.
+        """
+        if allctxs:
+            cm.update(pnemap, concat(allctxs))
+            allctxs.clear() # Flush existing means and stds
+
+        src_ctxs = list(self.gen_ctxs(src)) # Get ctxs
+
+        n = sum(len(c) for c in src_ctxs)
+        if src_ctxs:
+            cm.update(pnemap, concat(src_ctxs)) # Compute poes and assign 
+                                                # probs of non-exceedance
+                                                # with ctx caching leveraged
+
+        cm.geom_cache_key = None # Now reset
+        
+        return n
+
     def _make_src_indep(self):
         # sources with the same ID
         cm = self.cmaker
@@ -1525,6 +1769,11 @@ class RmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
+            if getattr(src, 'geom_label', None) is not None:
+                totlen += self._update_labelled_src(
+                    src, cm, pnemap, allctxs)
+                ctxlen = 0
+                continue
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
                 totlen += len(ctx)

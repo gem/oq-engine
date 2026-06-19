@@ -102,6 +102,7 @@ rt_branch_dt = numpy.dtype([
     ('uvalue', hdf5.vstr),
     ('weight', float),
     ('xml', hdf5.vstr),
+    ('geom_label', hdf5.vstr),
 ])
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
@@ -1011,9 +1012,21 @@ class RuntimeSourceModelLT(object):
     file must contain a top-level function of:
 
         def get_source_model_lt():
-            # Returns list of (name, weight, xml_str) triples;
-            # xml_str must be a complete NRML 0.5 sourceModel XML string.
+            # Returns a list of (name, weight, xml_str) triples OR a
+            # list of (name, weight, xml_str, geom_label) 4-tuples.
             # Weights must sum to 1.0.
+            # --> xml_str must be a complete NRML source model XML
+            #     string.
+            # --> A geom_label is an optional string used to share the
+            #     rupture geometry (and the associated GMM's mean/stds)
+            #     across sibling branches at runtime for speedup: all of
+            #     the branches tagged with the same label must enumerate
+            #     exactly the same rupture set per source (mags, nodal planes,
+            #     hypocentres etc) so only the per-rupture occurrence rates may
+            #     vary. 
+            #     NOTE: a geometry label is not necessary for every branch in
+            #     the builder script - you just have to set to None in this
+            #     case to have a placeholder value.
 
     Branch XML strings are parsed in-memory via nrml; no source XML files
     are written to or read from disk.
@@ -1040,12 +1053,16 @@ class RuntimeSourceModelLT(object):
 
         self._branch_xmls = {}    # branch_id -> xml_str
         self._branch_weights = {} # branch_id -> weight
+        self._branch_labels = {}  # branch_id -> geom_label (str or None)
 
         branches = list(branches)
-        if not all(isinstance(b, tuple) and len(b) == 3 for b in branches):
+        tuple_lens = {len(b) for b in branches if isinstance(b, tuple)}
+        if (not all(isinstance(b, tuple) for b in branches)
+                or tuple_lens not in ({3}, {4})):
             raise ValueError(
                 '%s: branches must be a list of (name, weight, xml_str)'
-                ' triples' % script_path)
+                ' triples OR (name, weight, xml_str, geom_label) 4-tuples'
+                % script_path)
         names = [b[0] for b in branches]
         dupes = [n for n in set(names) if names.count(n) > 1]
         if dupes:
@@ -1055,11 +1072,26 @@ class RuntimeSourceModelLT(object):
 
         src_data = []
         src_flt = source_id.split('!')[0].split('@')[0]
-        for name, weight, xml_str in branches:
+        for b in branches:
+            if len(b) == 3:
+                # No geometry label
+                name, weight, xml_str = b
+                geom_label = None
+            else:
+                # Geometry label is being used for caching means
+                # and stds for sources with sibling rupture sets
+                name, weight, xml_str, geom_label = b
+                if geom_label is None:
+                    pass  # No geom label use
+                elif not isinstance(geom_label, str) or geom_label == '':
+                    raise ValueError(
+                        '%s: geom_label must be a non-empty string or'
+                        ' None, got %r' % (script_path, geom_label))
             branch_id = name
             sentinel = '__rt__%s' % branch_id
             self._branch_xmls[branch_id] = xml_str
             self._branch_weights[branch_id] = weight
+            self._branch_labels[branch_id] = geom_label
             trt_by_src = get_trt_by_src(io.StringIO(xml_str), src_flt)
             for sid, trt in trt_by_src.items():
                 src_data.append((branch_id, trt, sentinel, sid))
@@ -1103,7 +1135,8 @@ class RuntimeSourceModelLT(object):
         num_samples = (self.num_samples if num_samples is None
                        else num_samples)
         branches = [
-            (bid, self._branch_weights[bid], xml_str)
+            (bid, self._branch_weights[bid], xml_str,
+             self._branch_labels.get(bid))
             for bid, xml_str in self._branch_xmls.items()
         ]
         return RuntimeSourceModelLT(
@@ -1172,6 +1205,13 @@ class RuntimeSourceModelLT(object):
             sm = nrml.node_to_obj(node_, sentinel, converter)
             sm.fname = sentinel
             sm.branch = branch_id
+            label = self._branch_labels.get(branch_id)
+            sm.geom_label = label
+            # Have to tag sources with their geometry labels
+            # so the cache key survives the CSM rebuild
+            for sg in sm.src_groups:
+                for src in sg:
+                    src.geom_label = label
             sm.rtime = time.time() - t0
             smdict[abs_path] = sm
         return smdict
@@ -1181,8 +1221,10 @@ class RuntimeSourceModelLT(object):
         for branch_id, weight in self._branch_weights.items():
             sentinel = '__rt__%s' % branch_id
             xml = self._branch_xmls.get(branch_id, '')
+            label = self._branch_labels.get(branch_id) or '' # Empty str
             tbl.append(
-                ('bs_rt', branch_id, 'sourceModel', sentinel, weight, xml))
+                ('bs_rt', branch_id, 'sourceModel', sentinel, weight,
+                 xml, label))
         attrs = dict(
             bsetdict='{"bs_rt": {"uncertaintyType": "sourceModel"}}',
             seed=self.seed,
@@ -1199,6 +1241,7 @@ class RuntimeSourceModelLT(object):
         vars(self).update(attrs)
         self._branch_xmls = {}
         self._branch_weights = {}
+        self._branch_labels = {}
         self.info = Info([], [], collections.defaultdict(list))
         trt_str = attrs.get('tectonic_region_types', '')
         self.tectonic_region_types = (
@@ -1208,6 +1251,7 @@ class RuntimeSourceModelLT(object):
             bid = rec['branch']
             self._branch_weights[bid] = float(rec['weight'])
             self._branch_xmls[bid] = decode(rec['xml'])
+            self._branch_labels[bid] = decode(rec['geom_label']) or None
         self.shortener = {bid: bid for bid in self._branch_weights}
         self.source_data = numpy.array([], source_dt)
         self.basepath = os.path.dirname(os.path.abspath(self.filename))
