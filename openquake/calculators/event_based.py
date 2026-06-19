@@ -416,7 +416,8 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        allargs.append((rups, cmaker, model))
+        for rupblock in block_splitter(rups, maxw, rup_weight):
+            allargs.append((rupblock, cmaker, model))
 
     allargs = _collect(allargs, maxw, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
@@ -426,11 +427,9 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
 
 
 def _collect(allargs, maxw, sids, sec_perils, dstore):
-    # allargs is a list [(rupblocks, cmaker, model), ...]
+    # allargs is a list [(rupblock, cmaker, model), ...]
     out = []
-    def weight(item):
-        return rup_weight(item[0]).sum()
-    for blk in block_splitter(allargs, maxw, weight,
+    for blk in block_splitter(allargs, maxw, lambda item: item[0].weight,
                               key=lambda item: item[2]):  # by model
         blks, cmakers, models = zip(*blk)
         allrups = [numpy.array(b) for b in blks]
