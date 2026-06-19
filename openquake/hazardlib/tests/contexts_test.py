@@ -436,7 +436,7 @@ class GeomCacheHitTestCase(unittest.TestCase):
 
         # First call populates the cache
         GEOM_CACHE.clear()
-        ctxs_A = list(cm.get_ctxs(srcs[0], sites)) # No cache
+        list(cm.get_ctxs(srcs[0], sites)) # i.e., ctxs_A (no cache)
         ctxs_B = list(cm.get_ctxs(srcs[1], sites)) # Uses cache in ctxs_A
 
         # Exactly one entry, distances reused, but rate substituted
