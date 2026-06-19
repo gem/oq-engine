@@ -100,7 +100,15 @@ def _read_admin_layer(fname):
 def load_admin_boundaries(
         country_name, iso3, adm_level, crs="EPSG:4326"):
     if adm_level == 1:
-        fname = config.directory.admin1_boundaries_file
+        try:
+            fname = config.directory.admin1_boundaries_file
+        except AttributeError:
+            # checking if the file is present in oq-engine
+            if not os.path.exists(
+                    fname := cd.parent.parent.parent /
+                    'World_Adm1_updated.csv'):
+                raise AttributeError(
+                    'config.directory.admin1_boundaries_file is missing')
     elif adm_level == 2:
         fname = config.directory.admin2_boundaries_file
     else:
