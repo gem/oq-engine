@@ -418,7 +418,7 @@ agg_id
         gsim = view('gsim_for_event:0', self.calc.datastore)
         self.assertEqual(str(gsim), "[BooreAtkinson2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
