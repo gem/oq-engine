@@ -106,7 +106,7 @@ def load_admin_boundaries(
             # checking if the file is present in oq-engine
             if not os.path.exists(
                     fname := cd.parent.parent.parent /
-                    'World_Adm1_updated.csv'):
+                    'World_Adm1_updated.gpkg'):
                 raise AttributeError(
                     'config.directory.admin1_boundaries_file is missing')
     elif adm_level == 2:
