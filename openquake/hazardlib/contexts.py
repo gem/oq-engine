@@ -1172,15 +1172,15 @@ class ContextMaker(object):
         NOTE: The caller (the _gen_poes method) only invokes this
         when self.geom_cache_key is set.
         """
-        # Get the key for given geometry group
+        # Get the entry for given geometry group
         entry = GEOM_CACHE.get(self.geom_cache_key)
         
-        # Lookup for given mag
+        # Lookup cached mean/sigma for given mag
         mag_key = round(float(ctx.mag[0]), 3)
         cached = entry.mean_stds.get(mag_key)
         
         if cached is not None: 
-            # Skip get_means_stds because sibling branch already
+            # Skip get_mean_stds because sibling branch already
             # computed means and stds for this mag (i.e., rupture)
             return cached
         
