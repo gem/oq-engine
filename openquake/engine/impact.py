@@ -95,6 +95,11 @@ def main_cmd(usgs_id, rupture_file=None,
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
     if aggregate_exposure:
         oqparams['aggregate_exposure'] = 'true'
+    if approach == 'use_shakemap_from_usgs':
+        oqparams['secondary_perils'] = (
+            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
+        oqparams['intensity_measure_types'] = (
+            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
     if err:
         callback(None, oqparams, exc=err)
         return
