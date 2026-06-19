@@ -85,7 +85,8 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
     calc, log = get_calc_log(ini, hc_id)
-    calc.run(export_dir='/tmp', close=False, tiling=tiling)
+    with log:
+        calc.run(export_dir='/tmp', close=False, tiling=tiling)
     if exports:
         calc.export(exports)
     print('Spent %.1f seconds' % (time.time() - t0))
@@ -93,19 +94,21 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
         calc_id = calc.datastore.calc_id
         fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
-            tbl = text_table(view(what, calc.datastore), ext='org')
+            tbl = view(what, calc.datastore)
         except KeyError:
             try:
                 dset = calc.datastore[what]
                 if '__pdcolumns__' in dset.attrs:
-                    df = calc.datastore.read_df(what)
+                    tbl = calc.datastore.read_df(what)
                 else:
-                    df = hdf5.ArrayWrapper.from_(dset).to_dframe()
+                    tbl = hdf5.ArrayWrapper.from_(dset).to_dframe()
             except KeyError:
-                df = extract(calc.datastore, what)
-                if not isinstance(df, pandas.DataFrame):
-                    df = df.to_dframe()
-            tbl = text_table(df, ext='org')
+                tbl = extract(calc.datastore, what)
+                if not isinstance(tbl, pandas.DataFrame):
+                    tbl = tbl.to_dframe()
+        if not isinstance(tbl, str):
+            tbl = text_table(tbl, ext='org')
+
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
         expected = outdir / bname
         if os.environ.get('OQ_OVERWRITE'):

@@ -34,6 +34,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
 
+U32 = numpy.uint32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
@@ -119,6 +120,26 @@ def poisson_sample(src, eff_num_ses, seed):
     # else (multi)point sources and area sources
     usd = src.upper_seismogenic_depth
     lsd = src.lower_seismogenic_depth
+    rup_args, rates = _rup_args_rates(src)
+    num_occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
+    for num_occ, args, rupid, rate in zip(num_occurs, rup_args, rupids, rates):
+        if num_occ:
+            (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,
+             dip_frac, ps) = args
+            hc = Point(lon, lat, hc_depth)
+            hdd = numpy.array([(1., hc.depth)])
+            dip_fracs = numpy.array([dip_frac])
+            [[[planar]]] = build_planar(
+                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
+                usd, lsd, ps.get_aspect_ratio(mag), dip_fracs=dip_fracs)
+            rup = ParametricProbabilisticRupture(
+                mag, np.rake, ps.tectonic_region_type, hc,
+                PlanarSurface.from_(planar), rate, tom)
+            yield rup, rupid, num_occ
+
+
+def _rup_args_rates(src):
+    # keep in memory potentially millions of rupture arguments and rates
     rup_args = []
     rates = []
     for ps in split_source(src):
@@ -136,22 +157,7 @@ def poisson_sample(src, eff_num_ses, seed):
                             mag, np, lon, lat, hc_depth, dip_frac, ps)
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
-    eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-    occurs = rng.poisson(eff_rates)
-    for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
-        if num_occ:
-            (_, np_prob, hc_prob, mag, np, lon, lat, hc_depth,
-             dip_frac, ps) = args
-            hc = Point(lon, lat, hc_depth)
-            hdd = numpy.array([(1., hc.depth)])
-            dip_fracs = numpy.array([dip_frac])
-            [[[planar]]] = build_planar(
-                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
-                usd, lsd, ps.get_aspect_ratio(mag), dip_fracs=dip_fracs)
-            rup = ParametricProbabilisticRupture(
-                mag, np.rake, ps.tectonic_region_type, hc,
-                PlanarSurface.from_(planar), rate, tom)
-            yield rup, rupid, num_occ
+    return rup_args, numpy.array(rates)
 
 
 def timedep_sample(src, eff_num_ses, seed):
@@ -207,14 +213,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     id = -1  # to be set
-    trt_smr = 0  # set by the engine
+    sampling = None  # set by the engine
     nsites = 1  # set when filtering the source
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
-    trt_smr = -1  # set by the engine
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
     samples = 1  # set by the engine
@@ -237,10 +242,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def trt_smrs(self):
         """
-        :returns: a list of integers (usually of 1 element)
+        :returns: a tuple of integers (usually of 1 element)
         """
-        trt_smr = self.trt_smr
-        return (trt_smr,) if isinstance(trt_smr, int) else trt_smr
+        if self.sampling is None:  # in hazardlib
+            return (0,)
+        return tuple(self.sampling['trt_smr'])
 
     def serial(self, ses_seed):
         """
@@ -276,30 +282,38 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             else:
                 yield rup.surface.mesh
 
+    @property
+    def multiplicity(self):
+        """
+        How many source model realizations the source belongs to
+        """
+        if self.sampling is None:
+            return 1
+        return len(self.sampling)
+
     def sample_ruptures(self, num_ses, ses_seed):
         """
-        :param num_ses: number of stochastic event sets
+        :param num_ses: ses_per_logic_tree_path
+        :param ses_seed: ses_seed coming from the job.ini
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
+        rng = numpy.random.default_rng(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        mul = len(self.trt_smrs)  # how many times the source is multiplied
-        if mul > 1:
-            triplet = (self.samples, self.smweight, self.trt_smrs)
-        else:
-            triplet = ([self.samples], [self.smweight], self.trt_smrs)
+        samples = self.sampling['samples'].sum()
+        probs = self.sampling['samples'] / samples
         ebrs = []
-        for i, (samples, smweight, trt_smr) in enumerate(zip(*triplet)):
-            for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
-                rupid = rid + i * self.num_ruptures
-                if hasattr(rup, 'occurrence_rate'):
-                    # defined only for poissonian sources
-                    # needed to get convergency of the frequency to the rate
-                    # tested only in oq-risk-tests etna0
-                    rup.occurrence_rate *= smweight
-                ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
-                                seed=rupid + TWO30 * self.id + ses_seed)
-                ebrs.append(ebr)
+        for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
+            if tot_occ:
+                occs = rng.multinomial(tot_occ, probs)
+                # rng.multinomial(1000, [.1, .2, .3, .4]) = [104, 201, 270, 425]
+                for i, (trt_smr, occ) in enumerate(
+                        zip(self.sampling['trt_smr'], occs)):
+                    if occ:
+                        rupid = rid + i * self.num_ruptures
+                        ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
+                                        seed=rupid + TWO30 * self.id + ses_seed)
+                        ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):

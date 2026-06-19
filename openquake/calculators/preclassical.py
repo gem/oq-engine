@@ -35,7 +35,7 @@ from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
-MAX_NUM_RUPTURES = 50_000  # tentative
+MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -101,7 +101,7 @@ def _filter_mag(srcs, min_mag, strict):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
-        if (ss.num_ruptures > MAX_NUM_RUPTURES and strict and
+        if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
             ss.code in b'FSCNXK'):  # only for fault sources
             raise RuntimeError('%s has too many ruptures' % ss)
     return out
@@ -185,7 +185,7 @@ def get_req_gb(data, N, oq):
     :returns: an array with the required GB for the RateMaps
     """
     out = numpy.zeros(len(data))
-    L = oq.imtls.size
+    L = oq.imtls.size if oq.imtls else 1
     for rec in data:
         if oq.disagg_by_src or rec['blocks'] > 1:
             # NB: the float(rec['gsims']) is necessary for case_lisa
@@ -206,20 +206,24 @@ def store_csm(dstore, csm, sitecol, cmakers):
         return 1
     N = len(sitecol)
     oq = csm.oq
-    fac = oq.imtls.size * N * 4 / 1024**2
+    if len(oq.imtls) == 0:  # in test_from_ses
+        mb_per_gsim = N * 4 / 1024**2
+    else:
+        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight()
 
     # build source_groups and store _csm
     quartets = []
     for sg, cmaker in zip(csm.src_groups, cmakers.to_array()):
         quartet = csm.split_sg(
-            cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+            cmaker, sg, sitecol, max_weight, mb_per_gsim, tiling=oq.tiling)
         quartets.append(quartet)
+    # storing _csm
     csm.save(dstore, [q[2] for q in quartets])
 
     data = numpy.array(
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
-          len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
+          len(cm.gsims) * mb_per_gsim, extra['weight'], extra['codes'], cm.trt)
          for cm, tgets, blocks, extra in quartets],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
@@ -235,7 +239,8 @@ def store_csm(dstore, csm, sitecol, cmakers):
         avail_gb = psutil.virtual_memory().available / 1024**3
         if required_gb > avail_gb:
             raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
-        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
+        if 'classical' in oq.calculation_mode:
+            logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
     dstore.create_dset('source_groups', data,
@@ -315,6 +320,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
             logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
+        elif sites:
+            sf = SourceFilter(sites, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
         atomic_sources = []

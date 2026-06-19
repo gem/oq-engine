@@ -714,7 +714,7 @@ The magnitude-frequency distributions currently supported by the OpenQuake engin
   in :ref:`the figure below <arb-mfd>`) can be input as::
 
 	<arbitraryMFD>
-	    <occurRates>0.12 0.036 0.067 0.2</occurRates>
+	    <occurRates>0.12 0.036 0.067 0.02</occurRates>
 	    <magnitudes>8.1 8.47 8.68 9.02</magnitude>
 	</arbitraryMFD>
 

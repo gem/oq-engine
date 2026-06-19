@@ -78,31 +78,32 @@ class KiteSurface(BaseSurface):
         """
         Removes from the mesh the rows and columns containing just NaNs
         """
-        # Rows
-        rm = []
-        for i in range(0, self.mesh.lons.shape[0]):
-            if np.all(np.isnan(self.mesh.lons[i, :])):
-                rm.append(i)
-        lons = np.delete(self.mesh.lons, rm, axis=0)
-        lats = np.delete(self.mesh.lats, rm, axis=0)
-        deps = np.delete(self.mesh.depths, rm, axis=0)
-        # Cols
-        rm = []
-        for i in range(0, lons.shape[1]):
-            if np.all(np.isnan(lons[:, i])):
-                rm.append(i)
-        lons = np.delete(lons, rm, axis=1)
-        lats = np.delete(lats, rm, axis=1)
-        deps = np.delete(deps, rm, axis=1)
+        # Identify rows that are NOT completely filled with NaNs
+        valid_rows = ~np.all(np.isnan(self.mesh.lons), axis=1)
 
-        success = True
-        if not lons.size > 0:
-            success = False
-            return success
+        # Early exit if all rows are dropped (size would be 0)
+        if not np.any(valid_rows):
+            return False
 
-        mesh = RectangularMesh(lons, lats, deps)
-        self.mesh = mesh
-        return success
+        # Slice the rows
+        lons = self.mesh.lons[valid_rows, :]
+        lats = self.mesh.lats[valid_rows, :]
+        deps = self.mesh.depths[valid_rows, :]
+
+        # Identify columns that are NOT completely filled with NaNs
+        valid_cols = ~np.all(np.isnan(lons), axis=0)
+
+        # Slice the columns
+        lons = lons[:, valid_cols]
+        lats = lats[:, valid_cols]
+        deps = deps[:, valid_cols]
+
+        # Final check to ensure we didn't wipe out the columns
+        if lons.size == 0:
+            return False
+
+        self.mesh = RectangularMesh(lons, lats, deps)
+        return True
 
     @property
     def surface_nodes(self):

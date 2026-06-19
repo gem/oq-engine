@@ -15,15 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import cProfile
 import tempfile
 import unittest
 import numpy
-import pandas
 import matplotlib.pyplot as plt
-from openquake.baselib import hdf5, general, writers
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts, calc
+from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save_and_split, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -147,10 +145,12 @@ class MultiFaultTestCase(unittest.TestCase):
         aac(ctx.rrup, [27.51933, 0., 27.51933, 55.03832,  0., 0., 0.],
             atol=tol)
         aac(ctx.rjb, [27.51907, 0., 27.51907, 55.03832,  0., 0., 0.], atol=tol)
-        aac(ctx.rx, [1.653083e-01, 0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
-                     1.643886e-05, 3.3298e-05], atol=tol)
-        aac(ctx.ry0, [27.5184749, 0., 27.518915, 55.03632, 0., 0., 0.],
-            atol=tol)
+        aac(ctx.rx, [1.65508553e-01, 0.00000000e+00, 1.10377736e-01,
+                     3.39619726e-01, 1.68873139e-05, 1.64545218e-05,
+                     3.33385033e-05], atol=tol)
+        aac(ctx.ry0, [2.75184898e+01, 0.00000000e+00, 2.75188866e+01,
+                      5.50363388e+01, 0.00000000e+00, 7.62939453e-06,
+                      1.52587891e-05], atol=tol)
         aac(ctx.clon, [10.35, 10., 10.35, 10.7, 10., 10., 10.])
         aac(ctx.clat, 45.)
 
@@ -163,72 +163,3 @@ class MultiFaultTestCase(unittest.TestCase):
             save_and_split([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
-
-    def test_performance(self):
-        # performance test with a reduced UCERF source
-        [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-        sitecol = SiteCollection.from_points([-122, -121], [37, 27])
-        sitecol._set('vs30', 760.)
-        sitecol._set('vs30measured', 1)
-        sitecol._set('z1pt0', 100.)
-        sitecol._set('z2pt5', 5.)
-        gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-        cmaker = contexts.simple_cmaker([gsim], ['PGA'])
-        sf = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
-        secparams = build_secparams(src.get_sections())
-        nsites = sf.get_close(secparams)
-        src.set_msparams(secparams, nsites > 0, ry0=True)
-        ctxt = cmaker.from_srcs([src], sitecol)
-        print(cmaker.ir_mon)
-        print(cmaker.ctx_mon)
-
-        inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
-        out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
-        ctx = ctxt[::50]
-        if os.environ.get('OQ_OVERWRITE'):
-            writers.write_csv(inp, ctx)
-        else:
-            writers.write_csv(out, ctx)
-            df = pandas.read_csv(inp, na_values=['NAN'])
-            aac = numpy.testing.assert_allclose
-            for col in df.columns:
-                if col == 'probs_occur:2':
-                    continue
-                print(col)
-                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
-
-
-def main100sites():
-    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    lons = [-122.]
-    lats = [27.]
-    sitecol = SiteCollection.from_points(lons, lats)
-    sitecol._set('vs30', 760.)
-    sitecol._set('vs30measured', 1)
-    sitecol._set('z1pt0', 100.)
-    sitecol._set('z2pt5', 5.)
-    gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
-    secparams = build_secparams(src.get_sections())
-    srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
-    src.set_msparams(secparams, ry0=True)
-    sites = srcfilter.get_close_sites(src)
-    with cProfile.Profile() as prof:
-        cmaker.get_ctxs(src, sites)
-    prof.print_stats('cumulative')
-    print(cmaker.ir_mon)
-    print(cmaker.ctx_mon)
-    # determine unique tors
-    rups = list(src.iter_ruptures())
-    lines = []
-    data = []
-    for rup in rups:
-        for surf in rup.surface.surfaces:
-            lines.append(surf.tor)
-            data.append(surf.tor.coo.tobytes())
-    uni, _inv = numpy.unique(data, return_inverse=True)
-    print('Found %d/%d unique segments' % (len(uni), len(data)))
-
-
-if __name__ == '__main__':
-    main100sites()

@@ -32,7 +32,7 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg, sum_records)
+    get_array, group_array, fast_agg, fast_agg3, sum_records)
 from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.general import encode, decode
@@ -459,7 +459,7 @@ def view_totlosses(token, dstore):
             name = 'avg_losses-rlzs/' + ltype
             tot = dstore[name][()].sum(axis=0)
         tot_losses += tot
-    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+    return tot_losses.view(oq.loss_dt(F32))
 
 
 def alt_to_many_columns(alt, loss_types):
@@ -800,8 +800,8 @@ def view_task_eb(token, dstore):
     return msg
 
 
-@view.add('task_cl')
-def view_task_cl(token, dstore):
+
+def view_task(token, dstore, taskname):
     """
     Display info about a given task. Here are a few examples of usage::
 
@@ -811,7 +811,7 @@ def view_task_cl(token, dstore):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=b'classical')
+    data = get_array(dstore['task_info'][()], taskname=taskname.encode('ascii'))
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
@@ -834,6 +834,28 @@ def view_task_cl(token, dstore):
     msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
         % df
     return msg
+
+
+@view.add('task_cl')
+def view_task_cl(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical')
+
+
+@view.add('task_cd')
+def view_task_cd(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cd:0  # the fastest task
+     $ oq show task_cd:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical_disagg')
 
 
 @view.add('source_data')
@@ -946,6 +968,23 @@ class GmpeExtractor(object):
             trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
+
+
+@view.add('occ_by_trt_smr')
+def view_occ_by_trt_smr(token, dstore):
+    """
+    Display the number of occurrences per trt_smr
+    """
+    try:
+        rups = dstore['filtered_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
+    arr = fast_agg3(rups, 'trt_smr', ['n_occ'])
+    arr.sort(order='n_occ')
+    df = pandas.DataFrame(
+        dict(trt_smr=arr['trt_smr'], n_occ=arr['n_occ'])
+    ).set_index('trt_smr')
+    return df
 
 
 @view.add('extreme_gmvs')

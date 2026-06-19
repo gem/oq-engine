@@ -866,6 +866,33 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
+@extract.add('exposure_by_lse')
+def extract_exposure_by_lse(dstore, what):
+    """
+    Aggregates exposure by secondary peril LSE tiers and tags.
+    Use it as /extract/exposure_by_lse?secondary_peril=landslide
+    or        /extract/exposure_by_lse?secondary_peril=liquefaction
+    To keep also tier bins with no assets:
+    /extract/exposure_by_lse?secondary_peril=landslide?discard_empty=0
+    or
+    /extract/exposure_by_lse?secondary_peril=liquefaction?discard_empty=0
+    """
+    qdict = parse(what)
+    [secondary_peril] = qdict['secondary_peril']
+    discard_empty = qdict.get('discard_empty', [1])[0] == 1
+    avg_gmf_array = dstore['avg_gmf'][:]
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    if 'exposure' in oq.inputs:
+        exposure_hdf5 = oq.inputs['exposure'][0]
+    else:
+        exposure_hdf5 = None
+    df = assetcol.aggregate_exposure_by_lse_tier(
+        oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
+        exposure_hdf5=exposure_hdf5, discard_empty=discard_empty)
+    return df
+
+
 # tested in impact_test and partially in case_1_ins
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
@@ -1090,7 +1117,8 @@ def extract_losses_by_site(dstore, what):
     sitecol.make_complete()  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
     ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
-    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
+    dic = {'lon': F32(sitecol.lons[ok_sids]),
+           'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
@@ -1327,7 +1355,7 @@ def extract_damages_stats_npz(dstore, what):
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """
-    Compare n_occ/eff_time with occurrence_rate.
+    The number of ruptures / eff_time per magnitude.
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = datastore.get_oq(dstore)
@@ -1339,11 +1367,10 @@ def extract_mfd(dstore, what):
         rup_df = dstore.read_df('filtered_ruptures', 'id')
     rup_df = rup_df[['mag', 'n_occ', 'occurrence_rate']]
     rup_df.mag = numpy.round(rup_df.mag, 1)
-    dic = dict(mag=[], freq=[], occ_rate=[])
+    dic = dict(mag=[], freq=[])
     for mag, df in rup_df.groupby('mag'):
         dic['mag'].append(mag)
         dic['freq'].append(df.n_occ.sum() / eff_time)
-        dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 

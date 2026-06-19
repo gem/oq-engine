@@ -26,22 +26,23 @@
                 </tr>
               </thead>
               <tbody>
-                {% for row in table_contents %}
+                {% for row in table_rows %}
                 <tr>
-                  {% for item in row %}
+                {% for header, item in row %}
                     {% if forloop.first %}
-                      {# assuming ID is the first column, otherwise it requires more work to avoid humanizing it by name #}
-                      <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
+                    <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
+                    {% elif header in string_columns %}
+                    <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
                     {% else %}
-                      <td>
+                    <td>
                         {% if item|stringformat:"s"|floatformat %}
-                          {{ item|humanize_number }}
+                        {{ item|humanize_number }}
                         {% else %}
-                          {{ item|stringformat:"s"|linebreaksbr }}
+                        {{ item|stringformat:"s"|linebreaksbr }}
                         {% endif %}
-                      </td>
+                    </td>
                     {% endif %}
-                  {% endfor %}
+                {% endfor %}
                 </tr>
                 {% endfor %}
               </tbody>

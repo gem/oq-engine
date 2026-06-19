@@ -82,7 +82,7 @@ class AvgPoeGMPE(GMPE):
         def_for_stddevs = []
         for branchid, branchparams in kwargs.items():
             [(gsim_name, params)] = branchparams.items()
-            weights.append(params.pop('weight'))
+            weights.append(params['weight'])
             gsim = registry[gsim_name](**params)
             rd.update(gsim.REQUIRES_DISTANCES)
             rsp.update(gsim.REQUIRES_SITES_PARAMETERS)

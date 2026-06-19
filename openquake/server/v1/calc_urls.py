@@ -67,6 +67,7 @@ elif settings.APPLICATION_MODE == 'IMPACT':
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^(\d+)/impact$', views.impact_results),
         re_path(r'^(\d+)/exposure_by_mmi$', views.exposure_by_mmi),
+        re_path(r'^(\d+)/exposure_by_lse$', views.exposure_by_lse),
         re_path(r'^(\d+)/download_aggrisk$', views.download_aggrisk),
         re_path(r'^(\d+)/extract_html_table/([-/_\.\(\)\w]+)$',
                 views.extract_html_table),

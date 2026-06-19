@@ -18,16 +18,14 @@
 
 import toml
 import copy
-import zlib
-import pickle
 import logging
 import operator
 import functools
 import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
-from openquake.baselib.general import (
-    block_splitter, split_in_blocks, AccumDict, groupby)
+from openquake.baselib.general import zpik, zunpik
+from openquake.baselib.general import split_in_blocks, AccumDict, groupby
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
@@ -50,6 +48,25 @@ def _grp_id(blk):
         return blk
     src = blk[0]
     return src if isinstance(src, U16) else src.grp_id
+
+
+def get_unique(sources):
+    """
+    :returns: remove redundant identical sources
+    """
+    unique = {}
+    for src in sources:
+        unique[id(src)] = src
+    return unique.values()
+
+
+def assert_unique(sources):
+    """
+    Raise an error if there are identical sources
+    """
+    n = len(sources)
+    nu = len(get_unique(sources))
+    assert nu == n, (nu, n)
 
 
 class SourceGroup(collections.abc.Sequence):
@@ -242,27 +259,6 @@ class SourceGroup(collections.abc.Sequence):
         """
         return self.sources[0].trt_smr
 
-    # used only in event_based, where weight = num_ruptures
-    def split(self, maxweight):
-        """
-        Split the group in subgroups with weight <= maxweight, unless it
-        it atomic.
-        """
-        if self.atomic:
-            return [self]
-
-        out = []
-        def weight(src):
-            if src.code == b'F':  # consider it much heavier
-                return src.num_ruptures * 25
-            return src.num_ruptures
-        for block in block_splitter(self, maxweight, weight):
-            sg = copy.copy(self)
-            sg.sources = block
-            out.append(sg)
-        logging.info('Produced %d subgroup(s) of %s', len(out), self)
-        return out
-
     def get_tom_toml(self, time_span):
         """
         :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
@@ -341,6 +337,7 @@ class CompositeSourceModel:
         self.code = {}  # srcid -> code
         for grp_id, sg in enumerate(self.src_groups):
             assert len(sg)  # sanity check
+            assert_unique(sg)
             for src in sg:
                 src.grp_id = grp_id
                 if src.code != b'P':
@@ -453,17 +450,18 @@ class CompositeSourceModel:
 
     def fix_src_offset(self):
         """
-        Set the src.offset field for each source
+        Set the src.offset field for each source with the same basename
         """
         src_id = 0
-        for srcs in groupby(self.get_sources(), self.basename).values():
-            offset = 0
+        unique = get_unique(self.get_sources())
+        for srcs in groupby(unique, self.basename).values():
+            offset = 0  # TODO: why not before the loop?
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
             for src in srcs:
                 src.id = src_id
                 src.offset = offset
-                offset += src.num_ruptures
+                offset += src.num_ruptures * src.multiplicity
                 if src.num_ruptures >= TWO30:
                     raise ValueError(
                         '%s contains more than 2**30 ruptures' % src)
@@ -522,9 +520,11 @@ class CompositeSourceModel:
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         # cmakers is a dictionary label -> array of cmakers
         with_labels = len(cmdict) > 1
+        N = len(sitecol)
         for idx, label in enumerate(cmdict):
             cms = cmdict[label].to_array(grp_ids)
             for cmaker, grp_id in zip(cms, grp_ids, strict=True):
+                mb_per_gsim = cmaker.oq.imtls.size * N * 4 / 1024**2
                 sg = self.src_groups[grp_id]
                 if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
@@ -538,14 +538,14 @@ class CompositeSourceModel:
                     if with_labels:
                         cmaker.ilabel = idx
                     yield self.split_sg(
-                        cmaker, sg, sites, max_weight, num_chunks, tiling)
+                        cmaker, sg, sites, max_weight, mb_per_gsim,
+                        num_chunks, tiling)
 
-    def split_sg(self, cmaker, sg, sitecol, max_weight,
+    def split_sg(self, cmaker, sg, sitecol, max_weight, mb_per_gsim,
                  num_chunks=1, tiling=False):
         N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
-        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = int(numpy.ceil(G * mb_per_gsim / max_mb))
         if sg.multifault and N / splits > 2_500:
@@ -583,7 +583,8 @@ class CompositeSourceModel:
             row = [srcid, src.grp_id, src.code,
                    0, 0, 0,  # CALC_TIME, NUM_CTXS, EST_CTXS
                    sum(s.num_ruptures for s in srcs),
-                   sum(s.weight for s in srcs)]
+                   sum(s.weight for s in srcs),
+                   sum(s.multiplicity for s in srcs) / len(srcs)]
             data[srcid] = row
         logging.info('There are %d groups and %d sources with '
                      'len(trt_smrs)=%.2f', len(self.src_groups), len(data),
@@ -665,21 +666,6 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
 
 
 # ################## read/write utilities ##################### # 
-
-def zpik(obj):
-    """
-    zip and pickle a python object
-    """
-    gz = zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
-    return numpy.frombuffer(gz, numpy.uint8)
-
-
-def zunpik(data):
-    """
-    unzip and unpickle some data array
-    """
-    return pickle.loads(zlib.decompress(data.tobytes())) 
-            
 
 def read_src_group(hdf5, key, mon=performance.Monitor()):
     """

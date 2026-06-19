@@ -25,17 +25,30 @@ from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
 class WC1994(BaseMSRSigma, BaseASRSigma):
     """
-    Wells and Coppersmith magnitude -- rupture area relationships,
+    Wells and Coppersmith magnitude -- rupture parameters relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.
 
-    Implements both magnitude-area and area-magnitude scaling relationships.
+    Implements scaling relationships for:
+    - Moment Magnitude (M)
+    - Rupture Area (RA)
+    - Surface Rupture Length (SRL)
+    - Subsurface Rupture Length (RLD)
+    - Rupture Width (RW)
     """
     def get_median_area(self, mag, rake):
         """
+        Calculates median area from magnitude.
+
         The values are a function of both magnitude and rake.
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
         if rake is None:
             # their "All" case
@@ -52,7 +65,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Standard deviation for WC1994. Magnitude is ignored.
+        Returns std of the logarithm of rupture area. Magnitude is ignored.
         """
         if rake is None:
             # their "All" case
@@ -67,26 +80,11 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             # normal
             return 0.22
 
-    def get_std_dev_mag(self, area, rake):
-        """
-        Standard deviation on the magnitude for the WC1994 area relation.
-        """
-        if rake is None:
-            # their "All" case
-            return 0.24
-        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
-            # strike slip
-            return 0.23
-        elif rake > 0:
-            # thrust/reverse
-            return 0.25
-        else:
-            # normal
-            return 0.25
-
     def get_median_mag(self, area, rake):
         """
-        Return magnitude (Mw) given the area and rake.
+        Calculates median magnitude from area.
+
+        The values are a function of both area and rake.
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
@@ -109,3 +107,291 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         else:
             # normal
             return 3.93 + 1.02 * log10(area)
+
+    def get_std_dev_mag(self, area, rake):
+        """
+        Returns std for magnitude. Area is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.24
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.23
+        elif rake > 0:
+            # thrust/reverse
+            return 0.25
+        else:
+            # normal
+            return 0.25
+
+    def get_median_srl(self, mag, rake):
+        """
+        Calculates median surface rupture length from magnitude.
+
+        The values are a function of both magnitude and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 10.0 ** (-3.22 + 0.69 * mag)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 10.0 ** (-3.55 + 0.74 * mag)
+        elif rake > 0:
+            # thrust/reverse
+            return 10.0 ** (-2.86 + 0.63 * mag)
+        else:
+            # normal
+            return 10.0 ** (-2.01 + 0.50 * mag)
+
+    def get_std_dev_srl(self, mag, rake):
+        """
+        Returns std of the logarithm of surface rupture length. Magnitude is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.22
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.23
+        elif rake > 0:
+            # thrust/reverse
+            return 0.20
+        else:
+            # normal
+            return 0.21
+
+    def get_median_mag_from_srl(self, srl, rake):
+        """
+        Calculates median magnitude from surface rupture length.
+
+        The values are a function of both surface rupture length and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param srl:
+            Surface rupture length in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 5.08 + 1.16 * log10(srl)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 5.16 + 1.12 * log10(srl)
+        elif rake > 0:
+            # thrust/reverse
+            return 5.00 + 1.22 * log10(srl)
+        else:
+            # normal
+            return 4.86 + 1.32 * log10(srl)
+
+    def get_std_dev_mag_from_srl(self, srl, rake):
+        """
+        Returns std for magnitude. Surface rupture length is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.28
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.28
+        elif rake > 0:
+            # thrust/reverse
+            return 0.28
+        else:
+            # normal
+            return 0.34
+
+    def get_median_rld(self, mag, rake):
+        """
+        Calculates median subsurface rupture length from magnitude.
+
+        The values are a function of both magnitude and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 10.0 ** (-2.44 + 0.59 * mag)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 10.0 ** (-2.57 + 0.62 * mag)
+        elif rake > 0:
+            # thrust/reverse
+            return 10.0 ** (-2.42 + 0.58 * mag)
+        else:
+            # normal
+            return 10.0 ** (-1.88 + 0.50 * mag)
+
+    def get_std_dev_rld(self, mag, rake):
+        """
+        Returns std of the logarithm of subsurface rupture length. Magnitude is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.16
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.15
+        elif rake > 0:
+            # thrust/reverse
+            return 0.16
+        else:
+            # normal
+            return 0.17
+
+    def get_median_mag_from_rld(self, rld, rake):
+        """
+        Calculates median magnitude from subsurface rupture length.
+
+        The values are a function of both subsurface rupture length and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param rld:
+            Subsurface rupture length in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 4.38 + 1.49 * log10(rld)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 4.33 + 1.49 * log10(rld)
+        elif rake > 0:
+            # thrust/reverse
+            return 4.49 + 1.49 * log10(rld)
+        else:
+            # normal
+            return 4.34 + 1.54 * log10(rld)
+
+    def get_std_dev_mag_from_rld(self, rld, rake):
+        """
+        Returns std for magnitude. Subsurface rupture length is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.26
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.24
+        elif rake > 0:
+            # thrust/reverse
+            return 0.26
+        else:
+            # normal
+            return 0.31
+
+    def get_median_rw(self, mag, rake):
+        """
+        Calculates median rupture width from magnitude.
+
+        The values are a function of both magnitude and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param mag:
+            Moment magnitude.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 10.0 ** (-1.01 + 0.32 * mag)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 10.0 ** (-0.76 + 0.27 * mag)
+        elif rake > 0:
+            # thrust/reverse
+            return 10.0 ** (-1.61 + 0.41 * mag)
+        else:
+            # normal
+            return 10.0 ** (-1.14 + 0.35 * mag)
+
+    def get_std_dev_rw(self, mag, rake):
+        """
+        Returns std of the logarithm of rupture width. Magnitude is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.15
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.14
+        elif rake > 0:
+            # thrust/reverse
+            return 0.15
+        else:
+            # normal
+            return 0.12
+
+    def get_median_mag_from_rw(self, rw, rake):
+        """
+        Calculates median magnitude from rupture width.
+
+        The values are a function of both rupture width and rake.
+
+        Setting the rake to ``None`` causes their "All" rupture-types
+        to be applied.
+
+        :param rw:
+            Rupture width in km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+        if rake is None:
+            # their "All" case
+            return 4.06 + 2.25 * log10(rw)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 3.80 + 2.59 * log10(rw)
+        elif rake > 0:
+            # thrust/reverse
+            return 4.37 + 1.95 * log10(rw)
+        else:
+            # normal
+            return 4.04 + 2.11 * log10(rw)
+
+    def get_std_dev_mag_from_rw(self, rw, rake):
+        """
+        Returns std for magnitude. Rupture width is ignored.
+        """
+        if rake is None:
+            # their "All" case
+            return 0.41
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            # strike slip
+            return 0.45
+        elif rake > 0:
+            # thrust/reverse
+            return 0.32
+        else:
+            # normal
+            return 0.31
+    

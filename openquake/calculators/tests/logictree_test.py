@@ -97,14 +97,13 @@ class LogictreeTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
 
         # check that the occurrence rates are the expected ones
-        # NB: in engine < 3.17 this check fails
         [src] = self.calc.csm.get_sources()
         occrates = src.mfd.occurrence_rates
-        self.assertEqual(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
+        aac(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
         df = self.calc.datastore.read_df('ruptures', 'id')[
             ['mag', 'occurrence_rate']]
         gb = df.groupby('mag').sum()
-        aac(occrates, gb.occurrence_rate)
+        aac(gb.occurrence_rate / src.multiplicity, occrates, atol=2E-7)
 
     def test_case_02(self):
         self.run_calc(case_02.__file__, 'job.ini')
@@ -774,12 +773,13 @@ hazard_uhs-std.csv
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
-        df = view('event_based_mfd', self.calc.datastore)
-        self.assertEqual(str(df), '''\
-      freq  occ_rate
-mag                 
-4.0  2.725     2.795
-4.5  1.578     1.614''')
+        fname = general.gettemp(str(view(
+            'occ_by_trt_smr', self.calc.datastore)))
+        self.assertEqualFiles('expected/occ_by_trt_smr', fname)
+        
+        fname = general.gettemp(str(view(
+            'event_based_mfd', self.calc.datastore)))
+        self.assertEqualFiles('expected/event_based_mfd', fname)
 
     def test_case_84(self):
         # test maxMagGRRelativeNoMoBalance

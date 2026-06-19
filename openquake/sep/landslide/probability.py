@@ -34,7 +34,7 @@ lithology_values={
     "nd": -0.66,
     "pa": -0.78,
     "pb": -1.88,
-    "vi": -1.61,
+    "pi": -1.61,
     "py": -1.05,
     "sc": -0.95,
     "sm": -1.36,
@@ -42,7 +42,7 @@ lithology_values={
     "su": -3.22,
     "va": -1.54,
     "vb": -1.50,
-    "pi": -0.81
+    "vi": -0.81
 }
 
 
@@ -123,11 +123,10 @@ def nowicki_jessee_2018(
     else:
         lithology_coeff = np.array([coeff_table_lith.get(lith, -0.66) for lith in lithology])
 
-    if isinstance(landcover, int):   
-        landcover = str(landcover)
-        landcover_coeff = coeff_table_cov.get(landcover, -1.08)
+    if np.isscalar(landcover):   
+        landcover_coeff = coeff_table_cov.get(str(int(landcover)), -1.08)
     else:
-        landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
+        landcover_coeff = np.array([coeff_table_cov.get(str(int(lc)), -1.08) for lc in landcover])
 
     pgv = np.clip(pgv, MIN_HAZARD, None)
     Xg = (

@@ -767,6 +767,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
 
+        # test for https://github.com/gem/oq-engine/issues/11512
+        export(('realizations', 'csv'), self.calc.datastore)
+
         # checking missing region
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_57.__file__, 'job_wrong.ini')
