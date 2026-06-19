@@ -2483,10 +2483,10 @@ def extract_html_table(request, calc_id, name):
     table_name = display_names[name] if name in display_names else name
 
     # Identify string columns from dtype before formatting the headers.
+    # dtype.kind: 'S' = bytes, 'U' = unicode, 'O' = object
     string_short_names = {
         col for col in table.columns
-        if str(table[col].dtype).startswith('S') or
-        table[col].dtype == object
+        if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
     }
 
     table_header = []
