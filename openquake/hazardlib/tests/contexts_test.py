@@ -26,7 +26,8 @@ from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    Effect, ContextMaker, get_distances, GEOM_CACHE)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -36,7 +37,8 @@ from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
-from openquake.hazardlib.mfd import ArbitraryMFD
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.mfd import ArbitraryMFD, TruncatedGRMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
@@ -390,3 +392,59 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class GeomCacheHitTestCase(unittest.TestCase):
+    """
+    Check that two sibling sources sharing a geom_label populate
+    GEOM_CACHE only once and the second source reuses the cached
+    contexts.
+    """
+    def test_sibling_hits_cache(self):
+        # Two sibling fault sources - they have identical surface and an MFD
+        # that only differs by a_val so their per-rupture rates are different
+        kw = dict(name='fs', tectonic_region_type=TRT.ACTIVE_SHALLOW_CRUST,
+                  rupture_mesh_spacing=5.0,
+                  magnitude_scaling_relationship=WC1994(),
+                  rupture_aspect_ratio=1.5,
+                  temporal_occurrence_model=PoissonTOM(50.0),
+                  upper_seismogenic_depth=0.0,
+                  lower_seismogenic_depth=15.0,
+                  fault_trace=Line([Point(9.8, 44.8), Point(10.2, 45.2)]),
+                  dip=60.0, rake=0.0)
+        srcs = [
+            SimpleFaultSource(source_id=f'fs!{b}',
+            mfd=TruncatedGRMFD(5.0, 6.0, 0.2, a, 1.0), 
+            **kw)
+            for b, a in [('A', 3.0), ('B', 2.5)] # Diff a-values
+                ]
+        
+        # Tag both siblings with the same geom_label so the cache applies
+        for s in srcs:
+            s.geom_label, s.offset = 'a_geometry_label', 0
+
+        # Make the cmaker
+        cm = ContextMaker(
+            TRT.ACTIVE_SHALLOW_CRUST, [AbrahamsonEtAl2014()],
+            dict(imtls={'PGA': [0.1, 0.5]}, truncation_level=3.0,
+                 investigation_time=50.0))
+        
+        # Make the sitecol
+        sites = SiteCollection([
+            Site(Point(10.0, 45.0), vs30=760.0, vs30measured=True,
+                 z1pt0=30.0, z2pt5=0.5)])
+
+        # First call populates the cache
+        GEOM_CACHE.clear()
+        ctxs_A = list(cm.get_ctxs(srcs[0], sites)) # No cache
+        ctxs_B = list(cm.get_ctxs(srcs[1], sites)) # Uses cache in ctxs_A
+
+        # Exactly one entry, distances reused, but rate substituted
+        [entry] = GEOM_CACHE.values()
+        assert len(GEOM_CACHE) == 1
+        aac(ctxs_B[0]['rrup'], entry.ctxs[0]['rrup']) # Should be same rrup
+        self.assertNotEqual( # But different occurrence rates
+            ctxs_B[0]['occurrence_rate'][0], entry.ctxs[0]['occurrence_rate'][0]
+            )
+
+        GEOM_CACHE.clear() $ 
