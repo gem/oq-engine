@@ -1033,6 +1033,16 @@ class RuntimeSourceModelLT(object):
 
     NOTE: An example of this feature (including a simple builder script) can
     be found in oq-engine/qa_test_data/ logictree/case_34/.
+
+    NOTE: The geom_label cache is engaged only in the calculation
+    modes whose path runs through RmapMaker._make_src_indep:
+        --> Classical PSHA
+        --> Disagg by source
+
+    In other modes the label is accepted but inert (results are still
+    correct). For example, in eb-based we sample rups stochastically
+    per branch so the sibling branches don't share enumerable rup sets
+    and the cache is therefore bypassed entirely.
     """
     # Single-level LT with one sourceModel branchset (i.e., it's flat)
     branchID = ''

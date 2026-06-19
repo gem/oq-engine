@@ -592,8 +592,9 @@ hazard_uhs-std.csv
         # The geometry labelled (ctx caching for same rupture sets) run
         # and the unlabelled (no-cache) run must produce identical mean
         # hazard curves in both classical and disagg_by_src. 
-        # NOTE: The geom label caching is is not supported for
-        # eb-based because no rupture sets to enumerate
+        # NOTE: The geom_label cache is not engaged in event-based runs:
+        # rupture sampling is stochastic per branch so sibling branches do
+        # not share an identical rupture set.
         for ini, export_key, expected in [
                 ('job_runtime.ini',
                  ('hcurves/mean', 'csv'),
