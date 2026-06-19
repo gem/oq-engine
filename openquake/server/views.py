@@ -2357,6 +2357,8 @@ def web_engine_get_outputs_impact(request, calc_id):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_aristotle_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
+    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
+    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2365,10 +2367,6 @@ def web_engine_get_outputs_impact(request, calc_id):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        gmf_cols = ds.read_df('gmf_data').columns
-        exposure_by_land_lse = "AllstadtEtAl2022Landslides_LSE" in gmf_cols
-        exposure_by_liq_lse = "AllstadtEtAl2022Liquefaction_LSE" in gmf_cols
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
