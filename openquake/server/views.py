@@ -43,7 +43,8 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
-from django.core.mail.backends.filebased import EmailBackend as FileEmailBackend
+from django.core.mail.backends.filebased import (
+    EmailBackend as FileEmailBackend)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -708,7 +709,7 @@ def share_job(user_level, calc_id, share):
         return JsonResponse(message, status=403)
     else:
         raise AssertionError(
-            f"share_job must return 'success' or 'error'!? Returned: {message}")
+            f"share_job must return 'success' or 'error'! Returned: {message}")
 
 
 def get_user_level(request):
@@ -1066,8 +1067,8 @@ def aelo_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1144,8 +1145,8 @@ def impact_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1167,7 +1168,8 @@ def impact_get_rupture_data(request):
     rup, rupdic, _oqparams, err = impact_validate(
         request.POST, request.user, rupture_path)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)
@@ -1333,8 +1335,8 @@ def impact_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    # NOTE: this is called via AJAX so the context processor isn't automatically
-    # applied, since AJAX calls often do not render templates
+    # NOTE: this is called via AJAX so the context processor isn't
+    # automatically applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
@@ -1354,7 +1356,8 @@ def impact_run(request):
     _rup, _rupdic, params, err = impact_validate(
         request.POST, request.user, rupture_path, station_data_file)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
@@ -1386,7 +1389,8 @@ def impact_run_with_shakemap(request):
         post['shakemap_version'] = shakemap_version
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
     if 'time_event' in request.POST:
@@ -1404,7 +1408,8 @@ def impact_run_with_shakemap(request):
     _rup, rupdic, params, err = impact_validate(
         post, request.user, post['rupture_file'])
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     email_file_path = request.POST.get('email_file_path')
     response_data = create_impact_job(request, params, email_file_path)
@@ -1462,7 +1467,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
+        valid_vs30 = oqvalidation.SITE_CLASSES[
+            asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
         else:
@@ -1502,7 +1508,8 @@ def aelo_run(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat, site_name, asce_version, site_class, vs30 = res
-    # NOTE: the site_name is transformed into a description and a custom_site_id
+    # NOTE: the site_name is transformed into a description and a
+    # custom_site_id
     description = f'AELO for {site_name}'
 
     # build a LogContext object associated to a database job
@@ -2259,7 +2266,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            asce41_m = {asce41_key_mapping.get(k, k): v
+                        for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
@@ -2347,7 +2355,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            pngs['avg_gmf'] = [k for k in ds['png']
+                               if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
