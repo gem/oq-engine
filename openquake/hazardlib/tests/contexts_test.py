@@ -447,4 +447,4 @@ class GeomCacheHitTestCase(unittest.TestCase):
             ctxs_B[0]['occurrence_rate'][0], entry.ctxs[0]['occurrence_rate'][0]
             )
 
-        GEOM_CACHE.clear() $ 
+        GEOM_CACHE.clear()
