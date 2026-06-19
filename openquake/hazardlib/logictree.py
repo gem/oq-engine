@@ -1035,9 +1035,8 @@ class RuntimeSourceModelLT(object):
     be found in oq-engine/qa_test_data/ logictree/case_34/.
 
     NOTE: The geom_label cache is engaged only in the calculation
-    modes whose path runs through RmapMaker._make_src_indep:
-        --> Classical PSHA
-        --> Disagg by source
+    modes whose path runs through RmapMaker._make_src_indep which is
+    1) classical and 2) disagg_by_src
 
     In other modes the label is accepted but inert (results are still
     correct). For example, in eb-based we sample rups stochastically
