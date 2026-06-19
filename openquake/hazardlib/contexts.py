@@ -1088,19 +1088,26 @@ class ContextMaker(object):
 
     def _check_geom_cache(self, src, sitecol, geom_label, step):
         """
-        Look up GEOM_CACHE for given src with (cache_key, ctxs):
+        Look up GEOM_CACHE for given src and return (cache_key, ctxs):
 
-            --> (None, None): Caching does not apply to this src.
-            
-            --> (cache_key, None): Applies but no caching yet - the caller 
-                                   must populate for this key later.
+            --> (None, None): Preclassical subsample pass (step != 1) -
+                              caching is skipped to avoid mixing a
+                              subsampled rupture set with the full
+                              classical pass.
 
-            --> (cache_key, ctxs): Cache exists so caller will yield ctxs
-                                   instead of recomputing distances and
-                                   re-running the GMPE.
+            --> (cache_key, None): Miss - the caller must populate
+                                   GEOM_CACHE[cache_key] after
+                                   computing the contexts itself.
 
-        On a cache hit self.geom_cache_key is also set so the
-        cached_mean_stds method can reuse the entry's mean/sigma.
+            --> (cache_key, ctxs): Hit - the caller short-circuits with
+                                   these ctxs instead of recomputing
+                                   distances and re-running the GMPE.
+
+        On a hit self.geom_cache_key is also set so the cached_mean_stds
+        method can reuse the entry's mean/sigma.
+
+        The no geom_label case is handled upstream by _try_geom_cache method
+        and never reaches this method.
         """
         # A step value > 1 is used by preclassical to subsample ruptures
         # for weight estimation so that rupture set is different from the
