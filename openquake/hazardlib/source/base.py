@@ -34,6 +34,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
 
+U32 = numpy.uint32
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
@@ -222,6 +223,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine
     samples = 1  # set by the engine
+    smweight = 1.  # set by the engine
     dt = 0  # set by the engine
     geom_label = None # Geometry-sharing label for
                       # RuntimeSourceModelLT sibling 
@@ -296,18 +298,27 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
 
     def sample_ruptures(self, num_ses, ses_seed):
         """
-        :param num_ses: number of stochastic event sets
+        :param num_ses: ses_per_logic_tree_path
+        :param ses_seed: ses_seed coming from the job.ini
         :returns: list of EBRuptures
         """
         seed = self.serial(ses_seed)
+        rng = numpy.random.default_rng(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
+        samples = self.sampling['samples'].sum()
+        probs = self.sampling['samples'] / samples
         ebrs = []
-        for i, (trt_smr, samples) in enumerate(self.sampling):
-            for rup, rid, num_occ in sample(self, num_ses*samples, seed + i):
-                rupid = rid + i * self.num_ruptures
-                ebr = EBRupture(rup, self.id, trt_smr, num_occ, rupid,
-                                seed=rupid + TWO30 * self.id + ses_seed)
-                ebrs.append(ebr)
+        for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
+            if tot_occ:
+                occs = rng.multinomial(tot_occ, probs)
+                # rng.multinomial(1000, [.1, .2, .3, .4]) = [104, 201, 270, 425]
+                for i, (trt_smr, occ) in enumerate(
+                        zip(self.sampling['trt_smr'], occs)):
+                    if occ:
+                        rupid = rid + i * self.num_ruptures
+                        ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
+                                        seed=rupid + TWO30 * self.id + ses_seed)
+                        ebrs.append(ebr)
         return ebrs
 
     def get_mags(self):

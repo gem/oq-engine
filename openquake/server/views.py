@@ -1924,7 +1924,8 @@ def extract(request, calc_id, what):
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
-    if not can_extract(request, what + query_string):
+    if not (can_extract(request, what)
+            or can_extract(request, what + query_string)):
         return HttpResponseForbidden()
     try:
         # read the data and save them on a temporary .npz file
