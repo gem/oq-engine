@@ -37,6 +37,7 @@ def main(calc_id):
     try:
         calc_id = int(calc_id)
     except ValueError:  # assume calc_id is a pathname
+        calc_id = os.path.abspath(calc_id)
         remote = False
         fname = os.path.join(datadir, os.path.basename(calc_id))
         if fname != calc_id:

@@ -817,7 +817,7 @@ def extract_agg_curves(dstore, what):
 
 def aggexp_tags(dstore):
     """
-    Read agg_values and returns a datastore with fields like::
+    Read agg_values and returns datastores with fields like::
 
             policy taxonomy  number  nonstructural  structural  area
      agg_id
@@ -828,7 +828,6 @@ def aggexp_tags(dstore):
     aggkey = dstore['assetcol/tagcol'].get_aggkey(oq.aggregate_by)
     ags = U32([key[0] for key in aggkey])
     dfs = []
-    slices = []
     for ag, start, stop in performance.idx_start_stop(ags):
         lines = numpy.array([
             line.decode('utf8') for line in dstore['agg_keys'][start:stop]])
@@ -841,9 +840,9 @@ def aggexp_tags(dstore):
             dic[kfield] = ks[:, i]
         for name in values.dtype.names:
             dic[name] = okvalues[name]
-        dfs.append(pandas.DataFrame(dic))
-        slices.append(slice(start, stop))
-    return pandas.concat(dfs).set_index('agg_id'), slices
+        df = pandas.DataFrame(dic).set_index('agg_id')
+        dfs.append(df)
+    return dfs
 
 
 @extract.add('aggexp_tags')
@@ -852,7 +851,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return aggexp_tags(dstore)[0]
+    return aggexp_tags(dstore)
 
 
 @extract.add('mmi_tags')
@@ -904,7 +903,7 @@ def extract_aggrisk_tags(dstore, what):
     aggrdf = dstore.read_df('aggrisk')
     aggrdf.loss *= ws[aggrdf.rlz_id]
     del aggrdf['rlz_id']
-    adf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
+    aggdf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
     if 'aggrisk_quantiles' in dstore:
         # normally there are two quantiles 0.05, 0.95
         qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
@@ -913,19 +912,13 @@ def extract_aggrisk_tags(dstore, what):
         qdf = ()
         qfields = []
 
-    fulldf, slices = aggexp_tags(dstore)
+    dfs = aggexp_tags(dstore)
     outs = []
-    for aggby, slc in zip(oq.aggregate_by, slices):
-        df = fulldf[slc]
+    for aggby, df in zip(oq.aggregate_by, dfs):
+        adf = aggdf[numpy.isin(aggdf.agg_id, df.index)]
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
-            if agg_id < slc.start or agg_id >= slc.stop:
-                continue
-            try:
-                df.loc[agg_id]
-            except KeyError:
-                continue
             lt = LOSSTYPE[loss_id]
             if lt in oq.loss_types:
                 for kfield, key in zip(aggby, df.loc[agg_id][aggby]):
