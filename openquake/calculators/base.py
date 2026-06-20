@@ -1911,8 +1911,10 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    _, full_lt = get_model_lts(dstore)[-1]
-    R = full_lt.get_num_paths()
+    try:
+        R = len(dstore['weights'])
+    except KeyError:
+        R = 1
     if R > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5

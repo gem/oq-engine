@@ -628,11 +628,10 @@ def export_aggexp_tags_csv(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    fulldf, slices = aggexp_tags(dstore)
+    dfs = aggexp_tags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
-    for aggby, slc in zip(oq.aggregate_by, slices):
-        df = fulldf[slc]
+    for aggby, df in zip(oq.aggregate_by, dfs):
         fname = dstore.export_path('%s-%s.csv' % (ekey[0], '-'.join(aggby)))
         writer.save(df, fname, comment=dstore.metadata)
         fnames.append(fname)
