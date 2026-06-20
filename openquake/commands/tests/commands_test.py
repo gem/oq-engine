@@ -317,7 +317,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id | code | calc_time | num_ctxs', str(p))
+        self.assertIn('source_id | code | calc_time | weight | mul', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
