@@ -567,7 +567,6 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
-    scenario = False
     deltagetter = None
     fewsites = False
     ilabel = None
@@ -802,6 +801,13 @@ class ContextMaker(object):
             conv_median, conv_sigma, rstd = self.conv[gsim][imt]
             me[:] = numpy.log(numpy.exp(me) / conv_median)
             si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+
+    @property
+    def scenario(self):
+        """
+        True if scenario
+        """
+        return 'scenario' in self.oq.calculation_mode
 
     @property
     def Z(self):
@@ -1531,6 +1537,10 @@ class ContextMaker(object):
             for src in sources:
                 src.weight = self.estimate_weight(src, srcfilter)
 
+    def __repr__(self):
+        rlzs = sum(len(rlzs) for rlzs in self.gsims.values())
+        return f'<{self.__class__.__name__} {self.trt} {rlzs=}>'
+        
 
 def by_dists(gsim):
     return tuple(sorted(gsim.REQUIRES_DISTANCES))

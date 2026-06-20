@@ -508,7 +508,19 @@ def export_gmf_data_hdf5(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
         f['sitecol'] = dstore['sitecol'].complete
-        dstore.hdf5.copy('gmf_data', f)
+        gd = dstore['gmf_data']
+        grp = f.create_group('gmf_data')
+        grp.attrs.update(gd.attrs)
+        for col in gd:
+            name = f'gmf_data/{col}'
+            obj = dstore[name]
+            dset = f.create_dataset(
+                name, data=obj[:], dtype=obj.dtype,
+                compression=obj.compression)
+            dset.attrs.update(obj.attrs)
+        # NB: dstore.hdf5.copy('gmf_data', f) can produce the error
+        # Unable to synchronously copy object (ring type mismatch for cache)
+        # with `oq run demos/risk/EventBasedDamage/job.ini -e csv,hdf5`
     return [fname]
 
 
