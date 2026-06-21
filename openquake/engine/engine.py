@@ -727,7 +727,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     successes = [ast.literal_eval(s.decode('utf8')) for s in dstore['success']]
     expected_failures = set()
-    with dstore:
+    with dstore, wfjob:
         n_wfs = oks.sum()
         for wf_no, wf in enumerate(wfjob.workflows):
             # skip workflows not selected
@@ -742,8 +742,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if 'oqparam' not in dstore:  # new workflow
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
-                with wfjob:
-                    dstore['oqparam'] = OqParam(**kw)
+                dstore['oqparam'] = OqParam(**kw)
 
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
@@ -751,18 +750,16 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if status_dset[idx] == b'complete':
                     # already done; notice the conversion numpy.int64 -> int
                     calcs.append(int(calc_dset[idx]))
-                    with wfjob:
-                        logging.info(f'{name} already computed')
+                    logging.info(f'{name} already computed')
                 else:
                     new.append(ini)
                     new_names.append(name)
             if new:
                 one_job = len(wf.names) == 1
-                with wfjob:
-                    jobs = create_jobs(new, log_level=logging.INFO if
-                                       one_job else logging.WARNING,
-                                       workflow_id=wfjob.calc_id)
-                    run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                jobs = create_jobs(new, log_level=logging.INFO if
+                                   one_job else logging.WARNING,
+                                   workflow_id=wfjob.calc_id)
+                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
@@ -775,36 +772,38 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         else:
                             failed += 1
                     else:
+                        #with datastore.read(rec.id) as ds:
+                        #    df = ds.read_df('starmap_info')
+                        #    df['name'] = name
+                        #dstore.hdf5.import_df('starmap_info', df, gzip=None)
                         calcs.append(job.calc_id)
-            with wfjob:
-                may_fails = [name in wf.may_fail for name in new_names]
-                for success in wf.success:
-                    if success in successes[wf_no]:
-                        logging.info(f'{format_dic(success)} already called')
-                    elif not failed:
-                        logging.info(f'{format_dic(success)}')
-                        successes[wf_no].append(success.copy())
-                        success['dstore'] = dstore
-                        success['calcs'] = calcs
-                        success['may_fails'] = may_fails
-                        sap.run_func(success)
+            may_fails = [name in wf.may_fail for name in new_names]
+            for success in wf.success:
+                if success in successes[wf_no]:
+                    logging.info(f'{format_dic(success)} already called')
+                elif not failed:
+                    logging.info(f'{format_dic(success)}')
+                    successes[wf_no].append(success.copy())
+                    success['dstore'] = dstore
+                    success['calcs'] = calcs
+                    success['may_fails'] = may_fails
+                    sap.run_func(success)
 
-                if n_wfs > 1:
-                    logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
-                                    f'finished step {wf_no+1} of {n_wfs}')
-            if failed and 'OQ_SAMPLES' not in wf.env:
+            if n_wfs > 1:
+                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                f'finished step {wf_no+1} of {n_wfs}')
+            if failed:
                 break
-    for wf_no, succ in enumerate(successes):
-        dstore['success'][wf_no] = str(succ)  # list of dictionaries
-    dt = (time.time() - t0) / 3600.
-    with wfjob:
+        for wf_no, succ in enumerate(successes):
+            dstore['success'][wf_no] = str(succ)  # list of dictionaries
+        dt = (time.time() - t0) / 3600.
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
-    if failed:
-        mask = status_dset[:] == b'failed'
-        dic = {str(name): int(calc) for name, calc in
-               zip(names[mask], calc_dset[:][mask])
-               if name not in expected_failures}
-        raise RuntimeError(f'The following jobs failed unexpectedly: {dic}')
+        if failed:
+            mask = status_dset[:] == b'failed'
+            dic = {str(name): int(calc) for name, calc in
+                   zip(names[mask], calc_dset[:][mask])
+                   if name not in expected_failures}
+            raise RuntimeError(f'Jobs failed unexpectedly: {dic}')
     return wfjob.calc_id
 
 
