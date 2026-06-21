@@ -90,10 +90,10 @@ class GeomCacheEntry(object):
         first source seen with this (label, basename) key.
         The ``occurrence_rate`` column is replaced per-branch on reuse.
     :param mean_stds:
-        dict {ctx_idx: mean_stdt array} caching the output of 
-        ContextMaker.get_mean_stds keyed by the position in ctxs.
-        It depends only on the ctx and the gsims, so it is shared across
-        siblings.
+        dict {mag_key: mean_stdt array} caching the output of
+        ContextMaker.get_mean_stds, keyed by the rupture magnitude rounded
+        to 3 decimal places. It depends only on the ctx and the gsims, so it
+        is shared across siblings.
     """
     __slots__ = ('ctxs', 'mean_stds')
 
