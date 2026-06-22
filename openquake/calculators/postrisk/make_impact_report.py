@@ -884,7 +884,7 @@ def get_dynamic_threshold(mag):
 
 def main(dstore, adm_level=1, threshold_deg=None):
     """
-    Create a PDF impact report
+    Create an impact report in PDF and PNG formats
     """
     if isinstance(dstore, (str, int)):
         # NOTE: called from the command line
