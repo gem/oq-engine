@@ -86,14 +86,18 @@ class GeomCacheEntry(object):
     geometries and thus same distances).
 
     :param ctxs:
-        list of recarrays returned by ContextMaker.get_ctxs for the
+        List of recarrays returned by ContextMaker.get_ctxs for the
         first source seen with this (label, basename) key.
         The ``occurrence_rate`` column is replaced per-branch on reuse.
+    :param remaining:
+        Number of remaining sibling-branch consumers; the entry is
+        evicted from GEOM_CACHE once this reaches zero.
     """
-    __slots__ = ('ctxs',)
+    __slots__ = ('ctxs', 'remaining')
 
-    def __init__(self, ctxs):
+    def __init__(self, ctxs, remaining):
         self.ctxs = ctxs
+        self.remaining = remaining
 
 
 def _get_cmaker_cache_sig(cmaker, sids):
@@ -1103,7 +1107,13 @@ class ContextMaker(object):
             # No cache = need to compute for ctxs for this cache_key
             return cache_key, None
 
-        return cache_key, self._load_cached_ctxs(src, entry, step)
+        ctxs = self._load_cached_ctxs(src, entry, step)
+        # Drop the entry once the last sibling branch has consumed it,
+        # so the per-source ctxs do not linger in memory
+        entry.remaining -= 1
+        if entry.remaining <= 0:
+            del GEOM_CACHE[cache_key]
+        return cache_key, ctxs
 
     def _load_cached_ctxs(self, src, entry, step):
         """
@@ -1214,8 +1224,12 @@ class ContextMaker(object):
             else:
                 ctxs = [self.recarray([c]) for c in ctxs]
 
-        # There was no cache already so store it for sibling branches
-        GEOM_CACHE[cache_key] = GeomCacheEntry(ctxs)
+        # Only cache if at least one sibling branch will consume it; this
+        # branch's own use is alreadfy accounted for, so remaining is
+        # (sibling-branch count) - 1
+        remaining = getattr(src, 'geom_label_branches', 0) - 1
+        if remaining > 0:
+            GEOM_CACHE[cache_key] = GeomCacheEntry(ctxs, remaining)
 
         return iter(ctxs)
 

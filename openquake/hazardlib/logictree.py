@@ -1203,6 +1203,11 @@ class RuntimeSourceModelLT(object):
         with source_reader.get_csm(). Keys are absolute sentinel paths
         matching what _groups_ids constructs from rlz.value[0].
         """
+        # Count sibling branches per label so the GEOM_CACHE entry built
+        # for the first branch can be evicted after the last sibling has
+        # consumed it (see contexts.GeomCacheEntry)
+        label_counts = collections.Counter(
+            lab for lab in self._branch_labels.values() if lab)
         smdict = {}
         for branch_id, xml_str in self._branch_xmls.items():
             sentinel = '__rt__%s' % branch_id
@@ -1215,11 +1220,13 @@ class RuntimeSourceModelLT(object):
             sm.branch = branch_id
             label = self._branch_labels.get(branch_id)
             sm.geom_label = label
+            nbranches = label_counts[label] if label else 0
             # Have to tag sources with their geometry labels
             # so the cache key survives the CSM rebuild
             for sg in sm.src_groups:
                 for src in sg:
                     src.geom_label = label
+                    src.geom_label_branches = nbranches
             sm.rtime = time.time() - t0
             smdict[abs_path] = sm
         return smdict
