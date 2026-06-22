@@ -468,6 +468,10 @@ class CountryReportBuilder:
         to the current country
         """
         try:
+            # NOTE: using for the report a file structured differently with
+            # respect to openquake/qa_tests_data/mosaic/worldcities.csv
+            # We may want to replace the other file with this, changing also
+            # the expected column names.
             world_cities_file = config.directory.world_cities_file
         except AttributeError:
             # checking if the file is present in oq-engine
