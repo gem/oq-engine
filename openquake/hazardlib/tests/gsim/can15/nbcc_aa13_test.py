@@ -53,7 +53,7 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         for trt in gsim_lt.values:
             rbg = {gsim: U32([g]) for g, gsim in enumerate(gsim_lt.values[trt])}
             cmaker = contexts.ContextMaker(trt, rbg, param)
-            cmaker.scenario = True
+            cmaker.oq.calculation_mode = "scenario"
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())

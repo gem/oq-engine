@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed the exporters `aggexp_tags` and `aggrisk_tags`
+  * Reduced the number of tasks and the memory consumption in event_based_risk
+  * Optimized rupture sampling for sources with high multiplicity
   * Internal: storing `occ_by_trt_smr` in the SES.hdf5 file
   * Introduced `strict` flag to disable checks which are possibly too strict
   * Internal: storing the real `occurrence_rate` in the `ruptures` dataset,

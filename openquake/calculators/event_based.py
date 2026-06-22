@@ -256,7 +256,6 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    cmaker.init_monitoring(monitor)
     maxdist = cmaker.oq.maximum_distance(cmaker.trt)
     with smon:
         with dstore as f:
@@ -268,7 +267,8 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
         srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
     for rups, cmaker in zip(allrups, cmakers):
-        cmaker.scenario = 'scenario' in cmaker.oq.calculation_mode
+        if not hasattr(cmaker, 'ctx_mon'):  # not already initialized
+            cmaker.init_monitoring(monitor)
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
@@ -421,7 +421,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         for rupblock in block_splitter(rups, maxw, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
-    allargs = _collect(allargs, maxw, sitecol.sids, sec_perils, dstore)
+    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
@@ -451,7 +451,6 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     trt = full_lt.trts[0]
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
     cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-    cmaker.scenario = True
     maxdist = oq.maximum_distance(cmaker.trt)
     srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
     sites = srcfilter.get_close_sites(proxy, cmaker.trt)
