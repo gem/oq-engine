@@ -459,7 +459,7 @@ class GeomCacheHitTestCase(unittest.TestCase):
         assert len(GEOM_CACHE) == 0 # Confirms it's been flushed
 
     def test_evicts_only_after_last_sibling(self):
-        # Three sibling sources with the same geom_label; verify the cache
+        # Three sibling sources with the same geom_label - verify the cache
         # entry survives the intermediate hit and is evicted after the last
         srcs = _make_tagged_siblings('three_branch_label', [3.0, 2.5, 2.0])
         cm, sites = _make_cmaker_and_sites()
