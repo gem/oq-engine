@@ -54,7 +54,7 @@ from openquake.baselib import (
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, datastore, logs
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.base import expose_outputs
 
 
@@ -772,11 +772,16 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         else:
                             failed += 1
                     else:
-                        #with datastore.read(rec.id) as ds:
-                        #    df = ds.read_df('starmap_info')
-                        #    df['name'] = name
-                        #dstore.hdf5.import_df('starmap_info', df, gzip=None)
                         calcs.append(job.calc_id)
+                    with datastore.read(job.calc_id) as ds:
+                        data = views.view('task_info', ds)
+                        dic = {col: data[col] for col in data.dtype.names}
+                        dic['job'] = name
+                        dic['taskname'] = general.decode(
+                            dic.pop('operation-duration'))
+                        dic['stddev'] = general.decode(dic['stddev'])
+                        # df = pandas.DataFrame(dic)
+                        # dstore.hdf5.import_df('wtask', df, gzip=None)
             may_fails = [name in wf.may_fail for name in new_names]
             for success in wf.success:
                 if success in successes[wf_no]:
