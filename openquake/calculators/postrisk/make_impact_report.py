@@ -235,6 +235,17 @@ def _read_countries_info(countries_info_path):
     return pd.read_csv(countries_info_path)
 
 
+@functools.lru_cache(maxsize=1)
+def _read_world_cities(world_cities_path):
+    """
+    Load and cache the world-cities CSV keyed on the resolved file path.
+    """
+    df = pd.read_csv(world_cities_path)
+    if 'lng' not in df.columns:
+        raise ValueError(f'Missing "lng" column in {world_cities_path}')
+    return df
+
+
 class CountryReportBuilder:
     """
     Builds and stores a single-country impact PDF report.
@@ -492,10 +503,8 @@ class CountryReportBuilder:
                     'worldcities.csv'):
                 raise AttributeError(
                     'config.directory.world_cities_file is missing')
-        df = pd.read_csv(world_cities_file)
-        # NOTE: assuming that the CSV uses 'lng' for longitude
-        if 'lng' not in df:
-            ValueError(f'Missing "lng" column in {world_cities_file}')
+        path_str = str(Path(world_cities_file).resolve())
+        df = _read_world_cities(path_str)   # cached
         # Pull the pre-calculated limits
         min_lon, max_lon = self.x_limits
         min_lat, max_lat = self.y_limits
@@ -503,9 +512,8 @@ class CountryReportBuilder:
         mask = (df['iso3'] == self.iso3) & \
                (df['lng'] >= min_lon) & (df['lng'] <= max_lon) & \
                (df['lat'] >= min_lat) & (df['lat'] <= max_lat)
-        viewport_cities = df[mask].copy()
         # Take the biggest ones
-        top_cities = viewport_cities.sort_values(
+        top_cities = df[mask].sort_values(
             'population', ascending=False).head(num_cities)
         return {row['city_ascii']: [row['lng'], row['lat']]
                 for _, row in top_cities.iterrows()}
