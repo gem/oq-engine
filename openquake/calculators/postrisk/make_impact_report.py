@@ -110,7 +110,11 @@ def load_admin_boundaries(
                 raise AttributeError(
                     'config.directory.admin1_boundaries_file is missing')
     elif adm_level == 2:
-        fname = config.directory.admin2_boundaries_file
+        try:
+            fname = config.directory.admin2_boundaries_file
+        except AttributeError as exc:
+            raise AttributeError(
+                'config.directory.admin2_boundaries_file is missing') from exc
     else:
         raise NotImplementedError(f'Admin level {adm_level} not supported')
     if not fname:
