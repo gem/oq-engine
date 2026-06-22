@@ -24,9 +24,9 @@ import pandas
 
 from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib import map_array, nrml, geo
+from openquake.hazardlib import map_array, nrml
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, datastore, readinput
+from openquake.commonlib import util, datastore
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -522,32 +522,3 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     dstore.swmr_on()
     smap = parallel.Starmap(task_func, h5=dstore.hdf5)
     return smap, gmf_dfs
-
-
-def get_close_regions(lon, lat, buffer_radius, region_kind='mosaic_model'):
-    """
-    :param lon: longitude
-    :param lat: latitude
-    :param buffer_radius: radius of the buffer around the point.
-        This distance is in the same units as the point's
-        coordinates (i.e. degrees), and it defines how far from
-        the point the buffer should extend in all directions,
-        creating a circular buffer region around the point
-    :param region_kind: either 'mosaic_model' or 'country',
-        determining which data source will be used to read boundaries from
-    :returns: list of regions intersecting the circle
-        centered on the given coordinates having the specified radius
-    """
-    if region_kind == 'mosaic_model':
-        regions_df = readinput.read_mosaic_df()
-    elif region_kind == 'country':
-        regions_df = readinput.read_countries_df()
-    else:
-        raise NotImplementedError(f'Unexpected {region_kind=}')
-    close_regions = geo.utils.geolocate_within_buffer(
-        lon, lat, buffer_radius, regions_df)
-    if not close_regions:
-        raise ValueError(
-            f"({lon}, {lat}) is farther than {buffer_radius} deg"
-            f" from any {region_kind.replace('_', ' ')}!")
-    return close_regions

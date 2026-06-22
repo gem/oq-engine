@@ -144,6 +144,23 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     return close_mosaic_models
 
 
+def get_close_countries(lon, lat, buffer_radius):
+    """
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point
+    :returns: the iso3 codes of the close countries
+    """
+    countries_df = read_countries_df()
+    close_countries = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, countries_df)
+    return close_countries
+
+
 def get_closest_country(lon, lat, buffer_radius):
     """
     :param lon: longitude
@@ -155,9 +172,7 @@ def get_closest_country(lon, lat, buffer_radius):
         creating a circular buffer region around the point
     :returns: the iso3 code of the closest country or '???'
     """
-    countries_df = read_countries_df()
-    close_countries = geo.utils.geolocate_within_buffer(
-        lon, lat, buffer_radius, countries_df)
+    close_countries = get_close_countries(lon, lat, buffer_radius)
     if not close_countries:
         return '???'
     # close_countries are ordered by ascending distance

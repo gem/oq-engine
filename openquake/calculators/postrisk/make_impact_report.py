@@ -35,7 +35,7 @@ from openquake.baselib import config, sap
 from openquake.calculators.extract import extract
 from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.commonlib import logs
-from openquake.commonlib.calc import get_close_regions
+from openquake.commonlib.readinput import get_close_countries
 
 cd = pathlib.Path(__file__).parent
 
@@ -954,8 +954,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
                      f" threshold: {threshold_deg} degrees.")
     else:
         threshold_deg = float(threshold_deg)
-    iso3_codes = get_close_regions(
-        lon, lat, buffer_radius=threshold_deg, region_kind='country')
+    iso3_codes = get_close_countries(lon, lat, buffer_radius=threshold_deg)
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
