@@ -119,7 +119,7 @@ def load_admin_boundaries(
     # NOTE: be careful not mutating the cached object
     #       (in case we need to mutate it, we should make a copy
     #       right after reading)
-    gdf = _read_admin_layer(fname)
+    gdf = _read_admin_layer(fname)  # cached
     if "shapeID" in gdf.columns:  # geoBoundaries
         iso3_col = "shapeGroup"
         id_col = "shapeID"
