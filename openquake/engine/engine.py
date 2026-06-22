@@ -61,7 +61,8 @@ from openquake.calculators.base import expose_outputs
 UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
-
+U32 = numpy.uint32
+F32 = numpy.float32
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
@@ -779,9 +780,14 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                         dic['job'] = name
                         dic['taskname'] = general.decode(
                             dic.pop('operation-duration'))
-                        dic['stddev'] = general.decode(dic['stddev'])
-                        # df = pandas.DataFrame(dic)
-                        # dstore.hdf5.import_df('wtask', df, gzip=None)
+                        dic['stddev'] = dic['mean'].astype(F32)
+                        dic['counts'] = dic['counts'].astype(U32)
+                        dic['mean'] = dic['mean'].astype(F32)
+                        dic['min'] = dic['min'].astype(F32)
+                        dic['max'] = dic['max'].astype(F32)
+                        dic['slowfac'] = dic['slowfac'].astype(F32)
+                        df = pandas.DataFrame(dic)
+                        dstore.hdf5.import_df('wtask', df, gzip=None)
             may_fails = [name in wf.may_fail for name in new_names]
             for success in wf.success:
                 if success in successes[wf_no]:
