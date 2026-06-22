@@ -1018,12 +1018,11 @@ class RuntimeSourceModelLT(object):
             # --> xml_str must be a complete NRML source model XML
             #     string.
             # --> A geom_label is an optional string used to share the
-            #     rupture geometry (and the associated GMM's mean/stds)
-            #     across sibling branches at runtime for speedup: all of
-            #     the branches tagged with the same label must enumerate
-            #     exactly the same rupture set per source (mags, nodal planes,
-            #     hypocentres etc) so only the per-rupture occurrence rates may
-            #     vary. 
+            #     rupture contexts (and thus the rupture-to-site distances)
+            #     across sibling branches at runtime for speedup: all of the
+            #     branches tagged with the same label must enumerate exactly
+            #     the same rupture set per source (mags, nodal planes, hypocentres
+            #     etc) so only the per-rupture occurrence rates may vary. 
             #     NOTE: a geometry label is not necessary for every branch in
             #     the builder script - you just have to set to None in this
             #     case to have a placeholder value.
@@ -1086,8 +1085,9 @@ class RuntimeSourceModelLT(object):
                 name, weight, xml_str = b
                 geom_label = None
             else:
-                # Geometry label is being used for caching means
-                # and stds for sources with sibling rupture sets
+                # Geometry label is being used for caching rupture
+                # contexts (distances) for sources with sibling
+                # rupture sets
                 name, weight, xml_str, geom_label = b
                 if geom_label is None:
                     pass  # No geom label use

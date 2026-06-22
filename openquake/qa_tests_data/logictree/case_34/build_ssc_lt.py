@@ -28,8 +28,9 @@ Each branch contains one area source and one simple fault source.
 Sibling branches sharing a geom_label produce the same rupture set per
 source (same surfaces, mags, nodal planes, hypocenters); only the
 per-rupture occurrence rates differ. The engine uses the label to share
-the GMPE mean/sigma across siblings via a process-level cache, avoiding
-redundant compute method calls for the same rupture sets.
+the rupture contexts (and thus distances) across siblings via a process-level
+cache, avoiding redundant rupture iteration and distance computation for the
+same rupture sets.
 """
 import os
 import numpy as np
@@ -131,7 +132,7 @@ def get_source_model_lt():
     SSC LTs inside the engine.
     
     The fourth output "geom_label" is optional and is used by the
-    engine to share contexts and GMPE mean/sigma across sibling
+    engine to share rupture contexts (distances) across sibling
     branches with the same label (which must enumerate the same
     rupture set per source). Omit it or pass None to not use this
     caching feature.
@@ -172,8 +173,8 @@ def get_source_model_lt():
         weight = float(row['weight'])
         xml_str = _build_xml(i, area_rows, fault_rows, b, ref_mag, rate)
         if USE_GEOM_LABEL_:
-            # Return the geom label too for the GMPE mean/sig
-            # caching for same rup set sources
+            # Return the geom label too for context (distance)
+            # caching across same rup set sources
             branches.append((f'branch_{i:03d}', weight, xml_str, label))
         else:
             branches.append((f'branch_{i:03d}', weight, xml_str))
