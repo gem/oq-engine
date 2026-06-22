@@ -225,6 +225,16 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
     return summary_data
 
 
+@functools.lru_cache(maxsize=1)
+def _read_countries_info(countries_info_path):
+    """
+    Load and cache the countries CSV keyed on the resolved file path.
+    Subsequent calls with the same path return the in-memory DataFrame
+    without any disk I/O.
+    """
+    return pd.read_csv(countries_info_path)
+
+
 class CountryReportBuilder:
     """
     Builds and stores a single-country impact PDF report.
@@ -458,7 +468,9 @@ class CountryReportBuilder:
                     'countries_info.csv'):
                 raise AttributeError(
                     'config.directory.countries_info_file is missing')
-        df = pd.read_csv(countries_info_file)
+
+        path_str = str(Path(countries_info_file).resolve())
+        df = _read_countries_info(path_str)   # cached
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
 
