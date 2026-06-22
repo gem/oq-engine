@@ -20,6 +20,7 @@ import io
 import os
 import base64
 import numpy
+import functools
 from pathlib import Path
 from shapely.geometry import Polygon, box
 from dataclasses import dataclass
@@ -562,23 +563,34 @@ def _build_legend_labels(classifier, legend_digits):
     return labels
 
 
+@functools.lru_cache(maxsize=1)
+def _read_basemap(basemap_path):
+    import rasterio
+    with rasterio.open(basemap_path) as src:
+        return src.read(), src.transform, src.crs
+
+
 def _overlay_basemap(ax, basemap_path, target_crs):
     """
     Safely handles rasterio imports and displays the basemap overlay.
+    Raster data is cached after the first load via _read_basemap().
     """
     if basemap_path is None:
         return
     try:
-        import rasterio
+        import rasterio  # noqa
     except ImportError as exc:
         raise RuntimeError(
             "In order to plot raster basemaps, 'rasterio' should be installed"
         ) from exc
     from rasterio.plot import show
-    with rasterio.open(Path(basemap_path)) as src:
-        if src.crs != target_crs:
-            raise ValueError("Raster CRS does not match vector CRS")
-        show(src, ax=ax, alpha=0.8)
+    # Normalise to str for the cache key; resolve() collapses any symlinks
+    # or relative segments so the same file always hits the same cache slot.
+    path_str = str(Path(basemap_path).resolve())
+    data, transform, crs = _read_basemap(path_str)
+    if crs != target_crs:
+        raise ValueError("Raster CRS does not match vector CRS")
+    show(data, transform=transform, ax=ax, alpha=0.8)
 
 
 def _overlay_cities(ax, cities, city_font_size):
