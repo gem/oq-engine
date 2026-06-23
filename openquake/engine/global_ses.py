@@ -62,7 +62,7 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
 import os
 from unittest.mock import patch
 from openquake.baselib import sap, config
-from openquake.qa_tests_data.mosaic import workflow
+from openquake.qa_tests_data.mosaic import genworkflow
 from openquake.engine import engine
 
 def main(mosaic_dir, out, models='ALL', toml:bool=False, *,
@@ -72,10 +72,10 @@ def main(mosaic_dir, out, models='ALL', toml:bool=False, *,
     """
     Storing global SES
     """
-    ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
-                            number_of_logic_tree_samples,
-                            ses_per_logic_tree_path,
-                            minimum_magnitude, toml)
+    ses_toml = genworkflow.ses(mosaic_dir, out, models.split(','),
+                               number_of_logic_tree_samples,
+                               ses_per_logic_tree_path,
+                               minimum_magnitude, toml)
     if toml:
         print(ses_toml)
         return
