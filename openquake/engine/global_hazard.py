@@ -20,8 +20,8 @@
 import os
 from unittest.mock import patch
 from openquake.baselib import sap
-from openquake.qa_tests_data.mosaic import workflow
-from openquake.engine import engine
+from openquake.qa_tests_data.mosaic import genworkflow
+from openquake.engine import workflow
 
 
 def main(mosaic_dir, ini='job.ini', toml:bool=False, *,
@@ -29,12 +29,12 @@ def main(mosaic_dir, ini='job.ini', toml:bool=False, *,
     """
     Storing global hazard mosaic
     """
-    ghm_toml = workflow.ghm(mosaic_dir, ini)
+    ghm_toml = genworkflow.ghm(mosaic_dir, ini)
     if toml:
         print(ghm_toml)
         return
     with patch.dict(os.environ, OQ_SAMPLE_SITES=".001"):
-        calc_id = engine.run_workflow(
+        calc_id = workflow.run_workflow(
             ghm_toml, {'cache': cache, 'kfilter': kfilter})
     os.remove(ghm_toml)
     return calc_id

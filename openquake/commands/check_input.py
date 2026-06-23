@@ -22,7 +22,7 @@ from unittest import mock
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # noqa
 from openquake.risklib.asset import Exposure
-from openquake.engine import engine
+from openquake.engine import engine, workflow
 
 
 def main(fnames):
@@ -50,6 +50,6 @@ def main(fnames):
         if inis:
             engine.run_jobs(engine.create_jobs(inis))
         for toml in tomls:
-            engine.run_workflow(toml, {})
+            workflow.run_workflow(toml, {})
 
 main.fnames = dict(help='File names to check', nargs='+')
