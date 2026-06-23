@@ -868,18 +868,18 @@ def extract_mmi_tags(dstore, what):
 
 def ensure_npy_serializable(df):
     """
-    Cast object-dtype (str/bytes) columns of df to fixed-width
-    numpy byte strings (dtype ``|S<n>``) so a structured array built from df
-    is serializable with allow_pickle=False
+    Cast object-dtype columns of a DataFrame to fixed-width numpy byte
+    strings (dtype ``|S<n>``) so that a structured array built from it
+    is serializable with ``allow_pickle=False``.
+
+    :param df: a :class:`pandas.DataFrame`
+    :returns: the same DataFrame with object columns replaced in-place
     """
-    string_cols = [c for c in df.columns if df[c].dtype == object]
-    for col in string_cols:
-        decoded_series = df[col].map(decode)
-        encoded_series = decoded_series.str.encode('utf-8')
-        # Guard against empty dataframes or completely null columns
-        raw_max = encoded_series.str.len().max()
-        max_len = max(int(raw_max) if pandas.notna(raw_max) else 1, 1)
-        df[col] = encoded_series.to_numpy().astype(f'S{max_len}')
+    for col in df.columns:
+        if df[col].dtype != object:
+            continue
+        df[col] = numpy.array(
+            [decode(v).encode('utf-8') for v in df[col]], dtype='S')
     return df
 
 
