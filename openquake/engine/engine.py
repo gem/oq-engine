@@ -712,6 +712,26 @@ def format_dic(success):
     return f'{func}({kwargs})'
 
 
+def import_task_info(calc_id, name, dstore):
+    """
+    Import a task_info view into the workflow datastore
+    """
+    with datastore.read(calc_id) as ds:
+        data = views.view('task_info', ds)
+        dic = {col: data[col] for col in data.dtype.names}
+        dic['job'] = name
+        dic['taskname'] = general.decode(
+            dic.pop('operation-duration'))
+        dic['stddev'] = dic['mean'].astype(F32)
+        dic['counts'] = dic['counts'].astype(U32)
+        dic['mean'] = dic['mean'].astype(F32)
+        dic['min'] = dic['min'].astype(F32)
+        dic['max'] = dic['max'].astype(F32)
+        dic['slowfac'] = dic['slowfac'].astype(F32)
+        df = pandas.DataFrame(dic)
+        dstore.hdf5.import_df('wtask', df, gzip=None)
+
+
 def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                  sbatch=False, notify_to=None, pdb=False, kfilter=''):
     """
@@ -774,20 +794,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
-                    with datastore.read(job.calc_id) as ds:
-                        data = views.view('task_info', ds)
-                        dic = {col: data[col] for col in data.dtype.names}
-                        dic['job'] = name
-                        dic['taskname'] = general.decode(
-                            dic.pop('operation-duration'))
-                        dic['stddev'] = dic['mean'].astype(F32)
-                        dic['counts'] = dic['counts'].astype(U32)
-                        dic['mean'] = dic['mean'].astype(F32)
-                        dic['min'] = dic['min'].astype(F32)
-                        dic['max'] = dic['max'].astype(F32)
-                        dic['slowfac'] = dic['slowfac'].astype(F32)
-                        df = pandas.DataFrame(dic)
-                        dstore.hdf5.import_df('wtask', df, gzip=None)
+                    import_task_info(job.calc_id, name, dstore)
             may_fails = [name in wf.may_fail for name in new_names]
             for success in wf.success:
                 if success in successes[wf_no]:
