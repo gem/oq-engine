@@ -54,14 +54,15 @@ from openquake.baselib import (
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, datastore, logs
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.base import expose_outputs
 
 
 UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
-
+U32 = numpy.uint32
+F32 = numpy.float32
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
@@ -711,6 +712,26 @@ def format_dic(success):
     return f'{func}({kwargs})'
 
 
+def import_task_info(calc_id, name, dstore):
+    """
+    Import a task_info view into the workflow datastore
+    """
+    with datastore.read(calc_id) as ds:
+        data = views.view('task_info', ds)
+        dic = {col: data[col] for col in data.dtype.names}
+        dic['job'] = name
+        dic['taskname'] = general.decode(
+            dic.pop('operation-duration'))
+        dic['stddev'] = dic['mean'].astype(F32)
+        dic['counts'] = dic['counts'].astype(U32)
+        dic['mean'] = dic['mean'].astype(F32)
+        dic['min'] = dic['min'].astype(F32)
+        dic['max'] = dic['max'].astype(F32)
+        dic['slowfac'] = dic['slowfac'].astype(F32)
+        df = pandas.DataFrame(dic)
+        dstore.hdf5.import_df('wtask', df, gzip=None)
+
+
 def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                  sbatch=False, notify_to=None, pdb=False, kfilter=''):
     """
@@ -727,7 +748,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     successes = [ast.literal_eval(s.decode('utf8')) for s in dstore['success']]
     expected_failures = set()
-    with dstore:
+    with dstore, wfjob:
         n_wfs = oks.sum()
         for wf_no, wf in enumerate(wfjob.workflows):
             # skip workflows not selected
@@ -742,8 +763,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if 'oqparam' not in dstore:  # new workflow
                 kw = wf.inis[0].copy()
                 kw.update(calculation_mode='workflow')
-                with wfjob:
-                    dstore['oqparam'] = OqParam(**kw)
+                dstore['oqparam'] = OqParam(**kw)
 
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
@@ -751,18 +771,16 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                 if status_dset[idx] == b'complete':
                     # already done; notice the conversion numpy.int64 -> int
                     calcs.append(int(calc_dset[idx]))
-                    with wfjob:
-                        logging.info(f'{name} already computed')
+                    logging.info(f'{name} already computed')
                 else:
                     new.append(ini)
                     new_names.append(name)
             if new:
                 one_job = len(wf.names) == 1
-                with wfjob:
-                    jobs = create_jobs(new, log_level=logging.INFO if
-                                       one_job else logging.WARNING,
-                                       workflow_id=wfjob.calc_id)
-                    run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                jobs = create_jobs(new, log_level=logging.INFO if
+                                   one_job else logging.WARNING,
+                                   workflow_id=wfjob.calc_id)
+                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
@@ -776,35 +794,34 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
-            with wfjob:
-                may_fails = [name in wf.may_fail for name in new_names]
-                for success in wf.success:
-                    if success in successes[wf_no]:
-                        logging.info(f'{format_dic(success)} already called')
-                    elif not failed:
-                        logging.info(f'{format_dic(success)}')
-                        successes[wf_no].append(success.copy())
-                        success['dstore'] = dstore
-                        success['calcs'] = calcs
-                        success['may_fails'] = may_fails
-                        sap.run_func(success)
+                    import_task_info(job.calc_id, name, dstore)
+            may_fails = [name in wf.may_fail for name in new_names]
+            for success in wf.success:
+                if success in successes[wf_no]:
+                    logging.info(f'{format_dic(success)} already called')
+                elif not failed:
+                    logging.info(f'{format_dic(success)}')
+                    successes[wf_no].append(success.copy())
+                    success['dstore'] = dstore
+                    success['calcs'] = calcs
+                    success['may_fails'] = may_fails
+                    sap.run_func(success)
 
-                if n_wfs > 1:
-                    logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
-                                    f'finished step {wf_no+1} of {n_wfs}')
-            if failed and 'OQ_SAMPLES' not in wf.env:
+            if n_wfs > 1:
+                logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
+                                f'finished step {wf_no+1} of {n_wfs}')
+            if failed:
                 break
-    for wf_no, succ in enumerate(successes):
-        dstore['success'][wf_no] = str(succ)  # list of dictionaries
-    dt = (time.time() - t0) / 3600.
-    with wfjob:
+        for wf_no, succ in enumerate(successes):
+            dstore['success'][wf_no] = str(succ)  # list of dictionaries
+        dt = (time.time() - t0) / 3600.
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
-    if failed:
-        mask = status_dset[:] == b'failed'
-        dic = {str(name): int(calc) for name, calc in
-               zip(names[mask], calc_dset[:][mask])
-               if name not in expected_failures}
-        raise RuntimeError(f'The following jobs failed unexpectedly: {dic}')
+        if failed:
+            mask = status_dset[:] == b'failed'
+            dic = {str(name): int(calc) for name, calc in
+                   zip(names[mask], calc_dset[:][mask])
+                   if name not in expected_failures}
+            raise RuntimeError(f'Jobs failed unexpectedly: {dic}')
     return wfjob.calc_id
 
 
