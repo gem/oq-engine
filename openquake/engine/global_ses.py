@@ -63,7 +63,7 @@ import os
 from unittest.mock import patch
 from openquake.baselib import sap, config
 from openquake.qa_tests_data.mosaic import genworkflow
-from openquake.engine import engine
+from openquake.engine import workflow
 
 def main(mosaic_dir, out, models='ALL', toml:bool=False, *,
          number_of_logic_tree_samples:int=2000,
@@ -80,7 +80,7 @@ def main(mosaic_dir, out, models='ALL', toml:bool=False, *,
         print(ses_toml)
         return
     with patch.dict(config.directory, {'mosaic_dir': mosaic_dir}):
-        calc_id = engine.run_workflow(ses_toml, {'cache': cache})
+        calc_id = workflow.run_workflow(ses_toml, {'cache': cache})
     os.remove(ses_toml)
     return calc_id
 
