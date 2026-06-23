@@ -41,8 +41,8 @@ from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
-from openquake.engine.engine import (
-    create_jobs, run_jobs, run_workflow, read_many)
+from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.workflow import run_workflow, read_many
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data import mosaic, mosaic_for_ses

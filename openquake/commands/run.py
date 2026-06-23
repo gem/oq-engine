@@ -27,7 +27,8 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs, run_workflow
+from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.workflow import run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
