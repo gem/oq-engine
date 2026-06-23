@@ -878,8 +878,7 @@ def ensure_npy_serializable(df):
     for col in df.columns:
         if df[col].dtype != object:
             continue
-        df[col] = numpy.array(
-            [decode(v).encode('utf-8') for v in df[col]], dtype='S')
+        df[col] = df[col].astype('S')
     return df
 
 
