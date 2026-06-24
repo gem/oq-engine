@@ -865,6 +865,22 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
+def ensure_npy_serializable(df):
+    """
+    Cast object-dtype columns of a DataFrame to fixed-width numpy byte
+    strings (dtype ``|S<n>``) so that a structured array built from it
+    is serializable with ``allow_pickle=False``.
+
+    :param df: a :class:`pandas.DataFrame`
+    :returns: the same DataFrame with object columns replaced in-place
+    """
+    for col in df.columns:
+        if df[col].dtype != object:
+            continue
+        df[col] = df[col].astype('S')
+    return df
+
+
 @extract.add('exposure_by_lse')
 def extract_exposure_by_lse(dstore, what):
     """
@@ -879,17 +895,23 @@ def extract_exposure_by_lse(dstore, what):
     qdict = parse(what)
     [secondary_peril] = qdict['secondary_peril']
     discard_empty = qdict.get('discard_empty', [1])[0] == 1
-    avg_gmf_array = dstore['avg_gmf'][:]
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
-    if 'exposure' in oq.inputs:
-        exposure_hdf5 = oq.inputs['exposure'][0]
-    else:
-        exposure_hdf5 = None
-    df = assetcol.aggregate_exposure_by_lse_tier(
-        oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
-        exposure_hdf5=exposure_hdf5, discard_empty=discard_empty)
-    return df
+    peril_name2imt = {
+        'landslide': 'AllstadtEtAl2022Landslides_LSE',
+        'liquefaction': 'AllstadtEtAl2022Liquefaction_LSE'
+    }
+    if secondary_peril not in peril_name2imt:
+        raise ValueError(f'{secondary_peril} not in {list(peril_name2imt)}')
+    peril_imt = peril_name2imt[secondary_peril]
+    if peril_imt not in oq.sec_imts:
+        raise ValueError(f'{peril_imt} not in sec_imts')
+    peril_ds_key = f'exposure_by_{secondary_peril}_lse'
+    if peril_ds_key not in dstore:
+        raise ValueError('{peril_ds_key} not found in the datastore')
+    df = dstore.read_df(peril_ds_key)
+    if discard_empty:
+        df = df[df['number'] > 0]
+    return ensure_npy_serializable(df)
 
 
 # tested in impact_test and partially in case_1_ins

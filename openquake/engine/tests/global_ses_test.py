@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import numpy
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
@@ -149,7 +150,7 @@ def teardown_module():
     dstore = read(RUP_HDF5)
     occ_df = dstore.read_df('occ_by_trt_smr')
     assert list(occ_df.columns) == ['trt_smr', 'n_occ', 'name']
-    if os.path.exists(RUP_HDF5):
+    if sys.platform != 'win32':
         os.remove(RUP_HDF5)
     if last_job:
         # make sure `read` works after rups.hdf5 has been removed

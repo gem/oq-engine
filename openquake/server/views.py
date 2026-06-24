@@ -43,7 +43,8 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
-from django.core.mail.backends.filebased import EmailBackend as FileEmailBackend
+from django.core.mail.backends.filebased import (
+    EmailBackend as FileEmailBackend)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -708,7 +709,7 @@ def share_job(user_level, calc_id, share):
         return JsonResponse(message, status=403)
     else:
         raise AssertionError(
-            f"share_job must return 'success' or 'error'!? Returned: {message}")
+            f"share_job must return 'success' or 'error'! Returned: {message}")
 
 
 def get_user_level(request):
@@ -1066,8 +1067,8 @@ def aelo_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1147,8 +1148,8 @@ def impact_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1173,7 +1174,7 @@ def impact_get_rupture_data(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (5.4, 5.4)
+        figsize = (6.3, 6.3)
         # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
@@ -1348,8 +1349,8 @@ def impact_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    # NOTE: this is called via AJAX so the context processor isn't automatically
-    # applied, since AJAX calls often do not render templates
+    # NOTE: this is called via AJAX so the context processor isn't
+    # automatically applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
@@ -1507,7 +1508,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
+        valid_vs30 = oqvalidation.SITE_CLASSES[
+            asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
         else:
@@ -1547,7 +1549,8 @@ def aelo_run(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat, site_name, asce_version, site_class, vs30 = res
-    # NOTE: the site_name is transformed into a description and a custom_site_id
+    # NOTE: the site_name is transformed into a description and a
+    # custom_site_id
     description = f'AELO for {site_name}'
 
     # build a LogContext object associated to a database job
@@ -2304,7 +2307,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            asce41_m = {asce41_key_mapping.get(k, k): v
+                        for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
@@ -2392,7 +2396,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            pngs['avg_gmf'] = [k for k in ds['png']
+                               if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
@@ -2406,6 +2411,8 @@ def web_engine_get_outputs_impact(request, calc_id):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
+    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
+    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2414,10 +2421,6 @@ def web_engine_get_outputs_impact(request, calc_id):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        gmf_cols = ds.read_df('gmf_data').columns
-        exposure_by_land_lse = "AllstadtEtAl2022Landslides_LSE" in gmf_cols
-        exposure_by_liq_lse = "AllstadtEtAl2022Liquefaction_LSE" in gmf_cols
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -2526,10 +2529,10 @@ def extract_html_table(request, calc_id, name):
     table_name = display_names[name] if name in display_names else name
 
     # Identify string columns from dtype before formatting the headers.
+    # dtype.kind: 'S' = bytes, 'U' = unicode, 'O' = object
     string_short_names = {
         col for col in table.columns
-        if str(table[col].dtype).startswith('S') or
-        table[col].dtype == object
+        if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
     }
 
     table_header = []
