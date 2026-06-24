@@ -288,7 +288,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         step = kwargs.get('step', 1)
         only_rates = kwargs.get('rates')
-        n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
@@ -306,7 +305,24 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup = num_rup_along_length * num_rup_along_width
             occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
-                yield numpy.full(num_rup * n_hypo * n_slip, occurrence_rate)
+                if self.hypo_depth_list:
+                    # Match _iter_ruptures_hypo_depth exactly - per (first_row,
+                    # first_col) yield one rate per (dip_frac, w) pair from
+                    # _hypo_list_from_depths, which filters by the float's
+                    # depth range and collapses entries with equal dip_frac
+                    n_cols = len(range(num_rup_along_length)[::step])
+                    parts = []
+                    for first_row in range(num_rup_along_width)[::step]:
+                        weights = numpy.array(
+                            [w for _, w in self._hypo_list_from_depths(
+                                first_row, rup_rows)]
+                                )
+                        parts.append(numpy.tile(weights, n_cols))
+                    yield numpy.concatenate(parts) * occurrence_rate
+                else:
+                    n_hypo = len(self.hypo_list) or 1
+                    yield numpy.full(
+                        num_rup * n_hypo * n_slip, occurrence_rate)
                 continue
             for first_row in range(num_rup_along_width)[::step]:
                 for first_col in range(num_rup_along_length)[::step]:
@@ -361,7 +377,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
         self._nr = []
-        n_hypo = len(self.hypo_depth_list) or len(self.hypo_list) or 1
         n_slip = len(self.slip_list) or 1
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             if mag_occ_rate == 0:
@@ -370,8 +385,20 @@ class SimpleFaultSource(ParametricSeismicSource):
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
-            self._nr.append(num_rup_along_length * num_rup_along_width *
-                            n_hypo * n_slip)
+            if self.hypo_depth_list:
+                # _hypo_list_from_depths filters by each float's depth range
+                # and collapses entries with equal dip_frac (e.g. when the
+                # fixedDipFrac is constant), so the real per-float count
+                # depends on first_row
+                n_hypo_total = sum(
+                    len(self._hypo_list_from_depths(first_row, rup_rows))
+                    for first_row in range(num_rup_along_width)
+                    )
+                self._nr.append(num_rup_along_length * n_hypo_total * n_slip)
+            else:
+                n_hypo = len(self.hypo_list) or 1
+                self._nr.append(num_rup_along_length * num_rup_along_width *
+                                n_hypo * n_slip)
         counts = sum(self._nr)
         return counts
 
