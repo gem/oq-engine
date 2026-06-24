@@ -2466,16 +2466,17 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    display_names = {'aggrisk_tags': 'Impact',
-                     'losses_by_site': 'Losses by site',
-                     'losses_by_location': 'Losses by location',
-                     'mmi_tags': 'Exposure by MMI',
-                     'exposure_by_location': 'Exposure by location',
-                     'exposure_by_lse?secondary_peril=liquefaction': (
-                        'Exposure by liquefaction LSE'),
-                     'exposure_by_lse?secondary_peril=landslide': (
-                        'Exposure by landslide LSE'),
-                     }
+    display_names = {
+        'aggrisk_tags': 'Impact',
+        'losses_by_site': 'Losses by site',
+        'losses_by_location': 'Losses by location',
+        'mmi_tags': 'Exposure by MMI',
+        'exposure_by_location': 'Exposure by location',
+        'exposure_by_lse?secondary_peril=liquefaction':
+            'Exposure grouped by Region and by Liquefaction LSE',
+        'exposure_by_lse?secondary_peril=landslide':
+            'Exposure grouped by Region and by Landslide LSE',
+    }
     loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
     exposure_names = ['mmi_tags', 'exposure_by_location',
                       'exposure_by_lse?secondary_peril=liquefaction',
