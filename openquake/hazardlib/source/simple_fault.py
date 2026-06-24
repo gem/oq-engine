@@ -388,8 +388,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             if self.hypo_depth_list:
                 # _hypo_list_from_depths filters by each float's depth range
                 # and collapses entries with equal dip_frac (e.g. when the
-                # fixedDipFrac is constant), so the real per-float count
-                # depends on first_row
+                # fixedDipFrac is constant over the depth entries), so the
+                # real per-float count depends on first_row
                 n_hypo_total = sum(
                     len(self._hypo_list_from_depths(first_row, rup_rows))
                     for first_row in range(num_rup_along_width)
