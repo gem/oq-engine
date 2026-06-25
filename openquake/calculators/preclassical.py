@@ -155,29 +155,33 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
+def preclassical(siblings, sf, cmaker, secparams, num_tasks, monitor):
     """
-    Split the sources if split_sources is true. If
-    ps_grid_spacing is set, grid the point sources.
+    Split the sources if split_sources is true. If ps_grid_spacing is set,
+    grid the point sources. ``siblings`` is a list of ``(grp_id, sources)``
+    tuples; sibling source groups sharing a geom_label are batched into a
+    single task so the cmaker and sitecol filter are pickled once per
+    geom_label instead of once per grp_id.
     """
-    # possibly grid the pointlike sources
-    if cmaker.ps_grid_spacing and cmaker.split_sources:
-        srcs = []
-        for src in sources:
-            if src.code in b'AM':
-                srcs.extend(split_source(src))
-            else:
-                srcs.append(src)
-        srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
-    else:
-        srcs = sources
-
     Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
-    # produce subtasks of kind set_weight
-    for i in range(Ns):
-        lst = srcs[i::Ns]
-        if lst:
-            yield filter_weight, lst, sf, cmaker, secparams
+    for grp_id, sources in siblings:
+        # possibly grid the pointlike sources
+        if cmaker.ps_grid_spacing and cmaker.split_sources:
+            srcs = []
+            for src in sources:
+                if src.code in b'AM':
+                    srcs.extend(split_source(src))
+                else:
+                    srcs.append(src)
+            srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        else:
+            srcs = sources
+
+        # produce subtasks of kind set_weight
+        for i in range(Ns):
+            lst = srcs[i::Ns]
+            if lst:
+                yield filter_weight, lst, sf, cmaker, secparams
 
 
 def get_req_gb(data, N, oq):
@@ -365,21 +369,45 @@ class PreClassicalCalculator(base.HazardCalculator):
         if normal_sources:
             sources_by_key = groupby(
                 normal_sources, operator.attrgetter('grp_id'))
-            logging.info('Starting preclassical with %d source groups',
-                         len(sources_by_key))
+            # Batch sibling source groups that share a geom_label so each
+            # task pickles one cmaker + sitecol filter instead of one per
+            # grp_id. Without this, sampled LTs with thousands of sibling
+            # branches OOM the parent at submission (e.g. 6252 grp_ids x
+            # ~6 MB of pickled args).
+            batches = AccumDict(accum=[])  # geom_label -> [(grp_id, srcs)]
+            for grp_id, srcs in sources_by_key.items():
+                label = getattr(srcs[0], 'geom_label', None)
+                batches[label].append((grp_id, srcs))
+            unbatched = batches.pop(None, [])  # grp_ids with no geom_label
+            num_tasks = len(unbatched) + len(batches)
+            logging.info('Starting preclassical with %d source groups '
+                         '(%d tasks: %d geom_label batches, %d unbatched)',
+                         len(sources_by_key), num_tasks,
+                         len(batches), len(unbatched))
             if sys.platform != 'darwin':
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
-            num_tasks = len(sources_by_key)
-            for grp_id, srcs in sources_by_key.items():
+            for grp_id, srcs in unbatched:
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
+                smap.submit(([(grp_id, srcs)], sf, cmaker, secparams,
+                             num_tasks))
+            for label, siblings in batches.items():
+                # Sibling branches share the same TRT, so their cmakers
+                # have the same gsims/oq/ps_grid_spacing for preclassical
+                # purposes -- pick the first as the representative
+                rep_grp_id = siblings[0][0]
+                cmaker = cmakers[rep_grp_id]
+                cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
+                pointlike = [src for src in siblings[0][1]
+                             if hasattr(src, 'nodal_plane_distribution')]
+                check_maxmag(pointlike)
+                smap.submit((siblings, sf, cmaker, secparams, num_tasks))
             res = smap.reduce()
         else:
             res = {}
