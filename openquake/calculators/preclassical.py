@@ -457,3 +457,4 @@ class PreClassicalCalculator(base.HazardCalculator):
         if self.oqparam.calculation_mode == 'preclassical':
             super().post_process()
         # else do nothing, post_process will be called later on
+        
