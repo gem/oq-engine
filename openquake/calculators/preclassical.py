@@ -249,6 +249,32 @@ def store_csm(dstore, csm, sitecol, cmakers):
     return max_weight
 
 
+# Attrs that legitimately differ between siblings sharing a geom_label.
+_PER_BRANCH_ATTRS = frozenset({
+    'mfd', '_num_ruptures', '_nr', 'num_ruptures', 'weight', 'nsites',
+    'nctxs', 'dt', 'grp_id', 'id', 'offset', 'source_id', 'sampling',
+    'smweight', 'scaling_rate',
+})
+
+
+def _alias_to_canonical(src, canonical):
+    """
+    Point src's geometric attrs at a canonical (geom_label, source_id) sibling.
+    """
+    label = getattr(src, 'geom_label', None)
+    if label is None:
+        return
+    key = (label, src.source_id)
+    canon = canonical.get(key)
+    if canon is None:
+        canonical[key] = src
+        return
+    d, cd = src.__dict__, canon.__dict__
+    for k in list(d):
+        if k not in _PER_BRANCH_ATTRS and k in cd:
+            d[k] = cd[k]
+
+
 def warn_use_rates(oq, num_rlzs):
     """
     Recommend setting use_rates and full enumeration when only the means
@@ -380,7 +406,21 @@ class PreClassicalCalculator(base.HazardCalculator):
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
                 smap.submit((srcs, sf, cmaker, secparams, num_tasks))
-            res = smap.reduce()
+            # Stream results and alias geometric attrs to a canonical
+            # (geom_label, source_id) sibling on arrival, so the parent
+            # holds one heavy geometry copy per geom_label instead of one
+            # per grp_id (critical under processpool, where pickling
+            # otherwise materializes a fresh copy per sibling).
+            res = AccumDict(accum=[])
+            canonical = {}
+            for result in smap:
+                for grp_id, srcs in result.items():
+                    for src in srcs:
+                        _alias_to_canonical(src, canonical)
+                    res[grp_id].extend(srcs)
+            if canonical:
+                logging.info(
+                    'Aliased to %d canonical geometries', len(canonical))
         else:
             res = {}
         atomic = set(src.grp_id for src in atomic_sources)
