@@ -1199,17 +1199,34 @@ class RuntimeSourceModelLT(object):
 
     def build_smdict(self, converter):
         """
-        Parse all in-memory XML strings and return an smdict compatible
-        with source_reader.get_csm(). Keys are absolute sentinel paths
-        matching what _groups_ids constructs from rlz.value[0].
+        Parse the in-memory XML strings and return an smdict compatible
+        with source_reader.get_csm().
         """
+        if self.num_samples:
+            probs = random(
+                (self.num_samples, 1), self.seed, self.sampling_method)
+            sampled_ids = {
+                branches[0].branch_id
+                for branches in self._bset.sample(
+                    probs, self.sampling_method)
+            }
+            items = [(bid, self._branch_xmls[bid]) for bid in sampled_ids]
+            logging.info(
+                'RuntimeSourceModelLT: parsing %d unique sampled branches'
+                ' (out of %d in the LT)',
+                len(items), len(self._branch_xmls))
+        else:
+            items = list(self._branch_xmls.items())
         # Count sibling branches per label so the GEOM_CACHE entry built
         # for the first branch can be evicted after the last sibling has
-        # consumed it (see contexts.GeomCacheEntry)
+        # consumed it (see contexts.GeomCacheEntry). When sampling the
+        # counts are derived from the sampled set so eviction tracking in
+        # GEOM_CACHE works still
         label_counts = collections.Counter(
-            lab for lab in self._branch_labels.values() if lab)
+            self._branch_labels.get(bid) for bid, _ in items
+            if self._branch_labels.get(bid))
         smdict = {}
-        for branch_id, xml_str in self._branch_xmls.items():
+        for branch_id, xml_str in items:
             sentinel = '__rt__%s' % branch_id
             abs_path = os.path.abspath(
                 os.path.join(self.basepath, sentinel))
