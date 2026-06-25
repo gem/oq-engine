@@ -249,32 +249,6 @@ def store_csm(dstore, csm, sitecol, cmakers):
     return max_weight
 
 
-# Attrs that legitimately differ between siblings sharing a geom_label.
-_PER_BRANCH_ATTRS = frozenset({
-    'mfd', '_num_ruptures', '_nr', 'num_ruptures', 'weight', 'nsites',
-    'nctxs', 'dt', 'grp_id', 'id', 'offset', 'source_id', 'sampling',
-    'smweight', 'scaling_rate',
-})
-
-
-def _alias_to_canonical(src, canonical):
-    """
-    Point src's geometric attrs at a canonical (geom_label, source_id) sibling.
-    """
-    label = getattr(src, 'geom_label', None)
-    if label is None:
-        return
-    key = (label, src.source_id)
-    canon = canonical.get(key)
-    if canon is None:
-        canonical[key] = src
-        return
-    d, cd = src.__dict__, canon.__dict__
-    for k in list(d):
-        if k not in _PER_BRANCH_ATTRS and k in cd:
-            d[k] = cd[k]
-
-
 def warn_use_rates(oq, num_rlzs):
     """
     Recommend setting use_rates and full enumeration when only the means
@@ -321,13 +295,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         csm = self.csm
-        canonical = {}
-        for sg in csm.src_groups:
-            for src in sg:
-                _alias_to_canonical(src, canonical)
-        if canonical:
-            logging.info('Input CSM: aliased to %d canonical geometries',
-                         len(canonical))
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
@@ -403,37 +370,17 @@ class PreClassicalCalculator(base.HazardCalculator):
             if sys.platform != 'darwin':
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
+            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
             num_tasks = len(sources_by_key)
-            # Build task_args up-front and pass to the Starmap constructor
-            # so submit_all() routes through self.task_queue, which only
-            # dispatches CT tasks at a time. The previous smap.submit()
-            # loop bypassed that throttle, so all 6k+ pickled task
-            # payloads piled up in the pool's queue and OOM'd the parent.
-            task_args = []
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                task_args.append((srcs, sf, cmaker, secparams, num_tasks))
-            smap = parallel.Starmap(
-                preclassical, task_args, h5=self.datastore.hdf5)
-            # Stream results and alias geometric attrs to a canonical
-            # (geom_label, source_id) sibling on arrival, so the parent
-            # holds one heavy geometry copy per geom_label instead of one
-            # per grp_id.
-            res = AccumDict(accum=[])
-            canonical = {}
-            for result in smap:
-                for grp_id, srcs in result.items():
-                    for src in srcs:
-                        _alias_to_canonical(src, canonical)
-                    res[grp_id].extend(srcs)
-            if canonical:
-                logging.info(
-                    'Aliased to %d canonical geometries', len(canonical))
+                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
+            res = smap.reduce()
         else:
             res = {}
         atomic = set(src.grp_id for src in atomic_sources)
@@ -510,4 +457,3 @@ class PreClassicalCalculator(base.HazardCalculator):
         if self.oqparam.calculation_mode == 'preclassical':
             super().post_process()
         # else do nothing, post_process will be called later on
-        
