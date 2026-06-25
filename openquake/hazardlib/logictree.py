@@ -1000,6 +1000,31 @@ class SourceModelLogicTree(object):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
 
 
+# Attrs that legitimately differ between sibling branches sharing a
+# geom_label; everything else parsed off the XML is shared geometry and
+# can alias the canonical sibling so the duplicate parsed objects are GC'd.
+_SIBLING_PER_BRANCH_ATTRS = frozenset({
+    'mfd', '_num_ruptures', '_nr', 'num_ruptures', 'weight', 'nsites',
+    'nctxs', 'dt', 'grp_id', 'id', 'offset', 'source_id', 'sampling',
+    'smweight', 'scaling_rate',
+})
+
+
+def _alias_sibling_geom(src, canonical, label):
+    """
+    Point src's geometric attrs at a canonical (label, source_id) sibling.
+    """
+    key = (label, src.source_id)
+    canon = canonical.get(key)
+    if canon is None:
+        canonical[key] = src
+        return
+    d, cd = src.__dict__, canon.__dict__
+    for k in list(d):
+        if k not in _SIBLING_PER_BRANCH_ATTRS and k in cd:
+            d[k] = cd[k]
+
+
 class RuntimeSourceModelLT(object):
     """
     In-memory SSC logic tree built from a Python script at runtime.
@@ -1226,6 +1251,13 @@ class RuntimeSourceModelLT(object):
             self._branch_labels.get(bid) for bid, _ in items
             if self._branch_labels.get(bid))
         smdict = {}
+        # Geometry sharing across sibling branches: as each sibling is
+        # parsed we alias its geometric attrs to the canonical (label,
+        # source_id) instance so the freshly-allocated duplicate objects
+        # are GC'd immediately. Without this the parent's heap grows with
+        # num_sampled_branches * sources_per_branch even though siblings
+        # differ only in per-rupture occurrence_rate
+        canonical = {}
         for branch_id, xml_str in items:
             sentinel = '__rt__%s' % branch_id
             abs_path = os.path.abspath(
@@ -1244,8 +1276,14 @@ class RuntimeSourceModelLT(object):
                 for src in sg:
                     src.geom_label = label
                     src.geom_label_branches = nbranches
+                    if label is not None:
+                        _alias_sibling_geom(src, canonical, label)
             sm.rtime = time.time() - t0
             smdict[abs_path] = sm
+        if canonical:
+            logging.info(
+                'RuntimeSourceModelLT: aliased to %d canonical geometries'
+                ' across sibling branches', len(canonical))
         return smdict
 
     def __toh5__(self):
