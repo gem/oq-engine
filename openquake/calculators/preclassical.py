@@ -321,6 +321,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         csm = self.csm
+        canonical = {}
+        for sg in csm.src_groups:
+            for src in sg:
+                _alias_to_canonical(src, canonical)
+        if canonical:
+            logging.info('Input CSM: aliased to %d canonical geometries',
+                         len(canonical))
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
