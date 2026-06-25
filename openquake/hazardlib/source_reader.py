@@ -498,9 +498,10 @@ def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
+    is_runtime = isinstance(full_lt.source_model_lt, RuntimeSourceModelLT)
     groups = []
     for rlz in full_lt.sm_rlzs:
-        if rlz.ordinal % 100 == 0:
+        if not is_runtime and rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
         src_groups, source_ids = _groups_ids(
