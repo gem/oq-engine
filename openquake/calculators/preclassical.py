@@ -403,21 +403,27 @@ class PreClassicalCalculator(base.HazardCalculator):
             if sys.platform != 'darwin':
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
-            smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
             num_tasks = len(sources_by_key)
+            # Build task_args up-front and pass to the Starmap constructor
+            # so submit_all() routes through self.task_queue, which only
+            # dispatches CT tasks at a time. The previous smap.submit()
+            # loop bypassed that throttle, so all 6k+ pickled task
+            # payloads piled up in the pool's queue and OOM'd the parent.
+            task_args = []
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
+                task_args.append((srcs, sf, cmaker, secparams, num_tasks))
+            smap = parallel.Starmap(
+                preclassical, task_args, h5=self.datastore.hdf5)
             # Stream results and alias geometric attrs to a canonical
             # (geom_label, source_id) sibling on arrival, so the parent
             # holds one heavy geometry copy per geom_label instead of one
-            # per grp_id (critical under processpool, where pickling
-            # otherwise materializes a fresh copy per sibling).
+            # per grp_id.
             res = AccumDict(accum=[])
             canonical = {}
             for result in smap:
