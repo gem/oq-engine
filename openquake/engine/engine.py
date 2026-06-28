@@ -94,7 +94,7 @@ def set_concurrent_tasks_default(calc, factor):
 
     else:
         num_workers = parallel.num_cores
-    concurrent_tasks = int(numpy.ceil(num_workers * factor))
+    concurrent_tasks = int(num_workers * factor)
     parallel.Starmap.CT = concurrent_tasks
     OqParam.concurrent_tasks.default = concurrent_tasks
     print
@@ -176,7 +176,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log, concurrent_jobs=1):
+def run_calc(log, factor=1):
     """
     Run a calculation.
 
@@ -216,7 +216,7 @@ def run_calc(log, concurrent_jobs=1):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        set_concurrent_tasks_default(calc, 2. / concurrent_jobs)
+        set_concurrent_tasks_default(calc, factor)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -338,7 +338,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            factor = 2. / len(jobctxs)
+            factor = 2. / min(len(jobctxs), concurrent_jobs)
             args = [(job, factor) for job in jobctxs]
             names = []
             for job in jobctxs:
