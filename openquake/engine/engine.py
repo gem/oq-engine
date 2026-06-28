@@ -216,7 +216,7 @@ def run_calc(log, concurrent_jobs=1):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        set_concurrent_tasks_default(calc, 1 / concurrent_jobs)
+        set_concurrent_tasks_default(calc, 2. / concurrent_jobs)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
