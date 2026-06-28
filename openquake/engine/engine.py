@@ -76,10 +76,11 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-def set_concurrent_tasks_default(calc, factor):
+def set_concurrent_tasks_default(calc, redfactor=1):
     """
     Look at the number of available workers and update the parameter
-    OqParam.concurrent_tasks.default. `factor` is 2/num_jobs.
+    OqParam.concurrent_tasks.default by taking into account the
+    reduction factor `redfactor`.
     Abort the calculations if no workers are available.
     Do nothing if the parallelization is disabled.
     """
@@ -94,7 +95,7 @@ def set_concurrent_tasks_default(calc, factor):
 
     else:
         num_workers = parallel.num_cores
-    concurrent_tasks = int(num_workers * factor)
+    concurrent_tasks = int(num_workers * redfactor)
     parallel.Starmap.CT = concurrent_tasks
     OqParam.concurrent_tasks.default = concurrent_tasks
     print
@@ -338,8 +339,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            factor = 2. / min(len(jobctxs), concurrent_jobs)
-            args = [(job, factor) for job in jobctxs]
+            redfactor = 2. / min(len(jobctxs), concurrent_jobs)
+            args = [(job, redfactor) for job in jobctxs]
             names = []
             for job in jobctxs:
                 name = f"{job.params['mosaic_model']}{job.calc_id}"
