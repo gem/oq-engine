@@ -79,8 +79,8 @@ def get_zmq_ports():
 def set_concurrent_tasks_default(calc, factor):
     """
     Look at the number of available workers and update the parameter
-    OqParam.concurrent_tasks.default. `factor` is the inverse of
-    concurrent_jobs. Abort the calculations if no workers are available.
+    OqParam.concurrent_tasks.default. `factor` is 2/num_jobs.
+    Abort the calculations if no workers are available.
     Do nothing if the parallelization is disabled.
     """
     dist = parallel.oq_distribute()
@@ -338,7 +338,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(job, concurrent_jobs) for job in jobctxs]
+            factor = 2. / len(jobctxs)
+            args = [(job, factor) for job in jobctxs]
             names = []
             for job in jobctxs:
                 name = f"{job.params['mosaic_model']}{job.calc_id}"
