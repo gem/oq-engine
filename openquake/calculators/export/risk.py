@@ -184,6 +184,22 @@ def export_mmi_tags(ekey, dstore):
     return [dest]
 
 
+@export.add(('exposure_by_liquefaction_lse', 'csv'),
+            ('exposure_by_landslide_lse', 'csv'))
+def export_exposure_by_lse(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]  # like exposure_by_liquefaction_lse
+    secondary_peril = dskey.split('exposure_by_')[1].split('_lse')[0]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname(dskey, '', 'csv')
+    df = extract(dstore, f'exposure_by_lse?secondary_peril={secondary_peril}')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
+
+
 def _get_data(dstore, dskey, loss_types, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':

@@ -30,6 +30,10 @@ DISPLAY_NAME = {
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
     'exposure': 'Exposure',
+    'exposure_by_liquefaction_lse':
+        'Exposure grouped by Region and by Liquefaction LSE',
+    'exposure_by_landslide_lse':
+        'Exposure grouped by Region and by Landslide LSE',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
