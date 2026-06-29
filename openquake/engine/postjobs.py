@@ -103,7 +103,6 @@ def import_outputs(dstore, calcs, out_types, may_fails=()):
         for fname, name, fields, calc_id in outs:
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
-            logging.info(f'Importing {table} for {name} [{calc_id}]')
             dstore.import_csv(fname, table, fields, extra={'calc': name})
             os.remove(fname)  # remove only if the import succeeded
     logging.info(f'Saved outputs in workflow {dstore.filename}')
