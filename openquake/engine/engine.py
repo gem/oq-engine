@@ -339,7 +339,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            redfactor = 2. / min(len(jobctxs), concurrent_jobs)
+            redfactor = 4. / min(len(jobctxs), concurrent_jobs)
             args = [(job, redfactor) for job in jobctxs]
             names = []
             for job in jobctxs:
