@@ -4,6 +4,7 @@
     Liquefaction/Landslide LSE)
 
   [Michele Simionato]
+  * Parallelized the exports in workflow calculations
   * Fixed the exporters `aggexp_tags` and `aggrisk_tags`
   * Reduced the number of tasks and the memory consumption in event_based_risk
   * Optimized rupture sampling for sources with high multiplicity

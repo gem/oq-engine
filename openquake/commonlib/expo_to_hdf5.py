@@ -61,7 +61,7 @@ class Indexer(object):
     """
     Class fine-tuned for our current world exposure containing ~72M assets
     """
-    def __init__(self, name, maxsize=199_000_000):
+    def __init__(self, name, maxsize=500_000_000):
         self.name = name
         self.maxsize = maxsize
         self.dic = {}
