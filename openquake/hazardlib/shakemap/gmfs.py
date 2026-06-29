@@ -177,13 +177,13 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
     # NOTE: dtype=float ensures the final gmfs to have max precision
     # floating-point accuracy. We might prefer instead to avoid specifying it,
     # so the default dtype would match the native precision of ShakeMap data.
-    scale = numpy.array([
+    return numpy.array([
         numpy.full_like(
             shakemap_std[str(im)],
             1.0 if 'PGV' in str(im) else pctg_value,
             dtype=float)
-        for im in imts]).flatten()
-    return scale[:, numpy.newaxis]
+        for im in imts
+    ]).reshape(-1, 1)
 
 
 @calculate_gmfs.add('Silva&Horspool')
@@ -232,7 +232,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
+    sig = numpy.array(stddev).reshape(-1, 1)  # (M,N) -> (M*N, 1)
 
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
@@ -250,9 +250,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     :returns: F(Z, mu) to calculate gmfs
     """
     # create vector with std values of shape (N*M, 1)
-    sig = numpy.array([shakemap['std'][str(im)]
-                       for im in imts]).flatten()
-    sig = sig[:, numpy.newaxis]
+    sig = numpy.array([shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
 
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
