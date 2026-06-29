@@ -169,6 +169,19 @@ To avoid that, set a proper `region_grid_spacing` so that your exposure
 involves less sites.'''
 
 
+def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
+    """
+    Builds a column vector matching the flattened shape of the shakemap arrays,
+    applying pctg_value scaling to acceleration IMTs and 1.0 to velocity (PGV).
+    Without specifying a dtype, scale matches the precision of ShakeMap data.
+    """
+    scale = numpy.array([
+        numpy.full_like(
+            shakemap_std[str(im)], 1.0 if 'PGV' in str(im) else pctg_value)
+        for im in imts]).flatten()
+    return scale[:, numpy.newaxis]
+
+
 @calculate_gmfs.add('Silva&Horspool')
 def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
                       crosscorr, cholesky_limit):
@@ -216,8 +229,11 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
     sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
+
+    scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
+
     # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / PCTG
+    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / scale
 
 
 @calculate_gmfs.add('basic')
@@ -231,12 +247,14 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     # create vector with std values of shape (N*M, 1)
     sig = numpy.array([shakemap['std'][str(im)]
-                      for im in imts]).flatten()
+                       for im in imts]).flatten()
     sig = sig[:, numpy.newaxis]
 
+    scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
+
     # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
-    # multiply Z and sig column-wise and add mean
-    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / PCTG
+    # multiply Z and sig column-wise, add mean and apply the correct IMT scale
+    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / scale
 
 
 @ calculate_gmfs.add('mmi')
