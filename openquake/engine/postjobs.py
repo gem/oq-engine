@@ -61,9 +61,9 @@ def build_ses(dstore, calcs, out_file, may_fails=()):
             h5.import_df('occ_by_trt_smr', df.reset_index())
 
 
-def _export_import(name, calc_id, output_type, may_fail, dstore):
-    # export the CSV files associated to the output type from the
-    # calculation and import them in the workflow datastore
+def export_csv(name, calc_id, out_types, may_fail):
+    # export the CSV files associated to the output types
+    allargs = []
     with datastore.read(calc_id) as calc_ds:
         oq = calc_ds['oqparam']
         aggby = set()
@@ -72,23 +72,21 @@ def _export_import(name, calc_id, output_type, may_fail, dstore):
         str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
-        # output_type = 'aggexp_tags'
-        try:
-            fnames = export.export((output_type, 'csv'), calc_ds)
-        except Exception as exc:
-            if may_fail or os.environ.get('OQ_SAMPLES'):
-                # errors are expected
-                logging.info(f'{name}: {output_type}#{calc_id} not imported')
-                return
-            else:
-                logging.error(f'{name}: #{calc_id}')
-                raise exc
-        for fname in fnames:
-            table = os.path.basename(fname).rsplit('_', 1)[0]
-            # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
-            logging.info(f'Importing {table} for {name} [{calc_id}]')
-            dstore.import_csv(fname, table, str_fields, extra={'calc': name})
-            os.remove(fname)  # remove only if the import succeeded
+        for out_type in out_types:
+            # output_type = 'aggexp_tags'
+            try:
+                fnames = export.export((out_type, 'csv'), calc_ds)
+            except Exception as exc:
+                if may_fail or os.environ.get('OQ_SAMPLES'):
+                    # errors are expected
+                    logging.info(f'{name}: {out_type}#{calc_id} not imported')
+                    continue
+                else:
+                    logging.error(f'{name}: #{calc_id}')
+                    raise exc
+            for fname in fnames:
+                allargs.append((fname, str_fields))
+    return allargs
 
 
 # tested in test_workflow
@@ -102,8 +100,14 @@ def import_outputs(dstore, calcs, out_types, may_fails=()):
     with performance.Monitor(measuremem=True, h5=dstore) as mon:
         for calc_id, may_fail in zip(calcs, may_fails):
             name = wf.loc[calc_id]['name']
-            for out_type in out_types:
-                _export_import(name, calc_id, out_type, may_fail, dstore)
+            allargs = export_csv(name, calc_id, out_types, may_fail)
+            for fname, fields in allargs:
+                table = os.path.basename(fname).rsplit('_', 1)[0]
+                # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
+                logging.info(f'Importing {table} for {name} [{calc_id}]')
+                dstore.import_csv(fname, table, fields, extra={'calc': name})
+                os.remove(fname)  # remove only if the import succeeded
+
     logging.info(f'Saved outputs in workflow {dstore.filename}')
     print(mon)
 
