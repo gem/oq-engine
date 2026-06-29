@@ -1,3 +1,8 @@
+  [Paolo Tormene]
+  * Added exporter for `exposure_by_liquefaction_lse` and
+    `exposure_by_landslide_lse` (Exposure grouped by Region and by
+    Liquefaction/Landslide LSE)
+
   [Michele Simionato]
   * Fixed the exporters `aggexp_tags` and `aggrisk_tags`
   * Reduced the number of tasks and the memory consumption in event_based_risk
