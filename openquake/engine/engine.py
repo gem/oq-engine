@@ -76,11 +76,13 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-def set_concurrent_tasks_default(calc, factor):
+def set_concurrent_tasks_default(calc, mulfactor):
     """
     Look at the number of available workers and update the parameter
-    OqParam.concurrent_tasks.default. Abort the calculations if no
-    workers are available. Do nothing for trivial distributions.
+    OqParam.concurrent_tasks.default by taking into account the
+    multiplicative factor `mulfactor` (2 except in multi-jobs).
+    Abort the calculations if no workers are available.
+    Do nothing if the parallelization is disabled.
     """
     dist = parallel.oq_distribute()
     if dist in ('zmq', 'slurm'):
@@ -93,12 +95,15 @@ def set_concurrent_tasks_default(calc, factor):
 
     else:
         num_workers = parallel.num_cores
-    parallel.Starmap.CT = num_workers * factor
-    OqParam.concurrent_tasks.default = num_workers * factor
+    concurrent_tasks = int(num_workers * mulfactor)
+    parallel.Starmap.CT = concurrent_tasks
+    OqParam.concurrent_tasks.default = concurrent_tasks
+    print
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
-        logging.warning('Using %d %s workers', num_workers, dist)
+        logging.warning(f'Using {num_workers} {dist} workers, '
+                        f'{concurrent_tasks=}')
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -172,7 +177,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log):
+def run_calc(log, mulfactor=2):
     """
     Run a calculation.
 
@@ -212,8 +217,7 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        workflow = oqparam.calculation_mode == 'workflow'
-        set_concurrent_tasks_default(calc, 1 if workflow else 2)
+        set_concurrent_tasks_default(calc, mulfactor)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -335,7 +339,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(job,) for job in jobctxs]
+            args = [(job, 1) for job in jobctxs]
             names = []
             for job in jobctxs:
                 name = f"{job.params['mosaic_model']}{job.calc_id}"
@@ -413,12 +417,11 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
     if concurrent_jobs > 1:
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+        with mock.patch.dict(os.environ, OQ_DISTRIBUTE='zmq'):
             _run(jobctxs, job_id, nodes, sbatch,
                  concurrent_jobs, notify_to)
     else:
-        _run(jobctxs, job_id, nodes, sbatch,
-             concurrent_jobs, notify_to)
+        _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to)
     return jobctxs
 
 
