@@ -27,7 +27,7 @@ import logging
 import tempfile
 import numpy as np
 import pandas as pd
-from openquake.baselib import hdf5, config, performance
+from openquake.baselib import hdf5, config, parallel
 from openquake.commonlib import datastore
 from openquake.calculators import base, export, views
 
@@ -85,7 +85,7 @@ def export_csv(name, calc_id, out_types, may_fail):
                     logging.error(f'{name}: #{calc_id}')
                     raise exc
             for fname in fnames:
-                allargs.append((fname, str_fields))
+                allargs.append((fname, name, str_fields, calc_id))
     return allargs
 
 
@@ -97,19 +97,16 @@ def import_outputs(dstore, calcs, out_types, may_fails=()):
     if len(may_fails) == 0:
         may_fails = np.ones(len(calcs), bool)
     wf = dstore.read_df('workflow', 'calc_id')
-    with performance.Monitor(measuremem=True, h5=dstore) as mon:
-        for calc_id, may_fail in zip(calcs, may_fails):
-            name = wf.loc[calc_id]['name']
-            allargs = export_csv(name, calc_id, out_types, may_fail)
-            for fname, fields in allargs:
-                table = os.path.basename(fname).rsplit('_', 1)[0]
-                # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
-                logging.info(f'Importing {table} for {name} [{calc_id}]')
-                dstore.import_csv(fname, table, fields, extra={'calc': name})
-                os.remove(fname)  # remove only if the import succeeded
-
+    inps = [(wf.loc[calc_id]['name'], calc_id, out_types, may_fail)
+            for calc_id, may_fail in zip(calcs, may_fails)]
+    for outs in parallel.Starmap(export_csv, inps, h5=dstore):
+        for fname, name, fields, calc_id in outs:
+            table = os.path.basename(fname).rsplit('_', 1)[0]
+            # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
+            logging.info(f'Importing {table} for {name} [{calc_id}]')
+            dstore.import_csv(fname, table, fields, extra={'calc': name})
+            os.remove(fname)  # remove only if the import succeeded
     logging.info(f'Saved outputs in workflow {dstore.filename}')
-    print(mon)
 
 
 def post_aelo(dstore, calcs, may_fails=()):
