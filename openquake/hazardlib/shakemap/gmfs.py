@@ -322,7 +322,21 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
         assert len(vs30) == len(shakemap), (len(vs30), len(shakemap))
         logging.info('Amplifying GMFs')
         gmfs = amplify_gmfs(imts, vs30, gmfs)
-    if gmfs.max() > MAX_GMV:
-        logging.warning('There are suspiciously large GMVs of %.2fg',
-                        gmfs.max())
-    return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
+
+    # Reshape the output to (N, E, M) prior to the checks
+    out_gmfs = gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
+
+    # Validate suspiciously large values per IMT
+    for i, im in enumerate(imts):
+        imt_str = str(im)
+        imt_gmf_max = out_gmfs[:, :, i].max()
+        if imt_str != 'PGV':
+            if imt_gmf_max > MAX_GMV:
+                logging.warning(
+                    'There are suspiciously large GMVs for %s of %.2fg',
+                    imt_str, imt_gmf_max)
+        else:
+            # We can add a PGV-specific check here if needed
+            pass
+
+    return imts, out_gmfs
