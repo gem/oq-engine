@@ -28,6 +28,7 @@ from openquake.hazardlib import geo, imt, correlation
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
+MAX_PGV_GMV = 500.  # cm/s
 
 
 def spatial_correlation_array(dmatrix, imts, correl='yes',
@@ -336,7 +337,9 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
                     'There are suspiciously large GMVs for %s of %.2fg',
                     imt_str, imt_gmf_max)
         else:
-            # We can add a PGV-specific check here if needed
-            pass
+            if imt_gmf_max > MAX_PGV_GMV:
+                logging.warning(
+                    'There are suspiciously large GMVs for PGV of %.2f cm/s',
+                    imt_gmf_max)
 
     return imts, out_gmfs
