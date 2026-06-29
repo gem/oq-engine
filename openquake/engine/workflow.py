@@ -435,8 +435,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                             expected_failures.add(name)
                         else:
                             failed += 1
-                    else:
-                        calcs.append(job.calc_id)
+                    calcs.append(job.calc_id)
                     import_task_info(job.calc_id, name, dstore)
             may_fails = [name in wf.may_fail for name in new_names]
             for success in wf.success:
