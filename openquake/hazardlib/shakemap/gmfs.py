@@ -173,11 +173,15 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
     """
     Builds a column vector matching the flattened shape of the shakemap arrays,
     applying pctg_value scaling to acceleration IMTs and 1.0 to velocity (PGV).
-    Without specifying a dtype, scale matches the precision of ShakeMap data.
     """
+    # NOTE: dtype=float ensures the final gmfs to have max precision
+    # floating-point accuracy. We might prefer instead to avoid specifying it,
+    # so the default dtype would match the native precision of ShakeMap data.
     scale = numpy.array([
         numpy.full_like(
-            shakemap_std[str(im)], 1.0 if 'PGV' in str(im) else pctg_value)
+            shakemap_std[str(im)],
+            1.0 if 'PGV' in str(im) else pctg_value,
+            dtype=float)
         for im in imts]).flatten()
     return scale[:, numpy.newaxis]
 
