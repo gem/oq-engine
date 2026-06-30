@@ -157,7 +157,7 @@ def cholesky(spatial_cov, cross_corr):
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
         LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M * N))
-    
+
     big_cutoff = numpy.eye(M*N) * 1E-8  # avoid negative eigenvalues
     return numpy.linalg.cholesky(numpy.array(LLT) + big_cutoff)
 
@@ -336,10 +336,9 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
                 logging.warning(
                     'There are suspiciously large GMVs for %s of %.2fg',
                     imt_str, imt_gmf_max)
-        else:
-            if imt_gmf_max > MAX_PGV_GMV:
-                logging.warning(
-                    'There are suspiciously large GMVs for PGV of %.2f cm/s',
-                    imt_gmf_max)
+        elif imt_gmf_max > MAX_PGV_GMV:
+            logging.warning(
+                'There are suspiciously large GMVs for PGV of %.2f cm/s',
+                imt_gmf_max)
 
     return imts, out_gmfs
