@@ -28,6 +28,7 @@ from openquake.hazardlib import geo, imt, correlation
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
+MAX_PGV_GMV = 500.  # cm/s
 
 
 def spatial_correlation_array(dmatrix, imts, correl='yes',
@@ -156,7 +157,7 @@ def cholesky(spatial_cov, cross_corr):
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
         LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M * N))
-    
+
     big_cutoff = numpy.eye(M*N) * 1E-8  # avoid negative eigenvalues
     return numpy.linalg.cholesky(numpy.array(LLT) + big_cutoff)
 
@@ -167,6 +168,23 @@ CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %s > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
 involves less sites.'''
+
+
+def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
+    """
+    Builds a column vector matching the flattened shape of the shakemap arrays,
+    applying pctg_value scaling to acceleration IMTs and 1.0 to velocity (PGV).
+    """
+    # NOTE: dtype=float ensures the final gmfs to have max precision
+    # floating-point accuracy. We might prefer instead to avoid specifying it,
+    # so the default dtype would match the native precision of ShakeMap data.
+    return numpy.array([
+        numpy.full_like(
+            shakemap_std[str(im)],
+            1.0 if 'PGV' in str(im) else pctg_value,
+            dtype=float)
+        for im in imts
+    ]).reshape(-1, 1)
 
 
 @calculate_gmfs.add('Silva&Horspool')
@@ -215,9 +233,12 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
+    sig = numpy.array(stddev).reshape(-1, 1)  # (M,N) -> (M*N, 1)
+
+    scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
+
     # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / PCTG
+    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / scale
 
 
 @calculate_gmfs.add('basic')
@@ -230,13 +251,13 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     :returns: F(Z, mu) to calculate gmfs
     """
     # create vector with std values of shape (N*M, 1)
-    sig = numpy.array([shakemap['std'][str(im)]
-                      for im in imts]).flatten()
-    sig = sig[:, numpy.newaxis]
+    sig = numpy.array([shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
+
+    scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
     # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
-    # multiply Z and sig column-wise and add mean
-    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / PCTG
+    # multiply Z and sig column-wise, add mean and apply the correct IMT scale
+    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / scale
 
 
 @ calculate_gmfs.add('mmi')
@@ -302,7 +323,22 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
         assert len(vs30) == len(shakemap), (len(vs30), len(shakemap))
         logging.info('Amplifying GMFs')
         gmfs = amplify_gmfs(imts, vs30, gmfs)
-    if gmfs.max() > MAX_GMV:
-        logging.warning('There are suspiciously large GMVs of %.2fg',
-                        gmfs.max())
-    return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
+
+    # Reshape the output to (N, E, M) prior to the checks
+    out_gmfs = gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
+
+    # Validate suspiciously large values per IMT
+    for i, im in enumerate(imts):
+        imt_str = str(im)
+        imt_gmf_max = out_gmfs[:, :, i].max()
+        if imt_str != 'PGV':
+            if imt_gmf_max > MAX_GMV:
+                logging.warning(
+                    'There are suspiciously large GMVs for %s of %.2fg',
+                    imt_str, imt_gmf_max)
+        elif imt_gmf_max > MAX_PGV_GMV:
+            logging.warning(
+                'There are suspiciously large GMVs for PGV of %.2f cm/s',
+                imt_gmf_max)
+
+    return imts, out_gmfs
