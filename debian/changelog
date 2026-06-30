@@ -1,4 +1,13 @@
   [Paolo Tormene]
+  * Fixed a unit-scaling bug in GMF calculations; acceleration IMTs are
+    converted to g as before, while velocity measures (PGV) preserve their
+    native cm/s units.
+
+  [Michele Simionato]
+  * Fixed a bug with IMT-dependent weights being not normalized, breaking
+    the CND model with use_rates=true
+
+  [Paolo Tormene]
   * Added exporter for `exposure_by_liquefaction_lse` and
     `exposure_by_landslide_lse` (Exposure grouped by Region and by
     Liquefaction/Landslide LSE)
