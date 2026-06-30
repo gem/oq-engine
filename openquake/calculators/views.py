@@ -280,7 +280,7 @@ def view_ruptimes(token, dstore, maxrows=25):
     info = dstore.read_df('ruptimes', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
     df['surface'] = [code2cls[code][1].__name__ for code in df.code]
-    del df['task_no']
+    df['task_no'] = int(df['task_no'])
     del df['code']
     return df[:maxrows]
 
