@@ -435,7 +435,8 @@ def _collect(allargs, maxw, sids, sec_perils, dstore):
     for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
-        allrups = [numpy.array(rb) for rb in rupblks]
+        allrups = general.WeightedSequence([
+            (numpy.array(rb), rb.weight) for rb in rupblks])
         out.append((allrups, cmakers, sids, sec_perils, dstore))
     # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
     return out
