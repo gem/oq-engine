@@ -1301,7 +1301,7 @@ class FullLogicTree(object):
         tot_weight = sum(rlz.weight for rlz in rlzs)
         if (tot_weight != 1).any():
             for rlz in rlzs:
-                rlz.weight = rlz.weight / tot_weight
+                rlz.weight /= tot_weight
         return rlzs
 
     def get_rlzs_by_gsim_dic(self):
