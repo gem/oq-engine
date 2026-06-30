@@ -49,7 +49,7 @@ def main(calc_id: int, rup_id: str):
     prim_imts = oq.get_primary_imtls()
     create_gmf_data(dstore, prim_imts, oq.sec_imts)
     dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
-    dstore.create_dset('gmf_data/rup_info', rup_dt)
+    dstore.create_dset('ruptimes', rup_dt)
 
     with job, patch.dict(os.environ, {'OQ_RUPTURE': rup_id}):
         calc = object.__new__(EventBasedCalculator)
