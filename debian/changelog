@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a bug with IMT-dependent weights being not normalized, breaking
+    the CND model with use_rates=true
+
   [Paolo Tormene]
   * Added exporter for `exposure_by_liquefaction_lse` and
     `exposure_by_landslide_lse` (Exposure grouped by Region and by

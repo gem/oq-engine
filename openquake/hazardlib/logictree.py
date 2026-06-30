@@ -1103,6 +1103,7 @@ class FullLogicTree(object):
         logging.info('Building {:_d} realizations'.format(R))
         self.weights = ws = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
+        numpy.testing.assert_allclose(ws.sum(axis=0), 1)
         self.gsim_lt.wget.weights = ws
         return self
 
@@ -1296,10 +1297,11 @@ class FullLogicTree(object):
                     rlzs[i] = LtRealization(i, smpath, gsim_rlz, weight)
                     i += 1
         # rescale the weights if not one, see case_52
-        tot_weight = sum(rlz.weight for rlz in rlzs)[-1]
-        if tot_weight != 1.:
+        # and logictree/case_30 for IMT-dependent weights
+        tot_weight = sum(rlz.weight for rlz in rlzs)
+        if (tot_weight != 1).any():
             for rlz in rlzs:
-                rlz.weight = rlz.weight / tot_weight
+                rlz.weight /= tot_weight
         return rlzs
 
     def get_rlzs_by_gsim_dic(self):
