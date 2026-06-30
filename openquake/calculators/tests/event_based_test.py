@@ -473,7 +473,7 @@ class EventBasedTestCase(CalculatorTestCase):
         df = view('ruptimes', self.calc.datastore)
         self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
                                             'rrup', 'time', 'weight',
-                                            'surface'])
+                                            'task_no', 'surface'])
 
     def test_case_23(self):
         # case with implicit grid and site model on a larger grid
