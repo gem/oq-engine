@@ -268,8 +268,8 @@ def view_slow_sources(token, dstore, maxrows=20):
     return data[::-1][:maxrows]
 
 
-@view.add('rup_info')
-def view_rup_info(token, dstore, maxrows=25):
+@view.add('ruptimes')
+def view_ruptimes(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
@@ -277,7 +277,7 @@ def view_rup_info(token, dstore, maxrows=25):
         code2cls.update(source.rupture.BaseRupture.init())
     fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
-    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    info = dstore.read_df('ruptimes', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
     df['surface'] = [code2cls[code][1].__name__ for code in df.code]
     del df['task_no']
@@ -785,7 +785,7 @@ def view_task_eb(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    rdata = dstore.read_df('gmf_data/rup_info')
+    rdata = dstore.read_df('ruptimes')
     rd = rdata[rdata.task_no == taskno]
     acc = AccumDict(accum=numpy.zeros(2))
     for rup_id, time, weight in zip(rd.rup_id, rd.time, rd.weight):
@@ -1345,7 +1345,7 @@ def view_risk_by_rup(token, dstore):
     $ oq show risk_by_rup
     """
     rbr = dstore.read_df('loss_by_rupture', 'rup_id')
-    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    info = dstore.read_df('ruptimes', 'rup_id')
     rdf = dstore.read_df('ruptures', 'id')
     df = rbr.join(rdf).join(info)[
         ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
