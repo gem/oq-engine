@@ -371,6 +371,7 @@ def import_task_info(calc_id, name, dstore):
         dic['min'] = dic['min'].astype(F32)
         dic['max'] = dic['max'].astype(F32)
         dic['slowfac'] = dic['slowfac'].astype(F32)
+        dic['calc_id'] = calc_id
         df = pandas.DataFrame(dic)
         dstore.hdf5.import_df('wtask', df, gzip=None)
 

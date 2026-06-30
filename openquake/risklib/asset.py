@@ -615,18 +615,20 @@ class AssetCollection(object):
             a DataFrame with aggregated exposure metrics grouped by
             geo-tags and the chosen LSE peril tiers
         """
+        # NOTE: tier labels need to be written with decimals to prevent
+        # spreadsheet applications from interpreting values like 1-2 as 1-Feb
         if secondary_peril == "liquefaction":
             lse_col = "AllstadtEtAl2022Liquefaction_LSE"
             tier_col = "liquefaction_lse_tier"
-            bins = [0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-            labels = ["<0.005", "0.005-0.01", "0.01-0.02", "0.02-0.05",
-                      "0.05-0.1", "0.1-0.2", ">0.2"]
+            bins = [0., 0.5, 1., 2., 5., 10., 20., numpy.inf]
+            labels = ["<0.5", "0.5-1.0", "1.0-2.0", "2.0-5.0", "5.0-10.0",
+                      "10.0-20.0", ">20.0"]
         elif secondary_peril == "landslide":
             lse_col = "AllstadtEtAl2022Landslides_LSE"
             tier_col = "landslide_lse_tier"
-            bins = [0, 0.002, 0.01, 0.02, 0.05, 0.1, 0.2, numpy.inf]
-            labels = ["<0.002", "0.002-0.01", "0.01-0.02", "0.02-0.05",
-                      "0.05-0.1", "0.1-0.2", ">0.2"]
+            bins = [0., 0.2, 1., 2., 5., 10., 20., numpy.inf]
+            labels = ["<0.2", "0.2-1.0", "1.0-2.0", "2.0-5.0", "5.0-10.0",
+                      "10.0-20.0", ">20.0"]
         else:
             raise ValueError(
                 "secondary_peril must be either 'liquefaction' or 'landslide'")
