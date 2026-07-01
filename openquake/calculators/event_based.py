@@ -344,7 +344,6 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
-    assert totw, 'All ruptures have been filtered out'
     logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -359,6 +358,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     trts = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
+    # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
