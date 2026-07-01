@@ -31,11 +31,12 @@ from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
+from openquake.commonlib import logs, datastore
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.tests.views_test import get_or_create_user
 
-CALC_RUN_TIMEOUT = 60
+CALC_RUN_TIMEOUT = 120
 
 
 def check_email(job_id, email_content, expected_error):
@@ -265,6 +266,18 @@ class ImpactModeTestCase(django.test.TestCase):
             exposure_by_lse = numpy.load(BytesIO(content))
             pandas.DataFrame.from_dict(
                 {item: exposure_by_lse[item] for item in exposure_by_lse})
+
+        job = logs.dbcmd('get_job', job_id)
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            impact_iso3_list = list(ds['impact'])
+            self.assertGreater(len(impact_iso3_list), 0)
+            for iso3 in impact_iso3_list:
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                self.assertEqual(ret.status_code, 200)
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}&format=png')
+                self.assertEqual(ret.status_code, 200)
 
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission

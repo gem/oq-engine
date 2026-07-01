@@ -125,8 +125,11 @@ window.initImpactForm = function() {
     }
 
     function set_shakemap_version_selector() {
+        let shakemap_selector = $("#shakemap_version");
+        shakemap_selector.empty();
         const usgs_id = $.trim($("#usgs_id").val());
         if (usgs_id == '') return;
+        $('input#usgs_id').prop('disabled', true);
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('#getStationDataFromUsgs').prop('disabled', true);
         $('#submit_impact_calc').prop('disabled', true);
@@ -166,6 +169,7 @@ window.initImpactForm = function() {
             var err_msg = resp.error_msg;
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
+            $('input#usgs_id').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
             $('#getStationDataFromUsgs').prop('disabled', false);
             toggleRunCalcBtnState();
@@ -398,8 +402,8 @@ window.initImpactForm = function() {
             encode: true,
         }).done(function (data) {
             // console.log(data);
-            $('.impact_time_grp').css('display', 'inline-block');
-            $('div.impact_time_grp').css('display', 'block');
+            $('.after_get_rupture_btn').css('display', 'inline-block');
+            $('div.after_get_rupture_btn').css('display', 'block');
             $('#lon').val(data.lon);
             toggleRunCalcBtnState();
             $('#lat').val(data.lat);
@@ -610,6 +614,7 @@ window.initImpactForm = function() {
             formData.append('msr', msr_selector.find(':selected').val());
         }
         formData.append('description', $('#description').val());
+        formData.append('notes', $('#notes').val());
         $.ajax({
             type: "POST",
             url: gem_oq_server_url + "/v1/calc/impact_run",

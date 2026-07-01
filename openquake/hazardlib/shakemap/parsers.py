@@ -35,7 +35,7 @@ from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from shapely.geometry import shape, Point, Polygon
@@ -1149,8 +1149,12 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 
     properties = usgs_event_data['properties']
 
-    # NB: currently we cannot find a case with missing shakemap
-    shakemaps = properties['products']['shakemap']
+    try:
+        shakemaps = properties['products']['shakemap']
+    except KeyError:
+        err = {'status': 'failed',
+               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        return None, None, None, None, err
     if shakemap_version == 'usgs_preferred':
         shakemap = _get_usgs_preferred_item(shakemaps)
     else:
@@ -1338,8 +1342,8 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
 
 
 def ms_to_utc_date_time(ms):
-    # convert from milliseconds to utc date time
-    dt = datetime.utcfromtimestamp(ms / 1000)  # convert to seconds
+    # convert from milliseconds to timezone-aware UTC date time
+    dt = datetime.fromtimestamp(ms / 1000, timezone.utc)  # convert to seconds
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -1368,7 +1372,12 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
 
     js = json.loads(text)
     properties = js['properties']
-    shakemaps = properties['products']['shakemap']
+    try:
+        shakemaps = properties['products']['shakemap']
+    except KeyError:
+        err = {'status': 'failed',
+               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        return None, None, err
     usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
     usgs_preferred_version = usgs_preferred_shakemap['id']
     sorted_shakemaps = sorted(
@@ -1540,7 +1549,7 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
     return rup, rupdic, err
 
 
-# tested in the nightly tests aristotle_run
+# tested in the nightly tests impact_run
 # the default argument is needed to avoid an
 # error in is_valid_shakemap
 def get_array_usgs_id(kind, id, contents={}):
