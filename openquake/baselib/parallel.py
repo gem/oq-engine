@@ -1130,7 +1130,7 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
                 safecall, [(func, args, name)
                            for args, name in zip(allargs, names)]):
             n += 1
-            if isinstance(name, Exception):
+            if isinstance(name, BaseException):
                 raise RuntimeError(f'{name.name}') from name
             elif logfinish:
                 logging.info('Finished job %s [%d of %d]', name, n, tot)
