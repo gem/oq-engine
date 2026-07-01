@@ -53,10 +53,7 @@ jobs:
         run: |
           set -x
           date
-          # FIXME: revert to downloading exposure.hdf5
-          # wget https://downloads.openquake.org/test_data/exposure.hdf5
-          wget https://downloads.openquake.org/test_data/exposure_partial_25jun2026.hdf5
-          mv exposure_partial_25jun2026.hdf5 exposure.hdf5  # FIXME remove this line
+          wget https://downloads.openquake.org/test_data/exposure.hdf5
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
