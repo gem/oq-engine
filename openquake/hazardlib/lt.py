@@ -450,6 +450,14 @@ def apply_uncertainties(bset_values, src_group):
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
+    srcs = set(src.source_id for src in src_group)
+    for bset, value in bset_values:
+        if bset.correlated:
+            for source_id in value:
+                if source_id not in srcs:
+                    raise NameError(
+                        f'The source {source_id} in {bset.uncertainty_type} is'
+                        ' missing, maybe you mispelled the name?')
     for source in src_group:
         oks = []
         for bset, value in bset_values:
