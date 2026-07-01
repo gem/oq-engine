@@ -198,7 +198,6 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
-from multiprocessing.connection import wait
 import multiprocessing.shared_memory as shmem
 import psutil
 import numpy
@@ -1091,6 +1090,20 @@ def logfinish(n, tot):
     return n + 1
 
 
+def safecall(func_args_name):
+    """
+    Safely call the function with the arguments and returns (res, name)
+    or (exc, name).
+    """
+    func, args, name = func_args_name
+    try:
+        res = func(*args)
+    except Exception as exc:
+        return (exc, name)
+    else:
+        return (res, name)
+
+
 def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
                names=()):
     """
@@ -1102,29 +1115,26 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
     :param logfinish: if True, log a progress message
     :param names: optionally, give names to the spawned processes
     """
-    if names:
-        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
         return
     tot = len(allargs)
-    procs = {}  # sentinel -> process
-    n = 1
-    while allargs:
-        args = allargs.pop(0)
-        name = names.pop(0) if names else None
-        proc = mp_context.Process(target=func, args=args, name=name)
-        proc.start()
-        procs[proc.sentinel] = proc
-    while procs:
-        for finished in wait(procs):
-            name = procs[finished].name or ''
-            procs[finished].join()
-            del procs[finished]
-            if logfinish:
+    if names:
+        assert len(names) == tot, (len(names), tot)
+    else:
+        names = [f'job{i}' for i in range(tot)]
+    n = 0
+    with mp_context.Pool(nprocs) as p:
+        for (res, name) in p.imap_unordered(
+                safecall, [(func, args, name)
+                           for args, name in zip(allargs, names)]):
+            if isinstance(res, Exception):
+                raise RuntimeError(f'{name}') from res
+            elif logfinish:
                 logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
+            yield res
 
 
 if oq_distribute() == 'slurm':
