@@ -1125,7 +1125,7 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
     else:
         names = [f'job{i}' for i in range(tot)]
     n = 0
-    with mp_context.Pool(nprocs) as p:
+    with mp_context.Pool(min(nprocs, tot)) as p:
         for name in p.imap_unordered(
                 safecall, [(func, args, name)
                            for args, name in zip(allargs, names)]):
