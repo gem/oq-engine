@@ -1120,16 +1120,18 @@ def multispawn(func, allargs, names, nprocs=num_cores, logfinish=True):
         return
     tot = len(allargs)
     assert len(names) == tot, (len(names), tot)
-    with mp_context.Pool(min(nprocs, tot)) as p:
-        n = 0
-        for name in p.imap_unordered(
-                safecall, [(func, args, name)
-                           for args, name in zip(allargs, names)]):
-            n += 1
-            if isinstance(name, BaseException):
-                logging.error(f'{name.name}: {name}')
-            elif logfinish:
-                logging.info('Finished job %s [%d of %d]', name, n, tot)
+    p = mp_context.Pool(min(nprocs, tot))
+    n = 0
+    for name in p.imap_unordered(
+            safecall, [(func, args, name)
+                       for args, name in zip(allargs, names)]):
+        n += 1
+        if isinstance(name, BaseException):
+            logging.error(f'{name.name}: {name}')
+        elif logfinish:
+            logging.info('Finished job %s [%d of %d]', name, n, tot)
+    p.close()
+    p.join()  # not using `with Pool` to avoid mysterious atexit errors
 
 
 if oq_distribute() == 'slurm':
