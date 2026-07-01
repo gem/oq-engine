@@ -1092,16 +1092,16 @@ def logfinish(n, tot):
 
 def safecall(func_args_name):
     """
-    Safely call the function with the arguments and returns (res, name)
-    or (exc, name).
+    Safely call the function with the arguments and returns name or exc
     """
     func, args, name = func_args_name
     try:
-        res = func(*args)
+        func(*args)
     except Exception as exc:
-        return (exc, name)
+        exc.name = name
+        return exc
     else:
-        return (res, name)
+        return name
 
 
 def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
@@ -1126,15 +1126,14 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
         names = [f'job{i}' for i in range(tot)]
     n = 0
     with mp_context.Pool(nprocs) as p:
-        for (res, name) in p.imap_unordered(
+        for name in p.imap_unordered(
                 safecall, [(func, args, name)
                            for args, name in zip(allargs, names)]):
-            if isinstance(res, Exception):
-                raise RuntimeError(f'{name}') from res
+            if isinstance(name, Exception):
+                raise RuntimeError(f'{name.name}') from name
             elif logfinish:
                 logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
-            yield res
 
 
 if oq_distribute() == 'slurm':
