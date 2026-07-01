@@ -24,6 +24,7 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
+import io
 import os
 import re
 import ast
@@ -47,7 +48,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty)
+    dummy_branchset, LogicTreeError, parse_uncertainty, random)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -90,6 +91,18 @@ branch_dt = numpy.dtype([
     ('utype', hdf5.vstr),
     ('uvalue', hdf5.vstr),
     ('weight', float),
+])
+
+# Adds an "xml" column so RuntimeSourceModelLT round-trips
+# its in-memory source XML strings through HDF5
+rt_branch_dt = numpy.dtype([
+    ('branchset', hdf5.vstr),
+    ('branch', hdf5.vstr),
+    ('utype', hdf5.vstr),
+    ('uvalue', hdf5.vstr),
+    ('weight', float),
+    ('xml', hdf5.vstr),
+    ('geom_label', hdf5.vstr),
 ])
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
@@ -211,6 +224,9 @@ def collect_info(smltpath, branchID=''):
     :param branchID: if given, consider only that branch
     :returns: an Info namedtuple (smpaths, h5paths, applytosources)
     """
+    if smltpath.endswith('.py'):
+        # Runtime script: all sources are built in-memory, no file paths
+        return Info(set(), set(), collections.defaultdict(list))
     n = nrml.read(smltpath)
     try:
         blevels = n.logicTree
@@ -289,8 +305,19 @@ def shorten(path_tuple, shortener, kind):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            # shortener[key] has the form letter+number
-            chars.append(shortener[key][0])
+            val = shortener[key]
+            if val == key:
+                # Key == value in RuntimeSourceModelLT to circumvent the
+                # B183 limit given cannot use extra branching levels in
+                # this case (each branch must be explicitly defined in
+                # the builder script specified by the user instead). So
+                # the branch_path in hdf5 could be <branch_name>~A where
+                # branch_name is the key and "A" is the regular BASE183
+                # encoding for the first GMM in the GMC logic tree
+                chars.append(val)
+            else:
+                # shortener[key] has the form letter+number
+                chars.append(val[0])
     return ''.join(chars)
 
 
@@ -971,6 +998,296 @@ class SourceModelLogicTree(object):
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
+
+
+class RuntimeSourceModelLT(object):
+    """
+    In-memory SSC logic tree built from a Python script at runtime.
+
+    Accepts an arbitrary number of branches (no BASE183 limit) because
+    branch data is supplied directly as (name, weight, xml_str) triples
+    rather than being parsed from an XML logic-tree file.
+
+    The script referenced by ``source_model_logic_tree_file`` in the job
+    file must contain a top-level function of:
+
+        def get_source_model_lt():
+            # Returns a list of (name, weight, xml_str) triples OR a
+            # list of (name, weight, xml_str, geom_label) 4-tuples.
+            # Weights must sum to 1.0.
+            # --> xml_str must be a complete NRML source model XML
+            #     string.
+            # --> A geom_label is an optional string used to share the
+            #     rupture contexts (and thus the rupture-to-site distances)
+            #     across sibling branches at runtime for speedup: all of the
+            #     branches tagged with the same label must enumerate exactly
+            #     the same rupture set per source (mags, nodal planes, hypocentres
+            #     etc) so only the per-rupture occurrence rates may vary. 
+            #     NOTE: a geometry label is not necessary for every branch in
+            #     the builder script - you just have to set to None in this
+            #     case to have a placeholder value.
+
+    Branch XML strings are parsed in-memory via nrml; no source XML files
+    are written to or read from disk.
+
+    NOTE: An example of this feature (including a simple builder script) can
+    be found in oq-engine/qa_test_data/ logictree/case_34/.
+
+    NOTE: The geom_label cache is engaged only in the calculation
+    modes whose path runs through RmapMaker._make_src_indep which is
+    1) classical and 2) disagg_by_src. In other modes the label is
+    accepted but inert (results are still correct). For example, in
+    eb-based we sample rups stochastically per branch so the sibling
+    branches don't share enumerable rup sets and the cache is therefore
+    bypassed entirely.
+    """
+    # Single-level LT with one sourceModel branchset (i.e., it's flat)
+    branchID = ''
+    is_source_specific = False # Can't use "fast path" in set_num_paths
+                               # given flat LT (decompose groups XMLs only
+                               # if applyToSources but not available here)
+
+    def __init__(self, branches, script_path, seed=0, num_samples=0,
+                 sampling_method='early_weights', source_id=''):
+        self.filename = script_path
+        self.basepath = os.path.dirname(os.path.abspath(script_path))
+        self.seed = int(seed)
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
+        self.source_id = source_id
+        self.tectonic_region_types = set()
+        self.info = Info([], [], collections.defaultdict(list))
+
+        self._branch_xmls = {}    # branch_id -> xml_str
+        self._branch_weights = {} # branch_id -> weight
+        self._branch_labels = {}  # branch_id -> geom_label (str or None)
+
+        branches = list(branches)
+        tuple_lens = {len(b) for b in branches if isinstance(b, tuple)}
+        if (not all(isinstance(b, tuple) for b in branches)
+                or tuple_lens not in ({3}, {4})):
+            raise ValueError(
+                '%s: branches must be a list of (name, weight, xml_str)'
+                ' triples OR (name, weight, xml_str, geom_label) 4-tuples'
+                % script_path)
+        names = [b[0] for b in branches]
+        dupes = [n for n in set(names) if names.count(n) > 1]
+        if dupes:
+            # Names become rlz identifiers, so must be unique
+            raise ValueError(
+                '%s: duplicate branch names: %s' % (script_path, dupes))
+
+        src_data = []
+        src_flt = source_id.split('!')[0].split('@')[0]
+        for b in branches:
+            if len(b) == 3:
+                # No geometry label
+                name, weight, xml_str = b
+                geom_label = None
+            else:
+                # Geometry label is being used for caching rupture
+                # contexts (distances) for sources with sibling
+                # rupture sets
+                name, weight, xml_str, geom_label = b
+                if geom_label is None:
+                    pass  # No geom label use
+                elif not isinstance(geom_label, str) or geom_label == '':
+                    raise ValueError(
+                        '%s: geom_label must be a non-empty string or'
+                        ' None, got %r' % (script_path, geom_label))
+            branch_id = name
+            sentinel = '__rt__%s' % branch_id
+            self._branch_xmls[branch_id] = xml_str
+            self._branch_weights[branch_id] = weight
+            self._branch_labels[branch_id] = geom_label
+            trt_by_src = get_trt_by_src(io.StringIO(xml_str), src_flt)
+            for sid, trt in trt_by_src.items():
+                src_data.append((branch_id, trt, sentinel, sid))
+                self.tectonic_region_types.add(trt)
+
+        self.source_data = numpy.array(src_data, source_dt)
+        self.num_paths = len(branches)
+        total = sum(self._branch_weights.values())
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(
+                '%s: branch weights sum to %s, expected 1.0'
+                % (script_path, total))
+        # Use branch names as shortener values so shorten() uses the full
+        # name, giving unique branch_path values regardless of branch count
+        self.shortener = {bid: bid for bid in self._branch_weights}
+        self._bset = self._build_bset()
+
+    def _build_bset(self):
+        # Canonical BranchSet shared by branches, branchsets and __iter__
+        bset = BranchSet('sourceModel', {})
+        bset.ordinal = 0
+        for bid, w in self._branch_weights.items():
+            bset.branches.append(Branch(bid, '__rt__%s' % bid, float(w)))
+        return bset
+
+    def get_num_paths(self):
+        return self.num_samples if self.num_samples else self.num_paths
+
+    def __repr__(self):
+        # Useful
+        return '<%s %d branches from %s>' % (
+            self.__class__.__name__,
+            len(self._branch_weights),
+            os.path.basename(self.filename))
+
+    @property
+    def branches(self):
+        return {br.branch_id: br for br in self._bset.branches}
+
+    def reduce(self, source_id, num_samples=None):
+        num_samples = (self.num_samples if num_samples is None
+                       else num_samples)
+        branches = [
+            (bid, self._branch_weights[bid], xml_str,
+             self._branch_labels.get(bid))
+            for bid, xml_str in self._branch_xmls.items()
+        ]
+        return RuntimeSourceModelLT(
+            branches,
+            script_path=self.filename,
+            seed=self.seed,
+            num_samples=num_samples,
+            sampling_method=self.sampling_method,
+            source_id=source_id,
+        )
+
+    @property
+    def branchsets(self):
+        # Wrap the cached BranchSet so compose() gets the correct
+        # SSC level when constructing a CompositeLogicTree instance
+        return [self._bset]
+
+    def bset_values(self, lt_path):
+        # Single-level LT: no downstream branchset modifications so need
+        # to return an empty list for when it's called in source_reader
+        return []
+
+    def __iter__(self):
+        if self.num_samples:
+            # Reuse the cached BranchSet so we go through the same
+            # bset.sample() code path as CompositeLogicTree.__iter__,
+            # guaranteeing the same seed picks the same branches as an
+            # XML SSC LT --> checked in qa_test_data/logictree/case_34
+            probs = random(
+                (self.num_samples, 1), self.seed, self.sampling_method)
+            for i, branches in enumerate(
+                    self._bset.sample(probs, self.sampling_method)):
+                br = branches[0]
+                if self.sampling_method.startswith('early_'):
+                    w = 1. / self.num_samples
+                else:
+                    w = float(br.weight)
+                yield Realization(
+                    value=[br.value],
+                    weight=w,
+                    ordinal=i,
+                    lt_path=(br.branch_id,),
+                )
+        else:
+            for i, br in enumerate(self._bset.branches):
+                yield Realization(
+                    value=[br.value],
+                    weight=float(br.weight),
+                    ordinal=i,
+                    lt_path=(br.branch_id,),
+                )
+
+    def build_smdict(self, converter):
+        """
+        Parse the in-memory XML strings and return an smdict compatible
+        with source_reader.get_csm().
+        """
+        if self.num_samples:
+            probs = random(
+                (self.num_samples, 1), self.seed, self.sampling_method)
+            sampled_ids = {
+                branches[0].branch_id
+                for branches in self._bset.sample(
+                    probs, self.sampling_method)
+            }
+            items = [(bid, self._branch_xmls[bid]) for bid in sampled_ids]
+            logging.info(
+                'RuntimeSourceModelLT: parsing %d unique sampled branches'
+                ' (out of %d in the LT)',
+                len(items), len(self._branch_xmls))
+        else:
+            items = list(self._branch_xmls.items())
+        # Count sibling branches per label so the GEOM_CACHE entry built
+        # for the first branch can be evicted after the last sibling has
+        # consumed it (see contexts.GeomCacheEntry). When sampling the
+        # counts are derived from the sampled set so eviction tracking in
+        # GEOM_CACHE works still
+        label_counts = collections.Counter(
+            self._branch_labels.get(bid) for bid, _ in items
+            if self._branch_labels.get(bid))
+        smdict = {}
+        for branch_id, xml_str in items:
+            sentinel = '__rt__%s' % branch_id
+            abs_path = os.path.abspath(
+                os.path.join(self.basepath, sentinel))
+            t0 = time.time()
+            [node_] = nrml.read(io.BytesIO(xml_str.encode('utf-8')))
+            sm = nrml.node_to_obj(node_, sentinel, converter)
+            sm.fname = sentinel
+            sm.branch = branch_id
+            label = self._branch_labels.get(branch_id)
+            sm.geom_label = label
+            nbranches = label_counts[label] if label else 0
+            # Have to tag sources with their geometry labels
+            # so the cache key survives the CSM rebuild
+            for sg in sm.src_groups:
+                for src in sg:
+                    src.geom_label = label
+                    src.geom_label_branches = nbranches
+            sm.rtime = time.time() - t0
+            smdict[abs_path] = sm
+        return smdict
+
+    def __toh5__(self):
+        tbl = []
+        for branch_id, weight in self._branch_weights.items():
+            sentinel = '__rt__%s' % branch_id
+            xml = self._branch_xmls.get(branch_id, '')
+            label = self._branch_labels.get(branch_id) or '' # Empty str
+            tbl.append(
+                ('bs_rt', branch_id, 'sourceModel', sentinel, weight,
+                 xml, label))
+        attrs = dict(
+            bsetdict='{"bs_rt": {"uncertaintyType": "sourceModel"}}',
+            seed=self.seed,
+            num_samples=self.num_samples,
+            sampling_method=self.sampling_method,
+            filename=self.filename,
+            num_paths=self.num_paths,
+            source_id=self.source_id,
+            tectonic_region_types=','.join(sorted(self.tectonic_region_types)),
+        )
+        return numpy.array(tbl, rt_branch_dt), attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self._branch_xmls = {}
+        self._branch_weights = {}
+        self._branch_labels = {}
+        self.info = Info([], [], collections.defaultdict(list))
+        trt_str = attrs.get('tectonic_region_types', '')
+        self.tectonic_region_types = (
+            set(trt_str.split(',')) if trt_str else set())
+        for rec in array:
+            rec = fix_bytes(rec)
+            bid = rec['branch']
+            self._branch_weights[bid] = float(rec['weight'])
+            self._branch_xmls[bid] = decode(rec['xml'])
+            self._branch_labels[bid] = decode(rec['geom_label']) or None
+        self.shortener = {bid: bid for bid in self._branch_weights}
+        self.source_data = numpy.array([], source_dt)
+        self.basepath = os.path.dirname(os.path.abspath(self.filename))
+        self._bset = self._build_bset()
 
 
 def capitalize(words):

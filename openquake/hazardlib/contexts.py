@@ -19,6 +19,7 @@
 import abc
 import copy
 import time
+import hashlib
 import logging
 import warnings
 import itertools
@@ -71,6 +72,50 @@ bymag = operator.attrgetter('mag')
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
+# Dict for caching sibling branch ctxs (same rup
+# set as informedby the geom_label)
+# --> Key of (geom_label, src_basename, cmaker_signature)
+# --> Value of GeomCacheEntry object
+GEOM_CACHE = {}
+
+
+class GeomCacheEntry(object):
+    """
+    Cached per-source ctxs shared by sibling branches with the same
+    geom_label (must have same rupture set - i.e., same rupture
+    geometries and thus same distances).
+
+    :param ctxs:
+        List of recarrays returned by ContextMaker.get_ctxs for the
+        first source seen with this (label, basename) key.
+        The ``occurrence_rate`` column is replaced per-branch on reuse.
+    :param remaining:
+        Number of remaining sibling-branch consumers; the entry is
+        evicted from GEOM_CACHE once this reaches zero.
+    """
+    __slots__ = ('ctxs', 'remaining')
+
+    def __init__(self, ctxs, remaining):
+        self.ctxs = ctxs
+        self.remaining = remaining
+
+
+def _get_cmaker_cache_sig(cmaker, sids):
+    """
+    Generate a signature identifying the cmaker context used to validate
+    cache entries across cmakers (i.e., give a unique fingerprint to each
+    cmaker in cache).
+        
+    We include the trt (can have same GMM in different TRT's GMM LTs), gsim
+    class names, IMTL names + level counts and a hash of the site ids.
+    """
+    gsim_sig = tuple(type(g).__name__ for g in cmaker.gsims)
+    
+    imtl_sig = tuple((imt, len(cmaker.imtls[imt])) for imt in cmaker.imtls)
+    
+    sids_sig = hashlib.sha1(sids.tobytes()).digest()
+
+    return (cmaker.trt, gsim_sig, imtl_sig, sids_sig)
 
 
 def _get(surfaces, param, dparam, mask=slice(None)):
@@ -1024,6 +1069,100 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
+    def _check_geom_cache(self, src, sitecol, step):
+        """
+        Look up GEOM_CACHE for given src and return (cache_key, ctxs):
+
+            --> (None, None): caching does not apply - either src
+                              carries no geom_label OR this is
+                              preclassical's subsampled pass (step != 1)
+                              and caching is skipped to avoid mixing a
+                              subsampled rupture set with the full classical
+                              pass.
+
+            --> (cache_key, None): Miss - the caller must populate
+                                   GEOM_CACHE[cache_key] after
+                                   computing the contexts itself.
+
+            --> (cache_key, ctxs): Hit - the caller short-circuits with
+                                   these ctxs instead of recomputing
+                                   distances.
+
+        """
+        geom_label = getattr(src, 'geom_label', None)
+        if geom_label is None or step != 1:
+            return None, None
+        
+        # Get a key for caching of the given branch's fragment
+        cache_key = (geom_label,            # --> The geometry label
+                     valid.corename(src),   # --> Base source ID
+                     valid.fragmentno(src), # --> Fragment of the src
+                     _get_cmaker_cache_sig( # --> Cmaker identity
+                         self, sitecol.complete.sids)
+                     )
+        
+        # Check if cache for this branch fragment's ctxs
+        entry = GEOM_CACHE.get(cache_key)
+        if entry is None:
+            # No cache = need to compute for ctxs for this cache_key
+            return cache_key, None
+
+        ctxs = self._load_cached_ctxs(src, entry, step)
+        # Drop the entry once the last sibling branch has consumed it,
+        # so the per-source ctxs do not linger in memory
+        entry.remaining -= 1
+        if entry.remaining <= 0:
+            del GEOM_CACHE[cache_key]
+        return cache_key, ctxs
+
+    def _load_cached_ctxs(self, src, entry, step):
+        """
+        Load list of ctxs for src by copying the cached ctxs and substituting
+        the per-rupture occurrence_rate and rup_id values from this branch's
+        ruptures.
+        """
+        # Get min and max mags
+        minmag = self.maximum_distance.x[0]
+        maxmag = self.maximum_distance.x[-1]
+
+        # Iter rups
+        with self.ir_mon: # Monitor rup iteration
+            rups = list(
+                src.iter_ruptures(shift_hypo=self.shift_hypo, step=step))
+            for i, rup in enumerate(rups):
+                # Get a unique ID for each rup in the branch
+                rup.rup_id = src.offset + i
+            # Sort the rups by mag to ensure alignment
+            rups = sorted(
+                [r for r in rups if minmag <= r.mag <= maxmag], key=bymag)
+            
+        # Sanity check that the same number of ruptures
+        if len(rups) != len(entry.ctxs):
+            raise ValueError(
+                'geom_label %r: source %s has %d ruptures but the '
+                'cached sibling has %d; sibling branches must enumerate '
+                'an identical rupture set' % (
+                    src.geom_label, src.source_id,
+                    len(rups), len(entry.ctxs)))
+        
+        # And now assign ctx to each mirror rup in sibling branch
+        new_ctxs = []
+        for rup, cached in zip(rups, entry.ctxs):
+            # cached.mag was rounded to 3 dp by get_rparams but rup.mag
+            # is raw MFD value, so compare with an atol
+            if abs(rup.mag - float(cached.mag[0])) > 1e-3:
+                raise ValueError(  # Sanity check on rup alignment
+                    'geom_label %r: source %s rupture mag %s does not '
+                    'match cached sibling mag %s' % (
+                        src.geom_label, src.source_id,
+                        rup.mag, cached.mag[0]))
+            new = cached.copy() # Stop recarray potentially mutating
+            new['occurrence_rate'] = rup.occurrence_rate
+            new['rup_id'] = rup.rup_id
+            new_ctxs.append(new)
+        
+        return new_ctxs
+
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -1041,6 +1180,11 @@ class ContextMaker(object):
         if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
+
+        # Check if geometry label and if so use caching of ctxs
+        cache_key, cached_ctxs = self._check_geom_cache(src, sitecol, step)
+        if cached_ctxs is not None:
+            return iter(cached_ctxs) # Found a cached entry for the branch
 
         if getattr(src, 'location', None):
             with self.pla_mon:
@@ -1072,8 +1216,22 @@ class ContextMaker(object):
         ctxs = self.gen_contexts(rups_sites, src_id)
         with self.ctx_mon:
             if len(rups_sites) == 1 and not self.minimum_distance:
-                return ctxs
-            return (self.recarray([c]) for c in ctxs)
+                if cache_key is None:
+                    return ctxs
+                ctxs = list(ctxs)
+            elif cache_key is None:
+                return (self.recarray([c]) for c in ctxs)
+            else:
+                ctxs = [self.recarray([c]) for c in ctxs]
+
+        # Only cache if at least one sibling branch will consume it; this
+        # branch's own use is alreadfy accounted for, so remaining is
+        # (sibling-branch count) - 1
+        remaining = getattr(src, 'geom_label_branches', 0) - 1
+        if remaining > 0:
+            GEOM_CACHE[cache_key] = GeomCacheEntry(ctxs, remaining)
+
+        return iter(ctxs)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1522,6 +1680,30 @@ class RmapMaker(object):
                 self.rupdata.append(ctx)
             yield ctx
 
+    def _update_labelled_src(self, src, cm, pnemap, allctxs):
+        """
+        Fold one geometry-labelled source's rupture contributions
+        into pnemap, processing the source on its own so the
+        per-source GEOM_CACHE entry built inside get_ctxs is
+        populated cleanly before sibling branches reuse it.
+
+        Any contexts already waiting in the shared batch buffer are
+        flushed first.
+
+        :returns: number of rupture rows this source contributed.
+        """
+        if allctxs:
+            cm.update(pnemap, concat(allctxs))
+            allctxs.clear()
+
+        src_ctxs = list(self.gen_ctxs(src))
+
+        n = sum(len(c) for c in src_ctxs)
+        if src_ctxs:
+            cm.update(pnemap, concat(src_ctxs))
+
+        return n
+
     def _make_src_indep(self):
         # sources with the same ID
         cm = self.cmaker
@@ -1535,6 +1717,11 @@ class RmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
+            if getattr(src, 'geom_label', None) is not None:
+                totlen += self._update_labelled_src(
+                    src, cm, pnemap, allctxs)
+                ctxlen = 0
+                continue
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
                 totlen += len(ctx)

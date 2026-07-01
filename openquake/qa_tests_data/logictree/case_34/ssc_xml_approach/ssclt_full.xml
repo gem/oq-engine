@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet uncertaintyType="sourceModel"
+                        branchSetID="bs1">
+      <logicTreeBranch branchID="branch_000">
+        <uncertaintyModel>ssm_000.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_001">
+        <uncertaintyModel>ssm_001.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_002">
+        <uncertaintyModel>ssm_002.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_003">
+        <uncertaintyModel>ssm_003.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_004">
+        <uncertaintyModel>ssm_004.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_005">
+        <uncertaintyModel>ssm_005.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_006">
+        <uncertaintyModel>ssm_006.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_007">
+        <uncertaintyModel>ssm_007.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_008">
+        <uncertaintyModel>ssm_008.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="branch_009">
+        <uncertaintyModel>ssm_009.xml</uncertaintyModel>
+        <uncertaintyWeight>0.10</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

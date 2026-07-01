@@ -32,6 +32,7 @@
 | case\_31           | Source Specific Logic Tree                                                 |
 | case\_32           | Tests setAspectRatioAbsolute and setAspectRatioRelative                    |
 | case\_33           | Tests setLowerSeismDepthRelative and setLowerSeismDepthAbsolute            |
+| case\_34           | Tests SSC logic trees defined at runtime from a builder script             |
 | case\_36           | Advanced applyToSources                                                    |
 | case\_39           | 0-IMT-weights, pointsource distance=0 and ruptures collapsing              |
 | case\_45           | MMI with disagg\_by\_src and sampling                                      |
