@@ -16,7 +16,7 @@
                         applyToSources="*"
                         branchSetID="bs3">
       <logicTreeBranch branchID="b31">
-        <uncertaintyModel correlated="sources">
+        <uncertaintyModel>
           ocn_1033 3.606 1.305,
           ocn_1062 2.711 1.034,
           ocn_1261 2.500 1.100,
@@ -28,7 +28,7 @@
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b32">
-        <uncertaintyModel correlated="sources">
+        <uncertaintyModel>
           ocn_1033 3.606 0.305,
           ocn_1062 2.711 0.034,
           ocn_1261 2.500 0.100,
