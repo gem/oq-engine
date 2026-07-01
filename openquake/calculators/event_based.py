@@ -344,7 +344,6 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
-    assert totw, 'All ruptures have been filtered out'
     logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -360,6 +359,8 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
     filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
+    if maxw == 0:
+        return [], {'???': oq}
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         if model == '???':
@@ -525,6 +526,9 @@ def run(func, oq, rup0, calc):
     assetcol = getattr(calc, 'assetcol', None)
     allargs, calc.oq_by = get_allargs(
         oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
+    if not allargs:
+        logging.error('All ruptures have been prefiltered out')
+        return {}
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
