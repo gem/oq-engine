@@ -186,8 +186,9 @@ def sum_chunk(slc, hdf5path):
         return f['array'][slc].sum()
 
 
-def pool_starmap(func, allargs, h5):
+def multispawn(func, allargs, h5):
     import multiprocessing
+    parallel.multispawn(func, allargs)
     with multiprocessing.get_context('spawn').Pool() as pool:
         for i, res in enumerate(pool.starmap(func, allargs)):
             perf = numpy.array([(func.__name__, 0, 0, i, i)],
@@ -212,7 +213,7 @@ class SWMRTestCase(unittest.TestCase):
             allargs.append((slice(s, s + 10), self.tmp))
         with hdf5.File(self.tmp, 'a') as h5:
             h5.swmr_mode = True
-            tot = sum(pool_starmap(sum_chunk, allargs, h5))
+            tot = sum(multispawn(sum_chunk, allargs, h5))
         self.assertEqual(tot, 4950)
 
     @classmethod

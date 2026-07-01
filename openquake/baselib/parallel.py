@@ -1104,7 +1104,7 @@ def safecall(func_args_name):
         return name
 
 
-def multispawn(func, allargs, names, nprocs=num_cores, logfinish=True):
+def multispawn(func, allargs, names=(), nprocs=num_cores, logfinish=True):
     """
     Spawn functions with the given arguments as subprocesses.
 
@@ -1118,6 +1118,8 @@ def multispawn(func, allargs, names, nprocs=num_cores, logfinish=True):
         for args in allargs:
             func(*args)
         return
+    if not names:
+        names = [f'job#{i}' for i, args in enumerate(allargs, 1)]
     tot = len(allargs)
     assert len(names) == tot, (len(names), tot)
     p = mp_context.Pool(min(nprocs, tot))
