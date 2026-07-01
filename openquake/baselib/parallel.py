@@ -1129,11 +1129,11 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
         for name in p.imap_unordered(
                 safecall, [(func, args, name)
                            for args, name in zip(allargs, names)]):
+            n += 1
             if isinstance(name, Exception):
                 raise RuntimeError(f'{name.name}') from name
             elif logfinish:
                 logging.info('Finished job %s [%d of %d]', name, n, tot)
-            n += 1
 
 
 if oq_distribute() == 'slurm':
