@@ -614,7 +614,7 @@ class SourceModelLogicTree(object):
                 values.append(value_node.text.strip())
             if correlated:
                 value = {}  # dictionary source_id -> values to apply
-                for row in value_node.text.split(', '):
+                for row in value_node.text.strip(', ').split(', '):
                     source_id, text = row.split(' ', 1)
                     value[source_id] = parse_uncertainty(
                         branchset.uncertainty_type,

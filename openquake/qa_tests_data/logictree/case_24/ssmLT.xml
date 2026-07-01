@@ -23,7 +23,7 @@
           ocn_1281 2.400 1.200,
           ocn_1379 2.300 1.200,
           ocn_1401 2.200 1.200,
-          ocn_1417 2.100 1.200
+          ocn_1417 2.100 1.200,
         </uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
@@ -35,7 +35,7 @@
           ocn_1281 2.400 0.200,
           ocn_1379 2.300 0.200,
           ocn_1401 2.200 0.200,
-          ocn_1417 2.100 0.200
+          ocn_1417 2.100 0.200,
         </uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
