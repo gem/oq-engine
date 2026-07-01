@@ -72,6 +72,28 @@ OVERRIDABLE_PARAMS = (
     'siteid')
 
 
+def save_workflow(workflow_hdf5, workflow_toml):
+    """
+    Save ~/.last-workflow
+    """
+    fname = os.path.expanduser("~/.last-workflow")
+    with open(fname, 'w') as f:
+        f.write(f'{workflow_toml}\n')
+        f.write(f'{workflow_hdf5}\n')
+
+
+def load_workflow():
+    """
+    :returns: the last workflow stored
+    """
+    fname = os.path.expanduser("~/.last-workflow")
+    with open(fname) as f:
+        toml, hdf5 = list(f)
+    ds = datastore.read(fname)
+    ds.toml = toml
+    return ds
+
+
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     # prefix is empty unless we are in a multi-workflow
@@ -349,6 +371,7 @@ def import_task_info(calc_id, name, dstore):
         dic['min'] = dic['min'].astype(F32)
         dic['max'] = dic['max'].astype(F32)
         dic['slowfac'] = dic['slowfac'].astype(F32)
+        dic['calc_id'] = calc_id
         df = pandas.DataFrame(dic)
         dstore.hdf5.import_df('wtask', df, gzip=None)
 
@@ -413,8 +436,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                             expected_failures.add(name)
                         else:
                             failed += 1
-                    else:
-                        calcs.append(job.calc_id)
+                    calcs.append(job.calc_id)
                     import_task_info(job.calc_id, name, dstore)
             may_fails = [name in wf.may_fail for name in new_names]
             for success in wf.success:
@@ -436,6 +458,7 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
         for wf_no, succ in enumerate(successes):
             dstore['success'][wf_no] = str(succ)  # list of dictionaries
         dt = (time.time() - t0) / 3600.
+        save_workflow(dstore.filename, os.path.abspath(workflow_toml))
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
         if failed:
             mask = status_dset[:] == b'failed'

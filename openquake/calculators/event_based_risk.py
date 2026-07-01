@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import os.path
 import logging
 import operator
@@ -323,11 +324,17 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     for dic in event_based.event_based(
             allrups, cmakers, sids, secperils, hdf5path, monitor):
         if len(dic['gmfdata']):
+            times = dic['times']  # rup_id, time, weight
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             items = ((id0taxo, monitor.read(
                 'assets', slc=slice(s0, s1)).set_index('ordinal'))
                      for id0taxo, s0, s1 in monitor.read('start-stop'))
-            yield _event_based_risk(gmf_df, items, crmodel, monitor)
+            t0 = time.time()
+            res = _event_based_risk(gmf_df, items, crmodel, monitor)
+            dt = time.time() - t0
+            times['time'] += dt / len(times)
+            res['times'] = times
+            yield res
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -475,6 +482,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             rup0 = self.datastore['ruptures'][0]
             if not hasattr(self, 'sec_perils'):
                 self.add_sec_perils(oq)
+            self.datastore.create_dset('ruptimes', event_based.rup_dt)
             event_based.run(ebrisk, oq, rup0, self)
             if self.gmf_bytes == 0:
                 logging.error(
@@ -514,6 +522,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
+        times = dic.pop('times', None)
+        if times is not None:
+            hdf5.extend(self.datastore['ruptimes'], times)
+
         with self.monitor('saving risk_by_event'):
             alt = dic.pop('alt')
             for name in alt.columns:

@@ -470,10 +470,10 @@ class EventBasedTestCase(CalculatorTestCase):
                               delta=1E-6)
 
         # testing slowest ruptures
-        df = view('rup_info', self.calc.datastore)
+        df = view('ruptimes', self.calc.datastore)
         self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
                                             'rrup', 'time', 'weight',
-                                            'surface'])
+                                            'task_no', 'surface'])
 
     def test_case_23(self):
         # case with implicit grid and site model on a larger grid

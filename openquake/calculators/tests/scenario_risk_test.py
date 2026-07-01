@@ -324,6 +324,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                 f'expected/exposure_by_{secondary_peril}_lse.org',
                 fname, delta=1E-3)
 
+        [gmf_data_file, _site_mesh_file] = export(
+            ('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data.csv', gmf_data_file)
+
     def test_case_shapefile(self):
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
         pre_id = str(self.calc.datastore.calc_id)

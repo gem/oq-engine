@@ -63,7 +63,8 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
-    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
+    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION,
+    DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -2512,16 +2513,18 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    display_names = {'aggrisk_tags': 'Impact',
-                     'losses_by_site': 'Losses by site',
-                     'losses_by_location': 'Losses by location',
-                     'mmi_tags': 'Exposure by MMI',
-                     'exposure_by_location': 'Exposure by location',
-                     'exposure_by_lse?secondary_peril=liquefaction': (
-                        'Exposure by liquefaction LSE'),
-                     'exposure_by_lse?secondary_peril=landslide': (
-                        'Exposure by landslide LSE'),
-                     }
+    # Using display names of the exporters if available
+    display_names = DISPLAY_NAME.copy()
+    display_names.update({
+        'aggrisk_tags': 'Impact',
+        'losses_by_site': 'Losses by site',
+        'losses_by_location': 'Losses by location',
+        'exposure_by_location': 'Exposure by location',
+        'exposure_by_lse?secondary_peril=liquefaction':
+            'Exposure grouped by Region and by Liquefaction LSE',
+        'exposure_by_lse?secondary_peril=landslide':
+            'Exposure grouped by Region and by Landslide LSE',
+    })
     loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
     exposure_names = ['mmi_tags', 'exposure_by_location',
                       'exposure_by_lse?secondary_peril=liquefaction',

@@ -436,7 +436,8 @@ def _collect(allargs, maxw, sids, sec_perils, dstore):
     for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
-        allrups = [numpy.array(rb) for rb in rupblks]
+        allrups = general.WeightedSequence([
+            (numpy.array(rb), rb.weight) for rb in rupblks])
         out.append((allrups, cmakers, sids, sec_perils, dstore))
     # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
     return out
@@ -807,7 +808,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
-                hdf5.extend(self.datastore['gmf_data/rup_info'], times)
+                hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
@@ -959,13 +960,13 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if not hasattr(self, 'sec_perils'):
             self.add_sec_perils(oq)
+        dstore.create_dset('ruptimes', rup_dt)
         if oq.ground_motion_fields and 'gmf_data' not in dstore:
             # if GMFs not already created by store_gmfs_from_shakemap
             prim_imts = oq.get_primary_imtls()
             base.create_gmf_data(dstore, prim_imts, oq.sec_imts,
                                  E=E, R=oq.number_of_logic_tree_samples)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
-            dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 

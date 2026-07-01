@@ -184,6 +184,22 @@ def export_mmi_tags(ekey, dstore):
     return [dest]
 
 
+@export.add(('exposure_by_liquefaction_lse', 'csv'),
+            ('exposure_by_landslide_lse', 'csv'))
+def export_exposure_by_lse(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]  # like exposure_by_liquefaction_lse
+    secondary_peril = dskey.split('exposure_by_')[1].split('_lse')[0]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname(dskey, '', 'csv')
+    df = extract(dstore, f'exposure_by_lse?secondary_peril={secondary_peril}')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
+
+
 # this is used by event_based_risk, classical_risk and scenario_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -789,7 +805,8 @@ def export_fragility_xml(dstore):
     crm = dstore.read_df('crm')
     ddic = {peril: {} for peril in crm.peril.unique()}
     for (peril, loss_type), df in crm.groupby(['peril', 'loss_type']):
-        nodeobj = convert_df_to_fragility(peril, loss_type, oq.limit_states, df)
+        nodeobj = convert_df_to_fragility(
+            peril, loss_type, oq.limit_states, df)
         dest = dstore.export_path('%s_%s_fragility.xml' % (peril, loss_type))
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)

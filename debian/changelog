@@ -1,4 +1,15 @@
+  [Paolo Tormene]
+  * Fixed a unit-scaling bug in GMF calculations; acceleration IMTs are
+    converted to g as before, while velocity measures (PGV) preserve their
+    native cm/s units.
+
+  [Paolo Tormene]
+  * Added exporter for `exposure_by_liquefaction_lse` and
+    `exposure_by_landslide_lse` (Exposure grouped by Region and by
+    Liquefaction/Landslide LSE)
+
   [Michele Simionato]
+  * Parallelized the exports in workflow calculations
   * Fixed the exporters `aggexp_tags` and `aggrisk_tags`
   * Reduced the number of tasks and the memory consumption in event_based_risk
   * Optimized rupture sampling for sources with high multiplicity
@@ -165,7 +176,6 @@
   [Michele Simionato]
   * Added variable `keep_trt` to select a branchset in the gsim logic tree
   * Filtering the sites around the rupture also in scenario_damage
-  * Forbidded IMT-dependent weights for classical calculations with sampling
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]
