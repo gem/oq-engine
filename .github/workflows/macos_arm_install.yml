@@ -136,7 +136,9 @@ jobs:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()
         run: |
-          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
+          # FIXME: revert to downloading exposure.hdf5
+          # curl -O https://downloads.openquake.org/test_data/exposure.hdf5
+          curl https://downloads.openquake.org/test_data/exposure_partial_25jun2026.hdf5 -o exposure.hdf5
           source ~/openquake/bin/activate
           cd openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
