@@ -99,7 +99,8 @@ def import_outputs(dstore, calcs, out_types, may_fails=()):
     wf = dstore.read_df('workflow', 'calc_id')
     inps = [(wf.loc[calc_id]['name'], calc_id, out_types, may_fail)
             for calc_id, may_fail in zip(calcs, may_fails)]
-    for outs in parallel.Starmap(export_csv, inps, h5=dstore):
+    for outs in parallel.Starmap(export_csv, inps, distribute='processpool',
+                                 h5=dstore):
         for fname, name, fields, calc_id in outs:
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1

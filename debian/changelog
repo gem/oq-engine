@@ -8,10 +8,6 @@
     converted to g as before, while velocity measures (PGV) preserve their
     native cm/s units.
 
-  [Michele Simionato]
-  * Fixed a bug with IMT-dependent weights being not normalized, breaking
-    the CND model with use_rates=true
-
   [Paolo Tormene]
   * Added exporter for `exposure_by_liquefaction_lse` and
     `exposure_by_landslide_lse` (Exposure grouped by Region and by
@@ -185,7 +181,6 @@
   [Michele Simionato]
   * Added variable `keep_trt` to select a branchset in the gsim logic tree
   * Filtering the sites around the rupture also in scenario_damage
-  * Forbidded IMT-dependent weights for classical calculations with sampling
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]
