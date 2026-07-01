@@ -451,7 +451,12 @@ def apply_uncertainties(bset_values, src_group):
     sg.sources = []
     sg.changes = 0
     for source in src_group:
-        oks = [bset.filter_source(source) for bset, _value in bset_values]
+        oks = []
+        for bset, value in bset_values:
+            if bset.correlated:
+                oks.append(source.source_id in value)
+            else:
+                oks.append(bset.filter_source(source))
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             srcs = []
@@ -471,7 +476,11 @@ def apply_uncertainties(bset_values, src_group):
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
-                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    if bset.correlated:
+                        apply_uncertainty(
+                            bset.uncertainty_type, src, value[source.source_id])
+                    else:
+                        apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
@@ -683,6 +692,13 @@ class BranchSet(object):
         self.ordinal = ordinal
         self.collapsed = collapsed
         self.branches = []
+
+    @property
+    def correlated(self):
+        """
+        The branchset is applied to correlated sources
+        """
+        return self.filters.get('applyToSources') == ['*']
 
     def sample(self, probabilities, sampling_method):
         """

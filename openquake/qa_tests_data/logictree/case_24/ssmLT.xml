@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet uncertaintyType="sourceModel"
+                        branchSetID="bs1">
+      <logicTreeBranch branchID="b1">
+	<uncertaintyModel>
+	  ssm/ssm_crust/src_2.xml
+	</uncertaintyModel>
+	<uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                        applyToBranches="b1"
+                        applyToSources="*"
+                        branchSetID="bs3">
+      <logicTreeBranch branchID="b31">
+        <uncertaintyModel correlated="sources">
+          ocn_1033 3.606 1.305,
+          ocn_1062 2.711 1.034,
+          ocn_1261 2.500 1.100,
+          ocn_1281 2.400 1.200,
+          ocn_1379 2.300 1.200,
+          ocn_1401 2.200 1.200,
+          ocn_1417 2.100 1.200
+        </uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b32">
+        <uncertaintyModel correlated="sources">
+          ocn_1033 3.606 0.305,
+          ocn_1062 2.711 0.034,
+          ocn_1261 2.500 0.100,
+          ocn_1281 2.400 0.200,
+          ocn_1379 2.300 0.200,
+          ocn_1401 2.200 0.200,
+          ocn_1417 2.100 0.200
+        </uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

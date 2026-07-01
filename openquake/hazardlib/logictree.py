@@ -223,8 +223,9 @@ def collect_info(smltpath, branchID=''):
     for blevel in blevels:
         for bset in bsnodes(smltpath, blevel):
             if 'applyToSources' in bset.attrib:
-                applytosources[bset.get('applyToBranches')].extend(
-                        bset['applyToSources'].split())
+                srcs = [src for src in bset['applyToSources'].split()
+                        if src !='*']
+                applytosources[bset.get('applyToBranches')].extend(srcs)
             if bset['uncertaintyType'] in 'sourceModel extendModel':
                 for br in bset:
                     if branchID and branchID != br['branchID']:
@@ -589,6 +590,7 @@ class SourceModelLogicTree(object):
         :return:
             ``None``, all branches are attached to provided branchset.
         """
+        correlated = branchset_node.get('applyToSources') == '*'
         bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
@@ -610,8 +612,17 @@ class SourceModelLogicTree(object):
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
-            value = parse_uncertainty(branchset.uncertainty_type,
-                                      value_node, self.filename)
+            if correlated:
+                value = {}  # dictionary source_id -> values to apply
+                for row in value_node.text.split(', '):
+                    source_id, text = row.split(' ', 1)
+                    value[source_id] = parse_uncertainty(
+                        branchset.uncertainty_type,
+                        Node(source_id, text=text),
+                        self.filename)
+            else:
+                value = parse_uncertainty(branchset.uncertainty_type,
+                                          value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 vals = []  # filenames with sources in it
                 try:
@@ -738,7 +749,8 @@ class SourceModelLogicTree(object):
                     "uncertainty of type '%s' must define 'applyToSources'"
                     % uncertainty_type)
 
-        if 'applyToSources' in f:
+        if 'applyToSources' in f and f['applyToSources'] != '*':
+            # uncorrelated sources
             if self.source_id:
                 srcids = [s for s in f['applyToSources'].split()
                           if s == self.source_id]
