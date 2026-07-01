@@ -1104,28 +1104,24 @@ def safecall(func_args_name):
         return name
 
 
-def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
-               names=()):
+def multispawn(func, allargs, names, nprocs=num_cores, logfinish=True):
     """
     Spawn functions with the given arguments as subprocesses.
 
     :param func: function to spawn
     :param allargs: list of arguments
+    :param names: name of the spawned processes
     :param nprocs: number of processes running at the same time
     :param logfinish: if True, log a progress message
-    :param names: optionally, give names to the spawned processes
     """
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
         return
     tot = len(allargs)
-    if names:
-        assert len(names) == tot, (len(names), tot)
-    else:
-        names = [f'job{i}' for i in range(tot)]
-    n = 0
+    assert len(names) == tot, (len(names), tot)
     with mp_context.Pool(min(nprocs, tot)) as p:
+        n = 0
         for name in p.imap_unordered(
                 safecall, [(func, args, name)
                            for args, name in zip(allargs, names)]):

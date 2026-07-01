@@ -344,7 +344,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             for job in jobctxs:
                 name = f"{job.params['mosaic_model']}{job.calc_id}"
                 names.append(name)
-            parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
+            parallel.multispawn(run_calc, args, names, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -480,8 +480,9 @@ if __name__ == '__main__':
         jobctxs = pickle.load(f)
     try:
         if len(jobctxs) > 1 and jobctxs[0].multi:
+            names = [f'job#{j.calc_id}' for j in jobctxs]
             parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
-                                parallel.Starmap.CT // 10 or 1)
+                                names, parallel.Starmap.CT // 10 or 1)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
