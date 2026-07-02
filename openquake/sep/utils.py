@@ -9,11 +9,11 @@ import pyproj as pj
 from osgeo import gdal
 from numpy.lib.stride_tricks import as_strided
 
-
 # Set PROJ_DATA (proj == 9.0.1) to dir containing proj.db to avoid:
 # 'ERROR 1: PROJ: proj_create_from_name: Cannot find proj.db'
 if "PROJ_DATA" not in os.environ:
     os.environ["PROJ_DATA"] = pj.datadir.get_data_dir()
+gdal.UseExceptions()
 
 
 def sample_raster_at_points(
@@ -141,10 +141,7 @@ def rolling_array_operation(
     """
     if window_size % 2 != 1:
         raise ValueError(
-            "window_size should be an odd integer; {} passed".format(
-                window_size
-            )
-        )
+            f"window_size should be an odd integer; {window_size} passed")
 
     window_rad = window_size // 2
 
