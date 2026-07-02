@@ -399,6 +399,8 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
             if not oks[wf_no]:
                 continue
 
+            t1 = time.time()
+
             # set the passed environment variables
             for k, v in wf.env.items():
                 if k not in os.environ:  # explicitly set variable must win
@@ -451,8 +453,10 @@ def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
                     sap.run_func(success)
 
             if n_wfs > 1:
+                dt = (time.time() - t1) / 3600.
                 logging.warning(f'{os.path.basename(wf.workflow_toml)}: '
-                                f'finished step {wf_no+1} of {n_wfs}')
+                                f'finished step {wf_no+1} of {n_wfs} in '
+                                f'{dt:.2} hours')
             if failed:
                 break
         for wf_no, succ in enumerate(successes):
