@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    AristotleParam, impact_validate)
+    ImpactParam, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -79,10 +79,10 @@ def main_cmd(usgs_id, rupture_file=None,
         assert config.directory.mosaic_dir
         exposure_hdf5 = os.path.join(config.directory.mosaic_dir,
                                      'exposure.hdf5')
-    AristotleParam.exposure_hdf5 = exposure_hdf5
+    ImpactParam.exposure_hdf5 = exposure_hdf5
 
     loc = locals().copy()
-    fields = set(AristotleParam.__dataclass_fields__) - {
+    fields = set(ImpactParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id
@@ -95,6 +95,11 @@ def main_cmd(usgs_id, rupture_file=None,
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
     if aggregate_exposure:
         oqparams['aggregate_exposure'] = 'true'
+    if approach == 'use_shakemap_from_usgs':
+        oqparams['secondary_perils'] = (
+            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
+        oqparams['intensity_measure_types'] = (
+            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
     if err:
         callback(None, oqparams, exc=err)
         return
@@ -136,6 +141,8 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.userlevel = 'User level'
+main = main_cmd
+
 
 if __name__ == '__main__':
     sap.run(main_cmd)

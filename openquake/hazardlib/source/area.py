@@ -62,10 +62,13 @@ class AreaSource(ParametricSeismicSource):
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
+
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
+        self.hypo_dip_fracs = getattr(
+            hypocenter_distribution, 'hypo_dip_fracs', None)
         self.polygon = polygon
         self.area_discretization = area_discretization
         self.max_radius = 0

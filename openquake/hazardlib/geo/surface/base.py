@@ -31,10 +31,9 @@ F32 = numpy.float32
 
 
 def _get_finite_mesh(mesh):
-    ok = numpy.isfinite(mesh.lons.flat)
+    ok = numpy.isfinite(F32(mesh.lons))
     if numpy.all(ok):
         return mesh
-    ok = numpy.reshape(ok, mesh.lons.shape)
     return Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
 
 

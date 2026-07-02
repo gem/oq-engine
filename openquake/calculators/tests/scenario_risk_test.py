@@ -89,7 +89,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
-        fname = gettemp(view('totlosses', self.calc.datastore))
+        fname = gettemp(text_table(view('totlosses', self.calc.datastore)))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['aggrisk', 'csv']
@@ -124,7 +124,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # testing the totlosses view
         dstore = self.calc.datastore
-        fname = gettemp(view('totlosses', dstore))
+        fname = gettemp(text_table(view('totlosses', dstore)))
         self.assertEqualFiles('expected/totlosses.txt', fname, delta=5E-5)
 
         # testing portfolio_losses
@@ -301,12 +301,32 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (6,))
         self.assertEqual(
             gmfa.dtype.names,
-            ('custom_site_id', 'lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
+            ('custom_site_id', 'lon', 'lat',
+             'PGA', 'PGV', 'SA(0.3)', 'SA(1.0)',
+             'AllstadtEtAl2022Landslides_LsProb',
+             'AllstadtEtAl2022Landslides_LSE',
+             'AllstadtEtAl2022Liquefaction_LiqProb',
+             'AllstadtEtAl2022Liquefaction_LiqOccur',
+             'AllstadtEtAl2022Liquefaction_LSE'))
+
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # exposure_by_lse
+        for secondary_peril in ['liquefaction', 'landslide']:
+            df = extract(self.calc.datastore,
+                         f'exposure_by_lse?secondary_peril={secondary_peril}')
+            fname = gettemp(text_table(df, ext='org'))
+            self.assertEqualFiles(
+                f'expected/exposure_by_{secondary_peril}_lse.org',
+                fname, delta=1E-3)
+
+        [gmf_data_file, _site_mesh_file] = export(
+            ('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data.csv', gmf_data_file)
 
     def test_case_shapefile(self):
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')

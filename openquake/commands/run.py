@@ -27,7 +27,8 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs, run_workflow
+from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.workflow import run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
@@ -75,7 +76,8 @@ def main(job_ini,
          exports: valid.export_formats = '',
          loglevel='info',
          nodes: int = 1,
-         workflow_id=None):
+         workflow_id=None,
+         kfilter=''):
     """
     Run a set of calculations or a workflow
     """
@@ -136,7 +138,8 @@ def main(job_ini,
     else:  # toml
         if workflow_id:
            params['workflow_id'] = int(workflow_id)
-        return run_workflow(job_ini, params, nodes=nodes, pdb=pdb)
+        return run_workflow(job_ini, params, nodes=nodes, pdb=pdb,
+                            kfilter=kfilter)
 
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
@@ -149,3 +152,4 @@ main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
 main.workflow_id = "ID of a previous workflow or description of a new workflow"
+main.kfilter = "Filter workflow jobs with a regex"

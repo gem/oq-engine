@@ -1,4 +1,96 @@
   [Michele Simionato]
+  * Saving memory when running several jobs together with a pool
+  * Fixed a bug with IMT-dependent weights being not normalized, breaking
+    the CND model with use_rates=true
+
+  [Paolo Tormene]
+  * Fixed a unit-scaling bug in GMF calculations; acceleration IMTs are
+    converted to g as before, while velocity measures (PGV) preserve their
+    native cm/s units.
+
+  [Paolo Tormene]
+  * Added exporter for `exposure_by_liquefaction_lse` and
+    `exposure_by_landslide_lse` (Exposure grouped by Region and by
+    Liquefaction/Landslide LSE)
+
+  [Michele Simionato]
+  * Parallelized the exports in workflow calculations
+  * Fixed the exporters `aggexp_tags` and `aggrisk_tags`
+  * Reduced the number of tasks and the memory consumption in event_based_risk
+  * Optimized rupture sampling for sources with high multiplicity
+  * Internal: storing `occ_by_trt_smr` in the SES.hdf5 file
+  * Introduced `strict` flag to disable checks which are possibly too strict
+  * Internal: storing the real `occurrence_rate` in the `ruptures` dataset,
+    not multiplied by `smweight`
+  * Fixed the slow tasks in AELO, due to accidental disabling of the filtering
+
+  [Savas Ceylan]
+  * Added EdwardsFah2013Foreland3Bars, BindiEtAl2011Rhypo,
+    ECOS2009VariableDepth and ECOS2009FixedDepth GSIMs with
+    verification tests.
+
+  [Michele Simionato]
+  * ebrisk calculations with not enough GMFs now just log an error
+    instead of failing
+  * Cached the multifault sections, with a 6x speedup when sampling the
+    ruptures of the NZL model
+  * Avoided copying sources when building the CompositeSourceModel,
+    thus reducing the memory occupation and time by 75% for NZL
+
+  [Paolo Tormene, Michele Simionato]
+  * Implemented secondary perils for ShakeMap calculations
+
+  [Catarina Costa]
+  * Fixed landcover coefficient assignment on Nowicki Jessee landslide model
+
+  [Michele Simionato]
+  * Saving `year` and `ses_id` in the events dataset of SES.hdf5 files
+  * Splitting multifault and multipoint sources with the colon convention
+  * Fixed missing weight in AvgPoeGMPE breaking the realization exporter
+
+  [Christopher Brooks]
+  * Fix a bug observed in the Aki and Richard's convention check in
+    complex faults.
+
+  [Michele Simionato]
+  * Added `--kfilter` capability to `oq run workflow.toml`
+  * Optimized reading and sampling multiFaultSources
+  * Saved memory in classical calculations with large sources affecting many
+    sites, by yieldings contexts
+  * Changed the rupture sampling algorithm so that the source groups are
+    consistent between event based and classical calculations; removed
+    useless copies of the sources and improved the performance and memory usage
+
+  [Fahrettin Kuran]
+  * Added additional magnitude-scaling relationships to wc1994.py
+  * Added additional magnitude-scaling relationships to thingbaijam2017.py
+
+  [Michele Simionato]
+  * Added checks on MAX_NUM_RUPTURES and ps_grid_spacing
+  * Added command `oq info db` to extract the path to the sqlite file
+  * Implemented a workflow to run the 2026 Global Risk Model
+
+  [Thuany Costa de Lima]
+  * Fix Allen (2022) depth truncation bug: hypocentral depth is now
+    clamped to [10, 500] km before evaluating the cubic log-depth
+    scaling term, as recommended in the original paper (Eq. 4, p. 1049).
+  * Updated test CSVs to reflect the corrected implementation.
+  * Added Bayless and Somerville (2024) GMM for Australia:
+    BaylessSomerville2024Cratonic and BaylessSomerville2024NonCratonic.
+
+  [Michele Simionato]
+  * Changed `postjobs.build_ses` to store `oqparam/{model}`
+  * Saved memory in the rupture sampling algorithm for fault sources
+    (simple, complex, characteristic)
+  * Extended use_rates to work also with IMT-dependent weights
+
+  [Christopher Brooks]
+  * Add ability to specify a down-dip fraction for hypocentre placement
+    on the rupture surface within a `hypoDepthDist` for area, point and
+    multi-point sources with a QA test in classical/case_31.
+  * Fix exporting of ruptures with surfaces defined using a `GriddedSurface`
+
+  [Michele Simionato]
   * Storing also `aggexp_by` outputs if `avg_losses_by` is enabled
   * Extended the rupture exporter to also work with multi-model SES files
   * Keeping the correlation matrices at 32 bit to save memory and to double
@@ -7,15 +99,14 @@
   [Christopher Brooks]
   * Modify `MorikawaFujiwara2013` to compute the distance to volcanic
     front (xvf) on a ctx-by-ctx basis instead of requiring it as a
-    site parameter for consistency with NIED's own implementation and
-    to apply the SW `PH` correction to all inslab events rather than
-    just those with depths less than 80 km.
+    site parameter for consistency with NIED's own implementation.
   * Expand `GridAdjustedGMPE` to provide raytracing capabilities for
     distance-based corrections and update the QA test (classical/case_11)
     to test this feature.
   * Add the 2025 NSHM variants of the anomalous intensity correction
-    to the `MorikawaFujiwara2013` and some QA tests to check the site
-    location-specific component of these corrections (classical/case_30).
+    and the PH correction to the `MorikawaFujiwara2013` and some QA
+    tests to check the site location-specific component of these
+    corrections (classical/case_30).
   * Added ability to specify a distribution of hypocenters within a
     simple fault source. Tested in classical/case_28 and unit tests.
   * Added the BCHydro adjusted versions of the original NGA GMMs (median
@@ -46,7 +137,7 @@
     source model logic tree. Some unit tests added and a QA test in
     logictree/case_33.
   * Add ability to specify reference z1pt4 (like for z1pt0, z2pt5 etc.) in
-    the job file.
+    the job file (QA test in classical/case_13 with `MorikawaFujiwara2013`).
 
   [Michele Simionato]
   * Internal: added an utility `hdf5.reduce_file` to reduce HDF5 files
@@ -90,7 +181,6 @@
   [Michele Simionato]
   * Added variable `keep_trt` to select a branchset in the gsim logic tree
   * Filtering the sites around the rupture also in scenario_damage
-  * Forbidded IMT-dependent weights for classical calculations with sampling
   * Extended `oq shakemap2gmfs` to work without a site model file
 
   [Christopher Brooks]

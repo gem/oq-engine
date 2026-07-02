@@ -293,7 +293,7 @@ agg_id
             self.run_calc(case_02.__file__, 'job_err.ini')
         self.assertIn("{'RM'} not in the CompositeRiskModel", str(ctx.exception))
 
-    def test_case_3(self):
+    def test_case_03(self):
         # this is a test with statistics
         self.run_calc(case_03.__file__, 'job.ini',
                       exports='csv', concurrent_tasks='4')
@@ -310,7 +310,7 @@ agg_id
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
-    def test_case_4(self):
+    def test_case_04(self):
         # Turkey with SHARE logic tree
         self.run_calc(case_04.__file__, 'job.ini')
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
@@ -322,7 +322,7 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=2E-5)
 
-    def test_case_4_hazard(self):
+    def test_case_04_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_04.__file__, 'job.ini',
@@ -351,7 +351,7 @@ agg_id
         self.run_calc(case_4a.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['events']), 5)
 
-    def test_case_5(self):
+    def test_case_05(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
         self.run_calc(case_05.__file__, 'job.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
@@ -416,9 +416,9 @@ agg_id
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
-        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+        self.assertEqual(str(gsim), "[BooreAtkinson2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
@@ -568,7 +568,7 @@ agg_id
         aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.13)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
-    def test_case_8(self):
+    def test_case_08(self):
         # loss_type-dependent taxonomy mapping
         out = self.run_calc(case_08.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')

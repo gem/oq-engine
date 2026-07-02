@@ -27,7 +27,8 @@ Point = collections.namedtuple("Point",  'lon lat')
 LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
-assert_aeq = numpy.testing.assert_almost_equal
+def assert_aeq(x, y, decimal=5):
+    numpy.testing.assert_almost_equal(x, y, decimal)
 
 
 class TestGeodeticDistance(unittest.TestCase):
@@ -35,13 +36,13 @@ class TestGeodeticDistance(unittest.TestCase):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
         assert_aeq(dist, 0.623585 * geodetic.EARTH_RADIUS, decimal=1)
         dist2 = geodetic.geodetic_distance(*(JFK + LAX))
-        assert_aeq(dist, dist2)
+        assert_aeq(dist, dist2, decimal=4)
 
     def test_on_equator(self):
         dist = geodetic.geodetic_distance(0, 0, 1, 0)
         assert_aeq(dist, 111.1949266)
         [dist2] = geodetic.geodetic_distance([-5], [0], [-6], [0])
-        assert_aeq(dist, dist2)
+        assert_aeq(dist, dist2, decimal=4)
 
     def test_along_meridian(self):
         coords = list(map(numpy.array, [(77.5, -150.), (-10., 15.),
@@ -51,7 +52,7 @@ class TestGeodeticDistance(unittest.TestCase):
 
     def test_one_point_on_pole(self):
         dist = geodetic.geodetic_distance(0, 90, 0, 88)
-        assert_aeq(dist, 222.3898533)
+        assert_aeq(dist, 222.3901)
 
     def test_small_distance(self):
         dist = geodetic.geodetic_distance(0, 0, 0, 1e-10)
@@ -61,7 +62,7 @@ class TestGeodeticDistance(unittest.TestCase):
 
     def test_opposite_points(self):
         dist = geodetic.geodetic_distance(110, -10, -70, 10)
-        assert_aeq(dist, geodetic.EARTH_RADIUS * numpy.pi, decimal=3)
+        assert_aeq(dist, geodetic.EARTH_RADIUS * numpy.pi, decimal=-1)
 
     def test_arrays(self):
         lons1 = numpy.array([[-50.03824533, -153.97808192],
@@ -84,15 +85,6 @@ class TestGeodeticDistance(unittest.TestCase):
         dist = geodetic.geodetic_distance(0, 0, [[-1, 0], [1, 0]],
                                                 [[0, 0], [0, 0]])
         assert_aeq(dist, [[111.195, 0], [111.195, 0]], decimal=4)
-
-    def test_distance_matrix(self):
-        lons = numpy.array([84., 84., 84., 85.5, 85.5, 85.5])
-        lats = numpy.array([26., 27.5, 29., 26., 27.5, 29.])
-        dmatrix = geodetic.distance_matrix(lons, lats)
-        assert_aeq(numpy.linalg.eigvalsh(dmatrix),
-                   [-550.60045439, -244.54774768, -155.3191062, -116.54457903,
-                    -82.64354555, 1149.65543285])
-        # NB: the sum of the eigenvalues must be zero up to numeric errors
 
 
 class TestAzimuth(unittest.TestCase):

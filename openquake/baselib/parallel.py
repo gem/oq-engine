@@ -188,6 +188,7 @@ import time
 import socket
 import signal
 import pickle
+import sqlite3
 import getpass
 import inspect
 import logging
@@ -197,7 +198,6 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
-from multiprocessing.connection import wait
 import multiprocessing.shared_memory as shmem
 import psutil
 import numpy
@@ -455,6 +455,9 @@ class Result(object):
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
+            if isinstance(val, sqlite3.Cursor):
+                # happens when the DbServer performs an UPDATE command
+                val = val.lastrowid
             res = Result(val, mon)
         return res
 
@@ -1087,49 +1090,50 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
-               names=()):
+def safecall(func_args_name):
+    """
+    Safely call the function with the arguments and returns name or exc
+    """
+    func, args, name = func_args_name
+    try:
+        func(*args)
+    except Exception as exc:
+        exc.name = name
+        return exc
+    else:
+        return name
+
+
+def multispawn(func, allargs, names=(), nprocs=num_cores, logfinish=True):
     """
     Spawn functions with the given arguments as subprocesses.
 
     :param func: function to spawn
     :param allargs: list of arguments
+    :param names: name of the spawned processes
     :param nprocs: number of processes running at the same time
     :param logfinish: if True, log a progress message
-    :param names: optionally, give names to the spawned processes
     """
-    if names:
-        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
         return
+    if not names:
+        names = [f'job#{i}' for i, args in enumerate(allargs, 1)]
     tot = len(allargs)
-    allargs = allargs[::-1]  # so that the first argument is submitted first
-    procs = {}  # sentinel -> process
-    n = 1
-    while allargs:
-        args = allargs.pop()
-        name = names.pop() if names else None
-        proc = mp_context.Process(target=func, args=args, name=name)
-        proc.start()
-        procs[proc.sentinel] = proc
-        while len(procs) >= nprocs:  # wait for something to finish
-            for finished in wait(procs):
-                procs[finished].join()
-                del procs[finished]
-                if logfinish:
-                    logging.info('Finished job %s [%d of %d]', name, n, tot)
-                n += 1
-
-    while procs:
-        for finished in wait(procs):
-            name = procs[finished].name or ''
-            procs[finished].join()
-            del procs[finished]
-            if logfinish:
-                logging.info('Finished job %s [%d of %d]', name, n, tot)
-            n += 1
+    assert len(names) == tot, (len(names), tot)
+    p = mp_context.Pool(min(nprocs, tot))
+    n = 0
+    for name in p.imap_unordered(
+            safecall, [(func, args, name)
+                       for args, name in zip(allargs, names)]):
+        n += 1
+        if isinstance(name, BaseException):
+            logging.error(f'{name.name}: {name}')
+        elif logfinish:
+            logging.info('Finished job %s [%d of %d]', name, n, tot)
+    p.close()
+    p.join()  # not using `with Pool` to avoid mysterious atexit errors
 
 
 if oq_distribute() == 'slurm':

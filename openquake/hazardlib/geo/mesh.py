@@ -298,7 +298,7 @@ class Mesh(object):
         :returns: an array of shape (N, 3) with the cartesian coordinates
         """
         return geo_utils.spherical_to_cartesian(
-            self.lons.flat, self.lats.flat, self.depths.flat)
+            self.lons.ravel(), self.lats.ravel(), self.depths.ravel())
 
     def __iter__(self):
         """

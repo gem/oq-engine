@@ -19,7 +19,9 @@
 """
 Module exports:
 class:`ECOS2009`,
-class:`ECOS2009Highest`
+class:`ECOS2009Highest`,
+class:`ECOS2009VariableDepth`,
+class:`ECOS2009FixedDepth`
 """
 import numpy as np
 
@@ -40,6 +42,22 @@ def _compute_mean(C, ctx, num_sites):
 
     log_term = np.log(ctx.rhypo / C['hypo_depth'])
     dist_term = c3 * (ctx.rhypo-C['hypo_depth'])
+
+    return (ctx.mag - c2 * log_term - dist_term - c0) / c1
+
+
+def _compute_mean_variable_depth(C, ctx):
+    """
+    Compute mean value for variable hypocentral depth.
+    """
+    c0 = C['alpha'] * (C['a']*np.log(30/ctx.hypo_depth) +
+                       C['b']*(30-ctx.hypo_depth)) + C['beta']
+    c1 = C['alpha']
+    c2 = -(C['a']) * C['alpha']
+    c3 = -(C['b']) * C['alpha']
+
+    log_term = np.log(ctx.rhypo / ctx.hypo_depth)
+    dist_term = c3 * (ctx.rhypo-ctx.hypo_depth)
 
     return (ctx.mag - c2 * log_term - dist_term - c0) / c1
 
@@ -118,3 +136,54 @@ class ECOS2009Highest(ECOS2009):
     IMT             a          b    alpha      beta   hypo_depth   sigma
     MMI       -0.4834   -0.00179    0.732     1.132      10.0      0.36474
     """)
+
+
+class ECOS2009VariableDepth(ECOS2009):
+    """
+    This class implements the version using "all intensity levels",
+    variable hypocentral depth and the weighting scheme "no weighting".
+
+    See page 18 for general equation (8) - needs to be solved for I_obs -
+    and equation (9) for estimating coefficients c0,c1,c2,c3.
+    Coefficients a,b are taken from Table 4 on page 19.
+    Coefficients alpha,beta are taken from Table 5 on page 19.
+    """
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean_variable_depth(C, ctx)
+            sig[m] = np.sqrt(C['be'] ** 2 + C['we'] ** 2)
+            tau[m] = C['be']
+            phi[m] = C['we']
+
+    COEFFS = CoeffsTable(table="""\
+    IMT             a          b    alpha      beta   sigma        we      be
+    MMI      -0.69182   -0.00084   0.7364    1.1568   0.3897     0.227   0.373
+    """)
+
+
+class ECOS2009FixedDepth(ECOS2009):
+    """
+    ECOS09 fixed-depth model with between- and within-event error terms from
+    the temporary implementation.
+    """
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            mean[m] = _compute_mean(C, ctx, imt)
+            sig[m] = np.sqrt(C['be'] ** 2 + C['we'] ** 2)
+            tau[m] = C['be']
+            phi[m] = C['we']
+
+    COEFFS = CoeffsTable(table="""\
+    IMT             a          b    alpha      beta   hypo_depth   sigma     we      be
+    MMI      -0.67755   -0.00174   0.7725    1.0363      10.0     0.4073    0.227   0.373
+        """)

@@ -20,6 +20,7 @@ import os
 import re
 import ast
 import sys
+import copy
 import json
 import inspect
 import logging
@@ -34,13 +35,13 @@ import itertools
 from openquake.baselib import __version__, hdf5, general, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
-    DictArray, AccumDict, cached_property, engine_version, count_lines)
+    DictArray, AccumDict, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
-from openquake.sep.classes import SecondaryPeril
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
+from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -212,7 +213,7 @@ coordinate_bin_width:
   Default: 100 degrees, meaning don't disaggregate by lon, lat
 
 countries:
-  Used to restrict the exposure to a single country in Aristotle mode.
+  Used to restrict the exposure to a single country in IMPACT mode.
   Example: *countries = ITA*.
   Default: ()
 
@@ -854,6 +855,11 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+strict:
+  Enable strict checking on fault sources and ps_grid_spacing
+  Example: *strict = false*
+  Default: True
+
 tectonic_region_type:
    Used to specify a tectonic region type.
    Example: *tectonic_region_type = Active Shallow Crust*.
@@ -970,10 +976,14 @@ SITE_CLASSES = {
         'B': {'display_name': 'B - Medium hard rock', 'vs30': 1080},
         'BC': {'display_name': 'BC - Soft rock', 'vs30': 760},
         'C': {'display_name': 'C - Very dense sand or hard clay', 'vs30': 530},
-        'CD': {'display_name': 'CD - Dense sand or ery stiff clay', 'vs30': 365},
-        'D': {'display_name': 'D - Medium dense sand or stiff clay', 'vs30': 260},
-        'DE': {'display_name': 'DE - Loose sand or medium stiff clay', 'vs30': 185},
-        'E': {'display_name': 'E - Very loose sand or soft clay', 'vs30': 150},
+        'CD': {'display_name':
+               'CD - Dense sand or ery stiff clay', 'vs30': 365},
+        'D': {'display_name':
+              'D - Medium dense sand or stiff clay', 'vs30': 260},
+        'DE': {'display_name':
+               'DE - Loose sand or medium stiff clay', 'vs30': 185},
+        'E': {'display_name':
+              'E - Very loose sand or soft clay', 'vs30': 150},
         'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
         'custom': {'display_name': 'Specify Vs30', 'vs30': None},
     },
@@ -1012,6 +1022,18 @@ def check_increasing(dframe, *columns):
     for col in columns:
         arr = dframe[col].to_numpy()
         assert (numpy.diff(arr) >= 0).all(), arr
+
+
+def extend(lst, values):
+    """
+    Extend the lst with the values, skipping duplicates (use small lists)
+    """
+    if isinstance(lst, set):
+        lst.update(values)
+        return
+    for value in values:
+        if value not in lst:
+            lst.append(value)
 
 
 class OqParam(valid.ParamSet):
@@ -1159,8 +1181,7 @@ class OqParam(valid.ParamSet):
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
-    oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate'), 'tolerate')
+    oversampling = valid.Param(valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1225,6 +1246,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_time = valid.Param(valid.positiveint, None)
     split_by_gsim = valid.Param(valid.positiveint, 0)
+    strict = valid.Param(valid.boolean, True)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
@@ -1361,6 +1383,12 @@ class OqParam(valid.ParamSet):
         self.minimum_intensity = dic
 
     def __init__(self, **names_vals):
+        rs = float(os.environ.get('OQ_SAMPLES', '0'))
+        if rs:
+            # used in tests to reduce the number of samples
+            names_vals['number_of_logic_tree_samples'] = str(int(
+                rs * int(names_vals['number_of_logic_tree_samples'])))
+
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
@@ -1371,8 +1399,6 @@ class OqParam(valid.ParamSet):
                names_vals['hazard_calculation_id'] == 0)
         if hc0:
             self.hazard_calculation_id = 0  # fake calculation_id
-        if 'job_ini' not in self.inputs:
-            self.inputs['job_ini'] = '<in-memory>'
         if 'calculation_mode' not in names_vals:
             self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
@@ -1439,6 +1465,7 @@ class OqParam(valid.ParamSet):
             self.raise_invalid('Missing gsim or gsim_logic_tree_file')
         if 'amplification' in self.inputs:
             self.req_site_params.add('ampcode')
+        self.sec_imts  # populate req_site_params
         self.req_site_params = sorted(self.req_site_params)
 
     def check_risk(self):
@@ -1617,6 +1644,13 @@ class OqParam(valid.ParamSet):
         """
         super().validate()
         self.check_source_model()
+        if isinstance(self.hazard_calculation_id, str):
+            path = self.hazard_calculation_id
+            if not os.path.isabs(path):
+                path = os.path.abspath(os.path.normpath(
+                    os.path.join(self.base_path, self.hazard_calculation_id)))
+            os.path.exists(path), path
+            self.hazard_calculation_id = path
         if 'post_loss_amplification' in self.inputs:
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
@@ -2019,13 +2053,14 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(
             self.secondary_perils, self.sec_peril_params, self)
 
-    @cached_property
+    @property
     def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
         outs = []
         for sp in self.get_sec_perils():
+            extend(self.req_site_params, sp.inputs)
             for out in sp.outputs:
                 outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
@@ -2542,7 +2577,25 @@ class OqParam(valid.ParamSet):
         # newlines can break the checksum, so we remove them
         return ini.strip().replace('\n\n', '\n')
 
+    def from_parent(self, oqparent, new=False):
+        """
+        :returns: updated instance with missing parameters copied from oqparent
+        """
+        params = {name: value for name, value in
+                  vars(oqparent).items()
+                  if name not in vars(self)
+                  and name != 'ground_motion_fields'}
+        if new:
+            oqc = copy.copy(self)
+            vars(oqc).update(params)
+            return oqc
+        vars(self).update(params)
+        return self
+        
     def __toh5__(self):
+        if hasattr(self, 'mags_by_trt'):
+            for trt, mags in self.mags_by_trt.items():
+                self.mags_by_trt[trt] = sorted(mags)
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):

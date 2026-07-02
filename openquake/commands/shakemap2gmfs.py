@@ -39,7 +39,7 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         dic = {'kind': 'file_npy', 'fname': fname}
     else:
         dic = {'kind': 'usgs_id', 'id': id}
-    imts = ['PGA', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)', 'MMI']
+    imts = ['PGV', 'PGA', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)', 'MMI']
     param = dict(number_of_ground_motion_fields=str(num_gmfs),
                  description='Converting ShakeMap->GMFs',
                  truncation_level=str(trunclevel),

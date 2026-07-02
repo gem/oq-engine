@@ -405,6 +405,17 @@ class File(h5py.File):
         for k, v in kw.items():
             attrs[k] = v
 
+    def import_df(self, groupname, df, gzip='gzip'):
+        """
+        Import a DataFrame in the File
+        """
+        if groupname not in self:
+            self.create_df(groupname, df, gzip)
+        else:
+            for col in df.columns:
+                dset = self[f'{groupname}/{col}']
+                extend(dset, df[col].to_numpy())
+
     def read_df(self, key, index=None, sel=(), slc=slice(None), slices=()):
         """
         :param key: name of the structured dataset
@@ -916,8 +927,9 @@ def parse_comment(comment):
     """
     if comment[0] == '"' and comment[-1] == '"':
         comment = comment[1:-1]
+    comment = comment.replace('""', '"').replace('=None', '="NA"')
     try:
-        dic = toml.loads('{%s}' % comment.replace('""', '"'))
+        dic = toml.loads('{%s}' % comment)
     except toml.TomlDecodeError as err:
         raise ValueError('%s in %s' % (err, comment))
     return list(dic.items())

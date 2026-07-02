@@ -53,7 +53,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_2(self):
         _rup, dic, _err = get_rup_dic(
-                {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_from_usgs'},
+                {'usgs_id': 'usp0001ccb',
+                 'approach': 'use_shakemap_from_usgs'},
                 user=user, use_shakemap=True)
         self.assertIsNotNone(dic['shakemap_array'])
         _rup, dic, _err = get_rup_dic(
@@ -86,21 +87,25 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3b(self):
         rup, _dic, _err = get_rup_dic(
-            {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_fault_rup_from_usgs'},
+            {'usgs_id': 'usp0001ccb',
+             'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsInstance(rup, BaseRupture)
 
     def test_3c(self):
         _rup, _dic, err = get_rup_dic(
-            {'usgs_id': 'us6000f65h', 'approach': 'use_shakemap_fault_rup_from_usgs'},
+            {'usgs_id': 'us6000f65h',
+             'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
-        self.assertIn('Unable to retrieve rupture geometries', err['error_msg'])
+        self.assertIn('Unable to retrieve rupture geometries',
+                      err['error_msg'])
 
     def test_3d(self):
         # TODO: make it possible to convert this kind of geometries
         usgs_id = 'us6000jllz'
         _rup, dic, _err = get_rup_dic(
-            {'usgs_id': usgs_id, 'approach': 'use_shakemap_fault_rup_from_usgs'},
+            {'usgs_id': usgs_id,
+             'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIn('Unable to convert the rupture', dic['rupture_issue'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
@@ -132,7 +137,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['dep'], 10.)
 
     def test_5(self):
-        for approach in ['use_shakemap_fault_rup_from_usgs', 'use_shakemap_from_usgs']:
+        for approach in ['use_shakemap_fault_rup_from_usgs',
+                         'use_shakemap_from_usgs']:
             rup, _dic, _err = get_rup_dic(
                 {'usgs_id': 'us20002926', 'approach': approach},
                 user=user, use_shakemap=True)
@@ -157,8 +163,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
             'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}
         }
-        expected_info = {'lon': '37.0143', 'lat': '37.2256', 'dep': '10', 'mag': '7.8'}
-        nodal_planes, info, _err = get_nodal_planes_and_info(usgs_id, user=user)
+        expected_info = {
+            'lon': '37.0143', 'lat': '37.2256', 'dep': '10', 'mag': '7.8'}
+        nodal_planes, info, _err = get_nodal_planes_and_info(
+            usgs_id, user=user)
         self.assertEqual(nodal_planes, expected_nodal_planes)
         self.assertEqual(info, expected_info)
 
@@ -170,8 +178,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
             'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}
         }
-        expected_info = {'lon': '22.934', 'lat': '38.222', 'dep': '33', 'mag': '6.7'}
-        nodal_planes, info, _err = get_nodal_planes_and_info(usgs_id, user=user)
+        expected_info = {
+            'lon': '22.934', 'lat': '38.222', 'dep': '33', 'mag': '6.7'}
+        nodal_planes, info, _err = get_nodal_planes_and_info(
+            usgs_id, user=user)
         self.assertEqual(nodal_planes, expected_nodal_planes)
         self.assertEqual(info, expected_info)
 
@@ -222,10 +232,12 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_12(self):
         current_dir = os.path.dirname(__file__)
-        rupture_file_path = os.path.join(current_dir, 'data', 'fault_rupture.xml')
+        rupture_file_path = os.path.join(
+            current_dir, 'data', 'fault_rupture.xml')
         dic_in = {'usgs_id': 'FromFile', 'approach': 'provide_rup'}
         rup, dic, _err = get_rup_dic(
-            dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
+            dic_in, user=user, use_shakemap=False,
+            rupture_file=rupture_file_path)
         self.assertIsInstance(rup, BaseRupture)
         # hypocenter was outside the rupture surface and it is moved to the
         # center of the surface
@@ -241,10 +253,12 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_12b(self):
         current_dir = os.path.dirname(__file__)
-        rupture_file_path = os.path.join(current_dir, 'data', 'fault_rupture.csv')
+        rupture_file_path = os.path.join(
+            current_dir, 'data', 'fault_rupture.csv')
         dic_in = {'usgs_id': 'FromFile', 'approach': 'provide_rup'}
         rup, dic, _err = get_rup_dic(
-            dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
+            dic_in, user=user, use_shakemap=False,
+            rupture_file=rupture_file_path)
         self.assertIsInstance(rup, BaseRupture)
         self.assertEqual(dic['lon'], -55.938899993896484)
         self.assertEqual(dic['lat'], 44.51041030883789)
@@ -262,8 +276,9 @@ class ShakemapParsersTestCase(unittest.TestCase):
             usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
-        self.assertEqual(station_err['error_msg'],
-                         'stationlist.json was downloaded, but it contains no features')
+        self.assertEqual(
+            station_err['error_msg'],
+            'stationlist.json was downloaded, but it contains no features')
 
     def test_14(self):
         usgs_id = 'us20002926'
@@ -271,44 +286,53 @@ class ShakemapParsersTestCase(unittest.TestCase):
             usgs_id, user=user)
         self.assertEqual(err, {})
         self.assertEqual(len(shakemap_versions), 3)
-        self.assertEqual(usgs_preferred_version,
-                         'urn:usgs-product:atlas:shakemap:us20002926:1594162031303')
+        self.assertEqual(
+            usgs_preferred_version,
+            'urn:usgs-product:atlas:shakemap:us20002926:1594162031303')
         first_version = shakemap_versions[0]
         self.assertIn('id', first_version)
         self.assertIn('utc_date_time', first_version)
         usgs_id = 'does_not_exist'
-        shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
+        shakemap_versions, usgs_preferred_version, err = \
+            get_shakemap_versions(usgs_id)
         self.assertIsNone(shakemap_versions)
         self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
 
     def test_15(self):
         usgs_id = 'usp0001ccb'
-        shakemap_versions, _usgs_preferred_version, _err = get_shakemap_versions(
-            usgs_id, user=user)
+        shakemap_versions, _usgs_preferred_version, _err = \
+            get_shakemap_versions(usgs_id, user=user)
         first_version = shakemap_versions[0]
         _rup, dic, _err = get_rup_dic(
-                {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_from_usgs'},
-                user=user, use_shakemap=True, shakemap_version=first_version['id'])
+                {'usgs_id': 'usp0001ccb',
+                 'approach': 'use_shakemap_from_usgs'},
+                user=user, use_shakemap=True,
+                shakemap_version=first_version['id'])
         self.assertIsNotNone(dic['shakemap_array'])
 
     def test_16(self):
         _rup, _dic, err = get_rup_dic(
-            {'usgs_id': 'usp0001ccb', 'approach': 'use_finite_fault_model_from_usgs'},
+            {'usgs_id': 'usp0001ccb',
+             'approach': 'use_finite_fault_model_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIn('The finite-fault was not found', err['error_msg'])
 
     def test_17(self):
         rup, dic, _err = get_rup_dic(
-            {'usgs_id': 'us6000jllz', 'approach': 'use_finite_fault_model_from_usgs'},
+            {'usgs_id': 'us6000jllz',
+             'approach': 'use_finite_fault_model_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsInstance(rup, BaseRupture)
         # ignoring file paths
         expected_dic = {
-            'lon': 37.0485, 'lat': 37.25841, 'dep': 14.0, 'mag': 7.899000177543584,
+            'lon': 37.0485, 'lat': 37.25841, 'dep': 14.0,
+            'mag': 7.899000177543584,
             'rake': 0.0, 'strike': 41.59611892700195, 'dip': 80.92811584472656,
             'usgs_id': 'us6000jllz',
-            'title': 'M 7.8 - Pazarcik earthquake, Kahramanmaras earthquake sequence',
+            'title': (
+                'M 7.8 - Pazarcik earthquake, Kahramanmaras'
+                ' earthquake sequence'),
             'shakemap_desc': 'v17: 2023-04-14 18:07:22'}
         for key in expected_dic:
             self.assertEqual(dic[key], expected_dic[key])

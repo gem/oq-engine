@@ -1,6 +1,8 @@
 [multi.workflow]
 description = "multi-workflow"
+env.OQ_SAMPLE_ASSETS = 1
 may_fail = ["riskJob"]
+override = {out_file="SES.hdf5", hazard_calculation_id="SES.hdf5"}
 
 [hazard.Job]
 ini = "job_hazard.ini"

@@ -19,6 +19,7 @@ import numpy
 from openquake.hazardlib import nrml
 from openquake.hazardlib.calc.filters import magdepdist
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.source_reader import sampling_dt
 
 aae = numpy.testing.assert_almost_equal
 HERE = pathlib.Path(__file__).parent
@@ -33,7 +34,7 @@ def _get_model_nankai():
     for i, src in enumerate(group):
         src.id = i
         src.grp_id = 0
-        src.trt_smr = 0
+        src.sampling = numpy.array([(0, 1)], sampling_dt)
         # src.num_ruptures = src.count_ruptures()
     aae([src.mutex_weight for src in group],
         [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,

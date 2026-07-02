@@ -23,7 +23,6 @@ import os
 
 import numpy
 import pandas
-import fiona
 from shapely import geometry, prepare, contains_xy
 
 from openquake.baselib import hdf5, general, config, performance
@@ -32,6 +31,7 @@ from openquake.baselib.general import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.geo.utils import SiteAssociationError
+from openquake.hazardlib.geo.packager import fiona
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -574,6 +574,129 @@ class AssetCollection(object):
             return ()
         df = pandas.concat(dfs)
         return df[df.number > 0]
+
+    def get_name_map(self, geo_columns, exposure_hdf5):
+        """
+        For each ID_* column in geo_columns, look up the corresponding NAME_*
+        array in exposure_hdf5 (if it exists) and return a dict:
+            { 'NAME_2': {id2_str: name2_str, ...}, ... }
+        """
+        name_map = {}
+        with hdf5.File(exposure_hdf5) as f:
+            for col in geo_columns:
+                if not col.startswith('ID_'):
+                    continue
+                name_col = col.replace('ID_', 'NAME_', 1)
+                if name_col not in f:
+                    continue
+                ids = f[f'tagcol/{col}'][:]  # e.g. ['ET-AF', 'ET-AM', ...]
+                names = f[name_col][:]       # e.g. ['Afar', 'Amhara', ...]
+                name_map[name_col] = {
+                    i.decode('utf-8'): n.decode('utf-8')
+                    for i, n in zip(ids, names)
+                }
+        return name_map
+
+    def aggregate_exposure_by_lse_tier(
+            self, aggregate_by, avg_gmf_array, all_imts, secondary_peril,
+            exposure_hdf5=None):
+        """
+        :param aggregate_by:
+            a list of lists of tag names (e.g., [['ID_0']])
+        :param avg_gmf_array:
+            a 3D numpy array from dstore['avg_gmf'][:]
+        :param all_imts:
+            IMT names including secondary perils
+        :param secondary_peril:
+            either "liquefaction" or "landslide"
+        :param exposure_hdf5:
+            a HDF5 file to read region names from (default: None)
+        :returns:
+            a DataFrame with aggregated exposure metrics grouped by
+            geo-tags and the chosen LSE peril tiers
+        """
+        # NOTE: tier labels need to be written with decimals to prevent
+        # spreadsheet applications from interpreting values like 1-2 as 1-Feb
+        if secondary_peril == "liquefaction":
+            lse_col = "AllstadtEtAl2022Liquefaction_LSE"
+            tier_col = "liquefaction_lse_tier"
+            bins = [0., 0.5, 1., 2., 5., 10., 20., numpy.inf]
+            labels = ["<0.5", "0.5-1.0", "1.0-2.0", "2.0-5.0", "5.0-10.0",
+                      "10.0-20.0", ">20.0"]
+        elif secondary_peril == "landslide":
+            lse_col = "AllstadtEtAl2022Landslides_LSE"
+            tier_col = "landslide_lse_tier"
+            bins = [0., 0.2, 1., 2., 5., 10., 20., numpy.inf]
+            labels = ["<0.2", "0.2-1.0", "1.0-2.0", "2.0-5.0", "5.0-10.0",
+                      "10.0-20.0", ">20.0"]
+        else:
+            raise ValueError(
+                "secondary_peril must be either 'liquefaction' or 'landslide'")
+        # Extract mean values (axis 0 = mean) for the targeted peril.
+        # avg_gmf_array has shape (statistics, sites, imts), so lse_values will
+        # be a 1D array of length n_sites
+        _n_stats, n_sites, _n_imts = avg_gmf_array.shape
+        lse_idx = all_imts.index(lse_col)
+        lse_values = avg_gmf_array[0, :, lse_idx]
+        # Build a site-level DataFrame.
+        # numpy.arange(n_sites) will match self.array['site_id']
+        gmf_df = pandas.DataFrame({
+                "site_id": numpy.arange(n_sites),
+                lse_col: lse_values,
+        })
+        # Bin continuous LSE values into discrete tiers.
+        # right=False makes each bin left-closed and right-open
+        # e.g. [0.005, 0.01)
+        # resulting in a pandas Categorical column.
+        gmf_df[tier_col] = pandas.cut(gmf_df[lse_col], bins=bins,
+                                      labels=labels, right=False)
+        # Build the exposure DataFrame
+        geo_columns = list(tagset(aggregate_by))
+        dic = {"site_id": self.array["site_id"]}
+        # Decode integer tag indices to string values by indexing into tagcol
+        # directly. self.array[col] holds 1-based integers; tagcol lists start
+        # at index 0 with '?' so tagcol[i] gives the correct string for tag
+        # index i.
+        # The loop covers every column in geo_columns, so multi-tag groups are
+        # handled correctly.
+        for col in geo_columns:
+            tag_values = numpy.array(getattr(self.tagcol, col))
+            dic[col] = tag_values[self.array[col]]
+        # self.fields contains names like 'structural', 'number' (i.e. the
+        # exposure value columns)
+        # self.array['value-structural'] is the corresponding numeric column
+        for field in self.fields:
+            dic[field] = self.array["value-" + field]
+        for field in self.occfields:
+            dic[field] = self.array[field]
+        exp_df = pandas.DataFrame(dic)
+        exposure_cols = list(self.fields) + list(self.occfields)
+        # Merge on the shared 'site_id' column. Every asset row gets the
+        # tier_col value of its site.
+        merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
+        # Sum all exposure value fields for each unique combination
+        # like (ID_0, ID_2, tier). observed=False keeps tier bins in the
+        # output even if no assets fall in it; the exporter has a
+        # parameter to filter them out if desired.
+        groupby_keys = geo_columns + [tier_col]
+        result_df = (
+            merged_df.groupby(groupby_keys, observed=False)[exposure_cols]
+            .sum()
+            .reset_index()
+        )
+        # Add region names
+        if exposure_hdf5:
+            name_map = self.get_name_map(geo_columns, exposure_hdf5)
+            for name_col, mapping in name_map.items():
+                id_col = name_col.replace('NAME_', 'ID_', 1)
+                result_df[name_col] = (
+                    result_df[id_col].apply(
+                        lambda v: mapping.get(
+                            v.decode('utf-8') if isinstance(v, bytes) else v,
+                            '')))
+        # the casting to fixed-width numpy byte strings necessary to
+        # use allow_pickle=False will be done at extraction time
+        return result_df
 
     def agg_by_site(self):
         """
@@ -1281,7 +1404,9 @@ class Exposure(object):
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 # tested in scenario_risk/case_13
-                df = general.random_filter(df, sa)
+                rdf = general.random_filter(df, sa)
+                if len(rdf):  # reduce only if there are samples
+                    df = rdf
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))
             yield fname, df.set_index('id')

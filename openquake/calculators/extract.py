@@ -817,7 +817,7 @@ def extract_agg_curves(dstore, what):
 
 def aggexp_tags(dstore):
     """
-    Read agg_values and returns a datastore with fields like::
+    Read agg_values and returns datastores with fields like::
 
             policy taxonomy  number  nonstructural  structural  area
      agg_id
@@ -828,7 +828,6 @@ def aggexp_tags(dstore):
     aggkey = dstore['assetcol/tagcol'].get_aggkey(oq.aggregate_by)
     ags = U32([key[0] for key in aggkey])
     dfs = []
-    slices = []
     for ag, start, stop in performance.idx_start_stop(ags):
         lines = numpy.array([
             line.decode('utf8') for line in dstore['agg_keys'][start:stop]])
@@ -841,9 +840,9 @@ def aggexp_tags(dstore):
             dic[kfield] = ks[:, i]
         for name in values.dtype.names:
             dic[name] = okvalues[name]
-        dfs.append(pandas.DataFrame(dic))
-        slices.append(slice(start, stop))
-    return pandas.concat(dfs).set_index('agg_id'), slices
+        df = pandas.DataFrame(dic).set_index('agg_id')
+        dfs.append(df)
+    return dfs
 
 
 @extract.add('aggexp_tags')
@@ -852,7 +851,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return aggexp_tags(dstore)[0]
+    return aggexp_tags(dstore)
 
 
 @extract.add('mmi_tags')
@@ -866,6 +865,55 @@ def extract_mmi_tags(dstore, what):
     return df
 
 
+def ensure_npy_serializable(df):
+    """
+    Cast object-dtype columns of a DataFrame to fixed-width numpy byte
+    strings (dtype ``|S<n>``) so that a structured array built from it
+    is serializable with ``allow_pickle=False``.
+
+    :param df: a :class:`pandas.DataFrame`
+    :returns: the same DataFrame with object columns replaced in-place
+    """
+    for col in df.columns:
+        if df[col].dtype != object:
+            continue
+        df[col] = df[col].astype('S')
+    return df
+
+
+@extract.add('exposure_by_lse')
+def extract_exposure_by_lse(dstore, what):
+    """
+    Aggregates exposure by secondary peril LSE tiers and tags.
+    Use it as /extract/exposure_by_lse?secondary_peril=landslide
+    or        /extract/exposure_by_lse?secondary_peril=liquefaction
+    To keep also tier bins with no assets:
+    /extract/exposure_by_lse?secondary_peril=landslide?discard_empty=0
+    or
+    /extract/exposure_by_lse?secondary_peril=liquefaction?discard_empty=0
+    """
+    qdict = parse(what)
+    [secondary_peril] = qdict['secondary_peril']
+    discard_empty = qdict.get('discard_empty', [1])[0] == 1
+    oq = dstore['oqparam']
+    peril_name2imt = {
+        'landslide': 'AllstadtEtAl2022Landslides_LSE',
+        'liquefaction': 'AllstadtEtAl2022Liquefaction_LSE'
+    }
+    if secondary_peril not in peril_name2imt:
+        raise ValueError(f'{secondary_peril} not in {list(peril_name2imt)}')
+    peril_imt = peril_name2imt[secondary_peril]
+    if peril_imt not in oq.sec_imts:
+        raise ValueError(f'{peril_imt} not in sec_imts')
+    peril_ds_key = f'exposure_by_{secondary_peril}_lse'
+    if peril_ds_key not in dstore:
+        raise ValueError('{peril_ds_key} not found in the datastore')
+    df = dstore.read_df(peril_ds_key)
+    if discard_empty:
+        df = df[df['number'] > 0]
+    return ensure_npy_serializable(df)
+
+
 # tested in impact_test and partially in case_1_ins
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
@@ -877,7 +925,7 @@ def extract_aggrisk_tags(dstore, what):
     aggrdf = dstore.read_df('aggrisk')
     aggrdf.loss *= ws[aggrdf.rlz_id]
     del aggrdf['rlz_id']
-    adf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
+    aggdf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
     if 'aggrisk_quantiles' in dstore:
         # normally there are two quantiles 0.05, 0.95
         qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
@@ -886,19 +934,13 @@ def extract_aggrisk_tags(dstore, what):
         qdf = ()
         qfields = []
 
-    fulldf, slices = aggexp_tags(dstore)
+    dfs = aggexp_tags(dstore)
     outs = []
-    for aggby, slc in zip(oq.aggregate_by, slices):
-        df = fulldf[slc]
+    for aggby, df in zip(oq.aggregate_by, dfs):
+        adf = aggdf[numpy.isin(aggdf.agg_id, df.index)]
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
-            if agg_id < slc.start or agg_id >= slc.stop:
-                continue
-            try:
-                df.loc[agg_id]
-            except KeyError:
-                continue
             lt = LOSSTYPE[loss_id]
             if lt in oq.loss_types:
                 for kfield, key in zip(aggby, df.loc[agg_id][aggby]):
@@ -1090,7 +1132,8 @@ def extract_losses_by_site(dstore, what):
     sitecol.make_complete()  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
     ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
-    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
+    dic = {'lon': F32(sitecol.lons[ok_sids]),
+           'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
@@ -1327,20 +1370,22 @@ def extract_damages_stats_npz(dstore, what):
 @extract.add('event_based_mfd')
 def extract_mfd(dstore, what):
     """
-    Compare n_occ/eff_time with occurrence_rate.
+    The number of ruptures / eff_time per magnitude.
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     R = len(base.get_weights(oq, dstore))
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    rup_df = dstore.read_df('ruptures', 'id')[
-        ['mag', 'n_occ', 'occurrence_rate']]
+    try:
+        rup_df = dstore.read_df('ruptures', 'id')
+    except KeyError:
+        rup_df = dstore.read_df('filtered_ruptures', 'id')
+    rup_df = rup_df[['mag', 'n_occ', 'occurrence_rate']]
     rup_df.mag = numpy.round(rup_df.mag, 1)
-    dic = dict(mag=[], freq=[], occ_rate=[])
+    dic = dict(mag=[], freq=[])
     for mag, df in rup_df.groupby('mag'):
         dic['mag'].append(mag)
         dic['freq'].append(df.n_occ.sum() / eff_time)
-        dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
 
 
@@ -1580,7 +1625,8 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', I64), ('source_id', SOURCE_ID), ('multiplicity', U32),
+            ('rup_id', I64), ('source_id', SOURCE_ID),
+            ('model', '<S3'), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1604,7 +1650,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.id, ebr.source_id, ebr.n_occ, rate,
+                (ebr.id, ebr.source_id, ebr.model, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake, boundaries) + ruptparams)
         return numpy.array(data, self.dt)
@@ -1658,17 +1704,20 @@ def extract_rupture_info(dstore, what):
         min_mag = 0
     [bounds] = qdict.get('boundaries', ['yes'])
     # bound is yes for the plugin and no for the exporter
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     try:
         info = dstore['source_info']
         source_id = info['source_id']
     except KeyError:  # scenario
         source_id = None
     multi_model = isinstance(source_id, Group)
+    multi_lt = isinstance(dstore['full_lt'], Group)
     dtlist = [('rup_id', I64), ('source_id', '<S75'), ('multiplicity', U32),
               ('mag', F32), ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
+    if multi_lt:
+        dtlist.append(('model', '<S3'))
     rows = []
     boundaries = []
     allrups = dstore['ruptures'][:]
@@ -1706,10 +1755,12 @@ def extract_rupture_info(dstore, what):
                                           ', '.join(coordset))
                     else:  # good polygon
                         boundaries.append('POLYGON((%s))' % ', '.join(coords))
-                rows.append(
-                    (r['rup_id'], srcid, r['multiplicity'],
-                     r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake']))
+                row = [r['rup_id'], srcid, r['multiplicity'],
+                       r['mag'], r['lon'], r['lat'], r['depth'],
+                       trt, r['strike'], r['dip'], r['rake']]
+                if multi_lt:
+                    row.append(r['model'])
+                rows.append(tuple(row))
     arr = numpy.array(rows, dtlist)
     geoms = gzip.compress('\n'.join(boundaries).encode('utf-8'))
     return ArrayWrapper(arr, dict(investigation_time=oq.investigation_time,

@@ -198,6 +198,8 @@ class MultiLine(object):
         """
         :returns: L arrays of shape (N, 2) or a single array (L, N, 2)
         """
+        lons = np.asarray(lons, dtype=np.float64)
+        lats = np.asarray(lats, dtype=np.float64)
         nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
         if len(set(nsegs)) == 1:
             # fast lane, when the number of segments is constant

@@ -41,8 +41,8 @@ from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
-from openquake.engine.engine import (
-    create_jobs, run_jobs, run_workflow, read_many)
+from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.workflow import run_workflow, read_many
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data import mosaic, mosaic_for_ses
@@ -297,6 +297,10 @@ class RunShowExportTestCase(unittest.TestCase):
         base = pathlib.Path(case_4a.__file__).parent
         wf_id = run_workflow(base / 'jobs.toml',
                              dict(description='test_workflow'))
+        # check description
+        job = commonlib.logs.dbcmd('get_job', wf_id)
+        assert job.description =='jobs.toml: test_workflow'
+
         # check aggexp_by
         with read(wf_id) as dstore:
             print(dstore.read_df('aggexp-taxonomy'))
@@ -313,7 +317,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id | code | calc_time | num_ctxs', str(p))
+        self.assertIn('source_id | code | calc_time | weight | mul', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:

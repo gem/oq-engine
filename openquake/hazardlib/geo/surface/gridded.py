@@ -176,6 +176,21 @@ class GriddedSurface(BaseSurface):
         coo[:, 1] = tmp[:, 1]
         coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
+
+        # Some surfaces (observed in non-parametric rups with gridded surfaces
+        # in NEA) have only two points which is not enough for fitting a plane
+        # so take azimuth of these two points instead as proxy strike for rup
+        if coo.shape[0] == 2:
+            dx = coo[1, 0] - coo[0, 0]
+            dy = coo[1, 1] - coo[0, 1]
+            # Use horizontal azimuth instead for strike
+            self.strike = np.degrees(np.arctan2(dx, dy)) % 360
+            # We cannot compute a dip from two points so has to be
+            # set to a nan to keep this limitation explicit downstream
+            if self.dip is None:
+                self.dip = np.nan
+            return self.strike
+
         _pnt0, vers = geo_utils.plane_fit(coo)
 
         # Find the angle between the surface projection of the unit vector and

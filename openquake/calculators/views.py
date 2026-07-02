@@ -32,7 +32,7 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg, sum_records)
+    get_array, group_array, fast_agg, fast_agg3, sum_records)
 from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.general import encode, decode
@@ -259,8 +259,8 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'code',
-                                 'calc_time', 'num_ctxs', 'num_ruptures']
+    info = dstore['source_info'][:]
+    info = info[['source_id', 'code', 'calc_time', 'weight', 'mul']]
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), dt(info.dtype.names))
     for name in info.dtype.names:
@@ -268,8 +268,8 @@ def view_slow_sources(token, dstore, maxrows=20):
     return data[::-1][:maxrows]
 
 
-@view.add('rup_info')
-def view_rup_info(token, dstore, maxrows=25):
+@view.add('ruptimes')
+def view_ruptimes(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
@@ -277,10 +277,10 @@ def view_rup_info(token, dstore, maxrows=25):
         code2cls.update(source.rupture.BaseRupture.init())
     fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
-    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    info = dstore.read_df('ruptimes', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
     df['surface'] = [code2cls[code][1].__name__ for code in df.code]
-    del df['task_no']
+    df['task_no'] = U32(df['task_no'])
     del df['code']
     return df[:maxrows]
 
@@ -459,7 +459,7 @@ def view_totlosses(token, dstore):
             name = 'avg_losses-rlzs/' + ltype
             tot = dstore[name][()].sum(axis=0)
         tot_losses += tot
-    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+    return tot_losses.view(oq.loss_dt(F32))
 
 
 def alt_to_many_columns(alt, loss_types):
@@ -506,7 +506,7 @@ def view_portfolio_losses(token, dstore):
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
-    return text_table(array, fmt='%.5E')
+    return text_table(array, fmt='%.5E', ext='org')
 
 
 @view.add('portfolio_loss')
@@ -785,7 +785,7 @@ def view_task_eb(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['task_no']
-    rdata = dstore.read_df('gmf_data/rup_info')
+    rdata = dstore.read_df('ruptimes')
     rd = rdata[rdata.task_no == taskno]
     acc = AccumDict(accum=numpy.zeros(2))
     for rup_id, time, weight in zip(rd.rup_id, rd.time, rd.weight):
@@ -800,8 +800,8 @@ def view_task_eb(token, dstore):
     return msg
 
 
-@view.add('task_cl')
-def view_task_cl(token, dstore):
+
+def view_task(token, dstore, taskname):
     """
     Display info about a given task. Here are a few examples of usage::
 
@@ -811,7 +811,7 @@ def view_task_cl(token, dstore):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=b'classical')
+    data = get_array(dstore['task_info'][()], taskname=taskname.encode('ascii'))
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
@@ -834,6 +834,28 @@ def view_task_cl(token, dstore):
     msg = f'{taskno=:d}, {grp_keys=:s}, {weight=:.0f}, {time=:.0f}s\n%s'\
         % df
     return msg
+
+
+@view.add('task_cl')
+def view_task_cl(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cl:0  # the fastest task
+     $ oq show task_cl:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical')
+
+
+@view.add('task_cd')
+def view_task_cd(token, dstore):
+    """
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task_cd:0  # the fastest task
+     $ oq show task_cd:-1  # the slowest task
+    """
+    return view_task(token, dstore, 'classical_disagg')
 
 
 @view.add('source_data')
@@ -946,6 +968,23 @@ class GmpeExtractor(object):
             trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
+
+
+@view.add('occ_by_trt_smr')
+def view_occ_by_trt_smr(token, dstore):
+    """
+    Display the number of occurrences per trt_smr
+    """
+    try:
+        rups = dstore['filtered_ruptures'][:]
+    except KeyError:
+        rups = dstore['ruptures'][:]
+    arr = fast_agg3(rups, 'trt_smr', ['n_occ'])
+    arr.sort(order='n_occ')
+    df = pandas.DataFrame(
+        dict(trt_smr=arr['trt_smr'], n_occ=arr['n_occ'])
+    ).set_index('trt_smr')
+    return df
 
 
 @view.add('extreme_gmvs')
@@ -1306,7 +1345,7 @@ def view_risk_by_rup(token, dstore):
     $ oq show risk_by_rup
     """
     rbr = dstore.read_df('loss_by_rupture', 'rup_id')
-    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    info = dstore.read_df('ruptimes', 'rup_id')
     rdf = dstore.read_df('ruptures', 'id')
     df = rbr.join(rdf).join(info)[
         ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
@@ -1510,22 +1549,17 @@ def view_rupture(token, dstore):
     return get_ebrupture(dstore, rup_id)
 
 
-@view.add('event_rates')
-def view_event_rates(token, dstore):
+@view.add('events_by_rlz')
+def view_events_rlz(token, dstore):
     """
-    Show the number of events per realization multiplied by risk_time/eff_time
+    Show the number of events per realization
     """
-    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
-    if oq.calculation_mode != 'event_based_damage':
-        return numpy.ones(R)
-    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
-        oq.ses_per_logic_tree_path * oq.investigation_time)
-    if oq.collect_rlzs:
-        return numpy.array([len(dstore['events']) * time_ratio / R])
-    else:
-        rlzs = dstore['events']['rlz_id']
-        return numpy.bincount(rlzs, minlength=R) * time_ratio
+    out = numpy.zeros(R, [('rlz', U32), ('num_events', U32)])
+    rlzs = dstore['events']['rlz_id']
+    out['rlz'] = numpy.arange(R)
+    out['num_events'] = numpy.bincount(rlzs, minlength=R)
+    return out
 
 
 def tup2str(tups):

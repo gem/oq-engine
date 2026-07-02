@@ -1622,9 +1622,9 @@ def corename(src):
 
 
 def fragmentno(src):
-    "Postfix after :.; as an integer"
+    "Postfix after @:.; as an integer"
     # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
-    fragments = re.split('[:.;]', src.source_id)
+    fragments = re.split('[@:.;]', src.source_id)
     if len(fragments) == 1:  # no fragment number, like in AELO for NZL
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16

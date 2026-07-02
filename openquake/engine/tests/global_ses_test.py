@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import numpy
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
@@ -66,9 +67,10 @@ def setup_module():
 
     with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
         evs = parent['events'][:]
-        ae(evs['id'], numpy.arange(33967))  # sequential indices
+        assert evs.dtype.names == ('id', 'rup_id', 'rlz_id', 'year', 'ses_id')
+        ae(evs['id'], numpy.arange(33965))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [23129, 23130, 23131])  # large enough e0
+        ae(e0s[-3:], [23127, 23128, 23129])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
@@ -83,8 +85,9 @@ def setup_module():
         b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
         b'IF-CFS-3', b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
         b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
-        b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
-        b'SSC-mps-4'])
+        b'SSC-mps-0', b'SSC-mps-1:0', b'SSC-mps-1:1', b'SSC-mps-1:2',
+        b'SSC-mps-1:3', b'SSC-mps-2', b'SSC-mps-3:0', b'SSC-mps-3:1',
+        b'SSC-mps-4:0', b'SSC-mps-4:1'])
 
 
 def test_one_site():
@@ -99,6 +102,13 @@ def test_one_site():
     # test multi-model rupture exporter
     [fname] = export(('ruptures', 'csv'), calc.datastore.parent)
     assert os.path.basename(fname) == 'ruptures_rups.csv'
+
+    # check the maximum_distance is different for MIE and EUR
+    mie = calc.oq_by['MIE'].maximum_distance['default'][0]
+    eur = calc.oq_by['EUR'].maximum_distance['default'][0]
+    assert mie == [5, 300]
+    assert eur == [5, 250]
+    assert not hasattr(calc.oqparam, 'maximum_distance')
 
 
 def test_sites():  # 5 sites
@@ -125,11 +135,11 @@ def test_site_model():  # 5 sites
     assert len(df) == 65
     assert df.index.max() < 5
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
-    assert len(rdf) == 15875
+    assert len(rdf) == 15870
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16595
+    assert len(edf) == 16590
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
-    assert len(rel_rups) == 15875
+    assert len(rel_rups) == len(rdf)
 
     op_df = calc.datastore.read_df('operations')
     ae(list(op_df.columns), ['calc_id', 'model', 'sample_ruptures',
@@ -137,7 +147,10 @@ def test_site_model():  # 5 sites
 
 
 def teardown_module():
-    if os.path.exists(RUP_HDF5):
+    dstore = read(RUP_HDF5)
+    occ_df = dstore.read_df('occ_by_trt_smr')
+    assert list(occ_df.columns) == ['trt_smr', 'n_occ', 'name']
+    if sys.platform != 'win32':
         os.remove(RUP_HDF5)
     if last_job:
         # make sure `read` works after rups.hdf5 has been removed

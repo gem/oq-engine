@@ -227,7 +227,7 @@ class GmfComputer(object):
         self.rup_id = rupture.id
         self.seed = rupture.seed
         rupture = rupture.rupture  # the underlying rupture
-        ctxs = cmaker.get_ctxs([rupture], sitecol)
+        ctxs = list(cmaker.get_ctxs([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
@@ -520,7 +520,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): np.array([0.])
                                       for imt in imts}))
-    cmaker.scenario = True
+    cmaker.oq.calculation_mode = 'scenario'
     ebr = EBRupture(
         rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
     ebr.seed = seed

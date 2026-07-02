@@ -43,14 +43,15 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
-from django.core.mail.backends.filebased import EmailBackend as FileEmailBackend
+from django.core.mail.backends.filebased import (
+    EmailBackend as FileEmailBackend)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -62,7 +63,8 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
-    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
+    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION,
+    DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -147,6 +149,8 @@ EXTRACTABLE_RESOURCES = [
     'events',
     'exposure_metadata',
     'exposure_by_location',
+    'exposure_by_lse?secondary_peril=liquefaction',
+    'exposure_by_lse?secondary_peril=landslide',
     'gmf_data',
     'hcurves',
     'hmaps',
@@ -706,7 +710,7 @@ def share_job(user_level, calc_id, share):
         return JsonResponse(message, status=403)
     else:
         raise AssertionError(
-            f"share_job must return 'success' or 'error'!? Returned: {message}")
+            f"share_job must return 'success' or 'error'! Returned: {message}")
 
 
 def get_user_level(request):
@@ -1064,8 +1068,8 @@ def aelo_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1142,8 +1146,8 @@ def impact_callback(
         body += (f'Please find the results here:\n{outputs_uri}')
     connection = None
     if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each email
-        # with a unique name like: file_path/20260319-123456-abcdefg.log
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
         connection = FileEmailBackend(file_path=email_file_path)
     EmailMessage(subject, body, from_email, to,
                  reply_to=[reply_to],
@@ -1165,7 +1169,8 @@ def impact_get_rupture_data(request):
     rup, rupdic, _oqparams, err = impact_validate(
         request.POST, request.user, rupture_path)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)
@@ -1267,6 +1272,14 @@ def get_uploaded_file_path(request, filename):
 
 
 def create_impact_job(request, params, email_file_path):
+    # NOTE: params['rupture_dict'] is a string representation of a
+    # dictionary, not a JSON string, so we can't use json.loads
+    rupdic = ast.literal_eval(params['rupture_dict'])
+    if rupdic['approach'] == 'use_shakemap_from_usgs':
+        params['secondary_perils'] = (
+            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
+        params['intensity_measure_types'] = (
+            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
         user_name=utils.get_username(request))
@@ -1323,8 +1336,8 @@ def impact_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    # NOTE: this is called via AJAX so the context processor isn't automatically
-    # applied, since AJAX calls often do not render templates
+    # NOTE: this is called via AJAX so the context processor isn't
+    # automatically applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
@@ -1344,7 +1357,8 @@ def impact_run(request):
     _rup, _rupdic, params, err = impact_validate(
         request.POST, request.user, rupture_path, station_data_file)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
@@ -1376,7 +1390,8 @@ def impact_run_with_shakemap(request):
         post['shakemap_version'] = shakemap_version
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
     if 'time_event' in request.POST:
@@ -1394,7 +1409,8 @@ def impact_run_with_shakemap(request):
     _rup, rupdic, params, err = impact_validate(
         post, request.user, post['rupture_file'])
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     email_file_path = request.POST.get('email_file_path')
     response_data = create_impact_job(request, params, email_file_path)
@@ -1452,7 +1468,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
+        valid_vs30 = oqvalidation.SITE_CLASSES[
+            asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
         else:
@@ -1492,7 +1509,8 @@ def aelo_run(request):
     if isinstance(res, HttpResponse):  # error
         return res
     lon, lat, site_name, asce_version, site_class, vs30 = res
-    # NOTE: the site_name is transformed into a description and a custom_site_id
+    # NOTE: the site_name is transformed into a description and a
+    # custom_site_id
     description = f'AELO for {site_name}'
 
     # build a LogContext object associated to a database job
@@ -1857,6 +1875,50 @@ def exposure_by_mmi(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
+def exposure_by_lse(request, calc_id):
+    """
+    Return exposure aggregated by secondary peril LSE tiers and tags,
+    by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    secondary_peril = request.GET.get('secondary_peril')
+    assert secondary_peril in ['liquefaction', 'landslide'], (
+        'Please specify secondary_peril: "landslide" or "liquefaction"')
+    discard_empty = request.GET.get('discard_empty', ['1'])[0] == '1'
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(
+                ds,
+                f'exposure_by_lse?secondary_peril={secondary_peril}'
+                f'&discard_empty={discard_empty}')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'exposure_by_lse', tb),
+            content_type='text/plain', status=400)
+    column_description = {
+        col: description
+        for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
+        if col in df.columns}
+    response_data = {'column_descriptions': column_description,
+                     'exposure_by_lse': df.to_dict()}
+    return JsonResponse(response_data)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
     Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
@@ -1867,11 +1929,12 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    if not can_extract(request, what):
-        return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
+    if not (can_extract(request, what)
+            or can_extract(request, what + query_string)):
+        return HttpResponseForbidden()
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2204,7 +2267,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            asce41_m = {asce41_key_mapping.get(k, k): v
+                        for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
@@ -2292,7 +2356,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            pngs['avg_gmf'] = [k for k in ds['png']
+                               if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
@@ -2302,6 +2367,8 @@ def web_engine_get_outputs_impact(request, calc_id):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_aristotle_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
+    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
+    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2326,7 +2393,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
-                       aggrisk_tags=aggrisk_tags)
+                       aggrisk_tags=aggrisk_tags,
+                       exposure_by_liq_lse=exposure_by_liq_lse,
+                       exposure_by_land_lse=exposure_by_land_lse)
                   )
 
 
@@ -2379,6 +2448,9 @@ def can_extract(request, resource):
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
     summarize = get_bool_param(request, 'summarize')
+    secondary_peril = request.GET.get('secondary_peril')
+    if secondary_peril:
+        name += f'?secondary_peril={secondary_peril}'
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -2395,26 +2467,58 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    display_names = {'aggrisk_tags': 'Impact',
-                     'mmi_tags': 'Exposure by MMI',
-                     'losses_by_site': 'Losses by site',
-                     'losses_by_location': 'Losses by location',
-                     'exposure_by_location': 'Exposure by location'}
+    # Using display names of the exporters if available
+    display_names = DISPLAY_NAME.copy()
+    display_names.update({
+        'aggrisk_tags': 'Impact',
+        'losses_by_site': 'Losses by site',
+        'losses_by_location': 'Losses by location',
+        'exposure_by_location': 'Exposure by location',
+        'exposure_by_lse?secondary_peril=liquefaction':
+            'Exposure grouped by Region and by Liquefaction LSE',
+        'exposure_by_lse?secondary_peril=landslide':
+            'Exposure grouped by Region and by Landslide LSE',
+    })
+    loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
+    exposure_names = ['mmi_tags', 'exposure_by_location',
+                      'exposure_by_lse?secondary_peril=liquefaction',
+                      'exposure_by_lse?secondary_peril=landslide']
     table_name = display_names[name] if name in display_names else name
+
+    # Identify string columns from dtype before formatting the headers.
+    # dtype.kind: 'S' = bytes, 'U' = unicode, 'O' = object
+    string_short_names = {
+        col for col in table.columns
+        if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
+    }
+
     table_header = []
     for short_name in table.columns:
-        if short_name in AGGRISK_FIELD_DESCRIPTION:
+        display_name = ''
+        if name in loss_names and short_name in AGGRISK_FIELD_DESCRIPTION:
             display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
-        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
-            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
-        else:
-            display_name = ''
+        elif name in exposure_names:
+            clean_name = short_name
+            if short_name.startswith('value-'):
+                clean_name = short_name.split('value-')[1]
+            if clean_name in EXPOSURE_FIELD_DESCRIPTION:
+                display_name = EXPOSURE_FIELD_DESCRIPTION[clean_name]
         # avoiding to show the internal short names when showing
         # the summary table
         if summarize and name == 'aggrisk_tags':
             table_header.append(display_name)
         else:
             table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+
+    # string_columns must contain the formatted header strings that actually
+    # appear in table_header so that `header in string_columns` in the
+    # template matches correctly.
+    string_columns = {
+        header
+        for header, short_name in zip(table_header, table.columns)
+        if short_name in string_short_names
+    }
+
     table_contents = table.to_numpy()
     if summarize and name == 'aggrisk_tags':  # the impact table
         table_header = table_header[1:-1]
@@ -2432,13 +2536,21 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+
+    # Decode byte strings to plain str
+    table_rows = [
+        list(zip(table_header, decode(row)))
+        for row in table_contents
+    ]
+
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,
                    'is_summary': summarize,
                    'internal_name': name,
                    'table_name': table_name,
                    'table_header': table_header,
-                   'table_contents': table_contents})
+                   'table_rows': table_rows,
+                   'string_columns': string_columns})
 
 
 @csrf_exempt

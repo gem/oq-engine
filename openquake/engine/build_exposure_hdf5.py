@@ -23,6 +23,7 @@ import logging
 import pandas
 import numpy
 import h5py
+import re
 from openquake.baselib import sap, general, performance, parallel, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.hazardlib.countries import country2code, REGIONS
@@ -30,7 +31,7 @@ from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import expo_to_hdf5
+from openquake.commonlib import expo_to_hdf5, readinput
 
 U16 = numpy.uint16
 F32 = numpy.float32
@@ -80,6 +81,9 @@ embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
     vfuncs = RiskFuncList()
     L = len('vulnerability_')
     for name in os.listdir(vulndir):
+        if not name.startswith('vulnerability_') or not name.endswith('.xml'):
+            logging.warning(f'Ignoring unexpected file in {vulndir}: {name}')
+            continue
         ltype = name[L:].split('.')[0]
         if ltype in ('total', 'structural', 'nonstructural'):
             # not used by OQImpact
@@ -98,12 +102,12 @@ embodied_carbon_vulnerability_file = vulnerability_embodied_carbon.xml
             vf.kind = 'vulnerability'
             vfuncs.append(vf)
     logging.info(f'Read {len(vfuncs)} functions')
-    oq = OqParam(calculation_mode='custom')
+    oq = OqParam(**readinput.oqdict(calculation_mode='custom'))
     crm = CompositeRiskModel(oq, vfuncs)
     crm.region = os.path.basename(vulndir)
     return crm
 
-    
+
 def get_gsim_lt(cwd):
     """
     :returns: a GsimLogicTree instance
@@ -133,33 +137,39 @@ def build_site_model(grm_dir):
     """
     factor = float(os.environ.get('OQ_SAMPLE_ASSETS', 1))
     dfs = []
-    for cwd, dirs, files in os.walk(grm_dir):
-        for f in files:
-            if f.startswith('Site_model_') and f.endswith('.csv'):
+    # NOTE: assuming the site-models repository is cloned inside the grm_dir
+    site_models_dir = os.path.join(grm_dir, 'site-models')
+    for region in REGIONS:
+        impact_dir = os.path.join(site_models_dir, region, 'Impact')
+        if not os.path.isdir(impact_dir):
+            raise FileNotFoundError(
+                f'Folder "{impact_dir}" was not found.')
+        for f in os.listdir(impact_dir):
+            if re.fullmatch(r'Site_model_[A-Z]{3}\.csv', f):
                 print('Reading %s' % f)
-                df = pandas.read_csv(os.path.join(cwd, f))
+                df = pandas.read_csv(os.path.join(impact_dir, f))
                 if factor < 1:
                     df = general.random_filter(df, factor*10)
                 if len(df):
                     dfs.append(df)
     columns = set()
-    n = 0
+    n_rows = 0
     for df in dfs:
         columns.update(df.columns)
-        n += len(df)
+        n_rows += len(df)
     dt = [(col, site.site_param_dt[col]) for col in sorted(columns)]
-    sm = numpy.zeros(n, dt)
+    sm = numpy.zeros(n_rows, dt)
     row = 0
     for df in dfs:
-        n = len(df)
-        recs = sm[row:row + n]
+        chunk = len(df)
+        recs = sm[row:row + chunk]
         for col in df.columns:
             val = df[col].to_numpy()
             if col in ('lon', 'lat'):
                 recs[col] = numpy.round(val, 5)
             else:
                 recs[col] = val
-        row += n
+        row += chunk
     return discard_dupl(sm)
 
 
@@ -199,7 +209,10 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
                 reader = csv.reader(f)
                 headers = next(reader, None)
                 if not headers or fieldname not in headers:
-                    continue  # skip if the field is missing
+                    logging.warning(
+                        f'Field "{fieldname}" not found in {file_path},'
+                        f' skipping')
+                    continue
                 field_index = headers.index(fieldname)
                 for i, row in enumerate(reader, start=2):  # skip header
                     if len(row) > field_index:
@@ -250,9 +263,10 @@ def main(grm_dir, wfp=False, action='build'):
             print(f'Reading {xml}')
             exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
-        n = len(tmaps) + len(exposures_xml) + len(csv_files)
-        print(f'Zipping {n} files')
-        a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
+        n_files = len(tmaps) + len(exposures_xml) + len(csv_files)
+        print(f'Zipping {n_files} files')
+        a = general.zipfiles(
+            tmaps + exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
     elif action == 'debug':
@@ -267,8 +281,8 @@ def main(grm_dir, wfp=False, action='build'):
     sample = os.environ.get('OQ_SAMPLE_ASSETS')
     with dstore, job:
         with mon:
-            n = build_site_model_gsims(grm_dir, dstore)
-            logging.info('Stored {:_d} sites'.format(n))
+            n_sites = build_site_model_gsims(grm_dir, dstore)
+            logging.info('Stored {:_d} sites'.format(n_sites))
             vulndir = os.path.join(
                 grm_dir, 'Vulnerability', 'Global', 'vulnerability')
             region = REGIONS[0]

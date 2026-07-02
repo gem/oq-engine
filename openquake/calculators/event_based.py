@@ -20,6 +20,7 @@ import io
 import time
 import os.path
 import logging
+import h5py
 import numpy
 import pandas
 from shapely import geometry
@@ -27,12 +28,14 @@ from openquake.baselib import (
     config, hdf5, parallel, general, performance)
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import imt, valid, logictree, InvalidFile
+from openquake.hazardlib.countries import ALIASES
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -47,7 +50,7 @@ from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.calculators import base, views
+from openquake.calculators import base, views, preclassical
 from openquake.calculators.getters import sig_eps_dt, get_ebrupture
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.extract import Extractor
@@ -244,22 +247,16 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
     return dic
 
 
-def event_based(rups, cmaker, sids, secperils, dstore, monitor):
+def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    oq = cmaker.oq
+    cmaker = cmakers[0]
     rmon = monitor('reading ruptures', measuremem=True)
     smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    cmaker.scenario = 'scenario' in oq.calculation_mode
-    cmaker.init_monitoring(monitor)
-    with rmon:
-        try:
-            proxies = get_proxies(dstore.filename, rups)
-        except KeyError:  # search in the parent
-            proxies = get_proxies(dstore.parent.filename, rups)
+    maxdist = cmaker.oq.maximum_distance(cmaker.trt)
     with smon:
         with dstore as f:
             try:
@@ -267,10 +264,18 @@ def event_based(rups, cmaker, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
-        srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
+        srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
-    for block in block_splitter(proxies, chunksize, lambda p: 1):
-        yield _event_based(block, cmaker, secperils, srcfilter, cmon, umon)
+    for rups, cmaker in zip(allrups, cmakers):
+        if not hasattr(cmaker, 'ctx_mon'):  # not already initialized
+            cmaker.init_monitoring(monitor)
+        with rmon:
+            try:
+                proxies = get_proxies(dstore.filename, rups)
+            except KeyError:  # search in the parent
+                proxies = get_proxies(dstore.parent.filename, rups)
+        for block in block_splitter(proxies, chunksize, lambda p: 1):
+            yield _event_based(block, cmaker, secperils, srcfilter, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -304,6 +309,8 @@ def filter_stations(station_df, complete, rup, maxdist):
 def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
+    if oq.mosaic_model and 'scenario' not in oq.calculation_mode:
+        allrups = allrups[in_mosaic(allrups)]
     rup_id = os.environ.get('OQ_RUPTURE')
     if rup_id is not None:
         rup_id = I64(rup_id.split(','))
@@ -337,7 +344,6 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
-    assert totw, 'All ruptures have been filtered out'
     logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -347,11 +353,12 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
 
 def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     """
-    :returns: list of starmap arguments
+    :returns: (list of starmap arguments, oq_by dictionary)
     """
     trts = {}
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
+    # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
@@ -363,17 +370,33 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
             rlzs_by_gsim[model, trt_smr] = rbg
 
     # store the filtered ruptures for debugging purposes
+    oq.mags_by_trt = AccumDict(accum=set())
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
         dstore['relevant_events'] = events[
             numpy.isin(events['rup_id'], filrups['id'])]
 
+        # populate oq_by when the parent is a SES.hdf5 file
+        grp = dstore.parent['oqparam']
+        if isinstance(grp, h5py.Group):
+            # tested in global_ses_test
+            oq_by = {}
+            for name in grp:
+                model = name[-3:]  # i.e. AfricaNAF -> NAF
+                if model in ALIASES:
+                    model = ALIASES[model]  # TWN -> TEM
+                oq_by[model] = oq.from_parent(
+                    dstore.parent[f'oqparam/{name}'], new=True)
+                oq_by[model].mags_by_trt = AccumDict(accum=set())
+        else:
+            oq_by = {'???': oq}
+    else:
+        oq_by = {'???': oq}  # parent is not a SES.hdf5 file
+
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
     allargs = []
-    oq.mags_by_trt = AccumDict(accum=set())
-
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
@@ -382,21 +405,41 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
             # full_lt is complex and was generated by import_ruptures
             model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
-        mags = [magstr(mag) for mag in numpy.unique(
-            numpy.round(rups['mag'], 2))]
-        oq.mags_by_trt[trt].update(mags)
+        if len(oq_by) == 1:
+            [oqparam] = oq_by.values()
+        elif oq.calculation_mode == 'event_based':
+            oqparam = oq_by.get(model, oq)  # supporting old SES.hdf5
+        else:
+            oqparam = oq_by[model]  # early error in risk calculations
+        oqparam.mags_by_trt[trt].update(
+            magstr(mag) for mag in numpy.unique(numpy.round(rups['mag'], 2)))
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
-                              oq, extraparams=sitecol.array.dtype.names)
-        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+                              oqparam, extraparams=sitecol.array.dtype.names)
+        cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for block in block_splitter(rups, maxw * 2, rup_weight):
-            args = (numpy.array(block), cmaker, sitecol.sids,
-                    sec_perils, dstore)
-            allargs.append(args)
-    for trt, mags in oq.mags_by_trt.items():
-        oq.mags_by_trt[trt] = sorted(mags)
-    return allargs
+        for rupblock in block_splitter(rups, maxw, rup_weight):
+            allargs.append((rupblock, cmaker, model))
+
+    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
+    for oqp in oq_by.values():
+        for trt, mags in oqp.mags_by_trt.items():
+            oqp.mags_by_trt[trt] = sorted(mags)
+    return allargs, oq_by
+
+
+def _collect(allargs, maxw, sids, sec_perils, dstore):
+    # allargs is a list [(rupblock, cmaker, model) ...]
+    # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
+    out = []
+    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
+                                  key=lambda item: item[2]):  # by model
+        rupblks, cmakers, models = zip(*triples)
+        allrups = general.WeightedSequence([
+            (numpy.array(rb), rb.weight) for rb in rupblks])
+        out.append((allrups, cmakers, sids, sec_perils, dstore))
+    # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
+    return out
 
 
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
@@ -409,7 +452,6 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     trt = full_lt.trts[0]
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
     cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
-    cmaker.scenario = True
     maxdist = oq.maximum_distance(cmaker.trt)
     srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
     sites = srcfilter.get_close_sites(proxy, cmaker.trt)
@@ -481,7 +523,8 @@ def run(func, oq, rup0, calc):
             return
 
     assetcol = getattr(calc, 'assetcol', None)
-    allargs = get_allargs(oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
+    allargs, calc.oq_by = get_allargs(
+        oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
@@ -554,7 +597,7 @@ def read_gsim_lt(oq):
                 oq.rupture_dict)
         if oq.gsim != '[FromFile]':
             raise ValueError(
-                'In Aristotle mode the gsim can not be specified in'
+                'In IMPACT mode the gsim can not be specified in'
                 ' the job.ini: %s' % oq.gsim)
         if oq.tectonic_region_type == '*':
             raise ValueError(
@@ -564,6 +607,34 @@ def read_gsim_lt(oq):
     else:
         gsim_lt = readinput.get_gsim_lt(oq)
     return gsim_lt
+
+
+def in_mosaic(rup_array):
+    """
+    Extract the ruptures associated to a model.
+    :returns: slice(None) or a mask
+    """
+    bad = rup_array['model'] == b'???'
+    outside = bad.sum()
+    if outside:
+        logging.error('There are %d ruptures outside the '
+                      'mosaic', outside)
+        return ~bad
+    return slice(None)
+
+
+def identical_to_any(group, groups):
+    """
+    :returns: True if the grp is contained in the groups
+    """
+    identical = numpy.ones(len(groups), bool)
+    for g, grp in enumerate(groups):
+        if len(group) != len(grp):
+            identical[g] = False
+        else:
+            for src1, src2 in zip(grp, group):
+                identical[g] *= src1 is src2
+    return identical.any()
 
 
 @base.calculators.add('event_based', 'scenario')
@@ -594,8 +665,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 geom = geometry.shape(f[0].geometry)
             self.mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
-        elif (oq.mosaic_model or
-              logs.get_country_or_model(oq.inputs['job_ini'])):
+        elif oq.mosaic_model:
             # tested in event_based/case_30
             self.mosaic_df = readinput.read_mosaic_df()
         else:
@@ -636,25 +706,46 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        maxweight = self.counting_ruptures()
+        maxw = self.counting_ruptures()
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        logging.info('Building ruptures')
-        g_index = 0
-        for sg_id, sg in enumerate(self.csm.src_groups):
-            if not sg.sources:
+        logging.info('Building ruptures from %d groups',
+                     len(self.csm.src_groups))
+        trt_smrs = self.csm.get_trt_smrs()
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
+
+        sent = []
+        for sg_id, cmaker in cmakers.enumerate():
+            sg = self.csm.src_groups[sg_id]
+            if sent and identical_to_any(sg, sent):
+                # do not send twice the same group, happens in kor_small
+                # TODO: see if we can improve this logic, for instance by
+                # not keeping the duplicated groups in the first place
                 continue
-            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
-            cmaker = ContextMaker(sg.trt, rgb, oq)
-            cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
-            g_index += len(rgb)
+            sent.append(sg)
+
             param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
-            for src_group in sg.split(maxweight):
-                allargs.append((src_group, param))
+            mfs = [src for src in sg if src.code == b'F']
+            if sg.atomic:
+                allargs.append((sg, param))
+            elif mfs:
+                # send one multifault source at the time
+                # tested in event_based case_29
+                for mf in mfs:
+                    allargs.append(([mf], param))
+                others = [src for src in sg if src.code != b'F']
+                if others:
+                    allargs.append((others, param))
+            else:
+                for block in block_splitter(
+                        sg.sources, maxw, lambda src: src.weight):
+                    allargs.append((block, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -680,17 +771,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 if len(self.mosaic_df):
                     # tested in global_ses
-                    rup_array['model'] = models = geolocate(
+                    rup_array['model'] = geolocate(
                         rup_array['hypo'], self.mosaic_df)
-                    if 'geometry' not in oq.inputs:
-                        # find ruptures not associated to a model
-                        bad = models == b'???'
-                        outside = bad.sum()
-                        if outside:
-                            logging.error('There are %d ruptures outside the '
-                                          'mosaic', outside)
-                            rup_array = rup_array[~bad]
-                            geom = geom[~bad]
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
@@ -725,7 +807,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
-                hdf5.extend(self.datastore['gmf_data/rup_info'], times)
+                hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
@@ -877,13 +959,13 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if not hasattr(self, 'sec_perils'):
             self.add_sec_perils(oq)
+        dstore.create_dset('ruptimes', rup_dt)
         if oq.ground_motion_fields and 'gmf_data' not in dstore:
             # if GMFs not already created by store_gmfs_from_shakemap
             prim_imts = oq.get_primary_imtls()
             base.create_gmf_data(dstore, prim_imts, oq.sec_imts,
                                  E=E, R=oq.number_of_logic_tree_samples)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
-            dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
@@ -916,7 +998,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         elif N > 50_000:
             logging.warning(
-                f'There are many sites ({N}), computing `avg_gmf` will'
+                f'There are many sites ({N}), computing `avg_gmf` will '
                 'be really slow, you should reduce `gmf_max_gb`')
 
         rlzs = self.datastore['events'][:]['rlz_id']

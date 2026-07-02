@@ -55,6 +55,12 @@ def main(yes=False):
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
+            # remove also files left over by PRAGMA journal_mode = WAL
+            for suffix in ('-wal', '-shm'):
+                leftover = dbpath + suffix
+                if os.path.exists(leftover):
+                    os.remove(leftover)
+                    print('Removed %s' % leftover)
 
 
 main.yes = 'confirmation'

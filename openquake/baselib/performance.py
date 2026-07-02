@@ -371,7 +371,7 @@ class Monitor(object):
         Save the measurements on the performance file
         """
         if getattr(h5, 'mode', 'r') == 'r':
-            # in AristotleParam h5 is replaced with a dictionary
+            # in ImpactParam h5 is replaced with a dictionary
             return
         data = self.get_data()
         if len(data):
@@ -459,10 +459,10 @@ class Monitor(object):
         msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
                               self.operation, self.username)
         if self.measuremem:
-            return '<%s, duration=%ss, memory=%s>' % (
+            return '<%s, duration=%.4fs, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))
         elif self.duration:
-            return '<%s, duration=%ss, counts=%s>' % (
+            return '<%s, duration=%.4fs, counts=%s>' % (
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg

@@ -28,7 +28,7 @@ import pandas
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.general import decode
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
@@ -55,7 +55,7 @@ def export_ruptures_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = dstore['oqparam']
+    oq = datastore.get_oq(dstore)
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
@@ -508,7 +508,19 @@ def export_gmf_data_hdf5(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
         f['sitecol'] = dstore['sitecol'].complete
-        dstore.hdf5.copy('gmf_data', f)
+        gd = dstore['gmf_data']
+        grp = f.create_group('gmf_data')
+        grp.attrs.update(gd.attrs)
+        for col in gd:
+            name = f'gmf_data/{col}'
+            obj = dstore[name]
+            dset = f.create_dataset(
+                name, data=obj[:], dtype=obj.dtype,
+                compression=obj.compression)
+            dset.attrs.update(obj.attrs)
+        # NB: dstore.hdf5.copy('gmf_data', f) can produce the error
+        # Unable to synchronously copy object (ring type mismatch for cache)
+        # with `oq run demos/risk/EventBasedDamage/job.ini -e csv,hdf5`
     return [fname]
 
 
@@ -538,18 +550,14 @@ def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     if dstore.parent:
         sitecol = dstore.parent['sitecol']
-        if 'complete' in dstore.parent:
-            sitecol.complete = dstore.parent['complete']
     else:
         sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.complete.sids)
-    dic['lon'] = sitecol.complete.lons
-    dic['lat'] = sitecol.complete.lats
+        dic = dict(site_id=sitecol.sids)
+    dic['lon'] = sitecol.lons
+    dic['lat'] = sitecol.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, C)
     imts = list(oq.imtls)
     for m, imt in enumerate(oq.all_imts()):

@@ -19,48 +19,46 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import os
-import re
-import ast
-import sys
-import json
-import time
-import pickle
-import socket
-import signal
-import getpass
-import logging
-import platform
 import functools
-from unittest import mock
-from os.path import getsize
+import getpass
+import json
+import logging
+import os
+import pickle
+import platform
+import re
+import signal
+import socket
+import sys
+import time
 from datetime import datetime, timezone
-import requests
-import psutil
-import toml
+from os.path import getsize
+from unittest import mock
+
 import h5py
 import numpy
-import pandas
+import psutil
+import requests
+from openquake.commonlib import logs, readinput
+
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
-from urllib.request import urlopen, Request
-from openquake.baselib.general import decode
-from openquake.baselib import (
-    hdf5, parallel, general, config, slurm, sap, workerpool as w)
-from openquake.hazardlib import InvalidFile
-from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, datastore, logs
-from openquake.calculators import base
-from openquake.calculators.base import expose_outputs
+from urllib.request import Request, urlopen
 
+from openquake.baselib import config, general, parallel, slurm
+from openquake.baselib import workerpool as w
+from openquake.baselib.general import decode
+from openquake.calculators import base
+from openquake.commonlib.oqvalidation import OqParam
 
 UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
-
+U32 = numpy.uint32
+F32 = numpy.float32
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
@@ -78,11 +76,13 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-def set_concurrent_tasks_default(calc, factor):
+def set_concurrent_tasks_default(calc, mulfactor):
     """
     Look at the number of available workers and update the parameter
-    OqParam.concurrent_tasks.default. Abort the calculations if no
-    workers are available. Do nothing for trivial distributions.
+    OqParam.concurrent_tasks.default by taking into account the
+    multiplicative factor `mulfactor` (2 except in multi-jobs).
+    Abort the calculations if no workers are available.
+    Do nothing if the parallelization is disabled.
     """
     dist = parallel.oq_distribute()
     if dist in ('zmq', 'slurm'):
@@ -95,12 +95,15 @@ def set_concurrent_tasks_default(calc, factor):
 
     else:
         num_workers = parallel.num_cores
-    parallel.Starmap.CT = num_workers * factor
-    OqParam.concurrent_tasks.default = num_workers * factor
+    concurrent_tasks = int(num_workers * mulfactor)
+    parallel.Starmap.CT = concurrent_tasks
+    OqParam.concurrent_tasks.default = concurrent_tasks
+    print
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
-        logging.warning('Using %d %s workers', num_workers, dist)
+        logging.warning(f'Using {num_workers} {dist} workers, '
+                        f'{concurrent_tasks=}')
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -174,7 +177,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log):
+def run_calc(log, mulfactor=2):
     """
     Run a calculation.
 
@@ -214,12 +217,11 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        workflow = oqparam.calculation_mode == 'workflow'
-        set_concurrent_tasks_default(calc, 1 if workflow else 2)
+        set_concurrent_tasks_default(calc, mulfactor)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
-        expose_outputs(calc.datastore)
+        base.expose_outputs(calc.datastore)
         calc.datastore.close()
         outs = '\n'.join(logs.dbcmd('list_outputs', log.calc_id, False))
         logging.info(outs)
@@ -250,7 +252,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     jobs = []
     for job_ini in job_inis:
         if isinstance(job_ini, dict):
-            dic = job_ini
+            dic = readinput.oqdict(job_ini)
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
@@ -317,6 +319,8 @@ def notify_job_complete(job_id, notify_to, exc=None):
 
 
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
+    if concurrent_jobs > 1:
+        print(f'================ Using {concurrent_jobs=} ==================')
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -335,9 +339,12 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(ctx,) for ctx in jobctxs]
-            names = [ctx.params['mosaic_model'] or None for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
+            args = [(job,) for job in jobctxs]
+            names = []
+            for job in jobctxs:
+                name = f"{job.params['mosaic_model']}{job.calc_id}"
+                names.append(name)
+            parallel.multispawn(run_calc, args, names, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -410,325 +417,12 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
     if concurrent_jobs > 1:
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+        with mock.patch.dict(os.environ, OQ_DISTRIBUTE='zmq'):
             _run(jobctxs, job_id, nodes, sbatch,
                  concurrent_jobs, notify_to)
     else:
-        _run(jobctxs, job_id, nodes, sbatch,
-             concurrent_jobs, notify_to)
+        _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to)
     return jobctxs
-
-
-OVERRIDABLE_PARAMS = (
-    'area_source_discretization',
-    'calculation_mode',
-    'cache',
-    'concurrent_tasks',
-    'discard_assets',
-    'ground_motion_fields',
-    'hazard_calculation_id',
-    'number_of_logic_tree_samples',
-    'ses_per_logic_tree_path',
-    'minimum_magnitude',
-    'mosaic_model',
-    'ps_grid_spacing',
-    'postproc_func',
-    'postproc_args',
-    'postrisk_func',
-    'postrisk_args',
-    'return_periods',
-    'ses_seed',
-    'sites',
-    'siteid')
-
-
-class _Workflow:
-    # workflow objects are instantiated by the function `read_many`
-    def __init__(self, workflow_toml, defaults, ddic, prefix=''):
-        self.workflow_toml = workflow_toml
-        self.workflow_dir = os.path.dirname(workflow_toml)
-        self.defaults = defaults
-        self.description = defaults.pop('description')
-        self.checkout = self.defaults.pop('checkout', {})  # repo->branch
-        self.may_fail = self.defaults.pop('may_fail', [])
-        for value in self.checkout:
-            repodir = os.path.join(self.workflow_dir, value)
-            if not os.path.exists(repodir):
-                raise FileNotFoundError(repodir)
-        inis = []
-        names = []
-        self.success = []
-        for k, dic in ddic.items():
-            assert len(k) <= 20, k
-            if k == 'success':
-                if isinstance(dic, dict):
-                    self.success = [dic]
-                elif isinstance(dic, list):
-                    self.success = dic
-                else:
-                    raise ValueError('"success": %s', dic)
-                for s in self.success:
-                    s['func']  # each success dictionary must contain a func
-                self.fix_paths(self.success)
-                continue
-
-            assert k[0].isupper(), k
-            assert isinstance(dic, dict), dic
-            self.fix_paths([dic])
-            inis.append(dic)
-            names.append(prefix + k)
-
-        check_unique(names, workflow_toml)
-        self.inis = numpy.array(inis)
-        self.names = numpy.array(names)
-
-    def fix_paths(self, dicts):
-        """
-        Expand relative path names to absolute path names
-        """
-        for dic in dicts:
-            for key, val in dic.items():
-                if isinstance(val, str) and val.endswith(
-                        ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = path = os.path.join(self.workflow_dir, val)
-                    if 'out' in key and not os.path.exists(path):
-                        open(path, 'w').close()  # touch the file
-
-
-    def validate(self):
-        """
-        Convert the .inis dictionaries into validated oqparam instances
-        """
-        assert len(self.inis), self
-        oqs = []
-        for i, dic in enumerate(self.inis):
-            params = readinput.get_params(dic.pop('ini'))
-            for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, self.defaults.get(param))
-                if val is not None:
-                    params[param] = str(val)
-            oq = OqParam(**params)
-            oq.validate()
-            self.inis[i] = params
-            oqs.append(oq)
-        if 'classical' in oq.calculation_mode:
-            for oq in oqs[1:]:
-                if oq.retperiods != oqs[0].retperiods:
-                    raise NameError(
-                        f'Expected return_periods = {oqs[0].retperiods}, '
-                        f'got {oq.retperiods}')
-        if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
-            for oq in oqs[1:]:
-                if oq.eff_time != oqs[0].eff_time:
-                    raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
-                                    f'got {oq.eff_time}')
-        return oqs
-
-    def to_toml(self):
-        """
-        :returns: a TOML representation of the Workflow object
-        """
-        dic = {'workflow': self.defaults}
-        for name, ini in zip(self.names, self.inis):
-            dic[name] = ini
-        dic['success'] = self.success
-        return toml.dumps(dic)
-
-    def __repr__(self):
-        return '<Workflow %s>' % self.workflow_toml
-
-
-# called twice, internally and also externally to Workflow objects
-def check_unique(names, workflow_toml):
-    uni, cnt = numpy.unique(names, return_counts=1)
-    if (cnt > 1).any():
-        raise ValueError(f'There are duplicates in {workflow_toml}: '
-                         f'{uni[cnt > 1]}')
-
-
-def read_many(workflow_toml, params={}, validate=True):
-    """
-    Read the workflow file and returns a list a workflow dictionary.
-    Set 'workflow_dir', 'success' and 'inis' on each.
-    Also expand relative paths to absolute paths for parameters following
-    the `_file` name convention.
-    """
-    out = []
-    prefix = ''
-    try:
-        with open(workflow_toml, encoding='utf8') as f:
-            wfdict = toml.load(f)
-        if 'multi' in wfdict:
-            multi = wfdict.pop('multi')
-
-            # include case
-            fnames = multi['workflow'].pop('include', [])
-            if fnames:
-                for fname in fnames:
-                    out.extend(read_many(fname, multi, validate))
-                return out
-
-            # regular case
-            for prefix, ddic in wfdict.items():
-                key, dic = next(iter(ddic.items()))
-                if 'ini' not in dic:
-                    raise SyntaxError(
-                        f'{workflow_toml}: missing ini in {prefix}.{key}')
-
-                wf = _Workflow(workflow_toml, multi['workflow'] | params,
-                               ddic, prefix)
-                if validate:
-                    wf.validate()
-                out.append(wf)
-        elif 'workflow' in wfdict:
-            defaults = wfdict.pop('workflow') | params
-            wf = _Workflow(workflow_toml, defaults, wfdict)
-            if validate:
-                wf.validate()
-            out.append(wf)
-        else:
-            raise InvalidFile('missing [workflow] or [multi.workflow]')
-    except Exception as exc:
-        print(f'Error while parsing {workflow_toml} {prefix}',
-              file=sys.stderr)
-        raise exc
-    return out
-
-
-def prepare_workflow(params, workflow_toml, pdb):
-    """
-    Create or retrieve a workflow record and create or update
-    the workflow database
-    """
-    try:
-        # retrieve an old workflow
-        workflow_id = params.pop('workflow_id')
-    except KeyError:
-        # create a new workflow
-        [wfjob] = create_jobs([{'calculation_mode': 'workflow'}], pdb=pdb)
-        workflow_id = wfjob.calc_id
-        new = True
-    else:
-        wfjob = logs.init({'job_id': workflow_id})
-        new = False
-    with wfjob:
-        workflows = read_many(workflow_toml, params)
-        names = numpy.concatenate([wf.names for wf in workflows])
-        n = len(names)
-        check_unique(names, workflow_toml)
-        wfdic = dict(base_path=os.path.dirname(workflow_toml),
-                     calculation_mode='workflow')
-        if new:
-            descr = workflows[0].description
-            dstore = datastore.read(workflow_id, 'w')
-            wf_df = pandas.DataFrame(
-                dict(name=names,
-                     calc_id=[0] * n,
-                     status=['created'] * n,
-                     size_mb=[0.0] * n)
-            ).set_index('name')
-            dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
-            dstore.create_df('workflow', wf_df.reset_index())
-            dstore.create_dset('success', hdf5.vstr, len(workflows))
-        else:
-            # continue an existing workflow
-            wfdic['job_id'] = workflow_id
-            dstore = datastore.read(workflow_id, 'r+')
-            descr = wfjob.get_job().description
-        wfjob.workflows = workflows
-    dstore['/'].attrs['engine_version'] = general.engine_version()
-    return wfjob, dstore, names, descr
-
-
-def format_dic(success):
-    """
-    Format the success dictionary; for instance::
-
-      {'func': 'openquake.engine.postjobs.import_outputs',
-       'out_types': ['hcurves', 'hmaps-stats']} =>
-      openquake.engine.postjobs.import_outputs(
-        out_types=['hcurves', 'hmaps-stats'])
-    """
-    dic = success.copy()
-    func = dic.pop('func')
-    kwargs = ', '.join(f'{k}={v!r}' for k, v in dic.items())
-    return f'{func}({kwargs})'
-
-
-def run_workflow(workflow_toml, params, concurrent_jobs=None, nodes=1,
-                 sbatch=False, notify_to=None, pdb=False):
-    """
-    Run sequentially multiple batches of calculations specified by
-    workflow files.
-    """
-    t0 = time.time()
-    wfjob, dstore, names, descr = prepare_workflow(params, workflow_toml, pdb)
-    name2idx = {name: i for i, name in enumerate(names)}
-    calc_dset = dstore['workflow/calc_id']
-    status_dset = dstore['workflow/status']
-    size_dset = dstore['workflow/size_mb']
-    success_dset = dstore['success']
-    successes = success_dset[:]  # array of lists
-    with dstore:
-        for wf_no, wf in enumerate(wfjob.workflows):
-            if wf_no == 0:  # at first step
-                kw = wf.inis[0].copy()
-                kw.update(calculation_mode='workflow', description=descr)
-                dstore['oqparam'] = OqParam(**kw)
-            failed, calcs, new, new_names = 0, [], [], []
-            for name, ini in zip(wf.names, wf.inis):
-                idx = name2idx[name]
-                if status_dset[idx] == b'complete':
-                    # already done; notice the conversion numpy.int64 -> int
-                    calcs.append(int(calc_dset[idx]))
-                    with wfjob:
-                        logging.info(f'{name} already computed')
-                else:
-                    new.append(ini)
-                    new_names.append(name)
-            if new:
-                jobs = create_jobs(new, log_level=logging.INFO if
-                                   concurrent_jobs == 1 else logging.WARNING,
-                                   workflow_id=wfjob.calc_id)
-                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-                for job, name in zip(jobs, new_names):
-                    rec = job.get_job()
-                    idx = name2idx[name]
-                    calc_dset[idx] = rec.id
-                    status_dset[idx] = rec.status
-                    size_dset[idx] = rec.size_mb
-                    if rec.status == 'failed':
-                        if name not in wf.may_fail:
-                            failed += 1
-                    else:
-                        calcs.append(job.calc_id)
-            literal_dics = successes[wf_no].decode('ascii')
-            if literal_dics:
-                successes[wf_no] = ast.literal_eval(literal_dics)
-            else:
-                successes[wf_no] = []
-            with wfjob:
-                for success in wf.success:
-                    if success in successes[wf_no]:
-                        logging.info(f'{format_dic(success)} already called')
-                    elif not failed:
-                        logging.info(f'{format_dic(success)}')
-                        successes[wf_no].append(success.copy())
-                        success['dstore'] = dstore
-                        success['calcs'] = calcs
-                        sap.run_func(success)
-    for wf_no, succ in enumerate(successes):
-        success_dset[wf_no] = str(succ)  # list of dictionaries
-    dt = (time.time() - t0) / 3600.
-    with wfjob:
-        logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
-    if failed:
-        mask = status_dset[:] == b'failed'
-        dic = {str(name): int(calc) for name, calc in
-               zip(names[mask], calc_dset[:][mask])}
-        with wfjob:
-            logging.warning(f'The following jobs failed: {dic}')
-    return wfjob.calc_id
 
 
 def version_triple(tag):
@@ -786,8 +480,9 @@ if __name__ == '__main__':
         jobctxs = pickle.load(f)
     try:
         if len(jobctxs) > 1 and jobctxs[0].multi:
+            names = [f'job#{j.calc_id}' for j in jobctxs]
             parallel.multispawn(run_calc, [(ctx,) for ctx in jobctxs],
-                                parallel.Starmap.CT // 10 or 1)
+                                names, parallel.Starmap.CT // 10 or 1)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

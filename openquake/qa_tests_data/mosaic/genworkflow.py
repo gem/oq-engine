@@ -2,8 +2,11 @@ import os
 import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import geolocate
-from openquake.hazardlib.countries import MODELS, REGIONS, country2code
+from openquake.hazardlib.countries import (
+    MODELS, ALIASES, REGIONS, country2code)
 from openquake.commonlib.readinput import read_mosaic_df
+
+MODELDIRS = [ALIASES.get(model, model) for model in MODELS]  # JPN->JPA
 
 
 TOML = '''\
@@ -15,10 +18,11 @@ number_of_logic_tree_samples = {}
 ses_per_logic_tree_path = {}
 minimum_magnitude = {}
 
+{}
+
 [success]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "{}"
-{}
 '''
 
 
@@ -31,9 +35,9 @@ def save(mosaic_dir, name, toml):
     return fname
 
 
-def add_checkout(lst, models):
-    for mod in models:
-        lst.append(f'checkout.{mod} = "master"')
+def add_checkout(lst, repos, branch="v2026_updates"):
+    for repo in repos:
+        lst.append(f'checkout."{repo}" = "{branch}"')
     lst.append('')
 
 
@@ -59,7 +63,7 @@ def aelo(mosaic_dir):
     sites, siteid = get_aelo_sites(site_file)
     lst = ['[workflow]\ndescription="AELO"']
     models = [mod for mod in MODELS if mod not in {'USA', 'ALS', 'HAW'}]
-    add_checkout(lst, models)
+    add_checkout(lst, MODELDIRS)
     for mod in models:
         if mod == 'CND':
             mod = 'CAN'
@@ -71,25 +75,37 @@ def aelo(mosaic_dir):
     return save(mosaic_dir, 'AELO.toml', '\n'.join(lst))
 
 
-def ghm(mosaic_dir, legacy=False):
-    "Build GHM.toml"
+def extract(basedir, job_ini):
+    """
+    Extract job.ini files from a base directory, recursively
+    """
+    out = {}
+    for cwd, dirs, files in os.walk(basedir):
+        for skipdir in [".git", "padding", "scenarios"]:
+            if skipdir in dirs:
+                dirs.remove(skipdir)
+        for model, mod in zip(MODELS, MODELDIRS):
+            if mod == 'JPN':
+                mod = 'JPA'
+            for dirname in dirs:                    
+                if dirname == mod:
+                    out[model] = os.path.join(cwd, mod, 'in', job_ini)
+    return sorted(out.items())
+
+
+def ghm(basedir, job_ini='job.ini'):
+    "Build generatedGHM.toml"
     lst = ['[workflow]\ndescription="GHM"']
-    add_checkout(lst, MODELS)
-    for mod in MODELS:
-        if legacy:  # to support unzipped_mosaic_run
-            if mod == 'CND':
-                mod = 'CAN'
-            elif mod in 'GLD OAT OPA':
-                continue
-        lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
-        if legacy and mod == 'ARB':
-            # speedup slow sources
-            lst.append('area_source_discretization = 50')
+    mod_inis = extract(basedir, job_ini)
+    add_checkout(lst, [os.path.dirname(os.path.dirname(ini))
+                       for _mod, ini in mod_inis])
+    for mod, ini in mod_inis:
+        lst.append(f'[{mod}]\nini = "{ini}"')
 
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
-    lst.append('out_types = ["hcurves", "hmaps-stats"]')
-    return save(mosaic_dir, 'GHM.toml', '\n'.join(lst))
+    lst.append('out_types = ["hmaps-stats"]')
+    return save(basedir, 'generatedGHM.toml', '\n'.join(lst))
 
 
 def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
@@ -133,16 +149,21 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int = 2000,
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
 
 
-def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
+def ses(mosaic_dir, out, models=['ALL'],
         number_of_logic_tree_samples: int = 2000,
-        ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5):
+        ses_per_logic_tree_path: int = 50, minimum_magnitude: float = 5,
+        toml: bool=False):
     "Build SES.toml"
     lst = []
     if models == ['ALL']:
         models = MODELS
     for model in models:
+        lst.append(f'checkout.{model} = "v2026_updates"')
+
+    for model in models:
         base = os.path.abspath(os.path.join(mosaic_dir, model))
-        assert os.path.exists(base), base
+        if not os.path.exists(base):
+            raise RuntimeError(f'Missing repository {base}')
         ini = os.path.join(base, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             ext = '_vs30.ini'
@@ -152,24 +173,30 @@ def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
             lst.append(f'ini = "{model}/in/job{ext}"')
-            lst.append('postproc_func = "dummy.main"')
-            if model in ("JPN", "KOR"):
+            if model == "AUS":
+                # reduce mesh spacing to avoid ValueError: source_id='310;0':
+                # At least two distinct points are needed for a line!
+                lst.append('rupture_mesh_spacing=2')
+            elif model in ("JPN", "KOR"):
                 # these models have an investigation time of 50, not 1 year
                 s = ses_per_logic_tree_path // 50
                 lst.append(f'ses_per_logic_tree_path={s}')
-            #elif model in ("PAC", "NZL", "TEM", "ZAF"):
-            #    lst.append('ses_per_logic_tree_path='
-            #               f'{ses_per_logic_tree_path*10}')
-            #    lst.append('number_of_logic_tree_samples='
-            #               f'{number_of_logic_tree_samples//10}')
+            elif model in ("PAC", "NZL", "TEM", "ZAF"):
+                # avoid running out of memory
+                lst.append('ses_per_logic_tree_path='
+                           f'{ses_per_logic_tree_path*10}')
+                lst.append('number_of_logic_tree_samples='
+                           f'{number_of_logic_tree_samples//10}')
 
     if not lst:
         raise RuntimeError(f'{models} not in {MODELS=}')
-    return save(mosaic_dir, 'SES.toml',
-                TOML.format(number_of_logic_tree_samples,
-                            ses_per_logic_tree_path,
-                            minimum_magnitude,
-                            out, '\n'.join(lst)))
+    code = TOML.format(number_of_logic_tree_samples,
+                       ses_per_logic_tree_path,
+                       minimum_magnitude,
+                       '\n'.join(lst), out)
+    if toml:
+        return code
+    return save(mosaic_dir, 'SES.toml', code)
 
 
 main = dict(AELO=aelo, GHM=ghm, GRM=grm, SES=ses)

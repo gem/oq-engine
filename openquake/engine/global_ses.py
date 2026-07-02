@@ -62,21 +62,25 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
 import os
 from unittest.mock import patch
 from openquake.baselib import sap, config
-from openquake.qa_tests_data.mosaic import workflow
-from openquake.engine import engine
+from openquake.qa_tests_data.mosaic import genworkflow
+from openquake.engine import workflow
 
-def main(mosaic_dir, out, models='ALL', *,
+def main(mosaic_dir, out, models='ALL', toml:bool=False, *,
          number_of_logic_tree_samples:int=2000,
          ses_per_logic_tree_path:int=50, minimum_magnitude:float=5,
          cache:str='false'):
     """
     Storing global SES
     """
-    ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
-                            number_of_logic_tree_samples,
-                            ses_per_logic_tree_path, minimum_magnitude)
+    ses_toml = genworkflow.ses(mosaic_dir, out, models.split(','),
+                               number_of_logic_tree_samples,
+                               ses_per_logic_tree_path,
+                               minimum_magnitude, toml)
+    if toml:
+        print(ses_toml)
+        return
     with patch.dict(config.directory, {'mosaic_dir': mosaic_dir}):
-        calc_id = engine.run_workflow(ses_toml, {'cache': cache})
+        calc_id = workflow.run_workflow(ses_toml, {'cache': cache})
     os.remove(ses_toml)
     return calc_id
 
@@ -87,6 +91,7 @@ main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Discard ruptures below this magnitude'
 main.cache = 'Use the cache to avoid repeating correct calculations'
+main.toml = 'Just print the TOML code'
 
 if __name__ == '__main__':
     sap.run(main)

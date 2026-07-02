@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
+import numpy
+import pandas
 
 from openquake.hazardlib import const
 from openquake.hazardlib import nrml
@@ -25,6 +27,7 @@ from openquake.hazardlib.geo import Polygon, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.source_reader import sampling_dt
 
 
 class FakeSource(ParametricSeismicSource):
@@ -114,3 +117,66 @@ class RecomputeMmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(7.377+0.25, src.mfd.max_mag, msg=msg, places=2)
         src.modify_recompute_mmax(-1)
         self.assertAlmostEqual(7.377-0.25, src.mfd.max_mag, msg=msg, places=2)
+
+
+class SampleRupturesTestCase(unittest.TestCase):
+    def test_sample(self):
+        ps = nrml.get('''\
+    <pointSource
+        id="5"
+        name="ps5"
+        tectonicRegion='active shallow crust'>
+      <pointGeometry>
+        <gml:Point><gml:pos>0.1 0</gml:pos></gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>10</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>PeerMSR</magScaleRel>
+      <ruptAspectRatio>1</ruptAspectRatio>
+      <incrementalMFD binWidth=".1" minMag="4.8">
+        <occurRates>
+        8.6195600E-01 6.8567600E-01 5.4547500E-01 4.3396300E-01 3.4526400E-01 2.7470900E-01 2.1858300E-01 1.7393200E-01 1.3841000E-01 1.1014800E-01 8.7660700E-02 6.9768100E-02 5.5530400E-02 4.4200400E-02 3.5183800E-02 2.8008000E-02 2.2296800E-02 1.7751100E-02 1.4132800E-02 1.1252700E-02 8.9598900E-03 4.9942600E-03 5.6815100E-04 4.5245700E-04 3.6034000E-04 6.1204000E-10
+        </occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="4" probability="1"/>
+      </hypoDepthDist>
+    </pointSource>''')
+        ps.sampling = numpy.array([(0, 1)], sampling_dt)
+        mags_rates = list(ps.get_annual_occurrence_rates())
+        mags, rates = zip(*mags_rates)
+        ebrs = list(ps.sample_ruptures(num_ses=100, ses_seed=42))
+        dic = dict(mag=[ebr.mag for ebr in ebrs],
+                   freq=[ebr.n_occ / 50 / 100 for ebr in ebrs],
+                   rate=rates[:len(ebrs)])
+        df = pandas.DataFrame(dic).set_index('mag')
+        self.assertEqual(str(df), '''\
+       freq      rate
+mag                  
+4.8  0.8462  0.861956
+4.9  0.6866  0.685676
+5.0  0.5412  0.545475
+5.1  0.4514  0.433963
+5.2  0.3348  0.345264
+5.3  0.2642  0.274709
+5.4  0.2254  0.218583
+5.5  0.1818  0.173932
+5.6  0.1330  0.138410
+5.7  0.1074  0.110148
+5.8  0.0892  0.087661
+5.9  0.0664  0.069768
+6.0  0.0538  0.055530
+6.1  0.0446  0.044200
+6.2  0.0354  0.035184
+6.3  0.0266  0.028008
+6.4  0.0194  0.022297
+6.5  0.0168  0.017751
+6.6  0.0118  0.014133
+6.7  0.0124  0.011253
+6.8  0.0084  0.008960
+6.9  0.0060  0.004994
+7.0  0.0002  0.000568
+7.2  0.0002  0.000452''')

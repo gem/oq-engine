@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import gc
 import os
 import sys
 import abc
@@ -28,6 +29,7 @@ import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
+import h5py
 import psutil
 import numpy
 import pandas
@@ -47,7 +49,7 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
@@ -193,7 +195,10 @@ def fix_hc_id(oq):
             oq.hazard_calculation_id, int):
         # there is nothing to fix
         return oq.hazard_calculation_id
-    path = os.path.join(oq.base_path, oq.hazard_calculation_id)
+    path = oq.hazard_calculation_id
+    if not os.path.isabs(path):
+        path = os.path.abspath(os.path.normpath(
+            os.path.join(oq.base_path, oq.hazard_calculation_id)))
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
@@ -223,7 +228,7 @@ def save_version_checksum(oq, dstore):
                  f'(total size {general.humansize(size)})')
     return checksum
 
-        
+
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -353,7 +358,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
-                # cleanup globals
+
                 if ct == 0:  # restore OQ_DISTRIBUTE
                     if oq_distribute is None:  # was not set
                         del os.environ['OQ_DISTRIBUTE']
@@ -362,6 +367,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
                 # remove temporary hdf5 file, if any
                 if os.path.exists(self.datastore.tempname):
+                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
+                    gc.collect()  # just in case
                     if remove and oq.calculation_mode != 'preclassical':
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
@@ -762,50 +769,51 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         parent = datastore.read(oq.hazard_calculation_id)
-        oqparent = parent['oqparam']
-        if 'weights' in parent:
-            weights = numpy.unique(parent['weights'][:])
-            if (oq.job_type == 'risk' and oq.collect_rlzs and
-                    len(weights) > 1):
-                raise ValueError(
-                    'collect_rlzs=true can be specified only if '
-                    'the realizations have identical weights')
-        if oqparent.imtls and oq.calculation_mode in ('classical', 'disagg'):
-            check_imtls(oq.imtls, oqparent.imtls)
-        self.check_precalc(oqparent.calculation_mode)
         self.datastore.parent = parent
-        # copy missing parameters from the parent
-        if 'concurrent_tasks' not in vars(self.oqparam):
-            self.oqparam.concurrent_tasks = (
-                self.oqparam.__class__.concurrent_tasks.default)
-        params = {name: value for name, value in
-                  vars(parent['oqparam']).items()
-                  if name not in vars(self.oqparam)
-                  and name != 'ground_motion_fields'}
-        if params:
-            self.save_params(**params)
+        oqp = parent['oqparam']
+        if isinstance(oqp, h5py.Group) and len(oqp) == 1:
+            [name] = list(oqp)
+            oqp = parent[f'oqparam/{name}']
+        if not isinstance(oqp, h5py.Group):  # not from SES.hdf5
+            if 'weights' in parent:
+                weights = numpy.unique(parent['weights'][:])
+                if (oq.job_type == 'risk' and oq.collect_rlzs and
+                        len(weights) > 1):
+                    raise ValueError(
+                        'collect_rlzs=true can be specified only if '
+                        'the realizations have identical weights')
+            if oqp.imtls and oq.calculation_mode in ('classical', 'disagg'):
+                check_imtls(oq.imtls, oqp.imtls)
+            self.check_precalc(oqp.calculation_mode)
+
+            # copy missing parameters from the parent
+            if 'concurrent_tasks' not in vars(self.oqparam):
+                self.oqparam.concurrent_tasks = (
+                    self.oqparam.__class__.concurrent_tasks.default)
+            self.oqparam = oq = oq.from_parent(oqp)
+            self.save_params()
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.investigation_time and oqp.eff_time != oq.eff_time:
+                raise ValueError(
+                    'The parent calculation was using eff_time=%s'
+                    ' != %s' % (oqp.eff_time, oq.eff_time))
+            hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
+            if hstats != rstats:
+                raise ValueError(
+                    'The parent calculation had stats %s != %s' %
+                    (hstats, rstats))
+            sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
+            missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
+            if oqp.imtls and missing_imts:
+                raise ValueError(
+                    'The parent calculation is missing the IMT(s) %s' %
+                    ', '.join(missing_imts))
+
         with self.monitor('importing inputs', measuremem=True):
             self.read_inputs()
-        oqp = parent['oqparam']
-        if oqp.investigation_time != oq.investigation_time:
-            raise ValueError(
-                'The parent calculation was using investigation_time=%s'
-                ' != %s' % (oqp.investigation_time, oq.investigation_time))
-        if oqp.investigation_time and oqp.eff_time != oq.eff_time:
-            raise ValueError(
-                'The parent calculation was using eff_time=%s'
-                ' != %s' % (oqp.eff_time, oq.eff_time))
-        hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
-        if hstats != rstats:
-            raise ValueError(
-                'The parent calculation had stats %s != %s' %
-                (hstats, rstats))
-        sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
-        missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
-        if oqp.imtls and missing_imts:
-            raise ValueError(
-                'The parent calculation is missing the IMT(s) %s' %
-                ', '.join(missing_imts))
         self.save_crmodel()
 
     def init(self):
@@ -815,8 +823,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if not oq.risk_imtls:
             if self.datastore.parent:
-                oq.risk_imtls = (
-                    self.datastore.parent['oqparam'].risk_imtls)
+                oqp = datastore.get_oq(self.datastore.parent)
+                oq.risk_imtls = oqp.risk_imtls
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         elif 'full_lt' in self.datastore:
@@ -997,7 +1005,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
 
-        oq_hazard = (self.datastore.parent['oqparam']
+        oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
@@ -1466,9 +1474,6 @@ def import_ruptures_hdf5(h5, fnames):
     """
     rups = []
     h5.create_dataset(
-        'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,
-        compression='gzip')
-    h5.create_dataset(
         'rupgeoms', (0,), hdf5.vfloat32, maxshape=(None,), chunks=True)
     E = 0
     offset = 0
@@ -1478,6 +1483,10 @@ def import_ruptures_hdf5(h5, fnames):
             events = f['events'][:]
             events['id'] += E
             events['rup_id'] += offset
+            if fileno == 0:  # first time
+                h5.create_dataset(
+                    'events', (0,), events.dtype, maxshape=(None,), chunks=True,
+                    compression='gzip')
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
@@ -1644,6 +1653,30 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
         dstore['avg_gmf'] = avg_gmf
 
 
+def create_exposure_by_lse(dstore):
+    oq = dstore['oqparam']
+    peril_imt2name = {
+        'AllstadtEtAl2022Landslides_LSE': 'landslide',
+        'AllstadtEtAl2022Liquefaction_LSE': 'liquefaction',
+    }
+    if not any(imt in oq.sec_imts for imt in peril_imt2name):
+        return
+    avg_gmf_array = dstore['avg_gmf'][:]
+    assetcol = dstore['assetcol']
+    if 'exposure' in oq.inputs:
+        exposure_hdf5 = oq.inputs['exposure'][0]
+    else:
+        exposure_hdf5 = None
+    for sec_imt in oq.sec_imts:
+        if sec_imt not in peril_imt2name:
+            continue
+        secondary_peril = peril_imt2name[sec_imt]
+        df = assetcol.aggregate_exposure_by_lse_tier(
+            oq.aggregate_by, avg_gmf_array, oq.all_imts(), secondary_peril,
+            exposure_hdf5=exposure_hdf5)
+        dstore.create_df(f'exposure_by_{secondary_peril}_lse', df)
+
+
 def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
@@ -1683,22 +1716,47 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
-        N, E, _M = gmfs.shape
+        N, E, M = gmfs.shape
         events = store_events(calc.datastore, E)
-        # convert into an array of dtype gmv_data_dt
-        lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for ei, event in enumerate(events)
-               for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
-        data = numpy.array(lst, oq.gmf_data_dt())
+        data = numpy.zeros(E*N, oq.gmf_data_dt())
+        field2idx = {name: idx for idx, name in enumerate(data.dtype.names)}
+        F = len(field2idx)
+        if sec_perils:
+            # the mag is needed only to compute the secondary perils
+            try:
+                mag = oq.rupture_dict['mag']
+            except KeyError:
+                raise RuntimeError(
+                    'TODO: extract the magnitude from the ShakeMap!')
+        i = 0
+        for ei, event in enumerate(events):
+            arr = numpy.zeros((N, F))  # (num_sites, num_fields)
+            arr[:, 0] = sitecol.sids
+            arr[:, 1] = ei
+            for m, imt in enumerate(imts):
+                arr[:, field2idx[imt.string]] = gmfs[:, ei, m]
+            for sec_peril in sec_perils:
+                imt_gmf = [(imt, gmfs[:, ei, m]) for m, imt in enumerate(imts)]
+                outs = sec_peril.compute(mag, imt_gmf, sitecol)
+                for out, key in zip(outs, sec_peril.outputs):
+                    idx = field2idx[f'{sec_peril.__class__.__name__}_{key}']
+                    arr[:, idx] = out
+            for s in numpy.arange(N, dtype=U32):
+                # tuple (sid, eid, PGA, SA(0.3), SA(1.0), SA(3.0), sec_imt, ..)
+                data[i] = tuple(arr[s])
+                i += 1
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+            calc.datastore, imts, oq.sec_imts, data=data,
+            N=len(sitecol.complete), R=1)
+        create_exposure_by_lse(calc.datastore)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         calc.datastore['weights'] = numpy.ones(1)
 
@@ -1863,7 +1921,7 @@ def run_calc(job_ini, **kw):
         fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
-        return calc
+    return calc
 
 
 def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
@@ -1878,8 +1936,10 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    _, full_lt = get_model_lts(dstore)[-1]
-    R = full_lt.get_num_paths()
+    try:
+        R = len(dstore['weights'])
+    except KeyError:
+        R = 1
     if R > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5

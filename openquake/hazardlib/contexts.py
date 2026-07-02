@@ -520,7 +520,6 @@ class ContextMaker(object):
     the underlying GSIMs are defined. This is intentional.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
-    scenario = False
     deltagetter = None
     fewsites = False
     ilabel = None
@@ -751,6 +750,13 @@ class ContextMaker(object):
             conv_median, conv_sigma, rstd = self.conv[gsim][imt]
             me[:] = numpy.log(numpy.exp(me) / conv_median)
             si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+
+    @property
+    def scenario(self):
+        """
+        True if scenario
+        """
+        return 'scenario' in self.oq.calculation_mode
 
     @property
     def Z(self):
@@ -1066,8 +1072,8 @@ class ContextMaker(object):
         ctxs = self.gen_contexts(rups_sites, src_id)
         with self.ctx_mon:
             if len(rups_sites) == 1 and not self.minimum_distance:
-                return list(ctxs)
-            return [self.recarray([c]) for c in ctxs]
+                return ctxs
+            return (self.recarray([c]) for c in ctxs)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1306,7 +1312,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        step = 1 if src.code in b'pP' else 4
+        step = 1 if src.code in b'pP' else 20 if src.num_ruptures >= 400 else 4
         C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
         src.dt = time.time() - t0
         if not C:
@@ -1331,6 +1337,10 @@ class ContextMaker(object):
             for src in sources:
                 src.weight = self.estimate_weight(src, srcfilter)
 
+    def __repr__(self):
+        rlzs = sum(len(rlzs) for rlzs in self.gsims.values())
+        return f'<{self.__class__.__name__} {self.trt} {rlzs=}>'
+        
 
 def by_dists(gsim):
     return tuple(sorted(gsim.REQUIRES_DISTANCES))
@@ -1923,12 +1933,14 @@ def get_unique_inverse(all_trt_smrs):
 
 def get_cmakers(all_trt_smrs, full_lt, oq):
     """
-    :params all_trt_smrs: a list of arrays
+    :params all_trt_smrs: a list of arrays, one per source group
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
+    if not hasattr(full_lt, 'weights'):
+        full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])

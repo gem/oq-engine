@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import os.path
 import logging
 import operator
@@ -303,7 +304,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def ebrisk(rups, cmaker, sids, secperils, hdf5path, monitor):
+def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
@@ -313,7 +314,7 @@ def ebrisk(rups, cmaker, sids, secperils, hdf5path, monitor):
     :param monitor: a Monitor instance
     :yields: dictionaries with keys 'avg' and 'alt'
     """
-    oq = cmaker.oq
+    oq = cmakers[0].oq
     oq.ground_motion_fields = True
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
@@ -321,13 +322,19 @@ def ebrisk(rups, cmaker, sids, secperils, hdf5path, monitor):
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
     for dic in event_based.event_based(
-            rups, cmaker, sids, secperils, hdf5path, monitor):
+            allrups, cmakers, sids, secperils, hdf5path, monitor):
         if len(dic['gmfdata']):
+            times = dic['times']  # rup_id, time, weight
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             items = ((id0taxo, monitor.read(
                 'assets', slc=slice(s0, s1)).set_index('ordinal'))
                      for id0taxo, s0, s1 in monitor.read('start-stop'))
-            yield _event_based_risk(gmf_df, items, crmodel, monitor)
+            t0 = time.time()
+            res = _event_based_risk(gmf_df, items, crmodel, monitor)
+            dt = time.time() - t0
+            times['time'] += dt / len(times)
+            res['times'] = times
+            yield res
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -468,17 +475,20 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     oq.gsim == '[FromFile]'):
                 raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
                                   % oq.inputs['job_ini'])
-            elif not hasattr(oq, 'maximum_distance'):
+            elif oq.hazard_calculation_id is None and not hasattr(
+                    oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             rup0 = self.datastore['ruptures'][0]
             if not hasattr(self, 'sec_perils'):
                 self.add_sec_perils(oq)
+            self.datastore.create_dset('ruptimes', event_based.rup_dt)
             event_based.run(ebrisk, oq, rup0, self)
             if self.gmf_bytes == 0:
-                raise RuntimeError(
+                logging.error(
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
+                return 1
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
@@ -512,6 +522,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
+        times = dic.pop('times', None)
+        if times is not None:
+            hdf5.extend(self.datastore['ruptimes'], times)
+
         with self.monitor('saving risk_by_event'):
             alt = dic.pop('alt')
             for name in alt.columns:

@@ -27,7 +27,6 @@ import traceback
 from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
-from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -38,6 +37,7 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
+root = logging.root
 
 
 def on_workers(action):
@@ -58,9 +58,9 @@ def dbcmd(action, *args):
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if (action.startswith('workers_') and config.zworkers.host_cores
-            == '127.0.0.1 -1'):  # local zmq
-        return on_workers(action)
+    hc = config.zworkers.host_cores
+    if action.startswith('workers_') and hc.startswith('127.0.0.1 '):
+        return on_workers(action)  # local zmq
     elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly
         if action.startswith('workers_'):
@@ -208,24 +208,6 @@ class LogDatabaseHandler(logging.Handler):
               record.getMessage())
 
 
-def get_country_or_model(job_ini):
-    """
-    If the path to job_ini contains a recognized country, returns the
-    country code or the mosaic code, else the empty string.
-    """
-    for name, cc in country2code.items():
-        if name in job_ini:
-            return cc
-    for model in MODELS:
-        if model in job_ini:
-            return model
-    for model in ALIASES:
-        if model in job_ini:
-            return ALIASES[model]
-    return ''
-
-
-
 class LogContext:
     """
     Context manager managing the logging functionality
@@ -279,26 +261,21 @@ class LogContext:
 
     def __enter__(self):
         self.t0 = time.time()
-        if not logging.root.handlers:  # first time
+        self.orig_handlers = root.handlers.copy()
+        if not self.orig_handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
-        inputs = self.params.get('inputs', {})  # missing in test_recompute
-        tag = (self.params.get('mosaic_model') or
-               get_country_or_model(inputs.get('job_ini', '')))
+        tag = self.params['mosaic_model']
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, tag + ' ' if tag else '')
-        self.handlers = [LogDatabaseHandler(self.calc_id)]
+        root.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
-            # add a StreamHandler if not already there
-            if not any(h for h in logging.root.handlers
-                       if isinstance(h, logging.StreamHandler)):
-                self.handlers.append(LogStreamHandler(self.calc_id))
+            root.addHandler(LogStreamHandler(self.calc_id))
         else:
-            self.handlers.append(LogFileHandler(self.calc_id, self.log_file))
-        for handler in self.handlers:
+            root.addHandler(LogFileHandler(self.calc_id, self.log_file))
+        for handler in root.handlers:
             handler.setFormatter(
                 logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
-            logging.root.addHandler(handler)
         if os.environ.get('NUMBA_DISABLE_JIT'):
             logging.warning('NUMBA_DISABLE_JIT is set')
         return self
@@ -310,9 +287,9 @@ class LogContext:
         elif tb:
             tb_str = ''.join(traceback.format_tb(tb))  # newlines are included
             # remove non-db handlers to avoid logging twice
-            for h in logging.root.handlers:
+            for h in root.handlers:
                 if not isinstance(h, LogDatabaseHandler):
-                    logging.root.removeHandler(h)
+                    root.removeHandler(h)
             # store the traceback
             logging.error(f'{tb_str}{etype.__name__}: {exc}')
             dbcmd('finish', self.calc_id, 'failed')
@@ -320,8 +297,9 @@ class LogContext:
                 post_mortem(tb)
         else:
             dbcmd('finish', self.calc_id, 'complete')
-        for handler in self.handlers:
-            logging.root.removeHandler(handler)
+        for handler in root.handlers:
+            root.removeHandler(handler)
+        root.handlers = self.orig_handlers
         parallel.Starmap.shutdown()
 
     def __repr__(self):
@@ -349,7 +327,9 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     """
     if job_ini in ('job', 'calc'):  # backward compatibility
         job_ini = dummy
-    if not isinstance(job_ini, dict):
+    if isinstance(job_ini, dict):
+        job_ini = readinput.oqdict(job_ini)
+    else:
         job_ini = readinput.get_params(job_ini)
     return LogContext(job_ini, log_level, log_file, user_name, hc_id,
                       host, pdb)

@@ -30,6 +30,10 @@ DISPLAY_NAME = {
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
     'exposure': 'Exposure',
+    'exposure_by_liquefaction_lse':
+        'Exposure grouped by Region and by Liquefaction LSE',
+    'exposure_by_landslide_lse':
+        'Exposure grouped by Region and by Landslide LSE',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
@@ -48,7 +52,7 @@ DISPLAY_NAME = {
     'aggrisk': 'Aggregate Risk',
     'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
-    'avg_losses_by': 'Average Losses By Taxonomy',
+    'avg_losses_by': 'Average Losses By',
     'aggcurves': 'Aggregate Risk Curves',
     'aggcurves-stats': 'Aggregate Risk Curves Statistics',
     'avg_gmf': 'Average Ground Motion Field',
@@ -94,13 +98,13 @@ AGGRISK_FIELD_DESCRIPTION = {
     'structural': 'Structural loss (USD)',
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
-    'area': 'Floor area lost (m2)',
+    'area': 'Floor area lost (m²)',
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
-    'embodied_carbon': 'Embodied carbon loss',
+    'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
@@ -115,13 +119,14 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'nonstructural': 'Nonstructural value (USD)',
     'structural': 'Structural value (USD)',
     'residents': 'Residents',
-    'area': 'Floor area (m2)',
+    'area': 'Floor area (m²)',
     'occupants_day': 'Occupants day',
     'occupants_night': 'Occupants night',
     'occupants_transit': 'Occupants transit hours',
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
             ' of assets is subjected'),
+    'embodied_carbon': 'Embodied carbon (tCO₂e)',
 }
 
 

@@ -31,6 +31,7 @@ from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from
+from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -50,7 +51,7 @@ def engine_profile(jobctx, nrows):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
+def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs, asce_version, vs30):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -76,7 +77,9 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
-    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
+    asce_dir = asce_dir or os.path.join(mosaic_dir, 'asce')
+    if not os.path.exists(asce_dir):
+        os.mkdir(asce_dir)
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -92,19 +95,18 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     if 'vs30' not in sites_df.keys():
         sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
-    models_in_dir = os.listdir(mosaic_dir)
     for vs30, dvf in sites_df.groupby('vs30'):
         # vs30 is a string and can contain multiple values, like '260 365 530'
         # it is used to set override_vs30 in `get_params_from` and then
         # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
-            if model not in models_in_dir:
+            if model not in MODELS:
                 continue
-            if model in ('???', 'USA', 'GLD'):
+            elif model in ('???', 'USA', 'GLD'):
                 continue
-            if exclude_models and model in exclude_models.split(','):
+            elif exclude_models and model in exclude_models.split(','):
                 continue
-            if only_models and model not in only_models.split(','):
+            elif only_models and model not in only_models.split(','):
                 continue
 
             df = df.sort_values(['Longitude', 'Latitude'])
@@ -124,7 +126,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    engine.run_jobs(logctxs)
+    engine.run_jobs(logctxs, concurrent_jobs)
     out = []
     count_errors = 0
     asce = {}
@@ -134,14 +136,14 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
-        dstore = datastore.read(logctx.calc_id)
-        try:
-            asce[model + '07'] = views.view('asce:07', dstore)
-            asce[model + '41'] = views.view('asce:41', dstore)
-        except KeyError:
-            # AELO results could not be computed due to some error,
-            # so the asce data is missing in the datastore
-            pass
+        with datastore.read(logctx.calc_id) as dstore:
+            try:
+                asce[model + '07'] = views.view('asce:07', dstore)
+                asce[model + '41'] = views.view('asce:41', dstore)
+            except KeyError:
+                # AELO results could not be computed due to some error,
+                # so the asce data is missing in the datastore
+                pass
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
@@ -151,7 +153,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         # serious problem to debug
         breakpoint()
     for name, table in asce.items():
-        fname = os.path.abspath(f'asce/{name}.org')
+        fname = os.path.abspath(f'{asce_dir}/{name}.org')
         with open(fname, 'w') as f:
             print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
@@ -160,7 +162,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     return [log.calc_id for log in logctxs]
 
 
-def run_site(lonlat_or_fname, mosaic_dir=None,
+def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760,
              asce_version: str = oqvalidation.OqParam.asce_version.default):
@@ -178,8 +180,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        return from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs,
-                         asce_version, vs30)
+        return from_file(lonlat_or_fname, mosaic_dir, asce_dir,
+                         concurrent_jobs, asce_version, vs30)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
         dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
@@ -189,12 +191,13 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     if slowest:
         engine_profile(jobctx, slowest or 40)
     else:
-        engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
+        engine.run_jobs([jobctx], concurrent_jobs)
     return [jobctx.calc_id]
 
 
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 run_site.mosaic_dir = 'mosaic directory'
+run_site.asce_dir = 'directory where to store the results'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'

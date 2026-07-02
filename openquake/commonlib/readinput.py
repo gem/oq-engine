@@ -56,7 +56,6 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.countries import MODELS
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
@@ -69,6 +68,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
+from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
@@ -82,6 +82,35 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
+
+
+def get_country_or_model(job_ini):
+    """
+    If the path to job_ini contains a recognized country, returns the
+    country code or the mosaic code, else the empty string.
+    """
+    for name, cc in country2code.items():
+        if name in job_ini:
+            return cc
+    for model in MODELS:
+        if model in job_ini:
+            return model
+    for model in ALIASES:
+        if model in job_ini:
+            return ALIASES[model]
+    return ''
+
+
+def oqdict(params={}, **kw):
+    """
+    Update the params dictionary with inputs['job_ini'] and 'mosaic_model'
+    """
+    params = params | kw
+    inputs = params.setdefault('inputs', {})
+    inputs.setdefault('job_ini', '<in-memory>')
+    if not params.get('mosaic_model', ''):
+        params['mosaic_model'] = get_country_or_model(inputs['job_ini'])
+    return params
 
 
 class DuplicatedPoint(Exception):
@@ -124,13 +153,14 @@ def get_closest_country(lon, lat, buffer_radius):
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
         creating a circular buffer region around the point
-    :returns: the closest country or '???'
+    :returns: the iso3 code of the closest country or '???'
     """
     countries_df = read_countries_df()
     close_countries = geo.utils.geolocate_within_buffer(
         lon, lat, buffer_radius, countries_df)
     if not close_countries:
         return '???'
+    # close_countries are ordered by ascending distance
     return close_countries[0]
 
 
@@ -385,7 +415,6 @@ def get_params(job_ini, kw={}):
         raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-
     return params
 
 
@@ -445,7 +474,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-    oqparam = OqParam(**job_ini)
+    oqparam = OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
@@ -873,17 +902,9 @@ def get_gsim_lt(oqparam, trts=()):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
-        if oqparam.calculation_mode.startswith(('classical',
-                                                'disaggregation')):
-            raise InvalidFile(
-                f'{oqparam.inputs["gsim_logic_tree"]}: IMT-dependent weights '
-                'in the GMM logic tree require full enumeration')
-        else:
-            logging.error(
-                'IMT-dependent weights in the logic tree cannot work '
-                'with sampling, because they would produce different '
-                'GMPE paths for each IMT that cannot be combined; '
-                'using the default weights')
+        logging.warning(
+            'IMT-dependent weights in the logic tree are ignored '
+            'when sampling; using the default weights')
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
@@ -940,6 +961,8 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
+    if oqparam.calculation_mode.startswith('scenario'):
+        return logictree.SourceModelLogicTree.fake()
     smlt = get_smlt(vars(oqparam))
     for bset in smlt.branchsets:
         bset.check_duplicates(smlt.filename)
@@ -974,9 +997,6 @@ def get_full_lt(oqparam):
     oversampling = oqparam.oversampling
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
-
-    if full_lt.gsim_lt.has_imt_weights() and oqparam.use_rates:
-        raise ValueError('use_rates=true cannot be used with imtWeight')
 
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
@@ -1276,9 +1296,11 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     sitecol.extend(lons, lats)
     logging.info('Extended complete site collection from %d to %d sites',
                  nsites, len(sitecol.complete))
-    dic = {(lo, la): sid
+    # 5dp matches the precision sitecol.extend uses for deduplication
+    dic = {(round(float(lo), 5), round(float(la), 5)): sid
            for lo, la, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats, strict=True)])
+    sids = U32([dic[round(float(lon), 5), round(float(lat), 5)]
+                for lon, lat in zip(lons, lats, strict=True)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
@@ -1814,7 +1836,7 @@ def read_geometries(fname, name):
     """
     codes = []
     geoms = []
-    with fiona.open(fname) as f:
+    with fiona.open(fname, IMMUTABLE="YES") as f:
         crs = f.crs
         for feature in f:
             props = feature["properties"]
@@ -1863,7 +1885,7 @@ def read_mosaic_df(mosaic_dir=''):
         if not os.path.exists(mosaic_boundaries_file):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
-    print(f'Reading {mosaic_boundaries_file}')
+    logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
     codes = sorted(df.code.unique())
     assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
