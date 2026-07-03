@@ -318,6 +318,8 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     oq.ground_motion_fields = True
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
+        pairs = [(idx0taxo, slice(s0, s1))
+                 for idx0taxo, s0, s1 in monitor.read('start-stop')]
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
@@ -326,9 +328,8 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         if len(dic['gmfdata']):
             times = dic['times']  # rup_id, time, weight
             gmf_df = pandas.DataFrame(dic['gmfdata'])
-            items = ((id0taxo, monitor.read(
-                'assets', slc=slice(s0, s1)).set_index('ordinal'))
-                     for id0taxo, s0, s1 in monitor.read('start-stop'))
+            items = ((id0taxo, monitor.read('assets', slc).
+                      set_index('ordinal')) for id0taxo, slc in pairs)
             t0 = time.time()
             res = _event_based_risk(gmf_df, items, crmodel, monitor)
             dt = time.time() - t0
