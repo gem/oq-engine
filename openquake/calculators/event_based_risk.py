@@ -256,26 +256,26 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def _event_based_risk(gdf, gen_adf, crmodel, monitor):
+def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
-        print(gdf)
+        print(gmf_df)
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
-        rng = MultiEventRNG(oq.master_seed, gdf.eid.unique(),
+        rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
                             int(oq.asset_correlation))
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    haz_sids = gdf.sid.unique()
+    haz_sids = gmf_df.sid.unique()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
@@ -283,6 +283,7 @@ def _event_based_risk(gdf, gen_adf, crmodel, monitor):
     for id0taxo, assetdf in gen_adf:
         with fil_mon:
             adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
+            gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
         if len(adf) == 0:
             # *crucial* for the performance of the next step
             continue
