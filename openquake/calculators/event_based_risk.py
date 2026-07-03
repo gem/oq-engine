@@ -55,7 +55,7 @@ def get_assetdf_startstop(assetcol):
     del assetdf['id']
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
-    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'site_id', 'ordinal'])
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
