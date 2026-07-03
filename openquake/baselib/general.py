@@ -321,6 +321,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
 
 def genconcat(dframes, size=512*1024**2):
     """
+    :paran dframes: iterator over dataframes
     Yield concatenated dataframes of size < 512 MB
     """
     dfs = []

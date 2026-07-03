@@ -323,9 +323,9 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
-    dfs = (dic['gmf_data'] for dic in event_based.event_based(
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if 'gmf_data' in dic)
+           if len(dic['gmfdata']))
     for gmf_df in general.genconcat(dfs):
         if len(gmf_df):
             items = ((id0taxo, monitor.read('assets', slc).
