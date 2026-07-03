@@ -334,6 +334,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     gmf_df = pandas.DataFrame(dic)
     if len(gmf_df) == 0:
         return {}
+    print(f'{len(gmf_df)=:_d}')
     times = numpy.concatenate([d['times'] for d in dics])  # rup_id, time, weight
     items = ((id0taxo, monitor.read('assets', slc).
               set_index('ordinal')) for id0taxo, slc in pairs)

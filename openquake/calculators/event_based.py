@@ -421,18 +421,24 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         for rupblock in block_splitter(rups, maxw, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
-    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
+    allargs = _collect(allargs, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return allargs, oq_by
 
 
-def _collect(allargs, maxw, sids, sec_perils, dstore):
+def blockweight(item):
+     rupblock = item[0]
+     w = sum(rb['n_occ']*rb['nsites'] for rb in rupblock)
+     return w
+ 
+
+def _collect(allargs, sids, sec_perils, dstore):
     # allargs is a list [(rupblock, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
     out = []
-    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
+    for triples in block_splitter(allargs, 10_000_0000, blockweight,
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
