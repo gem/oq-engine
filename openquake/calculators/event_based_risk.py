@@ -324,19 +324,24 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
-    for dic in event_based.event_based(
-            allrups, cmakers, sids, secperils, hdf5path, monitor):
-        if len(dic['gmfdata']):
-            times = dic['times']  # rup_id, time, weight
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            items = ((id0taxo, monitor.read('assets', slc).
-                      set_index('ordinal')) for id0taxo, slc in pairs)
-            t0 = time.time()
-            res = _event_based_risk(gmf_df, items, crmodel, monitor)
-            dt = time.time() - t0
-            times['time'] += dt / len(times)
-            res['times'] = times
-            yield res
+    dics = list(event_based.event_based(
+        allrups, cmakers, sids, secperils, hdf5path, monitor))
+    cols = {col: arr.dtype for col, arr in dics[0]['gmfdata'].items()}
+    dic = {}
+    for col, dt in cols.items():
+        dic[col] = numpy.concatenate([d['gmfdata'][col] for d in dics], dtype=dt)
+    gmf_df = pandas.DataFrame(dic)
+    if len(gmf_df) == 0:
+        return {}
+    times = numpy.concatenate([d['times'] for d in dics])  # rup_id, time, weight
+    items = ((id0taxo, monitor.read('assets', slc).
+              set_index('ordinal')) for id0taxo, slc in pairs)
+    t0 = time.time()
+    res = _event_based_risk(gmf_df, items, crmodel, monitor)
+    dt = time.time() - t0
+    times['time'] += dt / len(times)
+    res['times'] = times
+    return res
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
