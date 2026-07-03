@@ -275,23 +275,23 @@ def _event_based_risk(gdf, gen_adf, crmodel, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    sids = gdf.sid.to_numpy()
+    haz_sids = gdf.sid.unique()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, adf in gen_adf:
+    for id0taxo, assetdf in gen_adf:
+        with fil_mon:
+            adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
+        if len(adf) == 0:
+            # *crucial* for the performance of the next step
+            continue
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
         country = countries[id0taxo // TWO24]
-        with fil_mon:
-            # *crucial* for the performance of the next step
-            gmf_df = gdf[numpy.isin(sids, adf.site_id.unique())]
-        if len(gmf_df) == 0:  # common enough
-            continue
         with risk_mon:
             [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+                adf, gdf, crmodel.oqparam._sec_losses, rng, country)
         with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
