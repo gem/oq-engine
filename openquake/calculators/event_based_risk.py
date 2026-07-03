@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -324,18 +323,14 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     # NB: the assets are read more times than needed; this is on purpose;
     # the slowdown is minor, while the memory saving is massive, since only
     # one taxonomy at the time is read inside _event_based_risk
-    for dic in event_based.event_based(
-            allrups, cmakers, sids, secperils, hdf5path, monitor):
-        if len(dic['gmfdata']):
-            times = dic['times']  # rup_id, time, weight
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
+    dfs = (dic['gmf_data'] for dic in event_based.event_based(
+        allrups, cmakers, sids, secperils, hdf5path, monitor)
+           if 'gmf_data' in dic)
+    for gmf_df in general.genconcat(dfs):
+        if len(gmf_df):
             items = ((id0taxo, monitor.read('assets', slc).
                       set_index('ordinal')) for id0taxo, slc in pairs)
-            t0 = time.time()
             res = _event_based_risk(gmf_df, items, crmodel, monitor)
-            dt = time.time() - t0
-            times['time'] += dt / len(times)
-            res['times'] = times
             yield res
 
 

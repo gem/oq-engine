@@ -319,6 +319,25 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
         yield ws
 
 
+def genconcat(dframes, size=512*1024**2):
+    """
+    Yield concatenated dataframes of size < 512 MB
+    """
+    dfs = []
+    nbytes = 0
+    for df in dframes:
+        nbytes += df.memory_usage().sum()
+        if nbytes > size:
+            yield pandas.concat(dfs)
+            nbytes = 0
+            dfs = []
+        else:
+            dfs.append(df)
+    if dfs:
+        yield pandas.concat(dfs)
+        
+    
+
 def split_in_slices(number, num_slices):
     """
     :param number: a positive number to split in slices

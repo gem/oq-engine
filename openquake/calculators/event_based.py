@@ -239,7 +239,7 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         return dict(gmfdata={}, times=times, sig_eps=())
 
     gmfdata = pandas.concat(alldata)  # ~40 MB
-    dic = dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+    dic = dict(gmfdata=gmfdata,
                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
     if oq.mea_tau_phi:
         mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
