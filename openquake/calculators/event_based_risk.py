@@ -282,11 +282,11 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
         countries = ["?"]  # assume a single contry
     for id0taxo, assetdf in gen_adf:
         with fil_mon:
+            # filtering is *crucial* for the performance of the next step
             adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
+            if len(adf) == 0:
+                continue
             gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
-        if len(adf) == 0:
-            # *crucial* for the performance of the next step
-            continue
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
         country = countries[id0taxo // TWO24]
