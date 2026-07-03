@@ -296,7 +296,7 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
         with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
-    dic = dict(gmf_bytes=gdf.memory_usage().sum())
+    dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
     xtypes = oq.ext_loss_types
     if oq.ideduc:
         xtypes.append('claim')
