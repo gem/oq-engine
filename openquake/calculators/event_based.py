@@ -430,7 +430,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
 
 def blockweight(item):
      rupblock = item[0]
-     w = sum(rb['n_occ']*rb['nsites'] for rb in rupblock)
+     w = sum(rec['n_occ'] * rec['nsites'] for rec in rupblock)
      return w
  
 
