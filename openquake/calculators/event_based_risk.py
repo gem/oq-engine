@@ -329,7 +329,8 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     cols = {col: arr.dtype for col, arr in dics[0]['gmfdata'].items()}
     dic = {}
     for col, dt in cols.items():
-        dic[col] = numpy.concatenate([d['gmfdata'][col] for d in dics], dtype=dt)
+        lst = [d['gmfdata'][col] for d in dics if len(d['gmfdata'])]
+        dic[col] = numpy.concatenate(lst, dtype=dt)
     gmf_df = pandas.DataFrame(dic)
     if len(gmf_df) == 0:
         return {}
