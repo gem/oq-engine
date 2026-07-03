@@ -438,7 +438,7 @@ def _collect(allargs, sids, sec_perils, dstore):
     # allargs is a list [(rupblock, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
     out = []
-    for triples in block_splitter(allargs, 5_000_0000, blockweight,
+    for triples in block_splitter(allargs, 1_000_0000, blockweight,
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
