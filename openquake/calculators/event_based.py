@@ -418,7 +418,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw, rup_weight):
+        for rupblock in block_splitter(rups, maxw/4, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
     allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
