@@ -321,8 +321,8 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
 
 def genconcat(dframes, size_mb=512):
     """
-    :paran dframes: iterator over dataframes
-    Yield concatenated dataframes of size < 512 MB
+    :param dframes: iterator over dataframes
+    :yields: concatenated dataframes of size ~512 MB
     """
     dfs = []
     size = 0
@@ -330,10 +330,10 @@ def genconcat(dframes, size_mb=512):
         mb = df.memory_usage().sum() / 1024**2
         size += mb
         if size > size_mb:
-            if dfs:
+            if len(dfs) > 1:
                 yield pandas.concat(dfs)
             else:
-                print(f'There is a large gmf_df of {mb:.0f} MB')
+                print(f'There is a gmf_df of {mb:.0f} MB')
                 yield df
             size = 0
             dfs = []
