@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -296,7 +295,7 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
         with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
-    dic = dict(gmf_bytes=gdf.memory_usage().sum())
+    dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
     xtypes = oq.ext_loss_types
     if oq.ideduc:
         xtypes.append('claim')
@@ -319,24 +318,21 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     oq.ground_motion_fields = True
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        pairs = [(idx0taxo, slice(s0, s1))
-                 for idx0taxo, s0, s1 in monitor.read('start-stop')]
-    # NB: the assets are read more times than needed; this is on purpose;
-    # the slowdown is minor, while the memory saving is massive, since only
-    # one taxonomy at the time is read inside _event_based_risk
-    for dic in event_based.event_based(
-            allrups, cmakers, sids, secperils, hdf5path, monitor):
-        if len(dic['gmfdata']):
-            times = dic['times']  # rup_id, time, weight
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            items = ((id0taxo, monitor.read('assets', slc).
-                      set_index('ordinal')) for id0taxo, slc in pairs)
-            t0 = time.time()
-            res = _event_based_risk(gmf_df, items, crmodel, monitor)
-            dt = time.time() - t0
-            times['time'] += dt / len(times)
-            res['times'] = times
-            yield res
+    pairs = [(idx0taxo, slice(s0, s1))
+             for idx0taxo, s0, s1 in monitor.read('start-stop')]
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
+        allrups, cmakers, sids, secperils, hdf5path, monitor)
+           if len(dic['gmfdata']))
+    # NB: it is essential to concatenate the small dataframes to have
+    # long arrays (around 512 MB) and hence a good performance
+    for gmf_df in general.concatenated(dfs):
+        # NB: the assets are read more times than needed; this is on purpose;
+        # the slowdown is minor, while the memory saving is massive, since
+        # only one taxonomy at the time is read inside _event_based_risk
+        items = ((id0taxo, monitor.read('assets', slc).
+                  set_index('ordinal')) for id0taxo, slc in pairs)
+        res = _event_based_risk(gmf_df, items, crmodel, monitor)
+        yield res
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
