@@ -326,7 +326,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
-    for gmf_df in general.genconcat(dfs):
+    for gmf_df in general.concatenated(dfs):
         items = ((id0taxo, monitor.read('assets', slc).
                   set_index('ordinal')) for id0taxo, slc in pairs)
         res = _event_based_risk(gmf_df, items, crmodel, monitor)
