@@ -333,8 +333,8 @@ def genconcat(dframes, size_mb=512):
             print(f'There is a gmf_df of {mb:.0f} MB')
             yield df
         elif size + mb > size_mb:
-            yield pandas.concat(dfs[:-1])
-            dfs = [dfs[-1]]
+            yield pandas.concat(dfs)
+            dfs = [df]
             size = mb
         else:
             dfs.append(df)
