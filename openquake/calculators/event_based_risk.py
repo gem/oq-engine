@@ -320,13 +320,15 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         crmodel = monitor.read('crmodel')
         pairs = [(idx0taxo, slice(s0, s1))
                  for idx0taxo, s0, s1 in monitor.read('start-stop')]
-    # NB: the assets are read more times than needed; this is on purpose;
-    # the slowdown is minor, while the memory saving is massive, since only
-    # one taxonomy at the time is read inside _event_based_risk
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
+    # NB: it is essential to concatenate the small dataframes to have
+    # long arrays (around 512 MB) and hence a good performance
     for gmf_df in general.concatenated(dfs):
+        # NB: the assets are read more times than needed; this is on purpose;
+        # the slowdown is minor, while the memory saving is massive, since
+        # only one taxonomy at the time is read inside _event_based_risk
         items = ((id0taxo, monitor.read('assets', slc).
                   set_index('ordinal')) for id0taxo, slc in pairs)
         res = _event_based_risk(gmf_df, items, crmodel, monitor)
