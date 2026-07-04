@@ -318,8 +318,8 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     oq.ground_motion_fields = True
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        pairs = [(idx0taxo, slice(s0, s1))
-                 for idx0taxo, s0, s1 in monitor.read('start-stop')]
+    pairs = [(idx0taxo, slice(s0, s1))
+             for idx0taxo, s0, s1 in monitor.read('start-stop')]
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
