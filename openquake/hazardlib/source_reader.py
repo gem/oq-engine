@@ -315,7 +315,7 @@ def get_csm(oq, full_lt, dstore=None):
                     break
     if (oq.strict and oq.mosaic_model and pointlike_sources and
         'classical' in oq.calculation_mode and oq.ps_grid_spacing == 0
-        and not oq.sites):
+        and not oq.sites and not oq.disagg_by_src):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 

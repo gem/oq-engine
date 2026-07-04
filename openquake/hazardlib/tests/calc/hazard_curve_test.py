@@ -227,7 +227,11 @@ class MixtureModelGMPETestCase(unittest.TestCase):
                                 -15.22535996, -16.23988897, -17.94685518,
                                 -19.36079032, -20.57460101, -21.64201335])
         expected = numpy.around(expected, 5)
-        hcm_lnpga = numpy.around(numpy.log(hcm["PGA"].flatten()), 5)
+        # Very small tail POEs underflow the F32 output of _get_poes to 0
+        # giving log(0) = -inf so use np.errstate to ignore related runtime
+        # div by zero warning given it's harmless
+        with numpy.errstate(divide='ignore'):
+            hcm_lnpga = numpy.around(numpy.log(hcm["PGA"].flatten()), 5)
         rel_diff = ((hcm_lnpga / expected) - 1.0)
         okdiff = rel_diff[numpy.isfinite(rel_diff)]
         assert (okdiff < .03).all()
