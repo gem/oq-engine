@@ -361,6 +361,8 @@ def import_task_info(calc_id, name, dstore):
     """
     with datastore.read(calc_id) as ds:
         data = views.view('task_info', ds)
+        if data == 'Not available':
+            return
         dic = {col: data[col] for col in data.dtype.names}
         dic['job'] = name
         dic['taskname'] = general.decode(
