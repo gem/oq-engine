@@ -314,7 +314,9 @@ class VulnerabilityFunction(object):
         """
         if asset_df is None:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
+            # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
+        # dataset with fields eid, mean, cov and key sid
         if self.distribution_name == 'PM':  # special case
             lratios = F64(self.loss_ratios)
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
@@ -322,6 +324,7 @@ class VulnerabilityFunction(object):
             lratios = ()
             cols = None
         df = ratio_df.join(asset_df, how='inner')
+        # df is a dataset with fields eid, mean, cov, aid, val and key sid
         sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)

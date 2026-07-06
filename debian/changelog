@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Optimized ebrisk calculations by using larger GMF arrays
+  * Saving memory when running several jobs together with a pool
+  * Fixed a bug with IMT-dependent weights being not normalized, breaking
+    the CND model with use_rates=true
+
   [Paolo Tormene]
   * Fixed a unit-scaling bug in GMF calculations; acceleration IMTs are
     converted to g as before, while velocity measures (PGV) preserve their

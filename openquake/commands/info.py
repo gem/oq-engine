@@ -232,7 +232,7 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'cfg', 'consequences', 'site_params',
+choices = ['calculators', 'cfg', 'config', 'consequences', 'site_params',
            'gsim', 'imt', 'views', 'exports', 'disagg', 'db',
            'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv',
            'loss_types', 'uncertainty_types']
@@ -327,6 +327,8 @@ def main(what, report=False):
         print('Looking at the following paths (the last wins)')
         for path in config.paths:
             print(path)
+    elif what == 'config':
+        pprint(config)
     elif what == 'site_params':
         print_cols(sorted(site.site_param_dt), 4)
     elif what == 'sources':

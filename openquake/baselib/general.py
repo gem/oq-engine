@@ -319,6 +319,31 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
         yield ws
 
 
+def concatenated(dframes, size_mb=300):
+    """
+    :param dframes: iterator over dataframes
+    :param size_mb: yielding when cum_size > size_mb
+    :yields: concatenated dataframes around ~size_mb
+    """
+    dfs = []
+    size = 0
+    for df in dframes:
+        mb = df.memory_usage().sum() / 1024**2
+        if mb > size_mb:
+            print(f'There is a gmf_df of {mb:.0f} MB')
+            yield df
+        elif size + mb > size_mb:
+            yield pandas.concat(dfs)
+            dfs = [df]
+            size = mb
+        else:
+            dfs.append(df)
+            size += mb
+    if dfs:
+        yield pandas.concat(dfs)
+        
+    
+
 def split_in_slices(number, num_slices):
     """
     :param number: a positive number to split in slices
