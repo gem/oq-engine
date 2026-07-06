@@ -334,9 +334,10 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
         if gmf_mb > GMF_MB:
             print(f'{gmf_mb=:.1f}')
-            mod2 = gmf_df.eid % 2
-            yield  _event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
-            yield  _event_based_risk, gmf_df[mod2==1], pairs, crmodel
+            mod3 = gmf_df.eid % 3
+            yield _event_based_risk(gmf_df[mod3==0], pairs, crmodel, monitor)
+            yield _event_based_risk, gmf_df[mod3==1], pairs, crmodel
+            yield _event_based_risk, gmf_df[mod3==2], pairs, crmodel
         else:
             yield _event_based_risk(gmf_df, pairs, crmodel, monitor)
 
