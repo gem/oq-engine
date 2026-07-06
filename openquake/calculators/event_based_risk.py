@@ -330,8 +330,12 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside _event_based_risk
-        res = _event_based_risk(gmf_df, pairs, crmodel, monitor)
-        yield res
+        size_mb = gmf_df.memory_usage().sum() / 1024**2
+        if size_mb > 100:
+            print(f'{size_mb=:.1f}')
+            yield  _event_based_risk, gmf_df, pairs, crmodel
+        else:
+            yield _event_based_risk(gmf_df, pairs, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
