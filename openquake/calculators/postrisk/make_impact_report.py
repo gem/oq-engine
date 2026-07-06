@@ -204,29 +204,27 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
         logging.info(
             f"No losses estimated for country {iso3}. Skipping report")
         return None
+    if all(r.lossmea < 1e-5 for _, r in rows.iterrows()):
+        logging.info(f"Estimated losses for country {iso3} are negligible"
+                     f" (all lossmea < 1e-5). Skipping report.")
+        return None
     summary_data = {}
     for label, lt in mapping.items():
-        r = rows.loc[rows['loss_type'] == lt].iloc[0]
         matching_rows = rows.loc[rows['loss_type'] == lt]
         if not matching_rows.empty:
             r = matching_rows.iloc[0]
-            q50, q05, q95 = (int(round(r.get('q50', 0))),
-                             int(round(r.get('q05', 0))),
-                             int(round(r.get('q95', 0))))
+            q50 = int(round(r.get('q50', 0)))
+            q05 = int(round(r.get('q05', 0)))
+            q95 = int(round(r.get('q95', 0)))
         else:
             q50 = q05 = q95 = 0
+        # Format with thousands separators
         if no_uncertainty:
             # Display only the central value
-            summary_data[label] = f"{q50}"
+            summary_data[label] = f"{q50:,}"
         else:
             # Display the range
-            summary_data[label] = f"{q05} - {q95}"
-    if all(r.lossmea < 1e-5 for _, r in
-           rows.loc[rows['loss_type'].isin(mapping.values())].iterrows()):
-        logging.info(
-            f"Estimated losses for country {iso3} are negligible"
-            f" (all lossmea < 1e-5). Skipping report.")
-        return None
+            summary_data[label] = f"{q05:,} - {q95:,}"
     return summary_data
 
 
