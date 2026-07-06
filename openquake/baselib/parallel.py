@@ -1122,6 +1122,7 @@ def multispawn(func, allargs, names=(), nprocs=num_cores, logfinish=True):
         names = [f'job#{i}' for i, args in enumerate(allargs, 1)]
     tot = len(allargs)
     assert len(names) == tot, (len(names), tot)
+    enable_sigchld()
     p = mp_context.Pool(min(nprocs, tot))
     n = 0
     for name in p.imap_unordered(
@@ -1132,6 +1133,7 @@ def multispawn(func, allargs, names=(), nprocs=num_cores, logfinish=True):
             logging.error(f'{name.name}: {name}')
         elif logfinish:
             logging.info('Finished job %s [%d of %d]', name, n, tot)
+    disable_sigchld()
     p.close()
     p.join()  # not using `with Pool` to avoid mysterious atexit errors
 
