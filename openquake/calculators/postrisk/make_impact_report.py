@@ -693,7 +693,7 @@ class CountryReportBuilder:
             self.Spacer(1, 4),
             summary_table,
             self.Spacer(1, 12),
-            self.Paragraph("<b>Most affected regions</b>",
+            self.Paragraph("<b>Regions with highest number of fatalities</b>",
                            self.styles["Normal"]),
             self.ListFlowable(
                 [self.ListItem(self.Paragraph(region_name, self.ParagraphStyle(
