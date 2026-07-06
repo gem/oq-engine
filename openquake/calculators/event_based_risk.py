@@ -168,10 +168,9 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    items = ((id0taxo, monitor.read('assets', slice(s0, s1)).
-              set_index('ordinal'))
-             for id0taxo, s0, s1 in monitor.read('start-stop'))
-    dic = _event_based_risk(gmf_df, items, crmodel, monitor)
+    pairs = [(id0taxo, slice(s0, s1))
+             for id0taxo, s0, s1 in monitor.read('start-stop')]
+    dic = _event_based_risk(gmf_df, pairs, crmodel, monitor)
     return dic
 
 
@@ -255,7 +254,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
+def _event_based_risk(gmf_df, pairs, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
@@ -266,6 +265,8 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
+    items = ((id0taxo, monitor.read('assets', slc).
+              set_index('ordinal')) for id0taxo, slc in pairs)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -279,7 +280,7 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, assetdf in gen_adf:
+    for id0taxo, assetdf in items:
         with fil_mon:
             # filtering is *crucial* for the performance of the next step
             adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
@@ -329,9 +330,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside _event_based_risk
-        items = ((id0taxo, monitor.read('assets', slc).
-                  set_index('ordinal')) for id0taxo, slc in pairs)
-        res = _event_based_risk(gmf_df, items, crmodel, monitor)
+        res = _event_based_risk(gmf_df, pairs, crmodel, monitor)
         yield res
 
 
