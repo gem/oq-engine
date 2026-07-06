@@ -97,6 +97,34 @@ jobs:
           pytest openquake/baselib/tests/pyproj_wheel_test.py
           pytest openquake/hazardlib/tests/pyproj_wheel_test.py
 
+      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
+        run: |
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
+          source ~/openquake/bin/activate
+          cd openquake
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep hazardlib commands engine hmtk risklib commonlib baselib
+          cd ..
+
+      - name: Run tests for calculators to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
+
+      - name: Run tests for the engine server in public mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=PUBLIC pytest -v openquake/server/tests/test_public_mode.py
+
+      - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py
       - name: Run test to start OQ-WebUI in public mode to test installation
         if: always()
         run: |
@@ -127,32 +155,3 @@ jobs:
           oq info venv
           oq info cfg
           bin/run-demos.sh demos/ openquake/qa_tests_data/
-      - name: Run tests for calculators to test installation
-        if: always()
-        run: |
-          source ~/openquake/bin/activate
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
-
-      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
-        if: always()
-        run: |
-          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
-          source ~/openquake/bin/activate
-          cd openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
-          cd ..
-
-
-      - name: Run tests for the engine server in public mode to test installation
-        if: always()
-        run: |
-          source ~/openquake/bin/activate
-          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          OQ_APPLICATION_MODE=PUBLIC pytest -v openquake/server/tests/test_public_mode.py
-
-      - name: Run tests for the engine server in read-only mode to test installation
-        if: always()
-        run: |
-          source ~/openquake/bin/activate
-          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py
