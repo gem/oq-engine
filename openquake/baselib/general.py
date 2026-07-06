@@ -319,7 +319,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
         yield ws
 
 
-def concatenated(dframes, size_mb=300):
+def concatenated(dframes, size_mb):
     """
     :param dframes: iterator over dataframes
     :param size_mb: yielding when cum_size > size_mb
