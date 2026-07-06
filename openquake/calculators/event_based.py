@@ -397,6 +397,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
     allargs = []
+    T = (oq.concurrent_tasks or 2) // 2
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
@@ -418,25 +419,27 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw/4, rup_weight):
-            allargs.append((rupblock, cmaker, model))
+        modTs = numpy.arange(len(rups)) % T
+        for t in range(T):
+            allargs.append((rups[modTs == t], cmaker, model))
 
-    allargs = _collect(allargs, maxw*1.5, sitecol.sids, sec_perils, dstore)
+    allargs = _collect(allargs, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return allargs, oq_by
 
 
-def _collect(allargs, maxw, sids, sec_perils, dstore):
+def _collect(allargs, sids, sec_perils, dstore):
     # allargs is a list [(rupblock, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
+    maxlen = sum(len(args[0]) for args in allargs)
     out = []
-    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
+    for triples in block_splitter(allargs, maxlen, lambda item: len(item[0]),
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
-            (numpy.array(rb), rb.weight) for rb in rupblks])
+            (rb, len(rb)) for rb in rupblks])
         out.append((allrups, cmakers, sids, sec_perils, dstore))
     # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
     return out
