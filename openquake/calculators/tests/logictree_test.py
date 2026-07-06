@@ -24,6 +24,7 @@ from openquake.baselib.general import decode
 from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     get_rmap, calc_mean_rates, to_rates)
+from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -97,7 +98,7 @@ class LogictreeTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
 
         # check that the occurrence rates are the expected ones
-        [src] = self.calc.csm.get_sources()
+        [src] = read_csm(self.calc.datastore).get_sources()
         occrates = src.mfd.occurrence_rates
         aac(occrates, [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0])
         df = self.calc.datastore.read_df('ruptures', 'id')[

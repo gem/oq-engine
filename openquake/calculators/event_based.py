@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import gc
 import time
 import os.path
 import logging
@@ -750,6 +751,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(
                         sg.sources, maxw, lambda src: src.weight):
                     allargs.append((block, param))
+
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -794,6 +796,10 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore['sitecol'] = self.sitecol
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(self.datastore.getitem('ruptures')[()])
+
+        # save memory
+        del self.csm
+        gc.collect()
 
     def agg_dicts(self, acc, result):
         """
