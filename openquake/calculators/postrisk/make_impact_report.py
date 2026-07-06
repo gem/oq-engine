@@ -225,7 +225,8 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
            rows.loc[rows['loss_type'].isin(mapping.values())].iterrows()):
         logging.info(
             f"Estimated losses for country {iso3} are negligible"
-            f" (all lossmea < 1e-5). Generating report anyway.")
+            f" (all lossmea < 1e-5). Skipping report.")
+        return None
     return summary_data
 
 
