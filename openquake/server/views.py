@@ -2401,6 +2401,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                                if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
+        usgs_id = None
+        if hasattr(oqparam.rupture_dict, 'usgs_id'):
+            usgs_id = oqparam.rupture_dict['usgs_id']
         if hasattr(oqparam, 'local_timestamp'):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
@@ -2441,7 +2444,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                        impact_iso3_list=impact_iso3_list,
                        aggrisk_tags=aggrisk_tags,
                        exposure_by_liq_lse=exposure_by_liq_lse,
-                       exposure_by_land_lse=exposure_by_land_lse)
+                       exposure_by_land_lse=exposure_by_land_lse,
+                       usgs_id=usgs_id)
                   )
 
 

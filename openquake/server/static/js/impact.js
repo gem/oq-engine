@@ -483,7 +483,7 @@ window.initImpactForm = function() {
                     $('#rupture-map').html('<p>No rupture image available</p>');
                 }
             }
-            var desc = $('#usgs_id').val() + ': ';
+            var desc = '';
             if (data.title) {
                 desc += data.title;
             }
