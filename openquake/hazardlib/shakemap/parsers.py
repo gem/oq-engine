@@ -1508,7 +1508,8 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
                         usgs_id, contents, user)
             if rupture_file:
                 rup, rupdic, updated_rup_data, rupture_issue = \
-                    _convert_rupture_file(inputdic, rupture_file, usgs_id, user)
+                    _convert_rupture_file(
+                        inputdic, rupture_file, usgs_id, user)
                 if updated_rup_data:
                     rup_data = updated_rup_data
             elif approach in ['use_shakemap_fault_rup_from_usgs',
@@ -1516,8 +1517,11 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
                 err = {"status": "failed",
                        "error_msg": 'Unable to retrieve rupture geometries'}
                 return None, None, err
-    if 'lon' not in rupdic:  # rupdic was incompletely filled
-        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    converted_rup_data = convert_rup_data(
+        rup_data, usgs_id, rupture_file, shakemap)
+    if 'rupture_file' in rupdic:  # already converted: do not overwrite
+        converted_rup_data.pop('rupture_file')
+    rupdic.update(converted_rup_data)
     for key in inputdic:
         if inputdic[key] is not None and key not in rupdic:
             rupdic[key] = inputdic[key]
