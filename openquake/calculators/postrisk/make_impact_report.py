@@ -658,7 +658,7 @@ class CountryReportBuilder:
         # Determine column header based on uncertainty
         col_header = ("Estimated losses" if self.no_uncertainty
                       else "Range of losses")
-        table_data = [["", col_header]] + [
+        table_data = [["Impact metric", col_header]] + [
             [meta["label"], self.summary_data[meta["label"]]]
             for meta in LOSS_METADATA.values()
         ]
