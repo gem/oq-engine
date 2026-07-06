@@ -330,7 +330,7 @@ def concatenated(dframes, size_mb=300):
     for df in dframes:
         mb = df.memory_usage().sum() / 1024**2
         if mb > size_mb:
-            print(f'There is a gmf_df of {mb:.0f} MB')
+            logging.info(f'There is a gmf_df of {mb:.0f} MB')
             yield df
         elif size + mb > size_mb:
             yield pandas.concat(dfs)

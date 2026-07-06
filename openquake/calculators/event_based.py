@@ -423,26 +423,24 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         for t in range(T):
             allargs.append((rups[modTs == t], cmaker, model))
 
-    allargs = _collect(allargs, sitecol.sids, sec_perils, dstore)
+    allargs = _collect(allargs, T, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return allargs, oq_by
 
 
-def _collect(allargs, sids, sec_perils, dstore):
-    # allargs is a list [(rupblock, cmaker, model) ...]
+def _collect(allargs, T, sids, sec_perils, dstore):
+    # allargs is a list [(rups, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
-    lens = [len(args[0]) for args in allargs if len(args[0])]
-    print(f'{lens=}')
+    mlen = sum(len(args[0]) for args in allargs) / T
     out = []
-    for triples in block_splitter(allargs, numpy.mean(lens),
+    for triples in block_splitter(allargs, mlen,
                                   lambda item: len(item[0]),
                                   key=lambda item: item[2]):  # by model
-        rupblks, cmakers, models = zip(*triples)
-        allrups = general.WeightedSequence([
-            (rb, len(rb)) for rb in rupblks])
-        out.append((allrups, cmakers, sids, sec_perils, dstore))
+        allrups, cmakers, models = zip(*triples)
+        seq = general.WeightedSequence([(rups, len(rups)) for rups in allrups])
+        out.append((seq, cmakers, sids, sec_perils, dstore))
     # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
     return out
 
