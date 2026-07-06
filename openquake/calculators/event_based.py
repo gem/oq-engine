@@ -433,9 +433,11 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
 def _collect(allargs, sids, sec_perils, dstore):
     # allargs is a list [(rupblock, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
-    maxlen = sum(len(args[0]) for args in allargs)
+    lens = [len(args[0]) for args in allargs if len(args[0])]
+    print(f'{lens=}')
     out = []
-    for triples in block_splitter(allargs, maxlen, lambda item: len(item[0]),
+    for triples in block_splitter(allargs, numpy.mean(lens),
+                                  lambda item: len(item[0]),
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
