@@ -9,6 +9,7 @@ Requirements
 Requirements are:
 
 -  macOS Sequoia 15.7 or macOS 26 Tahoe 26.4
+-  ARM-based Apple Silicon CPU (M1 - M5)
 -  at least 16 GB of RAM
 -  4 GB of free disk space
 -  Python 3.12
