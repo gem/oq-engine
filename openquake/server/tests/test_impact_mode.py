@@ -405,12 +405,12 @@ class ImpactModeTestCase(django.test.TestCase):
         #     "number": "5",
         #     "utc_date_time": "2025-01-13 18:20:35"
         # },
-        usgs_id = 'us6000phrk'
+        usgs_id = 'us6000t7zp'
         resp = self.post('impact_get_shakemap_versions',
                          prefix='/v1/', data={'usgs_id': usgs_id})
         js = json.loads(resp.content.decode('utf8'))
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
-                         if version['number'] == '5']
+                         if version['number'] == '10']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
