@@ -89,7 +89,15 @@ jobs:
           pip3 install pytest pyshp flake8
           oq engine --upgrade-db
           sleep 5
-
+      
+      - name: Run demos to test installation
+        run: |
+          set -x
+          source ~/openquake/bin/activate
+          oq info venv
+          oq info cfg
+          bin/run-demos.sh demos/ openquake/qa_tests_data/
+          
       - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
         if: always()
         run: |
@@ -125,6 +133,7 @@ jobs:
           source ~/openquake/bin/activate
           pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py
+          
       - name: Run test to start OQ-WebUI in public mode to test installation
         if: always()
         run: |
@@ -147,11 +156,3 @@ jobs:
           sleep 5
           echo "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/"
           curl -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
-
-      - name: Run demos to test installation
-        run: |
-          set -x
-          source ~/openquake/bin/activate
-          oq info venv
-          oq info cfg
-          bin/run-demos.sh demos/ openquake/qa_tests_data/
