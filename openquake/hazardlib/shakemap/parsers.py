@@ -1500,24 +1500,29 @@ def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
     """
     Merge downloaded/converted rupture data into rupdic, backfill any
     fields still missing from inputdic, and attach metadata (mmi file,
-    shakemap array, title, shakemap description). Mutates rupdic in place.
+    shakemap array, title, shakemap description).
+
+    Returns a new dict
     """
+    new_rupdic = dict(rupdic)
     converted_rup_data = convert_rup_data(
         rup_data, usgs_id, rupture_file, shakemap)
-    if 'rupture_file' in rupdic:  # already converted: do not overwrite
+    if 'rupture_file' in new_rupdic:  # already converted: do not overwrite
         converted_rup_data.pop('rupture_file')
-    rupdic.update(converted_rup_data)
+    new_rupdic.update(converted_rup_data)
 
     for key in inputdic:
-        if inputdic[key] is not None and key not in rupdic:
-            rupdic[key] = inputdic[key]
+        if inputdic[key] is not None and key not in new_rupdic:
+            new_rupdic[key] = inputdic[key]
 
-    if 'mmi_file' not in rupdic:
-        rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
+    if 'mmi_file' not in new_rupdic:
+        new_rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':
-        rupdic['shakemap_array'] = shakemap
-    rupdic['title'] = properties['title']
-    rupdic['shakemap_desc'] = shakemap_desc
+        new_rupdic['shakemap_array'] = shakemap
+    new_rupdic['title'] = properties['title']
+    new_rupdic['shakemap_desc'] = shakemap_desc
+
+    return new_rupdic
 
 
 def _build_planar_rupture(rupdic):
@@ -1596,9 +1601,9 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
             if downloaded_rupdic:
                 rupdic = downloaded_rupdic
 
-    _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
-                     shakemap_desc, contents, inputdic, approach, properties,
-                     user)
+    rupdic = _finalize_rupdic(
+        rupdic, rup_data, usgs_id, rupture_file, shakemap, shakemap_desc,
+        contents, inputdic, approach, properties, user)
 
     if not rup and not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
