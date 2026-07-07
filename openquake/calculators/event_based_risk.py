@@ -42,7 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 300
+GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
