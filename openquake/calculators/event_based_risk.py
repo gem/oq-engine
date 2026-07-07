@@ -171,7 +171,7 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
         crmodel = monitor.read('crmodel')
     pairs = [(id0taxo, slice(s0, s1))
              for id0taxo, s0, s1 in monitor.read('start-stop')]
-    dic = _event_based_risk(gmf_df, pairs, crmodel, monitor)
+    dic = event_based_risk(gmf_df, pairs, crmodel, monitor)
     return dic
 
 
@@ -255,7 +255,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def _event_based_risk(gmf_df, pairs, crmodel, monitor):
+def event_based_risk(gmf_df, pairs, crmodel, monitor):
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
@@ -330,15 +330,15 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     for gmf_df in general.concatenated(dfs, GMF_MB):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
-        # only one taxonomy at the time is read inside _event_based_risk
+        # only one taxonomy at the time is read inside event_based_risk
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
         if gmf_mb > GMF_MB:
             print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
-            yield _event_based_risk, gmf_df[mod2==1], pairs, crmodel
-            yield _event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
+            yield event_based_risk, gmf_df[mod2==1], pairs, crmodel
+            yield event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
         else:
-            yield _event_based_risk(gmf_df, pairs, crmodel, monitor)
+            yield event_based_risk(gmf_df, pairs, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
