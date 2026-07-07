@@ -256,6 +256,11 @@ def set_oqparam(oq, assetcol, dstore):
 
 
 def event_based_risk(gmf_df, pairs, crmodel, monitor):
+    """
+    Aggregate the losses for all assets for the given event slice
+
+    :returns: dictionary alt, avg
+    """
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
