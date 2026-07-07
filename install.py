@@ -78,14 +78,13 @@ if PYVER < (3, 11, 0):
 
 # check macOS
 if sys.platform == "darwin":
-    try:
-        mac_version_str = platform.mac_ver()[0]
-        major_version = int(mac_version_str.split(".")[0])
-        if major_version < 15:
-            sys.exit(
-                f"Error: macOS {mac_version_str} is not supported. "
-                "Version 15 or higher is required."
-            )
+    mac_version_str = platform.mac_ver()[0]
+    major_version = int(mac_version_str.split(".")[0])
+    if major_version < 15:
+        sys.exit(
+            f"Error: macOS {mac_version_str} is not supported. "
+            "Version 15 or higher is required."
+        )
 
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = """Found pre-existing venv %s
