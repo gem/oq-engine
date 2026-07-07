@@ -42,7 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 450
+GMF_MB = 300
 get_n_occ = operator.itemgetter(1)
 
 
@@ -334,10 +334,9 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
         if gmf_mb > GMF_MB:
             print(f'{gmf_mb=:.1f}')
-            mod3 = gmf_df.eid % 3
-            yield _event_based_risk(gmf_df[mod3==0], pairs, crmodel, monitor)
-            yield _event_based_risk, gmf_df[mod3==1], pairs, crmodel
-            yield _event_based_risk, gmf_df[mod3==2], pairs, crmodel
+            mod2 = gmf_df.eid % 2
+            yield _event_based_risk, gmf_df[mod2==1], pairs, crmodel
+            yield _event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
         else:
             yield _event_based_risk(gmf_df, pairs, crmodel, monitor)
 
