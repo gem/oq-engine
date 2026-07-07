@@ -481,6 +481,7 @@ def install(inst, version, from_fork):
             "-m",
             "pip",
             "install",
+            "--force-reinstall",
             "--trusted-host",
             "wheelhouse.openquake.org",
             "--trusted-host",
