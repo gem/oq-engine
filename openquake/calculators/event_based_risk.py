@@ -493,6 +493,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
                 return 1
+            self.datastore['/'].attrs['gmf_bytes'] = self.gmf_bytes
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
