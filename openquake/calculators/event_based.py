@@ -239,7 +239,7 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         return dict(gmfdata={}, times=times, sig_eps=())
 
     gmfdata = pandas.concat(alldata)  # ~40 MB
-    dic = dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+    dic = dict(gmfdata=gmfdata,
                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
     if oq.mea_tau_phi:
         mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
@@ -418,7 +418,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw, rup_weight):
+        for rupblock in block_splitter(rups, maxw/4, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
     allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
@@ -530,8 +530,12 @@ def run(func, oq, rup0, calc):
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
         calc.save_tmp(smap.monitor)
-    for args in allargs:
-        smap.submit(args)
+    task_no = os.environ.get('OQ_TASK_NO', '')
+    if task_no:  # debug a single task
+        smap.submit(allargs[int(task_no)])
+    else:
+        for args in allargs:
+            smap.submit(args)
     smap.reduce(calc.agg_dicts)
 
 

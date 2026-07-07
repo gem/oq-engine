@@ -58,9 +58,9 @@ def dbcmd(action, *args):
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if (action.startswith('workers_') and config.zworkers.host_cores
-            == '127.0.0.1 -1'):  # local zmq
-        return on_workers(action)
+    hc = config.zworkers.host_cores
+    if action.startswith('workers_') and hc.startswith('127.0.0.1 '):
+        return on_workers(action)  # local zmq
     elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly
         if action.startswith('workers_'):
