@@ -326,7 +326,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
     # NB: it is essential to concatenate the small dataframes to have
-    # long arrays (around 512 MB) and hence a good performance
+    # long arrays (around GMF_MB) and hence a good performance
     for gmf_df in general.concatenated(dfs, GMF_MB):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
