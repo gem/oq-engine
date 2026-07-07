@@ -17,6 +17,7 @@ We recommend using a Linux server for large calculations such as
 national or regional-scale models.
 
 **Intel-based MacOS**  are not supported.
+
 **Please note** that  OpenQuake Engine cannot be installed on any macOS version lower than macOS Sequoia 15.7.
 
 Installation Procedure of Python 3
