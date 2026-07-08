@@ -335,7 +335,7 @@ class File(h5py.File):
     conforming to the HDF5 protocol used by the OpenQuake software.
     It works recursively also for dictionaries of the form name->obj.
 
-    >>> f = File('/tmp/x.h5', 'w')
+    >>> f = File(f'{tempfile.gettempdir()}/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
     >>> int(dic['a']['x'][()])
