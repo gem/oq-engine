@@ -337,8 +337,8 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside event_based_risk
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
+        print(f'{gmf_mb=:.1f}')
         if gmf_mb > GMF_MB:
-            print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
             yield event_based_risk, gmf_df[mod2==1], pairs, crmodel
             yield event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
