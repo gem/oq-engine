@@ -109,7 +109,8 @@ class ImpactPageLevel2(ImpactPage):
         )
 
     def confirm_relocated_hypocenter_warning(self):
-        expect(self.page.get_by_text("it was moved")).to_be_visible(timeout=15_000)
+        expect(self.page.get_by_text("it was moved")).to_be_visible(
+            timeout=50_000)
         modal = self.page.get_by_text("it was moved")
         self.page.get_by_role("button", name="Close").click()
         expect(modal).not_to_be_visible()
@@ -126,7 +127,8 @@ class ImpactPageLevel2(ImpactPage):
                                                  name="Retrieve from the USGS")
         expect(get_stations_btn).to_be_visible()
         get_stations_btn.click()
-        station_data_loaded = self.page.locator('input#station_data_file_loaded')
+        station_data_loaded = self.page.locator(
+            'input#station_data_file_loaded')
         if expect_no_seismic_stations:
             self.page.get_by_role("button", name="Close").click()
             expect(station_data_loaded).to_have_value(

@@ -1505,11 +1505,12 @@ def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
     Returns a new dict
     """
     new_rupdic = dict(rupdic)
-    converted_rup_data = convert_rup_data(
-        rup_data, usgs_id, rupture_file, shakemap)
-    if 'rupture_file' in new_rupdic:  # already converted: do not overwrite
-        converted_rup_data.pop('rupture_file')
-    new_rupdic.update(converted_rup_data)
+    if 'lon' not in new_rupdic:  # rupdic was incompletely filled
+        converted_rup_data = convert_rup_data(
+            rup_data, usgs_id, rupture_file, shakemap)
+        if 'rupture_file' in new_rupdic:  # already converted: do not overwrite
+            converted_rup_data.pop('rupture_file')
+        new_rupdic.update(converted_rup_data)
 
     for key in inputdic:
         if inputdic[key] is not None and key not in new_rupdic:

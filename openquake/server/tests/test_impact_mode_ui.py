@@ -43,9 +43,9 @@ def test_impact_ui_level_0(
 def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id):
     page = ImpactPageLevel1(authenticated_page)
-    page.set_rupture_identifier('us6000phrk')
+    page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
-        value='urn:usgs-product:us:shakemap:us6000phrk:1738891320927')
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
     expect(page.intensity_map()).to_be_visible(timeout=50_000)
     expect(page.pga_map()).to_be_visible(timeout=30_000)
@@ -75,10 +75,11 @@ def test_impact_ui_level_2_use_shakemap(
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Use ShakeMap from the USGS')
     expect(page.rupture_identifier()).to_be_visible()
-    page.set_rupture_identifier('us6000phrk')
+    page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
-        value='urn:usgs-product:us:shakemap:us6000phrk:1738891320927')
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
+    page.confirm_relocated_hypocenter_warning()
     expect(page.intensity_map()).to_be_visible(timeout=50_000)
     expect(page.pga_map()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
