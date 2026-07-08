@@ -422,7 +422,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
         for rupblock in block_splitter(rups, maxw/4, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
-    allargs = _collect(allargs, maxw*1.5, sitecol.sids, sec_perils, dstore)
+    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)

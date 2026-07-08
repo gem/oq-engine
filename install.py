@@ -75,6 +75,17 @@ if PYVER < (3, 11, 0):
     sys.exit(
         "Error: you need at least Python 3.11, but you have %s"
         % ".".join(map(str, sys.version_info)))
+
+# check macOS
+if sys.platform == "darwin":
+    mac_version_str = platform.mac_ver()[0]
+    major_version = int(mac_version_str.split(".")[0])
+    if major_version < 15:
+        sys.exit(
+            f"Error: macOS {mac_version_str} is not supported. "
+            "Version 15 or higher is required."
+        )
+
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = """Found pre-existing venv %s
 If you proceeed you will have to reinstall manually any software other
@@ -481,6 +492,7 @@ def install(inst, version, from_fork):
             "-m",
             "pip",
             "install",
+            "--force-reinstall",
             "--trusted-host",
             "wheelhouse.openquake.org",
             "--trusted-host",

@@ -66,6 +66,11 @@ and for Mac, it would be::
 	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-macos.txt openquake.engine
 	```
 
+If you have a previous installation of the engine it is a good idea to
+pass ``--force-reinstall`` to ``pip``: this solves potential issues with
+geospatial libraries, like using using the old version of proj instead
+of the new one.
+
 Cloud
 -----
 

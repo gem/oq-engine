@@ -42,6 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
+GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
@@ -168,10 +169,9 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    items = ((id0taxo, monitor.read('assets', slice(s0, s1)).
-              set_index('ordinal'))
-             for id0taxo, s0, s1 in monitor.read('start-stop'))
-    dic = _event_based_risk(gmf_df, items, crmodel, monitor)
+    pairs = [(id0taxo, slice(s0, s1))
+             for id0taxo, s0, s1 in monitor.read('start-stop')]
+    dic = event_based_risk(gmf_df, pairs, crmodel, monitor)
     return dic
 
 
@@ -255,7 +255,12 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
+def event_based_risk(gmf_df, pairs, crmodel, monitor):
+    """
+    Aggregate the losses for all assets for the given event slice
+
+    :returns: dictionary with keys 'alt', 'avg', 'gmf_bytes'
+    """
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
@@ -266,6 +271,8 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
+    items = ((id0taxo, monitor.read('assets', slc).
+              set_index('ordinal')) for id0taxo, slc in pairs)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -279,7 +286,7 @@ def _event_based_risk(gmf_df, gen_adf, crmodel, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, assetdf in gen_adf:
+    for id0taxo, assetdf in items:
         with fil_mon:
             # filtering is *crucial* for the performance of the next step
             adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
@@ -324,15 +331,19 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
     # NB: it is essential to concatenate the small dataframes to have
-    # long arrays (around 512 MB) and hence a good performance
-    for gmf_df in general.concatenated(dfs):
+    # long arrays (around GMF_MB) and hence a good performance
+    for gmf_df in general.concatenated(dfs, GMF_MB):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
-        # only one taxonomy at the time is read inside _event_based_risk
-        items = ((id0taxo, monitor.read('assets', slc).
-                  set_index('ordinal')) for id0taxo, slc in pairs)
-        res = _event_based_risk(gmf_df, items, crmodel, monitor)
-        yield res
+        # only one taxonomy at the time is read inside event_based_risk
+        gmf_mb = gmf_df.memory_usage().sum() / 1024**2
+        if gmf_mb > GMF_MB:
+            print(f'{gmf_mb=:.1f}')
+            mod2 = gmf_df.eid % 2
+            yield event_based_risk, gmf_df[mod2==1], pairs, crmodel
+            yield event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
+        else:
+            yield event_based_risk(gmf_df, pairs, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -487,6 +498,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
                 return 1
+            self.datastore['/'].attrs['gmf_bytes'] = self.gmf_bytes
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
