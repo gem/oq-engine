@@ -60,8 +60,10 @@ def test_impact_ui_level_1(
     with page.page.context.expect_page() as report_page_info:
         page.to_report()
     report_tab = report_page_info.value
-    report_tab.wait_for_load_state()
-    report_tab.close()
+    # networkidle is needed to avoid breaking in headless mode
+    report_tab.wait_for_load_state('networkidle')
+    report_tab.wait_for_timeout(500)  # let any trailing response writes complete
+    # report_tab.close()
     page.page.bring_to_front()
     page.to_calculations()
     page.remove_job(job_id)
