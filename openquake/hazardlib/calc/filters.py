@@ -337,10 +337,15 @@ def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
     for r, sids in enumerate(all_sids):
         if sids:
             rup = ruptures[r]
-            # NB: if there are stations num_assets[sid] can be empty
-            rup['nsites'] = sum(num_assets.get(s, 1)
-                                for sid in sids
-                                for s in orig_sids[sid])
+            wei = 0
+            for sid in sids:
+                if num_assets:
+                    # NB: if there are stations num_assets[s] can be empty
+                    for s in orig_sids[sid]:
+                        wei += max(num_assets.get(s, 0), 10)
+                else:
+                    wei += len(orig_sids[sid])
+            rup['nsites'] = wei
             out.append(rup)
     return numpy.array(out)
 
