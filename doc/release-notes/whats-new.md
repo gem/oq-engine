@@ -91,17 +91,6 @@ We added an epistemic uncertainty setting for relative seismogenic depth,
 'adjust_lower_seismogenic_depth' and 'adjust_upper_seismogenic_depth'
 (see https://github.com/gem/oq-engine/pull/11415).
 
-## job.ini extensions
-
-We added a `keep_trt` parameter to discard all sources except the
-ones with the specified tectonic region type. This is useful while debugging.
-
-We added the parameters `truncation_level_between` and
-`truncation_level_within` for use in scenario calculations.
-
-We added the ability to define a reference `z1pt4` parameter in the job
-configuration file, to be used with the latest Japan model.
-
 ## hazardlib: new features and fixes
 
 Savash Ceylan contributed a set of GMPEs: EdwardsFah2013Foreland3Bars,
@@ -176,7 +165,9 @@ can give a large speedup, especially for conditioned scenarios (in a
 scenario_damage calculation for the PAPERS project the measured
 speedup was 100x).
 
-We added support for sampling the GMFs from the truncated multivariate normal
+We added the parameters `truncation_level_between` and
+`truncation_level_within` for use in scenario calculations, and then
+we added support for sampling the GMFs from the truncated multivariate normal
 distribution.
 
 We improved the error triggered when all assets are filtered out to something
@@ -251,10 +242,16 @@ converted into an integer (i.e. 60.0 was considered different from
 
 ## Other
 
+We added a `keep_trt` parameter to discard all sources except the
+ones with the specified tectonic region type. This is useful while debugging.
+
+We added the ability to define a reference `z1pt4` parameter in the job
+configuration file, to be used with the latest Japan model.
+
 As usual there was work on the WebUI for the AELO and OQImpact
-projects, like for instance restricting the visibility of the
-datastore and `job.zip` download buttons only to advanced users
-or improving a few plots.
+projects, like restricting the visibility of the datastore and
+`job.zip` download buttons only to advanced users and improving a few
+plots.
 
 We refactored the testing approach so that now the AELO and IMPACT
 tests can be run together in a single action.
