@@ -1,4 +1,4 @@
-  [Amir Shahmohamadian]
+  [Amir Shahmohammadian]
   * Fixed a bug in the treatment of PGV period in the Jayaram and Baker
     (2009) spatial correlation model resulting in a wrong coefficient
     b = 22.0 instead of b = 25.7
