@@ -1,7 +1,7 @@
 Release notes (dev)
 ===================
 
-Version 3.26 is the culmination of 3 months of work involving over 320
+Version 3.26 is the culmination of 4 months of work involving over 320
 pull requests. It is the minimum version able to run the 2026 release of Global
 Hazard and Risk Models. Users not needing the latest models may want to
 stay with the LTS release, currently at version 3.23.4.
