@@ -109,6 +109,7 @@ Nicholas Clemett         (@nc-hsu)              January 2026
 Thuany Costa de Lima     (@thuanycostadelima)   May 2026
 Fahrettin Kuran          (@kurannn)             May 2026
 Savas Ceylan             (@sceylan)             June 2026
+Amir Shahmohammadian     (@Shahmohamadian)      July 2026
 
 Project management
 ------------------
