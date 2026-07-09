@@ -318,11 +318,19 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
            if len(dic['gmfdata']))
     # NB: it is essential to concatenate the small dataframes to have
     # long arrays (around GMF_MB) and hence a good performance
+    num_assets = monitor.read('num_assets')
     for gmf_df in general.concatenated(dfs, GMF_MB):
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside event_based_risk
-        yield event_based_risk(gmf_df, monitor)
+        na = int(num_assets[gmf_df.sid.unique()].sum())
+        print(f'{na=:_d}')
+        if na > 1E6:
+            mod2 = gmf_df.eid % 2
+            yield event_based_risk, gmf_df[mod2==1]
+            yield event_based_risk(gmf_df[mod2==0], monitor)
+        else:
+            yield event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -350,6 +358,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('sids', self.sitecol.sids)
         adf, iss = get_assetdf_startstop(self.assetcol)
         monitor.save('assets', adf)
+        monitor.save('num_assets', general.fast_agg(self.assetcol['site_id']))
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
