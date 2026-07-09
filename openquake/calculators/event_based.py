@@ -344,7 +344,7 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
     maxw = min(totw / (oq.concurrent_tasks or 1), 1E8)
-    logging.info(f'{round(maxw)=}')
+    logging.info(f'{round(maxw)=:_d}')
     return filrups, maxw, acc
 
 
