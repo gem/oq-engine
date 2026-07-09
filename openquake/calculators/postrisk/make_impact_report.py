@@ -740,27 +740,54 @@ class CountryReportBuilder:
         return tbl
 
     def _build_notes(self):
-        notes_font = self._select_font(self.notes_txt)
+        """
+        Builds a bordered notes box with a full-width header for custom notes,
+        followed by a 3-column grid for job parameters.
+        """
+        story = []
+        if not self.notes_txt:
+            return story
+        notes_items = list(self.notes_txt)
+        grid_data = []
+        # Create a compact font style variant for the notes box
         notes_style = self.ParagraphStyle(
-            "notes",
-            parent=self.styles["Normal"],
-            fontName=notes_font,
+            'NotesStyle',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            leading=7.5
         )
-        tbl = self.Table(
-            [[self.Paragraph(f"<b>Notes</b>: {self.notes_txt}", notes_style)]],
-            colWidths=[self.page_width],
-            rowHeights=[self.NOTES_H],
-        )
-
-        tbl.setStyle(self.TableStyle([
-            ("BOX", (0, 0), (-1, -1), 1, self.colors.black),
-            ("BACKGROUND", (0, 0), (-1, -1), self.colors.whitesmoke),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
+        # Isolate the user note if it exists
+        user_note = ""
+        if notes_items and not notes_items[0].startswith(
+                ("USGS identifier:", "Longitude:", "Latitude:")):
+            user_note = notes_items.pop(0)
+        # Create the full-width header row
+        header_text = f"<b>Notes:</b> {user_note}".strip()
+        grid_data.append([self.Paragraph(header_text, notes_style), "", ""])
+        # Chunk the remaining metadata into 3-column rows
+        for i in range(0, len(notes_items), 3):
+            row = [self.Paragraph(item, notes_style)
+                   for item in notes_items[i:i+3]]
+            while len(row) < 3:
+                row.append(self.Paragraph("", notes_style))
+            grid_data.append(row)
+        # Apply styles: outer box, inner padding, and top row span
+        t = self.Table(grid_data, colWidths=[180, 180, 180])
+        t.setStyle(self.TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, self.reportlab.lib.colors.black),
+            ('SPAN', (0, 0), (2, 0)),  # Make the first row span all 3 columns
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            # Tighter gap below the header
+            ('BOTTOMPADDING', (0, 0), (2, 0), 0),
+            # Some room at the very bottom
+            ('BOTTOMPADDING', (0, -1), (2, -1), 6),
         ]))
-
-        return tbl
+        story.append(t)
+        return story
 
     def build(self):
         logging.info(f'Making impact PDF report for {self.iso3}...')
@@ -833,25 +860,25 @@ def make_report_for_country(
 
 
 def _get_notes(oqparam):
-    notes = ''
+    notes_list = []
+    # If there are user notes, add them as the first standalone block
     if oqparam.notes:
-        notes += oqparam.notes + '<br/>'
+        notes_list.append(oqparam.notes)
     rupdic = oqparam.rupture_dict
-    notes += f'Rupture identifier: {rupdic["usgs_id"]}'
-    notes += f'. Lon: {rupdic["lon"]}'
-    notes += f'. Lat: {rupdic["lat"]}'
-    notes += f'. Dep: {rupdic["dep"]}'
-    notes += f'. Mag: {rupdic["mag"]}'
-    notes += f'. Rake: {rupdic["rake"]}'
-    notes += f'. Dip: {rupdic["dip"]}'
-    notes += f'. Strike: {rupdic["strike"]}'
-    notes += f'. <br/>Mosaic model: {oqparam.mosaic_model}'
-    notes += (f'. Number of ground motion fields:'
-              f' {oqparam.number_of_ground_motion_fields}')
-    notes += f'. Truncation level: {oqparam.truncation_level}'
-    notes += f'. Time of the event: {oqparam.time_event}'
-    notes += f'. Tectonic region type: {oqparam.tectonic_region_type}'
-    return notes
+    # Append each metadata element as an individual line item
+    notes_list.append(f'USGS identifier: {rupdic["usgs_id"]}')
+    notes_list.append(f'Longitude: {rupdic["lon"]}')
+    notes_list.append(f'Latitude: {rupdic["lat"]}')
+    notes_list.append(f'Depth: {rupdic["dep"]}')
+    notes_list.append(f'Magnitude: {rupdic["mag"]}')
+    notes_list.append(f'Rake: {rupdic["rake"]}')
+    notes_list.append(f'Dip: {rupdic["dip"]}')
+    notes_list.append(f'Strike: {rupdic["strike"]}')
+    notes_list.append(f'Number of ground motion fields:'
+                      f' {oqparam.number_of_ground_motion_fields}')
+    notes_list.append(f'Truncation level: {oqparam.truncation_level}')
+    notes_list.append(f'Considered time of the event: {oqparam.time_event}')
+    return notes_list
 
 
 def to_utc_string(ts: str) -> str:
