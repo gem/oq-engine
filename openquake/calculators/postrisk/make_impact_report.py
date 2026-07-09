@@ -557,7 +557,7 @@ class CountryReportBuilder:
             label = meta["label"]
             elements = MapDataElements(
                 plot_title=meta["title"],
-                legend_title=label,
+                # legend_title=label,  # already in plot title
                 cities=self.cities,
                 x_limits=self.x_limits,
                 y_limits=self.y_limits,
