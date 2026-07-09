@@ -1,11 +1,11 @@
 # Release notes (dev)
 
-Version 3.26 is the culmination of four months of work involving over 320
-pull requests. It is the minimum version able to run the 
-[2026 release of GEM's Global Seismic Hazard and Risk Models]
+Version 3.26 is the culmination of four months of work involving over
+320 pull requests. It is the minimum version able to run the [2026
+release of GEM's Global Seismic Hazard and Risk Models]
 (https://www.globalquakemodel.org/GEMNews/gem-2026-unveil-new-global-earthquake-risk-products).
-Users who do not need the latest models may want to stay with the 
-LTS release, currently at version 3.23.4.
+Users who do not need the latest models may want to stay with the LTS
+release, currently at version 3.23.4.
 
 The complete set of changes is listed in the changelog:
 
@@ -18,11 +18,15 @@ A summary is given below.
 ## Rupture sampling
 
 The performance of the command generating the Global Stochastic Event
-Set has been drastically improved by reducing slow tasks and saving
+Set has been drastically improved by changing the algorithm to
+use the multinomial distribution with weights proportional to
+the number of samples per source model. That makes over an order
+of difference in models with high source multiplicity like New Zealand.
+
+Moreover, by splitting the multifault and multipoint sources in a
+smarter way, we were able to reduce the slow tasks and to save
 memory. Without these improvements, the Global SES with the latest
-models could not be computed because of out-of-memory errors. The changes
-required splitting the multifault and multipoint sources in a
-different way and consequently changing the rupture seed generation algorithm.
+models could not run because of out-of-memory errors.
 
 We fixed a rupture sampling bug in the case of mutually exclusive ruptures,
 affecting Japan in the Nankai area and the USA model in the New Madrid area.
@@ -120,8 +124,8 @@ We implemented the Holmgren et al. (2024) GMM requested by Bruce Worden
 (see https://github.com/gem/oq-engine/issues/9910).
 
 We added an `AlternativeCharacteristicMFD` class (see
-https://github.com/gem/oq-engine/pull/11360)
-and made it usable in area sources.
+https://github.com/gem/oq-engine/pull/11360) and updated the source
+reader to understand it at the XML level.
 
 We fixed `SiMidorikawa1999` to correctly use `Rhypo` instead of
 `Rrup` for the NE correction term (see https://github.com/gem/oq-engine/pull/11307).
