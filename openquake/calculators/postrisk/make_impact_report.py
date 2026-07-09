@@ -42,19 +42,19 @@ cd = pathlib.Path(__file__).parent
 LOSS_METADATA = {
     "occupants": {
         "label": "Fatalities",
-        "title": "Fatalities",
+        "title": "fatalities",
         "colors": [
             '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d'],
     },
     "residents": {
         "label": "Displaced",
-        "title": "Displaced population",
+        "title": "displaced population",
         "colors": [
             '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
     },
     "number": {
         "label": "Buildings lost",
-        "title": "Buildings beyond repair",
+        "title": "buildings beyond repair",
         "colors": [
             '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
     },
@@ -79,6 +79,7 @@ class ReportOptions:
     basemap_path: str
     threshold_deg: float
     no_uncertainty: bool
+    loss_metric: str
 
 
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded
@@ -314,6 +315,7 @@ class CountryReportBuilder:
         self.basemap_path = options.basemap_path
         self.threshold_deg = options.threshold_deg
         self.no_uncertainty = options.no_uncertainty
+        self.loss_metric = options.loss_metric
 
         self.styles = self.getSampleStyleSheet()
 
@@ -555,8 +557,9 @@ class CountryReportBuilder:
         images = {}
         for meta in LOSS_METADATA.values():
             label = meta["label"]
+            plot_title = f'{self.loss_metric} {meta["title"]}'
             elements = MapDataElements(
-                plot_title=meta["title"],
+                plot_title=plot_title,
                 # legend_title=label,  # already in plot title
                 cities=self.cities,
                 x_limits=self.x_limits,
@@ -917,13 +920,16 @@ def main(dstore, adm_level=1, threshold_deg=None):
     # the spatial loss maps, consistent with how _get_impact_summary_data
     # displays the central value.  Fall back to the mean only if the median is
     # unavailable (e.g. a calculation run without quantile outputs).
+    loss_metric = None
     if hasattr(avg_losses, 'quantile-0.5') and avg_losses[
             'quantile-0.5'] is not None:
         losses_df = pd.DataFrame(avg_losses['quantile-0.5'])
+        loss_metric = 'Median'
     elif hasattr(avg_losses, 'mean') and avg_losses.mean is not None:
         logging.warning(
             "Median losses not available; falling back to mean for loss maps.")
         losses_df = pd.DataFrame(avg_losses.mean)
+        loss_metric = 'Mean'
     else:
         raise RuntimeError(
             "avg_losses has neither 'quantile' nor 'mean' attribute; "
@@ -964,7 +970,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
     report_opts = ReportOptions(
         disclaimer_txt=disclaimer_txt, notes_txt=notes_txt,
         basemap_path=basemap_path, threshold_deg=threshold_deg,
-        no_uncertainty=no_uncertainty)
+        no_uncertainty=no_uncertainty, loss_metric=loss_metric)
     for iso3 in iso3_codes:
         summary_data = _get_impact_summary_data(dstore, iso3, no_uncertainty)
         if summary_data is not None:
