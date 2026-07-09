@@ -943,9 +943,10 @@ def main(dstore, adm_level=1, threshold_deg=None):
     job = logs.dbcmd('get_job', calc_id)
     time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
     disclaimer_txt = '''
-    This is an automatically generated draft. Content has not been verified
-    for accuracy by a human reviewer. Please treat all figures as provisional
-    until a final validated version is issued.'''
+    This is an automatically generated draft. Content has not been verified for
+    accuracy by a human reviewer. The metrics presented were estimated based on
+    ground shaking information from ShakeMap only. Impact assessments are
+    subject to changes as more information becomes available.'''
     notes_txt = _get_notes(oqparam)
     if threshold_deg is None:
         threshold_deg = get_dynamic_threshold(mag)
