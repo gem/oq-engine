@@ -656,7 +656,7 @@ class CountryReportBuilder:
     def _build_grid(self, images):
         # Determine column header based on uncertainty
         col_header = ("Estimated losses" if self.no_uncertainty
-                      else "Range of losses")
+                      else "Range of losses (5% - 95%)")
         table_data = [["Impact metric", col_header]] + [
             [meta["label"], self.summary_data[meta["label"]]]
             for meta in LOSS_METADATA.values()
