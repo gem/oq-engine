@@ -167,11 +167,7 @@ def ebr_from_gmfs(gmf_df, oqparam, monitor):
     :param monitor: a Monitor instance
     :yields: dictionary of arrays, the output of event_based_risk
     """
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    pairs = [(id0taxo, slice(s0, s1))
-             for id0taxo, s0, s1 in monitor.read('start-stop')]
-    dic = event_based_risk(gmf_df, pairs, crmodel, monitor)
+    dic = event_based_risk(gmf_df, monitor)
     return dic
 
 
@@ -255,12 +251,17 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def event_based_risk(gmf_df, pairs, crmodel, monitor):
+def event_based_risk(gmf_df, monitor):
     """
     Aggregate the losses for all assets for the given event slice
 
     :returns: dictionary with keys 'alt', 'avg', 'gmf_bytes'
     """
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
+    pairs = [(id0taxo, slice(s0, s1))
+             for id0taxo, s0, s1 in monitor.read('start-stop')]
+
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(oq.ext_loss_types) + oq.ideduc
@@ -323,10 +324,6 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    pairs = [(idx0taxo, slice(s0, s1))
-             for idx0taxo, s0, s1 in monitor.read('start-stop')]
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
@@ -340,10 +337,10 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         if gmf_mb > GMF_MB:
             print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
-            yield event_based_risk, gmf_df[mod2==1], pairs, crmodel
-            yield event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
+            yield event_based_risk, gmf_df[mod2==1]
+            yield event_based_risk(gmf_df[mod2==0], monitor)
         else:
-            yield event_based_risk(gmf_df, pairs, crmodel, monitor)
+            yield event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
