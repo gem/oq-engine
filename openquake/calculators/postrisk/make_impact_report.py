@@ -257,7 +257,7 @@ class CountryReportBuilder:
     # Layout constants
     MARGIN = 20
     DISCLAIMER_H = 40
-    HEADER_H = 60
+    HEADER_H = 80
     NOTES_H = 80
     SAFETY_BUFFER = 20
     LOGO_W = 100
@@ -603,10 +603,18 @@ class CountryReportBuilder:
             fontSize=11,
         )
 
+        meta_style = self.ParagraphStyle(
+            "HeaderMeta",
+            parent=self.styles["Italic"],
+            fontSize=9,
+            leading=11
+        )
+
         # subtracting also the padding
         title_width = self.page_width - self.LOGO_W - 12
 
-        event_text = f"<b>{self.event_name}. {self.event_date}</b>"
+        # Line 1: Bold event name
+        event_text = f"<b>{self.event_name}</b>"
         event_paragraph = self._one_line_paragraph(
             event_text,
             event_style,
@@ -627,17 +635,23 @@ class CountryReportBuilder:
             self.HEADER_H - 10,
         )
 
-        txt = f"Time of the calculation: {self.time_of_calc}"
+        # Build individual paragraph blocks for lines 2, 3, and 4
+        sm_version_txt = None
         if self.shakemap_version is not None:
-            txt += f" &nbsp;&nbsp;ShakeMap version: {self.shakemap_version}"
-        header_text = [
-            event_paragraph,
+            sm_version_txt = f'ShakeMap version: {self.shakemap_version}'
+        date_txt = f"Time of the event: {self.event_date}"
+        calc_txt = f"Time of the calculation: {self.time_of_calc}"
+        header_text = [event_paragraph]
+        if sm_version_txt:
+            header_text.append(
+                self._one_line_paragraph(
+                    sm_version_txt, meta_style, max_width=title_width))
+        header_text.extend([
             self._one_line_paragraph(
-                txt,
-                self.styles["Italic"],
-                max_width=title_width,
-            ),
-        ]
+                date_txt, meta_style, max_width=title_width),
+            self._one_line_paragraph(
+                calc_txt, meta_style, max_width=title_width),
+        ])
 
         tbl = self.Table(
             [[header_text, logo_img]],
@@ -886,15 +900,14 @@ def to_utc_string(ts: str) -> str:
     Convert a timestamp with timezone offset (e.g. '+08:00')
     to the format: 'YYYY-MM-DD HH:MM:SS UTC'
     """
-    ret_str = 'Time of the event: '
     if not ts:
-        return ret_str + "unknown"
+        return "unknown"
     dt = datetime.fromisoformat(ts)
     if dt.tzinfo is None:
         logging.warning("Timestamp has no timezone information")
-        return ret_str + dt.strftime('%Y-%m-%d %H:%M:%S')
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
     dt_utc = dt.astimezone(timezone.utc)
-    return ret_str + dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+    return dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
 def get_dynamic_threshold(mag):
