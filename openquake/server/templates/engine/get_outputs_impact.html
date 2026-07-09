@@ -72,7 +72,7 @@
               {% endif %}
               {% for iso3 in impact_iso3_list %}
               <div class="my-pngs">
-                <a href="/v1/calc/{{ calc_id }}/impact_report?&iso3={{ iso3 }}" class="btn btn-sm" target="_blank">
+                <a href="/v1/calc/{{ calc_id }}/impact_report?&iso3={{ iso3 }}&format=PNG" class="btn btn-sm" target="_blank">
                     Show impact report ({{ iso3 }})</a>
               </div>
               {% endfor %}
