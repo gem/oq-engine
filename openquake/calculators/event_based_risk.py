@@ -320,12 +320,12 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     # long arrays (around GMF_MB) and hence a good performance
     num_assets = monitor.read('num_assets')
     for gmf_df in general.concatenated(dfs, GMF_MB):
-        # NB: the assets are read more times than needed; this is on purpose;
+        # NB: the assets are read more times than needed; this is on purpose:
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside event_based_risk
-        na = int(num_assets[gmf_df.sid.unique()].sum())
-        print(f'{na=:_d}')
-        if na > 1E6:
+        num_ass = num_assets[gmf_df.sid.unique()].sum()
+        if num_ass > 1E6:
+            # produce an extra task and reduce by half the time spent here
             mod2 = gmf_df.eid % 2
             yield event_based_risk, gmf_df[mod2==1]
             yield event_based_risk(gmf_df[mod2==0], monitor)
