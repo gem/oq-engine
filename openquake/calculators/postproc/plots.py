@@ -507,14 +507,21 @@ def _resolve_limits(ax, x_limits, y_limits, epicenter=None, buffer_ratio=0.05):
         ymin = min(ymin, lat)
         ymax = max(ymax, lat)
 
-        xspan = xmax - xmin
-        yspan = ymax - ymin
+        # Calculate current directional spans
+        xspan = max(xmax - xmin, 1e-6)
+        yspan = max(ymax - ymin, 1e-6)
 
-        # Handle degenerate spans (e.g. single point)
-        if xspan == 0:
-            xspan = 1e-6
-        if yspan == 0:
-            yspan = 1e-6
+        # Force the spans to be identical to guarantee a square data viewport
+        if xspan > yspan:
+            center_y = (ymin + ymax) / 2
+            ymin = center_y - (xspan / 2)
+            ymax = center_y + (xspan / 2)
+            yspan = xspan
+        elif yspan > xspan:
+            center_x = (xmin + xmax) / 2
+            xmin = center_x - (yspan / 2)
+            xmax = center_x + (yspan / 2)
+            xspan = yspan
 
         # Apply buffer
         xpad = xspan * buffer_ratio
@@ -712,5 +719,6 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     ax.set_xlabel("Longitude", fontsize=style.font_size)
     ax.set_ylabel("Latitude", fontsize=style.font_size)
+    ax.set_aspect('equal', adjustable='box')
     fig.tight_layout()
     return fig, ax
