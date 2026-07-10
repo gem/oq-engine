@@ -832,6 +832,18 @@ class pack(dict):
                 self[k] = arr
 
 
+def drop_column(array, column):
+    """
+    :returns: a new structured array without the given columns
+    """
+    assert column in array.dtype.names, column
+    new_descr = [descr for descr in array.dtype.descr if descr[0] != column]
+    new_arr = numpy.empty(array.shape, new_descr)
+    for field in new_arr.dtype.names:
+        new_arr[field] = array[field]
+    return new_arr
+
+
 class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::

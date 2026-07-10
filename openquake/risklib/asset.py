@@ -1098,6 +1098,13 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         if len(dupl):
             raise nrml.DuplicatedID(dupl)
 
+    # add NAME_1 if missing
+    try:
+        assets_df['NAME_1']
+    except KeyError:
+        exposure.tagcol.add_tagname('NAME_1')
+        assets_df['NAME_1'] = 'country'
+
     return exposure, assets_df
 
 
