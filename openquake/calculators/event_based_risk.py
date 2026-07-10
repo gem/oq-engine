@@ -324,7 +324,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         # only one taxonomy at the time is read inside event_based_risk
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
         if gmf_mb > GMF_MB:
-            print(f'{gmf_mb=:.1f}')
+            # print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
             yield event_based_risk, gmf_df[mod2==1]
             yield event_based_risk(gmf_df[mod2==0], monitor)
