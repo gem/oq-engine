@@ -1998,6 +1998,16 @@ class OqParam(valid.ParamSet):
         return etypes
 
     @property
+    def xtypes(self):
+        """
+        :returnsL the extended loss types plus claim if deduc is set
+        """
+        xtypes = self.ext_loss_types
+        if self.ideduc:
+            xtypes.append('claim')
+        return xtypes
+
+    @property
     def total_loss_types(self):
         """
         :returns: a dictionary loss_type -> index
