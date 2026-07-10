@@ -42,7 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 300
+GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
@@ -160,21 +160,6 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(gmf_df, oqparam, monitor):
-    """
-    :param gmf_df: DataFrame of GMFs
-    :param oqparam: OqParam instance
-    :param monitor: a Monitor instance
-    :yields: dictionary of arrays, the output of event_based_risk
-    """
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    pairs = [(id0taxo, slice(s0, s1))
-             for id0taxo, s0, s1 in monitor.read('start-stop')]
-    dic = event_based_risk(gmf_df, pairs, crmodel, monitor)
-    return dic
-
-
 def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
     """
     Update loss2 and loss3
@@ -255,15 +240,23 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def event_based_risk(gmf_df, pairs, crmodel, monitor):
+def event_based_risk(gmf_df, monitor):
     """
     Aggregate the losses for all assets for the given event slice
 
     :returns: dictionary with keys 'alt', 'avg', 'gmf_bytes'
     """
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
+    pairs = [(id0taxo, slice(s0, s1))
+             for id0taxo, s0, s1 in monitor.read('start-stop')]
+
     oq = crmodel.oqparam
+    xtypes = oq.ext_loss_types
+    if oq.ideduc:
+        xtypes.append('claim')
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
-    X = len(oq.ext_loss_types) + oq.ideduc
+    X = len(xtypes)
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
@@ -303,9 +296,6 @@ def event_based_risk(gmf_df, pairs, crmodel, monitor):
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
     dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
     dic['alt'] = build_alt(loss2, xtypes)
     dic['avg'] = build_avg(loss3, oq.A, R*X)
     return dic
@@ -323,10 +313,6 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    pairs = [(idx0taxo, slice(s0, s1))
-             for idx0taxo, s0, s1 in monitor.read('start-stop')]
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
@@ -338,12 +324,12 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         # only one taxonomy at the time is read inside event_based_risk
         gmf_mb = gmf_df.memory_usage().sum() / 1024**2
         if gmf_mb > GMF_MB:
-            print(f'{gmf_mb=:.1f}')
+            # print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
-            yield event_based_risk, gmf_df[mod2==1], pairs, crmodel
-            yield event_based_risk(gmf_df[mod2==0], pairs, crmodel, monitor)
+            yield event_based_risk, gmf_df[mod2==1]
+            yield event_based_risk(gmf_df[mod2==0], monitor)
         else:
-            yield event_based_risk(gmf_df, pairs, crmodel, monitor)
+            yield event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -503,10 +489,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             smap, gmf_dfs = starmap_from_gmfs(
-                ebr_from_gmfs, oq, self.datastore, self._monitor)
+                event_based_risk, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, oq))
+                smap.submit((gmf_df,))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:

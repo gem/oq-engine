@@ -21,9 +21,10 @@ from openquake.sep.utils import (
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 test_dem = os.path.join(BASE_DATA_PATH, "dem_small.tif")
 test_relief = os.path.join(BASE_DATA_PATH, "relief_out.tif")
+test_grid = os.path.join(BASE_DATA_PATH, "grid.asc")
 
 
-class testUtils(unittest.TestCase):
+class TestUtils(unittest.TestCase):
     def test_slope_angle_to_gradient_1(self):
         assert slope_angle_to_gradient(0, unit="degree") == 0.0
 
@@ -45,7 +46,7 @@ class testUtils(unittest.TestCase):
         )
 
 
-class test_array_funcs_super_simple(unittest.TestCase):
+class Test_array_funcs_super_simple(unittest.TestCase):
     def setUp(self):
         self.array = np.arange(25).reshape((5, 5))
 
@@ -233,25 +234,27 @@ class test_array_funcs_super_simple(unittest.TestCase):
 
 
 @unittest.skipIf(gdal is None, "GDAL not always installed correctly")
-class test_make_local_relief_raster(unittest.TestCase):
+class Test_make_local_relief_raster(unittest.TestCase):
     def setUp(self):
         self.test_relief_raster = gdal.Open(test_relief)
         _outfile_handler, outfile = tempfile.mkstemp(suffix=".tiff")
         self.lrr = make_local_relief_raster(
-            test_dem, 5, outfile=outfile, write=False, trim=False
-        )
+            test_dem, 5, outfile=outfile, write=False, trim=False)
 
     def test_make_local_relief_raster_geo_transform(self):
         np.testing.assert_allclose(
             self.lrr.GetGeoTransform(),
-            self.test_relief_raster.GetGeoTransform(),
-        )
+            self.test_relief_raster.GetGeoTransform())
 
     def test_make_2d_local_relief_raster_array_vals(self):
         np.testing.assert_array_almost_equal(
             self.lrr.GetRasterBand(1).ReadAsArray(),
-            self.test_relief_raster.GetRasterBand(1).ReadAsArray(),
-        )
+            self.test_relief_raster.GetRasterBand(1).ReadAsArray())
+
+    def test_grid_asc(self):
+        raster = gdal.Open(test_grid)
+        lon, lon_delta, _, lat, _, lat_delta = raster.GetGeoTransform()
+        print(raster.ReadAsArray())
 
     def tearDown(self):
         # NOTE: On Windows, trying to remove the temporary outfile raises

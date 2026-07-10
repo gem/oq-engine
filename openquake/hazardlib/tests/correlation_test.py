@@ -17,7 +17,7 @@ import unittest
 
 import numpy
 
-from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.imt import SA, PGA, PGV
 from openquake.hazardlib.correlation import JB2009CorrelationModel, \
                                             HM2018CorrelationModel
 from openquake.hazardlib.site import Site, SiteCollection
@@ -99,6 +99,21 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         corma = cormo._get_correlation_matrix(self.SITECOL, sa)
         corma2 = cormo._get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
+
+    def test_pgv(self):
+        sa = SA(period=1.0, damping=5)
+        pgv = PGV()
+
+        for vs30_clustering in (False, True):
+            cormo = JB2009CorrelationModel(
+                vs30_clustering=vs30_clustering)
+
+            corma = cormo._get_correlation_matrix(
+                self.SITECOL, sa)
+            corma2 = cormo._get_correlation_matrix(
+                self.SITECOL, pgv)
+
+            self.assertTrue((corma == corma2).all())
 
 
 class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
