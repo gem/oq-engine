@@ -42,7 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 200
+GMF_MB = 500
 get_n_occ = operator.itemgetter(1)
 
 
@@ -319,12 +319,13 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     # NB: it is essential to concatenate the small dataframes to have
     # long arrays (around GMF_MB) and hence a good performance
     num_assets = monitor.read('num_assets')
+    quarter_assets = num_assets.sum() / 4
     for gmf_df in general.concatenated(dfs, GMF_MB):
         # NB: the assets are read more times than needed; this is on purpose:
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside event_based_risk
         num_ass = num_assets[gmf_df.sid.unique()].sum()
-        if num_ass > 1E6:
+        if num_ass > quarter_assets:
             # produce an extra task and reduce by half the time spent here
             mod2 = gmf_df.eid % 2
             yield event_based_risk, gmf_df[mod2==1]
