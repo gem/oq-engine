@@ -727,12 +727,12 @@ class CountryReportBuilder:
         ]
         left_bundle = [
             self.Paragraph(
-                f"<b>Summary of impact for {self.country_name}</b>",
+                f"<b>Summary of impact for {self.country_name}:</b>",
                 title_style),
             self.Spacer(1, 4),
             summary_table,
             self.Spacer(1, 12),
-            self.Paragraph("<b>Regions with highest number of fatalities</b>",
+            self.Paragraph("<b>Regions with highest number of fatalities:</b>",
                            title_style),
             self.ListFlowable(
                 [self.ListItem(self.Paragraph(region_name, self.ParagraphStyle(
