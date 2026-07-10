@@ -41,6 +41,7 @@ dependencies = [
     "toml~=0.10.2",
     "numba~=0.61.2",
     "alpha_shapes~=1.1.0",
+    "docutils~=0.20.1",
 
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",
