@@ -22,6 +22,9 @@ import pathlib
 import tempfile
 import logging
 import functools
+import difflib
+import urllib.request
+import json
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
@@ -61,6 +64,11 @@ LOSS_METADATA = {
 }
 LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
+COUNTRY_PROFILES_REPO_TREE_URL = (
+    "https://api.github.com/repos/gem/risk-profiles/git/trees/master"
+    "?recursive=1")
+COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
+
 
 @dataclass
 class EventContext:
@@ -75,11 +83,60 @@ class EventContext:
 class ReportOptions:
     """Visual, text, and threshold configurations for the report."""
     disclaimer_txt: str
-    notes_txt: str
     basemap_path: str
     threshold_deg: float
     no_uncertainty: bool
     loss_metric: str
+
+
+def _normalize(name):
+    return name.strip().lower().replace("_", " ").replace("-", " ")
+
+
+@functools.lru_cache(maxsize=1)
+def _get_country_dirs():
+    """Fetch the repo tree once and return {normalized_country_name: path}."""
+    req = urllib.request.Request(
+        COUNTRY_PROFILES_REPO_TREE_URL,
+        headers={"Accept": "application/vnd.github+json"}
+    )
+    with urllib.request.urlopen(req) as resp:
+        data = json.load(resp)
+
+    if data.get("truncated"):
+        raise RuntimeError(
+            "GitHub tree response was truncated; repo is too large for a "
+            "single recursive call. Consider paginating per-continent instead."
+        )
+
+    country_dirs = {}
+    for entry in data["tree"]:
+        if entry["type"] != "tree":
+            continue
+        path = entry["path"]
+        if path.count("/") == 1:  # depth-1 dir, i.e. Continent/Country
+            _, country = path.split("/")
+            country_dirs[_normalize(country)] = path
+    return country_dirs
+
+
+def get_country_profile_link(country_name):
+    """Return the risk-profiles URL for a given country name, fetched live
+    from the GitHub repo (no local dictionary needed).
+
+    Raises KeyError (with close-match suggestions) if not found.
+    """
+    country_dirs = _get_country_dirs()
+    key = _normalize(country_name)
+
+    if key in country_dirs:
+        return f"{COUNTRY_PROFILES_BASE_URL}/{country_dirs[key]}"
+
+    close = difflib.get_close_matches(
+        key, country_dirs.keys(), n=3, cutoff=0.6)
+    suggestion = f" Did you mean: {', '.join(close)}?" if close else ""
+    raise KeyError(
+        f"No country profile found for {country_name!r}.{suggestion}")
 
 
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded
@@ -264,7 +321,7 @@ class CountryReportBuilder:
 
     def __init__(
             self, iso3, adm_level, event: EventContext, options: ReportOptions,
-            losses_df, summary_data, dstore, time_of_calc):
+            losses_df, summary_data, dstore, time_of_calc, oqparam):
         try:
             import reportlab
             from reportlab import platypus
@@ -311,7 +368,6 @@ class CountryReportBuilder:
 
         # Unpacking ReportOptions
         self.disclaimer_txt = options.disclaimer_txt
-        self.notes_txt = options.notes_txt
         self.basemap_path = options.basemap_path
         self.threshold_deg = options.threshold_deg
         self.no_uncertainty = options.no_uncertainty
@@ -324,6 +380,7 @@ class CountryReportBuilder:
         self.cities = {}
 
         self._load_country_info()
+        self.notes = self._get_notes(oqparam)
         self._compute_layout()
 
         self._register_unicode_font()
@@ -489,6 +546,38 @@ class CountryReportBuilder:
         df = _read_countries_info(path_str)   # cached
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
+
+    def _get_notes(self, oqparam):
+        notes_data = {
+            "user_note": oqparam.notes if oqparam.notes else None,
+            "profile_link": None,
+            "metadata": []
+        }
+        try:
+            country_profile_link = get_country_profile_link(self.country_name)
+        except KeyError as exc:
+            logging.warning(str(exc))
+        else:
+            notes_data["profile_link"] = (
+                f"Seismic Risk Profile for the Country: "
+                f"<font color='blue'><u><a href='{country_profile_link}'>"
+                f"{country_profile_link}</a></u></font>"
+            )
+        rupdic = oqparam.rupture_dict
+        meta = notes_data["metadata"]
+        meta.append(f'USGS identifier: {rupdic["usgs_id"]}')
+        meta.append(f'Longitude: {rupdic["lon"]}')
+        meta.append(f'Latitude: {rupdic["lat"]}')
+        meta.append(f'Depth: {rupdic["dep"]}')
+        meta.append(f'Magnitude: {rupdic["mag"]}')
+        meta.append(f'Rake: {rupdic["rake"]}')
+        meta.append(f'Dip: {rupdic["dip"]}')
+        meta.append(f'Strike: {rupdic["strike"]}')
+        meta.append(f'Number of ground motion fields:'
+                    f' {oqparam.number_of_ground_motion_fields}')
+        meta.append(f'Truncation level: {oqparam.truncation_level}')
+        meta.append(f'Considered time of the event: {oqparam.time_event}')
+        return notes_data
 
     def _get_cities_in_viewport(self, num_cities=15):
         """
@@ -784,14 +873,23 @@ class CountryReportBuilder:
 
     def _build_notes(self):
         """
-        Builds a bordered notes box with a full-width header for custom notes,
-        followed by a 3-column grid for job parameters.
+        Builds a bordered notes box with dedicated, dynamic rows for full-width
+        user notes and web links, anchoring a 3-column metadata grid below.
         """
         story = []
-        if not self.notes_txt:
+        if not self.notes or not isinstance(self.notes, dict):
             return story
-        notes_items = list(self.notes_txt)
         grid_data = []
+
+        styles_to_apply = [
+            ('BOX', (0, 0), (-1, -1), 1, self.reportlab.lib.colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]
+
         # Create a compact font style variant for the notes box
         notes_style = self.ParagraphStyle(
             'NotesStyle',
@@ -799,36 +897,40 @@ class CountryReportBuilder:
             fontSize=8,
             leading=7.5
         )
-        # Isolate the user note if it exists
-        user_note = ""
-        if notes_items and not notes_items[0].startswith(
-                ("USGS identifier:", "Longitude:", "Latitude:")):
-            user_note = notes_items.pop(0)
-        # Create the full-width header row
-        header_text = f"<b>Notes:</b> {user_note}".strip()
+        # Header and Optional User Custom Notes Row
+        user_note = self.notes.get("user_note")
+        header_text = (
+            f"<b>Notes:</b> {user_note}" if user_note else "<b>Notes:</b>")
         grid_data.append([self.Paragraph(header_text, notes_style), "", ""])
-        # Chunk the remaining metadata into 3-column rows
+        styles_to_apply.append(('SPAN', (0, 0), (2, 0)))
+        # Keep spacing tight below title
+        styles_to_apply.append(('BOTTOMPADDING', (0, 0), (2, 0), 0))
+
+        # Optional Standalone Profile Link Row
+        profile_link = self.notes.get("profile_link")
+        if profile_link:
+            grid_data.append(
+                [self.Paragraph(profile_link, notes_style), "", ""])
+            link_row_idx = len(grid_data) - 1
+            styles_to_apply.append(
+                ('SPAN', (0, link_row_idx), (2, link_row_idx)))
+            styles_to_apply.append(
+                ('BOTTOMPADDING', (0, link_row_idx), (2, link_row_idx), 2))
+
+        # 3. Spread the remaining system metadata across 3 columns
+        notes_items = self.notes.get("metadata", [])
         for i in range(0, len(notes_items), 3):
             row = [self.Paragraph(item, notes_style)
                    for item in notes_items[i:i+3]]
             while len(row) < 3:
                 row.append(self.Paragraph("", notes_style))
             grid_data.append(row)
-        # Apply styles: outer box, inner padding, and top row span
+
+        # 4. Add safety cushion at the bottom of the last metadata row
+        styles_to_apply.append(('BOTTOMPADDING', (0, -1), (2, -1), 6))
+
         t = self.Table(grid_data, colWidths=[180, 180, 180])
-        t.setStyle(self.TableStyle([
-            ('BOX', (0, 0), (-1, -1), 1, self.reportlab.lib.colors.black),
-            ('SPAN', (0, 0), (2, 0)),  # Make the first row span all 3 columns
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            # Tighter gap below the header
-            ('BOTTOMPADDING', (0, 0), (2, 0), 0),
-            # Some room at the very bottom
-            ('BOTTOMPADDING', (0, -1), (2, -1), 6),
-        ]))
+        t.setStyle(self.TableStyle(styles_to_apply))
         story.append(t)
         return story
 
@@ -895,33 +997,11 @@ class CountryReportBuilder:
 
 def make_report_for_country(
         iso3, adm_level, event, options, losses_df, summary_data,
-        dstore, time_of_calc):
+        dstore, time_of_calc, oqparam):
     builder = CountryReportBuilder(
         iso3, adm_level, event, options, losses_df, summary_data,
-        dstore, time_of_calc)
+        dstore, time_of_calc, oqparam)
     builder.build()
-
-
-def _get_notes(oqparam):
-    notes_list = []
-    # If there are user notes, add them as the first standalone block
-    if oqparam.notes:
-        notes_list.append(oqparam.notes)
-    rupdic = oqparam.rupture_dict
-    # Append each metadata element as an individual line item
-    notes_list.append(f'USGS identifier: {rupdic["usgs_id"]}')
-    notes_list.append(f'Longitude: {rupdic["lon"]}')
-    notes_list.append(f'Latitude: {rupdic["lat"]}')
-    notes_list.append(f'Depth: {rupdic["dep"]}')
-    notes_list.append(f'Magnitude: {rupdic["mag"]}')
-    notes_list.append(f'Rake: {rupdic["rake"]}')
-    notes_list.append(f'Dip: {rupdic["dip"]}')
-    notes_list.append(f'Strike: {rupdic["strike"]}')
-    notes_list.append(f'Number of ground motion fields:'
-                      f' {oqparam.number_of_ground_motion_fields}')
-    notes_list.append(f'Truncation level: {oqparam.truncation_level}')
-    notes_list.append(f'Considered time of the event: {oqparam.time_event}')
-    return notes_list
 
 
 def to_utc_string(ts: str) -> str:
@@ -1022,7 +1102,6 @@ def main(dstore, adm_level=1, threshold_deg=None):
     accuracy by a human reviewer. The metrics presented were estimated based on
     ground shaking information from ShakeMap only. Impact assessments are
     subject to changes as more information becomes available.'''
-    notes_txt = _get_notes(oqparam)
     if threshold_deg is None:
         threshold_deg = get_dynamic_threshold(mag)
         logging.info(f"Magnitude {mag} detected. Using dynamic"
@@ -1037,7 +1116,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
         name=event_name, date=event_date, hypocenter=hypocenter,
         shakemap_version=shakemap_version)
     report_opts = ReportOptions(
-        disclaimer_txt=disclaimer_txt, notes_txt=notes_txt,
+        disclaimer_txt=disclaimer_txt,
         basemap_path=basemap_path, threshold_deg=threshold_deg,
         no_uncertainty=no_uncertainty, loss_metric=loss_metric)
     for iso3 in iso3_codes:
@@ -1045,7 +1124,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
         if summary_data is not None:
             make_report_for_country(
                 iso3, adm_level, event_ctx, report_opts,
-                losses_df, summary_data, dstore, time_of_calc)
+                losses_df, summary_data, dstore, time_of_calc, oqparam)
 
 
 if __name__ == '__main__':
