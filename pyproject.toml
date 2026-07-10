@@ -38,7 +38,7 @@ dependencies = [
     # unplanned deps
     "decorator~=5.1.1",
     "pillow~=12.2.0",
-    "toml~=10.0.2",
+    # "toml~=10.0.2",
 
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",
