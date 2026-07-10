@@ -671,17 +671,13 @@ class CountryReportBuilder:
 
         return tbl
 
-    # NOTE: passing images explicitly to avoid implicit ordering dependency
-    def _build_grid(self, images):
-        # Standardized regular body style to match header metadata
+    def _grid_styles(self):
         body_style = self.ParagraphStyle(
             "GridBodyText",
             parent=self.styles["Normal"],
             fontSize=9,
             leading=11,
         )
-
-        # Clear title styles using the registered NotoSans bold variant
         title_style = self.ParagraphStyle(
             "GridSectionTitle",
             parent=self.styles["Normal"],
@@ -689,12 +685,11 @@ class CountryReportBuilder:
             fontSize=11,
             leading=14,
         )
+        return body_style, title_style
 
-        # Determine column header based on uncertainty
+    def _build_summary_table(self, body_style):
         col_header = ("Estimated losses" if self.no_uncertainty
                       else "Range of losses (5% - 95%)")
-        # Wrapping table cell values in Paragraph flowables forces them to use
-        # NotoSans
         table_data = [[
             self.Paragraph("<b>Impact metric</b>", body_style),
             self.Paragraph(f"<b>{col_header}</b>", body_style)
@@ -707,6 +702,7 @@ class CountryReportBuilder:
         if self.no_uncertainty:
             table_data.append([
                 self.Paragraph("No uncertainty was included", body_style), ""])
+
         summary_table = self.Table(
             table_data,
             colWidths=[self.col_w * 0.42, self.col_w * 0.48],
@@ -718,14 +714,16 @@ class CountryReportBuilder:
             ("PADDING", (0, 0), (-1, -1), 4),
         ]
         if self.no_uncertainty:
-            # Span the last row across both columns and italicize
             last_row_idx = len(table_data) - 1
             style_cmds.append(("SPAN", (0, last_row_idx), (1, last_row_idx)))
         summary_table.setStyle(self.TableStyle(style_cmds))
+        return summary_table
+
+    def _build_left_bundle(self, summary_table, body_style, title_style):
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
-        left_bundle = [
+        return [
             self.Paragraph(
                 f"<b>Summary of impact for {self.country_name}:</b>",
                 title_style),
@@ -744,6 +742,14 @@ class CountryReportBuilder:
                 leftIndent=15,
             ),
         ]
+
+    # NOTE: passing images explicitly to avoid implicit ordering dependency
+    def _build_grid(self, images):
+        body_style, title_style = self._grid_styles()
+        summary_table = self._build_summary_table(body_style)
+        left_bundle = self._build_left_bundle(
+            summary_table, body_style, title_style)
+
         img_top_right = self._scaled_image_from_bytes(
             images[LOSS_METADATA['number']['label']],
             self.col_w - 10,
