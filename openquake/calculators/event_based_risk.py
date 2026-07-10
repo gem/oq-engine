@@ -314,24 +314,26 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     xtypes = oq.xtypes
     X = len(xtypes)
     RX = (1 if oq.collect_rlzs else len(monitor.read('weights')))*X
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
     # NB: it is essential to concatenate the small dataframes to have
     # long arrays (around GMF_MB) and hence a good performance
+    gmfbytes = 0
     for gmf_df in general.concatenated(dfs, GMF_MB):
+        gmfbytes += gmf_df.memory_usage().sum()
         # NB: the assets are read more times than needed; this is on purpose;
         # the slowdown is minor, while the memory saving is massive, since
         # only one taxonomy at the time is read inside event_based_risk
-        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-        loss3 = {'aids': [], 'bids': [], 'loss': []}
-        for chunk, sids in monitor.read('sids_by_chunk').items():
-            gdf = gmf_df[numpy.isin(gmf_df.sid, sids)]
-            l2, l3 = event_based_risk(gdf, chunk, 0, monitor)
+        mod10 = gmf_df.sid.to_numpy() % 10
+        for chunk in range(10):
+            l2, l3 = event_based_risk(gmf_df[mod10==chunk], chunk, 0, monitor)
             loss2 += l2
             for key in loss3:
                 loss3[key].extend(l3[key])
-        dic = dict(gmfbytes=gmf_df.memory_usage().sum())
-        dic['alt'] = build_alt(loss2, xtypes)
-        dic['avg'] = build_avg(loss3, oq.A, RX)
-        yield dic
+    dic = dict(gmfbytes=gmfbytes)
+    dic['alt'] = build_alt(loss2, xtypes)
+    dic['avg'] = build_avg(loss3, oq.A, RX)
+    return dic
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -365,8 +367,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if ok.any():
                 monitor.save(f'assets{c}', adf[ok])
         mod10 = sids % 10
-        monitor.save('sids_by_chunk', {c: sids[mod10==c] for c in range(10)
-                                       if (mod10==c).any()})
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
 
