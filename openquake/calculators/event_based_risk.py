@@ -36,14 +36,34 @@ from openquake.calculators.post_risk import (
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
+I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
-TWO32 = U64(2 ** 32)
+TWO32 = I64(2 ** 32)
 GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
+
+
+def split3(idtaxo):
+    """
+    Split the 64 bit integer `idtaxo` in 3 integers id0, id1 (16 bit)
+    and taxo (32 bit).
+    """
+    id01, taxo = numpy.divmod(idtaxo, TWO32)
+    id0, id1 = numpy.divmod(id01, TWO16)
+    return id0, id1, taxo
+
+
+def compose3(id0, id1, taxo):
+    """
+    Compose 3 integers into a single int64 value.
+
+    >>> split3(compose3(1, 2, 5))
+    (np.int64(1), np.int64(2), np.int64(5))
+    """
+    return (id0 * TWO16 + id1) * TWO32 + taxo
 
 
 def get_assetdf_startstop(assetcol):
@@ -55,16 +75,22 @@ def get_assetdf_startstop(assetcol):
     del assetdf['id']
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
-    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'site_id', 'ordinal'])
+    if 'NAME_1' in assetdf:
+        id1 = assetdf.NAME_1.to_numpy()
+        fields = ['ID_0', 'NAME_1', 'taxonomy', 'site_id', 'ordinal']
+    else:
+        id1 = numpy.zeros(len(assetdf), U32)
+        fields = ['ID_0', 'taxonomy', 'site_id', 'ordinal']
+        
+    assetdf = assetdf.sort_values(fields)
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
     # causing different losses
-    id0taxo = TWO24 * assetdf.ID_0.to_numpy() + assetdf.taxonomy.to_numpy()
-
+    idtaxo = compose3(assetdf.ID_0.to_numpy(), id1, assetdf.taxonomy.to_numpy())
     iss = []
     maxsize = int(config.memory.max_assets_chunk)
-    for idx, start, stop in performance.idx_start_stop(id0taxo):
+    for idx, start, stop in performance.idx_start_stop(idtaxo):
         for slc in general.gen_slices(start, stop, maxsize):
             iss.append((idx, slc.start, slc.stop))
 
@@ -177,15 +203,15 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
             update(loss3, li, len(xtypes), alt, rlz_id, oq.collect_rlzs)
         if correl:  # use sigma^2 = (sum sigma_i)^2
             alt['variance'] = numpy.sqrt(alt.variance)
-        eids = alt.eid.to_numpy() * TWO32  # U64
+        eids = alt.eid.to_numpy() * TWO32  # I64
         values = numpy.array([alt[col] for col in value_cols]).T
         # aggregate all assets
-        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
+        fast_agg(eids + I64(oq.K), values, correl, li, loss2)
         if len(aggids):
             # aggregate assets for each tag combination
             aids = alt.aid.to_numpy()
             for kids in aggids[:, aids]:
-                fast_agg(eids + U64(kids), values, correl, li, loss2)
+                fast_agg(eids + I64(kids), values, correl, li, loss2)
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -248,8 +274,8 @@ def event_based_risk(gmf_df, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    pairs = [(id0taxo, slice(s0, s1))
-             for id0taxo, s0, s1 in monitor.read('start-stop')]
+    pairs = [(idtaxo, slice(s0, s1))
+             for idtaxo, s0, s1 in monitor.read('start-stop')]
 
     oq = crmodel.oqparam
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
@@ -261,8 +287,8 @@ def event_based_risk(gmf_df, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    items = ((id0taxo, monitor.read('assets', slc).
-              set_index('ordinal')) for id0taxo, slc in pairs)
+    items = ((idtaxo, monitor.read('assets', slc).
+              set_index('ordinal')) for idtaxo, slc in pairs)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -276,7 +302,8 @@ def event_based_risk(gmf_df, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, assetdf in items:
+    for idtaxo, assetdf in items:
+        id0, id1, taxo = split3(idtaxo)
         with fil_mon:
             # filtering is *crucial* for the performance of the next step
             adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
@@ -285,7 +312,7 @@ def event_based_risk(gmf_df, monitor):
             gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
         # passing the contry is crucial for impact_test,
         # where the exposure contains multiple countries
-        country = countries[id0taxo // TWO24]
+        country = countries[id0]
         with risk_mon:
             [out] = crmodel.get_outputs(
                 adf, gdf, crmodel.oqparam._sec_losses, rng, country)
