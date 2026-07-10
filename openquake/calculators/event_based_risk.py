@@ -164,17 +164,14 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
     """
     Update loss2 and loss3
     """
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes += ['claim']
     correl = int(oq.asset_correlation)
     value_cols = ['variance', 'loss']
-    for li, ln in enumerate(xtypes):
+    for li, ln in enumerate(oq.xtypes):
         if ln not in out or len(out[ln]) == 0:
             continue
         alt = out[ln]
         if oq.avg_losses:  # fast
-            update(loss3, li, len(xtypes), alt, rlz_id, oq.collect_rlzs)
+            update(loss3, li, len(oq.xtypes), alt, rlz_id, oq.collect_rlzs)
         if correl:  # use sigma^2 = (sum sigma_i)^2
             alt['variance'] = numpy.sqrt(alt.variance)
         eids = alt.eid.to_numpy() * TWO32  # U64
@@ -252,9 +249,7 @@ def event_based_risk(gmf_df, monitor):
              for id0taxo, s0, s1 in monitor.read('start-stop')]
 
     oq = crmodel.oqparam
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
+    xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(xtypes)
     loss3 = {'aids': [], 'bids': [], 'loss': []}
@@ -401,9 +396,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         set_oqparam(oq, self.assetcol, self.datastore)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
-        self.xtypes = oq.ext_loss_types
-        if self.assetcol['ideductible'].any():
-            self.xtypes.append('claim')
+        self.xtypes = oq.xtypes
         self.X = len(self.xtypes)
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
