@@ -166,12 +166,13 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
     """
     correl = int(oq.asset_correlation)
     value_cols = ['variance', 'loss']
-    for li, ln in enumerate(oq.xtypes):
+    xtypes = oq.xtypes
+    for li, ln in enumerate(xtypes):
         if ln not in out or len(out[ln]) == 0:
             continue
         alt = out[ln]
         if oq.avg_losses:  # fast
-            update(loss3, li, len(oq.xtypes), alt, rlz_id, oq.collect_rlzs)
+            update(loss3, li, len(xtypes), alt, rlz_id, oq.collect_rlzs)
         if correl:  # use sigma^2 = (sum sigma_i)^2
             alt['variance'] = numpy.sqrt(alt.variance)
         eids = alt.eid.to_numpy() * TWO32  # U64
