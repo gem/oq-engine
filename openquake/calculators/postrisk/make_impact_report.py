@@ -600,12 +600,14 @@ class CountryReportBuilder:
         event_style = self.ParagraphStyle(
             "EventTitle",
             parent=self.styles["Normal"],
-            fontSize=11,
+            fontName="NotoSans-Bold",
+            fontSize=12,
+            leading=14,
         )
 
         meta_style = self.ParagraphStyle(
             "HeaderMeta",
-            parent=self.styles["Italic"],
+            parent=self.styles["Normal"],
             fontSize=9,
             leading=11
         )
@@ -671,50 +673,71 @@ class CountryReportBuilder:
 
     # NOTE: passing images explicitly to avoid implicit ordering dependency
     def _build_grid(self, images):
+        # Standardized regular body style to match header metadata
+        body_style = self.ParagraphStyle(
+            "GridBodyText",
+            parent=self.styles["Normal"],
+            fontSize=9,
+            leading=11,
+        )
+
+        # Clear title styles using the registered NotoSans bold variant
+        title_style = self.ParagraphStyle(
+            "GridSectionTitle",
+            parent=self.styles["Normal"],
+            fontName="NotoSans-Bold",
+            fontSize=11,
+            leading=14,
+        )
+
         # Determine column header based on uncertainty
         col_header = ("Estimated losses" if self.no_uncertainty
                       else "Range of losses (5% - 95%)")
-        table_data = [["Impact metric", col_header]] + [
-            [meta["label"], self.summary_data[meta["label"]]]
-            for meta in LOSS_METADATA.values()
-        ]
+        # Wrapping table cell values in Paragraph flowables forces them to use
+        # NotoSans
+        table_data = [[
+            self.Paragraph("<b>Impact metric</b>", body_style),
+            self.Paragraph(f"<b>{col_header}</b>", body_style)
+        ]]
+        for meta in LOSS_METADATA.values():
+            table_data.append([
+                self.Paragraph(meta["label"], body_style),
+                self.Paragraph(self.summary_data[meta["label"]], body_style)
+            ])
         if self.no_uncertainty:
-            table_data.append(["No uncertainty was included", ""])
+            table_data.append([
+                self.Paragraph("No uncertainty was included", body_style), ""])
         summary_table = self.Table(
             table_data,
-            colWidths=[self.col_w * 0.45, self.col_w * 0.45],
+            colWidths=[self.col_w * 0.42, self.col_w * 0.48],
             hAlign="LEFT",
         )
         style_cmds = [
             ("GRID", (0, 0), (-1, -1), 0.5, self.colors.grey),
             ("BACKGROUND", (0, 0), (-1, 0), self.colors.whitesmoke),
-            ("SIZE", (0, 0), (-1, -1), 9),
             ("PADDING", (0, 0), (-1, -1), 4),
         ]
         if self.no_uncertainty:
             # Span the last row across both columns and italicize
             last_row_idx = len(table_data) - 1
             style_cmds.append(("SPAN", (0, last_row_idx), (1, last_row_idx)))
-            style_cmds.append(("FONTNAME",
-                               (0, last_row_idx), (0, last_row_idx),
-                               "Helvetica-Oblique"))
         summary_table.setStyle(self.TableStyle(style_cmds))
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
         left_bundle = [
             self.Paragraph(
-                f"<b>Summary of impact for {self.country_name}:</b>",
-                self.styles["Normal"]),
+                f"<b>Summary of impact for {self.country_name}</b>",
+                title_style),
             self.Spacer(1, 4),
             summary_table,
             self.Spacer(1, 12),
             self.Paragraph("<b>Regions with highest number of fatalities</b>",
-                           self.styles["Normal"]),
+                           title_style),
             self.ListFlowable(
                 [self.ListItem(self.Paragraph(region_name, self.ParagraphStyle(
                     "region",
-                    parent=self.styles["Normal"],
+                    parent=body_style,
                     fontName=self._select_font(region_name),
                 ))) for region_name in most_affected],
                 bulletType="bullet",
