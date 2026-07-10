@@ -137,13 +137,13 @@ def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
     if period < 1:
         if not vs30_clustering:
             # case 1, eq. (17)
-            b = 8.5 + 17.2 * imt.period
+            b = 8.5 + 17.2 * period
         else:
             # case 2, eq. (18)
-            b = 40.7 - 15.0 * imt.period
+            b = 40.7 - 15.0 * period
     else:
         # both cases, eq. (19)
-        b = 22.0 + 3.7 * imt.period
+        b = 22.0 + 3.7 * period
 
     # eq. (20)
     return numpy.exp((- 3.0 / b) * distances)

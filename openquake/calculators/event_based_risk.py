@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -43,6 +42,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
+GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
@@ -55,7 +55,7 @@ def get_assetdf_startstop(assetcol):
     del assetdf['id']
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
-    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'site_id', 'ordinal'])
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
@@ -160,79 +160,13 @@ def build_alt(loss2, xtypes):
     return pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(gmf_df, oqparam, monitor):
-    """
-    :param gmf_df: DataFrame of GMFs
-    :param oqparam: OqParam instance
-    :param monitor: a Monitor instance
-    :yields: dictionary of arrays, the output of event_based_risk
-    """
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    assdf = monitor.read('assets')
-    items = ((id0taxo, assdf[s0:s1].set_index('ordinal'))
-             for id0taxo, s0, s1 in monitor.read('start-stop'))
-    dic = _event_based_risk(gmf_df, items, crmodel, monitor)
-    return dic
-
-
-def _event_based_risk(df, gen_adf, crmodel, monitor):
-    oq = crmodel.oqparam
-    R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
-    X = len(oq.ext_loss_types) + oq.ideduc
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    if os.environ.get('OQ_DEBUG_SITE'):
-        print(df)
-
-    aggids = monitor.read('aggids')
-    rlz_id = monitor.read('rlz_id')
-    if oq.ignore_master_seed or oq.ignore_covs:
-        rng = None
-    else:
-        rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
-                            int(oq.asset_correlation))
-    risk_mon = monitor('computing risk', measuremem=False)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    agg_mon = monitor('aggregating losses', measuremem=False)
-    sids = df.sid.to_numpy()
-    try:
-        countries = monitor.read('countries')
-    except KeyError:  # no ID_0 in the exposure
-        countries = ["?"]  # assume a single contry
-    for id0taxo, adf in gen_adf:
-        # passing the contry is crucial for impact_test,
-        # where the exposure contains multiple countries
-        country = countries[id0taxo // TWO24]
-        with fil_mon:
-            # *crucial* for the performance of the next step
-            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-        if len(gmf_df) == 0:  # common enough
-            continue
-        with risk_mon:
-            [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-        with agg_mon:
-            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-
-    dic = dict(gmf_bytes=df.memory_usage().sum())
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
-    dic['alt'] = build_alt(loss2, xtypes)
-    dic['avg'] = build_avg(loss3, oq.A, R*X)
-    return dic
-
-
 def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
     """
     Update loss2 and loss3
     """
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes += ['claim']
     correl = int(oq.asset_correlation)
     value_cols = ['variance', 'loss']
+    xtypes = oq.xtypes
     for li, ln in enumerate(xtypes):
         if ln not in out or len(out[ln]) == 0:
             continue
@@ -304,37 +238,94 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+def event_based_risk(gmf_df, monitor):
+    """
+    Aggregate the losses for all assets for the given event slice
+
+    :returns: dictionary with keys 'alt', 'avg', 'gmf_bytes'
+    """
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
+    pairs = [(id0taxo, slice(s0, s1))
+             for id0taxo, s0, s1 in monitor.read('start-stop')]
+
+    oq = crmodel.oqparam
+    xtypes = oq.xtypes
+    R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
+    X = len(xtypes)
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    if os.environ.get('OQ_DEBUG_SITE'):
+        print(gmf_df)
+
+    aggids = monitor.read('aggids')
+    rlz_id = monitor.read('rlz_id')
+    items = ((id0taxo, monitor.read('assets', slc).
+              set_index('ordinal')) for id0taxo, slc in pairs)
+    if oq.ignore_master_seed or oq.ignore_covs:
+        rng = None
+    else:
+        rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
+                            int(oq.asset_correlation))
+    risk_mon = monitor('computing risk', measuremem=False)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    agg_mon = monitor('aggregating losses', measuremem=False)
+    haz_sids = gmf_df.sid.unique()
+    try:
+        countries = monitor.read('countries')
+    except KeyError:  # no ID_0 in the exposure
+        countries = ["?"]  # assume a single contry
+    for id0taxo, assetdf in items:
+        with fil_mon:
+            # filtering is *crucial* for the performance of the next step
+            adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
+            if len(adf) == 0:
+                continue
+            gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
+        # passing the contry is crucial for impact_test,
+        # where the exposure contains multiple countries
+        country = countries[id0taxo // TWO24]
+        with risk_mon:
+            [out] = crmodel.get_outputs(
+                adf, gdf, crmodel.oqparam._sec_losses, rng, country)
+        with agg_mon:
+            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+
+    dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
+    dic['alt'] = build_alt(loss2, xtypes)
+    dic['avg'] = build_avg(loss3, oq.A, R*X)
+    return dic
+
+
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
-    :param cmaker: ContextMaker instance associated to the trt_smr
+    :param cmakers: ContextMaker instances associated to each trt_smr
     :param sids: array of site indices
     :param secperils: list of secondary peril instances
     :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
-    :yields: dictionaries with keys 'avg' and 'alt'
+    :yields: dictionaries with keys 'avg', 'alt' and times
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    # NB: the assets are read more times than needed; this is on purpose;
-    # the slowdown is minor, while the memory saving is massive, since only
-    # one taxonomy at the time is read inside _event_based_risk
-    for dic in event_based.event_based(
-            allrups, cmakers, sids, secperils, hdf5path, monitor):
-        if len(dic['gmfdata']):
-            times = dic['times']  # rup_id, time, weight
-            gmf_df = pandas.DataFrame(dic['gmfdata'])
-            items = ((id0taxo, monitor.read(
-                'assets', slc=slice(s0, s1)).set_index('ordinal'))
-                     for id0taxo, s0, s1 in monitor.read('start-stop'))
-            t0 = time.time()
-            res = _event_based_risk(gmf_df, items, crmodel, monitor)
-            dt = time.time() - t0
-            times['time'] += dt / len(times)
-            res['times'] = times
-            yield res
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
+        allrups, cmakers, sids, secperils, hdf5path, monitor)
+           if len(dic['gmfdata']))
+    # NB: it is essential to concatenate the small dataframes to have
+    # long arrays (around GMF_MB) and hence a good performance
+    for gmf_df in general.concatenated(dfs, GMF_MB):
+        # NB: the assets are read more times than needed; this is on purpose;
+        # the slowdown is minor, while the memory saving is massive, since
+        # only one taxonomy at the time is read inside event_based_risk
+        gmf_mb = gmf_df.memory_usage().sum() / 1024**2
+        if gmf_mb > GMF_MB:
+            # print(f'{gmf_mb=:.1f}')
+            mod2 = gmf_df.eid % 2
+            yield event_based_risk, gmf_df[mod2==1]
+            yield event_based_risk(gmf_df[mod2==0], monitor)
+        else:
+            yield event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -406,9 +397,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         set_oqparam(oq, self.assetcol, self.datastore)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
-        self.xtypes = oq.ext_loss_types
-        if self.assetcol['ideductible'].any():
-            self.xtypes.append('claim')
+        self.xtypes = oq.xtypes
         self.X = len(self.xtypes)
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
@@ -489,14 +478,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'No GMFs were generated, perhaps they were '
                     'all below the minimum_intensity threshold')
                 return 1
+            self.datastore['/'].attrs['gmf_bytes'] = self.gmf_bytes
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             smap, gmf_dfs = starmap_from_gmfs(
-                ebr_from_gmfs, oq, self.datastore, self._monitor)
+                event_based_risk, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, oq))
+                smap.submit((gmf_df,))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:

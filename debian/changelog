@@ -1,4 +1,10 @@
+  [Amir Shahmohammadian]
+  * Fixed a bug in the treatment of PGV period in the Jayaram and Baker
+    (2009) spatial correlation model resulting in a wrong coefficient
+    b = 22.0 instead of b = 25.7
+
   [Michele Simionato]
+  * Optimized ebrisk calculations by using larger GMF arrays
   * Saving memory when running several jobs together with a pool
   * Fixed a bug with IMT-dependent weights being not normalized, breaking
     the CND model with use_rates=true
