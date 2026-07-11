@@ -190,11 +190,9 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
     """
     Update loss2 and loss3
     """
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes += ['claim']
     correl = int(oq.asset_correlation)
     value_cols = ['variance', 'loss']
+    xtypes = oq.xtypes
     for li, ln in enumerate(xtypes):
         if ln not in out or len(out[ln]) == 0:
             continue
@@ -278,8 +276,9 @@ def event_based_risk(gmf_df, monitor):
              for idtaxo, s0, s1 in monitor.read('start-stop')]
 
     oq = crmodel.oqparam
+    xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
-    X = len(oq.ext_loss_types) + oq.ideduc
+    X = len(xtypes)
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
@@ -320,9 +319,6 @@ def event_based_risk(gmf_df, monitor):
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
     dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
     dic['alt'] = build_alt(loss2, xtypes)
     dic['avg'] = build_avg(loss3, oq.A, R*X)
     return dic
@@ -428,9 +424,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         set_oqparam(oq, self.assetcol, self.datastore)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
-        self.xtypes = oq.ext_loss_types
-        if self.assetcol['ideductible'].any():
-            self.xtypes.append('claim')
+        self.xtypes = oq.xtypes
         self.X = len(self.xtypes)
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
