@@ -259,6 +259,16 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+class AssetReader:
+    def __init__(self, monitor):
+        self.monitor = monitor('reading assets', measuremem=True)
+        self.tot = 0
+
+    def read(self, slc):
+        with self.monitor as mon:
+            return mon.read('assets', slc).set_index('ordinal')
+
+
 def event_based_risk(gmf_df, monitor):
     """
     Aggregate the losses for all assets for the given event slice
@@ -281,8 +291,8 @@ def event_based_risk(gmf_df, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    items = ((idtaxo, monitor.read('assets', slc).
-              set_index('ordinal')) for idtaxo, slc in pairs)
+    areader = AssetReader(monitor)
+    items = ((idtaxo, areader.read(slc)) for idtaxo, slc in pairs)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
