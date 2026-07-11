@@ -384,8 +384,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
         adf, iss = get_assetdf_startstop(self.assetcol)
-        max_assets_per_slice = (iss[:, 2] - iss[:, 1]).max()
-        logging.info(f'{max_assets_per_slice=:_d}')
+        max_assets_per_region_taxon = (iss[:, 2] - iss[:, 1]).max()
+        logging.info(f'{max_assets_per_region_taxon=:_d}')
         monitor.save('assets', adf)
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
