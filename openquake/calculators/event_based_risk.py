@@ -178,7 +178,8 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
         eids = alt.eid.to_numpy() * TWO32  # U64
         values = numpy.array([alt[col] for col in value_cols]).T
         # aggregate all assets
-        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
+        if oq.K == 0:
+            fast_agg(eids + U64(oq.K), values, correl, li, loss2)
         if len(aggids):
             # aggregate assets for each tag combination
             aids = alt.aid.to_numpy()
@@ -367,10 +368,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:
             monitor.save('weights', ws)
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
+            self.aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
-            aggids = ()
-        monitor.save('aggids', aggids)
+            self.aggids = ()
+        monitor.save('aggids', self.aggids)
 
     def pre_execute(self):
         oq = self.oqparam
@@ -503,6 +504,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info('Risk parameters (rel_E={:_d}, K={:_d}, X={})'.
                      format(E, K, self.X))
 
+    def update_elt(self, alt):
+        if not hasattr(self, 'elt'):
+            self.elt = pandas.DataFrame(dict(event_id=[], agg_id=[],
+                                             loss_id=[], variance=[], loss=[])
+                                        ).set_index(['event_id', 'loss_id'])
+        aggids = numpy.intersect1d(alt.agg_id.unique(), self.aggids[0])
+        for aggid in aggids:
+            df = alt[alt.agg_id==aggid].set_index(['event_id', 'loss_id'])
+            self.elt = self.elt.add(df, fill_value=0)
+
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
@@ -518,6 +529,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         with self.monitor('saving risk_by_event'):
             alt = dic.pop('alt')
+            if self.oqparam.aggregate_by:
+                self.update_elt(alt)
             for name in alt.columns:
                 dset = self.datastore['risk_by_event/' + name]
                 hdf5.extend(dset, alt[name].to_numpy())
@@ -538,6 +551,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
+        if K:
+            elt = self.elt.reset_index()
+            elt['agg_id'] = K
+            for name in elt.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, elt[name].to_numpy())
+            del elt, self.elt
         upper_limit = self.E * (K + 1) * len(self.xtypes)
         if upper_limit < 1E7:
             # sanity check on risk_by_event if not too large
