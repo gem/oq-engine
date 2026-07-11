@@ -505,11 +505,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                      format(E, K, self.X))
 
     def update_elt(self, alt):
+        """
+        Aggregate losses and variances by (event_id, loss_id)
+        """
         if not hasattr(self, 'elt'):
             self.elt = pandas.DataFrame(dict(event_id=[], agg_id=[],
                                              loss_id=[], variance=[], loss=[])
                                         ).set_index(['event_id', 'loss_id'])
-        aggids = numpy.intersect1d(alt.agg_id.unique(), self.aggids[0])
+        aggids = numpy.intersect1d(alt.agg_id.unique(), self.aggids[-1])
         for aggid in aggids:
             df = alt[alt.agg_id==aggid].set_index(['event_id', 'loss_id'])
             self.elt = self.elt.add(df, fill_value=0)
