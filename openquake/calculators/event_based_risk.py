@@ -87,15 +87,10 @@ def get_assetdf_startstop(assetcol):
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
     # causing different losses
-    idtaxo = compose3(assetdf.ID_0.to_numpy(), id1, assetdf.taxonomy.to_numpy())
-    iss = []
-    maxsize = int(config.memory.max_assets_chunk)
-    for idx, start, stop in performance.idx_start_stop(idtaxo):
-        for slc in general.gen_slices(start, stop, maxsize):
-            iss.append((idx, slc.start, slc.stop))
 
     # building start-stop indices, so that the assets are read by taxonomy
-    return assetdf, I64(iss)
+    idtaxo = compose3(assetdf.ID_0.to_numpy(), id1, assetdf.taxonomy.to_numpy())
+    return assetdf, performance.idx_start_stop(idtaxo)
 
 
 def fast_agg(keys, values, correl, li, loss2):
