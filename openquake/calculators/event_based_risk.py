@@ -95,7 +95,7 @@ def get_assetdf_startstop(assetcol):
             iss.append((idx, slc.start, slc.stop))
 
     # building start-stop indices, so that the assets are read by taxonomy
-    return assetdf, U32(iss)
+    return assetdf, I64(iss)
 
 
 def fast_agg(keys, values, correl, li, loss2):
