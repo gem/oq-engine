@@ -35,6 +35,7 @@ dependencies = [
     "pyzmq~=26.0.3; python_version <= '3.11'",
     "pyzmq~=26.2.0; python_version >  '3.11'",    
     "h3>=4.4",
+
     # unplanned deps
     "decorator~=5.1.1",
     "pillow~=12.2.0",
@@ -42,6 +43,7 @@ dependencies = [
     "numba~=0.61.2",
     "alpha_shapes~=1.1.0",
     "docutils~=0.20.1",
+    "django_cors_headers~=4.3.1",
 
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",
