@@ -46,24 +46,21 @@ GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
-def split3(idtaxo):
+def split2(id01):
     """
-    Split the 64 bit integer `idtaxo` in 3 integers id0, id1 (16 bit)
-    and taxo (32 bit).
+    Split the 32 bit integer `id01` in 2 integers id0, id1 (16 bit)
     """
-    id01, taxo = numpy.divmod(idtaxo, TWO32)
-    id0, id1 = numpy.divmod(id01, TWO16)
-    return id0, id1, taxo
+    return numpy.divmod(id01, TWO16)
 
 
-def compose3(id0, id1, taxo):
+def compose2(id0, id1):
     """
-    Compose 3 integers into a single int64 value.
+    Compose 3 integers into a single uint32 value.
 
-    >>> split3(compose3(1, 2, 5))
-    (np.int64(1), np.int64(2), np.int64(5))
+    >>> split2(compose2(1, 2))
+    (np.int32(1), np.int43(2))
     """
-    return (id0 * TWO16 + id1) * TWO32 + taxo
+    return id0 * TWO16 + id1
 
 
 def get_assetdf_startstop(assetcol):
@@ -77,10 +74,10 @@ def get_assetdf_startstop(assetcol):
         assetdf['ID_0'] = U32(0)
     if 'NAME_1' in assetdf:
         id1 = assetdf.NAME_1.to_numpy()
-        fields = ['ID_0', 'NAME_1', 'taxonomy', 'site_id', 'ordinal']
+        fields = ['ID_0', 'NAME_1', 'site_id', 'ordinal']
     else:
         id1 = numpy.zeros(len(assetdf), U32)
-        fields = ['ID_0', 'taxonomy', 'site_id', 'ordinal']
+        fields = ['ID_0', 'site_id', 'ordinal']
         
     assetdf = assetdf.sort_values(fields)
     # NB: this is subtle! without the ordering by 'ordinal'
@@ -89,8 +86,8 @@ def get_assetdf_startstop(assetcol):
     # causing different losses
 
     # building start-stop indices, so that the assets are read by taxonomy
-    idtaxo = compose3(assetdf.ID_0.to_numpy(), id1, assetdf.taxonomy.to_numpy())
-    return assetdf, performance.idx_start_stop(idtaxo)
+    id01 = compose2(assetdf.ID_0.to_numpy(), id1)
+    return assetdf, performance.idx_start_stop(id01)
 
 
 def fast_agg(keys, values, correl, li, loss2):
@@ -292,7 +289,7 @@ def event_based_risk(gmf_df, monitor):
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     areader = AssetReader(monitor)
-    items = ((idtaxo, areader.read(slc)) for idtaxo, slc in pairs)
+    items = ((id01, areader.read(slc)) for id01, slc in pairs)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -306,22 +303,24 @@ def event_based_risk(gmf_df, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for idtaxo, assetdf in items:
-        id0, id1, taxo = split3(idtaxo)
-        with fil_mon:
-            # filtering is *crucial* for the performance of the next step
-            adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
-            if len(adf) == 0:
-                continue
-            gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
-        # passing the contry is crucial for impact_test,
-        # where the exposure contains multiple countries
-        country = countries[id0]
-        with risk_mon:
-            [out] = crmodel.get_outputs(
-                adf, gdf, crmodel.oqparam._sec_losses, rng, country)
-        with agg_mon:
-            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+    for id01, assetdf in items:
+        id0, id1 = split2(id01)
+        for taxo in assetdf.taxonomy.unique():
+            with fil_mon:
+                # filtering is *crucial* for the performance of the next step
+                adf = assetdf[(assetdf.taxonomy == taxo) &
+                              numpy.isin(assetdf.site_id, haz_sids)]
+                if len(adf) == 0:
+                    continue
+                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
+            # passing the contry is crucial for impact_test,
+            # where the exposure contains multiple countries
+            country = countries[id0]
+            with risk_mon:
+                [out] = crmodel.get_outputs(
+                    adf, gdf, crmodel.oqparam._sec_losses, rng, country)
+            with agg_mon:
+                aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
     dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
     dic['alt'] = build_alt(loss2, xtypes)

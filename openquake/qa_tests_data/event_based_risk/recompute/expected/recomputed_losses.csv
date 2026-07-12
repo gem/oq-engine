@@ -1,7 +1,7 @@
-#,,,"generated_by='OpenQuake engine 3.26.0-git837044a375', start_date='2026-07-11T01:58:27', checksum=724861661, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:48', checksum=725582560, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,loss_value,loss_ratio
-structural,Central,1.78565E+06,1.47516E-03
-structural,East,7.76809E+04,5.84186E-04
-structural,Far-Western,1.98430E+04,5.53391E-04
-structural,Mid-Western,4.47289E+04,4.38212E-04
-structural,West,3.82905E+04,3.61984E-04
+structural,Central,1.92552E+06,1.59071E-03
+structural,East,8.04203E+04,6.04787E-04
+structural,Far-Western,1.77298E+04,4.94458E-04
+structural,Mid-Western,4.80570E+04,4.70817E-04
+structural,West,4.06451E+04,3.84244E-04
