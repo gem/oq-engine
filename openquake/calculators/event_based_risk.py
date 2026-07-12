@@ -298,22 +298,19 @@ def event_based_risk(gmf_df, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    haz_sids = gmf_df.sid.unique()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id01, assetdf in items:
+    for id01, adf_ in items:
         id0, id1 = split2(id01)
-        with fil_mon:
-            adf_ = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
-        for taxo in assetdf.taxonomy.unique():
+        for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
                 adf = adf_[adf_.taxonomy == taxo]
-                if len(adf) == 0:
-                    continue
                 gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
+                if len(gdf) == 0:
+                    continue
             # passing the contry is crucial for impact_test,
             # where the exposure contains multiple countries
             country = countries[id0]
