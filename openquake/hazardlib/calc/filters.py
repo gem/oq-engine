@@ -332,15 +332,12 @@ def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(
         hypos[:, 0], hypos[:, 1], hypos[::, 2]))
+    # determine the sites close to each rupture
     all_sids = kr.query_ball_tree(sitetree, dist, eps=.1)
     out = []
-    for r, sids in enumerate(all_sids):
+    for rup, sids in zip(ruptures, all_sids):
         if sids:
-            rup = ruptures[r]
-            # NB: if there are stations num_assets[sid] can be empty
-            rup['nsites'] = sum(num_assets.get(s, 1)
-                                for sid in sids
-                                for s in orig_sids[sid])
+            rup['nsites'] = sum(len(orig_sids[sid]) for sid in sids)
             out.append(rup)
     return numpy.array(out)
 

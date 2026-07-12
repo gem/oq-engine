@@ -73,10 +73,7 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
-    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    # NB: if there was an assetcol, nsites is actually the number of affected
-    # assets, as set by close_ruptures
-    return rup['n_occ'] * (1 + rup['nsites'] // 100)
+    return rup['n_occ'] * rup['nsites']
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -346,8 +343,8 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = totw / (oq.concurrent_tasks or 1)
-    logging.info(f'{round(maxw)=}')
+    maxw = min(totw / (oq.concurrent_tasks or 1), 1E8)
+    logging.info(f'{round(maxw)=:_d}')
     return filrups, maxw, acc
 
 
