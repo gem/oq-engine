@@ -289,7 +289,7 @@ def event_based_risk(gmf_df, monitor):
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
                 adf = adf_[adf_.taxonomy == taxo]
-                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
+                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
                 if len(gdf) == 0:
                     continue
             # passing the contry is crucial for impact_test,
