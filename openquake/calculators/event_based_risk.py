@@ -46,23 +46,6 @@ GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
-def split2(id01):
-    """
-    Split the 32 bit integer `id01` in 2 integers id0, id1 (16 bit)
-    """
-    return numpy.divmod(id01, TWO16)
-
-
-def compose2(id0, id1):
-    """
-    Compose 3 integers into a single uint32 value.
-
-    >>> split2(compose2(1, 2))
-    (np.int32(1), np.int43(2))
-    """
-    return id0 * TWO16 + id1
-
-
 def get_assetdf_startstop(assetcol):
     """
     :param assetcol: an AssetCollection
@@ -86,7 +69,7 @@ def get_assetdf_startstop(assetcol):
     # causing different losses
 
     # building start-stop indices, so that the assets are read by taxonomy
-    id01 = compose2(assetdf.ID_0.to_numpy(), id1)
+    id01 = assetdf.ID_0.to_numpy() * TWO16 + id1
     return assetdf, performance.idx_start_stop(id01)
 
 
@@ -261,9 +244,9 @@ class AssetReader:
         self.monitor = monitor('reading assets', measuremem=True)
         self.tot = 0
 
-    def read(self, slc):
+    def read(self, s0, s1):
         with self.monitor as mon:
-            return mon.read('assets', slc).set_index('ordinal')
+            return mon.read('assets', slice(s0, s1)).set_index('ordinal')
 
 
 def event_based_risk(gmf_df, monitor):
@@ -274,9 +257,6 @@ def event_based_risk(gmf_df, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    pairs = [(idtaxo, slice(s0, s1))
-             for idtaxo, s0, s1 in monitor.read('start-stop')]
-
     oq = crmodel.oqparam
     xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
@@ -289,7 +269,8 @@ def event_based_risk(gmf_df, monitor):
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     areader = AssetReader(monitor)
-    items = ((id01, areader.read(slc)) for id01, slc in pairs)
+    items = ((id01, areader.read(s0, s1))
+             for id01, s0, s1 in monitor.read('start-stop'))
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -303,7 +284,7 @@ def event_based_risk(gmf_df, monitor):
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
     for id01, adf_ in items:
-        id0, id1 = split2(id01)
+        id0, id1 = numpy.divmod(id01, TWO16)
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
