@@ -66,9 +66,14 @@ def get_assetdf_startstop(assetcol):
     # with respect to Intel machines, depending on the machine, thus
     # causing different losses
 
-    # building start-stop indices, so that the assets are read by taxonomy
+    # building start-stop indices, so that the assets are read by region
+    maxsize = int(config.memory.max_assets_chunk)
     id01 = assetdf.ID_0.to_numpy() * TWO16 + id1
-    return assetdf, performance.idx_start_stop(id01)
+    iss = []
+    for idx, start, stop in performance.idx_start_stop(id01):
+        for slc in general.gen_slices(start, stop, maxsize):
+            iss.append((idx, slc.start, slc.stop))
+    return assetdf, U32(iss)
 
 
 def fast_agg(keys, values, correl, li, loss2):
@@ -360,8 +365,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
         adf, iss = get_assetdf_startstop(self.assetcol)
-        max_assets_per_region_taxon = (iss[:, 2] - iss[:, 1]).max()
-        logging.info(f'{max_assets_per_region_taxon=:_d}')
+        max_assets_per_region = (iss[:, 2] - iss[:, 1]).max()
+        logging.info(f'{max_assets_per_region=:_d}')
         monitor.save('assets', adf)
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
