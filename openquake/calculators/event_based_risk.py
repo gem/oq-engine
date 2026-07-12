@@ -56,13 +56,11 @@ def get_assetdf_startstop(assetcol):
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
     if 'NAME_1' in assetdf:
+        assetdf = assetdf.sort_values(['ID_0', 'NAME_1', 'ordinal'])
         id1 = assetdf.NAME_1.to_numpy()
-        fields = ['ID_0', 'NAME_1', 'site_id', 'ordinal']
     else:
+        assetdf = assetdf.sort_values(['ID_0', 'ordinal'])
         id1 = numpy.zeros(len(assetdf), U32)
-        fields = ['ID_0', 'site_id', 'ordinal']
-        
-    assetdf = assetdf.sort_values(fields)
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
