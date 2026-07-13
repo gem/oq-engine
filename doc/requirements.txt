@@ -1,4 +1,4 @@
-sphinx==7
+sphinx==6.2
 pydata-sphinx-theme==0.15.2
 myst-parser==2.0.0
 pygments-csv-lexer==0.1.3
