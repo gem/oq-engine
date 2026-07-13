@@ -185,7 +185,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'csv rst org html md', ext
+    assert ext in 'csv rst org md', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
