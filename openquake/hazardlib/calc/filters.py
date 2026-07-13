@@ -321,11 +321,10 @@ def split_source(src):
     return splits
 
 
-def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
+def filter_rups(ruptures, sitetree, orig_sids, dist, mon):
     """
     :param ruptures: array of ruptures with the same magnitude
     :param sitetree: kdtree for the reduced sites
-    :param num_assets: dictionary site_id -> number of assets on that site
     :param dist: integration distance at that magnitude
     :returns: ruptures close to the global site collection
     """
@@ -346,8 +345,7 @@ def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
 # NB: the magdist here is hard-coded and independent from oq
 # NB: sitecol.lower_res(5) is needed to save memory: for India
 # with 1.3M sites the filtering was taking 83 GB, now only 6 GB
-def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
-                   magdist=magdepdist(
+def close_ruptures(ruptures, sitecol, h5=None, magdist=magdepdist(
         [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
          (8., 400.), (9., 700.), (11., 1200.)])):
     """
@@ -357,11 +355,6 @@ def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
     :param h5: hdf5 where to save the performance info
     :returns: the ruptures close to the sites
     """
-    if assetcol:
-        sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
-        num_assets = dict(zip(sids, counts))
-    else:
-        num_assets = {}
     sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
     if len(sites) < len(sitecol):
         logging.debug('Reducing %s->%d sites', sitecol, len(sites))
@@ -373,7 +366,7 @@ def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
         ok = mags == mag
         if ok.sum() == 0:  # no ruptures in this magnitude range
             continue
-        smap.submit((ruptures[ok], ks, orig_sids, num_assets, magdist(mag)))
+        smap.submit((ruptures[ok], ks, orig_sids, magdist(mag)))
         if len(ruptures) > 100_000:
             logging.info('Considering %d ruptures of magnitude %s',
                          ok.sum(), mag)
