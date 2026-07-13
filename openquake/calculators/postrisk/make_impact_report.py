@@ -22,10 +22,6 @@ import pathlib
 import tempfile
 import logging
 import functools
-import difflib
-import urllib.request
-import json
-import unicodedata
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
@@ -65,9 +61,6 @@ LOSS_METADATA = {
 }
 LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
-COUNTRY_PROFILES_REPO_TREE_URL = (
-    "https://api.github.com/repos/gem/risk-profiles/git/trees/master"
-    "?recursive=1")
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 
 
@@ -88,64 +81,6 @@ class ReportOptions:
     threshold_deg: float
     no_uncertainty: bool
     loss_metric: str
-
-
-def _strip_accents(text):
-    # Decompose accented characters (e.g. ü -> u + combining diaeresis),
-    # then drop the combining marks. "Türkiye" -> "Turkiye".
-    decomposed = unicodedata.normalize("NFKD", text)
-    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-
-
-def _normalize(name):
-    name = _strip_accents(name)
-    return name.strip().lower().replace("_", " ").replace("-", " ")
-
-
-@functools.lru_cache(maxsize=1)
-def _get_country_dirs():
-    """Fetch the repo tree once and return {normalized_country_name: path}."""
-    req = urllib.request.Request(
-        COUNTRY_PROFILES_REPO_TREE_URL,
-        headers={"Accept": "application/vnd.github+json"}
-    )
-    with urllib.request.urlopen(req) as resp:
-        data = json.load(resp)
-
-    if data.get("truncated"):
-        raise RuntimeError(
-            "GitHub tree response was truncated; repo is too large for a "
-            "single recursive call. Consider paginating per-continent instead."
-        )
-
-    country_dirs = {}
-    for entry in data["tree"]:
-        if entry["type"] != "tree":
-            continue
-        path = entry["path"]
-        if path.count("/") == 1:  # depth-1 dir, i.e. Continent/Country
-            _, country = path.split("/")
-            country_dirs[_normalize(country)] = path
-    return country_dirs
-
-
-def get_country_profile_link(country_name):
-    """Return the risk-profiles URL for a given country name, fetched live
-    from the GitHub repo (no local dictionary needed).
-
-    Raises KeyError (with close-match suggestions) if not found.
-    """
-    country_dirs = _get_country_dirs()
-    key = _normalize(country_name)
-
-    if key in country_dirs:
-        return f"{COUNTRY_PROFILES_BASE_URL}/{country_dirs[key]}"
-
-    close = difflib.get_close_matches(
-        key, country_dirs.keys(), n=3, cutoff=0.6)
-    suggestion = f" Did you mean: {', '.join(close)}?" if close else ""
-    raise KeyError(
-        f"No country profile found for {country_name!r}.{suggestion}")
 
 
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded
@@ -555,6 +490,7 @@ class CountryReportBuilder:
         df = _read_countries_info(path_str)   # cached
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
+        self.country_region = row["GEM_REGION"]
 
     def _get_notes(self, oqparam):
         notes_data = {
@@ -562,16 +498,14 @@ class CountryReportBuilder:
             "profile_link": None,
             "metadata": []
         }
-        try:
-            country_profile_link = get_country_profile_link(self.country_name)
-        except KeyError as exc:
-            logging.warning(str(exc))
-        else:
-            notes_data["profile_link"] = (
-                f"Seismic Risk Profile for the Country: "
-                f"<font color='blue'><u><a href='{country_profile_link}'>"
-                f"{country_profile_link}</a></u></font>"
-            )
+        country_profile_link = (f'{COUNTRY_PROFILES_BASE_URL}/'
+                                f'{self.country_region}/'
+                                f'{self.country_name}')
+        notes_data["profile_link"] = (
+            f"Seismic Risk Profile for the Country: "
+            f"<font color='blue'><u><a href='{country_profile_link}'>"
+            f"{country_profile_link}</a></u></font>"
+        )
         rupdic = oqparam.rupture_dict
         meta = notes_data["metadata"]
         meta.append(f'USGS identifier: {rupdic["usgs_id"]}')
