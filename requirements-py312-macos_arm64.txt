@@ -40,7 +40,7 @@ https://wheelhouse.openquake.org/v3/py/django_appconf-1.0.6-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/docutils-0.19.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/docutils-0.19-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flatbuffers-25.12.19-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.60.2-py3-none-any.whl
