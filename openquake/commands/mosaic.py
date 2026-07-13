@@ -51,7 +51,8 @@ def engine_profile(jobctx, nrows):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs, asce_version, vs30):
+def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
+              asce_version, vs30):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -116,6 +117,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs, asce_version, vs30):
             dic = dict(sites=sites, vs30=str(vs30), asce_version=asce_version,
                        siteid=' '.join(map(str, ids[model])))
             params = get_params_from(dic, mosaic_dir)
+            params['exports'] = 'csv'
             # del params['postproc_func']
             allparams.append(params)
             models.append(model)
