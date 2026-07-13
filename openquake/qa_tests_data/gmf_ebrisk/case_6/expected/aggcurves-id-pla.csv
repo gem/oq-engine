@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.20.0-git7d05807a42', start_date='2024-05-29T07:10:11', checksum=1900499300"
+#,,,,,"generated_by='OpenQuake engine 3.26.0-gita9ccf82a87', start_date='2026-07-12T13:32:43', checksum=3972552964"
 return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,14767
 200,structural,0.00000E+00,0.00000E+00,mean,14767
@@ -7,7 +7,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,14770
 200,structural,0.00000E+00,0.00000E+00,mean,14770
 500,structural,0.00000E+00,0.00000E+00,mean,14770
-1000,structural,8.40659E+03,1.11471E+04,mean,14770
+1000,structural,8.54064E+03,1.13249E+04,mean,14770
 100,structural,0.00000E+00,0.00000E+00,mean,14777
 200,structural,0.00000E+00,0.00000E+00,mean,14777
 500,structural,1.11634E+03,1.44097E+03,mean,14777
@@ -42,7 +42,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,3.11086E+05,4.12500E+05,mean,16280
 100,structural,0.00000E+00,0.00000E+00,mean,16606
 200,structural,0.00000E+00,0.00000E+00,mean,16606
-500,structural,4.01392E+03,5.18117E+03,mean,16606
+500,structural,4.01445E+03,5.18186E+03,mean,16606
 1000,structural,5.11675E+06,6.78481E+06,mean,16606
 100,structural,0.00000E+00,0.00000E+00,mean,15689
 200,structural,4.16766E+02,5.12392E+02,mean,15689
@@ -59,7 +59,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,16613
 200,structural,0.00000E+00,0.00000E+00,mean,16613
 500,structural,4.81885E+05,6.22018E+05,mean,16613
-1000,structural,5.17481E+05,6.86180E+05,mean,16613
+1000,structural,5.17225E+05,6.85840E+05,mean,16613
 100,structural,0.00000E+00,0.00000E+00,mean,16919
 200,structural,6.36808E+04,7.82923E+04,mean,16919
 500,structural,1.70574E+05,2.20176E+05,mean,16919
@@ -74,7 +74,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,5.80495E+04,7.69736E+04,mean,14799
 100,structural,0.00000E+00,0.00000E+00,mean,14802
 200,structural,0.00000E+00,0.00000E+00,mean,14802
-500,structural,1.38615E+04,1.78924E+04,mean,14802
+500,structural,1.37725E+04,1.77775E+04,mean,14802
 1000,structural,2.44351E+06,3.24009E+06,mean,14802
 100,structural,0.00000E+00,0.00000E+00,mean,15065
 200,structural,0.00000E+00,0.00000E+00,mean,15065
@@ -82,7 +82,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,3.25077E+05,4.31052E+05,mean,15065
 100,structural,0.00000E+00,0.00000E+00,mean,15068
 200,structural,0.00000E+00,0.00000E+00,mean,15068
-500,structural,1.39912E+04,1.80598E+04,mean,15068
+500,structural,1.40598E+04,1.81484E+04,mean,15068
 1000,structural,2.44351E+06,3.24009E+06,mean,15068
 100,structural,0.00000E+00,0.00000E+00,mean,15070
 200,structural,0.00000E+00,0.00000E+00,mean,15070
@@ -91,7 +91,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,15361
 200,structural,0.00000E+00,0.00000E+00,mean,15361
 500,structural,0.00000E+00,0.00000E+00,mean,15361
-1000,structural,3.24795E+05,4.30678E+05,mean,15361
+1000,structural,3.25774E+05,4.31976E+05,mean,15361
 100,structural,0.00000E+00,0.00000E+00,mean,15707
 200,structural,0.00000E+00,0.00000E+00,mean,15707
 500,structural,4.67001E+04,6.02805E+04,mean,15707
@@ -111,7 +111,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,17254
 200,structural,0.00000E+00,0.00000E+00,mean,17254
 500,structural,0.00000E+00,0.00000E+00,mean,17254
-1000,structural,6.06178E+06,8.03792E+06,mean,17254
+1000,structural,6.00858E+06,7.96738E+06,mean,17254
 100,structural,0.00000E+00,0.00000E+00,mean,17577
 200,structural,0.00000E+00,0.00000E+00,mean,17577
 500,structural,1.58148E+04,2.04137E+04,mean,17577
@@ -130,12 +130,12 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,2.63250E+05,3.49069E+05,mean,16639
 100,structural,0.00000E+00,0.00000E+00,mean,17590
 200,structural,0.00000E+00,0.00000E+00,mean,17590
-500,structural,5.62148E+05,7.25621E+05,mean,17590
-1000,structural,5.87452E+05,7.78962E+05,mean,17590
+500,structural,5.90303E+05,7.61963E+05,mean,17590
+1000,structural,6.01618E+05,7.97745E+05,mean,17590
 100,structural,0.00000E+00,0.00000E+00,mean,17893
 200,structural,0.00000E+00,0.00000E+00,mean,17893
 500,structural,2.41501E+05,3.11729E+05,mean,17893
-1000,structural,3.07299E+05,4.07478E+05,mean,17893
+1000,structural,3.07630E+05,4.07918E+05,mean,17893
 100,structural,0.00000E+00,0.00000E+00,mean,14825
 200,structural,0.00000E+00,0.00000E+00,mean,14825
 500,structural,2.26750E+04,2.92689E+04,mean,14825
@@ -146,8 +146,8 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,9.91985E+02,1.31537E+03,mean,15383
 100,structural,0.00000E+00,0.00000E+00,mean,17275
 200,structural,0.00000E+00,0.00000E+00,mean,17275
-500,structural,4.83211E+05,6.23729E+05,mean,17275
-1000,structural,7.23642E+05,9.59549E+05,mean,17275
+500,structural,4.83260E+05,6.23792E+05,mean,17275
+1000,structural,7.47831E+05,9.91624E+05,mean,17275
 100,structural,0.00000E+00,0.00000E+00,mean,17597
 200,structural,0.00000E+00,0.00000E+00,mean,17597
 500,structural,5.65610E+04,7.30090E+04,mean,17597
@@ -183,7 +183,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,15733
 200,structural,0.00000E+00,0.00000E+00,mean,15733
 500,structural,0.00000E+00,0.00000E+00,mean,15733
-1000,structural,2.41621E+05,3.20389E+05,mean,15733
+1000,structural,2.33987E+05,3.10267E+05,mean,15733
 100,structural,0.00000E+00,0.00000E+00,mean,17613
 200,structural,0.00000E+00,0.00000E+00,mean,17613
 500,structural,0.00000E+00,0.00000E+00,mean,17613
@@ -227,14 +227,14 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,14847
 200,structural,0.00000E+00,0.00000E+00,mean,14847
 500,structural,9.83733E+04,1.26980E+05,mean,14847
-1000,structural,1.38381E+05,1.83493E+05,mean,14847
+1000,structural,1.38629E+05,1.83822E+05,mean,14847
 100,structural,0.00000E+00,0.00000E+00,mean,14852
 200,structural,0.00000E+00,0.00000E+00,mean,14852
-500,structural,3.38730E+05,4.37233E+05,mean,14852
+500,structural,3.42351E+05,4.41906E+05,mean,14852
 1000,structural,7.23080E+05,9.58804E+05,mean,14852
 100,structural,0.00000E+00,0.00000E+00,mean,16029
 200,structural,0.00000E+00,0.00000E+00,mean,16029
-500,structural,8.61829E+05,1.11245E+06,mean,16029
+500,structural,9.01474E+05,1.16362E+06,mean,16029
 1000,structural,1.84195E+06,2.44243E+06,mean,16029
 100,structural,0.00000E+00,0.00000E+00,mean,16350
 200,structural,0.00000E+00,0.00000E+00,mean,16350
@@ -243,7 +243,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,16671
 200,structural,0.00000E+00,0.00000E+00,mean,16671
 500,structural,1.25202E+05,1.61611E+05,mean,16671
-1000,structural,1.75780E+05,2.33084E+05,mean,16671
+1000,structural,1.76138E+05,2.33559E+05,mean,16671
 100,structural,0.00000E+00,0.00000E+00,mean,17302
 200,structural,0.00000E+00,0.00000E+00,mean,17302
 500,structural,2.99625E+04,3.86756E+04,mean,17302
@@ -251,7 +251,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 100,structural,0.00000E+00,0.00000E+00,mean,17625
 200,structural,0.00000E+00,0.00000E+00,mean,17625
 500,structural,5.36581E+04,6.92619E+04,mean,17625
-1000,structural,7.55016E+04,1.00115E+05,mean,17625
+1000,structural,7.54938E+04,1.00105E+05,mean,17625
 100,structural,0.00000E+00,0.00000E+00,mean,17626
 200,structural,0.00000E+00,0.00000E+00,mean,17626
 500,structural,7.99616E+03,1.03214E+04,mean,17626
@@ -262,7 +262,7 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,2.43427E+04,3.22785E+04,mean,17628
 100,structural,0.00000E+00,0.00000E+00,mean,17936
 200,structural,0.00000E+00,0.00000E+00,mean,17936
-500,structural,7.85628E+05,1.01409E+06,mean,17936
+500,structural,8.25114E+05,1.06506E+06,mean,17936
 1000,structural,1.68211E+06,2.23048E+06,mean,17936
 100,structural,0.00000E+00,0.00000E+00,mean,17939
 200,structural,0.00000E+00,0.00000E+00,mean,17939
@@ -282,12 +282,12 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,3.14700E+03,4.17293E+03,mean,15652
 100,structural,0.00000E+00,0.00000E+00,mean,15655
 200,structural,0.00000E+00,0.00000E+00,mean,15655
-500,structural,3.17247E+04,4.09503E+04,mean,15655
-1000,structural,5.01533E+04,6.65033E+04,mean,15655
+500,structural,3.13075E+04,4.04118E+04,mean,15655
+1000,structural,4.84254E+04,6.42121E+04,mean,15655
 100,structural,0.00000E+00,0.00000E+00,mean,15663
 200,structural,0.00000E+00,0.00000E+00,mean,15663
-500,structural,3.00385E+03,3.87737E+03,mean,15663
-1000,structural,5.02783E+03,6.66690E+03,mean,15663
+500,structural,3.01200E+03,3.88789E+03,mean,15663
+1000,structural,4.89610E+03,6.49222E+03,mean,15663
 100,structural,0.00000E+00,0.00000E+00,mean,15942
 200,structural,0.00000E+00,0.00000E+00,mean,15942
 500,structural,2.55163E+03,3.29364E+03,mean,15942
@@ -302,8 +302,8 @@ return_period,loss_type,loss,pla_loss,stat,id
 1000,structural,2.58767E+05,3.43125E+05,mean,15963
 100,structural,0.00000E+00,0.00000E+00,mean,16253
 200,structural,0.00000E+00,0.00000E+00,mean,16253
-500,structural,6.04806E+03,7.80684E+03,mean,16253
-1000,structural,9.71317E+03,1.28797E+04,mean,16253
+500,structural,5.89392E+03,7.60787E+03,mean,16253
+1000,structural,9.65828E+03,1.28069E+04,mean,16253
 100,structural,0.00000E+00,0.00000E+00,mean,16256
 200,structural,0.00000E+00,0.00000E+00,mean,16256
 500,structural,1.56535E+03,2.02055E+03,mean,16256

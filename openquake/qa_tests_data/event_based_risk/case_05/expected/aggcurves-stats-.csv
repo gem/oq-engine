@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.25.0-gita29978772c', start_date='2025-11-22T03:05:38', checksum=595716330"
+#,,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:44', checksum=2703572957"
 return_period,loss_type,loss,stat
 1,structural,0.0,mean
 1,structural,0.0,quantile-0.15
@@ -15,18 +15,18 @@ return_period,loss_type,loss,stat
 20,structural,0.0,mean
 20,structural,0.0,quantile-0.15
 20,structural,0.0,quantile-0.85
-50,structural,978.88904,mean
-50,structural,60.4252520785555,quantile-0.15
-50,structural,906.3788063897132,quantile-0.85
-100,structural,2312.7285,mean
-100,structural,1294.6767982808183,quantile-0.15
-100,structural,2232.356103719795,quantile-0.85
-200,structural,4260.8555,mean
-200,structural,2036.7335946218045,quantile-0.15
-200,structural,4085.266919831245,quantile-0.85
-500,structural,7854.6846,mean
-500,structural,3232.8779964974647,quantile-0.15
-500,structural,7489.805328234542,quantile-0.85
-1000,structural,8313.521,mean
-1000,structural,5931.807426781483,quantile-0.15
-1000,structural,8125.491349911623,quantile-0.85
+50,structural,960.6613,mean
+50,structural,59.30008254018066,quantile-0.15
+50,structural,889.5012628446332,quantile-0.85
+100,structural,2121.6455,mean
+100,structural,1248.2141857363695,quantile-0.15
+100,structural,2052.6905932239315,quantile-0.85
+200,structural,4242.2104,mean
+200,structural,1860.642435190803,quantile-0.15
+200,structural,4054.192013156793,quantile-0.85
+500,structural,7674.1953,mean
+500,structural,3497.7408845068126,quantile-0.15
+500,structural,7344.475686931318,quantile-0.85
+1000,structural,8137.534,mean
+1000,structural,5904.23611062458,quantile-0.15
+1000,structural,7961.221408171637,quantile-0.85
