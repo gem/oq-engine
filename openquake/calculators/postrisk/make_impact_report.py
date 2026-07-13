@@ -573,6 +573,10 @@ class CountryReportBuilder:
         meta.append(f'Rake: {rupdic["rake"]}')
         meta.append(f'Dip: {rupdic["dip"]}')
         meta.append(f'Strike: {rupdic["strike"]}')
+        if rupdic['approach'] != 'use_shakemap_from_usgs':
+            meta.append(f'Mosaic model: {oqparam.mosaic_model}')
+            meta.append(
+                f'Tectonic region type: {oqparam.tectonic_region_type}')
         meta.append(f'Number of ground motion fields:'
                     f' {oqparam.number_of_ground_motion_fields}')
         meta.append(f'Truncation level: {oqparam.truncation_level}')
