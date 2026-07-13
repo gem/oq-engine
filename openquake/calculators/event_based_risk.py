@@ -55,20 +55,24 @@ def get_assetdf_startstop(assetcol):
     del assetdf['id']
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
-    assetdf = assetdf.sort_values(['ID_0', 'taxonomy', 'site_id', 'ordinal'])
+    if 'NAME_1' in assetdf:
+        assetdf = assetdf.sort_values(['ID_0', 'NAME_1', 'ordinal'])
+        id1 = assetdf.NAME_1.to_numpy()
+    else:
+        assetdf = assetdf.sort_values(['ID_0', 'ordinal'])
+        id1 = numpy.zeros(len(assetdf), U32)
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
     # causing different losses
-    id0taxo = TWO24 * assetdf.ID_0.to_numpy() + assetdf.taxonomy.to_numpy()
 
-    iss = []
+    # building start-stop indices, so that the assets are read by region
     maxsize = int(config.memory.max_assets_chunk)
-    for idx, start, stop in performance.idx_start_stop(id0taxo):
+    id01 = assetdf.ID_0.to_numpy() * TWO16 + id1
+    iss = []
+    for idx, start, stop in performance.idx_start_stop(id01):
         for slc in general.gen_slices(start, stop, maxsize):
             iss.append((idx, slc.start, slc.stop))
-
-    # building start-stop indices, so that the assets are read by taxonomy
     return assetdf, U32(iss)
 
 
@@ -238,6 +242,18 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+class AssetReader:
+    """
+    Read a slice of assets by measuring type spent and memory allocated
+    """
+    def __init__(self, monitor):
+        self.monitor = monitor('reading assets', measuremem=True)
+
+    def read(self, s0, s1):
+        with self.monitor as mon:
+            return mon.read('assets', slice(s0, s1)).set_index('ordinal')
+
+
 def event_based_risk(gmf_df, monitor):
     """
     Aggregate the losses for all assets for the given event slice
@@ -246,9 +262,6 @@ def event_based_risk(gmf_df, monitor):
     """
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    pairs = [(id0taxo, slice(s0, s1))
-             for id0taxo, s0, s1 in monitor.read('start-stop')]
-
     oq = crmodel.oqparam
     xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
@@ -260,8 +273,9 @@ def event_based_risk(gmf_df, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    items = ((id0taxo, monitor.read('assets', slc).
-              set_index('ordinal')) for id0taxo, slc in pairs)
+    areader = AssetReader(monitor)
+    items = ((id01, areader.read(s0, s1))
+             for id01, s0, s1 in monitor.read('start-stop'))
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -270,26 +284,27 @@ def event_based_risk(gmf_df, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
-    haz_sids = gmf_df.sid.unique()
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id0taxo, assetdf in items:
-        with fil_mon:
-            # filtering is *crucial* for the performance of the next step
-            adf = assetdf[numpy.isin(assetdf.site_id, haz_sids)]
-            if len(adf) == 0:
-                continue
-            gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id)]
-        # passing the contry is crucial for impact_test,
-        # where the exposure contains multiple countries
-        country = countries[id0taxo // TWO24]
-        with risk_mon:
-            [out] = crmodel.get_outputs(
-                adf, gdf, crmodel.oqparam._sec_losses, rng, country)
-        with agg_mon:
-            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+    for id01, adf_ in items:
+        id0, id1 = numpy.divmod(id01, TWO16)
+        for taxo in adf_.taxonomy.unique():
+            with fil_mon:
+                # filtering is *crucial* for the performance of the next step
+                adf = adf_[adf_.taxonomy == taxo]
+                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
+                if len(gdf) == 0:
+                    continue
+            # passing the contry is crucial for impact_test,
+            # where the exposure contains multiple countries
+            country = countries[id0]
+            with risk_mon:
+                [out] = crmodel.get_outputs(
+                    adf, gdf, crmodel.oqparam._sec_losses, rng, country)
+            with agg_mon:
+                aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
     dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
     dic['alt'] = build_alt(loss2, xtypes)
@@ -352,6 +367,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
         adf, iss = get_assetdf_startstop(self.assetcol)
+        max_assets_per_region = (iss[:, 2] - iss[:, 1]).max()
+        logging.info(f'{max_assets_per_region=:_d}')
         monitor.save('assets', adf)
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
