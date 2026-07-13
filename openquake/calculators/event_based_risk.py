@@ -36,12 +36,12 @@ from openquake.calculators.post_risk import (
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-I64 = numpy.int64
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
-TWO32 = I64(2 ** 32)
+TWO32 = U64(2 ** 32)
 GMF_MB = 400
 get_n_occ = operator.itemgetter(1)
 
@@ -179,15 +179,15 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
             update(loss3, li, len(xtypes), alt, rlz_id, oq.collect_rlzs)
         if correl:  # use sigma^2 = (sum sigma_i)^2
             alt['variance'] = numpy.sqrt(alt.variance)
-        eids = alt.eid.to_numpy() * TWO32  # I64
+        eids = alt.eid.to_numpy() * TWO32  # U64
         values = numpy.array([alt[col] for col in value_cols]).T
         # aggregate all assets
-        fast_agg(eids + I64(oq.K), values, correl, li, loss2)
+        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
         if len(aggids):
             # aggregate assets for each tag combination
             aids = alt.aid.to_numpy()
             for kids in aggids[:, aids]:
-                fast_agg(eids + I64(kids), values, correl, li, loss2)
+                fast_agg(eids + U64(kids), values, correl, li, loss2)
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
