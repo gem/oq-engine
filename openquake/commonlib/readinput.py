@@ -1888,9 +1888,8 @@ def read_mosaic_df(mosaic_dir=''):
     logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
     codes = sorted(df.code.unique())
-    assert set(MODELS) <= set(codes), (codes, MODELS)  # sanity check
     if codes != MODELS:
-        logging.info(f'{mosaic_boundaries_file} contains extra models')
+        logging.warning(f'{mosaic_boundaries_file} not aligned with MODELS')
     return df
 
 

@@ -4,7 +4,7 @@ from openquake.baselib import general
 # these are in one-to-one correspondence with the file mosaic.gpkg
 MODELS = sorted('''
 ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
-NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM USA WAF ZAF PAN PAR'''.split())
+NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM USA WAF ZAF PAN PAR TUR'''.split())
 ALIASES = dict(TWN='TEM')  # manage change of name
 
 REGIONS = """\
