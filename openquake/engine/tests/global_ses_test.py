@@ -45,24 +45,24 @@ def count_rups(dstore, model):
 def check(dstore, calcs):
     with hdf5.File(RUP_HDF5) as ds, \
          read(calcs[0]) as ds_EUR, \
-         read(calcs[1]) as ds_MIE:
+         read(calcs[1]) as ds_TUR:
 
         # count the ruptures outside the models
-        mie_unknown = count_rups(ds_MIE, '???')
-        assert mie_unknown == 0
+        tur_unknown = count_rups(ds_TUR, '???')
+        assert tur_unknown == 4
         eur_unknown = count_rups(ds_EUR, '???')
-        assert eur_unknown == 0
+        assert eur_unknown == 4
         
         nrup_EUR = count_rups(ds_EUR, 'EUR')
-        nrup_MIE = count_rups(ds_MIE, 'MIE')
+        nrup_TUR = count_rups(ds_TUR, 'TUR')
         rups = ds['ruptures'][:]
         nrup = len(rups)
-        assert nrup == nrup_EUR + nrup_MIE  # no double counting
+        assert nrup == nrup_EUR + nrup_TUR  # no double counting
 
 
 def setup_module():
     worflow_id = global_ses.main(
-        MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
+        MOSAIC_DIR, 'rups.hdf5', 'EUR,TUR',
         number_of_logic_tree_samples='200')
 
     with read(os.path.join(MOSAIC_DIR, 'rups.hdf5')) as parent:
@@ -70,7 +70,7 @@ def setup_module():
         assert evs.dtype.names == ('id', 'rup_id', 'rlz_id', 'year', 'ses_id')
         ae(evs['id'], numpy.arange(33965))  # sequential indices
         e0s = parent['ruptures']['e0']
-        ae(e0s[-3:], [23127, 23128, 23129])  # large enough e0
+        ae(e0s[-3:], [33962, 33963, 33964])  # large enough e0
 
     wdf = read(worflow_id).read_df('workflow')
     # case with a region
@@ -80,7 +80,7 @@ def setup_module():
     check(dstore, list(wdf.calc_id))
     ae(dstore['source_info/EUR']['source_id'],
        [b'IF-CFS-0', b'IF-CFS-1', b'IF-CFS-2', b'IF-CFS-3'])
-    ae(dstore['source_info/MIE']['source_id'],
+    ae(dstore['source_info/TUR']['source_id'],
        [b'DS-AS-AZEAS300', b'DS-AS-AZEAS301', b'DS-AS-IRNAS300',
         b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
         b'IF-CFS-3', b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
@@ -96,17 +96,17 @@ def test_one_site():
         path('job1.ini'), hazard_calculation_id='rups.hdf5')
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 14
+    assert len(df) == 255
     assert df.index.max() < 1
 
     # test multi-model rupture exporter
     [fname] = export(('ruptures', 'csv'), calc.datastore.parent)
     assert os.path.basename(fname) == 'ruptures_rups.csv'
 
-    # check the maximum_distance is different for MIE and EUR
-    mie = calc.oq_by['MIE'].maximum_distance['default'][0]
+    # check the maximum_distance is different for TUR and EUR
+    tur = calc.oq_by['TUR'].maximum_distance['default'][0]
     eur = calc.oq_by['EUR'].maximum_distance['default'][0]
-    assert mie == [5, 300]
+    assert tur == [5, 300]
     assert eur == [5, 250]
     assert not hasattr(calc.oqparam, 'maximum_distance')
 
@@ -121,7 +121,7 @@ def test_sites():  # 5 sites
     #    numpy.array([b'A', b'B', b'C', b'D', b'E']))
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 68
+    assert len(df) == 944
     assert df.index.max() < 5
 
 
@@ -132,12 +132,12 @@ def test_site_model():  # 5 sites
     ae(calc.sitecol.sids, [0, 1, 2, 3, 4])
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 65
+    assert len(df) == 944
     assert df.index.max() < 5
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
-    assert len(rdf) == 15870
+    assert len(rdf) == 5360
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16590
+    assert len(edf) == 7241
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == len(rdf)
 
