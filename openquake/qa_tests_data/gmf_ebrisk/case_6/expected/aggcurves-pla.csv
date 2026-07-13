@@ -1,6 +1,6 @@
-#,,,,"generated_by='OpenQuake engine 3.20.0-git7d05807a42', start_date='2024-05-29T07:10:11', checksum=1900499300"
+#,,,,"generated_by='OpenQuake engine 3.26.0-gita9ccf82a87', start_date='2026-07-12T13:32:43', checksum=3972552964"
 return_period,loss_type,loss,pla_loss,stat
 100,structural,4.91864E+05,5.94664E+05,mean
-200,structural,2.73031E+06,3.35678E+06,mean
-500,structural,8.13782E+06,1.05043E+07,mean
-1000,structural,3.09394E+07,4.10256E+07,mean
+200,structural,2.75891E+06,3.39194E+06,mean
+500,structural,8.13731E+06,1.05036E+07,mean
+1000,structural,3.08879E+07,4.09574E+07,mean

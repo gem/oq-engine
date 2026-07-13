@@ -623,7 +623,7 @@ Source Loss Table'''.splitlines())
         # refactoring of the monitoring and it happened several times)
         with read(log.calc_id) as dstore:
             perf = str(view('performance', dstore))
-            self.assertIn('total ebr_from_gmfs', perf)
+            self.assertIn('total event_based_risk', perf)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored

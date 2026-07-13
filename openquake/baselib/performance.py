@@ -412,7 +412,7 @@ class Monitor(object):
             if isinstance(obj, numpy.ndarray):
                 f[key] = obj
             elif isinstance(obj, pandas.DataFrame):
-                f.create_df(key, obj)
+                f.create_df(key, obj)  # no gzip makes read('assets') faster
             else:
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
         return True
