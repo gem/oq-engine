@@ -710,11 +710,19 @@ class CountryReportBuilder:
         return tbl
 
     def _grid_styles(self):
-        body_style = self.ParagraphStyle(
-            "GridBodyText",
+        body_left_style = self.ParagraphStyle(
+            "GridBodyTextLeft",
             parent=self.styles["Normal"],
             fontSize=9,
             leading=11,
+            alignment=0,  # Left-aligned for text labels
+        )
+        body_right_style = self.ParagraphStyle(
+            "GridBodyTextRight",
+            parent=self.styles["Normal"],
+            fontSize=9,
+            leading=11,
+            alignment=2,  # Right-aligned for numeric metrics
         )
         title_style = self.ParagraphStyle(
             "GridSectionTitle",
@@ -723,22 +731,23 @@ class CountryReportBuilder:
             fontSize=11,
             leading=14,
         )
-        return body_style, title_style
+        return body_left_style, body_right_style, title_style
 
-    def _build_summary_table(self, body_style):
+    def _build_summary_table(self, body_left_style, body_right_style):
         col_header = ("Estimated losses" if self.no_uncertainty
                       else "Range of losses (5% - 95%)")
         table_data = [[
-            self.Paragraph("<b>Impact metric</b>", body_style),
-            self.Paragraph("<b>Exposed value</b>", body_style),
-            self.Paragraph(f"<b>{col_header}</b>", body_style)
+            self.Paragraph("<b>Impact metric</b>", body_left_style),
+            self.Paragraph("<b>Exposed value</b>", body_right_style),
+            self.Paragraph(f"<b>{col_header}</b>", body_right_style)
         ]]
         for meta in LOSS_METADATA.values():
             table_data.append([
-                self.Paragraph(meta["label"], body_style),
+                self.Paragraph(meta["label"], body_left_style),
                 self.Paragraph(self.summary_data[meta["label"] + "_exposed"],
-                               body_style),
-                self.Paragraph(self.summary_data[meta["label"]], body_style)
+                               body_right_style),
+                self.Paragraph(self.summary_data[meta["label"]],
+                               body_right_style)
             ])
         summary_table = self.Table(
             table_data,
@@ -751,17 +760,18 @@ class CountryReportBuilder:
             ("GRID", (0, 0), (-1, -1), 0.5, self.colors.grey),
             ("BACKGROUND", (0, 0), (-1, 0), self.colors.whitesmoke),
             ("PADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ]
         summary_table.setStyle(self.TableStyle(style_cmds))
         return summary_table
 
-    def _build_left_bundle(self, summary_table, body_style, title_style):
+    def _build_left_bundle(self, summary_table, body_left_style, title_style):
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
         left_bundle = [
             self.Paragraph(
-                f"<b>Summary of impact for {self.country_name}:</b>",
+                f"Summary of impact for {self.country_name}:",
                 title_style),
             self.Spacer(1, 4),
             summary_table,
@@ -773,19 +783,20 @@ class CountryReportBuilder:
             f'The exposed value refers to the assets and population located'
             f' within a {maximum_distance}km radius of the epicentre.')
         left_bundle.append(
-            self.Paragraph(exposed_value_txt, body_style))
+            self.Paragraph(exposed_value_txt, body_left_style))
         if self.no_uncertainty:
             left_bundle.extend([
                 self.Spacer(1, 4),
-                self.Paragraph("No uncertainty was included", body_style)])
+                self.Paragraph("No uncertainty was included",
+                               body_left_style)])
         left_bundle.append(self.Spacer(1, 18))
         left_bundle.extend([
-            self.Paragraph("<b>Regions with highest number of fatalities:</b>",
+            self.Paragraph("Regions with highest number of fatalities:",
                            title_style),
             self.ListFlowable(
                 [self.ListItem(self.Paragraph(region_name, self.ParagraphStyle(
                     "region",
-                    parent=body_style,
+                    parent=body_left_style,
                     fontName=self._select_font(region_name),
                 ))) for region_name in most_affected],
                 bulletType="bullet",
@@ -796,10 +807,11 @@ class CountryReportBuilder:
 
     # NOTE: passing images explicitly to avoid implicit ordering dependency
     def _build_grid(self, images):
-        body_style, title_style = self._grid_styles()
-        summary_table = self._build_summary_table(body_style)
+        body_left_style, body_right_style, title_style = self._grid_styles()
+        summary_table = self._build_summary_table(body_left_style,
+                                                  body_right_style)
         left_bundle = self._build_left_bundle(
-            summary_table, body_style, title_style)
+            summary_table, body_left_style, title_style)
 
         img_top_right = self._scaled_image_from_bytes(
             images[LOSS_METADATA['number']['label']],
