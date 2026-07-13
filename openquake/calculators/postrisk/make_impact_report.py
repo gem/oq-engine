@@ -25,6 +25,7 @@ import functools
 import difflib
 import urllib.request
 import json
+import unicodedata
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timezone
@@ -89,7 +90,15 @@ class ReportOptions:
     loss_metric: str
 
 
+def _strip_accents(text):
+    # Decompose accented characters (e.g. ü -> u + combining diaeresis),
+    # then drop the combining marks. "Türkiye" -> "Turkiye".
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
 def _normalize(name):
+    name = _strip_accents(name)
     return name.strip().lower().replace("_", " ").replace("-", " ")
 
 
