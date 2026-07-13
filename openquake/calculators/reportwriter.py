@@ -58,33 +58,43 @@ class ReportWriter(object):
         'performance': 'Slowest operations',
     }
 
-    def __init__(self, dstore):
+    def __init__(self, dstore, fmt='rst'):
         self.dstore = dstore
+        self.fmt = fmt
         self.oq = oq = dstore['oqparam']
-        self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
+        if fmt == 'md':
+            self.text = '# %s' % decode(oq.description)
+        else:
+            self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         try:
             num_rlzs = dstore['full_lt'].get_num_paths()
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.text_table(versions)
+        self.text += '\n\n' + views.text_table(versions, ext=self.fmt)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
             len(dstore['sitecol']), oq.imtls.size if oq.imtls else 0, num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
         if obj:
-            text = '\n::\n\n' + indent(str(obj))
+            if self.fmt == 'md':
+                text = '\n```\n' + str(obj) + '\n```'
+            else:
+                text = '\n::\n\n' + indent(str(obj))
         else:
             res = views.view(name, self.dstore)
             if isinstance(res, (numpy.ndarray, pandas.DataFrame)):
-                text = views.text_table(res)
+                text = views.text_table(res, ext=self.fmt)
             else:
                 text = res
         if text:
             title = self.title[name]
-            line = '-' * len(title)
-            self.text += '\n'.join(['\n\n' + title, line, text])
+            if self.fmt == 'md':
+                self.text += '\n\n## %s\n\n%s' % (title, text.lstrip('\n'))
+            else:
+                line = '-' * len(title)
+                self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self, show_inputs=True):
         """Build the report and return a restructed text string"""

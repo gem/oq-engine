@@ -243,9 +243,11 @@ def set_oqparam(oq, assetcol, dstore):
 
 
 class AssetReader:
+    """
+    Read a slice of assets by measuring type spent and memory allocated
+    """
     def __init__(self, monitor):
         self.monitor = monitor('reading assets', measuremem=True)
-        self.tot = 0
 
     def read(self, s0, s1):
         with self.monitor as mon:

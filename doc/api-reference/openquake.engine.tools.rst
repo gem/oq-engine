@@ -9,10 +9,10 @@ openquake.engine.tools.correct_complex_sources module
     :undoc-members:
     :show-inheritance:
 
-openquake.engine.tools.make_html_report module
+openquake.engine.tools.make_report module
 ----------------------------------------------
 
-.. automodule:: openquake.engine.tools.make_html_report
+.. automodule:: openquake.engine.tools.make_report
     :members:
     :undoc-members:
     :show-inheritance:
