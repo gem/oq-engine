@@ -218,8 +218,9 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
             q50 = int(round(r.get('q50', 0)))
             q05 = int(round(r.get('q05', 0)))
             q95 = int(round(r.get('q95', 0)))
+            exposed_val = int(round(r.get('value', 0)))
         else:
-            q50 = q05 = q95 = 0
+            q50 = q05 = q95 = exposed_val = 0
         # Format with thousands separators
         if no_uncertainty:
             # Display only the central value
@@ -227,6 +228,7 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
         else:
             # Display the range
             summary_data[label] = f"{q05:,} - {q95:,}"
+        summary_data[f"{label}_exposed"] = f"{exposed_val:,}"
     return summary_data
 
 
@@ -728,20 +730,21 @@ class CountryReportBuilder:
                       else "Range of losses (5% - 95%)")
         table_data = [[
             self.Paragraph("<b>Impact metric</b>", body_style),
+            self.Paragraph("<b>Exposed value</b>", body_style),
             self.Paragraph(f"<b>{col_header}</b>", body_style)
         ]]
         for meta in LOSS_METADATA.values():
             table_data.append([
                 self.Paragraph(meta["label"], body_style),
+                self.Paragraph(self.summary_data[meta["label"] + "_exposed"],
+                               body_style),
                 self.Paragraph(self.summary_data[meta["label"]], body_style)
             ])
-        if self.no_uncertainty:
-            table_data.append([
-                self.Paragraph("No uncertainty was included", body_style), ""])
-
         summary_table = self.Table(
             table_data,
-            colWidths=[self.col_w * 0.42, self.col_w * 0.48],
+            colWidths=[self.col_w * 0.32,
+                       self.col_w * 0.32,
+                       self.col_w * 0.32],
             hAlign="LEFT",
         )
         style_cmds = [
@@ -749,9 +752,6 @@ class CountryReportBuilder:
             ("BACKGROUND", (0, 0), (-1, 0), self.colors.whitesmoke),
             ("PADDING", (0, 0), (-1, -1), 4),
         ]
-        if self.no_uncertainty:
-            last_row_idx = len(table_data) - 1
-            style_cmds.append(("SPAN", (0, last_row_idx), (1, last_row_idx)))
         summary_table.setStyle(self.TableStyle(style_cmds))
         return summary_table
 
@@ -759,13 +759,27 @@ class CountryReportBuilder:
         most_affected = self.dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
-        return [
+        left_bundle = [
             self.Paragraph(
                 f"<b>Summary of impact for {self.country_name}:</b>",
                 title_style),
             self.Spacer(1, 4),
             summary_table,
-            self.Spacer(1, 12),
+            self.Spacer(1, 6),
+        ]
+
+        maximum_distance = 300  # FIXME function argument
+        exposed_value_txt = (
+            f'The exposed value refers to the assets and population located'
+            f' within a {maximum_distance}km radius of the epicentre.')
+        left_bundle.append(
+            self.Paragraph(exposed_value_txt, body_style))
+        if self.no_uncertainty:
+            left_bundle.extend([
+                self.Spacer(1, 4),
+                self.Paragraph("No uncertainty was included", body_style)])
+        left_bundle.append(self.Spacer(1, 18))
+        left_bundle.extend([
             self.Paragraph("<b>Regions with highest number of fatalities:</b>",
                            title_style),
             self.ListFlowable(
@@ -777,7 +791,8 @@ class CountryReportBuilder:
                 bulletType="bullet",
                 leftIndent=15,
             ),
-        ]
+        ])
+        return left_bundle
 
     # NOTE: passing images explicitly to avoid implicit ordering dependency
     def _build_grid(self, images):
