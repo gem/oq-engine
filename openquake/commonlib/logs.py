@@ -86,6 +86,9 @@ def dbcmd(action, *args):
 
 
 def get_job_info(job_id):
+    """
+    :retuns: dictionary field -> value extract from the job record
+    """
     job = dbcmd('get_job', int(job_id))
     job_info = {key: val for key, val in zip(job.__dict__['_fields'],
                                              job.__dict__['_values'])}
