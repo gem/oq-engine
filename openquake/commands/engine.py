@@ -26,7 +26,7 @@ from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
-from openquake.engine.tools.make_html_report import make_report
+from openquake.engine.tools.make_report import make_report as makerep
 from openquake.server import dbserver
 from openquake.commands.abort import main as abort
 
@@ -86,7 +86,7 @@ def main(
         multi=False,
         *,
         log_file=None,
-        make_html_report=None,
+        make_report=None,
         run=None,
         delete_calculation: int = None,
         hazard_calculation_id: valid.calculation = None,
@@ -189,8 +189,8 @@ def main(
             safeprint(line)
 
     # export
-    elif make_html_report:
-        safeprint('Written %s' % make_report(make_html_report))
+    elif make_report:
+        safeprint('Written %s' % makerep(make_report))
         sys.exit(0)
 
     elif list_outputs is not None:
@@ -248,7 +248,7 @@ main.log_file = dict(
     abbrev='-L', help='''\
 Location where to store log messages; if not specified, log messages
 will be printed to the console (to stderr)''')
-main.make_html_report = dict(
+main.make_report = dict(
     abbrev='--r', metavar='YYYY-MM-DD|today',
     help='Build an HTML report of the computation at the given date')
 main.run = dict(abbrev='--run',
