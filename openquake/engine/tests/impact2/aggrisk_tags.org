@@ -1,261 +1,261 @@
 | ID_0    | loss_type       | value       | lossmea   | q05       | q50       | q95       | ID      | NAME                       |
 |---------+-----------------+-------------+-----------+-----------+-----------+-----------+---------+----------------------------|
-| ERI     | contents        | 29_098      | 5.332E-05 | 0.0       | 0.0       | 1.935E-04 | nan     | nan                        |
-| ERI     | structural      | 97_042      | 360.2     | 0.0       | 0.0       | 2_636     | nan     | nan                        |
+| ERI     | contents        | 29_098      | 7.267E-05 | 0.0       | 0.0       | 1.935E-04 | nan     | nan                        |
+| ERI     | structural      | 97_042      | 34.5228   | 0.0       | 0.0       | 279.8     | nan     | nan                        |
 | ERI     | occupants       | 22.6363     | 5.721E-08 | 0.0       | 0.0       | 2.264E-07 | nan     | nan                        |
 | ERI     | area            | 431.9       | 9.776E-07 | 0.0       | 0.0       | 4.319E-06 | nan     | nan                        |
 | ERI     | number          | 5.9710      | 1.139E-08 | 0.0       | 0.0       | 5.971E-08 | nan     | nan                        |
 | ERI     | residents       | 18.9709     | 2.846E-08 | 0.0       | 0.0       | 1.897E-07 | nan     | nan                        |
 | ERI     | affectedpop     | 18.9709     | 2.846E-08 | 0.0       | 0.0       | 1.897E-07 | nan     | nan                        |
 | ERI     | injured         | 22.6363     | 5.721E-08 | 0.0       | 0.0       | 2.264E-07 | nan     | nan                        |
-| ERI     | embodied_carbon | 40.2856     | 0.1417    | 0.0       | 0.0       | 1.0773    | nan     | nan                        |
-| ETH     | contents        | 29_119_072  | 193_934   | 42_533    | 139_202   | 364_966   | nan     | nan                        |
-| ETH     | structural      | 113_037_104 | 1_667_387 | 640_802   | 1_486_425 | 3_054_882 | nan     | nan                        |
-| ETH     | occupants       | 61_681      | 3.1112    | 0.0398    | 1.2411    | 7.7775    | nan     | nan                        |
-| ETH     | area            | 1_374_590   | 9_584     | 1_908     | 8_160     | 23_750    | nan     | nan                        |
-| ETH     | number          | 18_938      | 132.2644  | 22.0851   | 105.7278  | 284.9     | nan     | nan                        |
-| ETH     | residents       | 77_977      | 699.8     | 129.7171  | 538.3     | 1_317     | nan     | nan                        |
-| ETH     | affectedpop     | 77_977      | 930.3     | 193.8     | 693.0     | 1_660     | nan     | nan                        |
-| ETH     | injured         | 61_681      | 15.2472   | 2.6731    | 12.0449   | 29.1636   | nan     | nan                        |
-| ETH     | embodied_carbon | 89_745      | 838.8     | 425.6     | 842.8     | 1_209     | nan     | nan                        |
-| KEN     | contents        | 164_120     | 1_505     | 0.0       | 0.0       | 15_053    | nan     | nan                        |
-| KEN     | structural      | 930_015     | 611.4     | 0.0       | 0.0       | 6_114     | nan     | nan                        |
+| ERI     | embodied_carbon | 40.2856     | 0.0088    | 0.0       | 0.0       | 0.0761    | nan     | nan                        |
+| ETH     | contents        | 29_119_072  | 170_602   | 21_655    | 112_081   | 382_938   | nan     | nan                        |
+| ETH     | structural      | 113_037_104 | 1_028_490 | 259_553   | 920_351   | 2_356_168 | nan     | nan                        |
+| ETH     | occupants       | 61_681      | 0.4260    | 0.0174    | 0.1859    | 0.9002    | nan     | nan                        |
+| ETH     | area            | 1_374_590   | 9_349     | 1_876     | 7_974     | 22_955    | nan     | nan                        |
+| ETH     | number          | 18_938      | 129.3830  | 22.0060   | 103.7030  | 276.5     | nan     | nan                        |
+| ETH     | residents       | 77_977      | 680.5     | 125.7133  | 523.6     | 1_274     | nan     | nan                        |
+| ETH     | affectedpop     | 77_977      | 893.1     | 173.3325  | 668.1     | 1_649     | nan     | nan                        |
+| ETH     | injured         | 61_681      | 15.0242   | 2.5863    | 11.8145   | 28.6649   | nan     | nan                        |
+| ETH     | embodied_carbon | 89_745      | 315.1     | 88.7599   | 294.8     | 511.3     | nan     | nan                        |
+| KEN     | contents        | 164_120     | 6.979E-04 | 0.0       | 0.0       | 0.0070    | nan     | nan                        |
+| KEN     | structural      | 930_015     | 134.6834  | 0.0       | 0.0       | 1_347     | nan     | nan                        |
 | KEN     | occupants       | 288.6       | 2.886E-07 | 0.0       | 0.0       | 2.886E-06 | nan     | nan                        |
 | KEN     | area            | 9_300       | 9.300E-06 | 0.0       | 0.0       | 9.300E-05 | nan     | nan                        |
 | KEN     | number          | 155.0044    | 1.550E-07 | 0.0       | 0.0       | 1.550E-06 | nan     | nan                        |
 | KEN     | residents       | 420.9       | 4.209E-07 | 0.0       | 0.0       | 4.209E-06 | nan     | nan                        |
 | KEN     | affectedpop     | 420.9       | 4.209E-07 | 0.0       | 0.0       | 4.209E-06 | nan     | nan                        |
 | KEN     | injured         | 288.6       | 2.886E-07 | 0.0       | 0.0       | 2.886E-06 | nan     | nan                        |
-| KEN     | embodied_carbon | 362.9       | 0.2414    | 0.0       | 0.0       | 2.4142    | nan     | nan                        |
-| SDN     | contents        | 7_526_654   | 18_088    | 2_853     | 15_195    | 37_976    | nan     | nan                        |
-| SDN     | structural      | 35_351_264  | 307_226   | 200_028   | 289_351   | 460_743   | nan     | nan                        |
-| SDN     | occupants       | 12_679      | 0.9186    | 0.0360    | 0.7115    | 2.7187    | nan     | nan                        |
-| SDN     | area            | 229_279     | 404.4     | 64.0505   | 336.6     | 1_187     | nan     | nan                        |
-| SDN     | number          | 2_650       | 3.1262    | 0.4776    | 1.5702    | 9.7646    | nan     | nan                        |
-| SDN     | residents       | 15_690      | 26.8658   | 1.9513    | 21.4733   | 60.5994   | nan     | nan                        |
-| SDN     | affectedpop     | 15_690      | 58.7473   | 9.0082    | 39.9002   | 103.7950  | nan     | nan                        |
-| SDN     | injured         | 12_679      | 0.9988    | 0.1935    | 0.8953    | 1.9576    | nan     | nan                        |
-| SDN     | embodied_carbon | 49_851      | 273.8     | 147.2202  | 265.6     | 358.1     | nan     | nan                        |
-| SSD     | contents        | 1_666_951   | 61.1429   | 8.158E-04 | 0.0043    | 10.1662   | nan     | nan                        |
-| SSD     | structural      | 8_182_389   | 24_007    | 2_818     | 13_953    | 59_454    | nan     | nan                        |
-| SSD     | occupants       | 1_546       | 0.0519    | 7.665E-06 | 1.013E-05 | 0.2246    | nan     | nan                        |
-| SSD     | area            | 36_690      | 27.3897   | 1.443E-04 | 1.1317    | 174.2236  | nan     | nan                        |
-| SSD     | number          | 383.9       | 0.1223    | 1.350E-06 | 0.0029    | 0.3657    | nan     | nan                        |
-| SSD     | residents       | 1_917       | 1.8124    | 9.377E-06 | 0.0880    | 14.1614   | nan     | nan                        |
-| SSD     | affectedpop     | 1_917       | 5.2863    | 9.377E-06 | 0.3052    | 35.2122   | nan     | nan                        |
-| SSD     | injured         | 1_546       | 0.0443    | 7.665E-06 | 1.301E-05 | 0.3227    | nan     | nan                        |
-| SSD     | embodied_carbon | 8_611       | 17.6736   | 2.0241    | 9.6580    | 42.7400   | nan     | nan                        |
-| *total* | affectedpop     | 96_024      | 994.4     | 202.9     | 733.2     | 1_799     | nan     | nan                        |
-| *total* | area            | 1_650_292   | 10_016    | 1_972     | 8_498     | 25_111    | nan     | nan                        |
-| *total* | contents        | 38_505_896  | 213_588   | 45_386    | 154_397   | 418_006   | nan     | nan                        |
-| *total* | embodied_carbon | 148_610     | 1_131     | 574.9     | 1_118     | 1_613     | nan     | nan                        |
-| *total* | injured         | 76_217      | 16.2903   | 2.8666    | 12.9402   | 31.4440   | nan     | nan                        |
-| *total* | number          | 22_133      | 135.5129  | 22.5627   | 107.3008  | 295.0     | nan     | nan                        |
-| *total* | occupants       | 76_217      | 4.0816    | 0.0758    | 1.9526    | 10.7208   | nan     | nan                        |
-| *total* | residents       | 96_024      | 728.5     | 131.6684  | 559.8     | 1_392     | nan     | nan                        |
-| *total* | structural      | 157_597_808 | 1_999_591 | 843_649   | 1_789_730 | 3_583_828 | nan     | nan                        |
-| nan     | contents        | 29_098      | 5.332E-05 | 0.0       | 0.0       | 1.935E-04 | ER-GB   | Gash-Barka                 |
-| nan     | structural      | 97_042      | 360.2     | 0.0       | 0.0       | 2_636     | ER-GB   | Gash-Barka                 |
+| KEN     | embodied_carbon | 362.9       | 0.0207    | 0.0       | 0.0       | 0.2075    | nan     | nan                        |
+| SDN     | contents        | 7_526_654   | 15_277    | 0.4634    | 4_836     | 44_057    | nan     | nan                        |
+| SDN     | structural      | 35_351_264  | 179_560   | 48_485    | 134_792   | 339_253   | nan     | nan                        |
+| SDN     | occupants       | 12_679      | 0.0744    | 0.0044    | 0.0348    | 0.2025    | nan     | nan                        |
+| SDN     | area            | 229_279     | 419.7     | 16.6298   | 279.2     | 1_116     | nan     | nan                        |
+| SDN     | number          | 2_650       | 3.6970    | 0.0884    | 1.7920    | 8.7058    | nan     | nan                        |
+| SDN     | residents       | 15_690      | 28.7324   | 0.3096    | 23.5876   | 54.5294   | nan     | nan                        |
+| SDN     | affectedpop     | 15_690      | 53.3594   | 1.6328    | 37.8815   | 150.9207  | nan     | nan                        |
+| SDN     | injured         | 12_679      | 0.7923    | 0.0570    | 0.6551    | 1.5328    | nan     | nan                        |
+| SDN     | embodied_carbon | 49_851      | 132.6120  | 21.5840   | 79.7219   | 327.9     | nan     | nan                        |
+| SSD     | contents        | 1_666_951   | 0.0043    | 1.619E-08 | 0.0031    | 0.0114    | nan     | nan                        |
+| SSD     | structural      | 8_182_389   | 4_848     | 228.6     | 2_453     | 12_878    | nan     | nan                        |
+| SSD     | occupants       | 1_546       | 0.0012    | 1.550E-06 | 2.932E-05 | 0.0102    | nan     | nan                        |
+| SSD     | area            | 36_690      | 5.2587    | 2.474E-05 | 0.0972    | 17.7925   | nan     | nan                        |
+| SSD     | number          | 383.9       | 0.0207    | 1.696E-07 | 8.560E-04 | 0.1779    | nan     | nan                        |
+| SSD     | residents       | 1_917       | 0.6690    | 9.377E-07 | 0.0070    | 1.4368    | nan     | nan                        |
+| SSD     | affectedpop     | 1_917       | 1.9258    | 9.377E-07 | 0.0608    | 5.0113    | nan     | nan                        |
+| SSD     | injured         | 1_546       | 0.0150    | 1.550E-06 | 7.959E-06 | 0.0463    | nan     | nan                        |
+| SSD     | embodied_carbon | 8_611       | 2.6992    | 0.0714    | 0.9184    | 4.7987    | nan     | nan                        |
+| *total* | affectedpop     | 96_024      | 948.4     | 174.9653  | 706.1     | 1_805     | nan     | nan                        |
+| *total* | area            | 1_650_292   | 9_774     | 1_893     | 8_253     | 24_089    | nan     | nan                        |
+| *total* | contents        | 38_505_896  | 185_878   | 21_656    | 116_917   | 426_995   | nan     | nan                        |
+| *total* | embodied_carbon | 148_610     | 450.4     | 110.4152  | 375.5     | 844.3     | nan     | nan                        |
+| *total* | injured         | 76_217      | 15.8315   | 2.6434    | 12.4696   | 30.2441   | nan     | nan                        |
+| *total* | number          | 22_133      | 133.1006  | 22.0944   | 105.4959  | 285.3     | nan     | nan                        |
+| *total* | occupants       | 76_217      | 0.5016    | 0.0218    | 0.2207    | 1.1129    | nan     | nan                        |
+| *total* | residents       | 96_024      | 709.9     | 126.0229  | 547.2     | 1_330     | nan     | nan                        |
+| *total* | structural      | 157_597_808 | 1_213_067 | 308_266   | 1_057_595 | 2_709_925 | nan     | nan                        |
+| nan     | contents        | 29_098      | 7.267E-05 | 0.0       | 0.0       | 1.935E-04 | ER-GB   | Gash-Barka                 |
+| nan     | structural      | 97_042      | 34.5228   | 0.0       | 0.0       | 279.8     | ER-GB   | Gash-Barka                 |
 | nan     | occupants       | 22.6363     | 5.721E-08 | 0.0       | 0.0       | 2.264E-07 | ER-GB   | Gash-Barka                 |
 | nan     | area            | 431.9       | 9.776E-07 | 0.0       | 0.0       | 4.319E-06 | ER-GB   | Gash-Barka                 |
 | nan     | number          | 5.9710      | 1.139E-08 | 0.0       | 0.0       | 5.971E-08 | ER-GB   | Gash-Barka                 |
 | nan     | residents       | 18.9709     | 2.846E-08 | 0.0       | 0.0       | 1.897E-07 | ER-GB   | Gash-Barka                 |
 | nan     | affectedpop     | 18.9709     | 2.846E-08 | 0.0       | 0.0       | 1.897E-07 | ER-GB   | Gash-Barka                 |
 | nan     | injured         | 22.6363     | 5.721E-08 | 0.0       | 0.0       | 2.264E-07 | ER-GB   | Gash-Barka                 |
-| nan     | embodied_carbon | 40.2856     | 0.1417    | 0.0       | 0.0       | 1.0773    | ER-GB   | Gash-Barka                 |
-| nan     | contents        | 5_876_625   | 1_452     | 0.0041    | 0.0116    | 10_163    | ET-AM   | Amara                      |
-| nan     | structural      | 20_269_984  | 52_818    | 25_108    | 42_978    | 109_505   | ET-AM   | Amara                      |
-| nan     | occupants       | 8_379       | 0.0034    | 1.202E-05 | 2.645E-05 | 0.0131    | ET-AM   | Amara                      |
-| nan     | area            | 204_204     | 5.6253    | 3.021E-04 | 0.0918    | 18.9347   | ET-AM   | Amara                      |
-| nan     | number          | 2_607       | 0.0528    | 3.261E-06 | 1.079E-04 | 0.2489    | ET-AM   | Amara                      |
-| nan     | residents       | 9_361       | 0.2595    | 1.175E-05 | 3.268E-05 | 2.1012    | ET-AM   | Amara                      |
-| nan     | affectedpop     | 9_361       | 0.6331    | 1.175E-05 | 2.269E-04 | 4.8521    | ET-AM   | Amara                      |
-| nan     | injured         | 8_379       | 0.0085    | 1.202E-05 | 2.622E-05 | 0.0614    | ET-AM   | Amara                      |
-| nan     | embodied_carbon | 19_966      | 38.4482   | 16.3974   | 32.0043   | 74.8298   | ET-AM   | Amara                      |
-| nan     | contents        | 708_422     | 36_592    | 1.1078    | 14_149    | 127_338   | ET-BE   | Benshangul-Gumaz           |
-| nan     | structural      | 2_633_227   | 184_047   | 17_699    | 106_959   | 556_307   | ET-BE   | Benshangul-Gumaz           |
-| nan     | occupants       | 2_389       | 1.3987    | 1.155E-05 | 0.0082    | 5.3648    | ET-BE   | Benshangul-Gumaz           |
-| nan     | area            | 36_286      | 1_168     | 0.7506    | 40.2075   | 6_200     | ET-BE   | Benshangul-Gumaz           |
-| nan     | number          | 555.8       | 19.3844   | 0.0061    | 0.6685    | 103.3296  | ET-BE   | Benshangul-Gumaz           |
-| nan     | residents       | 3_192       | 145.1626  | 0.0616    | 7.2264    | 683.5     | ET-BE   | Benshangul-Gumaz           |
-| nan     | affectedpop     | 3_192       | 237.7     | 0.1081    | 42.7117   | 922.0     | ET-BE   | Benshangul-Gumaz           |
-| nan     | injured         | 2_389       | 3.0130    | 1.936E-05 | 0.2078    | 15.5424   | ET-BE   | Benshangul-Gumaz           |
-| nan     | embodied_carbon | 2_720       | 123.9711  | 14.1956   | 74.4386   | 342.6     | ET-BE   | Benshangul-Gumaz           |
-| nan     | contents        | 3_252_001   | 4.3121    | 0.0012    | 0.0078    | 23.2099   | ET-CE   | Central Ethiopia           |
-| nan     | structural      | 12_073_432  | 26_595    | 2_787     | 9_768     | 70_787    | ET-CE   | Central Ethiopia           |
-| nan     | occupants       | 6_556       | 7.632E-04 | 3.412E-06 | 1.571E-05 | 3.580E-05 | ET-CE   | Central Ethiopia           |
-| nan     | area            | 154_416     | 0.4892    | 7.480E-05 | 4.062E-04 | 2.3445    | ET-CE   | Central Ethiopia           |
-| nan     | number          | 2_141       | 0.0078    | 9.900E-07 | 5.400E-06 | 0.0318    | ET-CE   | Central Ethiopia           |
-| nan     | residents       | 8_446       | 0.0773    | 3.950E-06 | 2.150E-05 | 0.6534    | ET-CE   | Central Ethiopia           |
-| nan     | affectedpop     | 8_446       | 0.7104    | 3.950E-06 | 2.150E-05 | 5.0454    | ET-CE   | Central Ethiopia           |
-| nan     | injured         | 6_556       | 0.0011    | 3.412E-06 | 1.571E-05 | 0.0016    | ET-CE   | Central Ethiopia           |
-| nan     | embodied_carbon | 8_383       | 20.5588   | 2.1664    | 7.1422    | 59.0412   | ET-CE   | Central Ethiopia           |
-| nan     | contents        | 576_270     | 7_748     | 2.723E-05 | 43.5781   | 31_551    | ET-GA   | Gambela Peoples            |
-| nan     | structural      | 2_295_567   | 188_238   | 20_559    | 60_036    | 1_015_331 | ET-GA   | Gambela Peoples            |
-| nan     | occupants       | 756.6       | 0.0020    | 7.566E-06 | 7.566E-06 | 0.0139    | ET-GA   | Gambela Peoples            |
-| nan     | area            | 26_395      | 1_354     | 2.640E-04 | 0.1545    | 11_928    | ET-GA   | Gambela Peoples            |
-| nan     | number          | 267.0       | 13.5747   | 2.670E-06 | 0.0015    | 119.2745  | ET-GA   | Gambela Peoples            |
-| nan     | residents       | 1_051       | 59.0904   | 1.051E-05 | 0.0566    | 515.8     | ET-GA   | Gambela Peoples            |
-| nan     | affectedpop     | 1_051       | 71.9455   | 1.051E-05 | 0.3088    | 609.2     | ET-GA   | Gambela Peoples            |
-| nan     | injured         | 756.6       | 1.2519    | 7.566E-06 | 7.566E-06 | 11.0118   | ET-GA   | Gambela Peoples            |
-| nan     | embodied_carbon | 834.7       | 63.5906   | 10.5624   | 23.2585   | 367.2     | ET-GA   | Gambela Peoples            |
-| nan     | contents        | 8_148_012   | 122_912   | 15_100    | 105_621   | 233_763   | ET-OR   | Oromia                     |
-| nan     | structural      | 33_201_424  | 850_318   | 387_481   | 815_514   | 1_232_573 | ET-OR   | Oromia                     |
-| nan     | occupants       | 22_554      | 1.7060    | 0.0329    | 1.1841    | 4.3930    | ET-OR   | Oromia                     |
-| nan     | area            | 449_320     | 6_720     | 1_896     | 6_311     | 12_766    | ET-OR   | Oromia                     |
-| nan     | number          | 6_433       | 95.8094   | 21.9476   | 85.5283   | 191.2     | ET-OR   | Oromia                     |
-| nan     | residents       | 28_417      | 478.9     | 128.6182  | 422.1     | 870.4     | ET-OR   | Oromia                     |
-| nan     | affectedpop     | 28_417      | 589.5     | 176.5131  | 517.5     | 994.2     | ET-OR   | Oromia                     |
-| nan     | injured         | 22_554      | 10.6319   | 2.6704    | 9.6159    | 21.1641   | ET-OR   | Oromia                     |
-| nan     | embodied_carbon | 28_528      | 445.1     | 246.9     | 474.7     | 596.5     | ET-OR   | Oromia                     |
-| nan     | contents        | 4_575_212   | 19.7048   | 8.639E-04 | 0.0048    | 40.2023   | ET-SE   | South Ethiopia             |
-| nan     | structural      | 18_993_120  | 24_377    | 884.4     | 8_749     | 87_184    | ET-SE   | South Ethiopia             |
-| nan     | occupants       | 10_614      | 1.563E-05 | 2.024E-06 | 8.129E-06 | 3.156E-05 | ET-SE   | South Ethiopia             |
-| nan     | area            | 233_607     | 0.1813    | 4.090E-05 | 1.980E-04 | 0.9380    | ET-SE   | South Ethiopia             |
-| nan     | number          | 3_550       | 0.0015    | 5.200E-07 | 2.550E-06 | 0.0087    | ET-SE   | South Ethiopia             |
-| nan     | residents       | 14_040      | 0.0289    | 1.835E-06 | 9.855E-06 | 0.1609    | ET-SE   | South Ethiopia             |
-| nan     | affectedpop     | 14_040      | 0.4379    | 1.835E-06 | 9.855E-06 | 0.4919    | ET-SE   | South Ethiopia             |
-| nan     | injured         | 10_614      | 2.607E-04 | 2.024E-06 | 8.129E-06 | 0.0011    | ET-SE   | South Ethiopia             |
-| nan     | embodied_carbon | 11_631      | 17.2062   | 0.7497    | 5.9700    | 50.1262   | ET-SE   | South Ethiopia             |
-| nan     | contents        | 777_678     | 1.9366    | 0.0       | 4.042E-04 | 4.4751    | ET-SI   | Sidama                     |
-| nan     | structural      | 3_363_073   | 6_698     | 0.0       | 2_174     | 20_916    | ET-SI   | Sidama                     |
-| nan     | occupants       | 1_915       | 4.100E-06 | 0.0       | 6.750E-07 | 1.247E-05 | ET-SI   | Sidama                     |
-| nan     | area            | 42_026      | 5.090E-04 | 0.0       | 1.160E-05 | 2.732E-04 | ET-SI   | Sidama                     |
-| nan     | number          | 616.0       | 5.476E-06 | 0.0       | 1.600E-07 | 4.110E-06 | ET-SI   | Sidama                     |
-| nan     | residents       | 2_426       | 2.179E-05 | 0.0       | 5.985E-07 | 1.608E-05 | ET-SI   | Sidama                     |
-| nan     | affectedpop     | 2_426       | 0.0031    | 0.0       | 5.985E-07 | 2.650E-04 | ET-SI   | Sidama                     |
+| nan     | embodied_carbon | 40.2856     | 0.0088    | 0.0       | 0.0       | 0.0761    | ER-GB   | Gash-Barka                 |
+| nan     | contents        | 5_876_625   | 271.9     | 0.0060    | 0.0123    | 923.1     | ET-AM   | Amara                      |
+| nan     | structural      | 20_269_984  | 9_827     | 3_406     | 7_026     | 28_182    | ET-AM   | Amara                      |
+| nan     | occupants       | 8_379       | 2.214E-04 | 1.202E-05 | 3.770E-05 | 4.654E-04 | ET-AM   | Amara                      |
+| nan     | area            | 204_204     | 4.2439    | 3.021E-04 | 0.0265    | 10.1903   | ET-AM   | Amara                      |
+| nan     | number          | 2_607       | 0.0393    | 3.261E-06 | 1.068E-04 | 0.0652    | ET-AM   | Amara                      |
+| nan     | residents       | 9_361       | 0.1610    | 1.175E-05 | 3.052E-05 | 0.3256    | ET-AM   | Amara                      |
+| nan     | affectedpop     | 9_361       | 0.3633    | 1.175E-05 | 3.342E-05 | 1.0018    | ET-AM   | Amara                      |
+| nan     | injured         | 8_379       | 0.0056    | 1.202E-05 | 2.622E-05 | 0.0452    | ET-AM   | Amara                      |
+| nan     | embodied_carbon | 19_966      | 3.3044    | 0.6510    | 1.7172    | 7.2551    | ET-AM   | Amara                      |
+| nan     | contents        | 708_422     | 28_321    | 0.0033    | 2_647     | 122_063   | ET-BE   | Benshangul-Gumaz           |
+| nan     | structural      | 2_633_227   | 130_304   | 3_028     | 64_640    | 547_721   | ET-BE   | Benshangul-Gumaz           |
+| nan     | occupants       | 2_389       | 0.1529    | 1.706E-05 | 0.0050    | 0.5689    | ET-BE   | Benshangul-Gumaz           |
+| nan     | area            | 36_286      | 1_157     | 0.5401    | 37.6866   | 6_213     | ET-BE   | Benshangul-Gumaz           |
+| nan     | number          | 555.8       | 19.2203   | 0.0042    | 0.6269    | 103.5440  | ET-BE   | Benshangul-Gumaz           |
+| nan     | residents       | 3_192       | 143.6768  | 0.0485    | 6.9674    | 684.0     | ET-BE   | Benshangul-Gumaz           |
+| nan     | affectedpop     | 3_192       | 234.4     | 0.0876    | 37.4354   | 921.4     | ET-BE   | Benshangul-Gumaz           |
+| nan     | injured         | 2_389       | 2.9978    | 1.936E-05 | 0.1909    | 15.5702   | ET-BE   | Benshangul-Gumaz           |
+| nan     | embodied_carbon | 2_720       | 50.6071   | 1.2703    | 20.2153   | 164.1410  | ET-BE   | Benshangul-Gumaz           |
+| nan     | contents        | 3_252_001   | 1.8428    | 0.0013    | 0.0069    | 0.1717    | ET-CE   | Central Ethiopia           |
+| nan     | structural      | 12_073_432  | 3_976     | 206.3     | 1_054     | 11_295    | ET-CE   | Central Ethiopia           |
+| nan     | occupants       | 6_556       | 1.303E-04 | 3.412E-06 | 1.571E-05 | 4.640E-05 | ET-CE   | Central Ethiopia           |
+| nan     | area            | 154_416     | 0.4049    | 7.480E-05 | 4.062E-04 | 1.1369    | ET-CE   | Central Ethiopia           |
+| nan     | number          | 2_141       | 0.0064    | 9.900E-07 | 5.400E-06 | 0.0155    | ET-CE   | Central Ethiopia           |
+| nan     | residents       | 8_446       | 0.0441    | 3.950E-06 | 2.150E-05 | 0.1116    | ET-CE   | Central Ethiopia           |
+| nan     | affectedpop     | 8_446       | 0.2807    | 3.950E-06 | 2.150E-05 | 0.4091    | ET-CE   | Central Ethiopia           |
+| nan     | injured         | 6_556       | 9.483E-04 | 3.412E-06 | 1.571E-05 | 3.580E-05 | ET-CE   | Central Ethiopia           |
+| nan     | embodied_carbon | 8_383       | 1.5272    | 0.0558    | 0.2505    | 4.8243    | ET-CE   | Central Ethiopia           |
+| nan     | contents        | 576_270     | 21_538    | 2.100E-05 | 0.0596    | 42_178    | ET-GA   | Gambela Peoples            |
+| nan     | structural      | 2_295_567   | 169_499   | 5_105     | 22_332    | 1_072_651 | ET-GA   | Gambela Peoples            |
+| nan     | occupants       | 756.6       | 0.0049    | 7.566E-06 | 7.888E-06 | 0.0432    | ET-GA   | Gambela Peoples            |
+| nan     | area            | 26_395      | 1_292     | 2.640E-04 | 0.1284    | 11_435    | ET-GA   | Gambela Peoples            |
+| nan     | number          | 267.0       | 12.9348   | 2.670E-06 | 0.0013    | 114.3425  | ET-GA   | Gambela Peoples            |
+| nan     | residents       | 1_051       | 56.2469   | 1.051E-05 | 0.0054    | 495.3     | ET-GA   | Gambela Peoples            |
+| nan     | affectedpop     | 1_051       | 67.7149   | 1.051E-05 | 0.0081    | 583.3     | ET-GA   | Gambela Peoples            |
+| nan     | injured         | 756.6       | 1.2178    | 7.566E-06 | 7.566E-06 | 10.7759   | ET-GA   | Gambela Peoples            |
+| nan     | embodied_carbon | 834.7       | 23.8017   | 1.2621    | 4.1967    | 146.6827  | ET-GA   | Gambela Peoples            |
+| nan     | contents        | 8_148_012   | 119_010   | 20_738    | 104_675   | 222_796   | ET-OR   | Oromia                     |
+| nan     | structural      | 33_201_424  | 579_460   | 185_876   | 524_969   | 933_427   | ET-OR   | Oromia                     |
+| nan     | occupants       | 22_554      | 0.2665    | 0.0121    | 0.1656    | 0.6854    | ET-OR   | Oromia                     |
+| nan     | area            | 449_320     | 6_593     | 1_864     | 6_266     | 12_710    | ET-OR   | Oromia                     |
+| nan     | number          | 6_433       | 94.0773   | 21.8715   | 84.8496   | 191.1     | ET-OR   | Oromia                     |
+| nan     | residents       | 28_417      | 465.9     | 124.6207  | 423.6     | 866.8     | ET-OR   | Oromia                     |
+| nan     | affectedpop     | 28_417      | 565.3     | 160.7731  | 517.5     | 939.8     | ET-OR   | Oromia                     |
+| nan     | injured         | 22_554      | 10.4937   | 2.5836    | 9.5299    | 21.0854   | ET-OR   | Oromia                     |
+| nan     | embodied_carbon | 28_528      | 209.2     | 70.5285   | 220.8     | 316.8     | ET-OR   | Oromia                     |
+| nan     | contents        | 4_575_212   | 37.9031   | 8.639E-04 | 0.0048    | 7.4085    | ET-SE   | South Ethiopia             |
+| nan     | structural      | 18_993_120  | 3_732     | 92.4120   | 881.6     | 14_405    | ET-SE   | South Ethiopia             |
+| nan     | occupants       | 10_614      | 1.669E-05 | 2.024E-06 | 8.129E-06 | 3.696E-05 | ET-SE   | South Ethiopia             |
+| nan     | area            | 233_607     | 0.1561    | 4.090E-05 | 1.980E-04 | 0.6969    | ET-SE   | South Ethiopia             |
+| nan     | number          | 3_550       | 0.0012    | 5.200E-07 | 2.550E-06 | 0.0054    | ET-SE   | South Ethiopia             |
+| nan     | residents       | 14_040      | 0.0100    | 1.835E-06 | 9.855E-06 | 0.0426    | ET-SE   | South Ethiopia             |
+| nan     | affectedpop     | 14_040      | 0.0187    | 1.835E-06 | 9.855E-06 | 0.0893    | ET-SE   | South Ethiopia             |
+| nan     | injured         | 10_614      | 2.413E-04 | 2.024E-06 | 8.129E-06 | 9.909E-04 | ET-SE   | South Ethiopia             |
+| nan     | embodied_carbon | 11_631      | 1.2017    | 0.0167    | 0.2896    | 4.6014    | ET-SE   | South Ethiopia             |
+| nan     | contents        | 777_678     | 0.0018    | 0.0       | 4.042E-04 | 0.0046    | ET-SI   | Sidama                     |
+| nan     | structural      | 3_363_073   | 568.9     | 0.0       | 65.1875   | 1_640     | ET-SI   | Sidama                     |
+| nan     | occupants       | 1_915       | 5.813E-06 | 0.0       | 6.750E-07 | 1.297E-05 | ET-SI   | Sidama                     |
+| nan     | area            | 42_026      | 5.028E-04 | 0.0       | 1.160E-05 | 2.732E-04 | ET-SI   | Sidama                     |
+| nan     | number          | 616.0       | 5.413E-06 | 0.0       | 1.600E-07 | 4.110E-06 | ET-SI   | Sidama                     |
+| nan     | residents       | 2_426       | 2.154E-05 | 0.0       | 5.985E-07 | 1.608E-05 | ET-SI   | Sidama                     |
+| nan     | affectedpop     | 2_426       | 0.0031    | 0.0       | 5.985E-07 | 1.608E-05 | ET-SI   | Sidama                     |
 | nan     | injured         | 1_915       | 4.100E-06 | 0.0       | 6.750E-07 | 1.247E-05 | ET-SI   | Sidama                     |
-| nan     | embodied_carbon | 3_400       | 5.1101    | 0.0       | 1.4317    | 16.9815   | ET-SI   | Sidama                     |
-| nan     | contents        | 4_567_238   | 25_203    | 0.0116    | 2_219     | 63_037    | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | structural      | 17_872_258  | 333_166   | 46_758    | 227_006   | 753_603   | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | occupants       | 7_813       | 2.702E-04 | 4.247E-05 | 5.350E-05 | 0.0020    | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | area            | 212_146     | 335.4     | 0.0716    | 30.2947   | 1_268     | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | number          | 2_588       | 3.4339    | 3.909E-04 | 0.2996    | 13.0648   | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | residents       | 10_250      | 16.2720   | 0.0160    | 1.9382    | 58.7829   | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | affectedpop     | 10_250      | 29.4364   | 0.4209    | 3.1793    | 101.6846  | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | injured         | 7_813       | 0.3406    | 4.420E-05 | 0.0281    | 1.1953    | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | embodied_carbon | 10_788      | 123.8837  | 42.2028   | 106.4451  | 217.9     | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | contents        | 637_615     | 2.125E-04 | 0.0       | 1.489E-04 | 5.251E-04 | ET-TI   | Tigray                     |
-| nan     | structural      | 2_335_025   | 1_129     | 0.0       | 146.8974  | 5_035     | ET-TI   | Tigray                     |
+| nan     | embodied_carbon | 3_400       | 0.2013    | 0.0       | 0.0353    | 0.6917    | ET-SI   | Sidama                     |
+| nan     | contents        | 4_567_238   | 1_421     | 0.0179    | 40.5580   | 4_656     | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | structural      | 17_872_258  | 131_072   | 5_145     | 65_629    | 351_336   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | occupants       | 7_813       | 0.0014    | 4.675E-05 | 2.159E-04 | 0.0046    | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | area            | 212_146     | 302.7     | 0.0014    | 23.7225   | 1_108     | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | number          | 2_588       | 3.1035    | 1.519E-05 | 0.1922    | 11.2436   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | residents       | 10_250      | 14.4684   | 6.029E-05 | 0.7500    | 50.2116   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | affectedpop     | 10_250      | 24.9259   | 0.0014    | 1.8551    | 88.6340   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | injured         | 7_813       | 0.3081    | 4.420E-05 | 0.0146    | 1.0674    | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | embodied_carbon | 10_788      | 25.2331   | 2.3153    | 12.9819   | 65.8913   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | contents        | 637_615     | 2.141E-04 | 0.0       | 1.489E-04 | 5.251E-04 | ET-TI   | Tigray                     |
+| nan     | structural      | 2_335_025   | 52.1122   | 0.0       | 12.7292   | 275.8     | ET-TI   | Tigray                     |
 | nan     | occupants       | 704.7       | 2.532E-07 | 0.0       | 9.342E-08 | 7.782E-07 | ET-TI   | Tigray                     |
 | nan     | area            | 16_190      | 6.722E-06 | 0.0       | 4.687E-06 | 1.500E-05 | ET-TI   | Tigray                     |
 | nan     | number          | 180.0       | 7.799E-08 | 0.0       | 1.995E-08 | 2.500E-07 | ET-TI   | Tigray                     |
 | nan     | residents       | 795.6       | 3.265E-07 | 0.0       | 4.331E-08 | 1.081E-06 | ET-TI   | Tigray                     |
 | nan     | affectedpop     | 795.6       | 3.265E-07 | 0.0       | 4.331E-08 | 1.081E-06 | ET-TI   | Tigray                     |
 | nan     | injured         | 704.7       | 2.532E-07 | 0.0       | 9.342E-08 | 7.782E-07 | ET-TI   | Tigray                     |
-| nan     | embodied_carbon | 3_494       | 0.9110    | 0.0       | 0.0441    | 4.2039    | ET-TI   | Tigray                     |
-| nan     | contents        | 164_120     | 1_505     | 0.0       | 0.0       | 15_053    | KE-43   | Turkana                    |
-| nan     | structural      | 930_015     | 611.4     | 0.0       | 0.0       | 6_114     | KE-43   | Turkana                    |
+| nan     | embodied_carbon | 3_494       | 0.0162    | 0.0       | 0.0025    | 0.0797    | ET-TI   | Tigray                     |
+| nan     | contents        | 164_120     | 6.979E-04 | 0.0       | 0.0       | 0.0070    | KE-43   | Turkana                    |
+| nan     | structural      | 930_015     | 134.6834  | 0.0       | 0.0       | 1_347     | KE-43   | Turkana                    |
 | nan     | occupants       | 288.6       | 2.886E-07 | 0.0       | 0.0       | 2.886E-06 | KE-43   | Turkana                    |
 | nan     | area            | 9_300       | 9.300E-06 | 0.0       | 0.0       | 9.300E-05 | KE-43   | Turkana                    |
 | nan     | number          | 155.0044    | 1.550E-07 | 0.0       | 0.0       | 1.550E-06 | KE-43   | Turkana                    |
 | nan     | residents       | 420.9       | 4.209E-07 | 0.0       | 0.0       | 4.209E-06 | KE-43   | Turkana                    |
 | nan     | affectedpop     | 420.9       | 4.209E-07 | 0.0       | 0.0       | 4.209E-06 | KE-43   | Turkana                    |
 | nan     | injured         | 288.6       | 2.886E-07 | 0.0       | 0.0       | 2.886E-06 | KE-43   | Turkana                    |
-| nan     | embodied_carbon | 362.9       | 0.2414    | 0.0       | 0.0       | 2.4142    | KE-43   | Turkana                    |
-| nan     | contents        | 1_250_552   | 627.7     | 0.0016    | 0.0089    | 1_127     | SD-GD   | Gedaref                    |
-| nan     | structural      | 6_155_180   | 68_098    | 16_154    | 50_630    | 151_720   | SD-GD   | Gedaref                    |
-| nan     | occupants       | 2_190       | 0.0378    | 1.198E-05 | 1.917E-05 | 0.3078    | SD-GD   | Gedaref                    |
-| nan     | area            | 41_784      | 79.6993   | 2.940E-04 | 1.4583    | 304.8     | SD-GD   | Gedaref                    |
-| nan     | number          | 464.0       | 1.2067    | 3.020E-06 | 0.0204    | 4.9143    | SD-GD   | Gedaref                    |
-| nan     | residents       | 2_731       | 9.4656    | 1.805E-05 | 0.1730    | 40.3385   | SD-GD   | Gedaref                    |
-| nan     | affectedpop     | 2_731       | 18.6320   | 1.906E-05 | 0.6931    | 76.3008   | SD-GD   | Gedaref                    |
-| nan     | injured         | 2_190       | 0.1866    | 1.198E-05 | 1.846E-05 | 0.7505    | SD-GD   | Gedaref                    |
-| nan     | embodied_carbon | 7_450       | 56.4412   | 13.4072   | 50.3066   | 119.3411  | SD-GD   | Gedaref                    |
-| nan     | contents        | 2_345_975   | 123.8417  | 0.0038    | 0.0078    | 512.8     | SD-GZ   | Gezira                     |
-| nan     | structural      | 11_059_575  | 39_982    | 11_537    | 24_882    | 98_043    | SD-GZ   | Gezira                     |
-| nan     | occupants       | 4_178       | 0.2730    | 9.108E-06 | 1.831E-05 | 0.8781    | SD-GZ   | Gezira                     |
-| nan     | area            | 68_627      | 35.0704   | 1.749E-04 | 0.8646    | 135.9405  | SD-GZ   | Gezira                     |
-| nan     | number          | 870.0       | 0.1171    | 1.680E-06 | 0.0041    | 0.3994    | SD-GZ   | Gezira                     |
-| nan     | residents       | 5_212       | 1.0640    | 1.050E-05 | 0.0098    | 6.0261    | SD-GZ   | Gezira                     |
-| nan     | affectedpop     | 5_212       | 4.3548    | 1.050E-05 | 0.0255    | 28.5790   | SD-GZ   | Gezira                     |
-| nan     | injured         | 4_178       | 0.1591    | 9.108E-06 | 1.831E-05 | 0.5607    | SD-GZ   | Gezira                     |
-| nan     | embodied_carbon | 14_696      | 31.4192   | 7.9804    | 22.6517   | 73.8855   | SD-GZ   | Gezira                     |
-| nan     | contents        | 1_210_490   | 444.1     | 3.866E-04 | 0.0015    | 1_273     | SD-KA   | Kassala                    |
-| nan     | structural      | 5_557_902   | 10_008    | 686.0     | 7_075     | 34_796    | SD-KA   | Kassala                    |
-| nan     | occupants       | 2_071       | 0.0058    | 2.222E-06 | 5.631E-06 | 0.0359    | SD-KA   | Kassala                    |
-| nan     | area            | 36_686      | 1.9171    | 5.201E-05 | 1.502E-04 | 9.8171    | SD-KA   | Kassala                    |
-| nan     | number          | 459.0       | 0.0191    | 4.901E-07 | 2.040E-06 | 0.0847    | SD-KA   | Kassala                    |
-| nan     | residents       | 2_665       | 0.2030    | 3.087E-06 | 1.169E-05 | 0.6832    | SD-KA   | Kassala                    |
-| nan     | affectedpop     | 2_665       | 1.0120    | 3.087E-06 | 1.169E-05 | 1.7436    | SD-KA   | Kassala                    |
-| nan     | injured         | 2_071       | 0.0025    | 2.222E-06 | 5.089E-06 | 0.0104    | SD-KA   | Kassala                    |
-| nan     | embodied_carbon | 10_305      | 9.7566    | 1.2959    | 6.2064    | 27.8554   | SD-KA   | Kassala                    |
-| nan     | contents        | 98_366      | 23.6943   | 0.0       | 6.882E-05 | 0.0042    | SD-KN   | North Kordofan             |
-| nan     | structural      | 547_406     | 424.4     | 0.0       | 96.5719   | 1_425     | SD-KN   | North Kordofan             |
-| nan     | occupants       | 143.1791    | 3.763E-07 | 0.0       | 4.331E-07 | 1.099E-06 | SD-KN   | North Kordofan             |
-| nan     | area            | 3_980       | 0.2215    | 0.0       | 1.300E-05 | 0.3392    | SD-KN   | North Kordofan             |
-| nan     | number          | 43.0000     | 0.0032    | 0.0       | 1.300E-07 | 0.0034    | SD-KN   | North Kordofan             |
-| nan     | residents       | 199.0       | 0.0421    | 0.0       | 6.016E-07 | 0.0158    | SD-KN   | North Kordofan             |
-| nan     | affectedpop     | 199.0       | 0.1480    | 0.0       | 6.016E-07 | 0.0736    | SD-KN   | North Kordofan             |
-| nan     | injured         | 143.1791    | 1.793E-04 | 0.0       | 4.331E-07 | 1.165E-06 | SD-KN   | North Kordofan             |
-| nan     | embodied_carbon | 715.0       | 0.5438    | 0.0       | 0.1846    | 1.7077    | SD-KN   | North Kordofan             |
-| nan     | contents        | 232_742     | 0.0011    | 0.0       | 0.0       | 0.0023    | SD-KS   | South Kordofan             |
-| nan     | structural      | 1_318_871   | 3_449     | 0.0       | 764.2     | 7_086     | SD-KS   | South Kordofan             |
-| nan     | occupants       | 376.9       | 0.0128    | 0.0       | 3.598E-06 | 3.769E-06 | SD-KS   | South Kordofan             |
-| nan     | area            | 8_840       | 4.1838    | 0.0       | 8.600E-05 | 1.5208    | SD-KS   | South Kordofan             |
-| nan     | number          | 89.9988     | 0.0418    | 0.0       | 8.600E-07 | 0.0152    | SD-KS   | South Kordofan             |
-| nan     | residents       | 534.3       | 0.2514    | 0.0       | 5.105E-06 | 0.0905    | SD-KS   | South Kordofan             |
-| nan     | affectedpop     | 534.3       | 0.9064    | 0.0       | 5.105E-06 | 0.0905    | SD-KS   | South Kordofan             |
-| nan     | injured         | 376.9       | 0.0086    | 0.0       | 3.598E-06 | 3.769E-06 | SD-KS   | South Kordofan             |
-| nan     | embodied_carbon | 539.0       | 1.2690    | 0.0       | 0.2745    | 2.7007    | SD-KS   | South Kordofan             |
-| nan     | contents        | 346_200     | 13_251    | 0.0025    | 8_457     | 30_540    | SD-NB   | Blue Nile                  |
-| nan     | structural      | 1_500_135   | 98_754    | 32_142    | 79_647    | 195_605   | SD-NB   | Blue Nile                  |
-| nan     | occupants       | 498.0       | 0.3238    | 4.980E-06 | 0.0656    | 1.1306    | SD-NB   | Blue Nile                  |
-| nan     | area            | 8_648       | 191.2     | 2.9939    | 128.6677  | 383.2     | SD-NB   | Blue Nile                  |
-| nan     | number          | 78.9601     | 1.3744    | 0.0115    | 1.0162    | 2.2418    | SD-NB   | Blue Nile                  |
-| nan     | residents       | 467.9       | 5.9529    | 4.679E-06 | 1.2113    | 12.1306   | SD-NB   | Blue Nile                  |
-| nan     | affectedpop     | 467.9       | 8.8378    | 4.679E-06 | 2.3638    | 24.6523   | SD-NB   | Blue Nile                  |
-| nan     | injured         | 498.0       | 0.4264    | 0.0088    | 0.2356    | 1.2184    | SD-NB   | Blue Nile                  |
-| nan     | embodied_carbon | 2_349       | 90.4100   | 29.6462   | 86.6110   | 166.5993  | SD-NB   | Blue Nile                  |
-| nan     | contents        | 1_116_034   | 44.6117   | 0.0010    | 0.0035    | 2.9813    | SD-NW   | White Nile                 |
-| nan     | structural      | 4_573_188   | 17_014    | 5_646     | 14_675    | 30_397    | SD-NW   | White Nile                 |
-| nan     | occupants       | 1_402       | 0.0040    | 3.911E-06 | 6.100E-06 | 0.0160    | SD-NW   | White Nile                 |
-| nan     | area            | 25_290      | 2.6644    | 8.245E-05 | 1.362E-04 | 17.4258   | SD-NW   | White Nile                 |
-| nan     | number          | 266.0       | 0.0143    | 8.299E-07 | 1.160E-06 | 0.0770    | SD-NW   | White Nile                 |
-| nan     | residents       | 1_484       | 0.2518    | 4.512E-06 | 7.060E-06 | 0.9793    | SD-NW   | White Nile                 |
-| nan     | affectedpop     | 1_484       | 0.7264    | 4.512E-06 | 0.0027    | 2.8510    | SD-NW   | White Nile                 |
-| nan     | injured         | 1_402       | 0.0060    | 3.911E-06 | 6.100E-06 | 0.0371    | SD-NW   | White Nile                 |
-| nan     | embodied_carbon | 6_011       | 25.1661   | 2.8844    | 20.4414   | 53.1693   | SD-NW   | White Nile                 |
-| nan     | contents        | 926_295     | 3_572     | 0.0028    | 4.7206    | 17_003    | SD-SI   | Sennar                     |
-| nan     | structural      | 4_639_008   | 69_495    | 33_182    | 62_622    | 114_402   | SD-SI   | Sennar                     |
-| nan     | occupants       | 1_820       | 0.2613    | 1.194E-05 | 0.0649    | 0.8788    | SD-SI   | Sennar                     |
-| nan     | area            | 35_424      | 89.4181   | 1.4598    | 33.0110   | 278.0     | SD-SI   | Sennar                     |
-| nan     | number          | 379.0       | 0.3497    | 0.0146    | 0.2081    | 0.6350    | SD-SI   | Sennar                     |
-| nan     | residents       | 2_397       | 9.6350    | 0.0869    | 3.8670    | 28.0656   | SD-SI   | Sennar                     |
-| nan     | affectedpop     | 2_397       | 24.1299   | 0.6405    | 18.8787   | 60.7829   | SD-SI   | Sennar                     |
-| nan     | injured         | 1_820       | 0.2096    | 1.194E-05 | 0.0871    | 0.5767    | SD-SI   | Sennar                     |
-| nan     | embodied_carbon | 7_785       | 58.7499   | 26.6343   | 51.2818   | 89.4570   | SD-SI   | Sennar                     |
-| nan     | contents        | 824_275     | 0.3892    | 0.0       | 5.089E-05 | 0.0082    | SS-EE   | Eastern Equatoria          |
-| nan     | structural      | 3_628_295   | 10_706    | 0.0       | 4_430     | 33_591    | SS-EE   | Eastern Equatoria          |
-| nan     | occupants       | 229.4       | 0.0145    | 0.0       | 5.444E-07 | 0.1083    | SS-EE   | Eastern Equatoria          |
-| nan     | area            | 12_026      | 13.3937   | 0.0       | 3.044E-05 | 100.2970  | SS-EE   | Eastern Equatoria          |
-| nan     | number          | 145.9718    | 0.0140    | 0.0       | 9.015E-08 | 0.1046    | SS-EE   | Eastern Equatoria          |
-| nan     | residents       | 193.9       | 0.4385    | 0.0       | 1.688E-07 | 3.4357    | SS-EE   | Eastern Equatoria          |
-| nan     | affectedpop     | 193.9       | 1.0065    | 0.0       | 1.688E-07 | 8.0344    | SS-EE   | Eastern Equatoria          |
-| nan     | injured         | 229.4       | 0.0089    | 0.0       | 5.444E-07 | 0.0689    | SS-EE   | Eastern Equatoria          |
-| nan     | embodied_carbon | 4_874       | 7.2830    | 0.0       | 2.7670    | 21.7563   | SS-EE   | Eastern Equatoria          |
+| nan     | embodied_carbon | 362.9       | 0.0207    | 0.0       | 0.0       | 0.2075    | KE-43   | Turkana                    |
+| nan     | contents        | 1_250_552   | 2_297     | 0.0035    | 0.0102    | 1_659     | SD-GD   | Gedaref                    |
+| nan     | structural      | 6_155_180   | 62_417    | 4_336     | 28_367    | 169_364   | SD-GD   | Gedaref                    |
+| nan     | occupants       | 2_190       | 0.0323    | 1.431E-05 | 0.0044    | 0.1550    | SD-GD   | Gedaref                    |
+| nan     | area            | 41_784      | 183.9     | 1.704E-04 | 19.2473   | 585.0     | SD-GD   | Gedaref                    |
+| nan     | number          | 464.0       | 1.9983    | 1.889E-06 | 0.1697    | 4.9060    | SD-GD   | Gedaref                    |
+| nan     | residents       | 2_731       | 16.1764   | 1.163E-05 | 2.0690    | 40.4854   | SD-GD   | Gedaref                    |
+| nan     | affectedpop     | 2_731       | 28.0280   | 1.365E-05 | 8.2796    | 75.3751   | SD-GD   | Gedaref                    |
+| nan     | injured         | 2_190       | 0.3234    | 9.074E-06 | 0.0268    | 0.7603    | SD-GD   | Gedaref                    |
+| nan     | embodied_carbon | 7_450       | 53.3806   | 1.4548    | 21.0850   | 173.2041  | SD-GD   | Gedaref                    |
+| nan     | contents        | 2_345_975   | 88.0914   | 0.0040    | 0.0082    | 73.3551   | SD-GZ   | Gezira                     |
+| nan     | structural      | 11_059_575  | 8_034     | 990.5     | 4_901     | 17_114    | SD-GZ   | Gezira                     |
+| nan     | occupants       | 4_178       | 0.0019    | 7.796E-06 | 3.902E-05 | 0.0064    | SD-GZ   | Gezira                     |
+| nan     | area            | 68_627      | 3.7759    | 1.421E-04 | 0.0307    | 13.8753   | SD-GZ   | Gezira                     |
+| nan     | number          | 870.0       | 0.0148    | 1.661E-06 | 2.902E-04 | 0.0726    | SD-GZ   | Gezira                     |
+| nan     | residents       | 5_212       | 0.1566    | 1.040E-05 | 0.0017    | 1.2476    | SD-GZ   | Gezira                     |
+| nan     | affectedpop     | 5_212       | 0.5299    | 1.040E-05 | 0.0026    | 3.3044    | SD-GZ   | Gezira                     |
+| nan     | injured         | 4_178       | 0.0169    | 7.277E-06 | 1.714E-05 | 0.0302    | SD-GZ   | Gezira                     |
+| nan     | embodied_carbon | 14_696      | 2.8443    | 0.3534    | 0.9095    | 7.5729    | SD-GZ   | Gezira                     |
+| nan     | contents        | 1_210_490   | 0.0045    | 1.627E-04 | 0.0014    | 0.0148    | SD-KA   | Kassala                    |
+| nan     | structural      | 5_557_902   | 2_953     | 71.2518   | 1_030     | 8_388     | SD-KA   | Kassala                    |
+| nan     | occupants       | 2_071       | 0.0024    | 9.453E-07 | 6.256E-06 | 6.338E-04 | SD-KA   | Kassala                    |
+| nan     | area            | 36_686      | 9.5593    | 9.708E-06 | 1.502E-04 | 1.4292    | SD-KA   | Kassala                    |
+| nan     | number          | 459.0       | 0.0961    | 6.709E-08 | 2.080E-06 | 0.0122    | SD-KA   | Kassala                    |
+| nan     | residents       | 2_665       | 1.1658    | 5.761E-07 | 1.253E-05 | 0.1305    | SD-KA   | Kassala                    |
+| nan     | affectedpop     | 2_665       | 3.5040    | 5.761E-07 | 1.253E-05 | 0.4816    | SD-KA   | Kassala                    |
+| nan     | injured         | 2_071       | 0.0230    | 4.138E-07 | 4.062E-06 | 0.0029    | SD-KA   | Kassala                    |
+| nan     | embodied_carbon | 10_305      | 2.0043    | 0.0474    | 0.4295    | 1.6122    | SD-KA   | Kassala                    |
+| nan     | contents        | 98_366      | 0.0117    | 0.0       | 6.882E-06 | 8.409E-04 | SD-KN   | North Kordofan             |
+| nan     | structural      | 547_406     | 104.1636  | 0.0       | 3.8003    | 299.7     | SD-KN   | North Kordofan             |
+| nan     | occupants       | 143.1791    | 3.676E-06 | 0.0       | 1.104E-07 | 1.356E-05 | SD-KN   | North Kordofan             |
+| nan     | area            | 3_980       | 0.0388    | 0.0       | 1.300E-06 | 0.0349    | SD-KN   | North Kordofan             |
+| nan     | number          | 43.0000     | 5.920E-04 | 0.0       | 2.000E-08 | 3.488E-04 | SD-KN   | North Kordofan             |
+| nan     | residents       | 199.0       | 0.0036    | 0.0       | 9.255E-08 | 0.0016    | SD-KN   | North Kordofan             |
+| nan     | affectedpop     | 199.0       | 0.0150    | 0.0       | 9.255E-08 | 0.0017    | SD-KN   | North Kordofan             |
+| nan     | injured         | 143.1791    | 2.490E-05 | 0.0       | 6.663E-08 | 1.222E-06 | SD-KN   | North Kordofan             |
+| nan     | embodied_carbon | 715.0       | 0.0584    | 0.0       | 0.0039    | 0.1678    | SD-KN   | North Kordofan             |
+| nan     | contents        | 232_742     | 955.3     | 0.0       | 2.277E-04 | 0.0023    | SD-KS   | South Kordofan             |
+| nan     | structural      | 1_318_871   | 210.9     | 0.0       | 19.6914   | 395.9     | SD-KS   | South Kordofan             |
+| nan     | occupants       | 376.9       | 2.018E-04 | 0.0       | 3.598E-07 | 7.948E-05 | SD-KS   | South Kordofan             |
+| nan     | area            | 8_840       | 0.4277    | 0.0       | 8.600E-06 | 0.1565    | SD-KS   | South Kordofan             |
+| nan     | number          | 89.9988     | 0.0043    | 0.0       | 8.600E-08 | 0.0016    | SD-KS   | South Kordofan             |
+| nan     | residents       | 534.3       | 0.0256    | 0.0       | 5.105E-07 | 0.0093    | SD-KS   | South Kordofan             |
+| nan     | affectedpop     | 534.3       | 0.0913    | 0.0       | 5.105E-07 | 0.0093    | SD-KS   | South Kordofan             |
+| nan     | injured         | 376.9       | 8.707E-04 | 0.0       | 3.598E-07 | 3.769E-06 | SD-KS   | South Kordofan             |
+| nan     | embodied_carbon | 539.0       | 0.0623    | 0.0       | 5.297E-07 | 0.0797    | SD-KS   | South Kordofan             |
+| nan     | contents        | 346_200     | 10_852    | 4.194E-04 | 2_375     | 44_055    | SD-NB   | Blue Nile                  |
+| nan     | structural      | 1_500_135   | 57_333    | 5_763     | 30_851    | 136_304   | SD-NB   | Blue Nile                  |
+| nan     | occupants       | 498.0       | 0.0165    | 1.883E-04 | 0.0080    | 0.0467    | SD-NB   | Blue Nile                  |
+| nan     | area            | 8_648       | 129.7737  | 0.3068    | 44.0843   | 259.6     | SD-NB   | Blue Nile                  |
+| nan     | number          | 78.9601     | 0.9931    | 0.0012    | 0.4176    | 1.9992    | SD-NB   | Blue Nile                  |
+| nan     | residents       | 467.9       | 4.2104    | 4.679E-06 | 0.2360    | 6.7212    | SD-NB   | Blue Nile                  |
+| nan     | affectedpop     | 467.9       | 6.5587    | 4.679E-06 | 0.9985    | 18.2681   | SD-NB   | Blue Nile                  |
+| nan     | injured         | 498.0       | 0.2796    | 8.985E-04 | 0.1165    | 0.7480    | SD-NB   | Blue Nile                  |
+| nan     | embodied_carbon | 2_349       | 33.3675   | 2.8052    | 20.6516   | 80.7252   | SD-NB   | Blue Nile                  |
+| nan     | contents        | 1_116_034   | 0.0186    | 9.143E-04 | 0.0039    | 0.0583    | SD-NW   | White Nile                 |
+| nan     | structural      | 4_573_188   | 2_798     | 388.8     | 1_996     | 4_535     | SD-NW   | White Nile                 |
+| nan     | occupants       | 1_402       | 2.432E-04 | 2.506E-06 | 6.100E-06 | 9.195E-04 | SD-NW   | White Nile                 |
+| nan     | area            | 25_290      | 1.7340    | 4.000E-05 | 1.265E-04 | 1.7844    | SD-NW   | White Nile                 |
+| nan     | number          | 266.0       | 0.0051    | 4.578E-07 | 1.120E-06 | 0.0172    | SD-NW   | White Nile                 |
+| nan     | residents       | 1_484       | 0.1986    | 2.755E-06 | 6.526E-06 | 0.2014    | SD-NW   | White Nile                 |
+| nan     | affectedpop     | 1_484       | 0.5587    | 2.755E-06 | 6.526E-06 | 1.2934    | SD-NW   | White Nile                 |
+| nan     | injured         | 1_402       | 0.0043    | 2.506E-06 | 5.126E-06 | 0.0058    | SD-NW   | White Nile                 |
+| nan     | embodied_carbon | 6_011       | 0.9699    | 0.0327    | 0.3867    | 2.1644    | SD-NW   | White Nile                 |
+| nan     | contents        | 926_295     | 1_084     | 0.0035    | 0.2601    | 8_675     | SD-SI   | Sennar                     |
+| nan     | structural      | 4_639_008   | 45_711    | 10_365    | 29_901    | 122_554   | SD-SI   | Sennar                     |
+| nan     | occupants       | 1_820       | 0.0208    | 1.655E-04 | 0.0036    | 0.0882    | SD-SI   | Sennar                     |
+| nan     | area            | 35_424      | 90.4553   | 2.5964    | 23.0657   | 334.8     | SD-SI   | Sennar                     |
+| nan     | number          | 379.0       | 0.5847    | 0.0236    | 0.0862    | 2.5773    | SD-SI   | Sennar                     |
+| nan     | residents       | 2_397       | 6.7955    | 0.1545    | 2.3391    | 20.3473   | SD-SI   | Sennar                     |
+| nan     | affectedpop     | 2_397       | 14.0738   | 0.2991    | 9.1550    | 32.9482   | SD-SI   | Sennar                     |
+| nan     | injured         | 1_820       | 0.1442    | 0.0018    | 0.0358    | 0.4643    | SD-SI   | Sennar                     |
+| nan     | embodied_carbon | 7_785       | 39.9246   | 2.2554    | 18.3734   | 130.5879  | SD-SI   | Sennar                     |
+| nan     | contents        | 824_275     | 0.0017    | 0.0       | 5.089E-05 | 0.0064    | SS-EE   | Eastern Equatoria          |
+| nan     | structural      | 3_628_295   | 769.6     | 0.0       | 0.0073    | 2_915     | SS-EE   | Eastern Equatoria          |
+| nan     | occupants       | 229.4       | 5.418E-07 | 0.0       | 3.717E-07 | 1.922E-06 | SS-EE   | Eastern Equatoria          |
+| nan     | area            | 12_026      | 2.500E-05 | 0.0       | 1.422E-05 | 1.060E-04 | SS-EE   | Eastern Equatoria          |
+| nan     | number          | 145.9718    | 2.485E-07 | 0.0       | 8.012E-08 | 1.350E-06 | SS-EE   | Eastern Equatoria          |
+| nan     | residents       | 193.9       | 2.909E-07 | 0.0       | 0.0       | 1.855E-06 | SS-EE   | Eastern Equatoria          |
+| nan     | affectedpop     | 193.9       | 2.909E-07 | 0.0       | 0.0       | 1.855E-06 | SS-EE   | Eastern Equatoria          |
+| nan     | injured         | 229.4       | 5.259E-07 | 0.0       | 3.717E-07 | 1.922E-06 | SS-EE   | Eastern Equatoria          |
+| nan     | embodied_carbon | 4_874       | 0.2757    | 0.0       | 9.432E-06 | 1.3233    | SS-EE   | Eastern Equatoria          |
 | nan     | contents        | 33_118      | 2.153E-04 | 0.0       | 3.312E-04 | 3.312E-04 | SS-JG   | Jonglei                    |
-| nan     | structural      | 132_472     | 568.8     | 0.0       | 509.5     | 1_471     | SS-JG   | Jonglei                    |
+| nan     | structural      | 132_472     | 4.1423    | 0.0       | 0.0013    | 23.4870   | SS-JG   | Jonglei                    |
 | nan     | occupants       | 29.4816     | 1.916E-07 | 0.0       | 2.948E-07 | 2.948E-07 | SS-JG   | Jonglei                    |
 | nan     | area            | 259.7       | 1.688E-06 | 0.0       | 2.597E-06 | 2.597E-06 | SS-JG   | Jonglei                    |
 | nan     | number          | 1.9908      | 1.294E-08 | 0.0       | 1.991E-08 | 1.991E-08 | SS-JG   | Jonglei                    |
 | nan     | injured         | 29.4816     | 1.916E-07 | 0.0       | 2.948E-07 | 2.948E-07 | SS-JG   | Jonglei                    |
-| nan     | embodied_carbon | 161.7136    | 0.6353    | 0.0       | 0.5888    | 1.6220    | SS-JG   | Jonglei                    |
-| nan     | contents        | 809_558     | 60.7535   | 0.0       | 0.0017    | 10.1658   | SS-NU   | Upper Nile                 |
-| nan     | structural      | 4_421_622   | 12_732    | 2_564     | 8_998     | 26_722    | SS-NU   | Upper Nile                 |
-| nan     | occupants       | 1_287       | 0.0374    | 7.293E-06 | 7.545E-06 | 0.0491    | SS-NU   | Upper Nile                 |
-| nan     | area            | 24_405      | 13.9961   | 1.352E-04 | 0.3208    | 78.6057   | SS-NU   | Upper Nile                 |
-| nan     | number          | 236.0       | 0.1084    | 1.330E-06 | 8.044E-04 | 0.1969    | SS-NU   | Upper Nile                 |
-| nan     | residents       | 1_723       | 1.3739    | 9.377E-06 | 0.0369    | 10.7749   | SS-NU   | Upper Nile                 |
-| nan     | affectedpop     | 1_723       | 4.2798    | 9.377E-06 | 0.0931    | 25.3522   | SS-NU   | Upper Nile                 |
-| nan     | injured         | 1_287       | 0.0354    | 7.293E-06 | 7.545E-06 | 0.2209    | SS-NU   | Upper Nile                 |
-| nan     | embodied_carbon | 3_575       | 9.7553    | 1.8038    | 7.4573    | 31.7785   | SS-NU   | Upper Nile                 |
-| nan     | affectedpop     | 96_024      | 994.4     | 177.6827  | 585.7     | 2_866     | *total* | *total*                    |
-| nan     | area            | 1_650_292   | 10_016    | 1_901     | 6_546     | 33_494    | *total* | *total*                    |
-| nan     | contents        | 38_505_896  | 213_588   | 15_102    | 130_494   | 531_442   | *total* | *total*                    |
-| nan     | embodied_carbon | 148_610     | 1_131     | 416.9     | 974.2     | 2_323     | *total* | *total*                    |
-| nan     | injured         | 76_217      | 16.2903   | 2.6793    | 10.1747   | 52.4214   | *total* | *total*                    |
-| nan     | number          | 22_133      | 135.5129  | 21.9802   | 87.7477   | 435.8     | *total* | *total*                    |
-| nan     | occupants       | 76_217      | 4.0816    | 0.0331    | 1.3229    | 13.1915   | *total* | *total*                    |
-| nan     | residents       | 96_024      | 728.5     | 128.7827  | 436.6     | 2_234     | *total* | *total*                    |
-| nan     | structural      | 157_597_824 | 1_999_591 | 603_187   | 1_527_660 | 4_555_252 | *total* | *total*                    |
+| nan     | embodied_carbon | 161.7136    | 9.808E-04 | 0.0       | 1.617E-06 | 0.0056    | SS-JG   | Jonglei                    |
+| nan     | contents        | 809_558     | 0.0023    | 0.0       | 7.270E-04 | 0.0076    | SS-NU   | Upper Nile                 |
+| nan     | structural      | 4_421_622   | 4_074     | 212.5     | 1_639     | 10_176    | SS-NU   | Upper Nile                 |
+| nan     | occupants       | 1_287       | 0.0012    | 1.298E-06 | 2.751E-05 | 0.0102    | SS-NU   | Upper Nile                 |
+| nan     | area            | 24_405      | 5.2587    | 1.818E-05 | 0.0971    | 17.7925   | SS-NU   | Upper Nile                 |
+| nan     | number          | 236.0       | 0.0207    | 1.599E-07 | 8.545E-04 | 0.1779    | SS-NU   | Upper Nile                 |
+| nan     | residents       | 1_723       | 0.6690    | 9.377E-07 | 0.0070    | 1.4368    | SS-NU   | Upper Nile                 |
+| nan     | affectedpop     | 1_723       | 1.9258    | 9.377E-07 | 0.0608    | 5.0113    | SS-NU   | Upper Nile                 |
+| nan     | injured         | 1_287       | 0.0150    | 1.298E-06 | 7.545E-06 | 0.0463    | SS-NU   | Upper Nile                 |
+| nan     | embodied_carbon | 3_575       | 2.4226    | 0.0714    | 0.6793    | 3.9314    | SS-NU   | Upper Nile                 |
+| nan     | affectedpop     | 96_024      | 948.4     | 161.1612  | 575.3     | 2_671     | *total* | *total*                    |
+| nan     | area            | 1_650_292   | 9_774     | 1_868     | 6_414     | 32_692    | *total* | *total*                    |
+| nan     | contents        | 38_505_896  | 185_878   | 20_739    | 109_738   | 447_086   | *total* | *total*                    |
+| nan     | embodied_carbon | 148_610     | 450.4     | 83.1198   | 323.0     | 1_113     | *total* | *total*                    |
+| nan     | injured         | 76_217      | 15.8315   | 2.5864    | 9.9145    | 50.6029   | *total* | *total*                    |
+| nan     | number          | 22_133      | 133.1006  | 21.9004   | 86.3449   | 430.0     | *total* | *total*                    |
+| nan     | occupants       | 76_217      | 0.5016    | 0.0126    | 0.1869    | 1.6108    | *total* | *total*                    |
+| nan     | residents       | 96_024      | 709.9     | 124.8238  | 436.0     | 2_167     | *total* | *total*                    |
+| nan     | structural      | 157_597_824 | 1_213_067 | 224_986   | 785_319   | 3_434_628 | *total* | *total*                    |
