@@ -17,7 +17,7 @@ from openquake import engine
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "OpenQuake Engine"
-copyright = "2023-2025, GEM Foundation"
+copyright = "2023-2026, GEM Foundation"
 author = "GEM Foundation"
 release = "v1.0.0"
 
@@ -95,7 +95,7 @@ html_theme_options = {
         # "version_match": (
         #     "development" if it_is_master is True else '.'.join(
         #         version.split('.')[0:2])
-        "version_match": "master"
+        "version_match": "3.26"
     },
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
