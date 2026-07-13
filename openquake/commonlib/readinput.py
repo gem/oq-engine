@@ -1888,8 +1888,14 @@ def read_mosaic_df(mosaic_dir=''):
     logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
     codes = sorted(df.code.unique())
-    if codes != MODELS:
-        logging.warning(f'{mosaic_boundaries_file} not aligned with MODELS')
+    extra_cod = set(MODELS) - set(codes)
+    if extra_cod:
+        raise InvalidFile(f'{mosaic_boundaries_file} is missing {extra_cod}'
+                          ' present in countries.MODELS')
+    extra_mod = set(codes) - set(MODELS)
+    if extra_mod:
+        raise InvalidFile(f'countries.MODELS is missing {extra_mod} present in'
+                          f' {mosaic_boundaries_file}')
     return df
 
 
