@@ -299,7 +299,10 @@ def event_based_risk(gmf_df, monitor):
                     continue
             # passing the contry is crucial for impact_test,
             # where the exposure contains multiple countries
-            country = countries[id0]
+            try:
+                country = countries[id0]
+            except IndexError:
+                raise IndexError(f'Index {id0} not in {countries}')
             with risk_mon:
                 [out] = crmodel.get_outputs(
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
