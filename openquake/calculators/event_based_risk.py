@@ -322,7 +322,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     :param secperils: list of secondary peril instances
     :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
-    :yields: dictionaries with keys 'avg', 'alt' and times
+    :yields: dictionaries with keys 'avg', 'alt' and 'gmfbytes'
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
