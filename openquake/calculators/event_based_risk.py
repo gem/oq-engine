@@ -266,7 +266,6 @@ def event_based_risk(gmf_df, monitor):
     xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(xtypes)
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
         print(gmf_df)
@@ -290,6 +289,7 @@ def event_based_risk(gmf_df, monitor):
         countries = ["?"]  # assume a single contry
     for id01, adf_ in items:
         id0, id1 = numpy.divmod(id01, TWO16)
+        loss3 = {'aids': [], 'bids': [], 'loss': []}
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -305,11 +305,11 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+        yield dict(avg=build_avg(loss3, oq.A, R*X))
 
-    dic = dict(gmf_bytes=gmf_df.memory_usage().sum())
-    dic['alt'] = build_alt(loss2, xtypes)
-    dic['avg'] = build_avg(loss3, oq.A, R*X)
-    return dic
+    dic = dict(gmf_bytes=gmf_df.memory_usage().sum(),
+               alt=build_alt(loss2, xtypes))
+    yield dic
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
@@ -338,9 +338,9 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
             # print(f'{gmf_mb=:.1f}')
             mod2 = gmf_df.eid % 2
             yield event_based_risk, gmf_df[mod2==1]
-            yield event_based_risk(gmf_df[mod2==0], monitor)
+            yield from event_based_risk(gmf_df[mod2==0], monitor)
         else:
-            yield event_based_risk(gmf_df, monitor)
+            yield from event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -532,16 +532,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         times = dic.pop('times', None)
         if times is not None:
             hdf5.extend(self.datastore['ruptimes'], times)
-
-        with self.monitor('saving risk_by_event'):
-            alt = dic.pop('alt')
-            for name in alt.columns:
-                dset = self.datastore['risk_by_event/' + name]
-                hdf5.extend(dset, alt[name].to_numpy())
-        if self.oqparam.avg_losses:
+        alt = dic.pop('alt', None)
+        if alt is not None:
+            with self.monitor('saving risk_by_event'):
+                for name in alt.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, alt[name].to_numpy())
+        coo = dic.pop('avg', None)
+        if coo is not None and self.oqparam.avg_losses:
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
-                coo = dic.pop('avg')
                 # the non-numpy approach is 2-3x slower, causing
                 # a big data queue and then running out of memory
                 # rlzs, xlts = numpy.divmod(coo.col, self.X)
