@@ -305,11 +305,11 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-        yield dict(avg=build_avg(loss3, oq.A, R*X))
+        avg = build_avg(loss3, oq.A, R*X)
+        yield dict(avg=avg)
 
-    dic = dict(gmf_bytes=gmf_df.memory_usage().sum(),
-               alt=build_alt(loss2, xtypes))
-    yield dic
+    alt = build_alt(loss2, xtypes)
+    yield dict(alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
