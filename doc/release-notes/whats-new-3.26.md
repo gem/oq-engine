@@ -1,4 +1,5 @@
-# Release notes (dev)
+Release notes v3.26
+===================
 
 Version 3.26 is the culmination of four months of work involving over
 320 pull requests. It is the minimum version able to run the [2026
