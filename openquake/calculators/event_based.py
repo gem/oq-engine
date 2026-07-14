@@ -74,10 +74,7 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
-    # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    # NB: if there was an assetcol, nsites is actually the number of affected
-    # assets, as set by close_ruptures
-    return rup['n_occ'] * (1 + rup['nsites'] // 100)
+    return rup['n_occ'] * rup['nsites']
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -307,7 +304,7 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def _filter_rups(oq, sitecol, assetcol, trts, dstore):
+def _filter_rups(oq, sitecol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
     if oq.mosaic_model and 'scenario' not in oq.calculation_mode:
@@ -321,7 +318,7 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
         # can manage 2 million sites in 2 minutes for IND
-        filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
+        filrups = close_ruptures(allrups, sitecol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
@@ -345,14 +342,14 @@ def _filter_rups(oq, sitecol, assetcol, trts, dstore):
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
-    logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = totw / (oq.concurrent_tasks or 1)
-    logging.info(f'{round(maxw)=}')
+    maxw = min(totw / (oq.concurrent_tasks or 1), 60_000_000)
+    logging.info(f'{round(maxw)=:_d}')
     return filrups, maxw, acc
 
 
-def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
+def get_allargs(oq, sitecol, sec_perils, dstore):
     """
     :returns: (list of starmap arguments, oq_by dictionary)
     """
@@ -360,7 +357,7 @@ def get_allargs(oq, sitecol, assetcol, sec_perils, dstore):
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
     # NB: _filter_rups calls close_ruptures which can raise an error
-    filrups, maxw, acc = _filter_rups(oq, sitecol, assetcol, trts, dstore)
+    filrups, maxw, acc = _filter_rups(oq, sitecol, trts, dstore)
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         if model == '???':
@@ -523,9 +520,8 @@ def run(func, oq, rup0, calc):
                             station_data, station_sites)
             return
 
-    assetcol = getattr(calc, 'assetcol', None)
     allargs, calc.oq_by = get_allargs(
-        oq, calc.sitecol, assetcol, calc.sec_perils, dstore)
+        oq, calc.sitecol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)

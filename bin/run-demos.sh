@@ -84,4 +84,4 @@ oq info usgs_rupture:us70006sj8
 oq db find %
 
 # build an HTML report
-oq engine --make-html-report today
+oq engine --make-report today
