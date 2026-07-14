@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Changed the event_based_risk calculator to split the assets by region
+    and not by taxonomy (thus generating slightly different random numbers)
+  * Changed `oq engine --make-report` to generate a Markdown report (no HTML)
+
+python3-oq-engine (3.26.0-1~xenial01) xenial; urgency=low
+
+  [Amir Shahmohammadian]
+  * Fixed a bug in the treatment of PGV period in the Jayaram and Baker
+    (2009) spatial correlation model resulting in a wrong coefficient
+    b = 22.0 instead of b = 25.7
+
+  [Michele Simionato]
+  * Optimized ebrisk calculations by using larger GMF arrays
   * Saving memory when running several jobs together with a pool
   * Fixed a bug with IMT-dependent weights being not normalized, breaking
     the CND model with use_rates=true
@@ -258,6 +271,8 @@
   * Internal: inferring the slow tasks information from starmap_info
   * Removed numpy.random.seed in the engine code base
   * The NegativeBinomialTOM can now be applied to all parametric sources
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 13 Jul 2026 13:37:02 +0000
 
 python3-oq-engine (3.25.0-1~xenial01) xenial; urgency=low
 

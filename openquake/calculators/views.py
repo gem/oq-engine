@@ -185,7 +185,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'csv rst org html', ext
+    assert ext in 'csv rst org md', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -210,7 +210,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
     for row in data:
         tup = tuple(fmt(c) for c in row)
-        if ext in 'rst org':
+        if ext in 'rst org md':
             tup = fix_newlines(tup)
         for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
@@ -221,8 +221,13 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     if ext == 'html':
         return HtmlTable([header] + body).render()
 
-    wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
-    sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
+    if ext == 'md':
+        wrap = '|-%s-|'
+        sepline = wrap % '-|-'.join('-' * size for size in col_sizes)
+    else:
+        wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
+        sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
+
     sep = ',' if ext == 'csv' else ' | '
     templ = sep.join('%-{}s'.format(size) for size in col_sizes)
     if ext != 'csv':
@@ -230,6 +235,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
     elif header and ext == 'org':
+        lines = [templ % tuple(header), sepline]
+    elif header and ext == 'md':
         lines = [templ % tuple(header), sepline]
     elif header and ext == 'csv':
         lines = [','.join(header)]
@@ -741,7 +748,7 @@ def view_task_info(token, dstore):
         if len(val):
             data.append(stats(task, val, val.max() / val.mean()))
     if not data:
-        return 'Not available'
+        return
     return numpy.array(
         data, dt('operation-duration counts mean stddev min max slowfac'))
 
