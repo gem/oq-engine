@@ -361,6 +361,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         logging.info(f'{max_assets_per_region=:_d}')
         monitor.save('assets', adf)
         monitor.save('start-stop', iss)
+        for id0, s0, s1 in iss:
+            monitor.save(f'sids_{id0}', adf[s0:s1].site_id.unique())
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
 
@@ -551,7 +553,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 hdf5.extend(dset, alt[name].to_numpy())
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
-        if upper_limit < 1E7:
+        if len(alt) and upper_limit < 1E7:
             # sanity check on risk_by_event if not too large
             size = len(alt)
             assert size <= upper_limit, (size, upper_limit)
