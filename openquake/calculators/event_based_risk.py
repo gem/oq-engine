@@ -310,9 +310,7 @@ def event_based_risk(gmf_df, monitor):
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
         avg = build_avg(loss3, oq.A, R*X)
         yield dict(avg=avg)
-
-    alt = build_alt(loss2, xtypes)
-    yield dict(alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
+    yield dict(loss2=loss2, gmf_bytes=gmf_df.memory_usage().sum())
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
@@ -377,10 +375,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:
             monitor.save('weights', ws)
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
+            self.aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
-            aggids = ()
-        monitor.save('aggids', aggids)
+            self.aggids = ()
+        monitor.save('aggids', self.aggids)
 
     def pre_execute(self):
         oq = self.oqparam
@@ -429,6 +427,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.gmf_bytes = 0
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+        self.loss2 = general.AccumDict(accum=numpy.zeros((len(self.xtypes), 2)))
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -525,12 +524,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         times = dic.pop('times', None)
         if times is not None:
             hdf5.extend(self.datastore['ruptimes'], times)
-        alt = dic.pop('alt', None)
-        if alt is not None:
-            with self.monitor('saving risk_by_event'):
-                for name in alt.columns:
-                    dset = self.datastore['risk_by_event/' + name]
-                    hdf5.extend(dset, alt[name].to_numpy())
+        loss2 = dic.pop('loss2', None)
+        if loss2 is not None:
+            self.loss2 += loss2
         coo = dic.pop('avg', None)
         if coo is not None and self.oqparam.avg_losses:
             # avg_losses are stored as coo matrices
@@ -547,11 +543,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
+        alt = build_alt(self.loss2, self.xtypes)
+        with self.monitor('saving risk_by_event'):
+            for name in alt.columns:
+                dset = self.datastore['risk_by_event/' + name]
+                hdf5.extend(dset, alt[name].to_numpy())
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
         if upper_limit < 1E7:
             # sanity check on risk_by_event if not too large
-            alt = self.datastore.read_df('risk_by_event')
             size = len(alt)
             assert size <= upper_limit, (size, upper_limit)
             # sanity check on uniqueness by (agg_id, loss_id, event_id)
