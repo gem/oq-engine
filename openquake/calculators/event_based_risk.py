@@ -42,7 +42,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 500
 get_n_occ = operator.itemgetter(1)
 
 
@@ -327,24 +326,13 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = (dic['gmfdata'] for dic in event_based.event_based(
+    dfs = [dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if len(dic['gmfdata']))
-    # NB: it is essential to concatenate the small dataframes to have
-    # long arrays (around GMF_MB) and hence a good performance
-    for gmf_df in general.concatenated(dfs, GMF_MB):
-        # NB: the assets are read more times than needed; this is on purpose;
-        # the slowdown is minor, while the memory saving is massive, since
-        # only one taxonomy at the time is read inside event_based_risk
-        gmf_mb = gmf_df.memory_usage().sum() / 1024**2
-        print(f'{gmf_mb=}')
-        if gmf_mb > GMF_MB:
-            # print(f'{gmf_mb=:.1f}')
-            mod2 = gmf_df.eid % 2
-            yield event_based_risk, gmf_df[mod2==1]
-            yield from event_based_risk(gmf_df[mod2==0], monitor)
-        else:
-            yield from event_based_risk(gmf_df, monitor)
+           if len(dic['gmfdata'])]
+    if dfs:
+        # NB: it is essential to concatenate the small dataframes to have
+        # long arrays (around GMF_MB) and hence a good performance
+        yield from event_based_risk(pandas.concat(dfs), monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
