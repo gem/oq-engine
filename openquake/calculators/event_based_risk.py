@@ -254,7 +254,7 @@ class AssetReader:
             return mon.read('assets', slice(s0, s1)).set_index('ordinal')
 
 
-def event_based_risk(gmf_df, monitor):
+def event_based_risk(gmf_df, slc, monitor):
     """
     Aggregate the losses for all assets for the given event slice
 
@@ -272,8 +272,6 @@ def event_based_risk(gmf_df, monitor):
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     areader = AssetReader(monitor)
-    items = ((id01, areader.read(s0, s1))
-             for id01, s0, s1 in monitor.read('start-stop'))
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -286,11 +284,11 @@ def event_based_risk(gmf_df, monitor):
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
-    for id01, adf_ in items:
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    for id01, s0, s1 in monitor.read('start-stop', slc):
         id0, id1 = numpy.divmod(id01, TWO16)
-        loss3 = {'aids': [], 'bids': [], 'loss': []}
-        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-        nbytes = 0
+        adf_ = areader.read(s0, s1)
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -309,9 +307,8 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-            nbytes += gdf.memory_usage().sum()
-        avg = build_avg(loss3, oq.A, R*X)
-        yield dict(avg=avg, loss2=loss2, gmf_bytes=nbytes)
+    avg = build_avg(loss3, oq.A, R*X)
+    return dict(avg=avg, loss2=loss2, gmf_bytes=gmf_df.memory_usage().sum())
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
@@ -332,7 +329,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     if dfs:
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield from event_based_risk(pandas.concat(dfs), monitor)
+        yield event_based_risk(pandas.concat(dfs), slice(None), monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -496,7 +493,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 event_based_risk, oq, self.datastore, self._monitor)
             self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df,))
+                smap.submit((gmf_df, slice(None)))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:
