@@ -266,7 +266,6 @@ def event_based_risk(gmf_df, monitor):
     xtypes = oq.xtypes
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(xtypes)
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     if os.environ.get('OQ_DEBUG_SITE'):
         print(gmf_df)
 
@@ -290,6 +289,8 @@ def event_based_risk(gmf_df, monitor):
     for id01, adf_ in items:
         id0, id1 = numpy.divmod(id01, TWO16)
         loss3 = {'aids': [], 'bids': [], 'loss': []}
+        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+        nbytes = 0
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -308,9 +309,9 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+            nbytes = gdf.memory_usage().sum()
         avg = build_avg(loss3, oq.A, R*X)
-        yield dict(avg=avg)
-    yield dict(loss2=loss2, gmf_bytes=gmf_df.memory_usage().sum())
+        yield dict(avg=avg, loss2=loss2, gmf_bytes=nbytes)
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
