@@ -1089,6 +1089,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
                      f" threshold: {threshold_deg} degrees.")
     else:
         threshold_deg = float(threshold_deg)
+    # close countries are ordered by ascending distance
     iso3_codes = get_close_countries(lon, lat, buffer_radius=threshold_deg)
     if not iso3_codes:
         raise RuntimeError(

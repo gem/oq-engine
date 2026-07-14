@@ -127,9 +127,10 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
         This distance is in the same units as the point's
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
-        creating a circular buffer region around the point
-    :returns: list of mosaic models intersecting the circle
-        centered on the given coordinates having the specified radius
+        creating a circular buffer region around the point.
+    :returns: list of mosaic models intersecting the circle,
+        centered on the given coordinates having the specified radius.
+        Models are ordered by ascending distance.
     """
     mosaic_df = read_mosaic_df()
     close_mosaic_models = geo.utils.geolocate_within_buffer(
@@ -152,8 +153,9 @@ def get_close_countries(lon, lat, buffer_radius):
         This distance is in the same units as the point's
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
-        creating a circular buffer region around the point
-    :returns: the iso3 codes of the close countries
+        creating a circular buffer region around the point.
+    :returns: the iso3 codes of the close countries, ordered by
+        ascending distance.
     """
     countries_df = read_countries_df()
     close_countries = geo.utils.geolocate_within_buffer(
