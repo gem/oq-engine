@@ -309,7 +309,7 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-            nbytes = gdf.memory_usage().sum()
+            nbytes += gdf.memory_usage().sum()
         avg = build_avg(loss3, oq.A, R*X)
         yield dict(avg=avg, loss2=loss2, gmf_bytes=nbytes)
 
