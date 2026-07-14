@@ -742,9 +742,15 @@ class CountryReportBuilder:
             self.Paragraph(f"<b>{col_header}</b>", body_right_style)
         ]]
         for meta in LOSS_METADATA.values():
+            # NOTE: in order to make it easier to understand and communicate,
+            # we use 'residents' for both 'Fatalities' and 'Displaced'
+            if meta["label"] in ["Fatalities", "Displaced"]:
+                exposed_key = LOSS_METADATA["residents"]["label"] + "_exposed"
+            else:
+                exposed_key = meta["label"] + "_exposed"
             table_data.append([
                 self.Paragraph(meta["label"], body_left_style),
-                self.Paragraph(self.summary_data[meta["label"] + "_exposed"],
+                self.Paragraph(self.summary_data[exposed_key],
                                body_right_style),
                 self.Paragraph(self.summary_data[meta["label"]],
                                body_right_style)
