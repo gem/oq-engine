@@ -307,6 +307,7 @@ def install_or_postinstall_standalone(venv, is_install=True):
 
                 subprocess.check_call(
                     [pycmd, "-m", "pip", "install",
+                     "--no-index", "--no-cache-dir",
                      "--find-links", WHEELHOUSE_URL,
                      "--find-links", URL_STANDALONE,
                      app['pkg']]
