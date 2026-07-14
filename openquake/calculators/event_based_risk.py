@@ -19,6 +19,7 @@
 import os.path
 import logging
 import operator
+from dataclasses import dataclass
 from functools import partial
 import numpy
 import pandas
@@ -44,6 +45,14 @@ TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 GMF_MB = 250
 get_n_occ = operator.itemgetter(1)
+
+@dataclass
+class Region:
+    id01: int
+    s0: int
+    s1: int
+    def weight(self):
+        return self.s1 - self.s0
 
 
 def get_assetdf_startstop(assetcol):
@@ -242,19 +251,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-class AssetReader:
-    """
-    Read a slice of assets by measuring type spent and memory allocated
-    """
-    def __init__(self, monitor):
-        self.monitor = monitor('reading assets', measuremem=True)
-
-    def read(self, s0, s1):
-        with self.monitor as mon:
-            return mon.read('assets', slice(s0, s1)).set_index('ordinal')
-
-
-def event_based_risk(gmf_df, slc, monitor):
+def event_based_risk(gmf_df, regions, monitor):
     """
     Aggregate the losses for all assets for the given event slice
 
@@ -271,7 +268,6 @@ def event_based_risk(gmf_df, slc, monitor):
 
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    areader = AssetReader(monitor)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -280,15 +276,18 @@ def event_based_risk(gmf_df, slc, monitor):
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=True) 
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
         countries = ["?"]  # assume a single contry
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    for id01, s0, s1 in monitor.read('start-stop', slc):
-        id0, id1 = numpy.divmod(id01, TWO16)
-        adf_ = areader.read(s0, s1)
+    for region in regions:
+        with ass_mon:
+            adf_ = monitor.read('assets', slice(region.s0, region.s1)).\
+                set_index('ordinal')
+        id0, id1 = numpy.divmod(region.id01, TWO16)
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -327,9 +326,11 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata'])]
     if dfs:
+        regions = [Region(id01, s0, s1) for id01, s0, s1
+                   in monitor.read('start-stop')]
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield event_based_risk(pandas.concat(dfs), slice(None), monitor)
+        yield event_based_risk(pandas.concat(dfs), regions, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -377,6 +378,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:
             self.aggids = ()
         monitor.save('aggids', self.aggids)
+        return iss
 
     def pre_execute(self):
         oq = self.oqparam
@@ -491,9 +493,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         else:  # start from GMFs
             smap, gmf_dfs = starmap_from_gmfs(
                 event_based_risk, oq, self.datastore, self._monitor)
-            self.save_tmp(smap.monitor)
+            iss = self.save_tmp(smap.monitor)
+            regions = [Region(id01, s0, s1) for id01, s0, s1 in iss]
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df, slice(None)))
+                smap.submit((gmf_df, regions))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:
