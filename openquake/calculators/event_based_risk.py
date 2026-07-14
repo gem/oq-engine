@@ -267,6 +267,7 @@ def event_based_risk(gmf_df, monitor):
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(xtypes)
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
     if os.environ.get('OQ_DEBUG_SITE'):
         print(gmf_df)
 
@@ -289,7 +290,6 @@ def event_based_risk(gmf_df, monitor):
         countries = ["?"]  # assume a single contry
     for id01, adf_ in items:
         id0, id1 = numpy.divmod(id01, TWO16)
-        loss3 = {'aids': [], 'bids': [], 'loss': []}
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -308,11 +308,10 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-        avg = build_avg(loss3, oq.A, R*X)
-        yield dict(avg=avg)
 
     alt = build_alt(loss2, xtypes)
-    yield dict(alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
+    avg = build_avg(loss3, oq.A, R*X)
+    return dict(alt=alt, avg=avg, gmf_bytes=gmf_df.memory_usage().sum())
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
@@ -333,7 +332,13 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     if dfs:
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield from event_based_risk(pandas.concat(dfs), monitor)
+        gmf_df = pandas.concat(dfs)
+        mod2 = gmf_df.eid % 2
+        if len(gmf_df) > 10_000_000:
+            yield event_based_risk, gmf_df[mod2==0]
+            yield event_based_risk(gmf_df[mod2==1], monitor)
+        else:
+            yield event_based_risk(gmf_df, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
