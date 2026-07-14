@@ -222,6 +222,7 @@ GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 # FIXME just for devel test
 # URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+WHEELHOUSE_URL=https://wheelhouse.openquake.org/unified
 
 
 def ensure(pip=None, pyvenv=None):
@@ -305,7 +306,9 @@ def install_or_postinstall_standalone(venv, is_install=True):
                 print("Applications " + app['pkg'] + " are not installed yet \n")
 
                 subprocess.check_call(
-                    [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
+                    [pycmd, "-m", "pip", "install",
+                     "--find-links", WHEELHOUSE_URL,
+                     "--find-links", URL_STANDALONE,
                      app['pkg']]
                 )
             except Exception as exc:
