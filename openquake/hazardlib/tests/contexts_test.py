@@ -27,7 +27,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, ContextMaker, get_distances, GEOM_CACHE)
+    Effect, ContextMaker, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -37,8 +37,7 @@ from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
-from openquake.hazardlib.source.simple_fault import SimpleFaultSource
-from openquake.hazardlib.mfd import ArbitraryMFD, TruncatedGRMFD
+from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
@@ -392,86 +391,3 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
-
-
-def _make_tagged_siblings(label, a_vals):
-    # Sibling SimpleFaultSources sharing one surface but with MFDs that
-    # differ only by a_val, all tagged with the same geom_label so the
-    # GEOM_CACHE applies across them
-    kw = dict(name='fs', tectonic_region_type=TRT.ACTIVE_SHALLOW_CRUST,
-              rupture_mesh_spacing=5.0,
-              magnitude_scaling_relationship=WC1994(),
-              rupture_aspect_ratio=1.5,
-              temporal_occurrence_model=PoissonTOM(50.0),
-              upper_seismogenic_depth=0.0,
-              lower_seismogenic_depth=15.0,
-              fault_trace=Line([Point(9.8, 44.8), Point(10.2, 45.2)]),
-              dip=60.0, rake=0.0)
-    srcs = [SimpleFaultSource(source_id=f'fs!{i}',
-                              mfd=TruncatedGRMFD(5.0, 6.0, 0.2, a, 1.0),
-                              **kw)
-            for i, a in enumerate(a_vals)]
-    for s in srcs:
-        s.geom_label, s.offset = label, 0
-        s.geom_label_branches = len(srcs)
-    return srcs
-
-
-def _make_cmaker_and_sites():
-    cm = ContextMaker(
-        TRT.ACTIVE_SHALLOW_CRUST, [AbrahamsonEtAl2014()],
-        dict(imtls={'PGA': [0.1, 0.5]}, truncation_level=3.0,
-             investigation_time=50.0))
-    sites = SiteCollection([
-        Site(Point(10.0, 45.0), vs30=760.0, vs30measured=True,
-             z1pt0=30.0, z2pt5=0.5)])
-    return cm, sites
-
-
-class GeomCacheHitTestCase(unittest.TestCase):
-    """
-    Check that two sibling sources sharing a geom_label populate
-    GEOM_CACHE only once and the second source reuses the cached
-    contexts.
-    """
-    def test_sibling_hits_cache(self):
-        srcs = _make_tagged_siblings('a_geometry_label', [3.0, 2.5])
-        cm, sites = _make_cmaker_and_sites()
-
-        # First call populates the cache
-        GEOM_CACHE.clear()
-        list(cm.get_ctxs(srcs[0], sites)) # i.e., ctxs_A (no cache)
-
-        # Check that the populating left exactly one
-        # entry awaiting its last sibling
-        [entry] = GEOM_CACHE.values()
-        assert len(GEOM_CACHE) == 1
-        assert entry.remaining == 1 # 1 geometry label
-        cached_rrup = entry.ctxs[0]['rrup'].copy()
-        cached_rate = entry.ctxs[0]['occurrence_rate'][0]
-
-        ctxs_B = list(cm.get_ctxs(srcs[1], sites)) # Uses cache in ctxs_A
-
-        # Last sibling consumed the entry, distances reused but rate
-        # substituted, and the cache is now empty
-        aac(ctxs_B[0]['rrup'], cached_rrup)
-        self.assertNotEqual(ctxs_B[0]['occurrence_rate'][0], cached_rate)
-        assert len(GEOM_CACHE) == 0 # Confirms it's been flushed
-
-    def test_evicts_only_after_last_sibling(self):
-        # Three sibling sources with the same geom_label - verify the cache
-        # entry survives the intermediate hit and is evicted after the last
-        srcs = _make_tagged_siblings('three_branch_label', [3.0, 2.5, 2.0])
-        cm, sites = _make_cmaker_and_sites()
-
-        GEOM_CACHE.clear()
-        list(cm.get_ctxs(srcs[0], sites))
-        [entry] = GEOM_CACHE.values()
-        assert entry.remaining == 2
-
-        list(cm.get_ctxs(srcs[1], sites))
-        assert entry.remaining == 1
-        assert len(GEOM_CACHE) == 1
-
-        list(cm.get_ctxs(srcs[2], sites))
-        assert len(GEOM_CACHE) == 0

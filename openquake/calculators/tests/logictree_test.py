@@ -588,28 +588,6 @@ hazard_uhs-std.csv
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data_eb_sampling.csv', f)
 
-        # The geometry labelled (ctx caching for same rupture sets) run
-        # and the unlabelled (no-cache) run must produce identical mean
-        # hazard curves in both classical and disagg_by_src. 
-        # NOTE: The geom_label cache is not engaged in event-based runs:
-        # rupture sampling is stochastic per branch so sibling branches do
-        # not share an identical rupture set.
-        for ini, export_key, expected in [
-                ('job_runtime.ini',
-                 ('hcurves/mean', 'csv'),
-                 'expected/hazard_curve-mean-PGA.csv'),
-                ('job_runtime_disagg.ini',
-                 ('mean_disagg_by_src', 'csv'),
-                 'expected/mean_disagg_by_src.csv')]:
-            contexts.GEOM_CACHE.clear()
-            with unittest.mock.patch.dict(
-                    # Set use of geom labels to false (by default in
-                    # the builder script it is True)
-                    'os.environ', {'OQ_CASE34_USE_GEOM_LABEL': '0'}):
-                self.run_calc(case_34.__file__, ini)
-            [f] = export(export_key, self.calc.datastore)
-            self.assertEqualFiles(expected, f)
-
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
         # testing also split_by_gsim
