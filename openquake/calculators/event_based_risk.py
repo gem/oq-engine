@@ -326,11 +326,12 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata'])]
     if dfs:
-        regions = [Region(id01, s0, s1) for id01, s0, s1
-                   in monitor.read('start-stop')]
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield event_based_risk(pandas.concat(dfs), regions, monitor)
+        gmf_df = pandas.concat(dfs)
+        for id01, s0, s1 in monitor.read('start-stop'):
+            region = Region(id01, s0, s1)
+            yield event_based_risk(gmf_df, [region], monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
