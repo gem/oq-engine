@@ -20,11 +20,6 @@
             <truncGutenbergRichterMFD aValue="3.2" bValue="0.9"
                                       minMag="6.5" maxMag="7.5"/>
             <rake>90.0</rake>
-            <hypoDepthDist>
-                <hypoDepth depth="5.0"  probability="0.25"/>
-                <hypoDepth depth="10.0" probability="0.50"/>
-                <hypoDepth depth="15.0" probability="0.25"/>
-            </hypoDepthDist>
         </simpleFaultSource>
 
     </sourceModel>

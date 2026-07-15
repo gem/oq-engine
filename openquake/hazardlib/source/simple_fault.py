@@ -122,6 +122,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_mmax_truncatedGR',
         'set_msr',
         'set_slip_rate',
+        'set_hypo_depth_dist',
     }
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

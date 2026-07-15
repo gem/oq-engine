@@ -2,14 +2,34 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID="lt1">
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
-                <logicTreeBranch branchID="b1">
+                <logicTreeBranch branchID="b1_0">
                     <uncertaintyModel>source_model.xml</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
+            <logicTreeBranchSet uncertaintyType="setHypoDepthDistribution"
+                                branchSetID="bs2">
+                <logicTreeBranch branchID="b2_0">
+                    <uncertaintyModel>
+                        <hypoDepthDist>
+                            <hypoDepth depth="5.0"  probability="0.25" fixedDipFrac="0.667"/>
+                            <hypoDepth depth="10.0" probability="0.50" fixedDipFrac="0.667"/>
+                            <hypoDepth depth="15.0" probability="0.25" fixedDipFrac="0.667"/>
+                        </hypoDepthDist>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2_1">
+                    <uncertaintyModel>
+                        <hypoDepthDist>
+                            <hypoDepth depth="7.0"  probability="0.50"/>
+                            <hypoDepth depth="12.0" probability="0.50"/>
+                        </hypoDepthDist>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
     </logicTree>
 </nrml>
