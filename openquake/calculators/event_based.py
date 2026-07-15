@@ -523,6 +523,7 @@ def run(func, oq, rup0, calc):
         oq, calc.sitecol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
+    os.environ['OQ_DISTRIBUTE'] = 'no'
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
         calc.save_tmp(smap.monitor)

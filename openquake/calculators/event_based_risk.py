@@ -331,6 +331,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata'])]
     if dfs:
+        breakpoint()
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
         yield from event_based_risk(pandas.concat(dfs), monitor)
