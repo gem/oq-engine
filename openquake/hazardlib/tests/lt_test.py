@@ -504,3 +504,126 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         cnt = collections.Counter(paths)
         assert cnt == {'A': 64, 'B': 36}
 
+
+class SetHypoDepthDistUncertaintyTestCase(unittest.TestCase):
+    """
+    Tests for setHypoDepthDistribution epistemic uncertainty.
+    """
+    # fixedDipFrac arrives as str from the LT parser
+    HDD_WITH_FDF = [
+        dict(probability=0.25, depth=5.0, fixedDipFrac='0.4'),
+        dict(probability=0.75, depth=10.0, fixedDipFrac='0.6')]
+    HDD_NO_FDF = [
+        dict(probability=0.5, depth=7.0),
+        dict(probability=0.5, depth=12.0)]
+
+    SIMPLE_FAULT = '''\
+    <simpleFaultSource id="1" name="sf"
+        tectonicRegion="Active Shallow Crust">
+      <simpleFaultGeometry>
+        <gml:LineString><gml:posList>0 0 1 0</gml:posList></gml:LineString>
+        <dip>60</dip>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <rake>90</rake>
+    </simpleFaultSource>'''
+
+    POINT_LIKE = {
+        'point': '''\
+    <pointSource id="2" name="ps"
+        tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point><gml:pos>0 0</gml:pos></gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </pointSource>''',
+        'area': '''\
+    <areaSource id="3" name="ar"
+        tectonicRegion="Active Shallow Crust">
+      <areaGeometry discretization="10">
+        <gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>
+          0 0 1 0 1 1 0 1
+        </gml:posList></gml:LinearRing></gml:exterior></gml:Polygon>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </areaSource>''',
+        'multi_point': '''\
+    <multiPointSource id="4" name="mp"
+        tectonicRegion="Active Shallow Crust">
+      <multiPointGeometry>
+        <gml:posList>0 0 0 1</gml:posList>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </multiPointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <multiMFD kind="truncGutenbergRichterMFD" size="2">
+        <a_val>3 3</a_val>
+        <b_val>0.9</b_val>
+        <min_mag>5</min_mag>
+        <max_mag>6</max_mag>
+      </multiMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </multiPointSource>'''}
+
+    def test_apply_to_simple_fault(self):
+        src = nrml.get(self.SIMPLE_FAULT)
+        lt.apply_uncertainty(
+            'setHypoDepthDistribution', src, self.HDD_WITH_FDF)
+        self.assertEqual(
+            src.hypo_depth_list,
+            [(0.25, 5.0, 0.4), (0.75, 10.0, 0.6)])
+        lt.apply_uncertainty(
+            'setHypoDepthDistribution', src, self.HDD_NO_FDF)
+        self.assertEqual(
+            src.hypo_depth_list,
+            [(0.5, 7.0, None), (0.5, 12.0, None)])
+
+    def test_apply_to_point_like(self):
+        for kind, xml in self.POINT_LIKE.items():
+            src = nrml.get(xml)
+            lt.apply_uncertainty(
+                'setHypoDepthDistribution', src, self.HDD_WITH_FDF)
+            self.assertEqual(src.hypocenter_distribution.data,
+                             [(0.25, 5.0), (0.75, 10.0)], msg=kind)
+            self.assertEqual(src.hypo_dip_fracs, (0.4, 0.6), msg=kind)
+            self.assertEqual(
+                src.hypocenter_distribution.hypo_dip_fracs,
+                (0.4, 0.6), msg=kind)
+            lt.apply_uncertainty(
+                'setHypoDepthDistribution', src, self.HDD_NO_FDF)
+            self.assertEqual(src.hypocenter_distribution.data,
+                             [(0.5, 7.0), (0.5, 12.0)], msg=kind)
+            self.assertIsNone(src.hypo_dip_fracs, msg=kind)
