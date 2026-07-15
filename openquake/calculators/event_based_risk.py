@@ -330,7 +330,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
-    blks = list(general.block_splitter(dfs, 1E8, len))
+    blks = list(general.block_splitter(dfs, 1E7, len))
     last = len(blks) - 1
     if last > 0:
         print(f'{monitor.task_no=} {len(blks)=}')
