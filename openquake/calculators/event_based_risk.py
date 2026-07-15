@@ -46,6 +46,13 @@ GMF_MB = 250
 get_n_occ = operator.itemgetter(1)
 
 
+def size_mb(df):
+    """
+    :returns: the size in MB of the dataframe
+    """
+    return df.memory_usage().sum() / 1024*2
+
+
 def get_assetdf_startstop(assetcol):
     """
     :param assetcol: an AssetCollection
@@ -330,7 +337,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
-    blks = list(general.block_splitter(dfs, 1E7, len))
+    blks = list(general.block_splitter(dfs, GMF_MB, size_mb))
     last = len(blks) - 1
     if last > 0:
         print(f'{monitor.task_no=} {len(blks)=}')
