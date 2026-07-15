@@ -480,6 +480,12 @@ master_seed:
   Example: *master_seed = 1234*.
   Default: 123456789
 
+make_impact_reports:
+  Produce a one-pager impact reports for each affected country,
+  as postrisk_func
+  Example: *make_impact_reports = true*.
+  Default: False
+
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
   Example: *max = true*.
@@ -1168,6 +1174,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
+    make_impact_reports = valid.Param(valid.boolean, False)
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)

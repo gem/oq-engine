@@ -52,6 +52,7 @@ class ImpactParam:
     trt: str = None
     description: str = None
     notes: str = None
+    make_impact_reports: bool = False
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -94,6 +95,7 @@ class ImpactParam:
                 self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
+            make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
             fname = general.gettemp(suffix='.npy')
@@ -157,6 +159,7 @@ IMPACT_FORM_LABELS = {
     'description': 'Description',
     'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
+    'make_impact_reports': 'Make one-pager country reports',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -259,6 +262,7 @@ validators = {
     'maximum_distance_stations': valid.positivefloat,
     'description': valid.utf8,  # if empty, it will be set automatically
     'notes': valid.utf8,
+    'make_impact_reports': valid.boolean,
 }
 
 

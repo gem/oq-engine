@@ -615,6 +615,7 @@ window.initImpactForm = function() {
         }
         formData.append('description', $('#description').val());
         formData.append('notes', $('#notes').val());
+        formData.append('make_impact_reports', $('#make_impact_reports').is(':checked'));
         $.ajax({
             type: "POST",
             url: gem_oq_server_url + "/v1/calc/impact_run",

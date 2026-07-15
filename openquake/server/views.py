@@ -204,8 +204,8 @@ def _get_base_url(request):
     return base_url
 
 
-def get_bool_param(request, name, default=False):
-    val = request.GET.get(name)
+def _get_bool_param(obj, name, default=False):
+    val = obj.get(name)
     if val is None:
         return default
     return str(val).lower() in ('1', 'true', 'yes', '')
@@ -1172,7 +1172,8 @@ def impact_get_rupture_data(request):
     rup, rupdic, _oqparams, err = impact_validate(
         request.POST, request.user, rupture_path)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err,
+                            status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)
@@ -1321,13 +1322,17 @@ def create_impact_job(request, params, email_file_path):
     return response_data
 
 
-def _run_impact_job(request, post_data, rupture_path=None, station_data_file=None):
+def _run_impact_job(request, post_data, rupture_path=None,
+                    station_data_file=None):
     _rup, _rupdic, params, err = impact_validate(
         post_data, request.user, rupture_path, station_data_file)
     if err:
-        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err,
+                            status=400 if 'invalid_inputs' in err else 500)
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    params['postrisk_func'] = 'make_impact_report.main'
+    make_impact_reports = _get_bool_param(post_data, 'make_impact_reports')
+    if make_impact_reports:
+        params['postrisk_func'] = 'make_impact_reports.main'
     email_file_path = request.POST.get('email_file_path')
     response_data = create_impact_job(request, params, email_file_path)
     return JsonResponse(response_data, status=200)
@@ -1409,7 +1414,8 @@ def impact_run_with_shakemap(request):
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    return _run_impact_job(request, post, rupture_path=post.get('rupture_file'))
+    return _run_impact_job(
+        request, post, rupture_path=post.get('rupture_file'))
 
 
 def extract_report_from_datastore(dstore, iso3, file_format):
@@ -2497,7 +2503,7 @@ def can_extract(request, resource):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
-    summarize = get_bool_param(request, 'summarize')
+    summarize = _get_bool_param(request.GET, 'summarize')
     secondary_peril = request.GET.get('secondary_peril')
     if secondary_peril:
         name += f'?secondary_peril={secondary_peril}'

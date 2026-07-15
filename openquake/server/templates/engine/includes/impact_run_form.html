@@ -69,6 +69,9 @@
                 <label for"notes">{{ impact_form_labels.notes }}</label>
                 <input class="impact-input impact-input-wider" type="text" id="notes" name="notes" placeholder="{{ impact_form_placeholders.notes }}" value="{{ impact_form_defaults.notes }}" {% if user_level < 1 %}disabled{% endif %}/>
               </div>
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
+                <label class="after_get_rupture_btn" for="make_impact_reports"><input type="checkbox" id="make_impact_reports" class="after_get_rupture_btn" value="1" checked> {{ impact_form_labels.make_impact_reports }}</label>
+              </div>
               <div class="impact_form_row">
                 <button id="submit_impact_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
                 <!-- <input type="submit"> -->
