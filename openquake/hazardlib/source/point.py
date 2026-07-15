@@ -138,6 +138,7 @@ class PointSource(ParametricSeismicSource):
         'adjust_lower_seismogenic_depth',
         'adjust_upper_seismogenic_depth',
         'set_msr',
+        'set_hypo_depth_dist',
     }
     ps_grid_spacing = 0  # updated in CollapsedPointSource
 
