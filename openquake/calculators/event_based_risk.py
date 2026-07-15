@@ -50,7 +50,7 @@ def size_mb(df):
     """
     :returns: the size in MB of the dataframe
     """
-    return df.memory_usage().sum() / 1024**2
+    return df.memory_usage().sum() // 1024**2
 
 
 def get_assetdf_startstop(assetcol):
@@ -340,7 +340,7 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     blks = list(general.block_splitter(dfs, GMF_MB, size_mb))
     last = len(blks) - 1
     if last > 0:
-        sizes = [sum(size_mb(df) for df in blk) for blk in blks]
+        sizes = [round(sum(size_mb(df)) for df in blk) for blk in blks]
         print(f'{monitor.task_no=} {len(blks)=}, {sizes=}')
     for b, blk in enumerate(blks):
         # NB: it is essential to concatenate the small dataframes to have
