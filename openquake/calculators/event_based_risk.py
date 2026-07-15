@@ -327,14 +327,17 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = [dic['gmfdata'] for dic in event_based.event_based(
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if len(dic['gmfdata'])]
-    if dfs:
-        breakpoint()
+           if len(dic['gmfdata']))
+    blks = list(general.block_splitter(dfs, 1E7, len))
+    for b, blk in enumerate(blks):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield from event_based_risk(pandas.concat(dfs), monitor)
+        if b == 0:
+            yield from event_based_risk(pandas.concat(blk), monitor)
+        else:
+            yield event_based_risk, pandas.concat(blk)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
