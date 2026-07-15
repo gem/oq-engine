@@ -331,10 +331,11 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
     blks = list(general.block_splitter(dfs, 1E7, len))
+    last = len(blks) - 1
     for b, blk in enumerate(blks):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        if b == 0:
+        if b == last:
             yield from event_based_risk(pandas.concat(blk), monitor)
         else:
             yield event_based_risk, pandas.concat(blk)
