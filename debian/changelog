@@ -1,3 +1,7 @@
+  [Michele Simionato, Christopher Brooks]
+  * Added absolute epistemic uncertainty for hypoDepthDist for both
+    simple faults and background sources. QA test in logictree/case_29
+  
   [Michele Simionato]
   * Fine tuned memory consumption and slow tasks in ebrisk
   * Changed the event_based_risk calculator to split the assets by region

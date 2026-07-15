@@ -47,6 +47,7 @@ class AreaSource(ParametricSeismicSource):
         'adjust_lower_seismogenic_depth',
         'adjust_upper_seismogenic_depth',
         'set_msr',
+        'set_hypo_depth_dist',
     }
 
     def __init__(self, source_id, name, tectonic_region_type,
