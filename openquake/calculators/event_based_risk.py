@@ -50,7 +50,7 @@ def size_mb(df):
     """
     :returns: the size in MB of the dataframe
     """
-    return df.memory_usage().sum() // 1024**2
+    return df.memory_usage().sum() / 1024**2
 
 
 def get_assetdf_startstop(assetcol):
