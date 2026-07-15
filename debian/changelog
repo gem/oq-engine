@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fine tuned memory consumption and slow tasks in ebrisk
   * Changed the event_based_risk calculator to split the assets by region
     and not by taxonomy (thus generating slightly different random numbers)
   * Changed `oq engine --make-report` to generate a Markdown report (no HTML)

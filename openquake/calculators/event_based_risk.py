@@ -42,8 +42,15 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 250
+GMF_MB = 500
 get_n_occ = operator.itemgetter(1)
+
+
+def size_mb(df):
+    """
+    :returns: the size in MB of the dataframe
+    """
+    return df.memory_usage().sum() / 1024**2
 
 
 def get_assetdf_startstop(assetcol):
@@ -327,13 +334,21 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = [dic['gmfdata'] for dic in event_based.event_based(
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if len(dic['gmfdata'])]
-    if dfs:
+           if len(dic['gmfdata']))
+    blks = list(general.block_splitter(dfs, GMF_MB, size_mb))
+    last = len(blks) - 1
+    # if last > 0:
+    #     sizes = [round(sum(size_mb(df) for df in blk)) for blk in blks]
+    #     print(f'{monitor.task_no=} {len(blks)=}, {sizes=}')
+    for b, blk in enumerate(blks):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield from event_based_risk(pandas.concat(dfs), monitor)
+        if b == last:
+            yield from event_based_risk(pandas.concat(blk), monitor)
+        else:
+            yield event_based_risk, pandas.concat(blk)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
