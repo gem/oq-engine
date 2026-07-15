@@ -481,7 +481,7 @@ master_seed:
   Default: 123456789
 
 make_impact_reports:
-  Produce a one-pager impact reports for each affected country,
+  Produce a one-page impact reports for each affected country,
   as postrisk_func
   Example: *make_impact_reports = true*.
   Default: False

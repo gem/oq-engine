@@ -159,7 +159,7 @@ IMPACT_FORM_LABELS = {
     'description': 'Description',
     'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
-    'make_impact_reports': 'Make one-pager country reports',
+    'make_impact_reports': 'Make one-page country reports',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
