@@ -331,8 +331,9 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
     blks = list(general.block_splitter(dfs, 1E7, len))
-    print(f'{monitor.task_no=} {len(blks)=}')
     last = len(blks) - 1
+    if last > 0:
+        print(f'{monitor.task_no=} {len(blks)=}')
     for b, blk in enumerate(blks):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
