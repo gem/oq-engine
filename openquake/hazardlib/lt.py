@@ -83,6 +83,15 @@ def abGR(utype, node, filename):
             node, filename, 'expected a pair of floats separated by space')
 
 
+@parse_uncertainty.add('setHypoDepthDistribution')
+def setHypoDepthDistribution(utype, node, filename):
+    try:
+        return [n.attrib for n in node.hypoDepthDist]
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a hypoDepthDist')
+
+
 @parse_uncertainty.add('maxMagAndDeltaMagACRelative',
                        'maxMagAndDeltaMagACRelativeNoMoBalance')
 def maxMagAndDeltaMagAC(utype, node, filename):
@@ -429,6 +438,11 @@ def _setLSDRelative(utype, source, value):
 @apply_uncertainty.add('setUpperSeismDepthRelative')
 def _setUSDRelative(utype, source, value):
     source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
+
+
+@apply_uncertainty.add('setHypoDepthDistribution')
+def _set_hypo_depth_dist_absolute(utype, source, value):
+    source.modify('set_hypo_depth_dist', dict(hdd=value))
 
 
 @apply_uncertainty.add('dummy')  # do nothing
