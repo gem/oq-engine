@@ -62,7 +62,7 @@ def unknown(utype, node, filename):
         return float(node.text)
     except (TypeError, ValueError):
         raise LogicTreeError(
-            node, filename, f'unknown {utype}: expected single float value, '
+            node, filename, f'{utype}: expected single float value, '
             f'got "{node.text}"')
 
 
@@ -890,7 +890,7 @@ class BranchSet(object):
         for br in self.branches:
             assert 0 <= br.weight <= 1, br.weight
             tot += br.weight
-        #assert abs(tot - 1.) < 5E-6, (tot, [br.weight for br in self.branches])
+        assert abs(tot - 1.) < 5E-6, (tot, [br.weight for br in self.branches])
 
     def __len__(self):
         return len(self.branches)
