@@ -3,10 +3,16 @@
     <logicTree logicTreeID="lt">
 
         <logicTreeBranchSet branchSetID="bs0" uncertaintyType="sourceModel">
-            <logicTreeBranch branchID="alt12">
-                <!-- Alt1 (area sources with TE or AC MFD) + Alt2 (with embedded faults and area sources, using incrementalMFD to split rates) -->
-                <uncertaintyModel>alt12.xml</uncertaintyModel>
-                <uncertaintyWeight>0.5</uncertaintyWeight>
+            <logicTreeBranch branchID="alt12_UBN">
+                <!-- Alt1 (area sources with TE or AC MFD), NVA-UBN (west, north) geometry -->
+                <uncertaintyModel>alt12_UBN.xml</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="alt12_AB">
+                <!-- Alt1 (area sources with TE or AC MFD), NVA-AB (east, central) geometry -->
+                <uncertaintyModel>alt12_AB.xml</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
             </logicTreeBranch>
 
             <logicTreeBranch branchID="alt3">
@@ -16,8 +22,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- Apply only to NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source; TE (0.7) vs AC (0.3) as alternative MFD flavours -->
-        <logicTreeBranchSet applyToSources="NVA-UBN-bkg" branchSetID="bs1a" uncertaintyType="recurSet">
+        <!-- Choose between a TE (weight 0.7) or AC (weight 0.3) MFD for the NVA-UBN geometry -->
+        <logicTreeBranchSet applyToBranches="alt12_UBN" applyToSources="NVA-UBN-bkg" branchSetID="bs1a" uncertaintyType="recurSet">
             <logicTreeBranch branchID="262">
                 <!-- TE MFD for NVA-UBN geometry -->
                 <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/></uncertaintyModel>
@@ -31,7 +37,6 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- applyToSources must be used to target only required sources in given recurSet -->
         <logicTreeBranchSet applyToBranches="262" applyToSources="NVA-UBN-bkg" branchSetID="bs2a" uncertaintyType="recurRow">
             <logicTreeBranch branchID="262a">
                 <uncertaintyModel><row b_value="0.531" ref_mag="3.25" rate="0.223505"/></uncertaintyModel>
@@ -44,7 +49,6 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- applyToSources must be used to target only required sources in given recurSet -->
         <logicTreeBranchSet applyToBranches="70" applyToSources="NVA-UBN-bkg" branchSetID="bs2b" uncertaintyType="recurRow">
             <logicTreeBranch branchID="70a">
                 <uncertaintyModel><row b_value="0.536" ref_mag="3.25" rate="0.227421"/></uncertaintyModel>
@@ -57,8 +61,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- Apply only to NVA-AB (alt_bound=east, unc_bound=central) geometry version of the area source; TE (0.7) vs AC (0.3) as alternative MFD flavours -->
-        <logicTreeBranchSet applyToSources="NVA-AB-bkg" branchSetID="bs1b" uncertaintyType="recurSet">
+        <!-- Choose between a TE (weight 0.7) or AC (weight 0.3) MFD for the NVA-AB geometry -->
+        <logicTreeBranchSet applyToBranches="alt12_AB" applyToSources="NVA-AB-bkg" branchSetID="bs1b" uncertaintyType="recurSet">
             <logicTreeBranch branchID="154">
                 <!-- TE MFD for NVA-AB geometry -->
                 <uncertaintyModel><row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
@@ -72,7 +76,6 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- applyToSources must be used to target only required sources in given recurSet -->
         <logicTreeBranchSet applyToBranches="154" applyToSources="NVA-AB-bkg" branchSetID="bs2c" uncertaintyType="recurRow">
             <logicTreeBranch branchID="154a">
                 <uncertaintyModel><row b_value="0.567" ref_mag="3.25" rate="0.119375"/></uncertaintyModel>
@@ -85,7 +88,6 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- applyToSources must be used to target only required sources in given recurSet -->
         <logicTreeBranchSet applyToBranches="52" applyToSources="NVA-AB-bkg" branchSetID="bs2d" uncertaintyType="recurRow">
             <logicTreeBranch branchID="52a">
                 <uncertaintyModel><row b_value="0.575" ref_mag="3.25" rate="0.121338"/></uncertaintyModel>
@@ -98,53 +100,41 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- Lower seismogenic depth epistemic uncertainty: correlated across both area source geometries so the same LSD is used for both in each realization -->
-        <logicTreeBranchSet applyToSources="*" branchSetID="bs3" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="lsd10">
-                <uncertaintyModel>
-                    <correlated src="NVA-UBN-bkg">10.0</correlated>
-                    <correlated src="NVA-AB-bkg">10.0</correlated>
-                </uncertaintyModel>
+        <!-- Choose the lower seismogenic depth for the NVA-UBN geometry -->
+        <logicTreeBranchSet applyToBranches="262a 262b 70a 70b" applyToSources="NVA-UBN-bkg" branchSetID="bs3a" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="lsd10_UBN">
+                <uncertaintyModel>10.0</uncertaintyModel>
                 <uncertaintyWeight>0.3</uncertaintyWeight>
             </logicTreeBranch>
 
-            <logicTreeBranch branchID="lsd15">
-                <uncertaintyModel>
-                    <correlated src="NVA-UBN-bkg">15.0</correlated>
-                    <correlated src="NVA-AB-bkg">15.0</correlated>
-                </uncertaintyModel>
+            <logicTreeBranch branchID="lsd15_UBN">
+                <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.4</uncertaintyWeight>
             </logicTreeBranch>
 
-            <logicTreeBranch branchID="lsd20">
-                <uncertaintyModel>
-                    <correlated src="NVA-UBN-bkg">20.0</correlated>
-                    <correlated src="NVA-AB-bkg">20.0</correlated>
-                </uncertaintyModel>
+            <logicTreeBranch branchID="lsd20_UBN">
+                <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.3</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!--
-        <logicTreeBranchSet branchSetID="bs1e" uncertaintyType="recurSet">
-            <logicTreeBranch branchID="244">
-                <uncertaintyModel><row alt_bound="west" unc_bound="north" rate_distrib="scenario_3" max_mag="6.8"/></uncertaintyModel>
-                <uncertaintyWeight>1.0</uncertaintyWeight>
-            </logicTreeBranch>
-        </logicTreeBranchSet>
-
-        <logicTreeBranchSet applyToBranches="244" branchSetID="bs2e" uncertaintyType="recurRow">
-            <logicTreeBranch branchID="244a">
-                <uncertaintyModel><row b_value_TE="0.538" ref_mag_TE="3.25" rate_TE="0.220636" b_value_AC="0.300" ref_mag_AC="5.80" rate_AC="0.006549"/></uncertaintyModel>
-                <uncertaintyWeight>0.8</uncertaintyWeight>
+        <!-- Choose the lower seismogenic depth for the NVA-AB geometry -->
+        <logicTreeBranchSet applyToBranches="154a 154b 52a 52b" applyToSources="NVA-AB-bkg" branchSetID="bs3b" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="lsd10_AB">
+                <uncertaintyModel>10.0</uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
             </logicTreeBranch>
 
-            <logicTreeBranch branchID="244b">
-                <uncertaintyModel><row b_value_TE="0.674" ref_mag_TE="3.25" rate_TE="0.219110" b_value_AC="0.300" ref_mag_AC="5.80" rate_AC="0.003594"/></uncertaintyModel>
-                <uncertaintyWeight>0.2</uncertaintyWeight>
+            <logicTreeBranch branchID="lsd15_AB">
+                <uncertaintyModel>15.0</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="lsd20_AB">
+                <uncertaintyModel>20.0</uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
-        -->
 
     </logicTree>
 </nrml>
