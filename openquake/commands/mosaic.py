@@ -118,7 +118,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
                        siteid=' '.join(map(str, ids[model])))
             params = get_params_from(dic, mosaic_dir)
             params['exports'] = 'csv'
-            params['export_dir'] = os.path.join(asce_dir, model)
+            params['export_dir'] = os.path.abspath(os.path.join(asce_dir, model))
             # del params['postproc_func']
             allparams.append(params)
             models.append(model)
