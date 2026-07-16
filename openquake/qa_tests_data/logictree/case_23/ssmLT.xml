@@ -17,25 +17,25 @@
                         branchSetID="bs3">
       <logicTreeBranch branchID="b31">
         <uncertaintyModel>
-          ocn_1033 3.606 1.305,
-          ocn_1062 2.711 1.034,
-          ocn_1261 2.500 1.100,
-          ocn_1281 2.400 1.200,
-          ocn_1379 2.300 1.200,
-          ocn_1401 2.200 1.200,
-          ocn_1417 2.100 1.200,
+          <correlated src="ocn_1033">3.606 1.305</correlated>
+          <correlated src="ocn_1062">2.711 1.034</correlated>
+          <correlated src="ocn_1261">2.500 1.100</correlated>
+          <correlated src="ocn_1281">2.400 1.200</correlated>
+          <correlated src="ocn_1379">2.300 1.200</correlated>
+          <correlated src="ocn_1401">2.200 1.200</correlated>
+          <correlated src="ocn_1417">2.100 1.200</correlated>
         </uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="b32">
         <uncertaintyModel>
-          ocn_1033 3.606 0.305,
-          ocn_1062 2.711 0.034,
-          ocn_1261 2.500 0.100,
-          ocn_1281 2.400 0.200,
-          ocn_1379 2.300 0.200,
-          ocn_1401 2.200 0.200,
-          ocn_1417 2.100 0.200,
+          <correlated src="ocn_1033">3.606 0.305</correlated>
+          <correlated src="ocn_1062">2.711 0.034</correlated>
+          <correlated src="ocn_1261">2.500 0.100</correlated>
+          <correlated src="ocn_1281">2.400 0.200</correlated>
+          <correlated src="ocn_1379">2.300 0.200</correlated>
+          <correlated src="ocn_1401">2.200 0.200</correlated>
+          <correlated src="ocn_1417">2.100 0.200</correlated>
         </uncertaintyModel>
         <uncertaintyWeight>0.5</uncertaintyWeight>
       </logicTreeBranch>
