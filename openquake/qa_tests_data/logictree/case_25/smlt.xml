@@ -14,7 +14,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="alt12"
             >
                 <uncertaintyModel>
-                <!-- Alt1 (area sources with TE or AC MFD) + Alt2 (with embedded faults)-->
+                <!-- Alt1 (area sources with TE or AC MFD) + Alt2 (with embedded faults and area sources, using incrementalMFD to split rates)-->
                     alt12.xml
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -40,6 +40,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="262"
             >
                 <uncertaintyModel>
+                    <!-- corresponds to the NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source-->
                     <row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -81,6 +82,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="70"
             >
                 <uncertaintyModel>
+                    <!-- Also corresponds to the NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source but for AC MFD instead of TE MFD-->
                     <row recur_model="AC" alt_bound="west" unc_bound="north" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -114,6 +116,91 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
+        <logicTreeBranchSet
+        branchSetID="bs1c"
+        uncertaintyType="recurSet"
+        >
+            <logicTreeBranch
+            branchID="154"
+            >
+                <uncertaintyModel>
+                    <!-- NVA-AB geometry (alt_bound=east, unc_bound=central) with TE MFD -->
+                    <row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToBranches="154"
+        branchSetID="bs2c"
+        uncertaintyType="recurRow"
+        >
+            <logicTreeBranch
+            branchID="154_01"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.567" ref_mag="3.25" rate="0.119375"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.7
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="154_02"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.724" ref_mag="3.25" rate="0.119375"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.3
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        branchSetID="bs1d"
+        uncertaintyType="recurSet"
+        >
+            <logicTreeBranch
+            branchID="52"
+            >
+                <uncertaintyModel>
+                    <!-- NVA-AB geometry (alt_bound=east, unc_bound=central) with AC MFD -->
+                    <row recur_model="AC" alt_bound="east" unc_bound="central" max_mag="6.8"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToBranches="52"
+        branchSetID="bs2d"
+        uncertaintyType="recurRow"
+        >
+            <logicTreeBranch
+            branchID="52_01"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.575" ref_mag="3.25" rate="0.121338"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.7
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="52_02"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.735" ref_mag="3.25" rate="0.119743"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.3
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <!--
         <logicTreeBranchSet
         branchSetID="bs3"
         uncertaintyType="recurSet"
@@ -155,6 +242,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
+        -->
     </logicTree>
 </nrml>
 
