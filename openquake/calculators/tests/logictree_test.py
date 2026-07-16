@@ -33,8 +33,9 @@ from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_28,
-    case_29, case_30, case_31, case_32, case_33, case_36, case_39, case_45,
-    case_46, case_52, case_56, case_58, case_59, case_67, case_68, case_71,
+    case_29, case_30, case_31, case_32, case_33, case_34, case_36, case_39,
+    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
+    case_71,
     case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
@@ -547,8 +548,52 @@ hazard_uhs-std.csv
     def test_case_33(self):
         # Test seismogenic depth epistemic uncertainties
         self.assert_curves_ok(
-            ['hazard_curve-mean-PGA.csv'], 
-             case_33.__file__)    
+            ['hazard_curve-mean-PGA.csv'],
+             case_33.__file__)
+
+    def test_case_34(self):
+        # Full enumeration: runtime and XML must give identical curves
+        self.run_calc(case_34.__file__, 'job_runtime.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+
+        # 5 samples, same seed: both approaches must give identical curves
+        self.run_calc(case_34.__file__, 'job_runtime_sampling.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_sampling.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA_sampling.csv', f)
+
+        # disagg_by_src: runtime and XML must give identical results
+        self.run_calc(case_34.__file__, 'job_runtime_disagg.ini')
+        [f] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_disagg.ini')
+        [f] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', f)
+
+        # event_based: runtime and XML must give identical ruptures and GMFs
+        # NOTE: Because of zlib.crc32(source_id, ses_seed) in source/base.py
+        # the equivalency holds ONLY if same branch name is provided by the
+        # builder script and specified in the SSC logic tree XML file
+        self.run_calc(case_34.__file__, 'job_runtime_eb_sampling.ini')
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures_eb_sampling.csv', f)
+        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data_eb_sampling.csv', f)
+
+        self.run_calc(case_34.__file__, 'job_xml_eb_sampling.ini')
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures_eb_sampling.csv', f)
+        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data_eb_sampling.csv', f)
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
