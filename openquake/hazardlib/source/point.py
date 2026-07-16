@@ -335,9 +335,14 @@ class PointSource(ParametricSeismicSource):
     def modify_set_lower_seismogenic_depth(self, lsd):
         """
         Modifies the current source geometry by replacing the original
-        lower seismogenic depth with the passed depth
+        lower seismogenic depth with the passed depth.
+
+        Hypocenter depths deeper than the new LSD are dropped and the
+        remaining probabilities are renormalised (see
+        ParamatricSeismicSource._shrink_hypo_depths_to_lsd).
         """
         self.lower_seismogenic_depth = lsd
+        self._shrink_hypo_depths_to_lsd(lsd)
 
     def modify_adjust_lower_seismogenic_depth(self, increment):
         """

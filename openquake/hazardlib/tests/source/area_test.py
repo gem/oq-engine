@@ -122,3 +122,18 @@ class AreaSourceDipFracsTestCase(unittest.TestCase):
             self.assertIsNone(ps.hypo_dip_fracs)
 
 
+class AreaSourceModifyLSDTestCase(unittest.TestCase):
+
+    def test_lsd_shrink_filters_and_renormalises_hypos(self):
+        hdd = PMF([(0.2, 4.0), (0.5, 8.0), (0.3, 12.0)])
+        hdd.hypo_dip_fracs = (0.5, 0.6, 0.7)
+        polygon = Polygon([Point(0, 0), Point(0, 1), Point(1, 1), Point(1, 0)])
+        src = make_area_source(polygon, 50.0, hypocenter_distribution=hdd,
+                               lower_seismogenic_depth=15.0)
+        src.modify_set_lower_seismogenic_depth(10.0)
+        data = src.hypocenter_distribution.data
+        self.assertEqual([d for _, d in data], [4.0, 8.0])
+        self.assertAlmostEqual(data[0][0], 0.2 / 0.7)
+        self.assertEqual(src.hypo_dip_fracs, (0.5, 0.6))
+
+
