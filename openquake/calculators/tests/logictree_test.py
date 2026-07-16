@@ -32,10 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_28,
-    case_29, case_30, case_31, case_32, case_33, case_36, case_39, case_45,
-    case_46, case_52, case_56, case_58, case_59, case_67, case_68, case_71,
-    case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23,
+    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
+    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
+    case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -489,6 +489,14 @@ hazard_uhs-std.csv
                       site_model_file='fat.csv slim.csv')
         nc2 = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
         assert nc2 >= nc
+
+    def test_case_23_bis(self):
+        # correlated uncertainties
+        self.run_calc(case_23.__file__, 'correlated.ini')
+        [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
+        ns = len(self.calc.datastore['source_info'])
+        assert ns == 26
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
