@@ -100,41 +100,5 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- Choose the lower seismogenic depth for the NVA-UBN geometry -->
-        <logicTreeBranchSet applyToBranches="262a 262b 70a 70b" applyToSources="NVA-UBN-bkg" branchSetID="bs3a" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="lsd10_UBN">
-                <uncertaintyModel>10.0</uncertaintyModel>
-                <uncertaintyWeight>0.3</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="lsd15_UBN">
-                <uncertaintyModel>15.0</uncertaintyModel>
-                <uncertaintyWeight>0.4</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="lsd20_UBN">
-                <uncertaintyModel>20.0</uncertaintyModel>
-                <uncertaintyWeight>0.3</uncertaintyWeight>
-            </logicTreeBranch>
-        </logicTreeBranchSet>
-
-        <!-- Choose the lower seismogenic depth for the NVA-AB geometry -->
-        <logicTreeBranchSet applyToBranches="154a 154b 52a 52b" applyToSources="NVA-AB-bkg" branchSetID="bs3b" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="lsd10_AB">
-                <uncertaintyModel>10.0</uncertaintyModel>
-                <uncertaintyWeight>0.3</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="lsd15_AB">
-                <uncertaintyModel>15.0</uncertaintyModel>
-                <uncertaintyWeight>0.4</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="lsd20_AB">
-                <uncertaintyModel>20.0</uncertaintyModel>
-                <uncertaintyWeight>0.3</uncertaintyWeight>
-            </logicTreeBranch>
-        </logicTreeBranchSet>
-
     </logicTree>
 </nrml>
