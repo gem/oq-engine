@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
 from openquake.hazardlib import geo, mfd
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
@@ -88,9 +89,28 @@ class AreaSource(ParametricSeismicSource):
     def modify_set_lower_seismogenic_depth(self, lsd):
         """
         Modifies the current source geometry by replacing the original
-        lower seismogenic depth with the passed depth
+        lower seismogenic depth with the passed depth.
+
+        Hypocenter depths deeper than the new LSD are dropped and the
+        remaining probabilities are renormalised. Any per-depth
+        hypo_dip_fracs are trimmed to match.
         """
         self.lower_seismogenic_depth = lsd
+        hdd = self.hypocenter_distribution
+        fracs = getattr(hdd, 'hypo_dip_fracs', None)
+        keep = [(i, prob, depth) for i, (prob, depth) in enumerate(hdd.data)
+                if depth <= lsd]
+        if not keep:
+            raise ValueError(
+                f'No hypocenter depths remain at or above the new '
+                f'lower_seismogenic_depth={lsd}')
+        total = sum(prob for _, prob, _ in keep)
+        new_hdd = PMF([(prob / total, depth) for _, prob, depth in keep])
+        if fracs is not None:
+            new_fracs = tuple(fracs[i] for i, _, _ in keep)
+            new_hdd.hypo_dip_fracs = new_fracs
+            self.hypo_dip_fracs = new_fracs
+        self.hypocenter_distribution = new_hdd
 
     def modify_adjust_lower_seismogenic_depth(self, increment):
         """

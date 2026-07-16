@@ -10,6 +10,7 @@
             </logicTreeBranch>
 
             <logicTreeBranch branchID="alt3">
+                <!-- Alt3 (embedded faults and area sources with total EQ rate partioned using seismic moment) -->
                 <uncertaintyModel>alt3.xml</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
@@ -93,6 +94,33 @@
 
             <logicTreeBranch branchID="52b">
                 <uncertaintyModel><row b_value="0.735" ref_mag="3.25" rate="0.119743"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <!-- Lower seismogenic depth epistemic uncertainty: correlated across both area source geometries so the same LSD is used for both in each realization -->
+        <logicTreeBranchSet applyToSources="*" branchSetID="bs3" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="lsd10">
+                <uncertaintyModel>
+                    <correlated src="NVA-UBN-bkg">10.0</correlated>
+                    <correlated src="NVA-AB-bkg">10.0</correlated>
+                </uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="lsd15">
+                <uncertaintyModel>
+                    <correlated src="NVA-UBN-bkg">15.0</correlated>
+                    <correlated src="NVA-AB-bkg">15.0</correlated>
+                </uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="lsd20">
+                <uncertaintyModel>
+                    <correlated src="NVA-UBN-bkg">20.0</correlated>
+                    <correlated src="NVA-AB-bkg">20.0</correlated>
+                </uncertaintyModel>
                 <uncertaintyWeight>0.3</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
