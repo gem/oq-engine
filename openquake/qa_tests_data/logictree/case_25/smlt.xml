@@ -30,7 +30,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="262" branchSetID="bs2a" uncertaintyType="recurRow">
+        <!-- applyToSources must be used to target only required sources in given recurSet -->
+        <logicTreeBranchSet applyToBranches="262" applyToSources="NVA-UBN-bkg" branchSetID="bs2a" uncertaintyType="recurRow">
             <logicTreeBranch branchID="262a">
                 <uncertaintyModel><row b_value="0.531" ref_mag="3.25" rate="0.223505"/></uncertaintyModel>
                 <uncertaintyWeight>0.7</uncertaintyWeight>
@@ -42,7 +43,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="70" branchSetID="bs2b" uncertaintyType="recurRow">
+        <!-- applyToSources must be used to target only required sources in given recurSet -->
+        <logicTreeBranchSet applyToBranches="70" applyToSources="NVA-UBN-bkg" branchSetID="bs2b" uncertaintyType="recurRow">
             <logicTreeBranch branchID="70a">
                 <uncertaintyModel><row b_value="0.536" ref_mag="3.25" rate="0.227421"/></uncertaintyModel>
                 <uncertaintyWeight>0.7</uncertaintyWeight>
@@ -69,7 +71,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="154" branchSetID="bs2c" uncertaintyType="recurRow">
+        <!-- applyToSources must be used to target only required sources in given recurSet -->
+        <logicTreeBranchSet applyToBranches="154" applyToSources="NVA-AB-bkg" branchSetID="bs2c" uncertaintyType="recurRow">
             <logicTreeBranch branchID="154a">
                 <uncertaintyModel><row b_value="0.567" ref_mag="3.25" rate="0.119375"/></uncertaintyModel>
                 <uncertaintyWeight>0.7</uncertaintyWeight>
@@ -81,7 +84,8 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="52" branchSetID="bs2d" uncertaintyType="recurRow">
+        <!-- applyToSources must be used to target only required sources in given recurSet -->
+        <logicTreeBranchSet applyToBranches="52" applyToSources="NVA-AB-bkg" branchSetID="bs2d" uncertaintyType="recurRow">
             <logicTreeBranch branchID="52a">
                 <uncertaintyModel><row b_value="0.575" ref_mag="3.25" rate="0.121338"/></uncertaintyModel>
                 <uncertaintyWeight>0.7</uncertaintyWeight>
