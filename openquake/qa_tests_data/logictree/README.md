@@ -26,8 +26,10 @@
 | case\_21           | Source Specific Logic Tree with 27 realizations                            |
 | case\_22           | Test sigma_model_alatik2015                                                |
 | case\_23           | Arctic region and IDL (no bounding box)                                    |
+| case\_23\_bis      | Correlated uncertainties                                                   |
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
+| case\_29           | Set hypo depth dist epistemic uncertainty                                  |
 | case\_30           | IMT-dependent weights, International Date Line                             |
 | case\_31           | Source Specific Logic Tree                                                 |
 | case\_32           | Tests setAspectRatioAbsolute and setAspectRatioRelative                    |

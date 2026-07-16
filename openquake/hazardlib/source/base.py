@@ -548,6 +548,35 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.slip_rate = slip_rate
 
+    def modify_set_hypo_depth_dist(self, hdd: list):
+        """
+        Updates the hypoDepthDist assigned to the source.
+
+        :param hdd:
+            List of dictionaries where each dictionary contains
+            the keys of probability and depth, and also potentially
+            of down-dip fraction to place the hypocentre.
+        """
+        # Get fixedDipFrac values if any
+        fracs = tuple(
+            float(dic['fixedDipFrac']) if 'fixedDipFrac' in dic else None
+            for dic in hdd)
+        
+        if hasattr(self, 'hypocenter_distribution'):
+            # Distributed typologies (MPS, PS, area) - rebuild the PMF
+            pmf = PMF([(dic['probability'], dic['depth']) for dic in hdd])
+            if any(f is not None for f in fracs):
+                pmf.hypo_dip_fracs = fracs
+                self.hypo_dip_fracs = fracs
+            else:
+                self.hypo_dip_fracs = None
+            self.hypocenter_distribution = pmf
+        else:
+            # Simple Faults - rebuild the hypo_depth_list
+            self.hypo_depth_list = [
+                (dic['probability'], dic['depth'], frac)
+                for dic, frac in zip(hdd, fracs)]
+
     def modify_set_mmax_truncatedGR(self, mmax: float):
         """
         Updates the mmax assigned. This works on for parametric MFDs.

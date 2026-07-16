@@ -83,6 +83,15 @@ def abGR(utype, node, filename):
             node, filename, 'expected a pair of floats separated by space')
 
 
+@parse_uncertainty.add('setHypoDepthDistribution')
+def setHypoDepthDistribution(utype, node, filename):
+    try:
+        return [n.attrib for n in node.hypoDepthDist]
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a hypoDepthDist')
+
+
 @parse_uncertainty.add('maxMagAndDeltaMagACRelative',
                        'maxMagAndDeltaMagACRelativeNoMoBalance')
 def maxMagAndDeltaMagAC(utype, node, filename):
@@ -431,6 +440,11 @@ def _setUSDRelative(utype, source, value):
     source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
 
 
+@apply_uncertainty.add('setHypoDepthDistribution')
+def _set_hypo_depth_dist_absolute(utype, source, value):
+    source.modify('set_hypo_depth_dist', dict(hdd=value))
+
+
 @apply_uncertainty.add('dummy')  # do nothing
 def _dummy(utype, source, value):
     pass
@@ -450,8 +464,21 @@ def apply_uncertainties(bset_values, src_group):
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
+    srcs = set(src.source_id for src in src_group)
+    for bset, value in bset_values:
+        if bset.correlated:
+            for source_id in value:
+                if source_id not in srcs:
+                    raise NameError(
+                        f'The source {source_id} in {bset.uncertainty_type} is'
+                        ' missing, maybe you mispelled the name?')
     for source in src_group:
-        oks = [bset.filter_source(source) for bset, _value in bset_values]
+        oks = []
+        for bset, value in bset_values:
+            if bset.correlated:
+                oks.append(source.source_id in value)
+            else:
+                oks.append(bset.filter_source(source))
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             srcs = []
@@ -471,7 +498,11 @@ def apply_uncertainties(bset_values, src_group):
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
-                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    if bset.correlated:
+                        apply_uncertainty(
+                            bset.uncertainty_type, src, value[source.source_id])
+                    else:
+                        apply_uncertainty(bset.uncertainty_type, src, value)
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
@@ -683,6 +714,13 @@ class BranchSet(object):
         self.ordinal = ordinal
         self.collapsed = collapsed
         self.branches = []
+
+    @property
+    def correlated(self):
+        """
+        The branchset is applied to correlated sources
+        """
+        return self.filters.get('applyToSources') == ['*']
 
     def sample(self, probabilities, sampling_method):
         """
