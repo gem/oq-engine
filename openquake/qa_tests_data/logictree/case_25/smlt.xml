@@ -33,7 +33,9 @@ xmlns:gml="http://www.opengis.net/gml"
             </logicTreeBranch>
         </logicTreeBranchSet>
 
+        <!-- Apply only to NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source-->
         <logicTreeBranchSet
+        applyToSources="NVA-UBN-bkg"
         branchSetID="bs1a"
         uncertaintyType="recurSet"
         >
@@ -41,7 +43,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="262"
             >
                 <uncertaintyModel>
-                    <!-- corresponds to the NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source-->
+                    <!-- TE MFD for NVA-UBN geometry -->
                     <row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -77,7 +79,9 @@ xmlns:gml="http://www.opengis.net/gml"
             </logicTreeBranch>
         </logicTreeBranchSet>
         
+        <!-- Apply only to NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source-->
         <logicTreeBranchSet
+        applyToSources="NVA-UBN-bkg"
         branchSetID="bs1b"
         uncertaintyType="recurSet"
         >
@@ -85,7 +89,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="70"
             >
                 <uncertaintyModel>
-                    <!-- Also corresponds to the NVA-UBN (alt_bound=west, unc_bound=north) geometry version of the area source but for AC MFD instead of TE MFD-->
+                    <!-- AC MFD for NVA-UBN geometry -->
                     <row recur_model="AC" alt_bound="west" unc_bound="north" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -119,7 +123,10 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
+
+        <!-- Apply only to NVA-AB (alt_bound=east, unc_bound=central) geometry version of the area source-->
         <logicTreeBranchSet
+        applyToSources="NVA-AB-bkg"
         branchSetID="bs1c"
         uncertaintyType="recurSet"
         >
@@ -127,7 +134,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="154"
             >
                 <uncertaintyModel>
-                    <!-- NVA-AB geometry (alt_bound=east, unc_bound=central) with TE MFD -->
+                    <!-- TE MFD for NVA-AB geometry -->
                     <row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -161,7 +168,10 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
+
+        <!-- Apply only to NVA-AB (alt_bound=east, unc_bound=central) geometry version of the area source-->
         <logicTreeBranchSet
+        applyToSources="NVA-AB-bkg"
         branchSetID="bs1d"
         uncertaintyType="recurSet"
         >
@@ -169,7 +179,7 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="52"
             >
                 <uncertaintyModel>
-                    <!-- NVA-AB geometry (alt_bound=east, unc_bound=central) with AC MFD -->
+                    <!-- AC MFD for NVA-AB geometry -->
                     <row recur_model="AC" alt_bound="east" unc_bound="central" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
@@ -203,6 +213,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
+        
         <!--
         <logicTreeBranchSet
         branchSetID="bs1e"
