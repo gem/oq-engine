@@ -219,6 +219,20 @@ def charGeom(utype, node, filename):
     return pairs
 
 
+@parse_uncertainty.add('recurSet')
+def recur_set(utype, node, filename):
+    # max_mag is returned as list because use of 
+    # valid.positivefloats so we convert to scalar
+    node.row.attrib["max_mag"] = node.row.attrib["max_mag"][0]
+    return node.row.attrib
+
+
+@parse_uncertainty.add('recurRow')
+def recur_row(utype, node, filename):
+    return node.row.attrib
+
+
+
 # validations
 
 def _validate_simple_fault_geometry(utype, node, filename):
@@ -449,15 +463,15 @@ def _set_hypo_depth_dist_absolute(utype, source, value):
 
 
 @apply_uncertainty.add('recurRow')
-def _recurrow(utype, source, value):
-    breakpoint()
-    source.modify('recurrow', dict(recurrow=value))
+def _set_recurrow(utype, source, value):
+    source.modify('set_recurrow', dict(recurrow=value))
 
 
 @apply_uncertainty.add('recurSet')
-def _recurset(utype, source, value):
-    breakpoint()
-    source.modify('recurset', dict(recurset=value))
+def _set_recurset(utype, source, value):
+    source.recur_model = value["recur_model"]
+    source.mmax = float(value["max_mag"])
+    return
 
 
 @apply_uncertainty.add('dummy')  # do nothing

@@ -7,8 +7,52 @@
       name="alt12"
       >
     <sourceGroup
-        name="group 1"
-        tectonicRegion="Active Shallow Crust"
-        />
+        name="Alt1 Background Sources"
+        tectonicRegion="NVA"
+        >
+      <areaSource id="NVA-UBS-bkg" name="NVA background (NVA-UBS)">
+          <!-- 1 of the 6 area source geometries in alternative 1 - these different geometries are the "base" sources we modify with additional branching levels -->
+          <areaGeometry>
+              <gml:Polygon>
+                  <gml:exterior>
+                      <gml:LinearRing>
+                          <gml:posList>-121.7076 49.1064 -121.9491 49.0269 -122.0547 49.1451 -122.1555 49.2666 -122.2759 49.4109 -123.0124 49.8213 -124.6899 50.7152 -125.1361 50.9117 -125.8091 51.111 -126.562 51.3272 -126.4772 51.5697 -126.2179 51.678 -125.9767 51.7779 -125.6634 51.906 -124.7858 51.9227 -123.7428 51.4624 -122.6619 51.1255 -121.9429 50.772 -121.4579 49.8895 -121.2884 49.5455 -121.2242 49.4137 -121.161 49.2833 -121.7076 49.1064</gml:posList>
+                      </gml:LinearRing>
+                  </gml:exterior>
+              </gml:Polygon>
+              <!-- Placeholder LSD - it is set by the LSD epistemic uncertainty -->
+              <upperSeismoDepth>0.0</upperSeismoDepth>
+              <lowerSeismoDepth>0.1</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>BCHydroNVAMSR</magScaleRel>
+          <aspectRatioFunction>
+              <type>linear_piecewise</type>
+              <mag_points>
+                  <mag_point mag="4.0" aratio="1.0"/>
+                  <mag_point mag="7.0" aratio="2.0"/>
+              </mag_points>
+          </aspectRatioFunction>
+          <!-- Placeholder MFD: dynamically reconstructed using the recurset/row epistemic uncertainties -->
+          <arbitraryMFD>
+              <magnitudes>3.25</magnitudes>
+              <occurRates>1.0</occurRates>
+          </arbitraryMFD>
+          <nodalPlaneDist>
+              <nodalPlane dip="45.0" probability="0.3" rake="90.0" strike="320.0"/>
+              <nodalPlane dip="60.0" probability="0.4" rake="90.0" strike="320.0"/>
+              <nodalPlane dip="75.0" probability="0.3" rake="90.0" strike="320.0"/>
+          </nodalPlaneDist>
+          <hypoDepthDist>
+              <hypoDepth depth="2.5" probability="0.03388916" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="3.5" probability="0.11861936" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="4.5" probability="0.13560038" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="5.5" probability="0.14237822" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="6.5" probability="0.14237822" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="7.5" probability="0.14237822" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="8.5" probability="0.14237822" fixedDipFrac="0.6667"/>
+              <hypoDepth depth="9.5" probability="0.14237822" fixedDipFrac="0.6667"/>
+          </hypoDepthDist>
+      </areaSource>
+    </sourceGroup>
   </sourceModel>
 </nrml>

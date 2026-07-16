@@ -14,10 +14,11 @@ xmlns:gml="http://www.opengis.net/gml"
             branchID="alt12"
             >
                 <uncertaintyModel>
+                <!-- Alt1 (area sources with TE or AC MFD) + Alt2 (with embedded faults)-->
                     alt12.xml
                 </uncertaintyModel>
                 <uncertaintyWeight>
-                    5.0000000E-01
+                    0.5
                 </uncertaintyWeight>
             </logicTreeBranch>
             <logicTreeBranch
@@ -27,7 +28,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     alt3.xml
                 </uncertaintyModel>
                 <uncertaintyWeight>
-                    5.0000000E-01
+                    0.5
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
@@ -42,7 +43,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
-                    1.0000000E+00
+                    1.0
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
@@ -73,6 +74,47 @@ xmlns:gml="http://www.opengis.net/gml"
             </logicTreeBranch>
         </logicTreeBranchSet>
         <logicTreeBranchSet
+        branchSetID="bs1b"
+        uncertaintyType="recurSet"
+        >
+            <logicTreeBranch
+            branchID="70"
+            >
+                <uncertaintyModel>
+                    <row recur_model="AC" alt_bound="west" unc_bound="north" max_mag="6.8"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToBranches="70"
+        branchSetID="bs2b"
+        uncertaintyType="recurRow"
+        >
+            <logicTreeBranch
+            branchID="70_01"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.536" ref_mag="3.25" rate="0.227421"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.7
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="70_02"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.674" ref_mag="3.25" rate="0.224412"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.3
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
         branchSetID="bs3"
         uncertaintyType="recurSet"
         >
@@ -83,7 +125,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <row alt_bound="west" unc_bound="north" rate_distrib="scenario_3" max_mag="6.8"/>
                 </uncertaintyModel>
                 <uncertaintyWeight>
-                    1.0000000E+00
+                    1.0
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
