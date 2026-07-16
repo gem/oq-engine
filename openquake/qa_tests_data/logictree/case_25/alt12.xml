@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+    xmlns="http://openquake.org/xmlns/nrml/0.5"
+    xmlns:gml="http://www.opengis.net/gml"
+    >
+  <sourceModel
+      name="alt12"
+      >
+    <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        />
+  </sourceModel>
+</nrml>

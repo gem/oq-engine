@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="lt"
+    >
+        <logicTreeBranchSet
+        branchSetID="bs0"
+        uncertaintyType="sourceModel"
+        >
+            <logicTreeBranch
+            branchID="alt12"
+            >
+                <uncertaintyModel>
+                    alt12.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    5.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="alt3"
+            >
+                <uncertaintyModel>
+                    alt3.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    5.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        branchSetID="bs1"
+        uncertaintyType="recurSet"
+        >
+            <logicTreeBranch
+            branchID="262"
+            >
+                <uncertaintyModel>
+                    <row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000000E+00
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToBranches="262"
+        branchSetID="bs2"
+        uncertaintyType="recurRow"
+        >
+            <logicTreeBranch
+            branchID="262_01"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.531" ref_mag="3.25" rate="0.223505"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.7
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="262_02"
+            >
+                <uncertaintyModel>
+                    <row b_value="0.666" ref_mag="3.25" rate="0.223505"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                  0.3
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        branchSetID="bs3"
+        uncertaintyType="recurSet"
+        >
+            <logicTreeBranch
+            branchID="244"
+            >
+                <uncertaintyModel>
+                    <row alt_bound="west" unc_bound="north" rate_distrib="scenario_3" max_mag="6.8"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000000E+00
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToBranches="244"
+        branchSetID="bs4"
+        uncertaintyType="recurRow"
+        >
+            <logicTreeBranch
+            branchID="244_01"
+            >
+                <uncertaintyModel>
+                    <row b_value_TE="0.538" ref_mag_TE="3.25" rate_TE="0.220636" b_value_AC="0.300" ref_mag_AC="5.80" rate_AC="0.006549"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.8
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="244_02"
+            >
+                <uncertaintyModel>
+                    <row b_value_TE="0.674" ref_mag_TE="3.25" rate_TE="0.219110" b_value_AC="0.300" ref_mag_AC="5.80" rate_AC="0.003594"/>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.2
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>
+

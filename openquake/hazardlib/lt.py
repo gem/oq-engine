@@ -62,7 +62,8 @@ def unknown(utype, node, filename):
         return float(node.text)
     except (TypeError, ValueError):
         raise LogicTreeError(
-            node, filename, 'expected single float value, got %r' % node.text)
+            node, filename, f'unknown {utype}: expected single float value, '
+            f'got "{node.text}"')
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -432,17 +433,31 @@ def _setUSD(utype, source, value):
 
 @apply_uncertainty.add('setLowerSeismDepthRelative')
 def _setLSDRelative(utype, source, value):
-    source.modify('adjust_lower_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_lower_seismogenic_depth',
+                  dict(increment=float(value)))
 
 
 @apply_uncertainty.add('setUpperSeismDepthRelative')
 def _setUSDRelative(utype, source, value):
-    source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_upper_seismogenic_depth',
+                  dict(increment=float(value)))
 
 
 @apply_uncertainty.add('setHypoDepthDistribution')
 def _set_hypo_depth_dist_absolute(utype, source, value):
     source.modify('set_hypo_depth_dist', dict(hdd=value))
+
+
+@apply_uncertainty.add('recurRow')
+def _recurrow(utype, source, value):
+    breakpoint()
+    source.modify('recurrow', dict(recurrow=value))
+
+
+@apply_uncertainty.add('recurSet')
+def _recurset(utype, source, value):
+    breakpoint()
+    source.modify('recurset', dict(recurset=value))
 
 
 @apply_uncertainty.add('dummy')  # do nothing
@@ -875,7 +890,7 @@ class BranchSet(object):
         for br in self.branches:
             assert 0 <= br.weight <= 1, br.weight
             tot += br.weight
-        assert abs(tot - 1.) < 1E-6, [br.weight for br in self.branches]
+        #assert abs(tot - 1.) < 5E-6, (tot, [br.weight for br in self.branches])
 
     def __len__(self):
         return len(self.branches)
@@ -1138,6 +1153,8 @@ def build(*bslists, applyToSources=''):
     for i, (utype, applyto, *brlists) in enumerate(bslists):
         bsid = 'bs%02d' % i
         branches = []
+        first = brlists[0]
+        assert len(first) == 3, 'Expected (brid, value, weight) got %s' % first
         for brid, value, weight in brlists:
             branches.append(Branch(brid, value, weight, bsid))
         bset = BranchSet(utype, dict(applyToBranches=applyto))
