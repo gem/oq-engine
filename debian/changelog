@@ -1,7 +1,10 @@
+  [Michele Simionato]
+  * Internal: changed `oq mosaic run_site` to export CSVs in asce_dir/<model>
+
   [Michele Simionato, Christopher Brooks]
   * Added absolute epistemic uncertainty for hypoDepthDist for both
     simple faults and background sources. QA test in logictree/case_29
-  
+
   [Michele Simionato]
   * Experimental implementation of correlated uncertainties
   * Fine tuned memory consumption and slow tasks in ebrisk
