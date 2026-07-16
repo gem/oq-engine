@@ -2589,7 +2589,8 @@ class OqParam(valid.ParamSet):
 
     def from_parent(self, oqparent, new=False):
         """
-        :returns: updated instance with missing parameters copied from oqparent
+        :returns:
+            updated instance with missing parameters copied from oqparent
         """
         params = {name: value for name, value in
                   vars(oqparent).items()

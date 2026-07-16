@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+            <logicTreeBranch branchID="b1">
+                <uncertaintyModel>source_model.xml</uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <!-- Shrinks LSD below the 10 and 15 km hypo depths on the area, point
+             and multi-point sources, exercising the filter+renormalise path in
+             ParametricSeismicSource._shrink_hypo_depths_to_lsd -->
+        <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute"
+                            applyToSources="*" branchSetID="bs2">
+            <logicTreeBranch branchID="lsd8">
+                <uncertaintyModel>
+                    <correlated src="area1">8.0</correlated>
+                    <correlated src="point1">8.0</correlated>
+                    <correlated src="mps1">8.0</correlated>
+                </uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>
