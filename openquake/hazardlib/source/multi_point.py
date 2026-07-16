@@ -123,7 +123,7 @@ class MultiPointSource(ParametricSeismicSource):
 
         Hypocenter depths deeper than the new LSD are dropped and the
         remaining probabilities are renormalised (see
-        ``_shrink_hypo_depths_to_lsd``).
+        ParamatricSeismicSource._shrink_hypo_depths_to_lsd).
         """
         self.lower_seismogenic_depth = lsd
         self._shrink_hypo_depths_to_lsd(lsd)
