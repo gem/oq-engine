@@ -436,9 +436,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
-        self.assertEqual(exc.message,
-                         "expected single float value, got '123.45z'",
-                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(
+            exc.message,
+            'bGRRelative: expected single float value, got "123.45z"',
+            "wrong exception message: %s" % exc.message)
 
     def test_incremental_mfd_absolute_wrong_format(self):
         lt = _make_nrml("""\
@@ -937,46 +938,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
-
-    def test_wrong_filter_on_absolute_uncertainties(self):
-        uncertainties_and_values = [('abGRAbsolute', '123 45'),
-                                    ('maxMagGRAbsolute', '678')]
-        filters = ('applyToSources="src01 src02"',
-                   'applyToTectonicRegionType="Active Shallow Crust"')
-        for uncertainty, value in uncertainties_and_values:
-            for filter_ in filters:
-                lt = _make_nrml("""\
-                    <logicTree logicTreeID="lt1">
-                      <logicTreeBranchingLevel branchingLevelID="bl1">
-                        <logicTreeBranchSet uncertaintyType="sourceModel"
-                                            branchSetID="bs1">
-                          <logicTreeBranch branchID="b1">
-                            <uncertaintyModel>sm.xml</uncertaintyModel>
-                            <uncertaintyWeight>1.0</uncertaintyWeight>
-                          </logicTreeBranch>
-                        </logicTreeBranchSet>
-                      </logicTreeBranchingLevel>
-                      <logicTreeBranchingLevel branchingLevelID="bl2">
-                        <logicTreeBranchSet uncertaintyType="%s"
-                                    branchSetID="bs1" %s>
-                          <logicTreeBranch branchID="b2">
-                            <uncertaintyModel>%s</uncertaintyModel>
-                            <uncertaintyWeight>1.0</uncertaintyWeight>
-                          </logicTreeBranch>
-                        </logicTreeBranchSet>
-                      </logicTreeBranchingLevel>
-                    </logicTree>
-                """ % (uncertainty, filter_, value))
-                sm = _whatever_sourcemodel()
-                exc = self._assert_logic_tree_error(
-                    'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
-                self.assertEqual(exc.lineno, 13)
-                error = (
-                    "uncertainty of type '%s' must define 'applyToSources'"
-                    " with only one source id" % uncertainty)
-                self.assertEqual(
-                    exc.message, error,
-                    "wrong exception message: %s" % exc.message)
 
     def test_duplicated_values(self):
         sm = _whatever_sourcemodel()

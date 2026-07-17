@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5" xmlns:gml="http://www.opengis.net/gml">
+    <logicTree logicTreeID="lt">
+
+        <logicTreeBranchSet branchSetID="bs0" uncertaintyType="sourceModel">
+            <logicTreeBranch branchID="alt12_UBN">
+                <!-- Alt1 (area sources with TE or AC MFD), NVA-UBN (west, north) geometry -->
+                <uncertaintyModel>alt12_UBN.xml</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="alt12_AB">
+                <!-- Alt1 (area sources with TE or AC MFD), NVA-AB (east, central) geometry -->
+                <uncertaintyModel>alt12_AB.xml</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="alt3">
+                <!-- Alt3 (embedded faults and area sources with total EQ rate partioned using seismic moment) -->
+                <uncertaintyModel>alt3.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <!-- Choose between a TE (weight 0.7) or AC (weight 0.3) MFD for the NVA-UBN geometry -->
+        <logicTreeBranchSet applyToBranches="alt12_UBN" applyToSources="NVA-UBN-bkg" branchSetID="bs1a" uncertaintyType="recurSet">
+            <logicTreeBranch branchID="262">
+                <!-- TE MFD for NVA-UBN geometry -->
+                <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="6.8"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="70">
+                <!-- AC MFD for NVA-UBN geometry -->
+                <uncertaintyModel><row recur_model="AC" alt_bound="west" unc_bound="north" max_mag="6.8"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet applyToBranches="262" applyToSources="NVA-UBN-bkg" branchSetID="bs2a" uncertaintyType="recurRow">
+            <logicTreeBranch branchID="262a">
+                <uncertaintyModel><row b_value="0.531" ref_mag="3.25" rate="0.223505"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="262b">
+                <uncertaintyModel><row b_value="0.666" ref_mag="3.25" rate="0.223505"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet applyToBranches="70" applyToSources="NVA-UBN-bkg" branchSetID="bs2b" uncertaintyType="recurRow">
+            <logicTreeBranch branchID="70a">
+                <uncertaintyModel><row b_value="0.536" ref_mag="3.25" rate="0.227421"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="70b">
+                <uncertaintyModel><row b_value="0.674" ref_mag="3.25" rate="0.224412"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <!-- Choose between a TE (weight 0.7) or AC (weight 0.3) MFD for the NVA-AB geometry -->
+        <logicTreeBranchSet applyToBranches="alt12_AB" applyToSources="NVA-AB-bkg" branchSetID="bs1b" uncertaintyType="recurSet">
+            <logicTreeBranch branchID="154">
+                <!-- TE MFD for NVA-AB geometry -->
+                <uncertaintyModel><row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="52">
+                <!-- AC MFD for NVA-AB geometry -->
+                <uncertaintyModel><row recur_model="AC" alt_bound="east" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet applyToBranches="154" applyToSources="NVA-AB-bkg" branchSetID="bs2c" uncertaintyType="recurRow">
+            <logicTreeBranch branchID="154a">
+                <uncertaintyModel><row b_value="0.567" ref_mag="3.25" rate="0.119375"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="154b">
+                <uncertaintyModel><row b_value="0.724" ref_mag="3.25" rate="0.119375"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet applyToBranches="52" applyToSources="NVA-AB-bkg" branchSetID="bs2d" uncertaintyType="recurRow">
+            <logicTreeBranch branchID="52a">
+                <uncertaintyModel><row b_value="0.575" ref_mag="3.25" rate="0.121338"/></uncertaintyModel>
+                <uncertaintyWeight>0.7</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="52b">
+                <uncertaintyModel><row b_value="0.735" ref_mag="3.25" rate="0.119743"/></uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <!-- Lower seismogenic depth -->
+        <logicTreeBranchSet branchSetID="bs3" applyToBranches="262a 262b 70a 70b 154a 154b 52a 52b" applyToSources="NVA-AB-bkg NVA-UBN-bkg" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="lsd10_NVA_AB_UBS">
+                <uncertaintyModel>10</uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="lsd15_NVA_AB_UBS">
+                <uncertaintyModel>15</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="lsd20_NVA_AB_UBS">
+                <uncertaintyModel>20.0</uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

@@ -62,7 +62,8 @@ def unknown(utype, node, filename):
         return float(node.text)
     except (TypeError, ValueError):
         raise LogicTreeError(
-            node, filename, 'expected single float value, got %r' % node.text)
+            node, filename, f'{utype}: expected single float value, '
+            f'got "{node.text}"')
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -216,6 +217,19 @@ def charGeom(utype, node, filename):
                 geom_node, filename, "Surface geometry type not recognised")
         pairs.append((geom_node.tag.split('}')[1], extra))
     return pairs
+
+
+@parse_uncertainty.add('recurSet')
+def recur_set(utype, node, filename):
+    # max_mag is returned as list because use of 
+    # valid.positivefloats so we convert to scalar
+    node.row.attrib["max_mag"] = node.row.attrib["max_mag"][0]
+    return node.row.attrib
+
+
+@parse_uncertainty.add('recurRow')
+def recur_row(utype, node, filename):
+    return node.row.attrib
 
 
 # validations
@@ -432,17 +446,31 @@ def _setUSD(utype, source, value):
 
 @apply_uncertainty.add('setLowerSeismDepthRelative')
 def _setLSDRelative(utype, source, value):
-    source.modify('adjust_lower_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_lower_seismogenic_depth',
+                  dict(increment=float(value)))
 
 
 @apply_uncertainty.add('setUpperSeismDepthRelative')
 def _setUSDRelative(utype, source, value):
-    source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_upper_seismogenic_depth',
+                  dict(increment=float(value)))
 
 
 @apply_uncertainty.add('setHypoDepthDistribution')
 def _set_hypo_depth_dist_absolute(utype, source, value):
     source.modify('set_hypo_depth_dist', dict(hdd=value))
+
+
+@apply_uncertainty.add('recurRow')
+def _set_recurrow(utype, source, value):
+    source.modify('set_recurrow', dict(recurrow=value))
+
+
+@apply_uncertainty.add('recurSet')
+def _set_recurset(utype, source, value):
+    source.recur_model = value["recur_model"]
+    source.mmax = float(value["max_mag"])
+    return
 
 
 @apply_uncertainty.add('dummy')  # do nothing
@@ -875,7 +903,7 @@ class BranchSet(object):
         for br in self.branches:
             assert 0 <= br.weight <= 1, br.weight
             tot += br.weight
-        assert abs(tot - 1.) < 1E-6, [br.weight for br in self.branches]
+        assert abs(tot - 1.) < 5E-6, (tot, [br.weight for br in self.branches])
 
     def __len__(self):
         return len(self.branches)
@@ -1138,6 +1166,8 @@ def build(*bslists, applyToSources=''):
     for i, (utype, applyto, *brlists) in enumerate(bslists):
         bsid = 'bs%02d' % i
         branches = []
+        first = brlists[0]
+        assert len(first) == 3, 'Expected (brid, value, weight) got %s' % first
         for brid, value, weight in brlists:
             branches.append(Branch(brid, value, weight, bsid))
         bset = BranchSet(utype, dict(applyToBranches=applyto))

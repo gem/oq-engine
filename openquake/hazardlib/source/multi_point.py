@@ -137,6 +137,7 @@ class MultiPointSource(ParametricSeismicSource):
             seismogenic depth
         """
         self.lower_seismogenic_depth += increment
+        self._shrink_hypo_depths_to_lsd(self.lower_seismogenic_depth)
 
     def modify_set_upper_seismogenic_depth(self, usd):
         """
