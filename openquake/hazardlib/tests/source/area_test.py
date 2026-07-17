@@ -140,6 +140,7 @@ class AreaSourceModifyLSDTestCase(unittest.TestCase):
 
 
 class AreaSourceRateSplitTestCase(unittest.TestCase):
+    # BCHydro NVA area source: recurSet + rateSplit + recurRow chain
     def test_rate_split_partitions_bg_share(self):
         polygon = Polygon(
             [Point(0, 0), Point(0, 1), Point(1, 1), Point(1, 0)])

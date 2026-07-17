@@ -536,18 +536,20 @@ class SimpleFaultSource(ParametricSeismicSource):
             Dict of values to use in given type of MFD (b_value, ref_mag,
             rate)
         """
-        # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        # Constants for BC Hydro NVA model
         b_ac = 0.3
         delta_mac = 1.0
-        gamma_eff = 0.9185
+        gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
         bin_width = 0.1
 
+        # Get params from recurRow
         mmax = self.mmax
         recur_model = self.recur_model
         bval = float(recurrow["b_value"])
         ref_mag = float(recurrow["ref_mag"])
         rate = float(recurrow["rate"])
 
+        # Build the parametric MFD
         if recur_model == "TE":
             a_val = math.log10(rate) + bval * ref_mag
             parent = TruncatedGRMFD(
@@ -562,20 +564,23 @@ class SimpleFaultSource(ParametricSeismicSource):
                 total_rate=rate,
             )
 
+        # No rateSplit: fault keeps the parametric MFD
         fault_frac = getattr(self, 'rate_split_fault_frac', None)
         if fault_frac is None:
             self.mfd = parent
             return
 
+        # Zero rates below Mmax-1, scale rest by fault_frac x rate_frac
         rate_frac = getattr(self, 'rate_frac', 1.0)
         scale = fault_frac * rate_frac
         threshold = mmax - 1.0
         bins = parent.get_annual_occurrence_rates()
-        # Trim leading zeros to avoid rup-mesh warnings on tiny-M fault rups
         occ = [
             (r * scale if m >= threshold - bin_width / 4 else 0.0)
             for m, r in bins
         ]
+
+        # Trim leading zeros to avoid rup-mesh warnings on tiny-M fault rups
         first = next((i for i, r in enumerate(occ) if r > 0), None)
         if first is None:
             raise ValueError(

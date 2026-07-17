@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <sourceModel name="Alt2 east (NVA-AB bg + 4 embedded faults)">
-        <sourceGroup name="alt2_east" tectonicRegion="NVA">
+    <sourceModel name="Alt2 NVA-UBN (bg + 4 embedded faults)">
+        <sourceGroup name="alt2_NVA-UBN" tectonicRegion="NVA">
 
-<areaSource id="alt2e-bkg" name="NVA background (alt2 east)">
+<areaSource id="NVA-UBN-alt2-bkg" name="NVA background (NVA-UBN alt2)">
     <areaGeometry>
         <gml:Polygon>
             <gml:exterior>
                 <gml:LinearRing>
-                    <gml:posList>-121.7803 49.2349 -121.9131 49.3456 -123.0849 50.2956 -125.9767 51.7779 -125.6634 51.906 -124.7858 51.9227 -123.7428 51.4624 -122.6619 51.1255 -121.9429 50.772 -121.4579 49.8895 -121.2884 49.5455 -121.2242 49.4137 -121.7803 49.2349</gml:posList>
+                    <gml:posList>-121.2884 49.5455 -121.9131 49.3456 -122.1555 49.2666 -122.2759 49.4109 -123.0124 49.8213 -124.6899 50.7152 -125.1361 50.9117 -125.8091 51.111 -126.562 51.3272 -126.4772 51.5697 -126.2179 51.678 -125.9767 51.7779 -125.6634 51.906 -124.7858 51.9227 -123.7428 51.4624 -122.6619 51.1255 -121.9429 50.772 -121.4579 49.8895 -121.2884 49.5455</gml:posList>
                 </gml:LinearRing>
             </gml:exterior>
         </gml:Polygon>
@@ -23,6 +23,7 @@
             <mag_point mag="7.0" aratio="2.0"/>
         </mag_points>
     </aspectRatioFunction>
+    <!-- Placeholder MFD - reconstructed by recurSet + rateSplit + recurRow -->
     <arbitraryMFD>
         <magnitudes>3.25</magnitudes>
         <occurRates>1.0</occurRates>
@@ -54,7 +55,7 @@
     </hypoDepthDist>
 </areaSource>
 
-<simpleFaultSource id="alt2e-EF1" name="Embedded fault (east) EF1" tectonicRegion="NVA" rateFrac="0.3439">
+<simpleFaultSource id="NVA-UBN-alt2-EF1" name="Embedded fault (NVA-UBN alt2) EF1" tectonicRegion="NVA" rateFrac="0.3439">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
@@ -98,7 +99,7 @@
     </hypoDepthDist>
 </simpleFaultSource>
 
-<simpleFaultSource id="alt2e-EF2" name="Embedded fault (east) EF2" tectonicRegion="NVA" rateFrac="0.2415">
+<simpleFaultSource id="NVA-UBN-alt2-EF2" name="Embedded fault (NVA-UBN alt2) EF2" tectonicRegion="NVA" rateFrac="0.2415">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
@@ -140,7 +141,7 @@
     </hypoDepthDist>
 </simpleFaultSource>
 
-<simpleFaultSource id="alt2e-EF3" name="Embedded fault (east) EF3" tectonicRegion="NVA" rateFrac="0.0919">
+<simpleFaultSource id="NVA-UBN-alt2-EF3" name="Embedded fault (NVA-UBN alt2) EF3" tectonicRegion="NVA" rateFrac="0.0919">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
@@ -181,7 +182,7 @@
     </hypoDepthDist>
 </simpleFaultSource>
 
-<simpleFaultSource id="alt2e-EF4" name="Embedded fault (east) EF4" tectonicRegion="NVA" rateFrac="0.3227">
+<simpleFaultSource id="NVA-UBN-alt2-EF4" name="Embedded fault (NVA-UBN alt2) EF4" tectonicRegion="NVA" rateFrac="0.3227">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>

@@ -626,6 +626,7 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         self.assertAlmostEqual(new_fault.dip, 72.0)
 
     def test_rate_split_partitions_fault_share(self):
+        # BCHydro NVA fault source: recurSet + rateSplit + recurRow chain
         from openquake.hazardlib.lt import apply_uncertainty
         fault = deepcopy(self.fault)
         fault.rate_frac = 0.3439

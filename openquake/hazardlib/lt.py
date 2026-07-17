@@ -219,19 +219,22 @@ def charGeom(utype, node, filename):
     return pairs
 
 
+# BCHydro NVA epistemic uncertainty
 @parse_uncertainty.add('recurSet')
 def recur_set(utype, node, filename):
-    # max_mag is returned as list because use of 
+    # max_mag is returned as list because use of
     # valid.positivefloats so we convert to scalar
     node.row.attrib["max_mag"] = node.row.attrib["max_mag"][0]
     return node.row.attrib
 
 
+# BCHydro NVA epistemic uncertainty
 @parse_uncertainty.add('recurRow')
 def recur_row(utype, node, filename):
     return node.row.attrib
 
 
+# BCHydro NVA epistemic uncertainty
 @parse_uncertainty.add('rateSplit')
 def rate_split(utype, node, filename):
     return node.row.attrib
@@ -466,11 +469,13 @@ def _set_hypo_depth_dist_absolute(utype, source, value):
     source.modify('set_hypo_depth_dist', dict(hdd=value))
 
 
+# BCHydro NVA epistemic uncertainty
 @apply_uncertainty.add('recurRow')
 def _set_recurrow(utype, source, value):
     source.modify('set_recurrow', dict(recurrow=value))
 
 
+# BCHydro NVA epistemic uncertainty
 @apply_uncertainty.add('recurSet')
 def _set_recurset(utype, source, value):
     source.recur_model = value["recur_model"]
@@ -478,6 +483,7 @@ def _set_recurset(utype, source, value):
     return
 
 
+# BCHydro NVA epistemic uncertainty
 @apply_uncertainty.add('rateSplit')
 def _set_rate_split(utype, source, value):
     source.rate_split_bg_frac = float(value["bg_frac"])

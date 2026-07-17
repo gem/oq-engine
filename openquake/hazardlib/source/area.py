@@ -141,18 +141,20 @@ class AreaSource(ParametricSeismicSource):
         :param recur_row:
             Dict of values to use in given type of MFD
         """
-        # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        # Constants for BC Hydro NVA model
         b_ac = 0.3
         delta_mac = 1.0
-        gamma_eff = 0.9185
+        gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
         bin_width = 0.1
 
+        # Get params from recurRow
         mmax = self.mmax
         recur_model = self.recur_model
         bval = float(recurrow["b_value"])
         ref_mag = float(recurrow["ref_mag"])
         rate = float(recurrow["rate"])
 
+        # Build the parametric MFD
         if recur_model == "TE":
             a_val = math.log10(rate) + bval * ref_mag
             self.mfd = TruncatedGRMFD(
@@ -167,6 +169,7 @@ class AreaSource(ParametricSeismicSource):
                 total_rate=rate,
                 )
 
+        # Piecewise partition above Mmax-1 if a rateSplit is active
         bg_frac = getattr(self, 'rate_split_bg_frac', None)
         if bg_frac is not None:
             bins = self.mfd.get_annual_occurrence_rates()
