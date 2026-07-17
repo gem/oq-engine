@@ -113,6 +113,7 @@ class server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
 
     @classmethod
     def exit(cls):
@@ -145,6 +146,7 @@ class devel_server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
     exit = server.exit
 
 
@@ -171,6 +173,7 @@ class user:
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     DBPORT = 1908
     CONFIG = ""
+    USER = None
 
     @classmethod
     def exit(cls):
@@ -274,7 +277,7 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
-def install_or_postinstall_standalone(venv, is_install=True):
+def install_or_postinstall_standalone(inst, is_install=True):
     """
     Install the standalone Django applications if possible or
     run '<app>_postinstall' command if it exists
@@ -332,7 +335,7 @@ def install_or_postinstall_standalone(venv, is_install=True):
                 subprocess.check_call(
                     [os.path.join(inst.VENV, *django_admin),
                      "openquake_engine_postinstall", app['name']],
-                    env=django_env)
+                    env=django_env, user=inst.USER)
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
@@ -340,11 +343,11 @@ def install_or_postinstall_standalone(venv, is_install=True):
     return errors
 
 
-def install_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=True)
+def install_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=True)
 
-def postinstall_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=False)
+def postinstall_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=False)
 
 def before_checks(inst, args, usage):
     """
@@ -581,7 +584,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
                 env=custom_env)
         fix_version(commit, inst.VENV)
 
-    errors = install_standalone(inst.VENV)
+    errors = install_standalone(inst)
 
     # create openquake.cfg
     if inst is server or inst is devel_server:
