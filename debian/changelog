@@ -1,8 +1,11 @@
+  [Michele Simionato]
+  * Internal: extended `oq sample` to manage ESRI .asc files
+
   [Christopher Brooks]
   * Added filtering of hypoDepthDist in area, multi-point and point
     sources to only depths within seismogenic depth range and then
     renormalise the distribution. QA test in classical/case_45
-    
+
   [Michele Simionato]
   * Internal: changed `oq mosaic run_site` to export CSVs in asce_dir/<model>
 
