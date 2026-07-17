@@ -295,7 +295,6 @@ def install_or_postinstall_standalone(venv, is_install=True):
 
     STANDALONE_APP_INFO = [
         {"pkg": "oq-platform-standalone", "name": None},
-        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
         {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
         {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
     ]

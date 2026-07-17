@@ -1,0 +1,54 @@
+    <div class="alert alert-info" role="alert">1. Use this form to initialize the fragility model.</div>
+    <div id="form" class="menuItems">
+      <div>
+        <label>Fragility Model Id:</label>
+        <input id="functionId" type="text">
+      </div>
+      <div>
+        <label>Asset Category:</label>
+        <input id="assetCategory" type="text" placeholder="buildings">
+      </div>
+      <div>
+        <label>Loss Category:</label>
+        <select id="lossCategory">
+          <option value="structural">Structural</option>
+          <option value="nonstructural">Nonstructural</option>
+          <option value="contents">Contents</option>
+          <option value="business_interruption">Business Interruption</option>
+          <option value="occupants">Occupants</option>
+        </select>
+      </div>
+      <div>
+        <label>Description:</label>
+        <textarea id="functionDescription" rows="4" cols="10"></textarea>
+      </div>
+      <div>
+        <label>Damage States</label><br>
+        <label>(Comma Separated):</label>
+        <textarea id="limitStates" rows="4" cols="10">slight, moderate, extensive, complete</textarea>
+      </div>
+    </div>
+    <br>
+    <div class="alert alert-info" role="alert">2. Use the 'Add Discrete Function' and 'Add Continuous Function' buttons to generate as many discrete and continuous fragility function sets (ffs) as needed.<br> Generate a NRML file by clicking 'Convert to NRML' once tables are populated.</div>
+    <div id="tables"></div>
+    <br>
+    <button id="addDiscrFunc" type="button" class="btn btn-lg">Add Discrete Function</button>
+    <button id="addContFunc" type="button" class="btn btn-lg">Add Continuous Function</button>
+    <br><br>
+    <div>
+      <button id="convertBtn" type="button" style="display:none;" class="btn btn-primary">Convert to NRML</button>
+    </div>
+    <br>
+    <div id="outputDiv" >
+      <div id="infoMsg" class="alert alert-info" role="alert">3. {%if gem_qgis != None %}'Save As' or Collect{% else %}Download{% endif %} the NRML file for use in the OpenQuake Engine.</div>
+      <div id="validationErrorMsg" class="alert alert-warning" role="alert">Error message</div>
+      <div id="downloadLink" style="display: none;">
+        {%if gem_qgis != None %}
+        <button id="delegateDownloadBtn" type="button" class="btn">Save As</button>
+        <button id="delegateCollectBtn" type="button" class="btn">Collect</button>
+        {% else %}
+        <button id="downloadBtn" type="button" class="btn">Download</button>
+        {% endif %}
+        <form id="downloadForm" method="post"></form></div>
+      <div id="outputText" style="width:600px; margin: auto;"></div>
+    </div>

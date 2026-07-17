@@ -1,0 +1,51 @@
+<div name="exposure-model">
+  <h3>Exposure model</h3>
+
+  <div class="menuItems" name="exposure-model-html" data-gem-group="exposure-model">
+    <label>Exposure <span class="ui-icon ui-icon-help ipt_help" title='File that contains the exposure model.'></span>:</label>
+    {{ exposure_model_html.file_html }}
+    {{ exposure_model_html.new_btn }}
+  </div>
+  <div class="menuItems" name="exposure-model-new" style="display: none;">
+    <div name="msg"><br></div>
+    <form action="upload/exposure_model" method="post" id="file-upload-form" name="exposure-model" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ exposure_model_upload.file_upload }}
+    </form>
+  </div>
+  <div name="exposure-model-risk">
+    <div class="menuItems" name="asset-hazard-distance" data-gem-enabled="true">
+      <label>Asset hazard distance <span class="ui-icon ui-icon-help ipt_help" title='This parameter indicates the maximum allowable distance between an asset and the closest hazard input. Hazard inputs can include hazard curves or ground motion intensity values.'></span>:</label>
+      <input type="text" name="asset_hazard_distance" value="15.0">
+    </div>
+  </div>
+
+  <div>
+    <div class="alert alert-info ipt-info" role="alert" style="text-align: center;">
+      <form style="margin: 0px;">
+        <div class="chbox chbox_last">
+          <input style="margin:0;" type="checkbox" name="taxonomy-mapping-choice">
+          <span class="inlible">Include taxonomy mapping</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div name="taxonomy-mapping" style="display: none;">
+    <div class="menuItems" name="taxonomy-mapping-html" data-gem-group="taxonomy-mapping">
+      <label>Taxonomy mapping <span class="ui-icon ui-icon-help ipt_help" title='FIXME Taxonomy mapping'></span>:</label>
+      {{ taxonomy_mapping_html.file_html }}
+      {{ taxonomy_mapping_html.new_btn }}
+    </div>
+    <div class="menuItems" name="taxonomy-mapping-new" style="display: none;">
+      <div name="msg"><br></div>
+      {% if gem_qgis == None %}
+      <form action="upload/taxonomy_mapping" method="post" id="file-upload-form" name="taxonomy-mapping"
+            enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ taxonomy_mapping_upload.file_upload }}
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>

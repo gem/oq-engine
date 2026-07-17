@@ -1,0 +1,167 @@
+    <div class="alert alert-info" role="alert">1. Use this form to modify the table header.</div>
+    <div id="form">
+      <div class="menuItems">
+        <label>Description:</label>
+        <textarea id="description" rows="4" cols="10" value="exposure model"></textarea>
+      </div>
+      <div id="cost" class="menuItems">
+        <label>Structural Costs:</label>
+        <select id="costStruc">
+          <option value="none">None</option>
+          <option value="aggregated">Aggregated</option>
+          <option value="per_asset">Per Building</option>
+          <option value="per_area">Per Area</option>
+        </select><br>
+        <div id="structural_costs_units_div" class="menuSubItems" style="display: none;">
+          <label>Structural Costs Units:</label>
+          <input id="structural_costs_units" type="text" value="EUR" maxlength="3">
+        </div>
+        <div id="retrofittingSelect" class="menuSubItems">
+          <div id="retroDiv" >
+            <label>Retrofitting Cost</label>
+            <input id="retroChbx" type="checkbox" value="retrofitting">
+          </div>
+        </div>
+        <div id="limitDiv" class="menuSubItems">
+          <label>Limit:</label>
+          <select id="limitSelect">
+            <option value="none">None</option>
+            <option value="absolute">Absolute</option>
+            <option value="relative">Relative</option>
+          </select><br>
+        </div>
+        <div id="deductibleDiv" class="menuSubItems">
+          <label>Deductible:</label>
+          <select id="deductibleSelect">
+            <option value="none">None</option>
+            <option value="absolute">Absolute</option>
+            <option value="relative">Relative</option>
+          </select><br>
+        </div>
+        <label>Nonstructural Costs:</label>
+        <select id="costNonStruc">
+          <option value="none">None</option>
+          <option value="aggregated">Aggregated</option>
+          <option value="per_asset">Per Building</option>
+          <option value="per_area">Per Area</option>
+        </select><br>
+        <div id="nonstructural_costs_units_div" class="menuSubItems" style="display: none;">
+          <label>Nonstructural Costs Units:</label>
+          <input id="nonstructural_costs_units" type="text" value="EUR" maxlength="3">
+        </div>
+        <label>Contents Costs:</label>
+        <select id="costContent">
+          <option value="none">None</option>
+          <option value="aggregated">Aggregated</option>
+          <option value="per_asset">Per Building</option>
+          <option value="per_area">Per Area</option>
+        </select><br>
+        <div id="contents_costs_units_div" class="menuSubItems" style="display: none;">
+          <label>Contents Costs Units:</label>
+          <input id="contents_costs_units" type="text" value="EUR" maxlength="3">
+        </div>
+        <label>Business Interruption Costs:</label>
+        <select id="costBusiness">
+          <option value="none">None</option>
+          <option value="aggregated">Aggregated</option>
+          <option value="per_asset">Per Building</option>
+          <option value="per_area">Per Area</option>
+        </select><br>
+        <div id="busi_inter_costs_units_div" class="menuSubItems" style="display: none;">
+          <label>Business Interruption Costs Units:</label>
+          <input id="busi_inter_costs_units" type="text" value="EUR/month">
+        </div>
+        <div id="perArea" class="menuSubItems">
+          <label>Area:</label>
+          <select id="perAreaSelect">
+            <option value="per_asset">Per Building</option>
+            <option value="aggregated">Aggregated</option>
+          </select><br>
+          <label>Area Units:</label>
+          <input id="area_units" type="text" value="SQM">
+        </div>
+        <div>
+          <label>Occupants:</label>
+          <div id="occupantsCheckBoxes">
+            <input type="checkbox" value="day"> Day
+            <br>
+            <input type="checkbox" value="night"> Night
+            <br>
+            <input type="checkbox" value="transit"> Transit
+          </div>
+        </div>
+        <br>
+      </div>
+    </div>
+    <div class="menuItems" id="tags_section">
+      <label>Tags:</label>
+      <div><input id="tags" type="text" placeholder="for each tag: type its name and press enter" data-role="tagsinput"></div>
+    </div>
+
+    <div name="exposure-type" class="alert alert-info" role="alert">Select type of exposure:
+      <div class="menuItems" style="text-align: center;">
+        <form style="margin: 0px;">
+          <div class="chbox">
+            <input style="margin:0;" type="radio" name="exposure-type" value="csv" checked>
+            <span class="inlible">CSV Exposure (one XML plus one or more CSV files)</span>
+          </div>
+          <div class="chbox chbox_last">
+            <input style="margin:0;" type="radio" name="exposure-type" value="xml">
+            <span class="inlible">XML Exposure (all in one file)</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div name="exposuretbl-descr" class="alert alert-info exposure-type-xml" role="alert">2. Copy and paste values from a spreadsheet into the table below OR upload a CSV file with the same columns number.</div>
+    <div name="exposuretbl" class="exposure-type-xml" style="display: none;">
+      <div name="exposuretbls">
+      </div>
+      <button id="new_exposuretbl_add" type="button" class="btn btn-primary">Add New Table</button>
+    </div>
+
+    <div class="exposure-type-csv">
+      <div class="menuItems">
+        <label>CSV Header Description</label>
+        <table class="tbl-exam-exposure"></table>
+      </div>
+      <div class="menuItems" name="exposure-csv-html">
+        <label>Exposure CSV file[s] <span class="ui-icon ui-icon-help ipt_help" title='FIXME.'></span></a>
+          :</label>
+        {{ exposure_csv_html.file_html }}
+        {{ exposure_csv_html.new_btn }}
+      </div>
+      <div class="menuItems" name="exposure-csv-new" style="display: none;">
+        <div name="msg" class="file-upload-multiple-msg"><br/></div>
+        {% if gem_qgis == None %}
+        <form action="upload/exposure_csv" method="post" id="file-upload-form" name="exposure-csv"
+              enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ exposure_csv_upload.file_upload }}
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div>
+      <button id="convertBtn" type="button" style="display:none;" class="btn btn-primary">Convert to NRML</button>
+    </div>
+    <br>
+    <div id="outputDiv">
+      <div id="infoMsg" class="alert alert-info" role="alert">3. {%if gem_qgis != None %}'Save As' or Collect{% else %}Download{% endif %} the NRML file for use in the OpenQuake Engine.</div>
+      <div id="validationErrorMsg" class="alert alert-warning" role="alert" style="display: none;">Error message</div>
+      <div id="downloadLink" style="display: none;">
+        {%if gem_qgis != None %}
+        <button id="delegateDownloadBtn" type="button" class="btn">Save As</button>
+        <button id="delegateCollectBtn" type="button" class="btn">Collect</button>
+        {% else %}
+        <button id="downloadBtn" type="button" class="btn">Download</button>
+        {% endif %}
+        <form id="downloadForm" method="post" enctype="multipart/form-data"></form>
+      </div>
+      <div id="outputText" style="width:600px; margin: auto;"></div>
+    </div>
+    <div>
+      <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="clean_all">Clean all</button>
+      <form style="display: inline-block;" name="downloadForm" method="post">{% csrf_token %}</form>
+    </div>

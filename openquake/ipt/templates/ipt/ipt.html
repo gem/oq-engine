@@ -1,0 +1,137 @@
+<!--
+Copyright (c) 2015-2019 GEM Foundation
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
+-->
+
+{% extends "site_base.html" %}
+{% load i18n %}
+
+{% block title %} Input Preparation Toolkit {% endblock title %}
+
+{% block extra_head %}
+    {{ block.super }}
+    {% if oqp_version_maj == '1' %}
+    <link href="{{ STATIC_URL }}css/oqplatform_index.css" rel="stylesheet"/>
+    {% else %}
+    <link href="{{ STATIC_URL }}css/oqplatform.css" rel="stylesheet"/>
+    {% endif %}
+    <link href="{{ STATIC_URL }}css/handsontable.full.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}ipt/css/ipt.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}css/jQuery-UI-Bootstrap-0.2.5.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/absolute_center_spinner.css" />
+    <link href="{{ STATIC_URL }}css/sol.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}ipt/css/bootstrap-tagsinput.css" rel="stylesheet"/>
+{% endblock extra_head %}
+
+
+{% block body %}
+  <div class="span12">
+    <div class="hero-unit">
+      <div id="oq-context-ribbon">
+        {% block oq_context_ribbon %}
+        {% endblock oq_context_ribbon %}
+      </div>
+      <div id="oq-body-heading">
+        {% block oq_body_heading %}
+          <h1>{% trans "Input Preparation Toolkit" %}</h1>
+          <br />
+        {% endblock oq_body_heading %}
+      </div>
+      <div id="oq-body-content">
+
+        <div id="absoluteSpinner" class="loading">Loading&#8230;</div>
+
+        <div id="tabs">
+          <ul>
+            <li><a href="#tabs-1">Exposure</a></li>
+            <li><a href="#tabs-2">Fragility</a></li>
+            <li><a href="#tabs-3">Consequence</a></li>
+            <li><a href="#tabs-4">Vulnerability</a></li>
+            <li><a href="#tabs-5">Earthquake Rupture</a></li>
+            <li><a href="#tabs-6">Configuration File</a></li>
+          </ul>
+          <!-- EXPOSURE -->
+          <div id="tabs-1" class="ex_gid" name="exposure">
+          {% include "ipt/tabs/exposure.html" %}
+          </div>
+          <!-- FRAGILITY -->
+          <div id="tabs-2" class="ff_gid" name="fragility">
+          {% include "ipt/tabs/fragility.html" %}
+          </div>
+          <!-- CONSEQUENCE -->
+          <div id="tabs-3" class="co_gid" name="consequence">
+          {% include "ipt/tabs/consequence.html" %}
+          </div>
+          <!-- VULNERABILITY -->
+          <div id="tabs-4" class="vf_gid" name="vulnerability">
+          {% include "ipt/tabs/vulnerability.html" %}
+          </div>
+          <!-- EARTHQUAKE RUPTURE -->
+          <div id="tabs-5" class="er_gid" name="earthquake_rupture">
+          {% include "ipt/tabs/earthquake_rupture.html" %}
+          </div>
+          <!-- CONFIGURATION FILE -->
+          <div id="tabs-6" class="cf_gid" name="configuration_file">
+          {% include "ipt/tabs/config_files.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="error-message" title="Error" style="display: none; width: 600px;"></div>
+  <div id="warning-message" title="Warning" style="display: none; width: 600px;"></div>
+  <div id="info-message" title="Info" style="display: none; width: 600px;"></div>
+  <div id="help-message" title="Help" style="display: none; width: 600px;"></div>
+  <div id="qgis-message" title="Warning" style="display: none; width: 600px;"></div>
+{% endblock body %}
+
+{% block extra_script %}
+    {{block.super}}
+    <script>
+      {% if gem_qgis != None %}
+      var gem_api = null;
+      var allowed_dirs = {{ allowed_dir|safe }};
+      {% endif %}
+    </script>
+    <script src="{{ STATIC_URL }}openquakeplatform/js/utils/utils.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/uuid-random.min.js"></script>
+    <!-- <script src="{{ STATIC_URL }}ipt/js/hybridge_key.js"></script> -->
+    <script src="{{ STATIC_URL }}ipt/js/hybridge.js"></script>
+    <script src="{{ STATIC_URL }}js/handsontable.full.min.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/bootstrap-tagsinput.min.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/common.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/exposure.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/fragility.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/consequence.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/vulnerability.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/earthquake_rupture.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/config_files.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/selectTextareaLine.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/selectAllTextareaText.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/validateAndDisplayNRML.js"></script>
+    <script src="{{ STATIC_URL }}ipt/js/app_web.js"></script>
+    <script>
+{% include "ipt/ipt.js" %}
+    </script>
+    {% with subtab_semi=request.GET.subtab_id|default:0 %}
+        {% if request.GET.example_id|add:"0" > 0 and request.GET.example_id|add:"0" < 100 and request.GET.tab_id|add:"0" > 0 and request.GET.tab_id|add:"0" < 7 and subtab_semi|add:"0" >= 0 and subtab_semi|add:"0" < 5 %}
+            <script>var gem_path_sep = '{{ gem_path_sep|escapejs }}';</script>
+            <script src="{{ STATIC_URL }}ipt/js/examples/{{ request.GET.tab_id|add:"0" }}{{ request.GET.example_id|add:"0"|stringformat:"02d" }}{{subtab_semi|add:"0"|stringformat:"01d" }}.js"></script>
+        {% else %}
+            <!-- Example not found "ipt/js/examples/{{ request.GET.tab_id|add:"0" }}{{ request.GET.example_id|add:"0"|stringformat:"02d" }}{{ request.GET.subtab_id|add:"0"|stringformat:"01d" }}.js"  -->
+        {% endif %}
+    {% endwith %}
+    <script src="{{ STATIC_URL }}js/sol.js"></script>
+{% endblock extra_script %}

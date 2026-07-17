@@ -1,0 +1,296 @@
+The OpenQuake scenario calculators can be used for the calculation of damage distribution statistics or individual asset and portfolio loss statistics for a portfolio of buildings from a single earthquake rupture scenario, taking into account aleatory and epistemic ground-motion variability.<br><br>
+<div class="alert alert-info" role="alert" name="choose-components">Choose components of your configuration file and fill related fields.
+  <p name="choose-one" style="display: none;">Choose at least one components.</p>
+
+  <div class="menuItems" style="text-align: center;">
+    <form style="margin: 0px;">
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="hazard">
+        <span class="inlible">Hazard</span>
+      </div>
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="risk">
+        <span class="inlible">Risk</span>
+        <span style="display: none;" name="risk-menu">
+          <input style="margin:0;" type="radio" name="risk-type" value="damage" checked="checked">
+          <span class="inlible">Damage</span>
+          <input style="margin:0;" type="radio" name="risk-type" value="losses">
+          <span class="inlible">Losses</span>
+        </span>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="menuItems">
+  <label>Description:</label>
+  <textarea id="description" rows="4" cols="10" name="description" class="gem-gen-descr">Scenario calculation</textarea>
+</div>
+
+<div name="rupture-information">
+  <h3>Rupture information</h3>
+
+  <div class="menuItems" name="rupture-file-html">
+    <label>Rupture model file <span class="ui-icon ui-icon-help ipt_help" title='Earthquake rupture model file describing the scenario event.'></span>
+      :</label>
+    {{ rupture_file_html.file_html }}
+    {{ rupture_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="rupture-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/rupture_file" method="post" id="file-upload-form" name="rupture-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ rupture_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+  <div class="menuItems">
+    <label>Rupture mesh spacing (km) <span class="ui-icon ui-icon-help ipt_help" title='A parameter used to specify the mesh size used by the OpenQuake-engine to discretize the rupture. Note that the smaller the mesh spacing, the greater will be (1) the precision in the calculation and (2) the computational demand.'></span>:</label>
+    <input type="text" name="rupture_mesh_spacing" value="5.0">
+  </div>
+</div><!-- end div name="rupture-information" -->
+<div name="hazard-sites">
+  {% include "ipt/tabs/cf/sect_hazard_sites.html" %}
+</div><!-- end div name="hazard-sites" -->
+
+<div name="gmf-file">
+  <h3>Ground motion field</h3>
+  <div class="alert alert-info ipt-info" role="alert" style="text-align: center;">
+    <input style="margin:0;" type="checkbox" name="use_gmf_file">
+    Import ground motion field from a file
+  </div>
+  <div class="menuItems" name="gmf-file-html">
+    <label>Precalculated ground motion field <span class="ui-icon ui-icon-help ipt_help" title='File containing precomputed ground motion fields (GMFs), following the OpenQuake format.'></span>:</label>
+    {{ gmf_file_html.file_html }}
+    {{ gmf_file_html.new_btn }}
+  </div>
+
+  <div class="menuItems" name="gmf-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    <form action="upload/gmf_file" method="post" id="file-upload-form" name="gmf-file" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ gmf_file_upload.file_upload }}
+    </form>
+  </div>
+</div>
+
+{% include "ipt/tabs/cf/sect_exposure_model.html" %}
+
+<div name="fragility-model">
+  <h3>Fragility model</h3>
+
+  <div class="alert alert-info ipt-info" role="alert" name="fragility-model-choices">
+    <p name="choose-one" style="display: none;">Choose at least one loss type.</p>
+    <div style="text-align: center;">
+      <div class="chbox">
+        <input type="checkbox" name="losstype" value="structural" checked="checked">
+        <span class="inlible">Structural</span>
+      </div>
+      <div class="chbox">
+        <input type="checkbox" name="losstype" value="nonstructural">
+        <span class="inlible">Non Structural</span>
+      </div>
+      <div class="chbox">
+        <input type="checkbox" name="losstype" value="contents">
+        <span class="inlible">Contents</span>
+      </div>
+      <div class="chbox">
+        <input type="checkbox" name="losstype" value="businter">
+        <span class="inlible">Business Interruption</span>
+      </div>
+    </div>
+  </div>
+
+  <div name="fm-loss-structural">
+    <div class="menuItems" name="fm-structural-html" data-gem-group="fragility-model">
+      <label>Structural fragility model <span class="ui-icon ui-icon-help ipt_help" title='A fragility model defines a set of fragility functions, describing the probability of exceeding a set of limit, or damage, states. Note: it is necessary to define a fragility function for each building typology present in the exposure model.'></span>:</label>
+      {{ fm_structural_html.file_html }}
+      {{ fm_structural_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-structural-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_model" method="post" id="file-upload-form" name="fm-structural" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_structural_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-nonstructural">
+    <div class="menuItems" name="fm-nonstructural-html" data-gem-group="fragility-model">
+      <label>Nonstructural fragility model <span class="ui-icon ui-icon-help ipt_help" title='A fragility model defines a set of fragility functions, describing the probability of exceeding a set of limit, or damage, states. Note: it is necessary to define a fragility function for each building typology present in the exposure model.'></span>:</label>
+      {{ fm_nonstructural_html.file_html }}
+      {{ fm_nonstructural_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-nonstructural-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_model" method="post" id="file-upload-form" name="fm-nonstructural" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_nonstructural_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-contents">
+    <div class="menuItems" name="fm-contents-html" data-gem-group="fragility-model">
+      <label>Contents fragility model <span class="ui-icon ui-icon-help ipt_help" title='A fragility model defines a set of fragility functions, describing the probability of exceeding a set of limit, or damage, states. Note: it is necessary to define a fragility function for each building typology present in the exposure model.'></span>:</label>
+      {{ fm_contents_html.file_html }}
+      {{ fm_contents_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-contents-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_model" method="post" id="file-upload-form" name="fm-contents" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_contents_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-businter">
+    <div class="menuItems" name="fm-businter-html" data-gem-group="fragility-model">
+      <label>Business interruption fragility model <span class="ui-icon ui-icon-help ipt_help" title='A fragility model defines a set of fragility functions, describing the probability of exceeding a set of limit, or damage, states. Note: it is necessary to define a fragility function for each building typology present in the exposure model.'></span>:</label>
+      {{ fm_businter_html.file_html }}
+      {{ fm_businter_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-businter-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_model" method="post" id="file-upload-form" name="fm-businter" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_businter_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+  <!-- models end -->
+
+  <!-- show consequences ? -->
+  <div class="alert alert-info ipt-info" role="alert" style="text-align: center;">
+    <input style="margin:0;" type="checkbox" name="fm-loss-include-cons">
+    Include consequence models <span class="ui-icon ui-icon-help ipt_help" title='A consequence model defines a set of consequence functions, describing the distribution of the loss (or consequence) ratio conditional on a set of discrete limit (or damage) states.'></span>
+  </div>
+
+  <!-- cons -->
+  <div name="fm-loss-structural-cons">
+    <div class="menuItems" name="fm-structural-cons-html" data-gem-group="fragility-cons">
+      <label>Structural consequence model:</label>
+      {{ fm_structural_cons_html.file_html }}
+      {{ fm_structural_cons_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-structural-cons-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_cons" method="post" id="file-upload-form" name="fm-structural-cons" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_structural_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-nonstructural-cons">
+    <div class="menuItems" name="fm-nonstructural-cons-html" data-gem-group="fragility-cons">
+      <label>Nonstructural consequence model <span class="ui-icon ui-icon-help ipt_help" title='A consequence model defines a set of consequence functions, describing the distribution of the loss (or consequence) ratio conditional on a set of discrete limit (or damage) states.'></span>:</label>
+      {{ fm_nonstructural_cons_html.file_html }}
+      {{ fm_nonstructural_cons_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-nonstructural-cons-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_cons" method="post" id="file-upload-form" name="fm-nonstructural-cons" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_nonstructural_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-contents-cons">
+    <div class="menuItems" name="fm-contents-cons-html" data-gem-group="fragility-cons">
+      <label>Contents consequence model <span class="ui-icon ui-icon-help ipt_help" title='A consequence model defines a set of consequence functions, describing the distribution of the loss (or consequence) ratio conditional on a set of discrete limit (or damage) states.'></span>:</label>
+      {{ fm_contents_cons_html.file_html }}
+      {{ fm_contents_cons_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-contents-cons-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_cons" method="post" id="file-upload-form" name="fm-contents-cons" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_contents_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div name="fm-loss-businter-cons">
+    <div class="menuItems" name="fm-businter-cons-html" data-gem-group="fragility-cons">
+      <label>Business interruption consequence model <span class="ui-icon ui-icon-help ipt_help" title='A consequence model defines a set of consequence functions, describing the distribution of the loss (or consequence) ratio conditional on a set of discrete limit (or damage) states.'></span>:</label>
+      {{ fm_businter_cons_html.file_html }}
+      {{ fm_businter_cons_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-businter-cons-new" style="display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/fragility_cons" method="post" id="file-upload-form" name="fm-businter-cons" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_businter_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+  <!-- cons end -->
+</div><!-- fragility-model end -->
+
+<div name="vulnerability-model">
+ {% include "ipt/tabs/cf/sect_vulnerability_model.html" %}
+</div> <!-- vulnerability model -->
+
+<div style="min-height: 50px;" name="site-conditions"><!-- site conditions block -->
+  {% include "ipt/tabs/cf/sect_site_conditions.html" %}
+</div> <!-- end site conditions -->
+
+<div style="min-height: 200px;" name="calculation-parameters"> <!-- calculation parameters -->
+  <h3>Calculation parameters</h3>
+  <br>
+
+  <div class="menuItems" name="hazard-gmpe_specify-gmpe" style="overflow: auto; min-height: 80px;">
+    <label>GMPE <span class="ui-icon ui-icon-help ipt_help" title='Name of the ground motion prediction equation to be used in the generation of the ground-motion fields.'></span>
+:</label><br>
+    <select name="gmpe" multiple="multiple" style="text-align: left; width: 500px; margin-left: auto;">
+    </select>
+  </div>
+
+<div style="min-height: 50px;" name="site-conditions"><!-- hazard imt block -->
+  {% include "ipt/tabs/cf/sect_hazard_imt.html" %}
+</div> <!-- end hazard imt -->
+
+<div class="menuItems">
+    <table style="width: 100%; margin: auto;">
+      <tr><td style="text-align: left;">
+          <label>Ground Motion Correlation Model <span class="ui-icon ui-icon-help ipt_help" title='Spatial correlation model to be used for the generation of ground-motion fields.'></span>
+:</label>
+        </td><td style="text-align: right;">
+          <select name="ground-motion-correlation">
+            <option value="" selected="selected">None</option>
+            <option value="JB2009">JB2009</option>
+          </select>
+      </td></tr>
+      <tr><td style="text-align: left;">
+          <label>Level of truncation <span class="ui-icon ui-icon-help ipt_help" title='The level of truncation of the Gaussian distribution of the logarithm of ground-motion used in the calculation of hazard.'></span>:</label>
+        </td><td style="text-align: right;">
+          <input type="text" name="truncation_level" value="3.0">
+      </td></tr>
+      <tr><td style="text-align: left;">
+          <label>Maximum source-to-site distance (km) <span class="ui-icon ui-icon-help ipt_help" title='The distance within which sources will contribute to the computation of the hazard.'></span>:</label>
+        </td><td style="text-align: right;">
+          <input type="text" name="maximum_distance" value="100.0">
+      </td></tr>
+      <tr><td style="text-align: left;">
+          <label>Number of ground motion fields <span class="ui-icon ui-icon-help ipt_help" title='Number of ground-motion fields to be generated.'></span>:</label>
+        </td><td style="text-align: right;">
+          <input type="text" name="number_of_ground_motion_fields" value="1">
+      </td></tr>
+    </table>
+  </div>
+</div>
+<div style="text-align: center;">
+  <hr>
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="clean_all">Clean all</button>
+
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="download">{%if gem_qgis != None %}'Save As'{% else %}Download{% endif %} Zip File</button>
+  {%if gem_qgis != None %}
+      <button name="run-calc-btn" type="button" style="vertical-align: top; margin: auto;" class="btn btn-primary">Run Calculation</button>
+  {% endif %}
+  <form style="display: inline-block;" name="downloadForm" method="post">{% csrf_token %}</form>
+</div>

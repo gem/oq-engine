@@ -1,0 +1,76 @@
+    <div class="alert alert-info" role="alert">
+      <div style="text-align: center;">
+        <div class="chbox">
+          <input type="radio" name="co__new_or_generate" value="new" checked="checked"
+                 >&nbsp;<span class="inlible">New consequence model</span>
+        </div>
+        <div class="chbox">
+          <input type="radio" name="co__new_or_generate" value="generate" disabled
+                 >&nbsp;<span class="inlible" style="color: #a0a0a0;">Generate consequence model</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSEQUENCE MODEL -->
+    <h3>Consequence model</h3>
+    <br>
+    <div class="menuItems">
+      <label>Asset Category<!-- <span class="ui-icon ui-icon-help ipt_help" title="TODO"></span> -->:</label>
+      <input type="text" name="asset-cat" value="" placeholder="buildings">
+    </div>
+
+    <div class="menuItems">
+      <label>Loss Category<!-- <span class="ui-icon ui-icon-help ipt_help" title="TODO""></span -->:</label>
+      <select id="lossCategory">
+        <option value="structural" selected="selected">Structural</option>
+        <option value="nonstructural">Non-structural</option>
+        <option value="contents">Contents</option>
+        <option value="business">Business</option>
+        <option value="interruption">Interruption</option>
+        <option value="occupants">Occupants</option>
+      </select><br>
+    </div>
+
+    <div class="menuItems">
+      <label>Description:</label>
+      <textarea name="descr" rows="4" cols="10" placeholder="free descrition"></textarea>
+    </div>
+
+    <div class="menuItems">
+      <label>Damage States<!-- <span class="ui-icon ui-icon-help ipt_help" title="TODO"></span> -->:</label>
+      <input type="text" style="width: 66%;" name="damage-states" value="slight, moderate, extensive, collapse" placeholder="comma separated strings">
+    </div>
+    
+    <div class="menuItems">
+      <label>Probabilistic distribution<!-- <span class="ui-icon ui-icon-help ipt_help" title="TODO""></span -->:</label>
+          <select id="prob_distrib">
+            <option value="LN" selected="selected">Lognormal</option>
+            <option value="BT">Beta</option>
+          </select><br>
+    </div>
+
+    <div class="menuItems">
+      <label>Consequence data<!-- <span class="ui-icon ui-icon-help ipt_help" title="TODO"></span> -->:</label>
+      <br>
+      <div style="text-align: left;"><input type="file" id="table_file" accept="text/csv,application/csv,csv"></div>
+      <div id="table" style="height: 100px; overflow: hidden;"></div>
+      <button id="new_row_add" type="button" class="btn">New Row</button><br>
+    </div>
+
+    <div>
+      <button id="convertBtn" type="button" style="display:none;" class="btn btn-primary">Convert to NRML</button>
+    </div>
+    <br>
+    <div id="outputDiv">
+      <div id="infoMsg" class="alert alert-info" role="alert">3. {%if gem_qgis != None %}'Save As' or Collect{% else %}Download{% endif %} the NRML file for use in the OpenQuake Engine.</div>
+      <div id="validationErrorMsg" class="alert alert-warning" role="alert" style="display: none;">Error message</div>
+      <div id="downloadLink" style="display: none;">
+        {%if gem_qgis != None %}
+        <button id="delegateDownloadBtn" type="button" class="btn">Save As</button>
+        <button id="delegateCollectBtn" type="button" class="btn">Collect</button>
+        {% else %}
+        <button id="downloadBtn" type="button" class="btn">Download</button>
+        {% endif %}
+        <form id="downloadForm" method="post" enctype="multipart/form-data"></form></div>
+      <div id="outputText" style="width:600px; margin: auto;"></div>
+    </div>

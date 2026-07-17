@@ -1,0 +1,269 @@
+<div class="alert alert-info" role="alert" name="choose-components">Choose components of your configuration file and fill related fields.
+  <p name="choose-one" style="display: none;">Choose at least one components.</p>
+  <div class="menuItems" style="text-align: center;">
+    <form style="margin: 0px;">
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="hazard">
+        <span class="inlible">Hazard</span>
+      </div>
+      <div class="chbox chbox_last">
+        <input style="margin:0;" type="checkbox" name="risk">
+        <span class="inlible">Risk</span>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="menuItems">
+  <label>Description:</label>
+  <textarea id="description" rows="4" cols="10" name="description" class="gem-gen-descr">Event based calculation</textarea>
+</div>
+
+<div name="hazard-sites">
+  {% include "ipt/tabs/cf/sect_hazard_sites.html" %}
+</div><!-- end div name="hazard-sites" -->
+
+<div style="min-height: 50px;" name="site-conditions"><!-- site conditions block -->
+  {% include "ipt/tabs/cf/sect_site_conditions.html" %}
+</div> <!-- end site conditions -->
+
+<div name="hazard-model">
+  <h3>Hazard model</h3>
+
+  <div class="menuItems">
+    <div name="source-model-logic-tree-file-html">
+      <label>Source model logic tree file <span class="ui-icon ui-icon-help ipt_help" title='File that contains a list of source models and their respective weights.'></span>:</label>
+      {{ source_model_logic_tree_file_html.file_html }}
+      {{ source_model_logic_tree_file_html.new_btn }}
+    </div>
+    <div class="menuItems" name="source-model-logic-tree-file-new" style="margin-right: 0px; display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/source_model_logic_tree_file" method="post" id="file-upload-form" name="source-model-logic-tree-file" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ source_model_logic_tree_file_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div class="menuItems">
+    <div name="source-model-file-html">
+      <label>Source model files <span class="ui-icon ui-icon-help ipt_help" title='Selection of source model files that contain a list of the sources used characterised the seismicity in a region.'></span>:</label>
+      {{ source_model_file_html.file_html }}
+      {{ source_model_file_html.new_btn }}
+    </div>
+    <div class="menuItems" name="source-model-file-new" style="margin-right: 0px; display: none;">
+      <div name="msg" class="file-upload-multiple-msg"><br></div>
+      <form action="upload/source_model_file" method="post" id="file-upload-form" name="source-model-file" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ source_model_file_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div class="menuItems">
+    <div name="gsim-logic-tree-file-html" data-gem-group="gsim">
+      <label>GMPE logic tree file <span class="ui-icon ui-icon-help ipt_help" title='File that contains a list of ground-motion prediction equations for each tectonic region used to characterise the sources in the PSHA model.'></span>:</label>
+      {{ gsim_logic_tree_file_html.file_html }}
+      {{ gsim_logic_tree_file_html.new_btn }}
+    </div>
+    <div class="menuItems" name="gsim-logic-tree-file-new" style="margin-right: 0px; display: none;">
+      <div name="msg"><br></div>
+      <form action="upload/gsim_logic_tree_file" method="post" id="file-upload-form" name="gsim-logic-tree-file" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ gsim_logic_tree_file_upload.file_upload }}
+      </form>
+    </div>
+  </div>
+
+  <div class="menuItems" name="width-of-mfd-bin">
+    <label>Bin-width of the magnitude-frequency distribution <span class="ui-icon ui-icon-help ipt_help" title='Level of discretization of the the magnitude-frequency distribution.'></span>:</label>
+    <input type="text" name="width_of_mfd_bin" value="0.5">
+  </div>
+
+  <div class="menuItems" name="rupture-mesh-spacing">
+    <label>Rupture mesh spacing (km) <span class="ui-icon ui-icon-help ipt_help" title='Level of discretization of the mesh representing faults.'></span>:</label>
+    <input type="text" name="rupture_mesh_spacing" value="5.0">
+  </div>
+
+  <div class="menuItems" name="area-source-discretization">
+    <label>Area source discretization (km) <span class="ui-icon ui-icon-help ipt_help" title='Level of discretization of the grid used to delineate the area sources.'></span>:</label>
+    <input type="text" name="area_source_discretization" value="10.0">
+  </div>
+
+  <div class="alert alert-info ipt-info" role="alert">
+    <div style="text-align: center;">
+      <div class="chbox">
+        <input type="checkbox" name="complex_fault_mesh_choice">
+        <span class="inlible">Complex fault mesh spacing</span>
+      </div>
+    </div>
+  </div>
+  <div class="menuItems" name="complex-fault-mesh">
+    <label>Complex fault mesh spacing (km) <span class="ui-icon ui-icon-help ipt_help" title='Level of discretization of the mesh representing complex faults.'></span>:</label>
+    <input type="text" name="complex_fault_mesh" value="10.0">
+  </div>
+</div> <!-- hazard-model -->
+
+<div name="hazard-calculation">
+  <h3>Hazard calculation</h3>
+
+  <div class="alert alert-info ipt-info" role="alert" name="use-imt-from-vulnerability">
+    <div style="text-align: center;">
+      <div class="chbox">
+        <input type="checkbox" name="use_imt_from_vulnerability_choice">
+        <span class="inlible">Use IMTs from vulnerability file</span>
+      </div>
+    </div>
+  </div>
+
+  {% include "ipt/tabs/cf/sect_hazard_imt.html" %}
+
+  <div class="menuItems" name="hazard-imt_imt-and-levels">
+    <label>Levels for intensity measure types <span class="ui-icon ui-icon-help ipt_help" title='FIXME.'></span>
+      :</label>
+    <table name="imt-and-levels-tab" class="imt-levels"><tbody></tbody></table>
+  </div>
+
+  <div class="menuItems">
+    <label>Ground Motion Correlation Model <span class="ui-icon ui-icon-help ipt_help" title='Spatial correlation model to be used for the generation of ground-motion fields.'></span>
+:</label>
+
+    <select name="ground-motion-correlation">
+      <option value="" selected="selected">None</option>
+      <option value="JB2009">JB2009</option>
+    </select>
+  </div>
+
+  <div class="menuItems">
+    <label>Maximum source-to-site distance (km) <span class="ui-icon ui-icon-help ipt_help" title='The distance beyond which contribution from sources will be ignored for the computation of the hazard.'></span>:</label>
+    <input type="text" name="maximum_distance" value="200">
+  </div>
+
+  <div class="menuItems">
+    <label>Level of truncation <span class="ui-icon ui-icon-help ipt_help" title='The level of truncation in standard deviations of the Gaussian distribution of the logarithm of ground motion used in the calculation of hazard.'></span>:</label>
+    <input type="text" name="truncation_level" value="3.0">
+  </div>
+
+  <div class="menuItems">
+    <label>Hazard investigation time (years) <span class="ui-icon ui-icon-help ipt_help" title='Parameter that specifies the time period for the hazard calculation.'></span>:</label>
+    <input type="text" name="investigation_time" value="1">
+  </div>
+
+  <div class="menuItems">
+    <label>Stochastic event sets per logic tree path <span class="ui-icon ui-icon-help ipt_help" title='Parameter that specifies the number of stochastic event sets to be generated for each logic tree realisation (each stochastic event set represents a potential realisation of seismicity during the "hazard investigation time").'></span>:</label>
+    <input type="text" name="ses_per_logic_tree_path" value="1000">
+  </div>
+
+  <div class="menuItems">
+    <label>Number of logic tree samples <span class="ui-icon ui-icon-help ipt_help" title='Number of realizations used in the Monte Carlo sampling for processing the logic tree structure. For complete enumeration of all the potential end-paths of the logic tree, the number of logic tree samples must be set to 0.'></span>:</label>
+    <input type="text" name="number_of_logic_tree_samples" value="0">
+  </div>
+
+</div> <!-- hazard-calculation -->
+
+{% include "ipt/tabs/cf/sect_exposure_model.html" %}
+
+<div name="vulnerability-model">
+ {% include "ipt/tabs/cf/sect_vulnerability_model.html" %}
+</div> <!-- vulnerability model -->
+
+
+<div name="risk-calculation">
+  <h3>Risk calculation</h3>
+
+  <div class="menuItems">
+    <label>Risk investigation time (years) <span class="ui-icon ui-icon-help ipt_help" title='Parameter that specifies the time period for which the time-averaged losses will be calculated. If this parameter is not provided, the time period used is the same as the hazard investigation time. To calculate average annual losses, this parameter must be set to 1.'></span>:</label>
+    <input type="text" name="risk_investigation_time" value="1">
+  </div>
+
+  <div class="menuItems" name="poes">
+    <label>Return periods for aggregate loss curve (years):</label><br>
+    <input type="text" name="ret_periods_for_aggr"
+           placeholder="5, 10, 25, 50, 100, 250, 500, 1000"
+           title="Comma-separated list of values for the return periods at which the loss exceedance curves will be evaluated. If this parameter is left blank, the OpenQuake-engine will evaluate the loss exceedance curves at a set of default return periods."
+           style="width: 600px;">
+  </div>
+</div>
+
+<div name="outputs">
+  <h3>Outputs</h3>
+
+  <div name="hazard-outputs">
+    <div class="menuItems">
+      <label>Ground motion fields</label>
+      <div class="cbox-leaf">
+        <input class="cbox-leaf" style="vertical-align: top;" type="checkbox" name="ground_motion_fields" checked="checked">
+      </div>
+    </div>
+
+    <div class="alert alert-info ipt-info" role="alert">
+      <div style="text-align: center;">
+        <div class="chbox">
+          <input type="checkbox" name="hazard_curves_from_gmfs">
+          <span class="inlible">Add hazard curves</span>
+        </div>
+      </div>
+    </div>
+
+    <div name="hazard-curves">
+      <div class="alert alert-info ipt-info" role="alert">
+        <div style="text-align: center;">
+          <div class="chbox">
+            <input type="checkbox" name="hazard_maps">
+            <span class="inlible">Add hazard maps</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="menuItems" name="poes">
+        <label>List of probability of exceedances:</label><br>
+        <input type="text" name="poes"
+               value="0.02, 0.10" style="width: 600px;">
+      </div>
+
+      <div class="menuItems" name="uniform-hazard-spectra">
+        <label>Uniform hazard spectra</label>
+        <div class="cbox-leaf">
+          <input type="checkbox" class="cbox-leaf" style="vertical-align: top;" name="uniform_hazard_spectra">
+        </div>
+      </div>
+    </div> <!-- hazard-curves -->
+  </div> <!-- hazard-outputs -->
+  <div class="alert alert-info ipt-info" role="alert" name="risk-outputs-group">
+    <div style="text-align: center;">
+      <div class="chbox">
+        <input type="checkbox" name="conditional_loss_poes_choice">
+        <span class="inlible">Include loss maps</span>
+      </div>
+    </div>
+  </div>
+  <div class="menuItems" name="conditional-loss-poes">
+    <label>Loss maps:</label><br>
+    <input type="text" name="conditional_loss_poes"
+           value="0.02, 0.10" style="width: 600px;">
+  </div>
+
+  <div class="menuItems" name="quantiles" style="margin-top: 8px;">
+    <label>Quantiles  <span class="ui-icon ui-icon-help ipt_help" title='List of quantiles to compute the curves (separated by comma)'></span>:</label>
+    <input type="text" name="quantiles"
+           placeholder="Optional. List of values in the range (0.0, 1.0). For example: 0.15, 0.50, 0.85"
+           title="List of quantiles to compute the curves (separated by comma)"
+           style="width: 600px;">
+  </div>
+  <div class="menuItems">
+    <label style="vertical-align: bottom;">Curves per realization <span class="ui-icon ui-icon-help ipt_help" title='Include in the calculation outputs the curves for each realization'></span></label>
+    <div class="cbox-leaf">
+      <input type="checkbox" class="cbox-leaf" style="vertical-align: top;" name="individual-curves" checked="checked">
+    </div>
+  </div>
+</div>
+
+<div style="text-align: center;">
+  <hr>
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="clean_all">Clean all</button>
+
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="download">{%if gem_qgis != None %}'Save As'{% else %}Download{% endif %} Zip File</button>
+  {%if gem_qgis != None %}
+  <button name="run-calc-btn" type="button" style="vertical-align: top; margin: auto;" class="btn btn-primary">Run Calculation</button>
+  {% endif %}
+  <form style="display: inline-block;" name="downloadForm" method="post">{% csrf_token %}</form>
+</div>

@@ -1,0 +1,302 @@
+.alert-info {
+    margin-top: 0;
+}
+.gem-jqueryui-dialog {
+    z-index: 1000;
+}
+
+#oq-body-content {
+    width: 100%;
+ }
+
+.menuItems{
+    left: 0px;
+    top: 0px;
+    text-align: right;
+    margin-left: 150px;
+    margin-right: 150px;
+    line-height: 32px;
+}
+
+.menuSubItems {
+    margin-left: 24px;
+}
+
+label {
+    font-weight: bold;
+    float: left;
+    margin: 1px;
+}
+
+.ffsForm, .vfsForm{
+    float: left;
+    clear: left;
+    margin-top: 10px;
+    width: 45%;
+}
+
+.ffsForm label, .vfsForm label {
+clear: left;
+ }
+
+.downloadbtn {
+    color: white !important;
+}
+
+.ffsForm input {
+	float: right;
+}
+
+.vfsForm input {
+	float: right;
+}
+
+.vfsForm select {
+	float: right;
+}
+
+.ffsTable {
+	width: 60%;
+	margin-left: 20px;
+}
+
+.vfsTable {
+	width: 60%;
+	margin-left: 3px;
+}
+
+.theTable {
+	float: right;
+	margin-top: 10px;
+}
+
+#tableOverflow {
+	height: 100px;
+    overflow: auto;
+    margin-top: 20px;
+}
+
+.ffsTitle, .vfsTitle {
+    font-size: 18px;
+}
+
+textarea {
+    height: 50px;
+}
+
+input, .uneditable-input {
+    height: 30px;
+    width: 220px;
+}
+
+.destroyTable {
+	float: right;
+}
+
+.destroyVTable {
+	float: right;
+    margin-top: 10px;
+}
+
+#tabs {
+	border: none;
+}
+
+#textarea {
+	width: 600px;
+	height: 700px;
+}
+
+#occupantsCheckBoxes, #economicCheckBoxes {
+	margin-left: 35%;
+}
+
+.ffsTableDiv, .vfsTableDiv {
+    width: 100%;
+    float: left;
+    border: 1px solid #eee;
+    margin-bottom: 1em;
+    padding: 4px;
+}
+
+.theVTableWrapper {
+    float: right;
+    clear: right;
+    margin-top: 10px;
+    text-align: right;
+}
+.theVTable {
+    overflow: hidden;
+    width: 400px;
+    height: 150px;
+    display: inline-block;
+}
+
+#outputDivEX {
+    margin-top: 20px;
+}
+
+#outputTextEX, #outputTextFF, #outputTextVF {
+    margin-top: 10px;
+}
+
+.nav-tabs.oqplatform > li > a {
+    color: #0088cc;
+}
+
+.nav-tabs.oqplatform > li.active > a {
+    color: #555;
+}
+
+div.chbox {
+    padding-left: 15px;
+    text-indent: -15px;
+    border-right: 1px solid #ddd;
+    display: inline;
+}
+div.chbox > input {
+    width: 13px;
+    height: 13px;
+    padding: 0;
+    margin:0;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    *overflow: hidden;
+}
+
+div.chbox_last {
+    border-right: 0px;
+}
+
+span.inlible {
+    padding: 0 12px 0 0px;
+    vertical-align: middle;
+}
+
+span.inlible_disabled {
+    color: #808080;
+}
+
+div.ipt-info {
+    margin: 8px 150px 16px 150px;
+}
+
+table.field {
+    margin: auto;
+    width: 250px;
+}
+
+table.field td {
+    width: 85%;
+}
+
+table.field td.cbox {
+    width: 15%;
+}
+
+span.ipt_help {
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: text-bottom;
+    border: 1px solid #a0a0a0;
+    background-color: #f7f7f9;
+}
+
+.planar_geometry .handsontable col.rowHeader {
+    width: 100px;
+    margin-left: 16px;
+}
+
+.arbitrary_geometry .handsontable col.rowHeader {
+    width: 100px;
+    margin-left: 16px;
+}
+
+input.hide_file_upload {
+    visibility: hidden;
+}
+
+div.bootstrap-tagsinput {
+    width: 600px;
+    margin-bottom: 16px;
+}
+
+.bootstrap-tagsinput input {
+    width: 100% !important;
+}
+
+.gem-gen-descr {
+    width: 350px;
+}
+
+.ui-dialog-titlebar-close {
+    visibility: hidden;
+}
+
+.file-upload-multiple-msg {
+    line-height: 105%;
+}
+
+#help-message a:link {
+    color: #3a87ad;
+    text-decoration: underline;
+}
+
+#help-message a:visited {
+    color: #3a87ad;
+    text-decoration: underline;
+}
+
+#help-message a:hover {
+    color: #3a87ad;
+    text-decoration: underline;
+}
+
+#help-message a:active {
+    color: #3a87ad;
+    text-decoration: underline;
+}
+
+ul.phen-list li {
+    float: left;
+    list-style-position: inside;
+    padding-left: 8px;
+}
+
+table.tbl-exam-exposure {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 16px 0;
+}
+
+table.tbl-exam-exposure th {
+    padding: 4px;
+    text-align: center;
+    border: 1px solid #ccc;
+    background-color: #fafafa;
+}
+
+table.imt-levels {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+table.imt-levels td input {
+    width: 100%;
+}
+
+.cbox-leaf {
+    padding: 3px;
+    border: 1px solid #ccc;
+    width: 80px;
+    display: inline-block;
+    text-align: center;
+    border-radius: 3px;
+}
+.ui-widget-content .ui-icon {
+    background-image: url(images/ui-icons_333333_256x240.png);
+    background-position: -50px -146px;
+    width: 15px;
+    height: 15px;
+}

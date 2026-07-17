@@ -1,0 +1,66 @@
+$(document).ready(function () {
+    window.gem_example_completed = false;
+    // this is a workaround for a bug fixed in jquery 1.9 (checked is toggled after that handler is fired)
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="hazard"]').prop('checked', true).triggerHandler('click');
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="risk"]').prop('checked', true).triggerHandler('click');
+
+    $(cf_obj['scen'].pfx + " div[name='rupture-file-new'] input[name='file_upload']").submit();
+
+    $(cf_obj['scen'].pfx + " div[name='region-grid'] input[name='grid_spacing']").val("5.0");
+
+    $(cf_obj['scen'].pfx + " div[name='region-grid'] input[type='radio'][name='region_grid']" +
+      "[value='infer-from-exposure']").prop('checked', true).triggerHandler('click');
+
+    var data = [
+        [ "40", "40" ], ["30", "30"], ["20", "20" ]
+    ];
+
+    var table = $(cf_obj['scen'].pfx + ' div[name="table"]').handsontable('getInstance');
+    table.loadData(data);
+
+    $(cf_obj['scen'].pfx + ' div[name="hazard-gmpe_specify-gmpe"] input[type="text"]').focus();
+
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="losstype"][value="structural"]').prop('checked', true).triggerHandler('click');
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="losstype"][value="nonstructural"]').prop('checked', true).triggerHandler('click');
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="losstype"][value="contents"]').prop('checked', true).triggerHandler('click');
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="losstype"][value="businter"]').prop('checked', true).triggerHandler('click');
+
+    $(cf_obj['scen'].pfx + ' input[type="checkbox"][name="fm-loss-include-cons"]').prop('checked', true).triggerHandler('click');
+
+
+    setTimeout(function () {
+        $(cf_obj['scen'].pfx + ' div[name="fm-structural-html"] select[name="file_html"]').val(
+            'fragility_model/structural_fragility_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-nonstructural-html"] select[name="file_html"]').val(
+            'fragility_model/nonstructural_fragility_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-contents-html"] select[name="file_html"]').val(
+            'fragility_model/contents_fragility_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-businter-html"] select[name="file_html"]').val(
+            'fragility_model/businter_fragility_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-structural-cons-html"] select[name="file_html"]').val(
+            'fragility_cons/structural_consequence_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-nonstructural-cons-html"] select[name="file_html"]').val(
+            'fragility_cons/nonstructural_consequence_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-contents-cons-html"] select[name="file_html"]').val(
+            'fragility_cons/contents_consequence_model.xml');
+
+        $(cf_obj['scen'].pfx + ' div[name="fm-businter-cons-html"] select[name="file_html"]').val(
+            'fragility_cons/businter_consequence_model.xml');
+
+
+        $(cf_obj['scen'].pfx + ' div[name="exposure-model-html"] select[name="file_html"]').val('exposure_model' + gem_path_sep + 'exposure_model_vol_full.zip');
+
+        $(cf_obj['scen'].pfx + ' div[name="rupture-file-html"] select[name="file_html"]').val('rupture_file' + gem_path_sep + 'earthquake_rupture_model.xml');
+        // waiting for gmpe list population
+        $(cf_obj['scen'].pfx + ' div[name="hazard-gmpe_specify-gmpe"] div.sol-label-text:contains("AbrahamsonEtAl2014RegCHN")'
+         ).click()
+        $(cf_obj['scen'].pfx + ' button[name="download"]').click();
+        window.gem_example_completed = true;
+    }, 1000);
+});

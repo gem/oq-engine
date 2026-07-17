@@ -1,0 +1,24 @@
+<div class="menuItems" name="hazard-imt_specify-imt">
+  <div> <!-- calculation parameters -->
+    <div style="min-height: 50px; overflow: auto;">
+      <label>Specify IMT <span class="ui-icon ui-icon-help ipt_help" title='Set of intensity measure types for which the ground-motion fields should be generated.'></span>
+:</label>
+      <select name="imt" multiple="multiple" style="width: 300px; margin-left: auto; text-align: initial;">
+        <option value="PGA" selected="selected">PGA</option>
+        <option value="SA(0.3)">SA(0.3)</option>
+        <option value="SA(0.7)">SA(0.7)</option>
+        <option value="SA(1.0)">SA(1.0)</option>
+        <option value="PGV">PGV</option>
+        <option value="PGD">PGD</option>
+        <option value="IA">IA</option>
+        <option value="CAV">CAV</option>
+        <option value="RSD">RSD</option>
+        <option value="MMI">MMI</option>
+      </select>
+    </div>
+    <div>
+      <label>Custom IMTs:</label>
+      <input type="text" name="custom_imt" value="" placeholder="Comma separated custom IMTs">
+    </div>
+  </div>
+</div>

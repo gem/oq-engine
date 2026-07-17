@@ -1,0 +1,385 @@
+The OpenQuake volcano calculator can be used for the estimation of damage distribution statistics or individual asset and portfolio loss statistics for a portfolio of buildings starting from hazard footprints.
+<br/>
+The following four hazard perils can be considered:
+<ul class="phen-list">
+  <li>Ash fall</li>
+  <li>Lahar</li>
+  <li>Lava flow</li>
+  <li>Pyroclastic density currents</li>
+</ul>
+<p style="clear: both;"></p>
+ For Ash fall, the ash load in kPa is considered as the hazard intensity. The other perils are assumed to be a binary phenomena.<br/>
+<div>
+  <h3>General</h3>
+  <div class="menuItems">
+    <label>Description:</label>
+    <textarea id="description" rows="4" cols="10" name="description" class="gem-gen-descr">Volcano scenario calculation</textarea>
+  </div>
+</div>
+
+<div name="phens" class="alert alert-info" role="alert">
+  <p name="choose-one" style="display: none;">Choose at least one volcano phenomena.</p>
+  <div class="menuItems" style="text-align: center;">
+    <form style="margin: 0px;">
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="ashfall">
+        <span class="inlible">Ash fall</span>
+      </div>
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="lavaflow">
+        <span class="inlible">Lava flow</span>
+      </div>
+      <div class="chbox">
+        <input style="margin:0;" type="checkbox" name="lahar">
+        <span class="inlible">Lahar</span>
+      </div>
+      <div class="chbox chbox_last">
+        <input style="margin:0;" type="checkbox" name="pyroclasticflow">
+        <span class="inlible">Pyroclastic density currents</span>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<div style="display: none;" name="ashfall-input">
+  <h3>Ash fall</h3>
+  <div class="menuItems">
+    <label>Input format
+
+      <a target="_blank" href="#" onclick="gem_ipt.help_msg('\
+Three possible input formats can be used for Ash fall hazard footprint:<br/><ul><li>An Ash3d output file containing ash deposit thikness in mm. ASCII (ASC) file format (<a target=\'_blank\' href=\'https://vsc-ash.wr.usgs.gov/ashgui/#/\'>USGS-Ash3D</a>).<br/>\
+See example file <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/ash_fall_Ash3D.txt\'>ash_fall_Ash3D.txt</a>\
+<li>A CSV file with three columns named: lon, lat, intensity.<br/>The intensity must be the ash load in kPa.<br/>The coordinate reference system must be WGS84 (EPSG:4326)<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/ash_fall_oq.csv\'>ash_fall_oq.csv</a>\
+</li><li>Polygonal vector layer in the ESRI shapefile format describing the ash deposit thickness in mm. The zip file must contain at least the .shp, .shx, .dbf and .prj files.<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/ash_fall_shapefile.zip\'>ash_fall_shapefile.zip</a>\
+         ', 'Ash fall - input format'); return false;"><span class="ui-icon ui-icon-help ipt_help" title='Three possible input formats can be used for Ash fall hazard footprint: Ash3D, CSV or Shapefile. Click for more details.'></span></a>
+      :</label>
+    <select name="in-type">
+      <option value="text">Ash3D output file</option>
+      <option value="openquake">Default CSV format</option>
+      <option value="shape">Shapefile (ESRI)</option>
+    </select>
+  </div>
+
+  <div class="menuItems" name="ashfall-file-html">
+    <label>Hazard footprint:</label>
+    {{ ashfall_file_html.file_html }}
+    {{ ashfall_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="ashfall-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/ashfall_file" method="post" id="file-upload-form" name="ashfall-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ ashfall_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="menuItems" name="epsg">
+    <label>Coordinate reference system [EPSG] <span class="ui-icon ui-icon-help ipt_help" title='The spatial reference system (SRS) used in the input layer. The SRS must follow the EPSG codes implemented by GDAL (https://gdal.org/osr_tutorial.html).'></span> :</label>
+    <input type="text" name="epsg" placeholder="for example: 4326" title="4326 (that corresponds to WGS84 projection)" oninput="this.value = this.value.replace(/[^0-9]/, '')"/>
+  </div>
+
+  <div class="menuItems" name="discr-dist">
+    <label>Discretization distance
+      <span class="ui-icon ui-icon-help ipt_help" title="This parameter indicates the discretization distance used to rasterize the Shapefile. NOTE: the units must be consistent with the Shapefile EPSG."></span>
+      :</label><input type="text" name="discr-dist" value="0.2"/>
+  </div>
+
+  <div class="menuItems" name="haz-field">
+    <label>Hazard field
+      <span class="ui-icon ui-icon-help ipt_help" title="Hazard field (column name) in the Shapefile attribute table describing the hazard values."></span>
+      :</label><select name="haz-field">
+      <option value=''>---------</option>
+    </select>
+  </div>
+
+  <div class="menuItems" name="spec-ass-haz-dist" data-gem-enabled="true">
+    <label>Asset hazard distance [km] <span class="ui-icon ui-icon-help ipt_help" title='This parameter indicates the maximum allowable distance between an asset and the closest hazard input.'></span>:</label>
+    <input type="text" name="spec-ass-haz-dist" placeholder="for example: 10.0">
+  </div>
+
+  <div class="menuItems">
+    <label>Ash wet amplification factor
+      <span class="ui-icon ui-icon-help ipt_help" title='Factor to amplify the ash density in wet conditions.'></span>
+      :</label><input type="text" name="wet-ampl" value="1.6"/>
+  </div>
+
+  <div class="menuItems" name="density">
+    <label>Ash density
+      <span class="ui-icon ui-icon-help ipt_help" title="Reference ash deposit density (units in kg/m³).
+The ash density is used to estimate the ash load input layer to be used by the OpenQuake-engine."></span>
+      :</label><input type="text" name="density" value="1500" title="Ash density (kg/m³)" oninput="this.value = this.value.replace(/[^0-9\.]/, '')"/>
+  </div>
+</div>
+
+<div style="display: none;" name="lavaflow-input">
+  <h3>Lava flow</h3>
+  <div class="menuItems">
+    <label>Input format:
+
+      <a target="_blank" href="#" onclick="gem_ipt.help_msg('\
+Three possible input formats can be used for Lava flow hazard footprint.<br/>\
+Hazard values are assumed to be binary (\&apos;1\&apos; affected and \&apos;0\&apos; not affected).<br/>\
+<ul>\
+<li>Q-LavaHa output file. ASCII (ASC) file format (<a target=\'_blank\' href=\'http://we.vub.ac.be/en/q-lavha\'>VUB-Q-LavaHa</a>).<br/>\
+See example file <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lava_flow_Q-LavaHa.asc\'>lava_flow_Q-LavaHa.asc</a>\
+</li><li>CSV file with three columns named: lon, lat, intensity.<br/>\
+The coordinate reference system must be WGS84 (EPSG:4326)<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lava_flow_oq.csv\'>lava_flow_oq.csv</a>\
+</li><li>Polygonal vector layer in the ESRI shapefile format describing the hazard peril in a single field. The zip file must contain at least the .shp, .shx, .dbf and .prj files.<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lava_flow_shapefile.zip\'>lava_flow_shapefile.zip</a>\
+</li></ul>', 'Lava flow - input format'); return false;"><span class="ui-icon ui-icon-help ipt_help" title='Three possible input formats can be used for Lava flow hazard footprint: Q-LavaHa, CSV or Shapefile. Hazard values are assumed to be binary (&apos;1&apos; affected and &apos;0&apos; not affected). Click for more detials.'></span></a>
+      :</label>
+    </label>
+    <select name="in-type">
+      <option value="text-to-wkt">Q-LavaHa output file</option>
+      <option value="openquake">Default CSV format</option>
+      <option value="shape-to-wkt">Shapefile (ESRI) to vector</option>
+    </select>
+  </div>
+
+  <div class="menuItems" name="lavaflow-file-html">
+    <label>Hazard footprint:</label>
+    {{ lavaflow_file_html.file_html }}
+    {{ lavaflow_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="lavaflow-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/lavaflow_file" method="post" id="file-upload-form" name="lavaflow-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ lavaflow_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="menuItems" name="epsg">
+    <label>Coordinate reference system [EPSG] <span class="ui-icon ui-icon-help ipt_help" title='The spatial reference system (SRS) used in the input layer. The SRS must follow the EPSG codes implemented by GDAL (https://gdal.org/osr_tutorial.html).'></span> :</label>
+    <input type="text" name="epsg" placeholder="for example: 4326" title="4326 (that corresponds to WGS84 projection)" oninput="this.value = this.value.replace(/[^0-9]/, '')"/>
+  </div>
+
+  <div class="menuItems" name="discr-dist">
+    <label>Discretization distance
+      <span class="ui-icon ui-icon-help ipt_help" title="This parameter indicates the discretization distance used to rasterize the Shapefile. NOTE: the units must be consistent with the Shapefile EPSG."></span>
+      :</label><input type="text" name="discr-dist" value="0.2"/>
+  </div>
+
+  <div class="menuItems" name="haz-field">
+    <label>Hazard field
+      <span class="ui-icon ui-icon-help ipt_help" title="Hazard field (column name) in the Shapefile attribute table describing the hazard values."></span>
+      :</label><input type="text" name="haz-field"/>
+  </div>
+
+  <div class="menuItems" name="spec-ass-haz-dist" data-gem-enabled="true">
+    <label>Asset hazard distance [km] <span class="ui-icon ui-icon-help ipt_help" title='This parameter indicates the maximum allowable distance between an asset and the closest hazard input.'></span>:</label>
+    <input type="text" name="spec-ass-haz-dist" placeholder="for example: 10.0">
+  </div>
+
+</div>
+
+<div style="display: none;" name="lahar-input">
+  <h3>Lahar</h3>
+  <div class="menuItems">
+    <label>Input format
+      <a target="_blank" href="#" onclick="gem_ipt.help_msg('\
+Three possible input formats can be used for Lava flow hazard footprint.<br/>\
+Hazard values are assumed to be binary (\&apos;1\&apos; affected and \&apos;0\&apos; not affected).<br/>\
+<ul>\
+<li>LaharZ output file. ASCII (ASC) file format (<a target=\'_blank\' href=\'https://pubs.er.usgs.gov/publication/ofr98638\'>USGS-LaharZ</a>).<br/>\
+See example file <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lahar_LaharZ.asc\'>lahar_LaharZ.asc</a>\
+</li><li>CSV file with three columns named: lon, lat, intensity.<br/>\
+The coordinate reference system must be WGS84 (EPSG:4326)<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lahar_oq.csv\'>lahar_oq.csv</a>\
+</li><li>Polygonal vector layer in the ESRI shapefile format describing the hazard peril in a single field. The zip file must contain at least the .shp, .shx, .dbf and .prj files.<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/lahar_shapefile.zip\'>lahar_shapefile.zip</a>\
+</li></ul>\
+', 'Lahar - input format'); return false;"><span class="ui-icon ui-icon-help ipt_help" title='Three possible input formats can be used for Lahars hazard footprint: LaharZ, CSV or Shapefile. Hazard values are assumed to be binary (1- affected and 0- not affected). Click for more detials.'></span></a>
+
+      :</label>
+    <select name="in-type">
+      <option value="text-to-wkt">LaharZ output file to vector</option>
+      <option value="openquake">Default CSV format</option>
+      <option value="shape-to-wkt">Shapefile (ESRI) to vector</option>
+    </select>
+  </div>
+  <div class="menuItems" name="lahar-file-html">
+    <label>Hazard footprint:</label>
+    {{ lahar_file_html.file_html }}
+    {{ lahar_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="lahar-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/lahar_file" method="post" id="file-upload-form" name="lahar-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ lahar_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="menuItems" name="epsg">
+    <label>Coordinate reference system [EPSG] <span class="ui-icon ui-icon-help ipt_help" title='The spatial reference system (SRS) used in the input layer. The SRS must follow the EPSG codes implemented by GDAL (https://gdal.org/osr_tutorial.html).'></span> :</label>
+    <input type="text" name="epsg" placeholder="for example: 4326" title="4326 (that corresponds to WGS84 projection)" oninput="this.value = this.value.replace(/[^0-9]/, '')"/>
+  </div>
+
+  <div class="menuItems" name="discr-dist">
+    <label>Discretization distance
+      <span class="ui-icon ui-icon-help ipt_help" title="This parameter indicates the discretization distance used to rasterize the Shapefile. NOTE: the units must be consistent with the Shapefile EPSG."></span>
+      :</label><input type="text" name="discr-dist" value="0.2"/>
+  </div>
+
+  <div class="menuItems" name="haz-field">
+    <label>Hazard field
+      <span class="ui-icon ui-icon-help ipt_help" title="Hazard field (column name) in the Shapefile attribute table describing the hazard values."></span>
+      :</label><input type="text" name="haz-field"/>
+  </div>
+
+  <div class="menuItems" name="spec-ass-haz-dist" data-gem-enabled="true">
+    <label>Asset hazard distance [km] <span class="ui-icon ui-icon-help ipt_help" title='This parameter indicates the maximum allowable distance between an asset and the closest hazard input.'></span>:</label>
+    <input type="text" name="spec-ass-haz-dist" placeholder="for example: 10.0">
+  </div>
+
+</div>
+
+<div style="display: none;" name="pyroclasticflow-input">
+  <h3>Pyroclastic density currents</h3>
+  <div class="menuItems">
+    <label>Input format <a target="_blank" href="#" onclick="gem_ipt.help_msg('\
+ Three possible input formats can be used for Pyroclastic density currents hazard footprint.<br/>\
+ Hazard values are assumed to be binary (\&apos;1\&apos; affected and \&apos;0\&apos; not affected).<br/>\
+<ul>\
+  <li>Titan2 output file. Format .-00001 (<a target=\'_blank\' href=\'http://www.gmfg.buffalo.edu/\'>GMFP at University of Buffalo</a>).<br/>\
+See example file <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/pyro_Titan2.-00001\'>pyro_Titan2.-00001</a>\
+  </li><li>CSV file with three columns named: lon, lat, intensity.<br/>\
+The coordinate reference system must be WGS84 (EPSG:4326)<br/>\
+    See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/pyro_oq.csv\'>pyro_oq.csv</a>\
+  </li><li>Polygonal vector layer in the ESRI shapefile format describing the hazard peril in a single field. The zip file must contain at least the .shp, .shx, .dbf and .prj files.<br/>\
+See example <a target=\'_blank\' download href=\'{{ STATIC_URL }}ipt/samples/pyro_shapefile.zip\'>pyro_shapefile.zip</a>\
+</li><ul>', 'Pyroclastic density currents - input format'); return false;"><span class="ui-icon ui-icon-help ipt_help" title='Three possible input formats can be used for Pyroclastic density currents hazard footprint: Titan2, CSV or Shapefile. Hazard values are assumed to be binary (&apos;1&apos; affected and &apos;0&apos; not affected). Click for more detials.'></span></a>
+      :</label>
+    <select name="in-type">
+      <option value="text-to-wkt">Titan2 output file</option>
+      <option value="openquake">Default CSV format</option>
+      <option value="shape-to-wkt">Shapefile (ESRI) to vector</option>
+    </select>
+  </div>
+
+  <div class="menuItems" name="pyroclasticflow-file-html">
+    <label>Hazard footprint:</label>
+    {{ pyroclasticflow_file_html.file_html }}
+    {{ pyroclasticflow_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="pyroclasticflow-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/pyroclasticflow_file" method="post" id="file-upload-form" name="pyroclasticflow-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ pyroclasticflow_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="menuItems" name="epsg">
+    <label>Coordinate reference system [EPSG] <span class="ui-icon ui-icon-help ipt_help" title='The spatial reference system (SRS) used in the input layer. The SRS must follow the EPSG codes implemented by GDAL (https://gdal.org/osr_tutorial.html).'></span> :</label>
+    <input type="text" name="epsg" placeholder="for example: 4326" title="4326 (that corresponds to WGS84 projection)" oninput="this.value = this.value.replace(/[^0-9]/, '')"/>
+  </div>
+
+  <div class="menuItems" name="discr-dist">
+    <label>Discretization distance
+      <span class="ui-icon ui-icon-help ipt_help" title="This parameter indicates the discretization distance used to rasterize the Shapefile. NOTE: the units must be consistent with the Shapefile EPSG."></span>
+      :</label><input type="text" name="discr-dist" value="0.2"/>
+  </div>
+
+  <div class="menuItems" name="haz-field">
+    <label>Hazard field
+      <span class="ui-icon ui-icon-help ipt_help" title="Hazard field (column name) in the Shapefile attribute table describing the hazard values."></span>
+      :</label><input type="text" name="haz-field"/>
+  </div>
+
+  <div class="menuItems" name="spec-ass-haz-dist" data-gem-enabled="true">
+    <label>Asset hazard distance [km] <span class="ui-icon ui-icon-help ipt_help" title='This parameter indicates the maximum allowable distance between an asset and the closest hazard input.'></span>:</label>
+    <input type="text" name="spec-ass-haz-dist" placeholder="for example: 10.0">
+  </div>
+
+</div>
+{% include "ipt/tabs/cf/sect_exposure_model.html" %}
+
+<div name="fragility" style="display: none;">
+  <h3>Fragility model</h3>
+  <div class="menuItems" name="fm-ashfall-file-html" data-gem-group="fragility-model">
+    <label>Ash fall structural fragility model <span class="ui-icon ui-icon-help ipt_help" title='A fragility model defines a set of fragility functions, describing the probability of exceeding a set of limit, or damage, states. (Note: it is necessary to define a fragility function for each building typology present in the exposure model)'></span>
+      :</label>
+    {{ fm_ashfall_file_html.file_html }}
+    {{ fm_ashfall_file_html.new_btn }}
+  </div>
+  <div class="menuItems" name="fm-ashfall-file-new" style="display: none;">
+    <div name="msg"><br></div>
+    {% if gem_qgis == None %}
+    <form action="upload/fragility_model" method="post" id="file-upload-form" name="fm-ashfall-file"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ fm_ashfall_file_upload.file_upload }}
+    </form>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="alert alert-info ipt-info" role="alert" style="text-align: center;">
+      <form style="margin: 0px;">
+        <div class="chbox chbox_last">
+          <input style="margin:0;" type="checkbox" name="is-cons-models">
+          Include consequence models <span class="ui-icon ui-icon-help ipt_help" title='A consequence model defines a set of consequence functions, describing the distribution of the loss (or consequence) ratio conditional on a set of discrete limit (or damage) states.'></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div name="ashfall-cons" style="display: none;">
+    <div class="menuItems" name="fm-ashfall-cons-html" data-gem-group="fragility-cons">
+      <label>Ash fall consequence model:</label>
+      {{ fm_ashfall_cons_html.file_html }}
+      {{ fm_ashfall_cons_html.new_btn }}
+    </div>
+    <div class="menuItems" name="fm-ashfall-cons-new" style="display: none;">
+      <div name="msg"><br></div>
+      {% if gem_qgis == None %}
+      <form action="upload/fragility_cons" method="post" id="file-upload-form" name="fm-ashfall-cons"
+            enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ fm_ashfall_cons_upload.file_upload }}
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- FIXME modal_damage_state
+<div>
+  <div class="menuItems">
+    <label>Modal damage state:</label>
+    <select name="is-modal-damage-state" style="width: 64px;">
+      <option value="no" checked="checked">No</option>
+      <option value="yes">Yes</option>
+    </select>
+  </div>
+</div>
+-->
+
+<div style="text-align: center;">
+  <hr>
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="clean_all">Clean all</button>
+
+  <button type="submit" style="vertical-align: top; margin: auto;" class="btn btn-primary" name="download">{%if gem_qgis != None %}'Save As'{% else %}Download{% endif %} Zip File</button>
+  {%if gem_qgis != None %}
+  <button name="run-calc-btn" type="button" style="vertical-align: top; margin: auto;" class="btn btn-primary">Run Calculation</button>
+  {% endif %}
+  <form style="display: inline-block;" name="downloadForm" method="post">{% csrf_token %}</form>
+</div>

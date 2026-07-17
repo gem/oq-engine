@@ -1,0 +1,61 @@
+<h3>Site conditions</h3>
+
+<div class="alert alert-info ipt-info" role="alert">
+  Select a method to specify site conditions:<br>
+  <form style="margin: 0px;">
+    <div style="text-align: center;">
+      <div class="chbox">
+        <input type="radio" name="hazard_sitecond" value="uniform-param">
+        <span class="inlible" name="hazard_sitecond">Use uniform site parameters</span>
+      </div>
+      <div class="chbox">
+        <input type="radio" name="hazard_sitecond" value="from-file">
+        <span class="inlible" name="hazard_sitecond">Site conditions file</span>
+      </div>
+    </div>
+  </form>
+</div>
+<div name="hazard-sitecond_uniform-param" class="menuItems">
+  <table style="width: 100%; margin: auto;">
+    <tr><td style="text-align: left;">
+        <label>Reference vs30 value (m/s) <span class="ui-icon ui-icon-help ipt_help" title='Average shear wave velocity in the top 30m.'></span>
+:</label>
+      </td><td style="text-align: right;">
+        <input type="text" name="reference_vs30_value" value="760">
+    </td></tr>
+    <tr><td style="text-align: left;">
+        <label>Reference vs30 type <span class="ui-icon ui-icon-help ipt_help" title='Selection of whether the reference vs30 value was inferred or measured.'></span>
+:</label>
+      </td><td style="text-align: right;">
+        <form style="margin: 0px;">
+          <input style="vertical-align: top;" type="radio" name="hazard_sitecond_type" value="inferred" checked="checked"><span class="inlible">Inferred</span>
+          <input style="vertical-align: top;" type="radio" name="hazard_sitecond_type" value="measured"><span class="inlible" style="margin-right: 20px">Measured</span>
+        </form>
+    </td></tr>
+    <tr><td style="text-align: left;">
+        <label style="display: inline-block; float: left;">Minimum depth (m) at which vs30 ≥ 1.0 km/s (z1.0) <span class="ui-icon ui-icon-help ipt_help" title='Vertical distance from earth surface to the layer where seismic waves start to propagate with a speed above 1.0 km/sec, in meters.'></span>:</label>
+      </td><td style="text-align: right;">
+        <input type="text" name="reference_depth_to_1pt0km_per_sec" value="100.0">
+    </td></tr>
+    <tr><td style="text-align: left;">
+        <label>Minimum depth (km) at which vs30 ≥ 2.5 km/s (z2.5) <span class="ui-icon ui-icon-help ipt_help" title='Vertical distance from earth surface to the layer where seismic waves start to propagate with a speed above 2.5 km/sec, in km.'></span>:</label>
+      </td><td style="text-align: right;">
+        <input type="text" name="reference_depth_to_2pt5km_per_sec" value="2.0">
+    </td></tr>
+  </table>
+</div>
+<div name="hazard-sitecond_from-file">
+  <div class="menuItems" name="site-conditions-html" data-gem-group="site-conditions">
+    <label>Site conditions file <span class="ui-icon ui-icon-help ipt_help" title='File that contains a list of sites with the corresponding local soil conditions.'></span>
+:</label>
+    {{ site_conditions_html.file_html }}
+    {{ site_conditions_html.new_btn }}
+  </div>
+  <div class="menuItems" name="site-conditions-new" style="display: none;">
+    <div name="msg"><br></div>
+    <form action="upload/site_conditions" method="post" id="file-upload-form" name="site-conditions" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ site_conditions_upload.file_upload }}
+    </form>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<h3>Hazard Sites</h3>
+<div class="alert alert-info ipt-info" role="alert">
+  Choose a method to input hazard sites:<br>
+  <div style="text-align: center;">
+    <form style="margin: 0px;">
+      <div class="chbox">
+        <input type="radio" name="hazard_sites" value="region-grid" checked="checked">
+        <span class="inlible">Region grid</span>
+      </div>
+      <div class="chbox">
+        <input type="radio" name="hazard_sites" value="list-of-sites">
+        <span class="inlible">List of sites</span>
+      </div>
+      <div class="chbox">
+        <input type="radio" name="hazard_sites" value="exposure-model">
+        <span class="inlible">Exposure model <span class="ui-icon ui-icon-help ipt_help" title='In this case, the ground motion fields will be computed at each of the locations of the assets in the exposure model.'></span></span>
+      </div>
+      <!-- 
+           <div class="chbox">
+             <input type="radio" name="hazard_sites" value="site-cond-model">
+             <span class="inlible">Read locations from site conditions <span class="ui-icon ui-icon-help ipt_help" title='In this case, the ground motion fields will be computed at each of the locations specified in the site model file.'></span></span>
+           </div> -->
+    </form>
+  </div>
+</div>
+<div name="region-grid">
+  <h3>Region grid</h3>
+  <div class="menuItems">
+    <label>Grid spacing (km) <span class="ui-icon ui-icon-help ipt_help" title='A parameter used to discretize the polygon area.'></span>
+:</label>
+    <input type="text" name="grid_spacing" placeholder="5.0">
+  </div>
+
+
+  <div class="alert alert-info ipt-info" role="alert">
+    <div style="text-align: center;">
+      <form style="margin: 0px;">
+        <div class="chbox">
+          <input type="radio" name="region_grid" value="region-coordinates">
+          <span class="inlible">
+            Region coordinates
+          </span>
+        </div>
+        <div class="chbox">
+          <input type="radio" name="region_grid" value="infer-from-exposure">
+          <span class="inlible">
+            Infer region coordinates from exposure model
+          </span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <div name="region-coordinates-table" class="menuItems" style="/* background-color: green; */ ">
+    <div style="display: inline-block; /* background-color: pink; */ float: left;">
+      <label>Coordinates <span class="ui-icon ui-icon-help ipt_help" title='Polygon used to specify the area where the hazard will be computed.'></span>
+:</label>
+    </div>
+    <div style="position: relative; display: inline-block; /* background-color: red; */ text-align: center;">
+      <div name="table" style=" width: 300px; height: 120px; overflow: hidden; padding: auto;"></div>
+      <button type="button" name="new_row_add" class="btn">New Row</button>
+      <br><br>
+    </div>
+  </div>
+</div>
+<div name="list-of-sites">
+  <h3>List of sites</h3>
+
+  <div class="menuItems" name="list-of-sites-html" data-gem-group="list-of-sites">
+    <label>Sites <span class="ui-icon ui-icon-help ipt_help" title='File that contains a number of sites where the hazard will be computed.'></span>
+:</label>
+    {{ list_of_sites_html.file_html }}
+    {{ list_of_sites_html.new_btn }}
+  </div>
+  <div class="menuItems" name="list-of-sites-new" style="display: none;">
+    <div name="msg"><br></div>
+    <form action="upload/list_of_sites" method="post" id="file-upload-form" name="list-of-sites" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ list_of_sites_upload.file_upload }}
+    </form>
+  </div>
+</div>
