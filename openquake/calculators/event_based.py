@@ -422,7 +422,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
             if len(rup_array):
                 allargs.append((rup_array, cmaker, model))
 
-    maxw = sum(rup_weight(item[0]).sum() for item in allargs) / NT / 2
+    maxw = sum(rup_weight(item[0]).sum() for item in allargs) / NT
     allargs = _collect(allargs, maxw, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
