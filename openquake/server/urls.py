@@ -69,7 +69,8 @@ if settings.WEBUI:
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
                     name="outputs_impact"),
-            re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
+            re_path(r'^v1/get_impact_form_defaults$',
+                    views.get_impact_form_defaults,
                     name="impact_form_defaults"),
             re_path(r'^v1/impact_get_stations_from_usgs$',
                     views.impact_get_stations_from_usgs,
@@ -83,13 +84,10 @@ if settings.WEBUI:
         ]
 
     for app_full in settings.STANDALONE_APPS:
-        app = app_full.split('.')[0]
-        if app in settings.STANDALONE_APP_NAME_MAP:
-            app_name = settings.STANDALONE_APP_NAME_MAP[app]
-        else:
-            app_name = app.split('_')[1]
+        app_name = settings.STANDALONE_APP_NAME_MAP[app_full]
+        # app_full=openquake.ipt, app_name=ipt
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
-            '%s.urls' % app, namespace='%s' % app_name)))
+            '%s.urls' % app_full, namespace=app_name)))
 
 if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     urlpatterns += [

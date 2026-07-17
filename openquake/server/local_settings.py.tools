@@ -5,7 +5,7 @@ APPLICATION_MODE = 'TOOLS_ONLY'
 EXTERNAL_TOOLS = True
 
 STANDALONE_APP_NAME_MAP = {
-       'openquakeplatform_ipt': 'ipt',
+       'openquake.ipt': 'ipt',
        'openquakeplatform_taxonomy': 'glossary',
        'django_gem_taxonomy': 'taxonomy',
 }
