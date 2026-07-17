@@ -73,6 +73,8 @@ rup_dt = numpy.dtype(
 
 
 def rup_weight(rup):
+    if isinstance(rup, numpy.ndarray):
+        return rup['n_occ'] @ rup['nsites']
     return rup['n_occ'] * rup['nsites']
 
 # ######################## hcurves_from_gmfs ############################ #
@@ -338,7 +340,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
-            totw += rup_weight(rups).sum()
+            totw += rup_weight(rups)
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
@@ -422,7 +424,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
             if len(rup_array):
                 allargs.append((rup_array, cmaker, model))
 
-    maxw = sum(rup_weight(item[0]).sum() for item in allargs) / NT
+    maxw = sum(rup_weight(item[0]) for item in allargs) / NT
     allargs = _collect(allargs, maxw, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
@@ -435,13 +437,13 @@ def _collect(allargs, maxw, sids, sec_perils, dstore):
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
     out = []
     for triples in block_splitter(
-            allargs, maxw, lambda item: rup_weight(item[0]).sum(),
+            allargs, maxw, lambda item: rup_weight(item[0]),
             key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
-            (rb, rup_weight(rb).sum()) for rb in rupblks])
+            (rb, rup_weight(rb)) for rb in rupblks])
         out.append((allrups, cmakers, sids, sec_perils, dstore))
-    # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
+    # the arguments are reduced in event_based_risk_test/case_03 (from 8 to 5)
     return out
 
 
