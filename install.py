@@ -324,25 +324,40 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 continue
 
             try:
+                # if sys.platform == "win32":
+                #     django_admin = ['Scripts', 'django-admin.exe']
+                # else:
+                #     django_admin = ["bin", "django-admin"]
                 if sys.platform == "win32":
-                    django_admin = ['Scripts', 'django-admin.exe']
+                    python = ['Scripts', 'python.exe']
                 else:
-                    django_admin = ["bin", "django-admin"]
+                    python = ["bin", "python"]
 
-                django_env = os.environ.copy()
-                django_env[
-                    "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-                if inst.USER is None:
-                    subprocess.check_call(
-                        [os.path.join(inst.VENV, *django_admin),
-                         "openquake_engine_postinstall", app['name']],
-                        env=django_env)
-                else:
-                    subprocess.check_call(
-                        ["sudo", "-u", inst.USER,
-                         "DJANGO_SETTINGS_MODULE=openquake.server.settings",
-                         os.path.join(inst.VENV, *django_admin),
-                         "openquake_engine_postinstall", app['name']])
+                # django_env = os.environ.copy()
+                # django_env[
+                #     "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
+                manage_path = os.path.join('openquake', 'server', 'manage.py')
+                subprocess.check_call(
+                    [os.path.join(inst.VENV, *python),
+                        manage_path, "openquake_engine_postinstall",
+                        app['name']], user=inst.USER)
+                # if inst.USER is None:
+                #     subprocess.check_call(
+                #         [os.path.join(inst.VENV, *django_admin),
+                #          "openquake_engine_postinstall", app['name']],
+                #         env=django_env)
+                # else:
+                #     manage_path = os.path.join(
+                #         'openquake', 'server', 'manage.py')
+                #     # subprocess.check_call(
+                #     #     ["sudo", "-u", inst.USER,
+                #     #      "DJANGO_SETTINGS_MODULE=openquake.server.settings",
+                #     #      os.path.join(inst.VENV, *manage_path),
+                #     #      "openquake_engine_postinstall", app['name']])
+                #     subprocess.check_call(
+                #         [os.path.join(inst.VENV, *python),
+                #          manage_path, "openquake_engine_postinstall",
+                #          app['name']], user=inst.USER)
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append(
