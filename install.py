@@ -43,6 +43,7 @@ import tempfile
 import argparse
 import platform
 import subprocess
+import site
 from urllib.request import urlopen, Request
 
 try:
@@ -336,7 +337,12 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 # django_env = os.environ.copy()
                 # django_env[
                 #     "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-                manage_path = os.path.join('openquake', 'server', 'manage.py')
+
+                # This returns a list of all site-packages paths for the
+                # current environment
+                site_packages_dirs = site.getsitepackages()
+                manage_path = os.path.join(site_packages_dirs[0],
+                                           'openquake', 'server', 'manage.py')
                 subprocess.check_call(
                     [os.path.join(inst.VENV, *python),
                         manage_path, "openquake_engine_postinstall",
