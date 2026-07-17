@@ -18,10 +18,8 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
 from openquake.hazardlib import geo, mfd
-from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
 
