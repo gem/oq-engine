@@ -332,6 +332,8 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 django_env = os.environ.copy()
                 django_env[
                     "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
+                if inst.USER is not None:
+                    django_env["USER"] = inst.USER
 
                 subprocess.check_call(
                     [os.path.join(inst.VENV, *django_admin),
