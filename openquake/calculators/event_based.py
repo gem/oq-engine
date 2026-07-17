@@ -393,8 +393,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
-    allargs = []
-    NT = (oq.concurrent_tasks or 2) // 2
+    triples = []
     for (model, trt_smr), rups in acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
@@ -416,33 +415,26 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        e0mod = rups['e0'] % NT
-        for i in range(NT):
-            rup_array = rups[e0mod == i]
-            if len(rup_array):
-                allargs.append((rup_array, cmaker, model))
+        triples.append((rups, cmaker, model))
 
-    maxw = sum(rup_weight(item[0]).sum() for item in allargs) / NT / 2
-    allargs = _collect(allargs, maxw, sitecol.sids, sec_perils, dstore)
+    rup_arrays, cmakers, models = zip(*triples)
+
+    NT = (oq.concurrent_tasks or 2) // 2
+    allargs = [(rups, cmakers, sitecol.sids, sec_perils, dstore)
+               for rups in split_e0(rup_arrays, NT)]
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return allargs, oq_by
 
 
-def _collect(allargs, maxw, sids, sec_perils, dstore):
-    # allargs is a list [(rupblock, cmaker, model) ...]
-    # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
-    out = []
-    for triples in block_splitter(
-            allargs, maxw, lambda item: rup_weight(item[0]).sum(),
-            key=lambda item: item[2]):  # by model
-        rupblks, cmakers, models = zip(*triples)
-        allrups = general.WeightedSequence([
-            (rb, rup_weight(rb).sum()) for rb in rupblks])
-        out.append((allrups, cmakers, sids, sec_perils, dstore))
-    # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
-    return out
+def split_e0(rup_arrays, NT):
+    """
+    Split in NT rupture arrays with constant e0 % NT
+    """
+    for i in range(NT):
+        yield [arr[arr['e0'] % NT == i] for arr in rup_arrays]
+
 
 
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
