@@ -74,7 +74,7 @@ rup_dt = numpy.dtype(
 
 def rup_weight(rup):
     if isinstance(rup, numpy.ndarray):
-        return rup['n_occ'] @ rup['nsites']
+        return I64(rup['n_occ']) @ rup['nsites']
     return rup['n_occ'] * rup['nsites']
 
 # ######################## hcurves_from_gmfs ############################ #
