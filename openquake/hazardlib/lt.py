@@ -232,6 +232,11 @@ def recur_row(utype, node, filename):
     return node.row.attrib
 
 
+@parse_uncertainty.add('rateSplit')
+def rate_split(utype, node, filename):
+    return node.row.attrib
+
+
 # validations
 
 def _validate_simple_fault_geometry(utype, node, filename):
@@ -471,6 +476,12 @@ def _set_recurset(utype, source, value):
     source.recur_model = value["recur_model"]
     source.mmax = float(value["max_mag"])
     return
+
+
+@apply_uncertainty.add('rateSplit')
+def _set_rate_split(utype, source, value):
+    source.rate_split_bg_frac = float(value["bg_frac"])
+    source.rate_split_fault_frac = float(value["fault_frac"])
 
 
 @apply_uncertainty.add('dummy')  # do nothing

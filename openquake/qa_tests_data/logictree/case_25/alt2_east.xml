@@ -1,25 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <sourceModel name="Alt3 scmBound=east svaBound=central Mmax68 recurset0 scenario_3 dip45 lsd15">
-        <sourceGroup name="group_1" tectonicRegion="NVA">
-<simpleFaultSource id="NVA-EF1" name="Embedded fault NVA-EF1" tectonicRegion="NVA">
+    <sourceModel name="Alt2 east (NVA-AB bg + 4 embedded faults)">
+        <sourceGroup name="alt2_east" tectonicRegion="NVA">
+
+<areaSource id="alt2e-bkg" name="NVA background (alt2 east)">
+    <areaGeometry>
+        <gml:Polygon>
+            <gml:exterior>
+                <gml:LinearRing>
+                    <gml:posList>-121.7803 49.2349 -121.9131 49.3456 -123.0849 50.2956 -125.9767 51.7779 -125.6634 51.906 -124.7858 51.9227 -123.7428 51.4624 -122.6619 51.1255 -121.9429 50.772 -121.4579 49.8895 -121.2884 49.5455 -121.2242 49.4137 -121.7803 49.2349</gml:posList>
+                </gml:LinearRing>
+            </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+    </areaGeometry>
+    <magScaleRel>BCHydroNVAMSR</magScaleRel>
+    <aspectRatioFunction>
+        <type>linear_piecewise</type>
+        <mag_points>
+            <mag_point mag="4.0" aratio="1.0"/>
+            <mag_point mag="7.0" aratio="2.0"/>
+        </mag_points>
+    </aspectRatioFunction>
+    <arbitraryMFD>
+        <magnitudes>3.25</magnitudes>
+        <occurRates>1.0</occurRates>
+    </arbitraryMFD>
+    <nodalPlaneDist>
+        <nodalPlane dip="45.0" probability="0.3" rake="90.0" strike="320.0"/>
+        <nodalPlane dip="60.0" probability="0.4" rake="90.0" strike="320.0"/>
+        <nodalPlane dip="75.0" probability="0.3" rake="90.0" strike="320.0"/>
+    </nodalPlaneDist>
+    <hypoDepthDist>
+        <hypoDepth depth="2.5" probability="0.01378954" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="3.5" probability="0.04826637" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="4.5" probability="0.05517597" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="5.5" probability="0.05793388" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.05793388" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="7.5" probability="0.05793388" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="8.5" probability="0.05793388" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="9.5" probability="0.05793388" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="11.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="12.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="13.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="15.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="16.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="17.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="18.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="19.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+    </hypoDepthDist>
+</areaSource>
+
+<simpleFaultSource id="alt2e-EF1" name="Embedded fault (east) EF1" tectonicRegion="NVA" rateFrac="0.3439">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
-            -121.7334 49.2502
-            -121.8623 49.5943
-            -122.3035 49.8454
-            -122.5585 50.0895
-            -122.6188 50.2273
-            -123.0106 50.5333
-            -123.287 50.6697
-            -123.6021 50.7102
-            -123.8088 50.8176
-            -124.2442 50.9267
-            -124.457 51.0984
-            -124.7655 51.2026
-            -125.7099 51.665
-            -125.8893 51.8138
+            -121.7334 49.2502 -121.8623 49.5943 -122.3035 49.8454 -122.5585 50.0895
+            -122.6188 50.2273 -123.0106 50.5333 -123.287 50.6697 -123.6021 50.7102
+            -123.8088 50.8176 -124.2442 50.9267 -124.457 51.0984 -124.7655 51.2026
+            -125.7099 51.665 -125.8893 51.8138
             </gml:posList>
         </gml:LineString>
         <dip>45.0</dip>
@@ -34,8 +76,10 @@
             <mag_point mag="7.0" aratio="2.0"/>
         </mag_points>
     </aspectRatioFunction>
-    <!-- Fault MFD: truncated GR with fixed AC b-value (b=0.3) over [Mmax-1, Mmax] = [5.8, 6.8]; rate scaled by fault-length fraction (0.3439). -->
-    <truncGutenbergRichterMFD aValue="-0.945689" bValue="0.300000" minMag="5.80" maxMag="6.80"/>
+    <arbitraryMFD>
+        <magnitudes>6.0</magnitudes>
+        <occurRates>1.0</occurRates>
+    </arbitraryMFD>
     <rake>90.0</rake>
     <hypoDepthDist>
         <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
@@ -53,18 +97,13 @@
         <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
-<simpleFaultSource id="NVA-EF2" name="Embedded fault NVA-EF2" tectonicRegion="NVA">
+
+<simpleFaultSource id="alt2e-EF2" name="Embedded fault (east) EF2" tectonicRegion="NVA" rateFrac="0.2415">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
-            -121.6843 50.2959
-            -121.888 50.4635
-            -123.0619 50.9694
-            -123.218 51.0624
-            -124.0714 51.2956
-            -124.3707 51.4605
-            -124.797 51.7831
-            -125.0291 51.9188
+            -121.6843 50.2959 -121.888 50.4635 -123.0619 50.9694 -123.218 51.0624
+            -124.0714 51.2956 -124.3707 51.4605 -124.797 51.7831 -125.0291 51.9188
             </gml:posList>
         </gml:LineString>
         <dip>45.0</dip>
@@ -79,8 +118,10 @@
             <mag_point mag="7.0" aratio="2.0"/>
         </mag_points>
     </aspectRatioFunction>
-    <!-- Fault MFD: truncated GR with fixed AC b-value (b=0.3) over [Mmax-1, Mmax] = [5.8, 6.8]; rate scaled by fault-length fraction (0.2415). -->
-    <truncGutenbergRichterMFD aValue="-1.099204" bValue="0.300000" minMag="5.80" maxMag="6.80"/>
+    <arbitraryMFD>
+        <magnitudes>6.0</magnitudes>
+        <occurRates>1.0</occurRates>
+    </arbitraryMFD>
     <rake>90.0</rake>
     <hypoDepthDist>
         <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
@@ -98,15 +139,12 @@
         <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
-<simpleFaultSource id="NVA-EF3" name="Embedded fault NVA-EF3" tectonicRegion="NVA">
+
+<simpleFaultSource id="alt2e-EF3" name="Embedded fault (east) EF3" tectonicRegion="NVA" rateFrac="0.0919">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
-            -121.7976 50.5025
-            -122.0891 50.6951
-            -122.5077 50.8825
-            -122.6765 50.9768
-            -122.9555 51.2188
+            -121.7976 50.5025 -122.0891 50.6951 -122.5077 50.8825 -122.6765 50.9768 -122.9555 51.2188
             </gml:posList>
         </gml:LineString>
         <dip>45.0</dip>
@@ -121,8 +159,10 @@
             <mag_point mag="7.0" aratio="2.0"/>
         </mag_points>
     </aspectRatioFunction>
-    <!-- Fault MFD: truncated GR with fixed AC b-value (b=0.3) over [Mmax-1, Mmax] = [5.8, 6.8]; rate scaled by fault-length fraction (0.0919). -->
-    <truncGutenbergRichterMFD aValue="-1.518806" bValue="0.300000" minMag="5.80" maxMag="6.80"/>
+    <arbitraryMFD>
+        <magnitudes>6.0</magnitudes>
+        <occurRates>1.0</occurRates>
+    </arbitraryMFD>
     <rake>90.0</rake>
     <hypoDepthDist>
         <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
@@ -140,17 +180,12 @@
         <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
-<simpleFaultSource id="NVA-EF4" name="Embedded fault NVA-EF4" tectonicRegion="NVA">
+
+<simpleFaultSource id="alt2e-EF4" name="Embedded fault (east) EF4" tectonicRegion="NVA" rateFrac="0.3227">
     <simpleFaultGeometry>
         <gml:LineString>
             <gml:posList>
-            -121.2264 49.418
-            -121.4578 49.8895
-            -121.943 50.772
-            -122.6618 51.1255
-            -123.7429 51.4624
-            -124.7859 51.9227
-            -124.7911 51.9226
+            -121.2264 49.418 -121.4578 49.8895 -121.943 50.772 -122.6618 51.1255 -123.7429 51.4624 -124.7859 51.9227 -124.7911 51.9226
             </gml:posList>
         </gml:LineString>
         <dip>45.0</dip>
@@ -165,8 +200,10 @@
             <mag_point mag="7.0" aratio="2.0"/>
         </mag_points>
     </aspectRatioFunction>
-    <!-- Fault MFD: truncated GR with fixed AC b-value (b=0.3) over [Mmax-1, Mmax] = [5.8, 6.8]; rate scaled by fault-length fraction (0.3227). -->
-    <truncGutenbergRichterMFD aValue="-0.973322" bValue="0.300000" minMag="5.80" maxMag="6.80"/>
+    <arbitraryMFD>
+        <magnitudes>6.0</magnitudes>
+        <occurRates>1.0</occurRates>
+    </arbitraryMFD>
     <rake>90.0</rake>
     <hypoDepthDist>
         <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
@@ -184,6 +221,7 @@
         <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
+
         </sourceGroup>
     </sourceModel>
 </nrml>

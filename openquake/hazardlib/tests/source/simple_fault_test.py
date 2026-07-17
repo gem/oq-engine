@@ -625,6 +625,33 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         new_fault.modify_set_dip(72.0)
         self.assertAlmostEqual(new_fault.dip, 72.0)
 
+    def test_rate_split_partitions_fault_share(self):
+        from openquake.hazardlib.lt import apply_uncertainty
+        fault = deepcopy(self.fault)
+        fault.rate_frac = 0.3439
+        apply_uncertainty('recurSet', fault,
+                          {"recur_model": "TE", "max_mag": "7.0"})
+        apply_uncertainty('rateSplit', fault,
+                          {"bg_frac": "0.15", "fault_frac": "0.85"})
+        apply_uncertainty('recurRow', fault,
+                          {"b_value": "1.0", "ref_mag": "3.25",
+                           "rate": "0.5"})
+        self.assertIsInstance(fault.mfd, EvenlyDiscretizedMFD)
+        min_mag, _ = fault.mfd.get_min_max_mag()
+        self.assertAlmostEqual(min_mag, 6.05, places=6)
+
+        ref_bins = TruncatedGRMFD(
+            a_val=numpy.log10(0.5) + 1.0 * 3.25, b_val=1.0,
+            min_mag=3.25, max_mag=7.0, bin_width=0.1
+        ).get_annual_occurrence_rates()
+        scale = 0.85 * 0.3439
+        expected = [(m, r * scale) for m, r in ref_bins if m >= 6.0 - 0.1 / 4]
+        got = fault.mfd.get_annual_occurrence_rates()
+        self.assertEqual(len(got), len(expected))
+        for (mg, rg), (me, re_) in zip(got, expected):
+            self.assertAlmostEqual(mg, me, places=6)
+            self.assertAlmostEqual(rg, re_, places=10)
+
 
 class HypoDepthListTestCase(unittest.TestCase):
 

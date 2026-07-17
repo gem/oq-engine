@@ -22,6 +22,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 class AreaSource(ParametricSeismicSource):
@@ -126,46 +127,56 @@ class AreaSource(ParametricSeismicSource):
 
     def modify_set_recurrow(self, recurrow):
         """
-        Modified the recurrence parameters by values given in a dict.
+        Modify the recurrence parameters by values given in a dict.
 
         NOTE: This is currently only intended for support of the BC Hydro
-        NVA SSC logic tree. We may expand it to become a more general capability.
+        NVA SSC logic tree. We may expand it to become a more general
+        capability.
+
+        If a rateSplit uncertainty has previously set self.rate_split_bg_frac,
+        the resulting MFD is a piecewise EvenlyDiscretizedMFD that scales
+        rates at or above Mmax-1 by that fraction (bg side of an alt2-style
+        partition between an area source and embedded faults).
 
         :param recur_row:
             Dict of values to use in given type of MFD
         """
-        # Constants for BCHydro NVA model
-        b_ac = 0.3                       
-        delta_mac = 1.0                  
-        gamma_eff = 0.9185 # This is corrected value from eq 1.2 of memo
+        # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        b_ac = 0.3
+        delta_mac = 1.0
+        gamma_eff = 0.9185
+        bin_width = 0.1
 
-        # Get mmax from value assigned on source within _set_recurset
         mmax = self.mmax
-
-        # Get recur_model from value assigned on source too
         recur_model = self.recur_model
-
-        # Get the other params from the recurrow
         bval = float(recurrow["b_value"])
         ref_mag = float(recurrow["ref_mag"])
         rate = float(recurrow["rate"])
 
-        # Now set the required MFD with the recurrow params
         if recur_model == "TE":
-            # Need to set a GR MFD
             a_val = math.log10(rate) + bval * ref_mag
             self.mfd = TruncatedGRMFD(
                 min_mag=ref_mag, max_mag=mmax,
-                bin_width=0.1, a_val=a_val, b_val=bval
+                bin_width=bin_width, a_val=a_val, b_val=bval,
                 )
         else:
-            # Need to set a AC MFD
             assert recur_model == "AC"
             self.mfd = AlternativeCharacteristicMFD(
                 min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
-                bin_width=0.1, gamma=gamma_eff, delta_m_AC=delta_mac,
-                total_rate=rate
+                bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
+                total_rate=rate,
                 )
+
+        bg_frac = getattr(self, 'rate_split_bg_frac', None)
+        if bg_frac is not None:
+            bins = self.mfd.get_annual_occurrence_rates()
+            threshold = mmax - 1.0
+            occ = [
+                (r * bg_frac if m >= threshold - bin_width / 4 else r)
+                for m, r in bins
+            ]
+            self.mfd = EvenlyDiscretizedMFD(
+                min_mag=bins[0][0], bin_width=bin_width, occurrence_rates=occ)
 
     def iter_ruptures(self, **kwargs):
         """

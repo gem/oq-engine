@@ -27,6 +27,9 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 # Grouping all the "extra" hypo depth options to reduce num args in class
@@ -123,6 +126,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_msr',
         'set_slip_rate',
         'set_hypo_depth_dist',
+        'set_recurrow',
     }
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -515,6 +519,70 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing)
         self.dip = dip
+
+    def modify_set_recurrow(self, recurrow):
+        """
+        Rebuild the MFD from a recurrow using self.recur_model + self.mmax
+        set by an earlier recurSet application. Intended for the BC Hydro
+        NVA alt2 model where fault sources take a scenario-dependent share
+        of the total rate above Mmax-1 and receive no rate below.
+
+        Requires rate_split_fault_frac to be set on the source (typically via
+        a preceding rateSplit uncertainty). The per-source rate_frac attribute
+        (fault-length fraction of the total fault share) is used if set,
+        otherwise defaults to 1.0.
+
+        :param recur_row:
+            Dict of values to use in given type of MFD (b_value, ref_mag,
+            rate)
+        """
+        # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        b_ac = 0.3
+        delta_mac = 1.0
+        gamma_eff = 0.9185
+        bin_width = 0.1
+
+        mmax = self.mmax
+        recur_model = self.recur_model
+        bval = float(recurrow["b_value"])
+        ref_mag = float(recurrow["ref_mag"])
+        rate = float(recurrow["rate"])
+
+        if recur_model == "TE":
+            a_val = math.log10(rate) + bval * ref_mag
+            parent = TruncatedGRMFD(
+                min_mag=ref_mag, max_mag=mmax,
+                bin_width=bin_width, a_val=a_val, b_val=bval,
+            )
+        else:
+            assert recur_model == "AC"
+            parent = AlternativeCharacteristicMFD(
+                min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
+                bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
+                total_rate=rate,
+            )
+
+        fault_frac = getattr(self, 'rate_split_fault_frac', None)
+        if fault_frac is None:
+            self.mfd = parent
+            return
+
+        rate_frac = getattr(self, 'rate_frac', 1.0)
+        scale = fault_frac * rate_frac
+        threshold = mmax - 1.0
+        bins = parent.get_annual_occurrence_rates()
+        # Trim leading zeros to avoid rup-mesh warnings on tiny-M fault rups
+        occ = [
+            (r * scale if m >= threshold - bin_width / 4 else 0.0)
+            for m, r in bins
+        ]
+        first = next((i for i, r in enumerate(occ) if r > 0), None)
+        if first is None:
+            raise ValueError(
+                f"no rate remains above Mmax-1 for fault {self.source_id}")
+        self.mfd = EvenlyDiscretizedMFD(
+            min_mag=bins[first][0], bin_width=bin_width,
+            occurrence_rates=occ[first:])
 
     def __iter__(self):
         mag_rates = self.get_annual_occurrence_rates()
