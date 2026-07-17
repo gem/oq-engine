@@ -232,7 +232,6 @@ def recur_row(utype, node, filename):
     return node.row.attrib
 
 
-
 # validations
 
 def _validate_simple_fault_geometry(utype, node, filename):
