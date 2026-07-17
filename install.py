@@ -611,7 +611,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
     if inst in (user, devel):  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
 
-    errors += postinstall_standalone(inst.VENV)
+    errors += postinstall_standalone(inst)
 
     if (
         inst is server
