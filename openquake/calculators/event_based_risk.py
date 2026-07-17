@@ -322,8 +322,8 @@ def event_based_risk(gmf_df, monitor):
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
-    :param rups: list of ruptures with the same trt_smr
-    :param cmakers: ContextMaker instances associated to each trt_smr
+    :param allrups: list of rupture arrays
+    :param cmakers: ContextMaker instances
     :param sids: array of site indices
     :param secperils: list of secondary peril instances
     :param hdf5path: path to the ses.hdf5 file

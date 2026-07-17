@@ -420,8 +420,8 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     rup_arrays, cmakers, models = zip(*triples)
 
     NT = (oq.concurrent_tasks or 2) // 2
-    allargs = [(rups, cmakers, sitecol.sids, sec_perils, dstore)
-               for rups in split_e0(rup_arrays, NT)]
+    allargs = [(allrups, cmakers, sitecol.sids, sec_perils, dstore)
+               for allrups in split_e0(rup_arrays, NT)]
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
