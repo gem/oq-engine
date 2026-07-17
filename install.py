@@ -332,13 +332,17 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 django_env = os.environ.copy()
                 django_env[
                     "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-                if inst.USER is not None:
-                    django_env["USER"] = inst.USER
-
-                subprocess.check_call(
-                    [os.path.join(inst.VENV, *django_admin),
-                     "openquake_engine_postinstall", app['name']],
-                    env=django_env, user=inst.USER)
+                if inst.USER is None:
+                    subprocess.check_call(
+                        [os.path.join(inst.VENV, *django_admin),
+                         "openquake_engine_postinstall", app['name']],
+                        env=django_env)
+                else:
+                    subprocess.check_call(
+                        ["sudo", "-u", inst.USER,
+                         "DJANGO_SETTINGS_MODULE=openquake.server.settings",
+                         os.path.join(inst.VENV, *django_admin),
+                         "openquake_engine_postinstall", app['name']])
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append(
