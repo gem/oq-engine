@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Internal: extended `oq sample` to manage ESRI .asc files
+
   [Michele Simionato, Christopher Brooks]
   * Added recurSet and recurRow epistemic uncertainties for area sources
     as required for alternative 1 of the BC Hydro NVA LT (tested inside
@@ -7,7 +10,7 @@
   * Added filtering of hypoDepthDist in area, multi-point and point
     sources to only depths within seismogenic depth range and then
     renormalise the distribution. QA test in classical/case_45
-    
+
   [Michele Simionato]
   * Internal: changed `oq mosaic run_site` to export CSVs in asce_dir/<model>
 
