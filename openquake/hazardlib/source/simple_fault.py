@@ -531,6 +531,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         rate_frac attribute (fault-length fraction of the total fault share) is
         used if set, otherwise defaults to 1.0.
 
+        NOTE: This is currently only intended for support of the BC Hydro
+        NVA SSC logic tree. We may expand it to become a more general
+        capability.
+
         :param recur_row:
             Dict of values to use in given type of MFD (b_value, ref_mag,
             rate)

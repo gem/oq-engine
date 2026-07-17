@@ -129,14 +129,14 @@ class AreaSource(ParametricSeismicSource):
         """
         Modify the recurrence parameters by values given in a dict.
 
-        NOTE: This is currently only intended for support of the BC Hydro
-        NVA SSC logic tree. We may expand it to become a more general
-        capability.
-
         If a rateSplit uncertainty has previously set self.rate_split_bg_frac,
         the resulting MFD is a piecewise EvenlyDiscretizedMFD that scales
         rates at or above Mmax-1 by that fraction (bg side of an alt2-style
         partition between an area source and embedded faults).
+
+        NOTE: This is currently only intended for support of the BC Hydro
+        NVA SSC logic tree. We may expand it to become a more general
+        capability.
 
         :param recur_row:
             Dict of values to use in given type of MFD
