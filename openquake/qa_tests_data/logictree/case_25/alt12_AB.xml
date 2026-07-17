@@ -22,7 +22,7 @@
               </gml:Polygon>
               <!-- Placeholder LSD - it is set by the LSD epistemic uncertainty -->
               <upperSeismoDepth>0.0</upperSeismoDepth>
-              <lowerSeismoDepth>20</lowerSeismoDepth>
+              <lowerSeismoDepth>15</lowerSeismoDepth>
           </areaGeometry>
           <magScaleRel>BCHydroNVAMSR</magScaleRel>
           <aspectRatioFunction>
