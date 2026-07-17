@@ -43,7 +43,6 @@ import tempfile
 import argparse
 import platform
 import subprocess
-import site
 from urllib.request import urlopen, Request
 
 try:
@@ -278,6 +277,16 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
+def _run_subprocess(inst, args):
+    # Run subprocess use sudo if inst.USER != None
+    if inst.USER is None:
+        subprocess.check_call(args)
+    else:
+        # user=inst.USER does not appear to work in the same
+        # way as sudo -u $USER
+        subprocess.check_call(['sudo', '-u', inst.USER] + args)
+
+
 def install_or_postinstall_standalone(inst, is_install=True):
     """
     Install the standalone Django applications if possible or
@@ -320,6 +329,24 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: could not install %s" % (exc, app['pkg']))
     else:
+        # Obtain paths for python and manage.py in VENV, we cannot use
+        # site.getsitepackages here since we are not yet running in the venv
+        if sys.platform == "win32":
+            python = ['Scripts', 'python.exe']
+            mpy = os.path.join(inst.VENV, 'lib', 'site-packages',
+                               'openquake', 'server', 'manage.py')
+        else:
+            python = ["bin", "python"]
+            mpy = os.path.join(inst.VENV, 'lib',
+                               f'python{PYVER[0]}.{PYVER[1]}',
+                               'site-packages', 'openquake',
+                               'server', 'manage.py')
+
+        # Run python manage.py migrate before running app postinstall
+        _run_subprocess(
+            inst,
+            [os.path.join(inst.VENV, *python), mpy, "migrate"])
+
         for app in STANDALONE_APP_INFO:
             if not app['name']:
                 continue
@@ -329,24 +356,17 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 #     django_admin = ['Scripts', 'django-admin.exe']
                 # else:
                 #     django_admin = ["bin", "django-admin"]
-                if sys.platform == "win32":
-                    python = ['Scripts', 'python.exe']
-                else:
-                    python = ["bin", "python"]
 
                 # django_env = os.environ.copy()
                 # django_env[
                 #     "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
 
-                # This returns a list of all site-packages paths for the
-                # current environment
-                site_packages_dirs = site.getsitepackages()
-                manage_path = os.path.join(site_packages_dirs[0],
-                                           'openquake', 'server', 'manage.py')
-                subprocess.check_call(
+                # Run python manage.py postinstall
+                _run_subprocess(
+                    inst,
                     [os.path.join(inst.VENV, *python),
-                        manage_path, "openquake_engine_postinstall",
-                        app['name']], user=inst.USER)
+                        mpy, "openquake_engine_postinstall",
+                        app['name']])
                 # if inst.USER is None:
                 #     subprocess.check_call(
                 #         [os.path.join(inst.VENV, *django_admin),
