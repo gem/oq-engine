@@ -298,15 +298,15 @@ def install_or_postinstall_standalone(inst, is_install=True):
 
     STANDALONE_APP_INFO = [
         {"pkg": "oq-platform-standalone", "name": None},
-        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
-        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
-        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
+        {"pkg": "oq-platform-ipt",       "name": "openquakeplatform_ipt"},
+        {"pkg": "oq-platform-taxonomy",  "name": "openquakeplatform_taxonomy"},
+        {"pkg": "django-gem-taxonomy",   "name": "django_gem_taxonomy"},
     ]
 
     if is_install:
         for app in STANDALONE_APP_INFO:
             try:
-                print("Applications " + app['pkg'] + " are not installed yet \n")
+                print(f"Applications {app['pkg']} are not installed yet \n")
 
                 subprocess.check_call(
                     [pycmd, "-m", "pip", "install",
@@ -330,7 +330,8 @@ def install_or_postinstall_standalone(inst, is_install=True):
                     django_admin = ["bin", "django-admin"]
 
                 django_env = os.environ.copy()
-                django_env["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
+                django_env[
+                    "DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
 
                 subprocess.check_call(
                     [os.path.join(inst.VENV, *django_admin),
@@ -338,7 +339,9 @@ def install_or_postinstall_standalone(inst, is_install=True):
                     env=django_env, user=inst.USER)
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
-                errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
+                errors.append(
+                    "%s: error during %s postinstall command execution" % (
+                        exc, app['name']))
 
     return errors
 
@@ -346,8 +349,10 @@ def install_or_postinstall_standalone(inst, is_install=True):
 def install_standalone(inst):
     return install_or_postinstall_standalone(inst, is_install=True)
 
+
 def postinstall_standalone(inst):
     return install_or_postinstall_standalone(inst, is_install=False)
+
 
 def before_checks(inst, args, usage):
     """
@@ -712,8 +717,10 @@ if __name__ == "__main__":
                         help="not use '--upgrade' in pip install calls")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
-    parser.add_argument("--version", help="version to install (default stable)")
-    parser.add_argument("--dbport", help="DbServer port (default 1907 or 1908)")
+    parser.add_argument("--version",
+                        help="version to install (default stable)")
+    parser.add_argument("--dbport",
+                        help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
@@ -728,7 +735,8 @@ if __name__ == "__main__":
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.novenv, args.noupgrade)
+            errors = install(inst, args.version, args.from_fork, args.novenv,
+                             args.noupgrade)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))

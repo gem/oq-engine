@@ -23,6 +23,7 @@ from django.core.management import call_command, get_commands
 import sys
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
     help = ("Command that run a '<app_name>_postinstall' command if it exists")
 
@@ -50,7 +51,8 @@ class Command(BaseCommand):
         if postinstall_cmd not in django_cmds:
             self.stdout.write(
                 self.style.WARNING(
-                    "No 'postinst' action needed for app %s, skipped." % (options['django_app'],))
+                    "No 'postinst' action needed for app %s, skipped." % (
+                        options['django_app'],))
                 )
             sys.exit(0)
 
