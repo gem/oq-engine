@@ -722,6 +722,7 @@ if __name__ == "__main__":
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
+        # set inst to the class named as the string args.inst
         inst = globals()[args.inst]
         before_checks(inst, args, parser.format_usage())
         if args.remove:
