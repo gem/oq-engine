@@ -161,10 +161,10 @@ class PointSource(ParametricSeismicSource):
         for _prob, depth in hypocenter_distribution.data:
             if depth > lower_seismogenic_depth:
                 raise ValueError(
-                    f'{depth=} is below {lower_seismogenic_depth=}')
+                    f'{source_id=} {depth=} is below {lower_seismogenic_depth=}')
             elif depth < upper_seismogenic_depth:
                 raise ValueError(
-                    f'{depth=} is over {upper_seismogenic_depth=}')
+                    f'{source_id=} {depth=} is over {upper_seismogenic_depth=}')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
             raise ValueError(
@@ -353,6 +353,7 @@ class PointSource(ParametricSeismicSource):
             seismogenic depth
         """
         self.lower_seismogenic_depth += increment
+        self._shrink_hypo_depths_to_lsd(self.lower_seismogenic_depth)
 
     def modify_set_upper_seismogenic_depth(self, usd):
         """
