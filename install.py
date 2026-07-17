@@ -343,9 +343,9 @@ def install_or_postinstall_standalone(inst, is_install=True):
                                'server', 'manage.py')
 
         # Run python manage.py migrate before running app postinstall
-        _run_subprocess(
-            inst,
-            [os.path.join(inst.VENV, *python), mpy, "migrate"])
+#        _run_subprocess(
+#            inst,
+#            [os.path.join(inst.VENV, *python), mpy, "migrate"])
 
         for app in STANDALONE_APP_INFO:
             if not app['name']:
