@@ -60,9 +60,7 @@ jobs:
         echo "branch to test: ${BRANCH}"
         cd /__w/oq-engine/oq-engine/
         eval '$mypython -m pip install -U pip setuptools wheel'
-        eval '$mypython -m venv /opt/openquake/venv '
-        source /opt/openquake/venv/bin/activate
-        eval '$mypython install.py server"'
+        eval '$mypython install.py server'
         if [[ $EXIT_CODE -ne 0 ]]; then
                 break
         fi
