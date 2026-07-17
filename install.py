@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 #
 # Copyright (C) 2020-2026 GEM Foundation
 #
@@ -114,6 +114,10 @@ class server:
         DBPATH,
     )
     USER = "openquake"
+    MPY = os.path.join(VENV, 'lib',
+                       f'python{PYVER[0]}.{PYVER[1]}',
+                       'site-packages', 'openquake',
+                       'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -148,6 +152,7 @@ class devel_server:
     )
     USER = "openquake"
     exit = server.exit
+    MPY = os.path.join('openquake', 'server', 'manage.py')
 
 
 class user:
@@ -164,10 +169,17 @@ class user:
             VENV = os.path.expanduser("~\\openquake")
             OQ = os.path.join(VENV, "\\Scripts\\oq")
             OQDATA = os.path.expanduser("~\\oqdata")
+        MPY = os.path.join(VENV, 'lib',
+                           'site-packages', 'openquake',
+                           'server', 'manage.py')
     else:
         VENV = os.path.expanduser("~/openquake")
         OQ = os.path.join(VENV, "/bin/oq")
         OQDATA = os.path.expanduser("~/oqdata")
+        MPY = os.path.join(VENV, 'lib',
+                           f'python{PYVER[0]}.{PYVER[1]}',
+                           'site-packages', 'openquake',
+                           'server', 'manage.py')
 
     CFG = os.path.join(VENV, "openquake.cfg")
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
@@ -187,6 +199,7 @@ class devel(user):
     Parameters for a devel installation (same as user)
     """
 
+    MPY = os.path.join('openquake', 'server', 'manage.py')
     exit = user.exit
 
 
@@ -333,19 +346,13 @@ def install_or_postinstall_standalone(inst, is_install=True):
         # site.getsitepackages here since we are not yet running in the venv
         if sys.platform == "win32":
             python = ['Scripts', 'python.exe']
-            mpy = os.path.join(inst.VENV, 'lib', 'site-packages',
-                               'openquake', 'server', 'manage.py')
         else:
             python = ["bin", "python"]
-            mpy = os.path.join(inst.VENV, 'lib',
-                               f'python{PYVER[0]}.{PYVER[1]}',
-                               'site-packages', 'openquake',
-                               'server', 'manage.py')
 
         # Run python manage.py migrate before running app postinstall
-#        _run_subprocess(
-#            inst,
-#            [os.path.join(inst.VENV, *python), mpy, "migrate"])
+        _run_subprocess(
+            inst,
+            [os.path.join(inst.VENV, *python), inst.MPY, "migrate"])
 
         for app in STANDALONE_APP_INFO:
             if not app['name']:
@@ -365,7 +372,7 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 _run_subprocess(
                     inst,
                     [os.path.join(inst.VENV, *python),
-                        mpy, "openquake_engine_postinstall",
+                        inst.MPY, "openquake_engine_postinstall",
                         app['name']])
                 # if inst.USER is None:
                 #     subprocess.check_call(
