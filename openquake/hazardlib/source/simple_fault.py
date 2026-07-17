@@ -527,10 +527,9 @@ class SimpleFaultSource(ParametricSeismicSource):
         NVA alt2 model where fault sources take a scenario-dependent share
         of the total rate above Mmax-1 and receive no rate below.
 
-        Requires rate_split_fault_frac to be set on the source (typically via
-        a preceding rateSplit uncertainty). The per-source rate_frac attribute
-        (fault-length fraction of the total fault share) is used if set,
-        otherwise defaults to 1.0.
+        Requires rate_split_fault_frac to be set on the source. The per-source
+        rate_frac attribute (fault-length fraction of the total fault share) is
+        used if set, otherwise defaults to 1.0.
 
         :param recur_row:
             Dict of values to use in given type of MFD (b_value, ref_mag,
@@ -549,7 +548,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         ref_mag = float(recurrow["ref_mag"])
         rate = float(recurrow["rate"])
 
-        # Build the parametric MFD
+        # Build the MFD
         if recur_model == "TE":
             a_val = math.log10(rate) + bval * ref_mag
             parent = TruncatedGRMFD(

@@ -154,7 +154,7 @@ class AreaSource(ParametricSeismicSource):
         ref_mag = float(recurrow["ref_mag"])
         rate = float(recurrow["rate"])
 
-        # Build the parametric MFD
+        # Build the MFD
         if recur_model == "TE":
             a_val = math.log10(rate) + bval * ref_mag
             self.mfd = TruncatedGRMFD(
