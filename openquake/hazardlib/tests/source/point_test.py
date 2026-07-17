@@ -92,7 +92,8 @@ class PointSourceCreationTestCase(unittest.TestCase):
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
         self.assert_failed_creation(
             ValueError,
-            'depth=8.001 is below lower_seismogenic_depth=8',
+            "source_id='source_id' depth=8.001 is below "
+            "lower_seismogenic_depth=8",
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
             hypocenter_distribution=PMF([(0.3, 4), (0.7, 8.001)]))
 
