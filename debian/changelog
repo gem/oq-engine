@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: extended `oq info job.ini` to display the source model logic tree
   * Internal: extended `oq sample` to manage ESRI .asc files
 
   [Michele Simionato, Christopher Brooks]
