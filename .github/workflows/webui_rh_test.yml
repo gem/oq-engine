@@ -31,7 +31,7 @@ jobs:
       uses: actions/checkout@v6
       if: github.event.inputs.git-ref != ''
       with:
-        ref: ${{ github.event.inputs.git-ref }}
+        ref: https://github.com/gem/oq-engine/actions/runs/29609855298/job/87981720931#step:6:784
     - name: Set up Python  ${{ matrix.python-version }} and install OQ
       run: |
         set -x
@@ -60,7 +60,7 @@ jobs:
         echo "branch to test: ${BRANCH}"
         cd /__w/oq-engine/oq-engine/
         eval '$mypython -m pip install -U pip setuptools wheel'
-        eval '$mypython install.py server'
+        eval '$mypython install.py server --version = $BRANCH'
         if [[ $EXIT_CODE -ne 0 ]]; then
                 break
         fi
