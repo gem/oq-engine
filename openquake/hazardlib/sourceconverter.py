@@ -821,6 +821,9 @@ class SourceConverter(RuptureConverter):
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
                 source.HypoData(hypo_list, slip_list, hypo_depth_list))
+            rate_frac = node.attrib.get('rateFrac')
+            if rate_frac is not None:
+                simple.rate_frac = float(rate_frac)
         return simple
 
     def convert_kiteFaultSource(self, node):

@@ -6,18 +6,12 @@
             <logicTreeBranch branchID="alt12_UBN">
                 <!-- Alt1 (area sources with TE or AC MFD), NVA-UBN (west, north) geometry -->
                 <uncertaintyModel>alt12_UBN.xml</uncertaintyModel>
-                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
 
             <logicTreeBranch branchID="alt12_AB">
                 <!-- Alt1 (area sources with TE or AC MFD), NVA-AB (east, central) geometry -->
                 <uncertaintyModel>alt12_AB.xml</uncertaintyModel>
-                <uncertaintyWeight>0.25</uncertaintyWeight>
-            </logicTreeBranch>
-
-            <logicTreeBranch branchID="alt3">
-                <!-- Alt3 (embedded faults and area sources with total EQ rate partioned using seismic moment) -->
-                <uncertaintyModel>alt3.xml</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
