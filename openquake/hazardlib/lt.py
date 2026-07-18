@@ -959,6 +959,41 @@ def dummy_branchset():
     return bset
 
 
+def print_tree(bob, prefix="", is_last=True):
+    """
+    Recursively prints a tree structure using ASCII art.
+
+    :param bob: a branchset or a branch
+    :param prefix: The visual padding/lines accumulated from parent levels.
+    :param is_last: Boolean indicating if this node is the last child
+    """
+    try:
+        id = bob.branch_id  # if branch
+    except AttributeError:
+        id = bob.id  # if branchset
+    print(f"{prefix}{'└── ' if is_last else '├── '}{id}")
+
+    # Update the prefix for the children.
+    # If this node is the last child, its vertical line ends here (add spaces).
+    # Otherwise, extend the vertical line downwards.
+    new_prefix = prefix + ("    " if is_last else "│   ")
+   
+    # Recursively print all branches
+    if hasattr(bob, 'bset') and bob.bset:
+        branches = bob.bset.branches
+    elif hasattr(bob, 'branches'):
+        branches = bob.branches
+    else:
+        branches = []
+    if len(branches) > 3:
+        br1 = copy.copy(branches[1])
+        br1.branch_id = '...'
+        branches = [branches[0], br1, branches[-1]]
+    count = len(branches)
+    for i, branch in enumerate(branches, 1):
+        print_tree(branch, new_prefix, is_last=(i == count))
+
+
 class Realization(object):
     """
     Generic Realization object with attributes value, weight, ordinal, lt_path,
