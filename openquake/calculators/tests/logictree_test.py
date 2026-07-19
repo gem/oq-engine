@@ -737,7 +737,7 @@ hazard_uhs-std.csv
         assert len(self.calc.datastore['weights']) == 3
         dic = dict(view('rlz:2', self.calc.datastore))
         assert str(dic) == ("{'sourceModel': 'common2.xml', "
-                            "'extendModel': '', "
+                            "'dummy': '', "
                             "'active shallow crust': [SadighEtAl1997]}")
 
     def test_case_68_bis(self):

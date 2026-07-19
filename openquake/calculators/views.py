@@ -1507,14 +1507,10 @@ def view_rlz(token, dstore):
     tbl = []
     bset = smlt.branchsets[0]
     for brid in rlz.sm_lt_path:
-        if brid == '.':
-            br = None
-        else:
-            br = smlt.branches[brid]
-        if br:
-            tbl.append((bset.uncertainty_type, br.value))
-            if br.bset:
-                bset = br.bset
+        br = smlt.branches.get(brid)
+        tbl.append((bset.uncertainty_type, br.value if br else ''))
+        if br and br.bset:
+            bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
