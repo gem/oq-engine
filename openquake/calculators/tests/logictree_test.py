@@ -506,6 +506,10 @@ hazard_uhs-std.csv
             'expected/hazard_curve-mean-PGA_alt1.csv', got_alt1)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 24)
 
+        # test oq show rlz:15
+        tbl = general.gettemp(text_table(view('rlz:15', self.calc.datastore)))
+        self.assertEqualFiles('expected/show-rlz.org', tbl)
+
         self.run_calc(case_25.__file__, 'job_alt2.ini', exports='csv')
         [got_alt2] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
