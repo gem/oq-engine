@@ -480,6 +480,12 @@ master_seed:
   Example: *master_seed = 1234*.
   Default: 123456789
 
+make_impact_reports:
+  Produce a one-page impact reports for each affected country,
+  as postrisk_func
+  Example: *make_impact_reports = true*.
+  Default: False
+
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
   Example: *max = true*.
@@ -573,6 +579,11 @@ mosaic_model:
   Used to restrict the ruptures to a given model
   Example: *mosaic_model = ZAF*
   Default: empty string
+
+notes:
+  Additional information about the job
+  Example: 'Lorem ipsum'
+  Default: None
 
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
@@ -1163,6 +1174,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
+    make_impact_reports = valid.Param(valid.boolean, False)
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)
@@ -1177,6 +1189,7 @@ class OqParam(valid.ParamSet):
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
+    notes = valid.Param(valid.utf8, None)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
@@ -1619,7 +1632,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses            
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types

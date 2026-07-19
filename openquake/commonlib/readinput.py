@@ -127,9 +127,10 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
         This distance is in the same units as the point's
         coordinates (i.e. degrees), and it defines how far from
         the point the buffer should extend in all directions,
-        creating a circular buffer region around the point
-    :returns: list of mosaic models intersecting the circle
-        centered on the given coordinates having the specified radius
+        creating a circular buffer region around the point.
+    :returns: list of mosaic models intersecting the circle,
+        centered on the given coordinates having the specified radius.
+        Models are ordered by ascending distance.
     """
     mosaic_df = read_mosaic_df()
     close_mosaic_models = geo.utils.geolocate_within_buffer(
@@ -144,6 +145,24 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
     return close_mosaic_models
 
 
+def get_close_countries(lon, lat, buffer_radius):
+    """
+    :param lon: longitude
+    :param lat: latitude
+    :param buffer_radius: radius of the buffer around the point.
+        This distance is in the same units as the point's
+        coordinates (i.e. degrees), and it defines how far from
+        the point the buffer should extend in all directions,
+        creating a circular buffer region around the point.
+    :returns: the iso3 codes of the close countries, ordered by
+        ascending distance.
+    """
+    countries_df = read_countries_df()
+    close_countries = geo.utils.geolocate_within_buffer(
+        lon, lat, buffer_radius, countries_df)
+    return close_countries
+
+
 def get_closest_country(lon, lat, buffer_radius):
     """
     :param lon: longitude
@@ -155,9 +174,7 @@ def get_closest_country(lon, lat, buffer_radius):
         creating a circular buffer region around the point
     :returns: the iso3 code of the closest country or '???'
     """
-    countries_df = read_countries_df()
-    close_countries = geo.utils.geolocate_within_buffer(
-        lon, lat, buffer_radius, countries_df)
+    close_countries = get_close_countries(lon, lat, buffer_radius)
     if not close_countries:
         return '???'
     # close_countries are ordered by ascending distance
@@ -933,7 +950,7 @@ def get_rupture(oqparam):
         # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
         # NB: this is tested in aristotle_run
-    if rupture_model and rupture_model.endswith('.xml'):
+    elif rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)
@@ -1898,10 +1915,15 @@ def read_countries_df():
     """
     :returns: a DataFrame of geometries for the world countries
     """
-    logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
-    fname = os.path.join(os.path.dirname(global_risk.__file__),
-                         'geoBoundariesCGAZ_ADM0.gpkg')
-    return read_geometries(fname, 'shapeGroup')
+    country_boundaries_file = None
+    if hasattr(config.directory, 'admin0_boundaries_file'):
+        country_boundaries_file = config.directory.admin0_boundaries_file
+    if not country_boundaries_file:
+        country_boundaries_file = os.path.join(
+            os.path.dirname(global_risk.__file__),
+            'geoBoundariesCGAZ_ADM0.gpkg')
+    logging.info(f'Reading {country_boundaries_file}')
+    return read_geometries(country_boundaries_file, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',

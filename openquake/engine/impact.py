@@ -70,6 +70,7 @@ def main_cmd(usgs_id, rupture_file=None,
              maximum_distance_stations='',
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
+             make_impact_reports=False,
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -140,6 +141,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
+main_cmd.make_impact_reports = 'Make one-page report for each involved country'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 
