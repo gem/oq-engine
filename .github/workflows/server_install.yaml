@@ -42,6 +42,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install OQ Server with ${{ matrix.python-version }}
         run: |
+          if [ -z ${{ github.event.inputs.git-ref }} ];
+          then
+             BRANCH=master
+          else
+             BRANCH=${{ github.event.inputs.git-ref }}
+          fi
           sudo -H python install.py --version $BRANCH server
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
