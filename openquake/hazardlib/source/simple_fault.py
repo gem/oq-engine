@@ -526,8 +526,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         set by an earlier recurSet application.
 
         Params are read from the recurrow dict, preferring fault-prefixed
-        keys (fault_b_value, fault_ref_mag, fault_rate) so a single
-        alt3-style recurRow branch can carry different-but-correlated
+        keys e.g. fault_b_value, fault_ref_mag, fault_rate) so a
+        single alt3-style recurRow branch can carry different-but-correlated
         background and fault parameters; otherwise the unprefixed alt2-style
         keys are used.
 
@@ -550,8 +550,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         capability.
 
         :param recurrow:
-            Dict of values to use in given type of MFD (b_value, ref_mag,
-            rate). Alt3-style rows use fault_ prefixes for the same keys.
+            Dict of values to use in given type of MFD e.g. b_value, ref_mag,
+            rate. Alt3-style rows use prefixes of "fault" for the same keys.
         """
         # Constants for BC Hydro NVA model
         b_ac = 0.3

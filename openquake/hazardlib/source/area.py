@@ -130,9 +130,9 @@ class AreaSource(ParametricSeismicSource):
         Modify the recurrence parameters by values given in a dict.
 
         Params are read from the recurrow dict, preferring bg-prefixed keys
-        (bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style recurRow
-        branch can carry different but correlated bg and fault parameters;
-        otherwise the unprefixed alt1/alt2 keys are used.
+        e.g., bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style
+        recurRow branch can carry different but correlated bg and fault
+        parameters; otherwise the unprefixed alt1/alt2 keys are used.
 
         How it works is determined by if rate_split_bg_frac is present:
 
@@ -148,8 +148,8 @@ class AreaSource(ParametricSeismicSource):
         capability.
 
         :param recurrow:
-            Dict of values to use in given type of MFD (b_value, ref_mag,
-            rate). Alt3-style rows use bg_ prefixes for the same keys.
+            Dict of values to use in given type of MFD e.g.b_value, ref_mag,
+            rate). Alt3-style rows use prefixes of "bg" for the same keys.
         """
         # Constants for BC Hydro NVA model
         b_ac = 0.3
