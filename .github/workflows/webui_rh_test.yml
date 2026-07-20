@@ -1,5 +1,5 @@
 ---
-name: Test WebUI on RH based OS
+name: OQ devel server Test WebUI on RH based OS
 on:
   workflow_dispatch:
     inputs:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   test_ui:
-    name: Test on RH based (fedora container)
+    name: Test on RH based (fedora container) OQ devel server ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     env:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
