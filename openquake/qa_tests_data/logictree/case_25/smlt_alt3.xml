@@ -29,7 +29,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- recurRow: bg_ params drive AreaSource, fault_ params drive SimpleFaultSource; fault_rate is unbounded at ref_mag=Mmax-1 -->
+        <!-- recurRow: bg_ params affect AreaSource, fault_ params affect SimpleFaultSource; fault_rate is unbounded at ref_mag=Mmax-1 -->
         <logicTreeBranchSet applyToBranches="mmax_NVA-UBN" applyToSources="NVA-UBN-alt3-bkg NVA-UBN-alt3-EF1 NVA-UBN-alt3-EF2 NVA-UBN-alt3-EF3 NVA-UBN-alt3-EF4" branchSetID="bs_rr_NVA-UBN" uncertaintyType="recurRow">
             <logicTreeBranch branchID="scn1_NVA-UBN">
                 <uncertaintyModel><row bg_b_value="0.531" bg_ref_mag="3.25" bg_rate="0.223505" fault_b_value="0.3" fault_ref_mag="6.0" fault_rate="0.2"/></uncertaintyModel>
