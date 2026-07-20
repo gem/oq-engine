@@ -2,7 +2,7 @@
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5" xmlns:gml="http://www.opengis.net/gml">
     <logicTree logicTreeID="lt_alt3">
 
-        <!-- 2 alt3 geometries: bg area + 4 embedded faults each, with distinct IDs -->
+        <!-- 2 alt3 geometries: bg + 4 embedded faults each -->
         <logicTreeBranchSet branchSetID="bs_sm" uncertaintyType="sourceModel">
             <logicTreeBranch branchID="alt3_NVA-UBN">
                 <uncertaintyModel>alt3_NVA-UBN.xml</uncertaintyModel>
@@ -14,8 +14,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- recurSet fixes recur_model=TE and max_mag for bg + 4 faults;
-             bg source carries mmaxOffset=-0.5 so its effective mmax = 6.5 while faults use 7.0 -->
+        <!-- recurSet: fix Mmax; bg mmaxOffset=-0.5 gives bg_mmax = fault_mmax - 0.5 -->
         <logicTreeBranchSet applyToBranches="alt3_NVA-UBN" applyToSources="NVA-UBN-alt3-bkg NVA-UBN-alt3-EF1 NVA-UBN-alt3-EF2 NVA-UBN-alt3-EF3 NVA-UBN-alt3-EF4" branchSetID="bs_rs_NVA-UBN" uncertaintyType="recurSet">
             <logicTreeBranch branchID="mmax_NVA-UBN">
                 <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="north" max_mag="7.0"/></uncertaintyModel>
@@ -30,10 +29,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- recurRow: single branchset carries bg_ (used by AreaSource) and fault_ (used by SimpleFaultSource) params
-             so the two source types receive different but perfectly correlated recurrence parameters.
-             fault_rate here is the UNBOUNDED cumulative rate at fault_ref_mag=Mmax-1; the truncated GR bounded rate
-             over [Mmax-1, Mmax] equals fault_rate * (1 - 10^(-b_AC * 1.0)) ≈ 0.4988 * fault_rate -->
+        <!-- recurRow: bg_ params drive AreaSource, fault_ params drive SimpleFaultSource; fault_rate is unbounded at ref_mag=Mmax-1 -->
         <logicTreeBranchSet applyToBranches="mmax_NVA-UBN" applyToSources="NVA-UBN-alt3-bkg NVA-UBN-alt3-EF1 NVA-UBN-alt3-EF2 NVA-UBN-alt3-EF3 NVA-UBN-alt3-EF4" branchSetID="bs_rr_NVA-UBN" uncertaintyType="recurRow">
             <logicTreeBranch branchID="scn1_NVA-UBN">
                 <uncertaintyModel><row bg_b_value="0.531" bg_ref_mag="3.25" bg_rate="0.223505" fault_b_value="0.3" fault_ref_mag="6.0" fault_rate="0.2"/></uncertaintyModel>
@@ -56,7 +52,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- Fault dip epistemic (correlated across all 4 faults per sm via applyToSources) -->
+        <!-- Fault dip epistemic (correlated across 4 faults per sm) -->
         <logicTreeBranchSet applyToBranches="scn1_NVA-UBN scn2_NVA-UBN scn1_NVA-AB scn2_NVA-AB" applyToSources="NVA-UBN-alt3-EF1 NVA-UBN-alt3-EF2 NVA-UBN-alt3-EF3 NVA-UBN-alt3-EF4 NVA-AB-alt3-EF1 NVA-AB-alt3-EF2 NVA-AB-alt3-EF3 NVA-AB-alt3-EF4" branchSetID="bs_dip" uncertaintyType="simpleFaultDipAbsolute">
             <logicTreeBranch branchID="dip45">
                 <uncertaintyModel>45.0</uncertaintyModel>
@@ -68,7 +64,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <!-- LSD applied to the bg area sources only (faults keep their fixed geometry LSD) -->
+        <!-- LSD applied to bg only -->
         <logicTreeBranchSet applyToBranches="dip45 dip60" applyToSources="NVA-UBN-alt3-bkg NVA-AB-alt3-bkg" branchSetID="bs_lsd" uncertaintyType="setLowerSeismDepthAbsolute">
             <logicTreeBranch branchID="lsd15">
                 <uncertaintyModel>15.0</uncertaintyModel>
