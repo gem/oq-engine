@@ -58,10 +58,12 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Actualize 'default' templates for email notifications
         run: |
-          pwd
-          for file in openquake/server/templates/registration/*.default.tmpl; do
+          cd /home/runner/work/oq-engine/oq-engine/
+          ls -lrt openquake/server/templates/registration/*.default.tmpl
+          for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
             cp -- "$file" "${file%.default.tmpl}"
           done
+          ls -lrt ./openquake/server/templates/registration/
       - name: WebUI and calculation with Auth
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
@@ -89,8 +91,8 @@ jobs:
           cat local_settings.py
           # Perform migration after setup local_settings
           cd /home/runner/work/oq-engine/oq-engine/openquake/server
-          /opt/openquake/venv/bin/python3 ./manage.py migrate
-          /opt/openquake/venv/bin/python3 ./manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
+          /opt/openquake/venv/bin/python3 manage.py migrate
+          /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
           # START WEBUI
           runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
           echo "Waiting WEBUI up on port 8800...."
