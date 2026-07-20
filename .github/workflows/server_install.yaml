@@ -95,8 +95,10 @@ jobs:
           # Perform migration after setup local_settings
           /opt/openquake/venv/bin/python3 manage.py migrate
           /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
-          # START WEBUI
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+          # STOP AND START WEBUI
+          systemctl stop openquake-webui
+          sleep 10
+          systemctl start openquake-webui
           echo "Waiting WEBUI up on port 8800...."
           echo "Test WebUI with curl before to test django"
           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
@@ -133,7 +135,7 @@ jobs:
           fi
           echo " Run a calc using https"
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
-          sleep 5
+          sleep 10
           status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
              -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
@@ -147,7 +149,7 @@ jobs:
           set -o pipefail
           source /opt/openquake/venv/bin/activate
           echo "Restart WebUI without authentication"
-          runuser -l openquake -c 'pkill oq-webui'
+          systemctl stop openquake-webui
           sleep 5
           runuser -l openquake -c 'OQ_APPLICATION_MODE=PUBLIC /opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
           echo "Waiting WEBUI up on port 8800...."
