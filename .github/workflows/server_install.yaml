@@ -55,7 +55,6 @@ jobs:
       - name: Actualize 'default' templates for email notifications
         run: |
           pwd
-          cd /__w/oq-engine/oq-engine/
           for file in openquake/server/templates/registration/*.default.tmpl; do
             cp -- "$file" "${file%.default.tmpl}"
           done
@@ -71,7 +70,7 @@ jobs:
           oq --version
           #
           echo "Add settings for login and logging on webui before to start"
-          cd /__w/oq-engine/oq-engine/
+          cd /home/runner/work/oq-engine/oq-engine
           cd openquake/server
           cat > local_settings.py << EOF
           APPLICATION_MODE = "RESTRICTED"
@@ -87,11 +86,9 @@ jobs:
           echo "DISPLAY content of local_settings"
           cat local_settings.py
           # Perform migration after setup local_settings
-          cd /__w/oq-engine/oq-engine/openquake/engine/
-          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
-          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email'
-          # Run help on manage.py
-          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py help'
+          cd /home/runner/work/oq-engine/oq-engine/openquake/server/
+          runuser -l openquake -c 'cd /home/runner/work/oq-engine/oq-engine/openquake/server/ ; /opt/openquake/venv/bin/python3 manage.py migrate'
+          runuser -l openquake -c 'cd /home/runner/work/oq-engine/oq-engine/openquake/server/ ; /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email'
           # START WEBUI
           runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
           echo "Waiting WEBUI up on port 8800...."
@@ -139,6 +136,7 @@ jobs:
            exit 1
           fi
       - name: WebUI on PUBLIC
+        shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
           set -o pipefail
           source /opt/openquake/venv/bin/activate
