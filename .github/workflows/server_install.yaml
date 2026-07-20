@@ -60,7 +60,7 @@ jobs:
         run: |
           cd /home/runner/work/oq-engine/oq-engine/
           ls -lrt openquake/server/templates/registration/*.default.tmpl
-          DEST_DIR="/opt/openquake/venv/lib/${{ matrix.python-version }}/site-packages/openquake/server/templates/registration"
+          DEST_DIR="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/openquake/server/templates/registration"
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
             filename=$(basename -- "$file")
             new_filename="${filename%.default.tmpl}"
