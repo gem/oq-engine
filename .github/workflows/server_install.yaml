@@ -60,10 +60,13 @@ jobs:
         run: |
           cd /home/runner/work/oq-engine/oq-engine/
           ls -lrt openquake/server/templates/registration/*.default.tmpl
+          DEST_DIR="/opt/openquake/venv/lib/${{ matrix.python-version }}/site-packages/openquake/server/templates/registration"
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
-            cp -- "$file" "${file%.default.tmpl}"
+            filename=$(basename -- "$file")
+            new_filename="${filename%.default.tmpl}"
+            cp -- "$file" "${DEST_DIR}/${new_filename}"
           done
-          ls -lrt ./openquake/server/templates/registration/
+          ls -lrt ${DEST_DIR}
       - name: WebUI and calculation with Auth
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
