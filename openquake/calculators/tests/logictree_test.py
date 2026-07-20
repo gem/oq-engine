@@ -516,6 +516,12 @@ hazard_uhs-std.csv
             'expected/hazard_curve-mean-PGA_alt2.csv', got_alt2)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 16)
 
+        self.run_calc(case_25.__file__, 'job_alt3.ini', exports='csv')
+        [got_alt3] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA_alt3.csv', got_alt3)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 8)
+
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')

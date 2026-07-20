@@ -5,8 +5,8 @@
   [Christopher Brooks]
   * Extended recurSet/recurRow epistemic uncertainties to simple fault
     sources and added a rateSplit uncertainty to partition rate between
-    an area source and embedded faults, for the BC Hydro NVA alt2 LT
-    (tested inside logictree/case_25)
+    an area source and embedded faults, for the BC Hydro NVA alt2/alt3
+    LTs (tested inside logictree/case_25)
 
   [Michele Simionato]
   * Fixed a bug in `oq show rlz` showing wrong information for some complex trees

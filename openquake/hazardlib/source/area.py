@@ -129,17 +129,28 @@ class AreaSource(ParametricSeismicSource):
         """
         Modify the recurrence parameters by values given in a dict.
 
-        If a rateSplit uncertainty has previously set self.rate_split_bg_frac,
-        the resulting MFD is a piecewise EvenlyDiscretizedMFD that scales
-        rates at or above Mmax-1 by that fraction (bg side of an alt2-style
-        partition between an area source and embedded faults).
+        Params are read from the recurrow dict, preferring bg-prefixed keys
+        e.g., bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style
+        recurRow branch can carry different but correlated bg and fault
+        parameters; otherwise the unprefixed alt1/alt2 keys are used.
+
+        How it works is determined by if rate_split_bg_frac is present:
+
+        - Alt1/Alt3 (no rate_split_bg_frac): Build the TE or AC MFD from the row
+          params and use it as it is.
+
+        - Alt2 (rate_split_bg_frac present): Build the same MFD, then
+          piecewise-scale bins at or above Mmax-1 by rate_split_bg_frac (bg
+          side of the alt2 partition between the area source and its faults
+          and make an EvenlyDiscretizedMFD.
 
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
         capability.
 
-        :param recur_row:
-            Dict of values to use in given type of MFD
+        :param recurrow:
+            Dict of values to use in given type of MFD e.g.b_value, ref_mag,
+            rate). Alt3-style rows use prefixes of "bg" for the same keys.
         """
         # Constants for BC Hydro NVA model
         b_ac = 0.3
@@ -147,12 +158,12 @@ class AreaSource(ParametricSeismicSource):
         gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
         bin_width = 0.1
 
-        # Get params from recurRow
+        # Get params from recurRow, preferring bg-prefixed keys (alt3)
         mmax = self.mmax
         recur_model = self.recur_model
-        bval = float(recurrow["b_value"])
-        ref_mag = float(recurrow["ref_mag"])
-        rate = float(recurrow["rate"])
+        bval = float(recurrow.get("bg_b_value", recurrow.get("b_value")))
+        ref_mag = float(recurrow.get("bg_ref_mag", recurrow.get("ref_mag")))
+        rate = float(recurrow.get("bg_rate", recurrow.get("rate")))
 
         # Build the MFD
         if recur_model == "TE":
@@ -169,7 +180,7 @@ class AreaSource(ParametricSeismicSource):
                 total_rate=rate,
                 )
 
-        # Piecewise partition above Mmax-1 if a rateSplit is active
+        # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
         bg_frac = getattr(self, 'rate_split_bg_frac', None)
         if bg_frac is not None:
             bins = self.mfd.get_annual_occurrence_rates()

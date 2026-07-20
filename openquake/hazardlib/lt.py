@@ -478,8 +478,11 @@ def _set_recurrow(utype, source, value):
 # BCHydro NVA epistemic uncertainty
 @apply_uncertainty.add('recurSet')
 def _set_recurset(utype, source, value):
+    # A per-source mmax_offset (parsed from the optional mmaxOffset XML
+    # attribute) shifts the branchset max_mag. The alt3 uses this to enforce
+    # bg_mmax = fault_mmax - 0.5 while still sharing one recurSet branchset
     source.recur_model = value["recur_model"]
-    source.mmax = float(value["max_mag"])
+    source.mmax = float(value["max_mag"]) + getattr(source, 'mmax_offset', 0.0)
     return
 
 

@@ -33,25 +33,13 @@
         <nodalPlane dip="60.0" probability="0.4" rake="90.0" strike="320.0"/>
         <nodalPlane dip="75.0" probability="0.3" rake="90.0" strike="320.0"/>
     </nodalPlaneDist>
+    <!-- 5-entry hypo depth dist -->
     <hypoDepthDist>
-        <hypoDepth depth="2.5" probability="0.01378954" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="3.5" probability="0.04826637" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="4.5" probability="0.05517597" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="5.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="6.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="7.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="8.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="9.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="10.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="11.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="12.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="13.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="14.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="15.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="16.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="17.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="18.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="19.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="2.5" probability="0.15" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.25" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.25" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.25" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="18.5" probability="0.10" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </areaSource>
 
@@ -82,20 +70,12 @@
         <occurRates>1.0</occurRates>
     </arbitraryMFD>
     <rake>90.0</rake>
+    <!-- 4-entry hypo depth dist -->
     <hypoDepthDist>
-        <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="3.5" probability="0.06861373" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="4.5" probability="0.07843617" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="5.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="6.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="7.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="8.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="9.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="10.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="11.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="12.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="13.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="2.5" probability="0.16666666" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.27777778" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
 
@@ -124,20 +104,12 @@
         <occurRates>1.0</occurRates>
     </arbitraryMFD>
     <rake>90.0</rake>
+    <!-- 4-entry hypo depth dist -->
     <hypoDepthDist>
-        <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="3.5" probability="0.06861373" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="4.5" probability="0.07843617" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="5.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="6.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="7.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="8.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="9.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="10.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="11.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="12.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="13.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="2.5" probability="0.16666666" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.27777778" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
 
@@ -165,20 +137,12 @@
         <occurRates>1.0</occurRates>
     </arbitraryMFD>
     <rake>90.0</rake>
+    <!-- 4-entry hypo depth dist -->
     <hypoDepthDist>
-        <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="3.5" probability="0.06861373" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="4.5" probability="0.07843617" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="5.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="6.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="7.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="8.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="9.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="10.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="11.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="12.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="13.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="2.5" probability="0.16666666" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.27777778" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
 
@@ -206,20 +170,12 @@
         <occurRates>1.0</occurRates>
     </arbitraryMFD>
     <rake>90.0</rake>
+    <!-- 4-entry hypo depth dist -->
     <hypoDepthDist>
-        <hypoDepth depth="2.5" probability="0.01960272" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="3.5" probability="0.06861373" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="4.5" probability="0.07843617" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="5.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="6.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="7.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="8.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="9.5" probability="0.08235671" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="10.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="11.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="12.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="13.5" probability="0.08431277" fixedDipFrac="0.6667"/>
-        <hypoDepth depth="14.5" probability="0.08431277" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="2.5" probability="0.16666666" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="6.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="10.5" probability="0.27777778" fixedDipFrac="0.6667"/>
+        <hypoDepth depth="14.5" probability="0.27777778" fixedDipFrac="0.6667"/>
     </hypoDepthDist>
 </simpleFaultSource>
 
