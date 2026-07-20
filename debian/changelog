@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed bug in classical_risk from hazard_curves.csv manifesting as a KeyError in
+    U32([sid2idx[sid] for sid in df.sid])
+
   [Christopher Brooks]
   * Extended recurSet/recurRow epistemic uncertainties to simple fault
     sources and added a rateSplit uncertainty to partition rate between
@@ -5,6 +9,7 @@
     LTs (tested inside logictree/case_25)
 
   [Michele Simionato]
+  * Fixed a bug in `oq show rlz` showing wrong information for some complex trees
   * Internal: extended `oq info job.ini` to display the source model logic tree
   * Internal: extended `oq sample` to manage ESRI .asc files
 

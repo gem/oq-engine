@@ -161,11 +161,14 @@ def get_num_chunks(dstore, full_lt=None):
     For performance, it is important to generate few chunks.
     There are three regimes:
 
+    - classical_risk from hazard_curves.csv, num_chunks=1
     - few sites, num_chunks=N
     - regular, num_chunks=concurrent_tasks/2
     - lots of data, num_chunks=req_gb
     """
     oq = dstore['oqparam']
+    if 'hazard_curves' in oq.inputs:
+        return 1
     N = len(dstore['sitecol/sids'])
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
