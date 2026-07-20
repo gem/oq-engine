@@ -76,7 +76,9 @@ jobs:
           oq --version
           #
           echo "Add settings for login and logging on webui before to start"
-          cd /home/runner/work/oq-engine/oq-engine/openquake/server
+          SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
+          cd  ${SITE_PKG}
+          cd openquake/server
           cat > local_settings.py << EOF
           APPLICATION_MODE = "RESTRICTED"
           EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -91,7 +93,6 @@ jobs:
           echo "DISPLAY content of local_settings"
           cat local_settings.py
           # Perform migration after setup local_settings
-          cd /home/runner/work/oq-engine/oq-engine/openquake/server
           /opt/openquake/venv/bin/python3 manage.py migrate
           /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
           # START WEBUI
