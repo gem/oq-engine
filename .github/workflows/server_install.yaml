@@ -48,7 +48,7 @@ jobs:
           else
              BRANCH=${{ github.event.inputs.git-ref }}
           fi
-          sudo -H python install.py --version $BRANCH server
+          sudo -H "$(which python3)" install.py --version $BRANCH server
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
@@ -58,12 +58,13 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Actualize 'default' templates for email notifications
         run: |
-          SITE-PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
-          cd ${SITE-PKG}
+          SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
+          cd ${SITE_PKG}
           for file in openquake/server/templates/registration/*.default.tmpl; do
              echo ' cp -- "$file" "${file%.default.tmpl}" '
              cp -- "$file" "${file%.default.tmpl}"
           done
+          ls -lrt ${SITE_PKG}/openquake/server/templates/registration/
       - name: WebUI and calculation with Auth
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
