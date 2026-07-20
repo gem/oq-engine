@@ -506,6 +506,10 @@ hazard_uhs-std.csv
             'expected/hazard_curve-mean-PGA_alt1.csv', got_alt1)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 24)
 
+        # test oq show rlz:15
+        tbl = general.gettemp(text_table(view('rlz:15', self.calc.datastore)))
+        self.assertEqualFiles('expected/show-rlz.org', tbl)
+
         self.run_calc(case_25.__file__, 'job_alt2.ini', exports='csv')
         [got_alt2] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
@@ -733,7 +737,7 @@ hazard_uhs-std.csv
         assert len(self.calc.datastore['weights']) == 3
         dic = dict(view('rlz:2', self.calc.datastore))
         assert str(dic) == ("{'sourceModel': 'common2.xml', "
-                            "'extendModel': '', "
+                            "'dummy': '', "
                             "'active shallow crust': [SadighEtAl1997]}")
 
     def test_case_68_bis(self):
