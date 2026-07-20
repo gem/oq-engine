@@ -526,13 +526,15 @@ class SimpleFaultSource(ParametricSeismicSource):
         set by an earlier recurSet application.
 
         Params are read from the recurrow dict, preferring fault-prefixed
-        keys e.g. fault_b_value, fault_ref_mag, fault_rate) so a
-        single alt3-style recurRow branch can carry different-but-correlated
+        keys (e.g. fault_b_value, fault_ref_mag, fault_rate) so a single
+        alt3-style recurRow branch can carry different but correlated
         background and fault parameters; otherwise the unprefixed alt2-style
         keys are used.
 
-        What happens is determined by the presence of rate_split_fault_frac
-        and rate_frac:
+        How it works is determined by the values of rate_split_fault_frac
+        (set by an earlier rateSplit application, absent otherwise) and
+        rate_frac (from the source's rateFrac XML attribute, defaults to
+        1.0 if not set):
 
         - No rateSplit and rate_frac == 1.0: build the parametric TE or
           AC MFD from the row params and use it as it is.
@@ -541,17 +543,18 @@ class SimpleFaultSource(ParametricSeismicSource):
           parametric MFD by rate_frac and make an EvenlyDiscretizedMFD.
 
         - Alt2 (rateSplit present): zero bins below Mmax-1 (their rate
-          belongs to the background via the alt2 partition, not the fault)
-          and scale the remaining bins by rate_split_fault_frac * rate_frac
-          and make an EvenlyDiscretizedMFD.
+          belongs to the background via the alt2 partition, not the
+          fault) and scale the remaining bins by
+          rate_split_fault_frac * rate_frac; make an EvenlyDiscretizedMFD.
 
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
         capability.
 
         :param recurrow:
-            Dict of values to use in given type of MFD e.g. b_value, ref_mag,
-            rate. Alt3-style rows use prefixes of "fault" for the same keys.
+            Dict of values to use in given type of MFD (e.g. b_value,
+            ref_mag, rate). Alt3-style rows use prefixes of "fault" for
+            the same keys.
         """
         # Constants for BC Hydro NVA model
         b_ac = 0.3

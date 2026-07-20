@@ -136,12 +136,13 @@ class AreaSource(ParametricSeismicSource):
 
         How it works is determined by if rate_split_bg_frac is present:
 
-        - Alt1/Alt3 (no rateSplit): Build the TE or AC MFD from the row params
-          and use it as it is.
+        - Alt1/Alt3 (no rate_split_bg_frac): Build the TE or AC MFD from the row
+          params and use it as it is.
 
-        - Alt2 (rateSplit present): Build the same MFD, then piecewise-scale bins
-          at or above Mmax-1 by rate_split_bg_frac (bg side of the alt2 partition
-          between the area source and its faults and make an EvenlyDiscretizedMFD.
+        - Alt2 (rate_split_bg_frac present): Build the same MFD, then
+          piecewise-scale bins at or above Mmax-1 by rate_split_bg_frac (bg
+          side of the alt2 partition between the area source and its faults
+          and make an EvenlyDiscretizedMFD.
 
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
@@ -179,7 +180,7 @@ class AreaSource(ParametricSeismicSource):
                 total_rate=rate,
                 )
 
-        # Piecewise partition above Mmax-1 if a rateSplit is active
+        # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
         bg_frac = getattr(self, 'rate_split_bg_frac', None)
         if bg_frac is not None:
             bins = self.mfd.get_annual_occurrence_rates()
