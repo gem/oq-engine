@@ -232,6 +232,7 @@ IMPACT_DEFAULT_USGS_ID = ''
 
 # Definition of Django applications
 STANDALONE_APP_NAME_MAP = {
+        'openquakeplatform_ipt': 'ipt',  # legacy name for old installations
         'openquake.ipt': 'ipt',
         'django_gem_taxonomy': 'taxonomy',
     }

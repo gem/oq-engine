@@ -84,8 +84,10 @@ if settings.WEBUI:
         ]
 
     for app_full in settings.STANDALONE_APPS:
+        # ('openquakeplatform_ipt', 'openquakeplatform_taxonomy')
+        # app_names = ('ipt', 'glossary')
         app_name = settings.STANDALONE_APP_NAME_MAP[app_full]
-        # app_full=openquake.ipt, app_name=ipt
+        # app = app_full.split('.')[0]
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app_full, namespace=app_name)))
 
