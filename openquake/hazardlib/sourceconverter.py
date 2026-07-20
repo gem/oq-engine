@@ -708,7 +708,7 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        return source.AreaSource(
+        area = source.AreaSource(
             source_id=node['id'],
             name=node['name'],
             tectonic_region_type=node.attrib.get('tectonicRegion'),
@@ -723,6 +723,12 @@ class SourceConverter(RuptureConverter):
             polygon=polygon,
             area_discretization=area_discretization,
             temporal_occurrence_model=self.get_tom(node))
+        # Optional per-source offset applied to recurSet's max_mag
+        # (used by the BC Hydro NVA alt3 bg sources: bg_mmax = fault_mmax - 0.5)
+        mmax_offset = node.attrib.get('mmaxOffset')
+        if mmax_offset is not None:
+            area.mmax_offset = float(mmax_offset)
+        return area
 
     def convert_pointSource(self, node):
         """

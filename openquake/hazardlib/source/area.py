@@ -134,6 +134,12 @@ class AreaSource(ParametricSeismicSource):
         rates at or above Mmax-1 by that fraction (bg side of an alt2-style
         partition between an area source and embedded faults).
 
+        When the recurrow carries bg-prefixed attributes (bg_b_value,
+        bg_ref_mag, bg_rate), those are used instead of the unprefixed keys.
+        This lets a single alt3-style recurRow branch carry different
+        parameters for bg vs fault sources while remaining perfectly
+        correlated.
+
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
         capability.
@@ -147,12 +153,12 @@ class AreaSource(ParametricSeismicSource):
         gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
         bin_width = 0.1
 
-        # Get params from recurRow
+        # Get params from recurRow, preferring bg-prefixed keys (alt3)
         mmax = self.mmax
         recur_model = self.recur_model
-        bval = float(recurrow["b_value"])
-        ref_mag = float(recurrow["ref_mag"])
-        rate = float(recurrow["rate"])
+        bval = float(recurrow.get("bg_b_value", recurrow.get("b_value")))
+        ref_mag = float(recurrow.get("bg_ref_mag", recurrow.get("ref_mag")))
+        rate = float(recurrow.get("bg_rate", recurrow.get("rate")))
 
         # Build the MFD
         if recur_model == "TE":

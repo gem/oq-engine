@@ -43,25 +43,12 @@
               <nodalPlane dip="75.0" probability="0.3" rake="90.0" strike="320.0"/>
           </nodalPlaneDist>
           <hypoDepthDist>
-          <!-- Depth entries deeper than LSD are dropped/renormalised in modify_set_lower_seismogenic_depth -->
-            <hypoDepth depth="2.5" probability="0.01378954" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="3.5" probability="0.04826637" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="4.5" probability="0.05517597" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="5.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="6.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="7.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="8.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="9.5" probability="0.05793388" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="10.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="11.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="12.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="13.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="14.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="15.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="16.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="17.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="18.5" probability="0.05930987" fixedDipFrac="0.6667"/>
-            <hypoDepth depth="19.5" probability="0.05930987" fixedDipFrac="0.6667"/>
+          <!-- Coarse 5-depth stand-in for the BC Hydro NVA HDD; kept small to speed up the QA test. Entries deeper than LSD are dropped/renormalised in modify_set_lower_seismogenic_depth -->
+            <hypoDepth depth="2.5" probability="0.15" fixedDipFrac="0.6667"/>
+            <hypoDepth depth="6.5" probability="0.25" fixedDipFrac="0.6667"/>
+            <hypoDepth depth="10.5" probability="0.25" fixedDipFrac="0.6667"/>
+            <hypoDepth depth="14.5" probability="0.25" fixedDipFrac="0.6667"/>
+            <hypoDepth depth="18.5" probability="0.10" fixedDipFrac="0.6667"/>
           </hypoDepthDist>
       </areaSource>
     </sourceGroup>
