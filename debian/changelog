@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed bug in classical_risk from hazard_curves.csv manifesting as KeyError
+
 python3-oq-engine (3.26.1-1~xenial01) xenial; urgency=low
   [Matteo Nastasi, Antonio Ettorre]
   * Fix and improve of post installation scripts
