@@ -1,5 +1,5 @@
 ---
-name: OQ devel server Test WebUI on RH based OS
+name: OQ devel server
 on:
   workflow_dispatch:
     inputs:
@@ -19,7 +19,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["python3.11", "python3.12", "python3.13"]
-        req-version: [py312]
     container:
       image: fedora:41
       options: --privileged
@@ -44,7 +43,7 @@ jobs:
         # update system and install utilities
         dnf update -y
         dnf install -y ${{ matrix.python-version }}
-        dnf install -y git git-lfs nc procps
+        dnf install -y git git-lfs nc procps sudo
         # define it
         mypython=${{ matrix.python-version }}
         #run it
@@ -58,9 +57,6 @@ jobs:
         cd /__w/oq-engine/oq-engine/
         eval '$mypython -m pip install -U pip setuptools wheel'
         eval '$mypython install.py --version $BRANCH devel_server'
-        if [[ $EXIT_CODE -ne 0 ]]; then
-                break
-        fi
     - name: Actualize 'default' templates for email notifications
       run: |
         cd /__w/oq-engine/oq-engine/
