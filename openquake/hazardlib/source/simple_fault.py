@@ -523,27 +523,33 @@ class SimpleFaultSource(ParametricSeismicSource):
     def modify_set_recurrow(self, recurrow):
         """
         Rebuild the MFD from a recurrow using self.recur_model + self.mmax
-        set by an earlier recurSet application. Intended for the BC Hydro
-        NVA alt2/alt3 models where the fault portion of the total seismicity
-        rate is scaled by a per-fault length fraction.
+        set by an earlier recurSet application.
 
-        When the recurrow carries fault-prefixed attributes (fault_b_value,
-        fault_ref_mag, fault_rate), those are used instead of the unprefixed
-        keys. This lets a single alt3-style recurRow branch carry different
-        parameters for bg vs fault sources while remaining perfectly
-        correlated.
+        Params are read from the recurrow dict, preferring fault-prefixed
+        keys (fault_b_value, fault_ref_mag, fault_rate) so a single
+        alt3-style recurRow branch can carry different-but-correlated
+        background and fault parameters; otherwise the unprefixed alt2-style
+        keys are used.
 
-        - Alt2 (rateSplit active): zero rates below Mmax-1 and scale rest
-          by rate_split_fault_frac x rate_frac.
-        - Alt3 (no rateSplit, rate_frac set): scale the whole parametric MFD
-          by rate_frac (the alt3 fault MFD is already defined on [Mmax-1, Mmax]
-          via its ref_mag so no threshold zeroing is needed).
+        What happens is determined by the presence of rate_split_fault_frac
+        and rate_frac:
+
+        - No rateSplit and rate_frac == 1.0: build the parametric TE or
+          AC MFD from the row params and use it as it is.
+
+        - Alt3 (no rateSplit, rate_frac != 1.0): scale every bin of the
+          parametric MFD by rate_frac and make an EvenlyDiscretizedMFD.
+
+        - Alt2 (rateSplit present): zero bins below Mmax-1 (their rate
+          belongs to the background via the alt2 partition, not the fault)
+          and scale the remaining bins by rate_split_fault_frac * rate_frac
+          and make an EvenlyDiscretizedMFD.
 
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
         capability.
 
-        :param recur_row:
+        :param recurrow:
             Dict of values to use in given type of MFD (b_value, ref_mag,
             rate). Alt3-style rows use fault_ prefixes for the same keys.
         """
@@ -579,12 +585,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_frac = getattr(self, 'rate_split_fault_frac', None)
         rate_frac = getattr(self, 'rate_frac', 1.0)
 
-        # No rateSplit and no per-fault scaling: fault keeps parametric MFD
+        # Neither rateSplit nor rateFrac set: no BC Hydro partition to apply
         if fault_frac is None and rate_frac == 1.0:
             self.mfd = parent
             return
 
-        # Alt3-style: pure rate_frac scaling, no threshold zeroing
+        # Alt3-style: rate_frac scaling
         if fault_frac is None:
             bins = parent.get_annual_occurrence_rates()
             occ = [r * rate_frac for _, r in bins]

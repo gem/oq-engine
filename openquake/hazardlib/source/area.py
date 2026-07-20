@@ -129,23 +129,27 @@ class AreaSource(ParametricSeismicSource):
         """
         Modify the recurrence parameters by values given in a dict.
 
-        If a rateSplit uncertainty has previously set self.rate_split_bg_frac,
-        the resulting MFD is a piecewise EvenlyDiscretizedMFD that scales
-        rates at or above Mmax-1 by that fraction (bg side of an alt2-style
-        partition between an area source and embedded faults).
+        Params are read from the recurrow dict, preferring bg-prefixed keys
+        (bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style recurRow
+        branch can carry different but correlated bg and fault parameters;
+        otherwise the unprefixed alt1/alt2 keys are used.
 
-        When the recurrow carries bg-prefixed attributes (bg_b_value,
-        bg_ref_mag, bg_rate), those are used instead of the unprefixed keys.
-        This lets a single alt3-style recurRow branch carry different
-        parameters for bg vs fault sources while remaining perfectly
-        correlated.
+        How it works is determined by if rate_split_bg_frac is present:
+
+        - Alt1/Alt3 (no rateSplit): Build the TE or AC MFD from the row params
+          and use it as it is.
+
+        - Alt2 (rateSplit present): Build the same MFD, then piecewise-scale bins
+          at or above Mmax-1 by rate_split_bg_frac (bg side of the alt2 partition
+          between the area source and its faults and make an EvenlyDiscretizedMFD.
 
         NOTE: This is currently only intended for support of the BC Hydro
         NVA SSC logic tree. We may expand it to become a more general
         capability.
 
-        :param recur_row:
-            Dict of values to use in given type of MFD
+        :param recurrow:
+            Dict of values to use in given type of MFD (b_value, ref_mag,
+            rate). Alt3-style rows use bg_ prefixes for the same keys.
         """
         # Constants for BC Hydro NVA model
         b_ac = 0.3
