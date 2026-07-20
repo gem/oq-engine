@@ -985,7 +985,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Compute and save avg_gmf, unless there are too many GMFs
         """
         oq = self.oqparam
-        N = len(self.sitecol.complete)
+        N = len(self.sitecol)
         C = len(self.oqparam.all_imts())
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
@@ -1014,9 +1014,10 @@ class EventBasedCalculator(base.HazardCalculator):
         avg_gmf = numpy.zeros((2, N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
-        for sid, avgstd in compute_avg_gmf(
-                gmf_df, self.weights, min_iml).items():
-            avg_gmf[:, sid] = avgstd
+        avgstd = compute_avg_gmf(
+            gmf_df, self.weights, min_iml)
+        for i, sid in enumerate(self.sitecol.sids):
+            avg_gmf[:, i] = avgstd.get(sid, 0)
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
         if oq.impact:
