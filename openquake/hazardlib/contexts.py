@@ -1617,7 +1617,10 @@ class RmapMaker(object):
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.cfactor
-        dic['rup_data'] = concat(self.rupdata)
+        if self.oq.keep_rupdata:
+            dic['rup_data'] = concat(self.rupdata)
+        else:
+            dic['rup_data'] = ()
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20
