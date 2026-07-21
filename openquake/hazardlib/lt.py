@@ -932,10 +932,19 @@ class BranchSet(object):
         return repr(self.branches)
 
     def __repr__(self):
-        kvs = ', '.join('%s=%s' % item for item in self.filters.items())
+        kvs = ', '.join(f'{k}={redlist(v)}' for k, v in self.filters.items())
         if kvs:
             kvs = ', ' + kvs
         return '<%s(%d%s)>' % (self.uncertainty_type, len(self), kvs)
+
+
+def redlist(lst):
+    """
+    Reduce a list for display purposes. Don't touch the original.
+    """
+    if len(lst) <= 3:
+        return lst
+    return [lst[0], '...', lst[-1]]
 
 
 # NB: this function cannot be used with monster logic trees like the one for
