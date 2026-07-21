@@ -1,5 +1,5 @@
 ---
-name: OQ devel server
+name: Devel Server Installation of OQ on RH OS
 on:
   workflow_dispatch:
     inputs:
@@ -12,16 +12,15 @@ on:
 
 jobs:
   test_ui:
-    name: OQ Devel Server on RH based (fedora container) ${{ matrix.python-version }}
+    name: Test on RH based (fedora container) ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     env:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
-      fail-fast: false
       matrix:
         python-version: ["python3.11", "python3.12", "python3.13"]
     container:
-      image: fedora:41
+      image: fedora:44
       options: --privileged
     steps:
     - name: Clone Repository (Master)
@@ -41,7 +40,7 @@ jobs:
         else
            BRANCH=${{ github.event.inputs.git-ref }}
         fi
-        # update system and install utilities
+        # Add openquake user
         dnf update -y
         dnf install -y ${{ matrix.python-version }}
         dnf install -y git git-lfs nc procps sudo
@@ -56,8 +55,10 @@ jobs:
         #
         echo "branch to test: ${BRANCH}"
         cd /__w/oq-engine/oq-engine/
-        eval '$mypython -m pip install -U pip setuptools wheel'
         eval '$mypython install.py --version $BRANCH devel_server'
+        if [[ $EXIT_CODE -ne 0 ]]; then
+                break
+        fi
     - name: Actualize 'default' templates for email notifications
       run: |
         cd /__w/oq-engine/oq-engine/
@@ -68,7 +69,6 @@ jobs:
       run: |
          set -o pipefail
          source /opt/openquake/venv/bin/activate
-         pip freeze
          mkdir -p /var/log/oq-engine/
          chown -R openquake /var/log/oq-engine/
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
