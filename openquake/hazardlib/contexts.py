@@ -200,6 +200,7 @@ class Oq(object):
     cross_correl = None
     mea_tau_phi = False
     split_sources = True
+    keep_rupdata = True
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
@@ -1617,7 +1618,10 @@ class RmapMaker(object):
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.cfactor
-        dic['rup_data'] = concat(self.rupdata)
+        if self.oq.keep_rupdata:
+            dic['rup_data'] = concat(self.rupdata)
+        else:
+            dic['rup_data'] = ()
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20
