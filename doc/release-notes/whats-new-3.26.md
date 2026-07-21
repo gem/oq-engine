@@ -220,8 +220,10 @@ which resulted in an incorrect coefficient of b = 22.0 instead of b = 25.7.
 We fixed a bug in `check_aki_richards_convention` where the bottom-left
 depth was used twice instead of using the bottom-left and upper-left depths.
 
-We fixed the `avg_gmf` CSV exporter so that it only considers the filtered
-site collection (i.e. the non-discarded sites).
+We fixed the `avg_gmf` CSV exporter so that it only considers the
+filtered site collection (i.e. the non-discarded sites) associated to
+nonzero ground motion values. Moreover, we are not exporting the
+standard deviations (but they are still available in the datastore).
 
 We fixed the `aggexp_tags` and `aggrisk_tags` exporters. In some
 cases they exported inconsistent results (i.e. tags present
