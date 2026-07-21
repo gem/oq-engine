@@ -327,7 +327,7 @@ def install_or_postinstall_standalone(inst, is_install=True):
         {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
          "ver": "~=1.21.0"},
         {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
-         "ver": "~=1.1.0"},
+         "ver": "~=1.2.0"},
         {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
          "ver": "~=1.4.4"},
     ]
