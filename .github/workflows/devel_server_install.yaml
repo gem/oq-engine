@@ -1,5 +1,5 @@
 ---
-name: Test WebUI on RH based OS
+name: Devel Server Installation of OQ on RH OS
 on:
   workflow_dispatch:
     inputs:
@@ -12,16 +12,15 @@ on:
 
 jobs:
   test_ui:
-    name: Test on RH based (fedora container)
+    name: Test on RH based (fedora container) ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     env:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
       matrix:
-        python-version: [python3.12]
-        req-version: [py312]
+        python-version: ["python3.11", "python3.12", "python3.13"]
     container:
-      image: fedora:41
+      image: fedora:44
       options: --privileged
     steps:
     - name: Clone Repository (Master)
@@ -41,15 +40,12 @@ jobs:
         else
            BRANCH=${{ github.event.inputs.git-ref }}
         fi
-        # Add openquake user
-        useradd -m -u 1000 -s /bin/bash openquake
-        # update system and install utilities
+        # Update system and install utilities
         dnf update -y
         dnf install -y ${{ matrix.python-version }}
-        dnf install -y git git-lfs nc procps
+        dnf install -y git git-lfs nc procps sudo
         # define it
         mypython=${{ matrix.python-version }}
-        reqpython=${{ matrix.req-version }}
         #run it
         eval '$mypython -c "import sys; print(sys.version)"'
         #
@@ -59,40 +55,10 @@ jobs:
         #
         echo "branch to test: ${BRANCH}"
         cd /__w/oq-engine/oq-engine/
-        eval '$mypython -m pip install -U pip setuptools wheel'
-        eval '$mypython -m venv /opt/openquake/venv '
-        source /opt/openquake/venv/bin/activate
-        eval '$mypython -m pip install -r "requirements-$reqpython-linux64.txt"'
-        eval '$mypython -m pip install -e . '
-        ## Standalone apps
-        echo "Downloading standalone apps"
-        for app in oq-platform-standalone django-gem-taxonomy oq-platform-ipt oq-platform-taxonomy; do
-            for branch in "$BRANCH" "master" "main"; do
-                TOOLS_BRANCH="$branch"
-                # do not fail on exit code 2 if the branch
-                # does not exist in the app repository
-                set +e
-                git ls-remote --exit-code --heads https://github.com/gem/${app}.git $TOOLS_BRANCH >/dev/null 2>&1
-                EXIT_CODE=$?
-                # set again to fail on exit code not 0
-                set -e
-                if [[ $EXIT_CODE -eq 0 ]]; then
-                    echo "Git branch '$BRANCH' exists in the remote repository"
-                    break
-                fi
-            done
-            if [[ $EXIT_CODE -ne 0 ]]; then
+        eval '$mypython install.py --version $BRANCH devel_server'
+        if [[ $EXIT_CODE -ne 0 ]]; then
                 break
-            fi
-            echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
-            git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-            eval '$mypython -m pip install -e ./${app}'
-        done
-        if [ $EXIT_CODE -ne 0 ]; then
-            echo "No '$branch', nor 'master' or 'main' branch found for '$app' django app; failed"
-            exit 1
         fi
-        deactivate
     - name: Actualize 'default' templates for email notifications
       run: |
         cd /__w/oq-engine/oq-engine/
@@ -103,7 +69,6 @@ jobs:
       run: |
          set -o pipefail
          source /opt/openquake/venv/bin/activate
-         pip freeze
          mkdir -p /var/log/oq-engine/
          chown -R openquake /var/log/oq-engine/
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'

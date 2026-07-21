@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 #
 # Copyright (C) 2020-2026 GEM Foundation
 #
@@ -113,6 +113,11 @@ class server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
+    MPY = os.path.join(VENV, 'lib',
+                       f'python{PYVER[0]}.{PYVER[1]}',
+                       'site-packages', 'openquake',
+                       'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -145,7 +150,9 @@ class devel_server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
     exit = server.exit
+    MPY = os.path.join('openquake', 'server', 'manage.py')
 
 
 class user:
@@ -162,15 +169,23 @@ class user:
             VENV = os.path.expanduser("~\\openquake")
             OQ = os.path.join(VENV, "\\Scripts\\oq")
             OQDATA = os.path.expanduser("~\\oqdata")
+        MPY = os.path.join(VENV, 'lib',
+                           'site-packages', 'openquake',
+                           'server', 'manage.py')
     else:
         VENV = os.path.expanduser("~/openquake")
         OQ = os.path.join(VENV, "/bin/oq")
         OQDATA = os.path.expanduser("~/oqdata")
+        MPY = os.path.join(VENV, 'lib',
+                           f'python{PYVER[0]}.{PYVER[1]}',
+                           'site-packages', 'openquake',
+                           'server', 'manage.py')
 
     CFG = os.path.join(VENV, "openquake.cfg")
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     DBPORT = 1908
     CONFIG = ""
+    USER = None
 
     @classmethod
     def exit(cls):
@@ -184,6 +199,7 @@ class devel(user):
     Parameters for a devel installation (same as user)
     """
 
+    MPY = os.path.join('openquake', 'server', 'manage.py')
     exit = user.exit
 
 
@@ -274,7 +290,17 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
-def install_or_postinstall_standalone(venv, is_install=True):
+def _run_subprocess(inst, args):
+    # Run subprocess use sudo if inst.USER != None
+    if inst.USER is None:
+        subprocess.check_call(args)
+    else:
+        # user=inst.USER does not appear to work in the same
+        # way as sudo -u $USER
+        subprocess.check_call(['sudo', '-u', inst.USER] + args)
+
+
+def install_or_postinstall_standalone(inst, is_install=True):
     """
     Install the standalone Django applications if possible or
     run '<app>_postinstall' command if it exists
@@ -294,57 +320,73 @@ def install_or_postinstall_standalone(venv, is_install=True):
         pycmd = inst.VENV + "/bin/python3"
 
     STANDALONE_APP_INFO = [
-        {"pkg": "oq-platform-standalone", "name": None},
-        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
-        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
-        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
+        # All engine Django app need oq-platform-standalone
+        {"pkg": "oq-platform-standalone", "name": None,
+         "ver": "~=2.16.4"},
+        # Django apps to install
+        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
+         "ver": "~=1.21.0"},
+        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
+         "ver": "~=1.2.0"},
+        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
+         "ver": "~=1.4.4"},
     ]
 
     if is_install:
         for app in STANDALONE_APP_INFO:
             try:
-                print("Applications " + app['pkg'] + " are not installed yet \n")
+                print(f"Applications {app['pkg']} are not installed yet \n")
 
                 subprocess.check_call(
                     [pycmd, "-m", "pip", "install",
                      "--no-index", "--no-cache-dir",
                      "--find-links", WHEELHOUSE_URL,
                      "--find-links", URL_STANDALONE,
-                     app['pkg']]
+                     app['pkg'] + app['ver']]
                 )
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: could not install %s" % (exc, app['pkg']))
     else:
+        # Obtain paths for python and manage.py in VENV, we cannot use
+        # site.getsitepackages here since we are not yet running in the venv
+        if sys.platform == "win32":
+            python = ['Scripts', 'python.exe']
+        else:
+            python = ["bin", "python"]
+
+        # Run python manage.py migrate before running app postinstall
+        _run_subprocess(
+            inst,
+            [os.path.join(inst.VENV, *python), inst.MPY, "migrate"])
+
         for app in STANDALONE_APP_INFO:
             if not app['name']:
                 continue
 
             try:
-                if sys.platform == "win32":
-                    django_admin = ['Scripts', 'django-admin.exe']
-                else:
-                    django_admin = ["bin", "django-admin"]
-
-                django_env = os.environ.copy()
-                django_env["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-
-                subprocess.check_call(
-                    [os.path.join(inst.VENV, *django_admin),
-                     "openquake_engine_postinstall", app['name']],
-                    env=django_env)
+                # Run python manage.py postinstall
+                _run_subprocess(
+                    inst,
+                    [os.path.join(inst.VENV, *python),
+                        inst.MPY, "openquake_engine_postinstall",
+                        app['name']])
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
-                errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
+                errors.append(
+                    "%s: error during %s postinstall command execution" % (
+                        exc, app['name']))
 
     return errors
 
 
-def install_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=True)
+def install_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=True)
 
-def postinstall_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=False)
+
+def postinstall_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=False)
+
 
 def before_checks(inst, args, usage):
     """
@@ -581,7 +623,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
                 env=custom_env)
         fix_version(commit, inst.VENV)
 
-    errors = install_standalone(inst.VENV)
+    errors = install_standalone(inst)
 
     # create openquake.cfg
     if inst is server or inst is devel_server:
@@ -608,7 +650,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
     if inst in (user, devel):  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
 
-    errors += postinstall_standalone(inst.VENV)
+    errors += postinstall_standalone(inst)
 
     if (
         inst is server
@@ -709,8 +751,10 @@ if __name__ == "__main__":
                         help="not use '--upgrade' in pip install calls")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
-    parser.add_argument("--version", help="version to install (default stable)")
-    parser.add_argument("--dbport", help="DbServer port (default 1907 or 1908)")
+    parser.add_argument("--version",
+                        help="version to install (default stable)")
+    parser.add_argument("--dbport",
+                        help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
@@ -719,12 +763,14 @@ if __name__ == "__main__":
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
+        # set inst to the class named as the string args.inst
         inst = globals()[args.inst]
         before_checks(inst, args, parser.format_usage())
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.novenv, args.noupgrade)
+            errors = install(inst, args.version, args.from_fork, args.novenv,
+                             args.noupgrade)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
