@@ -200,6 +200,7 @@ class Oq(object):
     cross_correl = None
     mea_tau_phi = False
     split_sources = True
+    keep_rupdata = True
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
