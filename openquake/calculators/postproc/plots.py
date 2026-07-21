@@ -342,7 +342,7 @@ def plot_avg_gmf(ex, imt):
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
+    coll = ax.scatter(avg_gmf['lon'], avg_gmf['lat'], c=gmf, cmap='jet',
                       s=markersize)
     plt.colorbar(coll)
 
