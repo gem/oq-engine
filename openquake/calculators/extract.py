@@ -76,7 +76,7 @@ def get_info(dstore):
     oq = dstore['oqparam']
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: li for li, lt in enumerate(oq.loss_dt().names)}
-    imt = {imt: i for i, imt in enumerate(oq.imtls)}
+    imt = {imt: i for i, imt in enumerate(oq.all_imts())}
     num_rlzs = len(base.get_weights(oq, dstore))
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
@@ -1297,23 +1297,23 @@ def extract_relevant_gmfs(dstore, what):
 def extract_avg_gmf(dstore, what):
     qdict = parse(what)
     info = get_info(dstore)
+    sitecol = dstore['sitecol']
     [imt] = qdict['imt']
     imti = info['imt'][imt]
-    try:
-        complete = dstore['complete']
-    except KeyError:
-        complete = dstore['sitecol'].complete
     avg_gmf = dstore['avg_gmf'][0, :, imti]
     if 'station_data' in dstore:
         # discard the stations from the avg_gmf plot
         stations = dstore['station_data/site_id'][:]
-        ok = (avg_gmf > 0) & ~numpy.isin(complete.sids, stations)
+        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
     else:
         ok = avg_gmf > 0
-    yield imt, avg_gmf[complete.sids[ok]]
-    yield 'sids', complete.sids[ok]
-    yield 'lons', complete.lons[ok]
-    yield 'lats', complete.lats[ok]
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        yield 'custom_site_id', decode(sitecol.custom_site_id[ok])
+    else:
+        yield 'site_id', sitecol.sids[ok]
+    yield 'lon', sitecol.lons[ok]
+    yield 'lat', sitecol.lats[ok]
+    yield imt, avg_gmf[ok]
 
 
 @extract.add('num_events')

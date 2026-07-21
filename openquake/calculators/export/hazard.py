@@ -548,23 +548,10 @@ def export_relevant_gmfs(ekey, dstore):
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    if dstore.parent:
-        sitecol = dstore.parent['sitecol']
-    else:
-        sitecol = dstore['sitecol']
-    if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
-    else:
-        dic = dict(site_id=sitecol.sids)
-    dic['lon'] = sitecol.lons
-    dic['lat'] = sitecol.lats
-    data = dstore['avg_gmf'][:]  # shape (2, N, C)
-    imts = list(oq.imtls)
+    dic = {}
     for m, imt in enumerate(oq.all_imts()):
-        if m < len(imts):
-            imt = imts[m]
-        dic['gmv_' + imt] = data[0, :, m]
-        dic['gsd_' + imt] = data[1, :, m]
+        dic.update(extract(dstore, f'avg_gmf?imt={imt}'))
+    del dic['extra']
     fname = dstore.build_fname('avg_gmf', '', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         pandas.DataFrame(dic), fname, comment=dstore.metadata)

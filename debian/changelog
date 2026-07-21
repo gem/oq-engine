@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the `avg_gmf` exporter to export only nonzero values
   * Fixed bug in classical_risk from hazard_curves.csv manifesting as a KeyError in
     U32([sid2idx[sid] for sid in df.sid])
 
