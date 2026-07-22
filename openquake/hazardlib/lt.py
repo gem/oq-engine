@@ -314,7 +314,7 @@ def _simple_fault_dip_relative(utype, source, value):
 
 
 @apply_uncertainty.add('simpleFaultDipAbsolute')
-def _simple_fault_dip_absolute(bset, source, value):
+def _simple_fault_dip_absolute(utype, source, value):
     source.modify('set_dip', dict(dip=value))
 
 
@@ -546,11 +546,12 @@ def apply_uncertainties(bset_values, src_group):
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
-                    if bset.correlated:
-                        apply_uncertainty(
-                            bset.uncertainty_type, src, value[source.source_id])
-                    else:
-                        apply_uncertainty(bset.uncertainty_type, src, value)
+                    for s in srcs:
+                        if bset.correlated:
+                            apply_uncertainty(
+                                bset.uncertainty_type, s, value[source.source_id])
+                        else:
+                            apply_uncertainty(bset.uncertainty_type, s, value)
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
@@ -630,6 +631,7 @@ def sample(weighted_objects, probabilities, sampling_method='early_weights'):
         n = len(weighted_objects)  # consider all weights equal
         idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
+    idxs = numpy.clip(idxs, 0, len(weighted_objects) - 1)
     return [weighted_objects[idx] for idx in idxs]
 
 
@@ -921,9 +923,11 @@ class BranchSet(object):
         """
         tot = 0
         for br in self.branches:
-            assert 0 <= br.weight <= 1, br.weight
+            if not (0 <= br.weight <= 1):
+                raise ValueError(f'Invalid weight {br.weight} for branch {br.branch_id}')
             tot += br.weight
-        assert abs(tot - 1.) < 5E-6, (tot, [br.weight for br in self.branches])
+        if abs(tot - 1.) >= 5E-6:
+            raise ValueError(f'Branch weights sum to {tot}, expected 1.0 ([{[br.weight for br in self.branches]}])')
 
     def __len__(self):
         return len(self.branches)
@@ -1038,20 +1042,16 @@ class Realization(object):
 
 def add_path(bset, bsno, brno, num_prev, tot):
     """
-    Extend the `paths` and returns its length as the new `brno`
+    Extend the `paths` and return its length as the new `brno`
     """
     paths = []
-    short_ids = BASE183[brno:brno+len(bset.branches)]
-    for br, short_id in zip(bset.branches, short_ids):
+    for br, short_id in zip(bset.branches, BASE183[brno:]):
         br.short_id = short_id
-        path = ['*'] * tot
-        path[bsno] = br.id
-        paths.append(''.join(path))
-    if 'applyToBranches' not in bset.filters or len(
-            bset.filters['applyToBranches']) == num_prev:
-        # apply to all
-        return 0, paths
-    return brno + len(paths), paths
+        paths.append('*' * bsno + br.id + '*' * (tot - bsno - 1))
+
+    app2brs = bset.filters.get('applyToBranches')
+    next_brno = 0 if app2brs is None or len(app2brs) == num_prev else brno + len(bset.branches)
+    return next_brno, paths
 
 
 def attach_branches(ltree, override=False):
@@ -1064,38 +1064,41 @@ def attach_branches(ltree, override=False):
     brno, paths = add_path(ltree.branchsets[0], 0, 0, 0, nb)
     previous_branches = ltree.branchsets[0].branches
     branchdic = {br.branch_id: br for br in previous_branches}
-    for i, bset in enumerate(ltree.branchsets[1:]):
+
+    for i, bset in enumerate(ltree.branchsets[1:], 1):
         for br in bset.branches:
             if br.branch_id != '.' and br.branch_id in branchdic:
-                raise NameError('The branch ID %s is duplicated'
-                                % br.branch_id)
+                raise NameError(f'The branch ID {br.branch_id} is duplicated')
             branchdic[br.branch_id] = br
+
         dummies = []
         prev_ids = [pb.branch_id for pb in previous_branches]
         app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
-        # print(prev_ids)
+
         if app2brs != prev_ids:
             bset.applied = app2brs
             for branch_id in app2brs:
+                if branch_id not in branchdic:
+                    raise LogicTreeError(fname, '?', f"branch ID {branch_id!r} in applyToBranches not found")
                 br = branchdic[branch_id]
-                if (br.bset is not None and br.bset.uncertainty_type != 'dummy'
-                    and not override):
-                    raise LogicTreeError(
-                        fname, '?', f"branch {br.branch_id!r} already has "
-                        "child branchset")
+                if br.bset is not None and br.bset.uncertainty_type != 'dummy' and not override:
+                    raise LogicTreeError(fname, '?', f"branch {br.branch_id!r} already has child branchset")
                 br.bset = bset
+            app2set = set(app2brs)
             for br in previous_branches:
-                if br.branch_id not in app2brs:
+                if br.branch_id not in app2set:
                     br.bset = dummy = dummy_branchset()
-                    [dummybranch] = dummy.branches
+                    dummybranch = dummy.branches[0]
                     branchdic[dummybranch.branch_id] = dummybranch
                     dummies.append(dummybranch)
-        else:  # apply to all previous branches
-            for branch in previous_branches:
-                branch.bset = bset
-        brno, new_paths = add_path(bset, i+1, brno, len(previous_branches), nb)
+        else:
+            for br in previous_branches:
+                br.bset = bset
+
+        brno, new_paths = add_path(bset, i, brno, len(previous_branches), nb)
         paths.extend(new_paths)
         previous_branches = bset.branches + dummies
+
     return paths
 
 
