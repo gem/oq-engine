@@ -264,7 +264,7 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
         srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
     for rups, cmaker in zip(allrups, cmakers):
-        if not hasattr(cmaker, 'ctx_mon'):  # not already initialized
+        if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
         with rmon:
             try:
