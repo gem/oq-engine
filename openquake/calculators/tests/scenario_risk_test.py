@@ -273,6 +273,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles('expected/avg_losses.csv', fname)
 
+        fnames = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats-ID1.csv', fnames[0])
+        self.assertEqualFiles('expected/aggrisk-stats-OCCUPANCY.csv', fnames[1])
+
     def test_case_13(self):
         # testing Youd gsim, with primary IMT LSD
         out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')

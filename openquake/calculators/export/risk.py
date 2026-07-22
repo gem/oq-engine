@@ -149,25 +149,40 @@ def export_aggrisk_stats(ekey, dstore):
     key = ekey[0].split('-')[0]  # aggrisk or aggcurves
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
-    dataf = extract(dstore, 'risk_stats/' + key)
-    assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(oq.aggregate_by)
-    K = len(agg_values) - 1
-    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
-    pairs = [([], dataf.agg_id == K)]  # full aggregation
-    for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
-        pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
     fnames = []
-    for tagnames, ok in pairs:
-        df = dataf[ok].copy()
-        if tagnames:
-            tagvalues = numpy.array([aggtags[agg_id] for agg_id in df.agg_id])
-            for n, name in enumerate(tagnames):
-                df[name] = tagvalues[:, n]
-        del df['agg_id']
-        fname = dest.format('-'.join(tagnames))
-        writer.save(df, fname, df.columns, comment=dstore.metadata)
-        fnames.append(fname)
+    if 'scenario' in oq.calculation_mode and oq.aggregate_by:
+        # tested in case_12
+        aggnames = set()
+        for aggby in oq.aggregate_by:
+            aggnames.update(aggby)
+        dataf = extract(dstore, 'aggrisk_tags')
+        for tagnames, (start, stop) in dataf.slc.items():
+            df = dataf[start:stop]
+            for missing in aggnames - set(tagnames):
+                del df[missing]
+            fname = dest.format('-'.join(tagnames))
+            writer.save(df, fname, df.columns, comment=dstore.metadata)
+            fnames.append(fname)            
+    else:  # event based risk
+        dataf = extract(dstore, 'risk_stats/' + key)
+        assetcol = dstore['assetcol']
+        agg_values = assetcol.get_agg_values(oq.aggregate_by)
+        K = len(agg_values) - 1
+        aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
+        pairs = [([], dataf.agg_id == K)]  # full aggregation
+        for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
+            pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
+        for tagnames, ok in pairs:
+            df = dataf[ok].copy()
+            if tagnames:
+                tagvalues = numpy.array(
+                    [aggtags[agg_id] for agg_id in df.agg_id])
+                for n, name in enumerate(tagnames):
+                    df[name] = tagvalues[:, n]
+            del df['agg_id']
+            fname = dest.format('-'.join(tagnames))
+            writer.save(df, fname, df.columns, comment=dstore.metadata)
+            fnames.append(fname)
     return fnames
 
 
