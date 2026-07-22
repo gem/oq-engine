@@ -1071,14 +1071,13 @@ def attach_branches(ltree):
         dummies = []
         prev_ids = [pb.branch_id for pb in previous_branches]
         app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
-        print(prev_ids)
+        # print(prev_ids)
         if app2brs != prev_ids:
             for branch_id in app2brs:
                 # NB: if branch_id has already a branchset it is overridden
                 branchdic[branch_id].bset = bset
-            for brid in prev_ids:
-                br = branchdic[brid]
-                if brid not in app2brs:
+            for br in previous_branches:
+                if br.branch_id not in app2brs:
                     br.bset = dummy = dummy_branchset()
                     [dummybranch] = dummy.branches
                     branchdic[dummybranch.branch_id] = dummybranch
