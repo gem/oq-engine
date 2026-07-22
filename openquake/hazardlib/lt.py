@@ -984,7 +984,10 @@ def print_tree(bob, prefix="", is_last=True):
     try:
         id = bob.branch_id  # if branch
     except AttributeError:
-        id = bob.id  # if branchset
+        try:
+            id = bob.id  # if branchset
+        except AttributeError:
+            id = 'root'
     print(f"{prefix}{'└── ' if is_last else '├── '}{id}")
 
     # Update the prefix for the children.
@@ -1037,17 +1040,17 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
     """
     Extend the `paths` and returns its length as the new `brno`
     """
-    for br in bset.branches:
-        br.short_id = BASE183[brno]
+    short_ids = BASE183[brno:brno+len(bset.branches)]
+    for br, short_id in zip(bset.branches, short_ids):
+        br.short_id = short_id
         path = ['*'] * tot
         path[bsno] = br.id
         paths.append(''.join(path))
-        brno += 1
     if 'applyToBranches' not in bset.filters or len(
             bset.filters['applyToBranches']) == num_prev:
         # apply to all
         return 0
-    return brno
+    return brno + len(bset.branches)
 
 
 def attach_branches(ltree, override=False):

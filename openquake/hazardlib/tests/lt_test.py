@@ -414,6 +414,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mmax_7pt6', '7.6', 0.1]]
         ]
         ltssc = lt.build(*ltl)
+        # lt.print_tree(ltssc.branchsets[0])
         paths = ltssc.get_all_paths()
         # The third branchset increases the number of branches from 3 to 5 for
         # each of the original 6 branches leading to 30 branches in total.
