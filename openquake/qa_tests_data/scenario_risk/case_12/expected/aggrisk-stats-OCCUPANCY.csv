@@ -1,0 +1,8 @@
+#,,,,,"generated_by='OpenQuake engine 3.27.0-git29758b513e', start_date='2026-07-22T11:23:17', checksum=215484728"
+loss_type,value,lossmea,q05,q95,OCCUPANCY
+affectedpop,1.86600E+02,7.02600E-07,0.00000E+00,1.48200E-06,Res
+injured,1.79300E+02,1.05500E-07,0.00000E+00,5.27500E-07,Res
+embodied_carbon,1.79077E+06,5.55919E-03,0.00000E+00,1.46116E-02,Res
+affectedpop,1.86600E+02,7.02600E-07,0.00000E+00,1.48200E-06,*total*
+embodied_carbon,1.79077E+06,5.55919E-03,0.00000E+00,1.46116E-02,*total*
+injured,1.79300E+02,1.05500E-07,0.00000E+00,5.27500E-07,*total*
