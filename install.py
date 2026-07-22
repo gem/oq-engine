@@ -97,7 +97,11 @@ class server:
     Parameters for a server installation (with root permissions)
     """
 
-    # Default venv, can be changed by --venv flag
+    #
+    # For server and devel_server we do not (yet) support changing venv
+    # if we support changing venv, we need also to replace CFG and other
+    # dependent fields with methods
+    #
     VENV = "/opt/openquake/venv"
     CFG = os.path.join(VENV, "openquake.cfg")
     OQ = "/usr/bin/oq"
@@ -215,7 +219,6 @@ class devel(user):
     @classmethod
     def manage_py(cls):
         return os.path.join('openquake', 'server', 'manage.py')
-
 
 
 PACKAGES = """It looks like you have an installation from packages.
