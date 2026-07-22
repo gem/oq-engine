@@ -1052,7 +1052,7 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
     return brno
 
 
-def attach_branches(ltree):
+def attach_branches(ltree, override=False):
     """
     Attach branchsets to branches depending on the applyToBranches
     attribute; also attach dummy branchsets to dummy branches.
@@ -1077,7 +1077,8 @@ def attach_branches(ltree):
             bset.applied = app2brs
             for branch_id in app2brs:
                 br = branchdic[branch_id]
-                if br.bset is not None and br.bset.uncertainty_type != 'dummy':
+                if (br.bset is not None and br.bset.uncertainty_type != 'dummy'
+                    and not override):
                     raise LogicTreeError(
                         fname, '?', f"branch {br.branch_id!r} already has "
                         "child branchset")
@@ -1111,7 +1112,7 @@ class CompositeLogicTree(object):
             bset.ordinal = i
             bset.check_duplicates()
             bset.check_weights()
-        self.basepaths = attach_branches(self)
+        self.basepaths = attach_branches(self, override=True)
 
     def __iter__(self):
         """
