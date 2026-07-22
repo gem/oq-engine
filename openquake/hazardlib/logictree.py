@@ -553,6 +553,15 @@ class SourceModelLogicTree(object):
         if not branchset.branches:
             del self.bsetdict[bsid]
             return
+        app2brs = branchset_node.attrib.get('applyToBranches', '')
+        lineno = branchset_node.lineno
+        for branch_id in app2brs.split():
+            if branch_id not in self.branches:
+                if self.branchID:  # the branch cannot be attached
+                    continue
+                raise LogicTreeError(
+                    lineno, self.filename,
+                    "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
 
     def parse_branches(self, branchset_node, branchset):
@@ -771,32 +780,6 @@ class SourceModelLogicTree(object):
                     branchset_node, self.filename,
                     'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree')
-
-    def apply_branchset(self, apply_to_branches, lineno, branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Parses branchset node's attribute ``@applyToBranches`` to apply
-        following branchests to preceding branches selectively. Branching
-        level can have more than one branchset exactly for this: different
-        branchsets can apply to different open ends.
-
-        Checks that branchset tries to be applied only to branches on previous
-        branching level which do not have a child branchset yet.
-        """
-        for branch_id in apply_to_branches.split():
-            if branch_id not in self.branches:
-                if self.branchID:  # the branch cannot be attached
-                    continue
-                raise LogicTreeError(
-                    lineno, self.filename,
-                    "branch '%s' is not yet defined" % branch_id)
-            branch = self.branches[branch_id]
-            if not branch.is_leaf():
-                raise LogicTreeError(
-                    lineno, self.filename,
-                    "branch '%s' already has child branchset" % branch_id)
-            branch.bset = branchset
 
     def _get_source_model(self, source_model_file):
         # NB: do not remove this, it is meant to be overridden in the tests

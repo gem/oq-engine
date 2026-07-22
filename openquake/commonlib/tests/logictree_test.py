@@ -370,7 +370,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm},
                                             logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 18)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)

@@ -1058,6 +1058,7 @@ def attach_branches(ltree):
     attribute; also attach dummy branchsets to dummy branches.
     """
     paths = []
+    fname = getattr(ltree, 'filename', '?')
     nb = len(ltree.branchsets)
     brno = add_path(ltree.branchsets[0], 0, 0, 0, nb, paths)
     previous_branches = ltree.branchsets[0].branches
@@ -1073,9 +1074,14 @@ def attach_branches(ltree):
         app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
         # print(prev_ids)
         if app2brs != prev_ids:
+            bset.applied = app2brs
             for branch_id in app2brs:
-                # NB: if branch_id has already a branchset it is overridden
-                branchdic[branch_id].bset = bset
+                br = branchdic[branch_id]
+                if br.bset is not None and br.bset.uncertainty_type != 'dummy':
+                    raise LogicTreeError(
+                        fname, '?', f"branch {br.branch_id!r} already has "
+                        "child branchset")
+                br.bset = bset
             for br in previous_branches:
                 if br.branch_id not in app2brs:
                     br.bset = dummy = dummy_branchset()
