@@ -97,6 +97,7 @@ class server:
     Parameters for a server installation (with root permissions)
     """
 
+    # Default venv, can be changed by --venv flag
     VENV = "/opt/openquake/venv"
     CFG = os.path.join(VENV, "openquake.cfg")
     OQ = "/usr/bin/oq"
@@ -114,10 +115,13 @@ class server:
         DBPATH,
     )
     USER = "openquake"
-    MPY = os.path.join(VENV, 'lib',
-                       f'python{PYVER[0]}.{PYVER[1]}',
-                       'site-packages', 'openquake',
-                       'server', 'manage.py')
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join(cls.VENV, 'lib',
+                            f'python{PYVER[0]}.{PYVER[1]}',
+                            'site-packages', 'openquake',
+                            'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -152,7 +156,10 @@ class devel_server:
     )
     USER = "openquake"
     exit = server.exit
-    MPY = os.path.join('openquake', 'server', 'manage.py')
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
 
 
 class user:
@@ -169,23 +176,28 @@ class user:
             VENV = os.path.expanduser("~\\openquake")
             OQ = os.path.join(VENV, "\\Scripts\\oq")
             OQDATA = os.path.expanduser("~\\oqdata")
-        MPY = os.path.join(VENV, 'lib',
-                           'site-packages', 'openquake',
-                           'server', 'manage.py')
     else:
         VENV = os.path.expanduser("~/openquake")
         OQ = os.path.join(VENV, "/bin/oq")
         OQDATA = os.path.expanduser("~/oqdata")
-        MPY = os.path.join(VENV, 'lib',
-                           f'python{PYVER[0]}.{PYVER[1]}',
-                           'site-packages', 'openquake',
-                           'server', 'manage.py')
 
     CFG = os.path.join(VENV, "openquake.cfg")
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     DBPORT = 1908
     CONFIG = ""
     USER = None
+
+    @classmethod
+    def manage_py(cls):
+        if sys.platform == "win32":
+            return os.path.join(cls.VENV, 'lib',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
+        else:
+            return os.path.join(cls.VENV, 'lib',
+                                f'python{PYVER[0]}.{PYVER[1]}',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -198,9 +210,12 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-
-    MPY = os.path.join('openquake', 'server', 'manage.py')
     exit = user.exit
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
+
 
 
 PACKAGES = """It looks like you have an installation from packages.
@@ -358,7 +373,7 @@ def install_or_postinstall_standalone(inst, is_install=True):
         # Run python manage.py migrate before running app postinstall
         _run_subprocess(
             inst,
-            [os.path.join(inst.VENV, *python), inst.MPY, "migrate"])
+            [os.path.join(inst.VENV, *python), inst.manage_py(), "migrate"])
 
         for app in STANDALONE_APP_INFO:
             if not app['name']:
@@ -369,7 +384,7 @@ def install_or_postinstall_standalone(inst, is_install=True):
                 _run_subprocess(
                     inst,
                     [os.path.join(inst.VENV, *python),
-                        inst.MPY, "openquake_engine_postinstall",
+                        inst.manage_py(), "openquake_engine_postinstall",
                         app['name']])
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
@@ -398,6 +413,7 @@ def before_checks(inst, args, usage):
         inst.DBPORT = int(args.dbport)
 
     if args.novenv:
+        # TODO REMOVE or add check for non Windows OS and non "user" usage
         inst.VENV = os.path.join(os.getenv('LocalAppData'), 'Programs',
                                  'OpenQuake Engine', 'python3')
 
@@ -745,6 +761,9 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
+    # FIXME --novenv is only for use on Windows with user install
+    # TODO update documentation and/or add checks and/or make --novenv
+    # work in all environments
     parser.add_argument("--novenv", action="store_true",
                         help="keep the current python environment")
     parser.add_argument("--noupgrade", action="store_true",
