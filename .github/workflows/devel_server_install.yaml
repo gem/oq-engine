@@ -40,7 +40,7 @@ jobs:
         else
            BRANCH=${{ github.event.inputs.git-ref }}
         fi
-        # Add openquake user
+        # Update system and install utilities
         dnf update -y
         dnf install -y ${{ matrix.python-version }}
         dnf install -y git git-lfs nc procps sudo
