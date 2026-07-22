@@ -942,6 +942,8 @@ def fmtlist(lst):
     """
     Format a list of strings for display purposes.
     """
+    if not isinstance(lst, list):
+        return lst
     if len(lst) <= 3:
         return  ' '.join(lst)
     return '%s..%s' % (lst[0],lst[-1])
