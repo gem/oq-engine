@@ -1037,17 +1037,15 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
     """
     Extend the `paths` and returns its length as the new `brno`
     """
-    base = BASE183
-    if brno + len(bset.branches) >= len(BASE183):
-        brno = 0
     for br in bset.branches:
-        br.short_id = base[brno]
+        br.short_id = BASE183[brno]
         path = ['*'] * tot
         path[bsno] = br.id
         paths.append(''.join(path))
         brno += 1
     if 'applyToBranches' not in bset.filters or len(
             bset.filters['applyToBranches']) == num_prev:
+        # apply to all
         return 0
     return brno
 
