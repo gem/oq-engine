@@ -47,7 +47,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty)
+    LogicTreeError, parse_uncertainty, attach_branches)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -500,6 +500,7 @@ class SourceModelLogicTree(object):
         for bsno, bnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, bnode)
             self.parse_branchset(bsnode, bsno)
+        attach_branches(self)
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
@@ -547,30 +548,11 @@ class SourceModelLogicTree(object):
         self.validate_branchset(branchset_node, bsno, branchset)
         self.parse_branches(branchset_node, branchset)
 
-        dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
         if not branchset.branches:
             del self.bsetdict[bsid]
             return
-        prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
-        app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-        if app2brs:
-            # apply only to some branches
-            branchset.applied = app2brs
-            self.apply_branchset(
-                app2brs, branchset_node.lineno, branchset)
-            for brid in set(prev_ids.split())- set(app2brs.split()):
-                if brid in self.branches:
-                    self.branches[brid].bset = dummy = dummy_branchset()
-                    [dummybranch] = dummy.branches
-                    self.branches[dummybranch.branch_id] = dummybranch
-                    dummies.append(dummybranch)
-        else:
-            # apply to all previous branches
-            for branch in self.previous_branches:
-                branch.bset = branchset
-        self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
 
     def parse_branches(self, branchset_node, branchset):

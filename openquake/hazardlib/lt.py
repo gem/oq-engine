@@ -1049,6 +1049,42 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
     return brno
 
 
+def attach_branches(ltree):
+    # attach branchsets to branches depending on the applyToBranches
+    # attribute; also attaches dummy branchsets to dummy branches.
+    paths = []
+    nb = len(ltree.branchsets)
+    brno = add_path(ltree.branchsets[0], 0, 0, 0, nb, paths)
+    previous_branches = ltree.branchsets[0].branches
+    branchdic = {br.branch_id: br for br in previous_branches}
+    for i, bset in enumerate(ltree.branchsets[1:]):
+        for br in bset.branches:
+            if br.branch_id != '.' and br.branch_id in branchdic:
+                raise NameError('The branch ID %s is duplicated'
+                                % br.branch_id)
+            branchdic[br.branch_id] = br
+        dummies = []
+        prev_ids = [pb.branch_id for pb in previous_branches]
+        app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
+        if app2brs != prev_ids:
+            for branch_id in app2brs:
+                # NB: if branch_id has already a branchset it is overridden
+                branchdic[branch_id].bset = bset
+            for brid in prev_ids:
+                br = branchdic[brid]
+                if brid not in app2brs:
+                    br.bset = dummy = dummy_branchset()
+                    [dummybranch] = dummy.branches
+                    branchdic[dummybranch.branch_id] = dummybranch
+                    dummies.append(dummybranch)
+        else:  # apply to all previous branches
+            for branch in previous_branches:
+                branch.bset = bset
+        brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
+        previous_branches = bset.branches + dummies
+    return paths
+
+
 class CompositeLogicTree(object):
     """
     Build a logic tree from a set of branches by automatically
@@ -1064,42 +1100,7 @@ class CompositeLogicTree(object):
             bset.ordinal = i
             bset.check_duplicates()
             bset.check_weights()
-        self.basepaths = self._attach_to_branches()
-
-    def _attach_to_branches(self):
-        # attach branchsets to branches depending on the applyToBranches
-        # attribute; also attaches dummy branchsets to dummy branches.
-        paths = []
-        nb = len(self.branchsets)
-        brno = add_path(self.branchsets[0], 0, 0, 0, nb, paths)
-        previous_branches = self.branchsets[0].branches
-        branchdic = {br.branch_id: br for br in previous_branches}
-        for i, bset in enumerate(self.branchsets[1:]):
-            for br in bset.branches:
-                if br.branch_id != '.' and br.branch_id in branchdic:
-                    raise NameError('The branch ID %s is duplicated'
-                                    % br.branch_id)
-                branchdic[br.branch_id] = br
-            dummies = []
-            prev_ids = [pb.branch_id for pb in previous_branches]
-            app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
-            if app2brs != prev_ids:
-                for branch_id in app2brs:
-                    # NB: if branch_id has already a branchset it is overridden
-                    branchdic[branch_id].bset = bset
-                for brid in prev_ids:
-                    br = branchdic[brid]
-                    if brid not in app2brs:
-                        br.bset = dummy = dummy_branchset()
-                        [dummybranch] = dummy.branches
-                        branchdic[dummybranch.branch_id] = dummybranch
-                        dummies.append(dummybranch)
-            else:  # apply to all previous branches
-                for branch in previous_branches:
-                    branch.bset = bset
-            brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
-            previous_branches = bset.branches + dummies
-        return paths
+        self.basepaths = attach_branches(self)
 
     def __iter__(self):
         """
