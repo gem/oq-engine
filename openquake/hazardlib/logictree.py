@@ -47,7 +47,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty)
+    LogicTreeError, parse_uncertainty, attach_branches)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -500,6 +500,7 @@ class SourceModelLogicTree(object):
         for bsno, bnode in enumerate(tree_node.nodes):
             [bsnode] = bsnodes(self.filename, bnode)
             self.parse_branchset(bsnode, bsno)
+        attach_branches(self)
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
@@ -547,32 +548,20 @@ class SourceModelLogicTree(object):
         self.validate_branchset(branchset_node, bsno, branchset)
         self.parse_branches(branchset_node, branchset)
 
-        dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
         if not branchset.branches:
             del self.bsetdict[bsid]
             return
-        prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
-        app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-        missing = set(prev_ids.split()) - set(app2brs.split())
-        if missing:
-            # apply only to some branches
-            branchset.applied = app2brs
-            self.apply_branchset(
-                app2brs, branchset_node.lineno, branchset)
-            not_applied = set(prev_ids.split()) - set(app2brs.split())
-            for brid in not_applied:
-                if brid in self.branches:
-                    self.branches[brid].bset = dummy = dummy_branchset()
-                    [dummybranch] = dummy.branches
-                    self.branches[dummybranch.branch_id] = dummybranch
-                    dummies.append(dummybranch)
-        else:
-            # apply to all previous branches
-            for branch in self.previous_branches:
-                branch.bset = branchset
-        self.previous_branches = branchset.branches + dummies
+        app2brs = branchset_node.attrib.get('applyToBranches', '')
+        lineno = branchset_node.lineno
+        for branch_id in app2brs.split():
+            if branch_id not in self.branches:
+                if self.branchID:  # the branch cannot be attached
+                    continue
+                raise LogicTreeError(
+                    lineno, self.filename,
+                    "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
 
     def parse_branches(self, branchset_node, branchset):
@@ -791,32 +780,6 @@ class SourceModelLogicTree(object):
                     branchset_node, self.filename,
                     'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree')
-
-    def apply_branchset(self, apply_to_branches, lineno, branchset):
-        """
-        See superclass' method for description and signature specification.
-
-        Parses branchset node's attribute ``@applyToBranches`` to apply
-        following branchests to preceding branches selectively. Branching
-        level can have more than one branchset exactly for this: different
-        branchsets can apply to different open ends.
-
-        Checks that branchset tries to be applied only to branches on previous
-        branching level which do not have a child branchset yet.
-        """
-        for branch_id in apply_to_branches.split():
-            if branch_id not in self.branches:
-                if self.branchID:  # the branch cannot be attached
-                    continue
-                raise LogicTreeError(
-                    lineno, self.filename,
-                    "branch '%s' is not yet defined" % branch_id)
-            branch = self.branches[branch_id]
-            if not branch.is_leaf():
-                raise LogicTreeError(
-                    lineno, self.filename,
-                    "branch '%s' already has child branchset" % branch_id)
-            branch.bset = branchset
 
     def _get_source_model(self, source_model_file):
         # NB: do not remove this, it is meant to be overridden in the tests
