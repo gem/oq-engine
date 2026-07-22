@@ -410,6 +410,24 @@ def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
+    # check venv
+    if sys.prefix != sys.base_prefix:
+        sys.exit("You are inside a virtual environment! Please deactivate")
+
+    # server and devel_server installs are linux only and with fixed venv
+    if (inst is server or inst is devel_server):
+        if (sys.platform != "linux"):
+            sys.exit("Error: this installation method is meant for linux!")
+        if args.venv:
+            sys.exit("Error: --venv with server install is not supported")
+        if getpass.getuser() != "root":
+            sys.exit(
+                "Error: you cannot perform a server or devel_server "
+                "installation unless "
+                "you are root. If you do not have root permissions, you "
+                "can install the engine in user mode.\n\n" + usage
+            )
+
     if args.venv:
         inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
     if args.dbport:
@@ -420,27 +438,9 @@ def before_checks(inst, args, usage):
         inst.VENV = os.path.join(os.getenv('LocalAppData'), 'Programs',
                                  'OpenQuake Engine', 'python3')
 
-    # check platform
-    if (inst is server and sys.platform != "linux") or (
-        inst is devel_server and sys.platform != "linux"
-    ):
-        sys.exit("Error: this installation method is meant for linux!")
-
-    # check venv
-    if sys.prefix != sys.base_prefix:
-        sys.exit("You are inside a virtual environment! Please deactivate")
-
     # check user
     user = getpass.getuser()
-    if (inst is server and user != "root") or (
-            inst is devel_server and user != "root"):
-        sys.exit(
-            "Error: you cannot perform a server or devel_server "
-            "installation unless "
-            "you are root. If you do not have root permissions, you "
-            "can install the engine in user mode.\n\n" + usage
-        )
-    elif (inst is user and user == "root") or (
+    if (inst is user and user == "root") or (
             inst is devel and user == "root"):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
