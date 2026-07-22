@@ -1051,7 +1051,7 @@ def add_path(bset, bsno, brno, num_prev, tot):
             bset.filters['applyToBranches']) == num_prev:
         # apply to all
         return 0, paths
-    return brno + len(bset.branches), paths
+    return brno + len(paths), paths
 
 
 def attach_branches(ltree, override=False):
