@@ -631,7 +631,6 @@ def sample(weighted_objects, probabilities, sampling_method='early_weights'):
         n = len(weighted_objects)  # consider all weights equal
         idxs = numpy.searchsorted(numpy.arange(1/n, 1, 1/n), probabilities)
     # NB: returning an array would break things
-    idxs = numpy.clip(idxs, 0, len(weighted_objects) - 1)
     return [weighted_objects[idx] for idx in idxs]
 
 

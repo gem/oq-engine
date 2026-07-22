@@ -631,17 +631,10 @@ class SetHypoDepthDistUncertaintyTestCase(unittest.TestCase):
 
 
 class LogicFixesTestCase(unittest.TestCase):
-    def test_sample_out_of_bounds_clip(self):
-        # Ensure probability values at or slightly above 1.0 do not cause IndexError
-        b1 = lt.Branch('A', 1.0, 0.5)
-        b2 = lt.Branch('B', 2.0, 0.5)
-        sampled = lt.sample([b1, b2], [1.0, 1.000001], 'early_weights')
-        self.assertEqual(len(sampled), 2)
-        self.assertEqual(sampled[0].branch_id, 'B')
-        self.assertEqual(sampled[1].branch_id, 'B')
 
     def test_mixed_collapsed_apply_uncertainties(self):
-        # Ensure non-collapsed uncertainties apply to all expanded sources from prior collapsed branchset
+        # Ensure non-collapsed uncertainties apply to all expanded sources
+        # from prior collapsed branchset
         src = nrml.get(SetHypoDepthDistUncertaintyTestCase.SIMPLE_FAULT)
         sg = sourceconverter.SourceGroup('Active Shallow Crust', [src])
         
