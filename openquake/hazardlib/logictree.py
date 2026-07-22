@@ -806,6 +806,8 @@ class SourceModelLogicTree(object):
         """
         for branch_id in apply_to_branches.split():
             if branch_id not in self.branches:
+                if self.branchID:  # the branch cannot be attached
+                    continue
                 raise LogicTreeError(
                     lineno, self.filename,
                     "branch '%s' is not yet defined" % branch_id)
