@@ -936,6 +936,8 @@ def extract_aggrisk_tags(dstore, what):
 
     dfs = aggexp_tags(dstore)
     outs = []
+    start = 0
+    slc = {}
     for aggby, df in zip(oq.aggregate_by, dfs):
         adf = aggdf[numpy.isin(aggdf.agg_id, df.index)]
         acc = general.AccumDict(accum=[])
@@ -976,8 +978,13 @@ def extract_aggrisk_tags(dstore, what):
         out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
         total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
 
-        outs.append(pandas.concat([out, total], ignore_index=True))
-    return pandas.concat(outs)
+        df = pandas.concat([out, total], ignore_index=True)
+        outs.append(df)
+        slc[tuple(aggby)] = (start, start + len(df))
+        start += len(df)
+    totdf = pandas.concat(outs)
+    totdf.slc = slc
+    return totdf
 
 
 @extract.add('agg_losses')

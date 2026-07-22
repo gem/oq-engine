@@ -149,7 +149,10 @@ def export_aggrisk_stats(ekey, dstore):
     key = ekey[0].split('-')[0]  # aggrisk or aggcurves
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
-    dataf = extract(dstore, 'risk_stats/' + key)
+    if 'scenario' in oq.calculation_mode and oq.aggregate_by:
+        dataf = extract(dstore, 'aggrisk_tags')
+    else:  # event based risk
+        dataf = extract(dstore, 'risk_stats/' + key)
     assetcol = dstore['assetcol']
     agg_values = assetcol.get_agg_values(oq.aggregate_by)
     K = len(agg_values) - 1
