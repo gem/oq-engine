@@ -555,14 +555,12 @@ class SourceModelLogicTree(object):
             return
         prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
         app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-        missing = set(prev_ids.split()) - set(app2brs.split())
-        if missing:
+        if app2brs:
             # apply only to some branches
             branchset.applied = app2brs
             self.apply_branchset(
                 app2brs, branchset_node.lineno, branchset)
-            not_applied = set(prev_ids.split()) - set(app2brs.split())
-            for brid in not_applied:
+            for brid in set(prev_ids.split())- set(app2brs.split()):
                 if brid in self.branches:
                     self.branches[brid].bset = dummy = dummy_branchset()
                     [dummybranch] = dummy.branches
