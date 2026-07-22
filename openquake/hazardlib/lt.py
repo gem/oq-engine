@@ -1034,6 +1034,9 @@ class Realization(object):
 
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
+    """
+    Extend the `paths` and returns its length as the new `brno`
+    """
     base = BASE183
     if brno + len(bset.branches) >= len(BASE183):
         brno = 0
@@ -1050,8 +1053,10 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
 
 
 def attach_branches(ltree):
-    # attach branchsets to branches depending on the applyToBranches
-    # attribute; also attaches dummy branchsets to dummy branches.
+    """
+    Attach branchsets to branches depending on the applyToBranches
+    attribute; also attach dummy branchsets to dummy branches.
+    """
     paths = []
     nb = len(ltree.branchsets)
     brno = add_path(ltree.branchsets[0], 0, 0, 0, nb, paths)
@@ -1066,6 +1071,7 @@ def attach_branches(ltree):
         dummies = []
         prev_ids = [pb.branch_id for pb in previous_branches]
         app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
+        print(prev_ids)
         if app2brs != prev_ids:
             for branch_id in app2brs:
                 # NB: if branch_id has already a branchset it is overridden
