@@ -1036,10 +1036,11 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def add_path(bset, bsno, brno, num_prev, tot, paths):
+def add_path(bset, bsno, brno, num_prev, tot):
     """
     Extend the `paths` and returns its length as the new `brno`
     """
+    paths = []
     short_ids = BASE183[brno:brno+len(bset.branches)]
     for br, short_id in zip(bset.branches, short_ids):
         br.short_id = short_id
@@ -1049,8 +1050,8 @@ def add_path(bset, bsno, brno, num_prev, tot, paths):
     if 'applyToBranches' not in bset.filters or len(
             bset.filters['applyToBranches']) == num_prev:
         # apply to all
-        return 0
-    return brno + len(bset.branches)
+        return 0, paths
+    return brno + len(bset.branches), paths
 
 
 def attach_branches(ltree, override=False):
@@ -1058,10 +1059,9 @@ def attach_branches(ltree, override=False):
     Attach branchsets to branches depending on the applyToBranches
     attribute; also attach dummy branchsets to dummy branches.
     """
-    paths = []
     fname = getattr(ltree, 'filename', '?')
     nb = len(ltree.branchsets)
-    brno = add_path(ltree.branchsets[0], 0, 0, 0, nb, paths)
+    brno, paths = add_path(ltree.branchsets[0], 0, 0, 0, nb)
     previous_branches = ltree.branchsets[0].branches
     branchdic = {br.branch_id: br for br in previous_branches}
     for i, bset in enumerate(ltree.branchsets[1:]):
@@ -1093,7 +1093,8 @@ def attach_branches(ltree, override=False):
         else:  # apply to all previous branches
             for branch in previous_branches:
                 branch.bset = bset
-        brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
+        brno, new_paths = add_path(bset, i+1, brno, len(previous_branches), nb)
+        paths.extend(new_paths)
         previous_branches = bset.branches + dummies
     return paths
 
