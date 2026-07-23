@@ -1107,9 +1107,12 @@ def attach_branches(ltree, override=False):
 
 
 def smlt_path(branches):
+    """
+    :returns: a tuple with the branch IDs (dots for dummy branches)
+    """
     path = []
     for br in branches:
-        if br.short_id == '.':
+        if br.is_dummy():
             path.append('.')
         else:
             path.append(br.branch_id)
