@@ -410,6 +410,8 @@ def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
+    # TODO consider moving the inst specific checks to inst.check(args, usage)
+
     # check venv
     if sys.prefix != sys.base_prefix:
         sys.exit("You are inside a virtual environment! Please deactivate")
@@ -439,12 +441,11 @@ def before_checks(inst, args, usage):
                                  'OpenQuake Engine', 'python3')
 
     # check user
-    user = getpass.getuser()
-    if (inst is user and user == "root") or (
-            inst is devel and user == "root"):
+    if ((inst is user or inst is devel) and getpass.getuser() == "root"):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
     elif inst is devel:
+        # TODO should we not be checking for devel_server here too?
         if shutil.which("git") is None:
             raise RuntimeError("git is missing, please install it")
         try:

@@ -344,7 +344,7 @@ jobs:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12", "3.13"]
     env:
-      OQ_APPLICATION_MODE: AELO
+      # We do not set OQ_APPLICATION_MODE: AELO here, but only after install.py
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -381,6 +381,8 @@ jobs:
               cp -- "$file" "${file%.aelo.tmpl}"
           done
       - name: Server 'AELO' mode tests
+        env:
+          OQ_APPLICATION_MODE: AELO
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
@@ -400,7 +402,6 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: IMPACT
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -437,6 +438,8 @@ jobs:
               cp -- "$file" "${file%.impact.tmpl}"
           done
       - name: Server 'IMPACT' mode tests
+        env:
+          OQ_APPLICATION_MODE: IMPACT
         run: |
           set -x
           date
