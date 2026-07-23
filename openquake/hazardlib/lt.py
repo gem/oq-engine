@@ -1055,6 +1055,7 @@ class Realization(object):
 
 def set_short_id(branches, short_ids):
     for branch, short_id in zip(branches, short_ids):
+        print(f'Setting {branch.branch_id} -> {short_id}')
         branch.short_id = short_id
 
 
@@ -1102,8 +1103,7 @@ def attach_branches(ltree, override=False):
 
         set_short_id(bset.branches, BASE183[brno:])
         app2brs = bset.filters.get('applyToBranches')
-        brno = 0 if app2brs is None or len(app2brs) == len(prev_ids)\
-            else brno + len(bset)
+        brno += len(bset)
         previous_branches = bset.branches + list(dummies.values())
 
 
