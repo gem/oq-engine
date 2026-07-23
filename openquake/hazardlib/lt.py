@@ -1090,9 +1090,8 @@ def attach_branches(ltree, override=False):
                         fname, '?',
                         f"branch {br.branch_id!r} already has child branchset")
                 br.bset = bset
-            app2set = set(app2brs)
             for br in previous_branches:
-                if br.branch_id not in app2set and br.branch_id not in dummies:
+                if br.branch_id not in app2brs and br.branch_id not in dummies:
                     br.bset = dummy = dummy_branchset(br.branch_id)
                     dummies[br.branch_id] = dummy.branches[0]
         else:
