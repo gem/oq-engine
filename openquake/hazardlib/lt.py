@@ -1101,7 +1101,6 @@ def attach_branches(ltree, override=False):
                 br.bset = bset
 
         set_short_id(bset.branches, BASE183[brno:])
-        print(f'{brno=}')
         brno += len(bset)
         previous_branches = bset.branches + list(dummies.values())
 
