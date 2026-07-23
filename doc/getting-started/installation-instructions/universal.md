@@ -15,7 +15,7 @@ The script allows the user to select between different kinds of installation:
 
 >_**Note 1.** On some Linux distributions (e.g. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
->_**Note 2.** New Macs with the Apple silicon CPU are supported only if you're on macOS 14.x or MacOS 15.x and we recommend python3.11 
+>_**Note 2.** New Macs with the Apple silicon CPU are supported only if you're on macOS 14.x or MacOS 15.x and we recommend python3.11
 ><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the Python  version from the official Python website (python.org)
 > <br />
 >_**Note 3.** For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts._<br />_Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html_
@@ -46,7 +46,7 @@ You just need to download the installation script as:
 
 **on Windows:**
 ```
-C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/master/install.py
+C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
 C:\>py.exe install.py user
 ```
 
@@ -55,13 +55,13 @@ C:\>py.exe install.py user
 Before running the universal installer Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
 $ python3.11 install.py user
 ```
 
 **on Linux:**
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
 $ python3.11 install.py user
 ```
 
@@ -179,7 +179,7 @@ automatically installed and started: `openquake-dbserver` and
 `openquake-webui`.
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
 $ sudo -H python3.11 install.py server
 ```
 
