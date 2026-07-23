@@ -94,5 +94,4 @@ https://groups.google.com/g/openquake-users
    cluster
    server
    slurm
-   tools
    docker
