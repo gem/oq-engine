@@ -1085,8 +1085,7 @@ def attach_branches(ltree, override=False):
                         fname, '?',
                         f"branch ID {branch_id!r} in applyToBranches not found")
                 br = branchdic[branch_id]
-                if (br.bset is not None and
-                    br.bset.uncertainty_type != 'dummy' and not override):
+                if not br.is_leaf() and not override:
                     raise LogicTreeError(
                         fname, '?',
                         f"branch {br.branch_id!r} already has child branchset")
