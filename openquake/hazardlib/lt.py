@@ -1055,8 +1055,8 @@ def attach_branches(ltree, override=False):
     fname = getattr(ltree, 'filename', '?')
     # example branchsets [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)]
     set_short_id(ltree.branchsets[0].branches, BASE183)
-    previous_branches = ltree.branchsets[0].branches
-    branchdic = {br.branch_id: br for br in previous_branches}
+    branchdic = {br.branch_id: br for br in ltree.branchsets[0].branches}
+    previous_branches = list(branchdic.values())
     brno = 0
     for i, bset in enumerate(ltree.branchsets[1:], 1):
         for br in bset.branches:
@@ -1086,9 +1086,7 @@ def attach_branches(ltree, override=False):
             for br in previous_branches:
                 if br.branch_id not in app2set:
                     br.bset = dummy = dummy_branchset()
-                    dummybranch = dummy.branches[0]
-                    branchdic[dummybranch.branch_id] = dummybranch
-                    dummies.append(dummybranch)
+                    dummies.append(dummy.branches[0])
         else:
             for br in previous_branches:
                 br.bset = bset
