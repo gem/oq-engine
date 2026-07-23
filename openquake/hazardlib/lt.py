@@ -659,9 +659,15 @@ class Branch(object):
         self.bs_id = bs_id
         self.bset = None
 
+    def is_dummy(self):
+        """
+        :returns: True with the parent branchset ID starts with 'dummy'
+        """
+        return self.bs_id.startswith('dummy')
+
     @property
     def id(self):
-        if self.short_id == '.':
+        if self.is_dummy():
             return '.'
         return self.branch_id if len(self.branch_id) == 1 else self.short_id
 
