@@ -659,8 +659,16 @@ class Branch(object):
         self.bs_id = bs_id
         self.bset = None
 
+    def is_dummy(self):
+        """
+        :returns: True with the parent branchset ID starts with 'dummy'
+        """
+        return self.bs_id.startswith('dummy')
+
     @property
     def id(self):
+        if self.is_dummy():
+            return '.'
         return self.branch_id if len(self.branch_id) == 1 else self.short_id
 
     def is_leaf(self):
@@ -969,13 +977,14 @@ def count_paths(branches):
 dummy_counter = itertools.count(1)
 
 
-def dummy_branchset():
+def dummy_branchset(branch_id):
     """
     :returns: a dummy BranchSet with a single branch
     """
+    br = Branch(branch_id, None, 1, f'dummy{next(dummy_counter)}')
+    br.short_id = '.'
     bset = BranchSet('dummy')
-    bset.branches = [Branch('.', None, 1, 'dummy%d' % next(dummy_counter))]
-    bset.branches[0].short_id = '.'
+    bset.branches = [br]
     return bset
 
 
@@ -983,10 +992,12 @@ def print_tree(bob, prefix="", is_last=True):
     """
     Recursively prints a tree structure using ASCII art.
 
-    :param bob: a branchset or a branch
+    :param bob: a tree, a branchset or a branch
     :param prefix: The visual padding/lines accumulated from parent levels.
     :param is_last: Boolean indicating if this node is the last child
     """
+    if hasattr(bob, 'branchsets'):  # a tree
+        bob = bob.branchsets[0]
     try:
         id = bob.branch_id  # if branch
     except AttributeError:
@@ -1060,14 +1071,13 @@ def attach_branches(ltree, override=False):
     brno = 0
     for i, bset in enumerate(ltree.branchsets[1:], 1):
         for br in bset.branches:
-            if br.branch_id != '.' and br.branch_id in branchdic:
+            if br.branch_id in branchdic:
                 raise NameError(f'The branch ID {br.branch_id} is duplicated')
             branchdic[br.branch_id] = br
 
-        dummies = []
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
-
+        app2brs = list(bset.filters.get('applyToBranches', [])) or prev_ids
+        dummies = {}  # else readinput_test.py::LogicTreeTestCase breaks
         if app2brs != prev_ids:
             bset.applied = app2brs
             for branch_id in app2brs:
@@ -1076,17 +1086,16 @@ def attach_branches(ltree, override=False):
                         fname, '?',
                         f"branch ID {branch_id!r} in applyToBranches not found")
                 br = branchdic[branch_id]
-                if (br.bset is not None and
-                    br.bset.uncertainty_type != 'dummy' and not override):
+                if not br.is_leaf() and not override:
                     raise LogicTreeError(
                         fname, '?',
                         f"branch {br.branch_id!r} already has child branchset")
                 br.bset = bset
-            app2set = set(app2brs)
             for br in previous_branches:
-                if br.branch_id not in app2set:
-                    br.bset = dummy = dummy_branchset()
-                    dummies.append(dummy.branches[0])
+                if br.branch_id not in app2brs and br.branch_id not in dummies:
+                    br.bset = dummy = dummy_branchset(br.branch_id)
+                    dummies[br.branch_id] = dummy.branches[0]
+                    # branchdic[br.branch_id] = dummy.branches[0]
         else:
             for br in previous_branches:
                 br.bset = bset
@@ -1095,8 +1104,20 @@ def attach_branches(ltree, override=False):
         app2brs = bset.filters.get('applyToBranches')
         brno = 0 if app2brs is None or len(app2brs) == len(prev_ids)\
             else brno + len(bset)
-        previous_branches = bset.branches + dummies
+        previous_branches = bset.branches + list(dummies.values())
 
+
+def smlt_path(branches):
+    """
+    :returns: a tuple with the branch IDs (dots for dummy branches)
+    """
+    path = []
+    for br in branches:
+        if br.is_dummy():
+            path.append('.')
+        else:
+            path.append(br.branch_id)
+    return tuple(path)
 
 
 class CompositeLogicTree(object):
@@ -1130,21 +1151,19 @@ class CompositeLogicTree(object):
             for branches in self.branchsets[0].sample(
                     probs, self.sampling_method):
                 value = [br.value for br in branches]
-                smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method.startswith('early_'):
                     weight = 1. / self.num_samples  # already accounted
                 elif self.sampling_method.startswith('late_'):
                     weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
-                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
+                yield Realization(value, weight, ordinal, smlt_path(branches))
                 ordinal += 1
         else:  # full enumeration
             rlzs = []
             for weight, branches in self.branchsets[0].enumerate_paths():
                 value = [br.value for br in branches]
-                branch_ids = [branch.branch_id for branch in branches]
-                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlz = Realization(value, weight, 0, smlt_path(branches))
                 rlzs.append(rlz)
             rlzs.sort(key=operator.attrgetter('pid'))
             for r, rlz in enumerate(rlzs):
