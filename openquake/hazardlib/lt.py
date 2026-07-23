@@ -1078,14 +1078,14 @@ def attach_branches(ltree, override=False):
 
         prev_ids = [pb.branch_id for pb in previous_branches]
         app2brs = bset.filters.get('applyToBranches', [])
-        dummies = {}
+        dummies = []
         next_previous = []
         if app2brs and app2brs != prev_ids:
             bset.applied = app2brs
             target_bs_ids = {
                 branchdic[brid].bs_id for brid in app2brs
                 if brid in branchdic
-            }
+            }  # bs00 for build4
             for branch_id in app2brs:
                 if branch_id not in branchdic:
                     raise LogicTreeError(
@@ -1102,8 +1102,9 @@ def attach_branches(ltree, override=False):
             for br in previous_branches:
                 if br.branch_id not in app2brs:
                     if br.bs_id in target_bs_ids:
+                        # attach dummy branchset only at the current level
                         br.bset = dummy = dummy_branchset(br.branch_id)
-                        dummies[br.branch_id] = dummy.branches[0]
+                        dummies.append(dummy.branches[0])
                     else:
                         next_previous.append(br)
         else:
@@ -1111,9 +1112,7 @@ def attach_branches(ltree, override=False):
                 br.bset = bset
         set_short_id(bset.branches, BASE183[brno:])
         brno += len(bset)
-        previous_branches = (
-            bset.branches + list(dummies.values()) + next_previous
-        )
+        previous_branches = bset.branches + dummies + next_previous
 
 
 def smlt_path(branches):
