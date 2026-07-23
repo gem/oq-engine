@@ -923,10 +923,13 @@ class BranchSet(object):
         tot = 0
         for br in self.branches:
             if not (0 <= br.weight <= 1):
-                raise ValueError(f'Invalid weight {br.weight} for branch {br.branch_id}')
+                raise ValueError(
+                    f'Invalid weight {br.weight} for branch {br.branch_id}')
             tot += br.weight
         if abs(tot - 1.) >= 5E-6:
-            raise ValueError(f'Branch weights sum to {tot}, expected 1.0 ([{[br.weight for br in self.branches]}])')
+            raise ValueError(
+                f'Branch weights sum to {tot}, expected 1.0 '
+                f'([{[br.weight for br in self.branches]}])')
 
     def __len__(self):
         return len(self.branches)
@@ -1039,31 +1042,28 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def add_path(bset, bsno, brno, num_prev, tot):
+def add_path(bset, bsno, brno, nbsets):
     """
-    Extend the `paths` and return its length as the new `brno`
+    :return: path list (i.e. ['*C*', '*D*'] for three branchsets)
     """
     paths = []
     for br, short_id in zip(bset.branches, BASE183[brno:]):
         br.short_id = short_id
-        paths.append('*' * bsno + br.id + '*' * (tot - bsno - 1))
-
-    app2brs = bset.filters.get('applyToBranches')
-    next_brno = 0 if app2brs is None or len(app2brs) == num_prev else brno + len(bset.branches)
-    return next_brno, paths
+        paths.append('*' * bsno + br.id + '*' * (nbsets - bsno - 1))
+    return paths
 
 
 def attach_branches(ltree, override=False):
     """
-    Attach branchsets to branches depending on the applyToBranches
-    attribute; also attach dummy branchsets to dummy branches.
+    Attach branchsets to branches depending on `applyToBranches`, plus
+    attach dummy branchsets to dummy branches.
     """
     fname = getattr(ltree, 'filename', '?')
-    nb = len(ltree.branchsets)
-    brno, paths = add_path(ltree.branchsets[0], 0, 0, 0, nb)
+    nb = len(ltree.branchsets)  # [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)]
+    paths = add_path(ltree.branchsets[0], 0, 0, nb)  # ['A*', 'B*']
     previous_branches = ltree.branchsets[0].branches
     branchdic = {br.branch_id: br for br in previous_branches}
-
+    brno = 0
     for i, bset in enumerate(ltree.branchsets[1:], 1):
         for br in bset.branches:
             if br.branch_id != '.' and br.branch_id in branchdic:
@@ -1078,10 +1078,15 @@ def attach_branches(ltree, override=False):
             bset.applied = app2brs
             for branch_id in app2brs:
                 if branch_id not in branchdic:
-                    raise LogicTreeError(fname, '?', f"branch ID {branch_id!r} in applyToBranches not found")
+                    raise LogicTreeError(
+                        fname, '?',
+                        f"branch ID {branch_id!r} in applyToBranches not found")
                 br = branchdic[branch_id]
-                if br.bset is not None and br.bset.uncertainty_type != 'dummy' and not override:
-                    raise LogicTreeError(fname, '?', f"branch {br.branch_id!r} already has child branchset")
+                if (br.bset is not None and
+                    br.bset.uncertainty_type != 'dummy' and not override):
+                    raise LogicTreeError(
+                        fname, '?',
+                        f"branch {br.branch_id!r} already has child branchset")
                 br.bset = bset
             app2set = set(app2brs)
             for br in previous_branches:
@@ -1094,11 +1099,13 @@ def attach_branches(ltree, override=False):
             for br in previous_branches:
                 br.bset = bset
 
-        brno, new_paths = add_path(bset, i, brno, len(previous_branches), nb)
-        paths.extend(new_paths)
+        paths.extend(add_path(bset, i, brno, nb))        
+        app2brs = bset.filters.get('applyToBranches')
+        brno = 0 if app2brs is None or len(app2brs) == len(prev_ids)\
+            else brno + len(bset)
         previous_branches = bset.branches + dummies
+    return paths  # i.e. ['A**', 'B**', '*C*', '*D*', '**E', '**F']
 
-    return paths
 
 
 class CompositeLogicTree(object):

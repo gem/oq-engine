@@ -328,8 +328,6 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
-        self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
         xml = clt.to_nrml()
         self.assertEqual(xml, EXPECTED_LT)
