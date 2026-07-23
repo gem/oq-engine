@@ -1095,7 +1095,6 @@ def attach_branches(ltree, override=False):
                 if br.branch_id not in app2brs and br.branch_id not in dummies:
                     br.bset = dummy = dummy_branchset(br.branch_id)
                     dummies[br.branch_id] = dummy.branches[0]
-                    # branchdic[br.branch_id] = dummy.branches[0]
         else:
             for br in previous_branches:
                 br.bset = bset
