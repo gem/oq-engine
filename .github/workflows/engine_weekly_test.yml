@@ -55,21 +55,6 @@ jobs:
           else
             python install.py devel --version master
           fi
-      - name: Install Tools using master branch
-        run: |
-          set -x
-          # Standalone apps
-          source ~/openquake/bin/activate
-          echo "Downloading standalone apps"
-          cd ..
-          pwd
-          TOOLS_BRANCH=master
-          for app in oq-platform-standalone oq-platform-ipt oq-platform-taxonomy; do
-           echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
-           git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-           pip install -e ./${app}
-          done
-          deactivate
       - name: Actualize 'default' templates for email notifications
         run: |
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
