@@ -1070,14 +1070,14 @@ def attach_branches(ltree, override=False):
     branchdic = {br.branch_id: br for br in ltree.branchsets[0].branches}
     previous_branches = list(branchdic.values())
     brno = 0
-    for i, bset in enumerate(ltree.branchsets[1:], 1):
+    for bset in ltree.branchsets[1:]:
         for br in bset.branches:
             if br.branch_id in branchdic:
                 raise NameError(f'The branch ID {br.branch_id} is duplicated')
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = list(bset.filters.get('applyToBranches', [])) or prev_ids
+        app2brs = bset.filters.get('applyToBranches', []) or prev_ids
         dummies = {}  # else readinput_test.py::LogicTreeTestCase breaks
         if app2brs != prev_ids:
             bset.applied = app2brs
@@ -1102,6 +1102,7 @@ def attach_branches(ltree, override=False):
                 br.bset = bset
 
         set_short_id(bset.branches, BASE183[brno:])
+        print(f'{brno=}')
         brno += len(bset)
         previous_branches = bset.branches + list(dummies.values())
 
