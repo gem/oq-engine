@@ -492,6 +492,28 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                 msg += '\n'
         self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
 
+    def test_build4(self):
+        # a reduced version of case_25
+        ltl = [
+            ['sourceModel', [],
+             ['ssm1', 'ssm1.xml', 0.5],
+             ['ssm2', 'ssm6.xml', 0.5]],
+            ['abGRAbsolute', ['ssm1'],
+             ['ab_1', '1.0 1.0', 0.5],
+             ['ab_2', '1.1 0.9', 0.5]],
+            ['abGRAbsolute', ['ssm2'],
+             ['ab_3', '0.9 1.0', 0.5],
+             ['ab_4', '1.0 0.9', 0.5]],
+            ['maxMagGRAbsolute', ['ab_1', 'ab_2', 'ab_3', 'ab_4'],
+             ['mmax_6pt8', '6.8', 0.3],
+             ['mmax_7pt0', '7.0', 0.7]],
+        ]
+        ltssc = lt.build(*ltl)
+        lt.print_tree(ltssc)
+        paths = ltssc.get_all_paths()
+        self.assertEqual(paths, ['AAE.', 'AAF.', 'ABE.', 'ABF.',
+                                 'BCE.', 'BCF.', 'BDE.', 'BDF.'])
+
     def test_zero_weight(self):
         # check that branches with zero weight are not sampled
         clt = lt.build(['sourceModel', [],

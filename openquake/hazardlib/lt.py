@@ -1068,17 +1068,17 @@ def attach_branches(ltree, override=False):
     set_short_id(ltree.branchsets[0].branches, BASE183)
     branchdic = {br.branch_id: br for br in ltree.branchsets[0].branches}
     previous_branches = list(branchdic.values())
-    brno = 0
-    for i, bset in enumerate(ltree.branchsets[1:], 1):
+    brno = 0  # for legacy instead of the more correct len(branchdic)
+    for bset in ltree.branchsets[1:]:
         for br in bset.branches:
             if br.branch_id in branchdic:
                 raise NameError(f'The branch ID {br.branch_id} is duplicated')
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = list(bset.filters.get('applyToBranches', [])) or prev_ids
+        app2brs = bset.filters.get('applyToBranches', [])
         dummies = {}  # else readinput_test.py::LogicTreeTestCase breaks
-        if app2brs != prev_ids:
+        if app2brs and app2brs != prev_ids:
             bset.applied = app2brs
             for branch_id in app2brs:
                 if branch_id not in branchdic:
@@ -1092,18 +1092,15 @@ def attach_branches(ltree, override=False):
                         f"branch {br.branch_id!r} already has child branchset")
                 br.bset = bset
             for br in previous_branches:
-                if br.branch_id not in app2brs and br.branch_id not in dummies:
+                if br.branch_id not in app2brs:
                     br.bset = dummy = dummy_branchset(br.branch_id)
                     dummies[br.branch_id] = dummy.branches[0]
-                    # branchdic[br.branch_id] = dummy.branches[0]
         else:
             for br in previous_branches:
                 br.bset = bset
 
         set_short_id(bset.branches, BASE183[brno:])
-        app2brs = bset.filters.get('applyToBranches')
-        brno = 0 if app2brs is None or len(app2brs) == len(prev_ids)\
-            else brno + len(bset)
+        brno += len(bset)
         previous_branches = bset.branches + list(dummies.values())
 
 
