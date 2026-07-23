@@ -1070,6 +1070,7 @@ def attach_branches(ltree, override=False):
     previous_branches = list(branchdic.values())
     brno = 0  # for legacy instead of the more correct len(branchdic)
     for bset in ltree.branchsets[1:]:
+        # build4: abGRAbsolute(ssm1), abGRAbsolute(ssm2), maxMagGRAbsolute
         for br in bset.branches:
             if br.branch_id in branchdic:
                 raise NameError(f'The branch ID {br.branch_id} is duplicated')
@@ -1077,31 +1078,42 @@ def attach_branches(ltree, override=False):
 
         prev_ids = [pb.branch_id for pb in previous_branches]
         app2brs = bset.filters.get('applyToBranches', [])
-        dummies = {}  # else readinput_test.py::LogicTreeTestCase breaks
+        dummies = {}
+        next_previous = []
         if app2brs and app2brs != prev_ids:
             bset.applied = app2brs
+            target_bs_ids = {
+                branchdic[brid].bs_id for brid in app2brs
+                if brid in branchdic
+            }
             for branch_id in app2brs:
                 if branch_id not in branchdic:
                     raise LogicTreeError(
                         fname, '?',
-                        f"branch ID {branch_id!r} in applyToBranches not found")
+                        f"branch ID {branch_id!r} in applyToBranches "
+                        f"not found")
                 br = branchdic[branch_id]
                 if not br.is_leaf() and not override:
                     raise LogicTreeError(
                         fname, '?',
-                        f"branch {br.branch_id!r} already has child branchset")
+                        f"branch {br.branch_id!r} already has child "
+                        f"branchset")
                 br.bset = bset
             for br in previous_branches:
                 if br.branch_id not in app2brs:
-                    br.bset = dummy = dummy_branchset(br.branch_id)
-                    dummies[br.branch_id] = dummy.branches[0]
+                    if br.bs_id in target_bs_ids:
+                        br.bset = dummy = dummy_branchset(br.branch_id)
+                        dummies[br.branch_id] = dummy.branches[0]
+                    else:
+                        next_previous.append(br)
         else:
             for br in previous_branches:
                 br.bset = bset
-
         set_short_id(bset.branches, BASE183[brno:])
         brno += len(bset)
-        previous_branches = bset.branches + list(dummies.values())
+        previous_branches = (
+            bset.branches + list(dummies.values()) + next_previous
+        )
 
 
 def smlt_path(branches):

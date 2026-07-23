@@ -504,7 +504,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
             ['abGRAbsolute', ['ssm2'],
              ['ab_3', '0.9 1.0', 0.5],
              ['ab_4', '1.0 0.9', 0.5]],
-            ['maxMagGRAbsolute', ['ab_1', 'ab_2', 'ab_3', 'ab_4'],
+            ['maxMagGRAbsolute', [],
              ['mmax_6pt8', '6.8', 0.3],
              ['mmax_7pt0', '7.0', 0.7]],
         ]
