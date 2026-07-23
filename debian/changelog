@@ -1,3 +1,4 @@
+python3-oq-engine (3.26.2-1~xenial01) xenial; urgency=low
   [Paul Henshaw, Paolo Tormene, Antonio Ettorre]
   * Fixed install.py to invoke the post installation operations correctly
 
