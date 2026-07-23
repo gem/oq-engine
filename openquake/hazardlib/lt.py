@@ -1076,9 +1076,9 @@ def attach_branches(ltree, override=False):
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = bset.filters.get('applyToBranches', []) or prev_ids
+        app2brs = bset.filters.get('applyToBranches', [])
         dummies = {}  # else readinput_test.py::LogicTreeTestCase breaks
-        if app2brs != prev_ids:
+        if app2brs and app2brs != prev_ids:
             bset.applied = app2brs
             for branch_id in app2brs:
                 if branch_id not in branchdic:
