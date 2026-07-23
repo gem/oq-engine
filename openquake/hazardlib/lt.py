@@ -992,10 +992,12 @@ def print_tree(bob, prefix="", is_last=True):
     """
     Recursively prints a tree structure using ASCII art.
 
-    :param bob: a branchset or a branch
+    :param bob: a tree, a branchset or a branch
     :param prefix: The visual padding/lines accumulated from parent levels.
     :param is_last: Boolean indicating if this node is the last child
     """
+    if hasattr(bob, 'branchsets'):  # a tree
+        bob = bob.branchsets[0]
     try:
         id = bob.branch_id  # if branch
     except AttributeError:

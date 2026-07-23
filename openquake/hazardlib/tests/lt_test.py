@@ -412,8 +412,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mmax_7pt6', '7.6', 0.1]]
         ]
         ltssc = lt.build(*ltl)
-        # lt.print_tree(ltssc.branchsets[0])
+        lt.print_tree(ltssc)
         paths = ltssc.get_all_paths()
+        print(numpy.array(paths))
         # The third branchset increases the number of branches from 3 to 5 for
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
@@ -475,7 +476,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mm7pt6', 7.5, .1],
              ],
             applyToSources='nva')
-        
+        # lt.print_tree(clt)
         fname = gettemp(clt.to_nrml(), suffix='.xml')
         expected = os.path.join(CDIR, 'lt_test.xml')
         with open(fname) as got, open(expected) as exp:
