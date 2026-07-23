@@ -1042,15 +1042,9 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def add_path(bset, bsno, brno, nbsets):
-    """
-    :return: path list (i.e. ['*C*', '*D*'] for three branchsets)
-    """
-    paths = []
-    for br, short_id in zip(bset.branches, BASE183[brno:]):
-        br.short_id = short_id
-        paths.append('*' * bsno + br.id + '*' * (nbsets - bsno - 1))
-    return paths
+def set_short_id(branches, short_ids):
+    for branch, short_id in zip(branches, short_ids):
+        branch.short_id = short_id
 
 
 def attach_branches(ltree, override=False):
@@ -1059,8 +1053,8 @@ def attach_branches(ltree, override=False):
     attach dummy branchsets to dummy branches.
     """
     fname = getattr(ltree, 'filename', '?')
-    nb = len(ltree.branchsets)  # [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)]
-    paths = add_path(ltree.branchsets[0], 0, 0, nb)  # ['A*', 'B*']
+    # example branchsets [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)]
+    set_short_id(ltree.branchsets[0].branches, BASE183)
     previous_branches = ltree.branchsets[0].branches
     branchdic = {br.branch_id: br for br in previous_branches}
     brno = 0
@@ -1099,12 +1093,11 @@ def attach_branches(ltree, override=False):
             for br in previous_branches:
                 br.bset = bset
 
-        paths.extend(add_path(bset, i, brno, nb))        
+        set_short_id(bset.branches, BASE183[brno:])
         app2brs = bset.filters.get('applyToBranches')
         brno = 0 if app2brs is None or len(app2brs) == len(prev_ids)\
             else brno + len(bset)
         previous_branches = bset.branches + dummies
-    return paths  # i.e. ['A**', 'B**', '*C*', '*D*', '**E', '**F']
 
 
 
@@ -1123,7 +1116,7 @@ class CompositeLogicTree(object):
             bset.ordinal = i
             bset.check_duplicates()
             bset.check_weights()
-        self.basepaths = attach_branches(self, override=True)
+        attach_branches(self, override=True)
 
     def __iter__(self):
         """
