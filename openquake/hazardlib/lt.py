@@ -1077,7 +1077,8 @@ def attach_branches(ltree, override=False):
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = bset.filters.get('applyToBranches', [])
+        app2brs = [brid for brid in bset.filters.get('applyToBranches', [])
+                   if brid in branchdic]
         dummies = []
         next_previous = []
         if app2brs and app2brs != prev_ids:
@@ -1087,12 +1088,7 @@ def attach_branches(ltree, override=False):
                 if brid in branchdic
             }  # bs00 for build4
             for branch_id in app2brs:
-                if branch_id not in branchdic:
-                    raise LogicTreeError(
-                        fname, '?',
-                        f"branch ID {branch_id!r} in applyToBranches "
-                        f"not found")
-                br = branchdic[branch_id]
+                br = branchdic[branch_id]  # the branch_ids are checked before
                 if not br.is_leaf() and not override:
                     raise LogicTreeError(
                         fname, '?',
