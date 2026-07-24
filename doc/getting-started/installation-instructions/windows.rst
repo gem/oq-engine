@@ -3,10 +3,12 @@
 Installing on Windows
 =====================
 
-The OpenQuake Engine can be installed on Windows with the :doc:`universal installer <universal>` script (recommended if you plan to develop GMPEs)
+The OpenQuake Engine can be installed on Windows with 
+the :doc:`universal installer <universal>` script (recommended if you plan to 
+develop GMPEs)
 or with a traditional .exe installer which can be downloaded from
 https://downloads.openquake.org/pkgs/windows/oq-engine/. 
-The .exe installer includes Python 3.11 and all required dependencies and (since
+The .exe installer includes Python and all required dependencies and (since
 version 3.19) does not require Windows administrator privileges.
 
 Requirements
@@ -18,23 +20,43 @@ Requirements are:
 -  at least 16 GB of RAM (32GB recommended)
 -  4 GB of free disk space
 
-**Windows 7** and **Windows 8** and **Windows 10** are not supported.
+**Windows 7**, **Windows 8** and **Windows 10** are not supported.
 
-We recommend using a Linux server for large calculations such as national or regional-scale models.
+We recommend using a Linux server for large calculations such as national or 
+regional-scale models.
 
 Installation Procedure
 ----------------------
 
 Download the installer from
 https://downloads.openquake.org/pkgs/windows/oq-engine/ Double-click on
-the installer to start the installation. Depend on your PC settings it is 
-possible to  be presented with a popup message similar to the one shown below:
+the installer to start the installation.
+
+You may be presented with a warning message similar to the one shown below:
+
+.. image:: _images/windows/00a_Windows_protected.png
+
+Please click on the "More info" link and then check that the Publisher
+field is as shown in the image below:
+
+.. image:: _images/windows/00b_check_pub_GEM.png
+
+If the Publisher is **not** Fondazione GEM, please click to "Don't run" button
+to halt the installation and contact your local IT support.
+If the Publisher is Fondazione GEM, please click the "Run anyway" button to
+continue with the installation.
+
+
+Depending on your PC settings you
+may be presented with a popup message similar to the one shown below:
 
 .. image:: _images/windows/00_Open.png
 
-As you can see the Publisher of the package is "Fondazione GEM" and you can click on the “Run” button to continue:
+As you can see the Publisher of the package is "Fondazione GEM" and you can 
+click on the “Run” button to continue:
 
-You will be presented with an installer dialog similar to the one depicted below:
+You will be presented with an installer dialog similar to the one depicted 
+below:
 
 .. image:: _images/windows/01_Run.png
 
@@ -115,15 +137,19 @@ Once the installer has completed. It will look something like this:
 
 .. image:: _images/windows/08_Complete.png
 
-Press Finish to close the installer. You should now see two OpenQuake Engine icons on your Windows desktop:
+Press Finish to close the installer. You should now see two OpenQuake Engine 
+icons on your Windows desktop:
 
 .. image:: _images/windows/09_icons.png
 
-It should also be possible to find the OpenQuake Engine by pressing the Windows key and typing “OpenQuake”:
+It should also be possible to find the OpenQuake Engine by pressing the 
+Windows key and typing “OpenQuake”:
 
 .. image:: _images/windows/14_Win11_Start_menu.png
 
-Double-click the webui icon to start the OpenQuake Engine web user-interface. The first time the OpenQuake engine is executed, the initialization process may take several minutes to complete:
+Double-click the webui icon to start the OpenQuake Engine web user-interface. 
+The first time the OpenQuake engine is executed, the initialization process 
+may take several minutes to complete:
 
 .. image:: _images/windows/15_Starting_webui_wait.png
 
@@ -131,7 +157,8 @@ Once the webui is ready for use, a web browser tab will be opened:
 
 .. image:: _images/windows/16_webui_up.png
 
-Please refer to the :ref:`Web user-interface instructions <web-ui>` for more information about using the web-ui.
+Please refer to the :ref:`Web user-interface instructions <web-ui>` for more 
+information about using the web-ui.
 
 Getting help
 ------------
