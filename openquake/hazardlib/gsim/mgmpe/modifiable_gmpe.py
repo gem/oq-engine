@@ -368,7 +368,7 @@ def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
 
 def alatik2015_setup(params):
     """
-    Resolve tau and phi_ss coefficient tables for `sigma_model_alatik2015`
+    Resolve tau and phi_ss coefficient tables for sigma_model_alatik2015
     from the user-supplied params, filling in defaults for ergodic,
     tau_model and phi_model
     """
