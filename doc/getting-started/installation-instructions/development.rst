@@ -18,7 +18,7 @@ development <https://xkcd.com/844/>`__ are required.
 
 Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
-engine. At the moment we recommend Python 3.12.
+engine. At the moment we recommend Python 3.13.
 
 **NB: Python 3.14 and later versions are not supported yet, so please do NOT install such
 versions**
@@ -30,8 +30,8 @@ Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python 3.12,
-but versions 3.11 through 3.13 can also be used.
+the supported version of Python. At the moment we recommend Python 3.13,
+but versions 3.11 through 3.12 can also be used.
 
 macOS
 -----
