@@ -521,7 +521,7 @@ class Conditioner:
         # NB: mean_stds matrices have shape (4, 1, M, N)
         g, gsim, inp, mean_stds, mean_stds_D = self.args
 
-        # build temporary matrices
+        # build temporary matrices of shape DD (#stations)
         with monitor.shared['DD'] as DD:
             t = createD(g, m, target_imt, inp, mean_stds_D, DD)
 
@@ -568,11 +568,6 @@ class Conditioner:
         # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
         RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
 
-        # # Compute the mean of the conditional between-event residual B|YD=yD
-        # # for the target sites
-        # mu_HN_yD = mu_HD_yD[0, None]
-        # mu_BY_yD = tau_Y @ mu_HN_yD
-
         # Compute the conditioned mean of the ground motion
         # at the target sites; shape (nsites, 1)
         mu_Y_yD = (mu_Y + tau_Y @ mu_HD_yD[0, numpy.newaxis] +
@@ -586,15 +581,11 @@ class Conditioner:
                 inp.spatial_correl, inp.cross_correl_within, YY,
                 [t.imt], [t.imt], phi_Y_diag, phi_Y_diag)
 
-            # Both conditioned covariance matrices can contain extremely
-            # small negative values due to limitations of floating point
-            # operations (~ -10^-17 to -10^-15), these are clipped to zero
-
             # Compute the conditioned within-event covariance matrix
             # for the target sites clipped to zero, shape (nsites, nsites)
             cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0).astype(F32)
 
-            # Compute the scaling matrix "C" for the conditioned between-event
+            # Compute the scaling matrix C for the conditioned between-event
             # covariance matrix
             if t.native_data_available:
                 C = (tau_Y - RC @ t.T_D).astype(F32)

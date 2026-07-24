@@ -33,12 +33,53 @@ def _update(rtra, rtra_prj, proj, pnt):
     rtra_prj.append(pnt)
 
 
+def _resample_segment(line, txy, idx, sect_len, rtra, rtra_prj):
+    pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
+    if np.isnan(pnt).any():
+        raise ValueError('Did not find the intersection')
+    _update(rtra, rtra_prj, line.proj, pnt)
+
+    # Adding more points still on the same segment
+    delta = txy[idx + 1] - rtra_prj[-1]
+    chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+    rat = delta / chk_dst
+    while chk_dst > sect_len * 0.9999:
+        _update(rtra, rtra_prj, line.proj,
+                rtra_prj[-1] + sect_len * rat)
+        # This is the distance between the last resampled point
+        # and the second vertex of the segment
+        chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+
+
+def _resample_last_segment(line, txy, orig_extremes, sect_len, 
+                           rtra, rtra_prj):
+    same_dir = True
+    if len(rtra) > 1:
+        same_dir = _get_same_dir(rtra, line.coo)
+
+    # Distance between last sampled point and last point on edge
+    dist_from_last = utils.get_dist(rtra_prj[-1], txy[-1])
+
+    if ((dist_from_last > sect_len / 2 and not orig_extremes and
+            same_dir) or
+        (dist_from_last < sect_len / 2 and not orig_extremes and
+            not same_dir)):
+        # Adding more points still on the same segment
+        delta = txy[-1] - txy[-2]
+        chk_dst = utils.get_dist(txy[-1], txy[-2])
+        _update(rtra, rtra_prj, line.proj, rtra_prj[-1] +
+                sect_len * delta / chk_dst)
+
+    elif orig_extremes:
+        # Adding last point
+        rtra.append(line.coo[-1])
+
+
 def _resample(line, sect_len, orig_extremes):
     # Returns array of resampled trace coordinates
     #
-    # :param coo:
-    #   A :class:`numpy.ndarray` instance with three columns and n-lines
-    #   containing the coordinates of the polyline to be resampled.
+    # :param line:
+    #   A :class:`Line` instance to be resampled.
     # :param sect_len:
     #   The resampling distance [km]
     # :param orig_extremes:
@@ -47,10 +88,6 @@ def _resample(line, sect_len, orig_extremes):
     # Project the coordinates of the trace and save them in `txy`
     txy = line.proj(line.coo[:, 0], line.coo[:, 1], line.coo[:, 2]).T
 
-    # Compute the total length of the original trace
-    # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
-    inc_len = 0.
-
     # Initialize the lists with the coordinates of the resampled trace
     rtra_prj = [txy[0]]
     rtra = [line.coo[0]]
@@ -58,11 +95,9 @@ def _resample(line, sect_len, orig_extremes):
     # Resampling
     idx_vtx = -1
     while True:
-
         # Computing distances from the reference point
         dis = utils.get_dist(txy, rtra_prj[-1])
         if idx_vtx > 0:
-
             # Fixing distances for points before the index
             dis[0:idx_vtx] = 100000
 
@@ -70,54 +105,13 @@ def _resample(line, sect_len, orig_extremes):
         # sampling distance
         idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
 
-        # If the pick a point that is not the last one on the trace we
+        # If we pick a point that is not the last one on the trace we
         # compute the new sample by interpolation
         if idx < len(dis) - 1:
-
-            pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-            if np.isnan(pnt).any():
-                raise ValueError('Did not find the intersection')
-            _update(rtra, rtra_prj, line.proj, pnt)
-            inc_len += sect_len
-
-            # Adding more points still on the same segment
-            delta = txy[idx + 1] - rtra_prj[-1]
-            chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
-            rat = delta / chk_dst
-            while chk_dst > sect_len * 0.9999:
-                _update(rtra, rtra_prj, line.proj,
-                        rtra_prj[-1] + sect_len * rat)
-                inc_len += sect_len
-                # This is the distance between the last resampled point
-                # and the second vertex of the segment
-                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+            _resample_segment(line, txy, idx, sect_len, rtra, rtra_prj)
         else:
-
-            same_dir = True
-            if len(rtra) > 1:
-                same_dir = _get_same_dir(rtra, line.coo)
-
-            # This is the distance between the last sampled point and the last
-            # point on the original edge
-            dist_from_last = utils.get_dist(rtra_prj[-1], txy[-1])
-
-            # We are processing the last point
-            # if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
-            if ((dist_from_last > sect_len / 2 and not orig_extremes and
-                    same_dir) or
-                (dist_from_last < sect_len / 2 and not orig_extremes and
-                    not same_dir)):
-
-                # Adding more points still on the same segment
-                delta = txy[-1] - txy[-2]
-                chk_dst = utils.get_dist(txy[-1], txy[-2])
-                _update(rtra, rtra_prj, line.proj, rtra_prj[-1] +
-                        sect_len * delta / chk_dst)
-                inc_len += sect_len
-
-            elif orig_extremes:
-                # Adding last point
-                rtra.append(line.coo[-1])
+            _resample_last_segment(line, txy, orig_extremes, sect_len, 
+                                   rtra, rtra_prj)
             break
 
         # Updating index
