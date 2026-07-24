@@ -258,6 +258,24 @@ def ceus2020_site_term(
     me[:] += (slin + snlin)
 
 
+def ceus2020_setup(gmpe, ctx, params, n_sites):
+    """
+    Compute the reference PGA (natural log) at the CEUS2020 reference Vs30
+    using the underlying GMPE, needed by the CEUS2020 site term
+    """
+    ref = np.zeros((1, n_sites))
+    tmp = np.zeros((1, n_sites))
+
+    tctx = ctx.copy()
+    ref_vs30 = params['ceus2020_site_term']['ref_vs30']
+    tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
+    timt = (PGA(),)
+
+    gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
+
+    return np.squeeze(ref)
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it.
@@ -597,24 +615,6 @@ def set_ref_ctx(ctx, params):
     ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
 
     return ctx_copy
-
-
-def ceus2020_setup(gmpe, ctx, params, n_sites):
-    """
-    Compute the reference PGA (natural log) at the CEUS2020 reference Vs30
-    using the underlying GMPE, needed by the CEUS2020 site term
-    """
-    ref = np.zeros((1, n_sites))
-    tmp = np.zeros((1, n_sites))
-
-    tctx = ctx.copy()
-    ref_vs30 = params['ceus2020_site_term']['ref_vs30']
-    tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
-    timt = (PGA(),)
-
-    gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
-
-    return np.squeeze(ref)
 
 
 def _dict_to_coeffs_table(input_dict, name):
