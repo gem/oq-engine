@@ -572,41 +572,51 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
 
 def get_ref_ctx(ctx, params):
     """
-    Set the reference ctx which is used for computing the reference
-    mean and std devs.
+    Build the target site ctx (with any epistemic site-param overrides
+    applied) and the rock-reference ctx (with vs30 replaced by the site
+    term's rock reference).
+
+    :returns:
+        Tuple of (ctx_tgt, ctx_ref) where ctx_tgt is the ctx used
+        by the modifier functions (e.g. site terms) and ctx_ref is
+        the ctx passed to the base GMPE. If no rock-reference site
+        term is configured then ctx_ref is ctx_tgt.
     """
-    # Epistemic uncertainty on site params - override base site params
+    ctx_tgt = ctx
+
+    # Epistemic uncertainty on site params
     if "site_term_epistemic" in params:
+        ctx_tgt = ctx.copy()
         site_params = params["site_term_epistemic"]["site_params"]
         for par in site_params:
             if par not in site_param_dt:
                 continue
-            if not hasattr(ctx, par):
+            if not hasattr(ctx_tgt, par):
                 raise ValueError(
                     f"Site parameter {par!r} is required by "
                     f"site_term_epistemic but is not present in the "
                     f"context.")
-            if len(np.unique(getattr(ctx, par))) != 1:
+            if len(np.unique(getattr(ctx_tgt, par))) != 1:
                 raise ValueError(
                     f"Non-uniform values found for site parameter "
                     f"{par!r}. Uniform site conditions must be "
                     f"provided in the base site model when specifying "
                     f"epistemic uncertainties on it.")
-            setattr(ctx, par, site_params[par])
+            setattr(ctx_tgt, par, site_params[par])
 
     # Set reference Vs30 if required by a rock-reference site term
     rock_site_terms = ('cy14_site_term', 'nrcan15_site_term',
                        'ba08_site_term', 'bssa14_site_term')
     if any(sm in params for sm in rock_site_terms):
-        ctx_copy = ctx.copy()
+        ctx_ref = ctx_tgt.copy()
         if 'cy14_site_term' in params:
             rock_vs30 = 1130.
         else:
             rock_vs30 = 760.
-        ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
-        return ctx_copy
+        ctx_ref.vs30 = np.full_like(ctx_tgt.vs30, rock_vs30)
+        return ctx_tgt, ctx_ref
 
-    return ctx
+    return ctx_tgt, ctx_tgt
 
 
 class ModifiableGMPE(GMPE):
@@ -710,20 +720,20 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Set reference ctx
-        ctx_copy = get_ref_ctx(ctx, self.params)
-        #breakpoint()
+        # Get target ctx (epistemic unc overrides applied) and
+        # ref ctx (equal to target ctx but no rock ref conditions set)
+        ctx_tgt, ctx_ref = get_ref_ctx(ctx, self.params)
 
         # If necessary, compute the means and std devs for the required
-        # IMTs that are not going to be calculated using conditional GMPEs 
+        # IMTs that are not going to be calculated using conditional GMPEs
         if "conditional_gmpe" in self.params:
             if not hasattr(self, 'imts_req'):
                 self.imts_req = init_underlying_gmpes(
                     self.params["conditional_gmpe"])
-            conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
+            conditional_gmpe_compute(self, imts, ctx_ref, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs
-            self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
+            self.gmpe.compute(ctx_ref, imts, mean, sig, tau, phi)
 
         # Here we compute reference ground-motion for PGA when we need to
         # amplify the motion using the CEUS2020 model
@@ -734,7 +744,7 @@ class ModifiableGMPE(GMPE):
             tmp = np.zeros((1, len(sig[0])))
 
             # Update context
-            tctx = ctx.copy()
+            tctx = ctx_tgt.copy()
             ref_vs30 = self.params['ceus2020_site_term']['ref_vs30']
             tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
             timt = (PGA(),)
@@ -758,4 +768,4 @@ class ModifiableGMPE(GMPE):
 
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
-                g[methname](ctx, imt, me, si, ta, ph, **kw)
+                g[methname](ctx_tgt, imt, me, si, ta, ph, **kw)
