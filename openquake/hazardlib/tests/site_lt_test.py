@@ -20,6 +20,10 @@ import tempfile
 import unittest
 import numpy
 from openquake.baselib import InvalidFile
+from openquake.hazardlib import logictree
+from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.logictree import (
+    SourceModelLogicTree, FullLogicTree)
 from openquake.hazardlib.site_lt import (
     SiteModelLogicTree, SiteModelsEpistemic)
 
@@ -159,3 +163,56 @@ class SiteModelsEpistemicTest(unittest.TestCase):
         smep = SiteModelsEpistemic(names, weights, [a] * 30)
         chars = list(smep.shortener.values())
         self.assertEqual(len(chars), len(set(chars)))
+
+
+class ReduceFullWithSiteLTTest(unittest.TestCase):
+    """
+    Check that reduce_full handles the site leg correctly.
+    """
+
+    def _full_lt_with_site_lt(self):
+        # Create site model LT
+        dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
+        a = numpy.array([(-65., 0., 760.)], dt)
+        b = numpy.array([(-65., 0., 360.)], dt)
+        smep = SiteModelsEpistemic(
+            ['rock', 'soil'], [0.6, 0.4], [a, b],
+            tree_filename='site_lt.xml', branchset_id='bs_site')
+
+        # Trivial single-branch SSC and GSIM
+        full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
+        full_lt.source_model_lt = SourceModelLogicTree.fake()
+
+        # Set the site model LT
+        full_lt.site_model_lt = smep
+
+        return full_lt, smep
+
+    def test_site_branch_shared_across_cluster_is_marked_reducible(self):
+        # Make full LT
+        full_lt, smep = self._full_lt_with_site_lt()
+
+        # Two rlzs both pinned to rock: the soil branch is unused
+        rock_short = smep.shortener['rock']
+        paths = ['A~A~%s' % rock_short, 'A~A~%s' % rock_short]
+        res = logictree.reduce_full(full_lt, paths)
+
+        # Site LT filename in the result with 'rock' as sole survivor
+        self.assertIn('site_lt.xml', res)
+        self.assertEqual(res['site_lt.xml'], {'bs_site': ['rock']})
+
+        # Before = 1 (ssc) * 1 (gsim) * 2 (site) = 2
+        before, _after = res['size_before_after']
+        self.assertEqual(before, 2)
+
+    def test_multiple_site_branches_in_cluster_not_reducible(self):
+        # Make full LT
+        full_lt, smep = self._full_lt_with_site_lt()
+
+        # Two rlzs on different site branches: nothing to reduce
+        paths = ['A~A~%s' % smep.shortener['rock'],
+                 'A~A~%s' % smep.shortener['soil']]
+        res = logictree.reduce_full(full_lt, paths)
+        
+        # Site LT absent from result = not reducible (both branches used)
+        self.assertNotIn('site_lt.xml', res)

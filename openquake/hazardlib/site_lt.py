@@ -87,6 +87,7 @@ class SiteModelLogicTree(object):
         self.filename = filename
         self.base_path = base_path or os.path.dirname(filename)
         self.branches = []  # list of (branchID, filename, weight)
+        self.branchset_id = ''  # captured during _parse
         self._parse()
 
     def _parse(self):
@@ -109,6 +110,7 @@ class SiteModelLogicTree(object):
                     '%s: only one <logicTreeBranchSet> is supported'
                     % self.filename)
             found_bset = True
+            self.branchset_id = bset.attrib.get('branchSetID', 'bs_site')
             for br in bset:
                 brid = br.attrib.get('branchID', '')
                 csv_rel = br.uncertaintyModel.text.strip()
@@ -173,7 +175,8 @@ class SiteModelsEpistemic(object):
         List of the CSV/XML site model files.
     """
 
-    def __init__(self, names, weights, arrays, filenames=None):
+    def __init__(self, names, weights, arrays, filenames=None,
+                 tree_filename='', branchset_id='bs_site'):
         if not (len(names) == len(weights) == len(arrays)):
             raise ValueError(
                 'Mismatched lengths: names=%d, weights=%d, arrays=%d'
@@ -182,6 +185,10 @@ class SiteModelsEpistemic(object):
         self.weights = numpy.asarray(weights, F32)
         self.arrays = list(arrays)
         self.filenames = list(filenames) if filenames else list(names)
+        # tree_filename and branchset_id are only used by reduce_full and
+        # by parent-restart when reconstructing the container from HDF5
+        self.filename = tree_filename
+        self.branchset_id = branchset_id
         self._validate()
 
     def _validate(self):
