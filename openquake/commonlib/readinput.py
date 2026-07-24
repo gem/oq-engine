@@ -766,7 +766,9 @@ def get_site_models_epistemic(oqparam, h5=None):
         names=tree.branch_ids,
         weights=tree.weights,
         arrays=per_branch_arrays,
-        filenames=tree.filenames)
+        filenames=tree.filenames,
+        tree_filename=tree.filename,
+        branchset_id=tree.branchset_id)
     
     # Save one row per branch (name, weight, filename) so a downstream
     # calc opening this datastore as its parent can reconstruct 
