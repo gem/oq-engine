@@ -640,7 +640,7 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_45.__file__)
 
     def test_case_46(self):
-        # Test epistemic uncertainty on site params via ModifiableGMPE
+        # Test epistemic uncertainty on site params through use of ModifiableGMPE
         self.assert_curves_ok(['hazard_curve-mean-SA(0.1).csv'],
                               case_46.__file__)
         
