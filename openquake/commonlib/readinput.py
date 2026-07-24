@@ -39,7 +39,6 @@ import traceback
 import configparser
 import collections
 import itertools
-
 import numpy
 import pandas
 import requests
@@ -62,7 +61,7 @@ from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt)
+    pmf, logictree, gsim_lt, get_smlt, site_lt)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -654,6 +653,133 @@ def check_site_param(oqparam, name):
     return value
 
 
+def _expand_site_model_lt(oqparam):
+    """
+    If inputs['site_model'] is a single XML that is a site-model logic
+    tree, replace it with the list of referenced CSV/XML filenames
+    and stash the parsed tree on oqparam._site_model_lt for later use.
+    """
+    # Only parse the XML once per oqparam
+    if getattr(oqparam, '_site_model_lt', None) is not None:
+        return oqparam._site_model_lt
+    oqparam._site_model_lt = None
+
+    # A site-model logic tree is a single file input; anything else
+    # (multi-file or missing site_model) is not a site-model LT
+    files = oqparam.inputs.get('site_model') or []
+    if len(files) != 1:
+        return None
+    fname = files[0]
+
+    # Distinguish a site-model LT from regular a site model CSV
+    # or site model XML
+    if not site_lt.SiteModelLogicTree.is_site_model_lt(fname):
+        return None
+    tree = site_lt.SiteModelLogicTree(fname)
+    oqparam._site_model_lt = tree
+
+    # Rewrite inputs to point at the per-branch site model files so
+    # downstream site-model loaders see a plain list of CSV/XML files
+    oqparam.inputs['site_model'] = list(tree.filenames)
+
+    return tree
+
+
+def _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets):
+    """
+    Parse a single site-model file (CSV or NRML XML) and append the
+    resulting structured array to ``arrays``.
+
+    NOTE: Handles both formats so a site-model logic tree may mix
+    them across branches.
+    """
+    # CSV path delegates to the pre-existing _smparse helper
+    if isinstance(fname, str) and not fname.endswith('.xml'):
+        _smparse(fname, oqparam, arrays, sm_fieldsets)
+        return
+
+    # Read the XML and get params from the site model
+    nodes = nrml.read(fname).siteModel
+    params = [valid.site_param(node.attrib) for node in nodes]
+
+    # Supply defaults for site params commonly omitted from the XML
+    missing = set(oqparam.req_site_params) - set(params[0])
+    if 'vs30measured' in missing:
+        missing -= {'vs30measured'}
+        for param in params:
+            param['vs30measured'] = False
+    if 'backarc' in missing:
+        missing -= {'backarc'}
+        for param in params:
+            param['backarc'] = False
+    if 'ampcode' in missing:
+        missing -= {'ampcode'}
+        for param in params:
+            param['ampcode'] = b''
+    if missing:
+        raise InvalidFile(
+            '%s: missing parameter %s' % (fname, ', '.join(missing))
+            )
+
+    # Build a structured array with one column per site param
+    # NOTE: The sorted in sorted(params[0]) is essential otherwise
+    # there is an heisenbug in scenario/test_case_4
+    site_model_dt = numpy.dtype(
+        [(p, site.site_param_dt[p]) for p in sorted(params[0])]
+        )
+    sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
+                      for param in params], site_model_dt)
+
+    # Duplicate (lon, lat) rows are ambiguous when assigning site params
+    dupl = "\n".join(
+        '%s %s' % loc for loc, n in countby(sm, 'lon', 'lat').items() if n > 1
+        )
+    if dupl:
+        raise InvalidFile(
+            'There are duplicated sites in %s:\n%s' % (fname, dupl)
+            )
+    sm_fieldsets[fname] = set(sm.dtype.names)
+    arrays.append(sm)
+
+
+def get_site_models_epistemic(oqparam, h5=None):
+    """
+    :returns:
+        a :class:`openquake.hazardlib.site_lt.SiteModelsEpistemic` when the
+        site_model input is a logic-tree XML, else None
+    """
+    # Returns None on non-site-LT inputs so the calcs not
+    # using it can skip the site-LT paths
+    tree = _expand_site_model_lt(oqparam)
+    if tree is None:
+        return None
+    
+    # One array per branch of site model LT
+    per_branch_arrays = []
+    for path in tree.filenames:
+        arrays = []
+        sm_fieldsets = {}
+        _parse_site_model_file(path, oqparam, arrays, sm_fieldsets)
+        [arr] = arrays
+        per_branch_arrays.append(arr)
+    smep = site_lt.SiteModelsEpistemic(
+        names=tree.branch_ids,
+        weights=tree.weights,
+        arrays=per_branch_arrays,
+        filenames=tree.filenames)
+    
+    # Save one row per branch (name, weight, filename) so a downstream
+    # calc opening this datastore as its parent can reconstruct 
+    # SiteModelsEpistemic using FullLogicTree.__fromh5__
+    if h5:
+        h5['site_models_epistemic'] = numpy.array(
+            [(n, w, f) for n, w, f in zip(
+                smep.names, smep.weights, smep.filenames)],
+            site_lt.site_model_lt_dt)
+        
+    return smep
+
+
 def get_site_model(oqparam, h5=None):
     """
     :param oqparam:
@@ -665,7 +791,7 @@ def get_site_model(oqparam, h5=None):
         return h5['site_model'][:]
 
     if oqparam.impact:
-        # read the site model close to the rupture
+        # Read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
         sm = get_site_model_around(oqparam.inputs['exposure'][0], rup, dist)
@@ -673,47 +799,16 @@ def get_site_model(oqparam, h5=None):
             h5['site_model'] = sm
         return sm
 
+    # Under a site-model LT, all branches share lon/lat so only the
+    # first (canonical) branch is loaded here - the per-branch overlays
+    # are applied later in the calc drivers
+    tree = _expand_site_model_lt(oqparam)
+    site_files = (oqparam.inputs['site_model'][:1] if tree
+                  else oqparam.inputs['site_model'])
     arrays = []
     sm_fieldsets = {}
-    for fname in oqparam.inputs['site_model']:
-        if isinstance(fname, str) and not fname.endswith('.xml'):
-            # parsing site_model.csv and populating arrays
-            _smparse(fname, oqparam, arrays, sm_fieldsets)
-            continue
-
-        # parsing site_model.xml
-        nodes = nrml.read(fname).siteModel
-        params = [valid.site_param(node.attrib) for node in nodes]
-        missing = set(oqparam.req_site_params) - set(params[0])
-        if 'vs30measured' in missing:  # use a default of False
-            missing -= {'vs30measured'}
-            for param in params:
-                param['vs30measured'] = False
-        if 'backarc' in missing:  # use a default of False
-            missing -= {'backarc'}
-            for param in params:
-                param['backarc'] = False
-        if 'ampcode' in missing:  # use a default of b''
-            missing -= {'ampcode'}
-            for param in params:
-                param['ampcode'] = b''
-        if missing:
-            raise InvalidFile('%s: missing parameter %s' %
-                              (oqparam.inputs['site_model'],
-                               ', '.join(missing)))
-        # NB: the sorted in sorted(params[0]) is essential, otherwise there is
-        # an heisenbug in scenario/test_case_4
-        site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
-                                     for p in sorted(params[0])])
-        sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
-                          for param in params], site_model_dt)
-        dupl = "\n".join(
-            '%s %s' % loc for loc, n in countby(sm, 'lon', 'lat').items()
-            if n > 1)
-        if dupl:
-            raise InvalidFile('There are duplicated sites in %s:\n%s' %
-                              (fname, dupl))
-        arrays.append(sm)
+    for fname in site_files:
+        _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets)
 
     # all source model input files must have the same fields
     for this_sm_fname in sm_fieldsets:
@@ -995,7 +1090,9 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
+    site_model_lt = get_site_models_epistemic(oqparam)
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, site_model_lt=site_model_lt)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
     if oqparam.number_of_logic_tree_samples:
