@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+
+        <logicTreeBranch branchID="site_model_branch1">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.ChiouYoungs2014 = {}
+                [ModifiableGMPE.site_term_epistemic.site_params]
+                "vs30" = 1200
+                "z1pt0" = 520
+            </uncertaintyModel>
+            <uncertaintyWeight>0.5</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="site_model_branch2">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.ChiouYoungs2014 = {}
+                [ModifiableGMPE.site_term_epistemic.site_params]
+                "vs30" = 300
+                "z2pt5" = 3.9
+            </uncertaintyModel>
+            <uncertaintyWeight>0.5</uncertaintyWeight>
+        </logicTreeBranch>
+        
+    </logicTreeBranchSet>
+</logicTree>
+</nrml>

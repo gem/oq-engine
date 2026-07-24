@@ -39,6 +39,7 @@
 |case\_43|Test for ps grid spacing|
 |case\_44|Test for shift hypo feature|
 |case\_45|Test setLowerSeismDepthAbsolute drops hypoDepthDist entries below the new LSD in distributed sources
+|case\_46|Test site model epistemic uncertainties represented as branches of ModifiableGMPE in the GMM Logic tree
 |case\_47|Mixture Model for Sigma using PEER (2018) Test Case 2.5b|
 |case\_48|Precise test of pointsource distance|
 |case\_49|Test the use of the convolution method to amplify the motion|

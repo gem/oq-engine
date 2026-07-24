@@ -26,6 +26,7 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.site import site_param_dt
 
 # Site terms imports
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
@@ -180,11 +181,18 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
 # ################ SITE TERMS AND BASIN TERMS ################## #
 
 
-SITE_TERMS = ["cy14_site_term",
-              "ba08_site_term",
-              "bssa14_site_term",
+SITE_TERMS = ["site_term_epistemic",
               "nrcan15_site_term",
-              "ceus2020_site_term"]
+              "ceus2020_site_term",
+              "cy14_site_term",
+              "ba08_site_term",
+              "bssa14_site_term"]
+
+
+def site_term_epistemic(ctx, imt, me, si, ta, ph, kind):
+    """
+    """
+    breakpoint()
 
 
 def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
@@ -563,6 +571,45 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     return sorted(imts_req)
 
 
+def get_ref_ctx(ctx, params):
+    """
+    Set the reference ctx which is used for computing the reference
+    mean and std devs.
+    """
+    # Set reference Vs30 if required
+    if any(sm in params for sm in SITE_TERMS):
+        ctx_copy = ctx.copy()
+        if 'cy14_site_term' in params:
+            rock_vs30 = 1130.
+        elif ('nrcan15_site_term' in params
+                or 'ba08_site_term' in params
+                or 'bssa14_site_term' in params):
+            rock_vs30 = 760.
+        ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
+    else:
+        if "site_term_epistemic" in params:
+            # Set regular site params specified in this branch of GMM LT
+            site_params = params["site_term_epistemic"]["site_params"]
+            for par in site_params:
+                if par not in site_param_dt:
+                    continue
+                if not hasattr(ctx, par):
+                    raise ValueError(
+                        f"Site parameter {par!r} is required by "
+                        f"site_term_epistemic but is not present in the "
+                        f"context.")
+                if len(np.unique(getattr(ctx, par))) != 1:
+                    raise ValueError(
+                        f"Non-uniform values found for site parameter "
+                        f"{par!r}. Uniform site conditions must be "
+                        f"provided in the base site model when specifying "
+                        f"epistemic uncertainties on it.")
+                setattr(ctx, par, site_params[par])
+        ctx_copy = ctx
+
+    return ctx_copy
+
+
 class ModifiableGMPE(GMPE):
     """
     This is a class to modify an underlying GMPE.
@@ -664,17 +711,9 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Set reference Vs30 if required
-        if any(sm in self.params for sm in SITE_TERMS):
-            ctx_copy = ctx.copy()
-            if 'cy14_site_term' in self.params:
-                rock_vs30 = 1130.
-            elif ('nrcan15_site_term' or 'ba08_site_term'
-                  or 'bssa14_site_term' in self.params):
-                rock_vs30 = 760.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
-        else:
-            ctx_copy = ctx
+        # Set reference ctx
+        ctx_copy = get_ref_ctx(ctx, self.params)
+        breakpoint()
 
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
