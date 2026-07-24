@@ -1252,6 +1252,59 @@ def make_rup_from_dic(inputdic, rupture_file):
     return rup, rupdic, rupture_issue
 
 
+def _fetch_usgs_rupture(inputdic, contents, properties, rup_data,
+                        user, monitor):
+    """
+    Download rupture or finite fault model files from USGS if needed.
+    """
+    usgs_id = inputdic['usgs_id']
+    approach = inputdic['approach']
+    rupdic = {}
+    rup = None
+    rupture_issue = None
+
+    if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
+        if inputdic.get('lon') is None:
+            rupdic, err = load_rupdic_from_origin(
+                usgs_id, properties['products'])
+            if err:
+                return None, None, None, None, err
+        else:
+            rupdic = inputdic.copy()
+    elif 'download/rupture.json' not in contents:
+        rupdic, err = load_rupdic_from_finite_fault(
+            usgs_id, properties['mag'], properties['products'])
+        if err:
+            return None, None, None, None, err
+
+    if not rup_data and approach in ['use_shakemap_from_usgs',
+                                     'use_shakemap_fault_rup_from_usgs',
+                                     'use_finite_fault_model_from_usgs']:
+        if approach == 'use_finite_fault_model_from_usgs':
+            with monitor('Download finite fault rupture'):
+                rupture_file, err = download_finite_fault_rupture(
+                    usgs_id, user, monitor)
+                if err:
+                    return None, None, None, None, err
+        else:
+            with monitor('Downloading rupture json'):
+                rup_data, rupture_file = download_shakemap_rupture_data(
+                    usgs_id, contents, user)
+        if rupture_file:
+            rup, rupdic, updated_rup_data, rupture_issue = (
+                _convert_rupture_file(inputdic, rupture_file, usgs_id, user)
+            )
+            if updated_rup_data:
+                rup_data = updated_rup_data
+        elif approach in ['use_shakemap_fault_rup_from_usgs',
+                          'use_finite_fault_model_from_usgs']:
+            err = {"status": "failed",
+                   "error_msg": 'Unable to retrieve rupture geometries'}
+            return None, None, None, None, err
+
+    return rup, rupdic, rup_data, rupture_issue, {}
+
+
 def get_rup_dic(inputdic, user=User(), use_shakemap=False,
                 shakemap_version='usgs_preferred', rupture_file=None,
                 monitor=performance.Monitor()):
@@ -1261,19 +1314,6 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
 
     NOTE: this function is called twice by impact_validate: first when
     retrieving rupture data, then when running the job.
-
-    :param inputdic:
-        dictionary with ShakeMap ID and other parameters
-    :param user:
-       User instance
-    :param use_shakemap:
-        download the ShakeMap only if True
-    :param shakemap_version:
-        id of the ShakeMap to be used (if the ShakeMap is used)
-    :param rupture_file:
-        None
-    :returns:
-        (rupture object or None, rupture dictionary, error dictionary or {})
     """
     rupdic = {}
     rup_data = {}
@@ -1290,49 +1330,28 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
             return rup, rupdic, rupture_issue
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
-    contents, properties, shakemap, shakemap_desc, err = \
+    contents, properties, shakemap, shakemap_desc, err = (
         _contents_properties_shakemap(
             usgs_id, user, get_grid, monitor, shakemap_version)
+    )
     if err:
         return None, None, err
-    if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        if inputdic.get('lon') is None:  # don't override user-inserted values
-            rupdic, err = load_rupdic_from_origin(
-                usgs_id, properties['products'])
-            if err:
-                return None, None, err
-        else:
-            rupdic = inputdic.copy()
-    elif 'download/rupture.json' not in contents:
-        # happens for us6000f65h in parsers_test
-        rupdic, err = load_rupdic_from_finite_fault(
-            usgs_id, properties['mag'], properties['products'])
-        if err:
-            return None, None, err
-    if not rup_data and approach in ['use_shakemap_from_usgs',
-                                     'use_shakemap_fault_rup_from_usgs',
-                                     'use_finite_fault_model_from_usgs']:
-            if approach == 'use_finite_fault_model_from_usgs':
-                with monitor('Download finite fault rupture'):
-                    rupture_file, err = download_finite_fault_rupture(
-                        usgs_id, user, monitor)
-                    if err:
-                        return None, None, err
-            else:  # use_shakemap_from_usgs or use_shakemap_fault_rup_from_usgs
-                with monitor('Downloading rupture json'):
-                    rup_data, rupture_file = download_shakemap_rupture_data(
-                        usgs_id, contents, user)
-            if rupture_file:
-                rup, rupdic, updated_rup_data, rupture_issue = \
-                    _convert_rupture_file(inputdic, rupture_file, usgs_id, user)
-                if updated_rup_data:
-                    rup_data = updated_rup_data
-            elif approach in ['use_shakemap_fault_rup_from_usgs',
-                              'use_finite_fault_model_from_usgs']:
-                err = {"status": "failed",
-                       "error_msg": 'Unable to retrieve rupture geometries'}
-                return None, None, err
-    if 'lon' not in rupdic:  # rupdic was incompletely filled
+
+    fetched_rup, fetched_rupdic, rup_data, fetched_issue, err = (
+        _fetch_usgs_rupture(
+            inputdic, contents, properties, rup_data, user, monitor)
+    )
+    if err:
+        return None, None, err
+
+    if fetched_rup:
+        rup = fetched_rup
+    if fetched_issue:
+        rupture_issue = fetched_issue
+    if fetched_rupdic:
+        rupdic.update(fetched_rupdic)
+
+    if 'lon' not in rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     for key in inputdic:
         if inputdic[key] is not None and key not in rupdic:
