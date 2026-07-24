@@ -309,9 +309,13 @@ def get_metadata(rlzs, kind):
     """
     metadata = {}
     if kind.startswith('rlz-'):
-        smlt_path, gslt_path = rlzs[int(kind[4:])]['branch_path'].split('~')
-        metadata['smlt_path'] = smlt_path
-        metadata['gsimlt_path'] = gslt_path
+        parts = rlzs[int(kind[4:])]['branch_path'].split('~')
+        # 2 parts for classic SSC~GMM, 3 for SSC~GMM~SITE when a
+        # site-model logic tree is active
+        metadata['smlt_path'] = parts[0]
+        metadata['gsimlt_path'] = parts[1]
+        if len(parts) > 2:
+            metadata['site_lt_path'] = parts[2]
     elif kind.startswith('quantile-'):
         metadata['statistics'] = 'quantile'
         metadata['quantile_value'] = float(kind[9:])
