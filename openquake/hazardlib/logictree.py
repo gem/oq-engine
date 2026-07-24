@@ -557,7 +557,9 @@ class SourceModelLogicTree(object):
         lineno = branchset_node.lineno
         for branch_id in app2brs.split():
             if branch_id not in self.branches:
-                if self.branchID:  # the branch cannot be attached
+                if self.source_id or self.branchID:
+                    # the branch cannot be attached, but it is okay since
+                    # this is a reduced logic tree, not the original
                     continue
                 raise LogicTreeError(
                     lineno, self.filename,
