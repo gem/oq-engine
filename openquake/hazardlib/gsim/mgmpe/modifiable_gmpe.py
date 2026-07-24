@@ -53,6 +53,9 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
     hashash2020_non_linear_scaling)
 
 
+EPISTEMIC_MODIFIERS = ["site_term_epistemic"]
+
+
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
 
@@ -181,18 +184,12 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
 # ################ SITE TERMS AND BASIN TERMS ################## #
 
 
-SITE_TERMS = ["site_term_epistemic",
-              "nrcan15_site_term",
+SITE_TERMS = ["nrcan15_site_term",
               "ceus2020_site_term",
               "cy14_site_term",
               "ba08_site_term",
               "bssa14_site_term"]
 
-
-def site_term_epistemic(ctx, imt, me, si, ta, ph, kind):
-    """
-    """
-    return
 
 def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     """
@@ -570,7 +567,7 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     return sorted(imts_req)
 
 
-def get_ref_ctx(ctx, params):
+def set_ctxs(ctx, params):
     """
     Build the target site ctx (with any epistemic site-param overrides
     applied) and the rock-reference ctx (with vs30 replaced by the site
@@ -641,7 +638,7 @@ class ModifiableGMPE(GMPE):
         self.params = kwargs  # non-gmpe parameters
         g = globals()
         for k in self.params:
-            if k not in g:
+            if k not in g and k not in EPISTEMIC_MODIFIERS:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
         self.gmpe._toml = _toml
@@ -722,7 +719,7 @@ class ModifiableGMPE(GMPE):
         """
         # Get target ctx (epistemic unc overrides applied) and
         # ref ctx (equal to target ctx but no rock ref conditions set)
-        ctx_tgt, ctx_ref = get_ref_ctx(ctx, self.params)
+        ctx_tgt, ctx_ref = set_ctxs(ctx, self.params)
 
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs
@@ -757,6 +754,10 @@ class ModifiableGMPE(GMPE):
         # Apply sequentially the modifications
         g = globals()
         for methname, kw in self.params.items():
+
+            # Epistemic modifiers are applied in set_ctxs
+            if methname in EPISTEMIC_MODIFIERS:
+                continue
 
             # CEUS 2020 site term needs ref PGA stored
             if methname in ['ceus2020_site_term']:

@@ -243,6 +243,42 @@ class ModifiableGMPETest(unittest.TestCase):
         """
         valid.gsim(gmm_toml) # Instantiate using valid.gsim from a toml
 
+    def test_site_term_epistemic(self):
+        """
+        Test that site_term_epistemic overrides ctx site params so the
+        modified GMPE returns the same mean as the base GMPE evaluated
+        directly at the overridden site conditions.
+        """
+        base = valid.gsim('ChiouYoungs2014')
+        override_vs30 = 400.
+        mgmpe = ModifiableGMPE(
+            gmpe={'ChiouYoungs2014': {}},
+            site_term_epistemic={'site_params': {'vs30': override_vs30}})
+
+        cmaker = simple_cmaker([base, mgmpe], ['PGA', 'SA(0.5)'])
+        ctx = cmaker.new_ctx(4)
+        ctx.mag = 6.
+        ctx.rake = 0.
+        ctx.dip = 90.
+        ctx.ztor = 0.
+        ctx.hypo_depth = 10.
+        ctx.occurrence_rate = .001
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rjb = ctx.rrup
+        ctx.rx = ctx.rrup
+        ctx.z1pt0 = 50.
+
+        # Base uses the ctx.vs30 = 800 but mgmpe overrides to 400
+        ctx.vs30 = 800.
+        mea_mod, *_ = cmaker.get_mean_stds([ctx])
+        # Now run the base directly at vs30 = override_vs30
+        ctx.vs30 = override_vs30
+        mea_ref, *_ = cmaker.get_mean_stds([ctx])
+
+        # The modified GMPE (MODI) evaluated with ctx.vs30=800 should
+        # match the base GMPE (ORIG) evaluated with ctx.vs30=400
+        aae(mea_mod[MODI], mea_ref[ORIG])
+
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
     Tests the implementation of a correction factor for intensity

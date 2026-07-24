@@ -31,7 +31,7 @@
             <uncertaintyWeight>0.33</uncertaintyWeight>
         </logicTreeBranch>
 
-        <!-- Oferride of vs30 combined with rock-reference CY14 site term -->
+        <!-- Override of vs30 combined with rock-reference CY14 site term -->
         <logicTreeBranch branchID="site_model_branch3">
             <uncertaintyModel>
                 [ModifiableGMPE]
