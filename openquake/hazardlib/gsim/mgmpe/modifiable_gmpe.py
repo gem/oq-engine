@@ -192,8 +192,7 @@ SITE_TERMS = ["site_term_epistemic",
 def site_term_epistemic(ctx, imt, me, si, ta, ph, kind):
     """
     """
-    breakpoint()
-
+    return
 
 def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     """
@@ -576,38 +575,38 @@ def get_ref_ctx(ctx, params):
     Set the reference ctx which is used for computing the reference
     mean and std devs.
     """
-    # Set reference Vs30 if required
-    if any(sm in params for sm in SITE_TERMS):
+    # Epistemic uncertainty on site params - override base site params
+    if "site_term_epistemic" in params:
+        site_params = params["site_term_epistemic"]["site_params"]
+        for par in site_params:
+            if par not in site_param_dt:
+                continue
+            if not hasattr(ctx, par):
+                raise ValueError(
+                    f"Site parameter {par!r} is required by "
+                    f"site_term_epistemic but is not present in the "
+                    f"context.")
+            if len(np.unique(getattr(ctx, par))) != 1:
+                raise ValueError(
+                    f"Non-uniform values found for site parameter "
+                    f"{par!r}. Uniform site conditions must be "
+                    f"provided in the base site model when specifying "
+                    f"epistemic uncertainties on it.")
+            setattr(ctx, par, site_params[par])
+
+    # Set reference Vs30 if required by a rock-reference site term
+    rock_site_terms = ('cy14_site_term', 'nrcan15_site_term',
+                       'ba08_site_term', 'bssa14_site_term')
+    if any(sm in params for sm in rock_site_terms):
         ctx_copy = ctx.copy()
         if 'cy14_site_term' in params:
             rock_vs30 = 1130.
-        elif ('nrcan15_site_term' in params
-                or 'ba08_site_term' in params
-                or 'bssa14_site_term' in params):
+        else:
             rock_vs30 = 760.
         ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
-    else:
-        if "site_term_epistemic" in params:
-            # Set regular site params specified in this branch of GMM LT
-            site_params = params["site_term_epistemic"]["site_params"]
-            for par in site_params:
-                if par not in site_param_dt:
-                    continue
-                if not hasattr(ctx, par):
-                    raise ValueError(
-                        f"Site parameter {par!r} is required by "
-                        f"site_term_epistemic but is not present in the "
-                        f"context.")
-                if len(np.unique(getattr(ctx, par))) != 1:
-                    raise ValueError(
-                        f"Non-uniform values found for site parameter "
-                        f"{par!r}. Uniform site conditions must be "
-                        f"provided in the base site model when specifying "
-                        f"epistemic uncertainties on it.")
-                setattr(ctx, par, site_params[par])
-        ctx_copy = ctx
+        return ctx_copy
 
-    return ctx_copy
+    return ctx
 
 
 class ModifiableGMPE(GMPE):
@@ -713,7 +712,7 @@ class ModifiableGMPE(GMPE):
         """
         # Set reference ctx
         ctx_copy = get_ref_ctx(ctx, self.params)
-        breakpoint()
+        #breakpoint()
 
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
@@ -756,7 +755,7 @@ class ModifiableGMPE(GMPE):
             # Conditional GMPEs
             if methname in ["conditional_gmpe"]:
                 kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
-                
+
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)

@@ -6,6 +6,7 @@
     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="Active Shallow Crust">
 
+        <!-- Override of vs30 and z1pt0 -->
         <logicTreeBranch branchID="site_model_branch1">
             <uncertaintyModel>
                 [ModifiableGMPE]
@@ -14,18 +15,33 @@
                 "vs30" = 1200
                 "z1pt0" = 520
             </uncertaintyModel>
-            <uncertaintyWeight>0.5</uncertaintyWeight>
+            <uncertaintyWeight>0.34</uncertaintyWeight>
         </logicTreeBranch>
-        
+
+        <!-- Override of a site param rep as string (geology) -->
         <logicTreeBranch branchID="site_model_branch2">
             <uncertaintyModel>
                 [ModifiableGMPE]
-                gmpe.ChiouYoungs2014 = {}
+                gmpe.KothaEtAl2020ESHM20SlopeGeology = {}
                 [ModifiableGMPE.site_term_epistemic.site_params]
-                "vs30" = 300
-                "z2pt5" = 3.9
+                "slope" = 0.05
+                "geology" = "CENOZOIC"
+                "region" = 0
             </uncertaintyModel>
-            <uncertaintyWeight>0.5</uncertaintyWeight>
+            <uncertaintyWeight>0.33</uncertaintyWeight>
+        </logicTreeBranch>
+
+        <!-- Oferride of vs30 combined with rock-reference CY14 site term -->
+        <logicTreeBranch branchID="site_model_branch3">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.ChiouYoungs2014 = {}
+                cy14_site_term = {}
+                [ModifiableGMPE.site_term_epistemic.site_params]
+                "vs30" = 400
+                "z1pt0" = 100
+            </uncertaintyModel>
+            <uncertaintyWeight>0.33</uncertaintyWeight>
         </logicTreeBranch>
         
     </logicTreeBranchSet>
