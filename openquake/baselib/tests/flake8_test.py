@@ -39,6 +39,7 @@ REPO = os.path.dirname(
     os.path.dirname(
         os.path.dirname(
             os.path.dirname(__file__))))
+MAX_FUN_LEN = 90
 LF = ord('\n')
 CR = ord('\r')
 
@@ -202,7 +203,7 @@ def test_forbid_long_funcs():
                                  'openquake.hmtk',
                                  'openquake.sep',
                                  'openquake._unc',
-                                 ], 90)
+                                 ], MAX_FUN_LEN)
     if long_funcs:
         raise RuntimeError(long_funcs)
 
