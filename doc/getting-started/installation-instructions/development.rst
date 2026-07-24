@@ -12,13 +12,13 @@ Prerequisites
 -------------
 
 Knowledge of `Python <https://www.python.org/>`__ (and its `virtual
-environments <https://docs.python.org/3.12/tutorial/venv.html>`__),
+environments <https://docs.python.org/3.13/tutorial/venv.html>`__),
 `git <https://git-scm.com/>`__ and `software
 development <https://xkcd.com/844/>`__ are required.
 
 Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
-engine. At the moment we recommend Python 3.12.
+engine. At the moment we recommend Python 3.13.
 
 **NB: Python 3.14 and later versions are not supported yet, so please do NOT install such
 versions**
@@ -30,8 +30,8 @@ Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python 3.12,
-but versions 3.11 through 3.13 can also be used.
+the supported version of Python. At the moment we recommend Python 3.13,
+but versions 3.11 and 3.12 can also be used.
 
 macOS
 -----
@@ -115,7 +115,7 @@ Before using again the OpenQuake software the environment must be
 reloaded running ``source openquake/bin/activate``\ (assuming that it
 has been installed under ‘openquake’). For more information about
 *virtualenv*, see
-https://docs.python.org/3.12/library/venv.html.
+https://docs.python.org/3.13/library/venv.html.
 
 To load the virtual environment automatically at every login, add the
 following line at the bottom of your ``~/.bashrc`` (Linux) or

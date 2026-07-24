@@ -40,6 +40,7 @@
   * Changed `oq engine --make-report` to generate a Markdown report (no HTML)
 
 python3-oq-engine (3.26.2-1~xenial01) xenial; urgency=low
+
   [Paul Henshaw, Paolo Tormene, Antonio Ettorre]
   * Fixed install.py to invoke the post installation operations correctly
 
@@ -52,9 +53,11 @@ python3-oq-engine (3.26.2-1~xenial01) xenial; urgency=low
  -- Paul Henshaw (GEM Foundation) <paul@openquake.org>  Fri, 24 Jul 2026 09:28:04 +0000
 
 python3-oq-engine (3.26.1-1~xenial01) xenial; urgency=low
+
   [Matteo Nastasi, Antonio Ettorre]
   * Fix and improve of post installation scripts
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 15 Jul 2026 06:19:19 +0000
 
 python3-oq-engine (3.26.0-1~xenial01) xenial; urgency=low
 
