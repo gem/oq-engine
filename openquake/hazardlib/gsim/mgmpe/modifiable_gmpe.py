@@ -70,7 +70,8 @@ ADJUSTMENT_REQUIREMENTS = {
     'cb14_basin_term': {'sites': {'z2pt5'}},
     'm9_basin_term': {'sites': {'z2pt5'}},
     'add_between_within_stds': {
-        'stddev_types': {StdDev.TOTAL, StdDev.INTRA_EVENT,
+        'stddev_types': {StdDev.TOTAL,
+                         StdDev.INTRA_EVENT,
                          StdDev.INTER_EVENT},
     },
     'apply_swiss_amplification': {
