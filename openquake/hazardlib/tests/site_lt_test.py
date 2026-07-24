@@ -150,9 +150,9 @@ class SiteModelsEpistemicTest(unittest.TestCase):
             SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
         self.assertIn('identical (lon, lat)', str(ctx.exception))
 
-    def test_shortener_falls_back_to_base183_beyond_26_branches(self):
-        # For large site LTs the a..z alphabet is exhausted; the BASE183
-        # fallback must still produce unique short chars per branch
+    def test_shortener_uses_base183_and_is_unique(self):
+        # The site leg of the composite path uses BASE183, consistent
+        # with the SSC and GSIM shorteners; short chars must be unique
         a = self._arr([-65.], [0.], [760.])
         names = ['b%d' % i for i in range(30)]
         weights = numpy.full(30, 1.0 / 30)
