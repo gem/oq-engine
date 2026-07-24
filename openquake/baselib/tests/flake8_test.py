@@ -39,7 +39,7 @@ REPO = os.path.dirname(
     os.path.dirname(
         os.path.dirname(
             os.path.dirname(__file__))))
-MAX_FUN_LEN = 90
+MAX_FUN_LEN = 80
 LF = ord('\n')
 CR = ord('\r')
 
