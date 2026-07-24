@@ -1309,11 +1309,9 @@ def get_rup_dic(inputdic, user=User(), use_shakemap=False,
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
-    if not rup_data and approach not in ['use_pnt_rup_from_usgs',
-                                         'build_rup_from_usgs']:
-        if approach in ['use_shakemap_from_usgs',
-                        'use_shakemap_fault_rup_from_usgs',
-                        'use_finite_fault_model_from_usgs']:
+    if not rup_data and approach in ['use_shakemap_from_usgs',
+                                     'use_shakemap_fault_rup_from_usgs',
+                                     'use_finite_fault_model_from_usgs']:
             if approach == 'use_finite_fault_model_from_usgs':
                 with monitor('Download finite fault rupture'):
                     rupture_file, err = download_finite_fault_rupture(
