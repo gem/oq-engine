@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Add ability to specify epistemic uncertainties on the site model
+    through ModifiableGMPE (tested inside classical/case_46)
+ 
   [Michele Simionato]
   * Extended smlt_branch to work with applyToSources and applyToBranches
   * Changed the `avg_gmf` exporter to export only nonzero values
