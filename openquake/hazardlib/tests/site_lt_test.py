@@ -19,7 +19,7 @@ import os
 import tempfile
 import unittest
 import numpy
-from openquake.baselib import InvalidFile
+from openquake.baselib import InvalidFile, hdf5
 from openquake.hazardlib import logictree
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.logictree import (
@@ -216,3 +216,49 @@ class ReduceFullWithSiteLTTest(unittest.TestCase):
         
         # Site LT absent from result = not reducible (both branches used)
         self.assertNotIn('site_lt.xml', res)
+
+
+class FullLogicTreeRoundtripTest(unittest.TestCase):
+    """
+    __toh5__/__fromh5__ must preserve the site-model logic tree
+    metadata so that reading from the datastore reconstructs an
+    equivalent FullLogicTree.
+    """
+    def _build(self):
+        # Trivial single-branch SSC and GSIM, plus a 2-branch site LT
+        dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
+        a = numpy.array([(-65., 0., 760.)], dt)
+        b = numpy.array([(-65., 0., 360.)], dt)
+        full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
+        full_lt.source_model_lt = SourceModelLogicTree.fake()
+        full_lt.site_model_lt = SiteModelsEpistemic(
+            ['rock', 'soil'], [0.6, 0.4], [a, b],
+            filenames=['rock.csv', 'soil.csv'],
+            tree_filename='site_lt.xml', branchset_id='bs_site')
+        
+        return full_lt
+
+    def _roundtrip(self, full_lt):
+        # Write the FullLogicTree to a temp HDF5 and read it back
+        fd, path = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        try:
+            with hdf5.File(path, 'w') as f:
+                f['flt'] = full_lt
+            with hdf5.File(path, 'r') as f:
+                return f['flt']
+        finally:
+            os.unlink(path)
+
+    def test_roundtrip_with_site_lt_preserves_metadata(self):
+        # names, weights, filenames, tree_filename, branchset_id
+        # must all survive the __toh5__/__fromh5__ cycle
+        full_lt = self._build()
+        reloaded = self._roundtrip(full_lt)
+        smep = reloaded.site_model_lt
+        self.assertIsNotNone(smep)
+        self.assertEqual(smep.names, ['rock', 'soil'])
+        numpy.testing.assert_allclose(smep.weights, [0.6, 0.4])
+        self.assertEqual(smep.filenames, ['rock.csv', 'soil.csv'])
+        self.assertEqual(smep.filename, 'site_lt.xml')
+        self.assertEqual(smep.branchset_id, 'bs_site')
