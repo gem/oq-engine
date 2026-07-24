@@ -660,7 +660,8 @@ class LogicFixesTestCase(unittest.TestCase):
         sg = sourceconverter.SourceGroup('Active Shallow Crust', [src])
         
         bs_collapsed = lt.BranchSet('bGRRelative', collapsed=True)
-        bs_collapsed.branches = [lt.Branch('b1', 0.1, 0.4), lt.Branch('b2', 0.2, 0.6)]
+        bs_collapsed.branches = [lt.Branch('b1', 0.1, 0.4),
+                                 lt.Branch('b2', 0.2, 0.6)]
         
         bs_normal = lt.BranchSet('maxMagGRRelative', collapsed=False)
         bs_normal.branches = [lt.Branch('m1', 0.5, 1.0)]
@@ -669,7 +670,9 @@ class LogicFixesTestCase(unittest.TestCase):
         mod_sg = lt.apply_uncertainties(bset_values, sg)
         
         self.assertEqual(len(mod_sg.sources), 2)
-        # Both sources generated from collapsed branchset must have max_mag updated by bs_normal
+
+        # Both sources generated from collapsed branchset must have
+        # max_mag updated by bs_normal
         for mod_src in mod_sg.sources:
             self.assertEqual(mod_src.mfd.max_mag, 6.5)
 

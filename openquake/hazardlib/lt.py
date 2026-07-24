@@ -547,9 +547,11 @@ def apply_uncertainties(bset_values, src_group):
                     if not srcs:  # only the first time
                         srcs.append(src)
                     for s in srcs:
+                        # tested in test_mixed_collapsed_apply_uncertainties
                         if bset.correlated:
                             apply_uncertainty(
-                                bset.uncertainty_type, s, value[source.source_id])
+                                bset.uncertainty_type, s,
+                                value[source.source_id])
                         else:
                             apply_uncertainty(bset.uncertainty_type, s, value)
                     sg.changes += 1
