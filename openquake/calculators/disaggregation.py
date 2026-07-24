@@ -47,7 +47,7 @@ F32 = numpy.float32
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                   monitor):
+                   rlz_filter, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -65,6 +65,11 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
         dictionary rlz -> weight, empty for individual realizations
     :param monitor:
         monitor of the currently running job
+    :param rlz_filter:
+        optional set of realization ordinals to restrict the
+        disaggregation to (used with site-model epistemic uncertainty
+        so each outer-loop pass computes only the rlzs bound to the
+        current site-model realization)
     :returns:
         a list of dictionaries containing matrices of rates
     """
@@ -85,6 +90,10 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
 
             imtls = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
+        if rlz_filter is not None:
+            rlzs = numpy.array([r for r in rlzs if r in rlz_filter])
+            if len(rlzs) == 0:
+                continue
         res = dis.disagg_by_magi(imtls, rlzs, rwdic, src_mutex,
                                  mon0, mon1, mon2, mon3)
         out.extend(res)
@@ -112,12 +121,14 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+           rlz_filter=None):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
-    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+                 rlz_filter))
 
 
 def check_memory(N, Z, shape8D):
@@ -180,7 +191,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         try:
             full_lt = self.full_lt
         except AttributeError:
-            full_lt = self.datastore['full_lt'].init()
+            full_lt = self.datastore['full_lt']
+        # always init() so gsim_lt.wget.weights is populated for
+        # build_stat_curve (skipped when full_lt has been passed in
+        # from a parent calc without going through init)
+        full_lt.init()
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = self.R  # 0 means all rlzs
         self.oqparam.mags_by_trt = self.datastore['source_mags']
@@ -246,7 +261,80 @@ class DisaggregationCalculator(base.HazardCalculator):
 
     def compute(self):
         """
-        Submit disaggregation tasks and return the results
+        Submit disaggregation tasks and return the results.
+
+        Under site-model epistemic uncertainty each realization is
+        computed with its own site parameters: the loop over site rlzs
+        overlays ``self.sitecol.array`` and passes an ``rlz_filter`` so
+        that ``compute_disagg`` restricts its inner rlz loop to the
+        rlzs bound to the current site-model branch.
+        """
+        oq = self.oqparam
+        full_lt = getattr(self, 'full_lt', None) \
+            or self.datastore['full_lt']
+        site_lt = getattr(full_lt, 'site_model_lt', None)
+        if site_lt is None:
+            return self._compute_pass(rlz_filter=None)
+        self.full_lt = full_lt
+        # site-model epistemic uncertainty: run one pass per branch
+        from openquake.commonlib import readinput
+        smep = readinput.get_site_models_epistemic(oq)
+        assert smep is not None
+        baseline = self.sitecol.array.copy()
+        skip = {'lon', 'lat', 'depth', 'sids'}
+        # save full_lt.gsim_lt.wget which get_realizations overwrites
+        _saved_wget = self.full_lt.gsim_lt.wget
+        all_rlzs = self.full_lt.get_realizations()
+        self.full_lt.gsim_lt.wget = _saved_wget
+        combined = None
+        for i, arr in enumerate(smep.arrays):
+            logging.info('Disaggregating for site-model rlz %d/%d (%s)',
+                         i + 1, smep.R, smep.names[i])
+            # overlay per-site params both in-memory and (in-place) on
+            # dstore['sitecol/*'] so read_ctx_by_grp - called inside
+            # _compute_pass - picks up the current branch's params when
+            # rebuilding the context array; re-fetch h5 each iteration
+            # because _compute_pass closes+reopens the file for SWMR
+            h5 = self.datastore.hdf5
+            for name in arr.dtype.names:
+                if name in skip:
+                    continue
+                if name in self.sitecol.array.dtype.names:
+                    self.sitecol.array[name] = arr[name]
+                    key = 'sitecol/' + name
+                    if key in h5:
+                        try:
+                            h5[key][:] = arr[name]
+                        except (TypeError, ValueError):
+                            pass
+            h5.flush()
+            rlz_filter = {r.ordinal for r in all_rlzs
+                          if r.site_rlz.ordinal == i}
+            part = self._compute_pass(rlz_filter=rlz_filter)
+            if combined is None:
+                combined = part
+            else:
+                for k, v in part.items():
+                    combined[k] = combined.get(k, 0) + v
+        # restore baseline sitecol both in-memory and on disk
+        h5 = self.datastore.hdf5
+        for name in baseline.dtype.names:
+            if name in skip:
+                continue
+            self.sitecol.array[name] = baseline[name]
+            key = 'sitecol/' + name
+            if key in h5:
+                try:
+                    h5[key][:] = baseline[name]
+                except (TypeError, ValueError):
+                    pass
+        return combined
+
+    def _compute_pass(self, rlz_filter):
+        """
+        Single pass of the disaggregation compute loop; used both by
+        the regular path (rlz_filter=None) and by the site-model
+        epistemic outer loop (one pass per site rlz).
         """
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
@@ -310,7 +398,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic)
+                       self.bin_edges, src_mutex, rwdic,
+                       rlz_filter=rlz_filter)
                 continue
 
             # split by tiles
@@ -322,11 +411,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for c in disagg.split_by_magbin(
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
-                               self.bin_edges, src_mutex, rwdic)
+                               self.bin_edges, src_mutex, rwdic,
+                               rlz_filter=rlz_filter)
                 elif len(ctx):
                     # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, rwdic)
+                           self.bin_edges, src_mutex, rwdic,
+                           rlz_filter=rlz_filter)
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])

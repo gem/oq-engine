@@ -105,6 +105,15 @@ class HcurvesGetter(object):
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
+        # under site-model epistemic uncertainty '_rates' is split into
+        # '_rates_site_i' per branch and there is no unambiguous single
+        # source-specific curve to return; the source-specific-LT path
+        # is orthogonal to the site LT so this combination is rejected
+        if '_rates' not in self.dstore:
+            raise NotImplementedError(
+                'HcurvesGetter is not supported when a site-model logic '
+                'tree is present (source-specific LT + site LT); '
+                'use the standard MapGetter path instead')
         dset = self.dstore['_rates']
         if gsim_idx is None:
             curves = dset[start:start + len(gsims), site_id, imt_slc]
@@ -212,18 +221,82 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
         for f in os.listdir(calc_dir):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(calc_dir, f))
+
+    # Site-model epistemic uncertainty: emit one getter per (chunk,
+    # site_rlz) pair, each reading from '_rates_site_i' and masked so
+    # it only contributes to the rlzs of that site-rlz branch. When no
+    # site LT is present the loop degenerates to a single unmasked pass.
+    # NB: gsim_lt.wget was populated by full_lt.init() above (weights
+    # required by build_stat_curve); full_lt.get_realizations() would
+    # rebuild wget and clear weights, so preserve and restore it
+    site_lt = getattr(full_lt, 'site_model_lt', None)
+    if site_lt is not None:
+        _saved_wget = full_lt.gsim_lt.wget
+        rlzs_arr = full_lt.get_realizations()
+        site_ords = numpy.array(
+            [r.site_rlz.ordinal for r in rlzs_arr])
+        full_lt.gsim_lt.wget = _saved_wget
+        variants = []
+        # Per-site-rlz gweights: for each gid, the total weight is
+        # summed only over the rlzs owned by this branch (i.e. those
+        # whose site_rlz.ordinal matches). This is what makes fastmean
+        # correct in the presence of site-model epistemic uncertainty:
+        # the sum over sub-getters (gid_rate * gid_weight_by_branch)
+        # reproduces sum_r w_r * rate_r since gid_rate depends on the
+        # site rlz's params and the branch weight is already folded in.
+        if oq.fastmean:
+            gweights_by_site = []
+            for i in range(site_lt.R):
+                mask = site_ords == i
+                gwi = []
+                for _trt_smrs in trt_smrs:
+                    for grlzs in full_lt.get_rlzs_by_gsim(_trt_smrs).values():
+                        mrlzs = numpy.array(
+                            [r for r in grlzs if mask[r]], dtype=int)
+                        if len(mrlzs):
+                            gwi.append(
+                                full_lt.weights[mrlzs].sum(axis=0))
+                        else:
+                            gwi.append(
+                                numpy.zeros_like(full_lt.weights[0]))
+                gweights_by_site.append(numpy.array(gwi))
+        for i in range(site_lt.R):
+            variants.append(('_rates_site_%d' % i, site_ords == i))
+    else:
+        variants = [('_rates', None)]
+
     out = []
     sids = dstore['sitecol/sids'][:]
     for chunk in range(n):
         tile = sids[sids % n == chunk]
-        getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq)
-        if oq.fastmean:
-            getter.gweights = gweights
+        sub_getters = []
+        for j, (rates_dset, rlz_mask) in enumerate(variants):
+            getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq,
+                               rates_dset=rates_dset, rlz_mask=rlz_mask)
+            if oq.fastmean:
+                if site_lt is not None:
+                    # each sub-getter needs branch-specific gweights so
+                    # that get_fast_mean produces the correctly-weighted
+                    # partial mean for its rlzs
+                    getter.gweights = [gweights_by_site[j]]
+                else:
+                    getter.gweights = gweights
+            else:
+                getter.wgets = wgets
+            if oq.site_labels:
+                getter.ilabels = dstore['sitecol'].ilabel
+            sub_getters.append(getter)
+        if len(sub_getters) > 1 and (disagg or oq.fastmean):
+            # collapse per-site-rlz sub-getters into a single merged
+            # getter per chunk when we need a single per-chunk view:
+            # - disagg indexes mgetters[sid] and expects one per site;
+            # - fastmean must sum rates before to_probs (summing the
+            #   per-sub-getter to_probs-ed means would be incorrect),
+            #   so aggregation belongs inside get_fast_mean.
+            merged = MergedMapGetter(sub_getters)
+            out.append(merged)
         else:
-            getter.wgets = wgets
-        if oq.site_labels:
-            getter.ilabels = dstore['sitecol'].ilabel
-        out.append(getter)
+            out.extend(sub_getters)
     return out
 
 
@@ -294,7 +367,8 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filenames, chunk, trt_rlzs, sids, R, oq):
+    def __init__(self, filenames, chunk, trt_rlzs, sids, R, oq,
+                 rates_dset='_rates', rlz_mask=None):
         self.filenames = filenames
         self.chunk = chunk
         self.trt_rlzs = trt_rlzs
@@ -306,6 +380,14 @@ class MapGetter(object):
         self.eids = None
         self.ilabels = ()  # overridden in case of ilabels
         self.array = None
+        # rates_dset: name of the datastore dataset holding the rates
+        # (defaults to '_rates'; per-site-rlz getters use '_rates_site_i');
+        # rlz_mask: optional boolean array of length R selecting which
+        # realizations should receive rates from this getter (used with
+        # site-model epistemic uncertainty so a per-site-rlz getter only
+        # contributes to the rlzs belonging to that site-rlz branch)
+        self.rates_dset = rates_dset
+        self.rlz_mask = rlz_mask
 
     @property
     def imts(self):
@@ -335,12 +417,16 @@ class MapGetter(object):
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
         self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
+        slice_key = '%s/slice_by_idx' % self.rates_dset
         for fname in self.filenames:
             with hdf5.File(fname) as dstore:
-                slices = dstore['_rates/slice_by_idx'][:]
+                if self.rates_dset not in dstore:
+                    continue
+                slices = dstore[slice_key][:]
                 slices = slices[slices['idx'] == self.chunk]
                 for start, stop in zip(slices['start'], slices['stop']):
-                    df = dstore.read_df('_rates', slc=slice(start, stop))
+                    df = dstore.read_df(
+                        self.rates_dset, slc=slice(start, stop))
                     idxs = U32([sid2idx[sid] for sid in df.sid])
                     lid = df.lid.to_numpy()
                     gid = df.gid.to_numpy()
@@ -360,6 +446,8 @@ class MapGetter(object):
             rlzs = t_rlzs % TWO24
             rates = array[idx, :, g]
             for rlz in rlzs:
+                if self.rlz_mask is not None and not self.rlz_mask[rlz]:
+                    continue
                 r0[:, rlz] += rates
         return to_probs(r0)
 
@@ -380,6 +468,115 @@ class MapGetter(object):
             for m in range(M):
                 means.array[sidx, m] = rates[m*L1: m*L1+L1] @ gweights[
                     :, m if imt_dep_weights else -1]
+        means.array[:] = to_probs(means.array)
+        return means
+
+
+class MergedMapGetter(object):
+    """
+    Wraps a list of per-site-rlz :class:`MapGetter` instances (all
+    sharing the same chunk / sids / trt_rlzs / R) and produces a
+    combined per-realization hazard curve where each rlz's column is
+    taken from the sub-getter whose ``rlz_mask`` covers that rlz.
+
+    Used by disaggregation, which indexes ``mgetters[sid]`` expecting a
+    single getter per site rather than one per (site, site-rlz) pair.
+    """
+
+    def __init__(self, sub_getters):
+        assert sub_getters, 'MergedMapGetter needs at least one sub-getter'
+        first = sub_getters[0]
+        self.sub_getters = sub_getters
+        self.filenames = first.filenames
+        self.chunk = first.chunk
+        self.trt_rlzs = first.trt_rlzs
+        self.sids = first.sids
+        self.R = first.R
+        self.imtls = first.imtls
+        self.poes = first.poes
+        self.use_rates = first.use_rates
+        self.eids = None
+        self.ilabels = first.ilabels
+        # wgets/gweights are set by map_getters on each sub-getter and
+        # are identical across them; expose them for consumers
+        self.wgets = getattr(first, 'wgets', None)
+        self.gweights = getattr(first, 'gweights', None)
+        self.array = None
+
+    @property
+    def imts(self):
+        return list(self.imtls)
+
+    @property
+    def Gt(self):
+        return len(self.trt_rlzs)
+
+    @property
+    def L(self):
+        return self.imtls.size
+
+    @property
+    def N(self):
+        return len(self.sids)
+
+    @property
+    def M(self):
+        return len(self.imtls)
+
+    def init(self):
+        for sub in self.sub_getters:
+            sub.init()
+        self.sid2idx = self.sub_getters[0].sid2idx
+        # NB: intentionally NOT summing sub-getter arrays here. Each
+        # sub-getter owns rates for a distinct site-model realization
+        # and their raw sum is not meaningful; downstream methods
+        # (get_hcurve, get_fast_mean) iterate sub-getters explicitly
+        # to combine correctly under either the per-rlz or fastmean
+        # aggregation model
+        self.array = None
+        return self.array
+
+    def get_hcurve(self, sid):
+        """
+        :returns: an array of shape (L, R) whose column r is taken from
+            the sub-getter whose mask includes rlz r
+        """
+        r0 = numpy.zeros((self.L, self.R))
+        for sub in self.sub_getters:
+            sub_curve = sub.get_hcurve(sid)  # (L, R) with zeros
+                                             # outside its rlz mask
+            mask = sub.rlz_mask
+            if mask is None:
+                return sub_curve
+            for r in range(self.R):
+                if mask[r]:
+                    r0[:, r] = sub_curve[:, r]
+        return r0
+
+    def get_fast_mean(self):
+        """
+        Correct fast mean under site-model epistemic uncertainty:
+        combine sub-getter rates *before* applying to_probs. Summing
+        per-sub-getter to_probs-ed means would be an incorrect double
+        application of the exponential.
+        """
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
+        for sub in self.sub_getters:
+            sub.init()
+            gweights = sub.gweights[0]
+            imt_dep_weights = gweights.shape[1] > 1
+            for sid in self.sids:
+                if len(sub.ilabels):
+                    gw = sub.gweights[sub.ilabels[sid]]
+                else:
+                    gw = gweights
+                rates = sub.array[sub.sid2idx[sid]]  # (L, G)
+                sidx = means.sidx[sid]
+                for m in range(M):
+                    means.array[sidx, m] += rates[m*L1:m*L1+L1] @ gw[
+                        :, m if imt_dep_weights else -1]
         means.array[:] = to_probs(means.array)
         return means
 

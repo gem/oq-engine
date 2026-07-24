@@ -62,7 +62,7 @@ from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt)
+    pmf, logictree, gsim_lt, get_smlt, site_lt)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -654,6 +654,98 @@ def check_site_param(oqparam, name):
     return value
 
 
+def _expand_site_model_lt(oqparam):
+    # If inputs['site_model'] is a single XML that is a site-model logic
+    # tree, replace it with the list of referenced CSV/XML filenames
+    # and stash the parsed tree on oqparam._site_model_lt for later use
+    if getattr(oqparam, '_site_model_lt', None) is not None:
+        return oqparam._site_model_lt
+    oqparam._site_model_lt = None
+    files = oqparam.inputs.get('site_model')
+    if not files or not isinstance(files, list) or len(files) != 1:
+        return None
+    fname = files[0]
+    if not isinstance(fname, str) or not fname.endswith('.xml'):
+        return None
+    if not site_lt.SiteModelLogicTree.is_site_model_lt(fname):
+        return None
+    tree = site_lt.SiteModelLogicTree(fname)
+    oqparam._site_model_lt = tree
+    oqparam.inputs['site_model'] = list(tree.filenames)
+    return tree
+
+
+def _parse_one_site_model_file(fname, oqparam, arrays, sm_fieldsets):
+    """
+    Parse a single site-model file (CSV or NRML XML) and append the
+    resulting structured array to ``arrays``. Handles both formats so
+    a site-model logic tree may mix them across branches.
+    """
+    if isinstance(fname, str) and not fname.endswith('.xml'):
+        _smparse(fname, oqparam, arrays, sm_fieldsets)
+        return
+    # NRML <siteModel> XML branch
+    nodes = nrml.read(fname).siteModel
+    params = [valid.site_param(node.attrib) for node in nodes]
+    missing = set(oqparam.req_site_params) - set(params[0])
+    if 'vs30measured' in missing:
+        missing -= {'vs30measured'}
+        for param in params:
+            param['vs30measured'] = False
+    if 'backarc' in missing:
+        missing -= {'backarc'}
+        for param in params:
+            param['backarc'] = False
+    if 'ampcode' in missing:
+        missing -= {'ampcode'}
+        for param in params:
+            param['ampcode'] = b''
+    if missing:
+        raise InvalidFile('%s: missing parameter %s' %
+                          (fname, ', '.join(missing)))
+    site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
+                                 for p in sorted(params[0])])
+    sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
+                      for param in params], site_model_dt)
+    dupl = "\n".join(
+        '%s %s' % loc for loc, n in countby(sm, 'lon', 'lat').items()
+        if n > 1)
+    if dupl:
+        raise InvalidFile('There are duplicated sites in %s:\n%s' %
+                          (fname, dupl))
+    sm_fieldsets[fname] = set(sm.dtype.names)
+    arrays.append(sm)
+
+
+def get_site_models_epistemic(oqparam, h5=None):
+    """
+    :returns:
+        a :class:`openquake.hazardlib.site_lt.SiteModelsEpistemic` when the
+        site_model input is a logic-tree XML, else None
+    """
+    tree = _expand_site_model_lt(oqparam)
+    if tree is None:
+        return None
+    per_branch_arrays = []
+    for path in tree.filenames:
+        arrays = []
+        sm_fieldsets = {}
+        _parse_one_site_model_file(path, oqparam, arrays, sm_fieldsets)
+        [arr] = arrays
+        per_branch_arrays.append(arr)
+    smep = site_lt.SiteModelsEpistemic(
+        names=tree.branch_ids,
+        weights=tree.weights,
+        arrays=per_branch_arrays,
+        filenames=tree.filenames)
+    if h5:
+        h5['site_models_epistemic'] = numpy.array(
+            [(n, w, f) for n, w, f in zip(
+                smep.names, smep.weights, smep.filenames)],
+            site_lt.site_model_lt_dt)
+    return smep
+
+
 def get_site_model(oqparam, h5=None):
     """
     :param oqparam:
@@ -673,9 +765,16 @@ def get_site_model(oqparam, h5=None):
             h5['site_model'] = sm
         return sm
 
+    # Expand a site-model logic tree (if present) so that inputs['site_model']
+    # holds the list of per-branch CSV files; in that case the canonical
+    # site model is the first branch (other branches share the same lon/lat)
+    tree = _expand_site_model_lt(oqparam)
+    site_files = (oqparam.inputs['site_model'][:1] if tree
+                  else oqparam.inputs['site_model'])
+
     arrays = []
     sm_fieldsets = {}
-    for fname in oqparam.inputs['site_model']:
+    for fname in site_files:
         if isinstance(fname, str) and not fname.endswith('.xml'):
             # parsing site_model.csv and populating arrays
             _smparse(fname, oqparam, arrays, sm_fieldsets)
@@ -995,7 +1094,9 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
+    site_model_lt = get_site_models_epistemic(oqparam)
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, site_model_lt=site_model_lt)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
     if oqparam.number_of_logic_tree_samples:

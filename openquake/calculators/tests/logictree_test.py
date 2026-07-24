@@ -19,6 +19,7 @@
 import sys
 import unittest
 import numpy
+import copy
 from openquake.baselib import general, config
 from openquake.baselib.general import decode
 from openquake.hazardlib import contexts, source_group, InvalidFile
@@ -32,10 +33,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
-    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    case_25, case_28, case_29, case_30, case_31, case_32, case_33, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -79,10 +80,32 @@ class LogictreeTestCase(CalculatorTestCase):
             sitecol = self.calc.datastore['sitecol']
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
-            rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
-            mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
+            # under site-model epistemic uncertainty the analytical
+            # mean rate is a weighted sum of per-branch rates computed
+            # with each branch's site params; get_rmap uses a single
+            # sitecol so we re-run it per branch and combine
+            if getattr(full_lt, 'site_model_lt', None) is not None:
+                site_lt = full_lt.site_model_lt
+                smep = readinput.get_site_models_epistemic(oq)
+                mean_rates = None
+                for i, arr in enumerate(smep.arrays):
+                    sc = copy.deepcopy(sitecol)
+                    for name in arr.dtype.names:
+                        if name in ('lon', 'lat', 'depth', 'sids'):
+                            continue
+                        if name in sc.array.dtype.names:
+                            sc.array[name] = arr[name]
+                    rmap_i = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
+                    mr_i = calc_mean_rates(
+                        rmap_i, full_lt.g_weights(trt_smrs), wget, oq.imtls)
+                    w_i = float(site_lt.weights[i])
+                    mean_rates = mr_i * w_i if mean_rates is None \
+                        else mean_rates + w_i * mr_i
+            else:
+                rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
+                mean_rates = calc_mean_rates(
+                    rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=2e-5)
@@ -497,6 +520,144 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
         ns = len(self.calc.datastore['source_info'])
         assert ns == 26
+
+    def test_case_24(self):
+        # Site LT: 2 site-model branches (rock/soil, vs30=760/360)
+        # combined with 1 source and 1 GMM produces 2 rlz with 3-part
+        # paths (SSC~GMM~SITE)
+        self.run_calc(case_24.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        full_lt = dstore['full_lt']
+
+        # Assert site LT is in the full logic tree
+        assert full_lt.site_model_lt is not None
+        assert full_lt.site_model_lt.R == 2, full_lt.site_model_lt.R
+        rlzs = full_lt.rlzs
+        ae(len(rlzs), 2)
+
+        # Paths carry the third (site) leg
+        paths = sorted(rlz['branch_path'] for rlz in rlzs)
+        ae(paths, ['A~A~a', 'A~A~b'])
+
+        # Weights match the site-model branch weights
+        weights = sorted(rlz['weight'] for rlz in rlzs)
+        aac(weights, [0.4, 0.6], atol=1e-6)
+
+        # Per site rlz rates are present in datastore
+        assert '_rates_site_0' in dstore, list(dstore)
+        assert '_rates_site_1' in dstore, list(dstore)
+
+        # rlz 0 (rock, vs30=760) and rlz 1 (soil, vs30=360) must have
+        # distinct hazard curves - soil should amplify motion
+        hc = dstore['hcurves-rlzs'][:]
+        assert not numpy.allclose(hc[0, 0], hc[0, 1])
+
+        # hcurves-stats mean must equal the weight-combined rlz curves
+        # (0.6 * rock + 0.4 * soil)
+        w_rock, w_soil = 0.6, 0.4
+        mean = dstore['hcurves-stats'][:, 0] # Mean
+        expected = w_rock * hc[:, 0] + w_soil * hc[:, 1]
+        aac(mean, expected, atol=1e-5)
+
+        # Compare exported hazard curves / maps against expected CSVs
+        got = (export(('hcurves', 'csv'), dstore)
+               + export(('hmaps', 'csv'), dstore))
+        for fname in got:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    def test_case_24_fastmean(self):
+        # Site LT combined with the fastmean path (use_rates=true,
+        # mean-only stats, individual_rlzs=false)
+        self.run_calc(case_24.__file__, 'job_fastmean.ini')
+        dstore = self.calc.datastore
+        fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
+
+        # Rebuild the fastmean from raw per-site-rlz rates
+        N = dstore['sitecol/sids'].size
+        L = self.calc.oqparam.imtls.size
+        rate_by_branch = []
+        for i in range(2):
+            # Load rates for each branch, sum by (sid, lid) across gids
+            df = dstore.read_df('_rates_site_%d' % i)
+            arr = numpy.zeros((N, L))
+            for sid, lid, rate in zip(df.sid, df.lid, df.rate):
+                arr[sid, lid] += rate
+            rate_by_branch.append(arr)
+
+        # Weight by branch weight and sum
+        mean_rate = 0.6 * rate_by_branch[0] + 0.4 * rate_by_branch[1]
+
+        # Convert to poes
+        expected_fm = (1 - numpy.exp(-mean_rate)).reshape(fm_mean.shape)
+        aac(fm_mean, expected_fm, atol=1e-6)
+
+        # Compare exported mean hazard curve against expected CSV
+        [got] = export(('hcurves', 'csv'), dstore)
+        self.assertEqualFiles('expected/fastmean_' + strip_calc_id(got), got)
+
+    def test_case_24_disagg(self):
+        # Same 2-branch site model epistemic tree in a disagg calc
+        self.run_calc(case_24.__file__, 'job_disagg.ini')
+        dstore = self.calc.datastore
+        keys = list(dstore)
+        parent = dstore.parent
+        if parent != ():
+            keys = list(parent)
+        assert '_rates_site_0' in keys, keys
+        assert '_rates_site_1' in keys, keys
+        assert 'disagg-rlzs' in dstore, list(dstore)
+
+        # Per rlz Mag PMFs must differ between rock and soil branches:
+        # different vs30 -> different GMPE motion -> different disagg
+        mag = dstore['disagg-rlzs/Mag'][:]  # (N, mag, M, P, R)
+        assert not numpy.allclose(mag[0, :, 0, 0, 0], mag[0, :, 0, 0, 1])
+
+        # Compare a representative slice of the exported disagg CSVs
+        # (Mag-mean per site) against the expected files
+        got = export(('disagg-stats', 'csv'), dstore)
+        for fname in got:
+            basename = strip_calc_id(fname)
+            if basename.startswith('Mag-mean-'):
+                self.assertEqualFiles('expected/disagg_' + basename, fname)
+
+    def test_case_24_sampling(self):
+        # Site LT with sampling
+        self.run_calc(case_24.__file__, 'job_sampling.ini')
+        dstore = self.calc.datastore
+        hc = dstore['hcurves-rlzs'][:]
+
+        # 4 samples * 2 site rlzs = 8 rlzs
+        ae(hc.shape[1], 8)
+
+        # Inner loop is over site rlzs so rlzs 0, 2, 4, 6 should share
+        # one branch and 1, 3, 5, 7 the other
+        aac(hc[:, 0], hc[:, 2])
+        aac(hc[:, 1], hc[:, 3])
+        assert not numpy.allclose(hc[:, 0], hc[:, 1])
+
+        # Compare exported hazard curves against expected CSVs
+        got = export(('hcurves', 'csv'), dstore)
+        for fname in got:
+            self.assertEqualFiles(
+                'expected/sampling_' + strip_calc_id(fname), fname)
+
+    def test_case_24_xml_branches(self):
+        # Site model LT branches point toward XML site models instead
+        self.run_calc(case_24.__file__, 'job_xml_branches.ini')
+        xml_dstore = self.calc.datastore
+        xml_hc = xml_dstore['hcurves-rlzs'][:]
+        assert not numpy.allclose(xml_hc[:, 0], xml_hc[:, 1])
+
+        # Compare exported hazard curves against expected CSVs
+        got = export(('hcurves', 'csv'), xml_dstore)
+        for fname in got:
+            self.assertEqualFiles(
+                'expected/xml_' + strip_calc_id(fname), fname)
+            
+        # Cross-check against the CSV variant
+        self.run_calc(case_24.__file__, 'job.ini')
+        csv_hc = self.calc.datastore['hcurves-rlzs'][:]
+        aac(xml_hc, csv_hc, atol=1e-6)
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties
