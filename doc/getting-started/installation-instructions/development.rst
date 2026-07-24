@@ -20,7 +20,7 @@ Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
 engine. At the moment we recommend Python 3.12.
 
-**NB: Python 3.13 and later versions are not supported yet, so please do NOT install such
+**NB: Python 3.14 and later versions are not supported yet, so please do NOT install such
 versions**
 
 **NB: Python version below 3.11 are not supported , so please do NOT
@@ -30,18 +30,18 @@ Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python version 3.12
-but Python 3.11 can also be used.
+the supported version of Python. At the moment we recommend Python 3.12,
+but versions 3.11 through 3.13 can also be used.
 
 macOS
 -----
-Python version 3.12 is recommended but Python 3.11 can also be used.
+Python versions 3.11 to 3.13 are supported.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
 
 Windows
 -------
 
-Python version 3.12 is recommended but Python 3.11 can also be used.
+At the moment we recommend Python 3.13, but versions 3.11 through 3.13 can also be used.
 Please install Python version using the official Python installer, using the instructions below.
 Do NOT install using Microsoft Store.
 
@@ -53,13 +53,13 @@ Do NOT install using Microsoft Store.
 
    https://www.python.org/downloads/windows/
 
-2. Under **Stable Releases**, click **Download Python 3.12.x**.
+2. Under **Stable Releases**, click **Download Python 3.13.x**.
 
 -------------------------
 2. Run the Installer
 -------------------------
 
-Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click it.
+Locate the downloaded file (e.g., ``python-3.13.x-amd64.exe``) and double-click it.
 
 -----------------------------------------
 3. Enable PATH and Start Installation
@@ -67,7 +67,7 @@ Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click 
 
 When the installer window appears:
 
-* Check **Add Python 3.12 to PATH**
+* Check **Add Python 3.13 to PATH**
 * Click **Install Now**
 
 
