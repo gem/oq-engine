@@ -789,6 +789,42 @@ def parse_basic_inversion_params(basic_inversion):
     return fault_segments
 
 
+def _add_ffm_planar_surface(parent, segment):
+    planar_surface = SubElement(
+        parent,
+        "planarSurface",
+        strike=str(segment["strike"]),
+        dip=str(segment["dip"]),
+    )
+    if len(segment["vertices"]) < 4:
+        return planar_surface
+
+    vertices = segment["vertices"]
+    if vertices[-1] == vertices[0]:
+        vertices.pop()
+
+    sorted_vertices = sorted(vertices, key=lambda v: v["depth"])
+    top_vertices = sorted_vertices[:2]
+    bottom_vertices = sorted_vertices[2:]
+
+    if top_vertices[0]["lon"] > top_vertices[1]["lon"]:
+        top_vertices.reverse()
+    if bottom_vertices[0]["lon"] > bottom_vertices[1]["lon"]:
+        bottom_vertices.reverse()
+
+    for name, vertex in zip(
+        ("topLeft", "topRight", "bottomRight", "bottomLeft"),
+        (top_vertices[0], top_vertices[1],
+         bottom_vertices[1], bottom_vertices[0])):
+        SubElement(
+            planar_surface,
+            name,
+            lon=str(vertex["lon"]),
+            lat=str(vertex["lat"]),
+            depth=str(vertex["depth"]))
+    return planar_surface
+
+
 def create_rupture_xml_from_ffm(event_details, fault_segments,
                                 output_filepath):
     nrml = Element(
@@ -810,42 +846,10 @@ def create_rupture_xml_from_ffm(event_details, fault_segments,
         "hypocenter",
         lat=str(event_details["lat"]),
         lon=str(event_details["lon"]),
-        depth=str(event_details["dep"]),
-    )
+        depth=str(event_details["dep"]))
 
     for segment in fault_segments:
-        planar_surface = SubElement(
-            multi_planes_rupture,
-            "planarSurface",
-            strike=str(segment["strike"]),
-            dip=str(segment["dip"]),
-        )
-        if len(segment["vertices"]) >= 4:
-            if segment["vertices"][-1] == segment["vertices"][0]:
-                segment["vertices"].pop()
-
-            sorted_vertices = sorted(
-                segment["vertices"], key=lambda v: v["depth"])
-            top_vertices = sorted_vertices[:2]
-            bottom_vertices = sorted_vertices[2:]
-
-            if top_vertices[0]["lon"] > top_vertices[1]["lon"]:
-                top_vertices.reverse()
-            if bottom_vertices[0]["lon"] > bottom_vertices[1]["lon"]:
-                bottom_vertices.reverse()
-
-            for name, vertex in zip(
-                ("topLeft", "topRight", "bottomRight", "bottomLeft"),
-                (top_vertices[0], top_vertices[1],
-                 bottom_vertices[1], bottom_vertices[0]),
-            ):
-                SubElement(
-                    planar_surface,
-                    name,
-                    lon=str(vertex["lon"]),
-                    lat=str(vertex["lat"]),
-                    depth=str(vertex["depth"]),
-                )
+        _add_ffm_planar_surface(multi_planes_rupture, segment)
 
     xml_str = tostring(nrml, encoding="utf-8")
     pretty_xml_str = minidom.parseString(xml_str).toprettyxml(indent="  ")
