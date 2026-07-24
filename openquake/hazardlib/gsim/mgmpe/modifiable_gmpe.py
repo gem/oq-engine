@@ -593,12 +593,6 @@ def set_ctxs(ctx, params):
                     f"Site parameter {par!r} is required by "
                     f"site_term_epistemic but is not present in the "
                     f"context.")
-            if len(np.unique(getattr(ctx_tgt, par))) != 1:
-                raise ValueError(
-                    f"Non-uniform values found for site parameter "
-                    f"{par!r}. Uniform site conditions must be "
-                    f"provided in the base site model when specifying "
-                    f"epistemic uncertainties on it.")
             setattr(ctx_tgt, par, site_params[par])
 
     # Set reference Vs30 if required by a rock-reference site term
