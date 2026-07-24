@@ -537,7 +537,7 @@ hazard_uhs-std.csv
 
         # Paths carry the third (site) leg
         paths = sorted(rlz['branch_path'] for rlz in rlzs)
-        ae(paths, ['A~A~a', 'A~A~b'])
+        ae(paths, ['A~A~A', 'A~A~B'])
 
         # Weights match the site-model branch weights
         weights = sorted(rlz['weight'] for rlz in rlzs)
