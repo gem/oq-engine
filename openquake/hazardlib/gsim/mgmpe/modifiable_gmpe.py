@@ -52,6 +52,40 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
     hashash2020_non_linear_scaling)
 
 
+# Per-adjustment extra ctx and model requirements
+ADJUSTMENT_REQUIREMENTS = {
+    'ba08_site_term': {
+        'sites': {'vs30'},
+        'rupture': {'rake'},
+        'distances': {'rjb'},
+    },
+    'bssa14_site_term': {
+        'sites': {'vs30'},
+        'rupture': {'rake'},
+        'distances': {'rjb'},
+    },
+    'cy14_site_term': {'sites': {'vs30'}},
+    'nrcan15_site_term': {'sites': {'vs30'}},
+    'ceus2020_site_term': {'sites': {'vs30'}},
+    'cb14_basin_term': {'sites': {'z2pt5'}},
+    'm9_basin_term': {'sites': {'z2pt5'}},
+    'add_between_within_stds': {
+        'stddev_types': {StdDev.TOTAL,
+                         StdDev.INTRA_EVENT,
+                         StdDev.INTER_EVENT},
+    },
+    'apply_swiss_amplification': {
+        'gmpe_sites': frozenset(['amplfactor']),
+    },
+    'set_between_epsilon': {
+        'requires_gmpe_stddev': StdDev.INTER_EVENT,
+    },
+    'set_total_std_as_tau_plus_delta': {
+        'requires_gmpe_stddev': StdDev.INTER_EVENT,
+    },
+}
+
+
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
 
@@ -225,6 +259,24 @@ def ceus2020_site_term(
     me[:] += (slin + snlin)
 
 
+def ceus2020_setup(gmpe, ctx, params, n_sites):
+    """
+    Compute the reference PGA (natural log) at the CEUS2020 reference Vs30
+    using the underlying GMPE, needed by the CEUS2020 site term
+    """
+    ref = np.zeros((1, n_sites))
+    tmp = np.zeros((1, n_sites))
+
+    tctx = ctx.copy()
+    ref_vs30 = params['ceus2020_site_term']['ref_vs30']
+    tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
+    timt = (PGA(),)
+
+    gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
+
+    return np.squeeze(ref)
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it.
@@ -312,6 +364,37 @@ def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
     si[:] = np.sqrt(tau ** 2. + phi ** 2.)
     ta[:] = tau
     ph[:] = phi
+
+
+def alatik2015_setup(params):
+    """
+    Resolve tau and phi_ss coefficient tables for sigma_model_alatik2015
+    from the user-supplied params, filling in defaults for ergodic,
+    tau_model and phi_model.
+    """
+    key = 'sigma_model_alatik2015'
+
+    # Phi S2SS and ergodic param
+    # params[key]['phi_s2ss'] = None
+    params[key]['ergodic'] = params[key].get("ergodic", True)
+
+    # Tau
+    tau_model = params[key].get("tau_model", "global")
+    if "tau_model" not in params:
+        params[key]['tau_model'] = tau_model
+    tau_quantile = params[key].get("tau_quantile", None)
+    params[key]['tau_coetab'] = get_tau_at_quantile(
+        TAU_SETUP[tau_model]["MEAN"],
+        TAU_SETUP[tau_model]["STD"],
+        tau_quantile)  # NB: this a dict an not a CoeffsTable :-/
+
+    # Phi SS
+    phi_model = params[key].get("phi_model", "global")
+    if "phi_model" in params:
+        del params[key]["phi_model"]
+    phi_ss_quantile = params[key].get("phi_ss_quantile", None)
+    params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
+        PHI_SETUP[phi_model], phi_ss_quantile)
 
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
@@ -517,6 +600,24 @@ def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
     si[:] = (ta[2]**2 + np.sign(delta) * delta**2)**0.5
 
 
+# ################ FUNCTIONS FOR SETUP ################## #
+
+
+def set_ref_ctx(ctx, params):
+    """
+    Return a ctx with vs30 replaced by a rock reference Vs30 when a site
+    term is specified or the original ctx unchanged if no site term is
+    configured.
+    """
+    if not any(sm in params for sm in SITE_TERMS):
+        return ctx
+    ctx_copy = ctx.copy()
+    rock_vs30 = 1130. if 'cy14_site_term' in params else 760.
+    ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
+
+    return ctx_copy
+
+
 def _dict_to_coeffs_table(input_dict, name):
     """
     Transform a dictionary of parameters organised by IMT into a
@@ -593,61 +694,36 @@ class ModifiableGMPE(GMPE):
             self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
 
-        if ('set_between_epsilon' in self.params or
-            'set_total_std_as_tau_plus_delta' in self.params) and (
-                StdDev.INTER_EVENT not in
-                self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-            raise ValueError('%s does not have between event std' % self.gmpe)
+        # Validate the underlying GMPE against per-adjustment requirements
+        for meth in self.params:
+            req_stddev = ADJUSTMENT_REQUIREMENTS.get(
+                meth, {}).get('requires_gmpe_stddev')
+            if (req_stddev is not None and req_stddev not in
+                    self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+                raise ValueError(
+                    f'{self.gmpe} does not have {req_stddev} std')
 
-        if 'apply_swiss_amplification' in self.params:
-            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+        # Apply per-adjustment ctx and model requirements
+        for meth in self.params:
+            reqs = ADJUSTMENT_REQUIREMENTS.get(meth, {})
+            if 'gmpe_sites' in reqs:
+                self.gmpe.REQUIRES_SITES_PARAMETERS = reqs['gmpe_sites']
+            for sp in reqs.get('sites', ()):
+                if sp not in self.gmpe.REQUIRES_SITES_PARAMETERS:
+                    self.REQUIRES_SITES_PARAMETERS |= {sp}
+            for rp in reqs.get('rupture', ()):
+                if rp not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
+                    self.REQUIRES_RUPTURE_PARAMETERS |= {rp}
+            for dp in reqs.get('distances', ()):
+                if dp not in self.gmpe.REQUIRES_DISTANCES:
+                    self.REQUIRES_DISTANCES |= {dp}
+            if 'stddev_types' in reqs:
+                self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = (
+                    reqs['stddev_types'])
 
-        if 'add_between_within_stds' in self.params:
-            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT}
-
-        if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
-            # Require rake and rjb in the ctx for computing bedrock PGA
-            if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
-                self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
-            if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
-                self.REQUIRES_DISTANCES |= {"rjb"}
-
-        if (any(sm in self.params for sm in SITE_TERMS) and
-            'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            # Make sure is always Vs30 in the ctx
-            self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
-
-        if ((('cb14_basin_term' in self.params) or
-             ('m9_basin_term' in self.params)) and
-                ('z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS)):
-            # Require z2pt5 in ctx
-            self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
-
-        # This is required by the `sigma_model_alatik2015` function
-        key = 'sigma_model_alatik2015'
-        if key in self.params:
-
-            # Phi S2SS and ergodic param
-            # self.params[key]['phi_s2ss'] = None
-            self.params[key]['ergodic'] = self.params[key].get("ergodic", True)
-
-            # Tau
-            tau_model = self.params[key].get("tau_model", "global")
-            if "tau_model" not in self.params:
-                self.params[key]['tau_model'] = tau_model
-            tau_quantile = self.params[key].get("tau_quantile", None)
-            self.params[key]['tau_coetab'] = get_tau_at_quantile(
-                TAU_SETUP[tau_model]["MEAN"],
-                TAU_SETUP[tau_model]["STD"],
-                tau_quantile)  # NB: this a dict an not a CoeffsTable :-/
-
-            # Phi SS
-            phi_model = self.params[key].get("phi_model", "global")
-            if "phi_model" in self.params:
-                del self.params[key]["phi_model"]
-            phi_ss_quantile = self.params[key].get("phi_ss_quantile", None)
-            self.params[key]['phi_ss_coetab'] = get_phi_ss_at_quantile(
-                PHI_SETUP[phi_model], phi_ss_quantile)
+        # Resolve tau and phi_ss coefficient tables for Al Atik (2015)
+        if 'sigma_model_alatik2015' in self.params:
+            alatik2015_setup(self.params)
 
         # Set params
         for key in self.params:
@@ -665,16 +741,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         # Set reference Vs30 if required
-        if any(sm in self.params for sm in SITE_TERMS):
-            ctx_copy = ctx.copy()
-            if 'cy14_site_term' in self.params:
-                rock_vs30 = 1130.
-            elif ('nrcan15_site_term' or 'ba08_site_term'
-                  or 'bssa14_site_term' in self.params):
-                rock_vs30 = 760.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
-        else:
-            ctx_copy = ctx
+        ctx_copy = set_ref_ctx(ctx, self.params)
 
         # If necessary, compute the means and std devs for the required
         # IMTs that are not going to be calculated using conditional GMPEs 
@@ -687,24 +754,9 @@ class ModifiableGMPE(GMPE):
             # otherwise, compute the original mean and std devs for all IMTs
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
-        # Here we compute reference ground-motion for PGA when we need to
-        # amplify the motion using the CEUS2020 model
+        # Compute reference PGA for the CEUS2020 site term
         if 'ceus2020_site_term' in self.params:
-
-            # Arrays for storing results
-            ref = np.zeros((1, len(sig[0])))
-            tmp = np.zeros((1, len(sig[0])))
-
-            # Update context
-            tctx = ctx.copy()
-            ref_vs30 = self.params['ceus2020_site_term']['ref_vs30']
-            tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
-            timt = (PGA(),)
-
-            self.gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
-
-            # 'ref' contains the PGA for the reference Vs30
-            ref = np.squeeze(ref)
+            ref = ceus2020_setup(self.gmpe, ctx, self.params, len(sig[0]))
 
         # Apply sequentially the modifications
         g = globals()
