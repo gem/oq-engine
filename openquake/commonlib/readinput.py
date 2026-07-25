@@ -688,7 +688,7 @@ def _expand_site_model_lt(oqparam):
 def _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets):
     """
     Parse a single site-model file (CSV or NRML XML) and append the
-    resulting structured array to ``arrays``.
+    resulting structured array to arrays variable.
 
     NOTE: Handles both formats so a site-model logic tree may mix
     them across branches.
