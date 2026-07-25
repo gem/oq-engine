@@ -737,7 +737,6 @@ def disable_sigchld():
 class Starmap(object):
     on = False
     pids = ()
-    running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     CT = num_cores * 2
     expected_outputs = 0  # unknown
@@ -846,7 +845,7 @@ class Starmap(object):
             self.return_ip = get_return_ip(config.dbserver.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
-        self.tasks = []  # populated by .submit
+        self.tasks = {}  # populated by .submit
         self.task_no = 0
         self._shared = {}
         self.n_out = 0
@@ -885,7 +884,6 @@ class Starmap(object):
         """
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
-            self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -906,7 +904,7 @@ class Starmap(object):
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
         submit[dist](self, func, args, self.monitor)
-        self.tasks.append(self.task_no)
+        self.tasks[self.task_no] = None
         self.task_no += 1
 
     def submit_all(self):
@@ -998,7 +996,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 finished.add(res.mon.task_no)
                 self.busytime += {res.workerid: res.mon.duration}
-                self.tasks.remove(res.mon.task_no)
+                del self.tasks[res.mon.task_no]
                 self._submit_many(1)
                 todo = set(range(self.task_no)) - finished
                 logging.debug('%d tasks todo %s', len(todo),
