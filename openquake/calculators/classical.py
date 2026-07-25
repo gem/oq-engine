@@ -36,7 +36,7 @@ from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
     RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
-from openquake.commonlib import calc
+from openquake.commonlib import calc, readinput
 from openquake.calculators import base, getters, preclassical, views
 
 get_weight = operator.attrgetter('weight')
@@ -303,6 +303,13 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
                 continue
             if R == 1 or individual_rlzs:
                 for r in range(R):
+                    # Under site model epistemic uncertainty, one pgetter
+                    # owns only the rlzs in its rlz_mask; skip other rlzs
+                    # so a later pgetter (for a different site rlz) can
+                    # write those entries
+                    if (pgetter.rlz_mask is not None
+                            and not pgetter.rlz_mask[r]):
+                        continue
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
@@ -407,7 +414,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']):
+        # --> skip on non-first iterations of the site-model epistemic
+        #     outer loop because rupture data depends on sources only
+        #     and would otherwise be duplicated in rup/*
+        if (self.few_sites and len(dic['rup_data'])
+                and not getattr(self, '_skip_store_ctxs', False)):
             with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
@@ -547,7 +558,10 @@ class ClassicalCalculator(base.HazardCalculator):
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
         sgs, ds = self._pre_execute()
-        self._execute(sgs, ds)
+        if getattr(self.full_lt, 'site_model_lt', None) is not None:
+            self._execute_epistemic_site(sgs, ds)
+        else:
+            self._execute(sgs, ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -692,6 +706,58 @@ class ClassicalCalculator(base.HazardCalculator):
             ok = got[m] < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
+    def _execute_epistemic_site(self, sgs, ds):
+        """
+        Run the compute step once per site-model realization, overlaying
+        each realization's per-site parameters on self.sitecol and
+        renaming the resulting _rates group to _rates_site_i.
+        """
+        oq = self.oqparam
+        smep = readinput.get_site_models_epistemic(oq)
+
+        # Baseline site params from the canonical (first) branch
+        baseline = self.sitecol.array.copy()
+        for i, arr in enumerate(smep.arrays):
+            self._overlay_sitecol(arr)
+
+            # Reset per iteration compute state
+            self.rmap = {}
+            self.cfactor = numpy.zeros(2)
+            self.rel_ruptures = AccumDict(accum=0)
+
+            # Purge _rates/* group and grp_keys so _execute starts clean;
+            # rup/* group is source-only so it is written once (through
+            # _skip_store_ctxs gate below) and reused across iterations
+            h5 = self.datastore.hdf5
+            purge = ['_rates/slice_by_idx', '_rates/sid', '_rates/lid',
+                     '_rates/gid', '_rates/rate', '_rates', 'grp_keys']
+            for key in purge:
+                if key in h5:
+                    del h5[key]
+            self.datastore.create_df(
+                '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+            self.datastore.create_dset(
+                '_rates/slice_by_idx', getters.slice_dt)
+
+            # After iteration 0 the rup/* key is already populated with the
+            # canonical rupture data so suppress further appends
+            self._skip_store_ctxs = i > 0
+
+            # Compute rates for this branch
+            self._execute(sgs, ds)
+
+            # Close & reopen to drop SWMR mode before renaming
+            self.datastore.close()
+            self.datastore.open('a')
+            h5 = self.datastore.hdf5
+            target = '_rates_site_%d' % i
+            if target in h5:
+                del h5[target]
+            h5.move('_rates', target)
+
+        # Restore the first (canonical) baseline sitecol
+        self._overlay_sitecol(baseline)
+
     def store_info(self):
         """
         Store full_lt, source_info and source_data
@@ -733,16 +799,25 @@ class ClassicalCalculator(base.HazardCalculator):
         # this is practically instantaneous
         if pmap_by_kind is None:  # instead of a dict
             raise MemoryError('You ran out of memory!')
+        # Under site-model LT, sum into (sid, r) cells across getters
+        site_epistemic = getattr(self.full_lt, 'site_model_lt', None) \
+            is not None
         for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
             pmaps = pmap_by_kind[kind]
             if kind in self.hazard:
                 array = self.hazard[kind]
+                first = False
             else:
                 dset = self.datastore.getitem(kind)
                 array = self.hazard[kind] = numpy.zeros(dset.shape, dset.dtype)
+                first = True
             for r, pmap in enumerate(pmaps):
                 for idx, sid in enumerate(pmap.sids):
-                    array[sid, r] = pmap.array[idx]  # shape (M, P)
+                    val = pmap.array[idx]  # shape (M, P) or (M, L1)
+                    if site_epistemic and not first:
+                        array[sid, r] += val
+                    else:
+                        array[sid, r] = val
 
     def post_execute(self, dummy):
         """
@@ -806,7 +881,10 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         N, S, M, P, L1 = self._create_hcurves_maps()
-        if '_rates' in set(self.datastore) or not self.datastore.parent:
+        keys = set(self.datastore)
+        has_rates = ('_rates' in keys
+                     or any(k.startswith('_rates_site_') for k in keys))
+        if has_rates or not self.datastore.parent:
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
