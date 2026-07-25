@@ -146,8 +146,7 @@ class SiteModelsEpistemicTest(unittest.TestCase):
             list(zip(lon, lat, vs30)), self.dt)
 
     def test_lonlat_mismatch_is_rejected(self):
-        # The load-bearing epistemic invariant: all branches must
-        # reference the same physical sites
+        # Make sure non-identical lon/lat raises error
         a = self._arr([-65., -64.], [0., 0.], [760., 760.])
         b = self._arr([-65., -63.], [0., 0.], [400., 400.])
         with self.assertRaises(InvalidFile) as ctx:
@@ -157,12 +156,12 @@ class SiteModelsEpistemicTest(unittest.TestCase):
     def test_shortener_uses_base183_and_is_unique(self):
         # The site leg of the composite path uses BASE183, consistent
         # with the SSC and GSIM shorteners; short chars must be unique
-        a = self._arr([-65.], [0.], [760.])
-        names = ['b%d' % i for i in range(30)]
-        weights = numpy.full(30, 1.0 / 30)
-        smep = SiteModelsEpistemic(names, weights, [a] * 30)
+        site = self._arr([-65.], [0.], [760.])
+        names = ['b%d' % i for i in range(30)] # Make 30 branch names
+        weights = numpy.full(30, 1.0 / 30) # Assign weight to each
+        smep = SiteModelsEpistemic(names, weights, [site] * 30)
         chars = list(smep.shortener.values())
-        self.assertEqual(len(chars), len(set(chars)))
+        self.assertEqual(len(chars), len(set(chars))) # Unique per branch
 
 
 class ReduceFullWithSiteLTTest(unittest.TestCase):
