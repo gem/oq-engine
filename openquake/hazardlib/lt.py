@@ -965,15 +965,23 @@ def fmtlist(lst):
     return '%s..%s' % (lst[0],lst[-1])
 
 
-# NB: this function cannot be used with monster logic trees like the one for
-# South Africa (ZAF), since it is too slow; the engine uses a trick instead
 def count_paths(branches):
     """
-    :param branches: a list of branches (endpoints or nodes)
-    :returns: the number of paths in the branchset (slow)
+    :param branches: a list of branches or a logic tree
+    :returns: the total number of paths including sub-branches
     """
-    return sum(1 if br.bset is None else count_paths(br.bset.branches)
-               for br in branches)
+    if hasattr(branches, 'branchsets'):  # a LogicTree
+        branches = branches.branchsets[0].branches
+    count = 0
+    stack = list(branches)
+    while stack:
+        br = stack.pop()
+        if br.bset is None:
+            count += 1
+        else:
+            # push sub-branches onto the stack to process next
+            stack.extend(br.bset.branches)
+    return count
 
 
 dummy_counter = itertools.count(1)
