@@ -62,6 +62,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     by propagating epistemic uncertainties with the two methods supported in
     this library
     """
+    @classmethod
+    def setUpClass(cls):
+        if PLOTTING:
+            figs = os.path.join(TFF, 'figs')
+            if not os.path.exists(figs):
+                print(f'Creating directory {figs}')
+                os.mkdir(figs)
+
     def test_against_oq(self):
         # Convolution Vs OQ
 
@@ -100,8 +108,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # ------------------------------------------------------------ FIGURE 1
         fig, axs = plt.subplots(1, 1)
 
-        n_rlz = self.dstore['hcurves-rlzs'].shape[1]
-        for i_rlz in range(0, n_rlz):
+        self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
+        for i_rlz in range(0, self.n_rlz):
             poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
@@ -114,7 +122,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
         plt.xscale('log')
         plt.yscale('log')
-        plt.xlim(self.xlim)
         plt.legend()
         plt.xlabel('Intensity measure level, IML [g]')
         plt.ylabel('Annual Frequency of exceedance, AFoE []')
@@ -129,8 +136,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # ------------------------------------------------------------ FIGURE 2
         fig, axs = plt.subplots(1, 1)
 
-        n_rlz = self.dstore['hcurves-rlzs'].shape[1]
-        for i_rlz in range(0, n_rlz):
+        self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
+        for i_rlz in range(0, self.n_rlz):
             poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
@@ -184,7 +191,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         lab = 'Mean from POINT'
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
 
-        plt.xlim(self.xlim)
         plt.yscale('log')
         plt.xscale('log')
         plt.legend()
@@ -341,7 +347,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         if PLOTTING:
             fig, _ = plt.subplots(1, 1)
 
-            plt.plot(self.imls['PGA'], pct_16, '-', label='16th perc. sampling')
+            lab = '16th perc. sampling'
+            plt.plot(self.imls['PGA'], pct_16, '-', label=lab)
             lab = '16th perc. convolution'
             plt.plot(
                 self.imls['PGA'], res_conv[:, 0], 'o', mfc='none', label=lab)
@@ -376,109 +383,62 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         conf_samp.read(fname_s)
         conf_samp = {s: dict(conf_samp.items(s)) for s in conf_samp.sections()}
 
-        # Compute sampling
-        results = []
         file_path = TFF / 'data_calc'
-        for nsam in NSAMPLES:
+        results, imls, afes = self._run_sampling_performance(
+            conf_samp, file_path)
+        conf_conv = self._prepare_conv_config(conf_conv, file_path)
+        self.plot02(conf_conv, results, imls, afes)
 
-            print(f"\n   Number of samples: {nsam}")
-
-            conf_samp['analysis']['number_of_samples'] = f'{nsam}'
-            conf_samp['analysis']['conf_file_path'] = file_path
-
-            tracemalloc.start()
-            start_time = time.time()
-
-            tmpdir = tempfile.mkdtemp()
-            imls, afes, _ = propagate(conf_samp, override_folder_out=tmpdir)
-
-            # Mean and median from sampling
-            mean_sampl = np.mean(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            median_sampl = np.median(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            tmp = np.sum(afes[0, :, :, 0], axis=0)
-            pct_16 = np.percentile(tmp, 16, axis=0)
-            pct_84 = np.percentile(tmp, 84, axis=0)
-
-            exec_time = time.time() - start_time
-            mem = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-
-            results.append([nsam, exec_time, mem, mean_sampl, median_sampl,
-                            pct_16, pct_84])
-
+    def _prepare_conv_config(self, conf_conv, file_path):
         conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
         conf_conv['analysis']['resolution'] = '100'
         conf_conv['analysis']['conf_file_path'] = file_path
-        self.plot02(conf_conv, results, imls, afes)
+        return conf_conv
 
-    def plot02(self, conf_conv, results, imls, afe):
-        # Compute convolution
+    def _run_sampling_performance(self, conf_samp, file_path):
+        results = []
+        imls = afes = None
+        for nsam in NSAMPLES:
+            print(f"\n   Number of samples: {nsam}")
+            conf_samp['analysis']['number_of_samples'] = f'{nsam}'
+            conf_samp['analysis']['conf_file_path'] = file_path
+            result, imls, afes = self._run_sampling_case(conf_samp, nsam)
+            results.append(result)
+        return results, imls, afes
+
+    def _run_sampling_case(self, conf_samp, nsam):
         tracemalloc.start()
         start_time = time.time()
-
         tmpdir = tempfile.mkdtemp()
-        h, _ = propagate(conf_conv, override_folder_out=tmpdir)
-
-        # Mean and median from convolution
-        res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
-
+        imls, afes, _ = propagate(conf_samp, override_folder_out=tmpdir)
+        stats = self._get_sampling_stats(afes)
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()
         tracemalloc.stop()
+        return [nsam, exec_time, mem, *stats], imls, afes
 
-        print(f"Execution time    : {exec_time}")
-        print(f"Memory occupation : {mem}")
+    def _get_sampling_stats(self, afes):
+        source_sum = afes[0, :, :, 0].sum(axis=0)
+        mean_sampl = np.mean(source_sum, axis=0)
+        median_sampl = np.median(source_sum, axis=0)
+        pct_16 = np.percentile(source_sum, 16, axis=0)
+        pct_84 = np.percentile(source_sum, 84, axis=0)
+        return mean_sampl, median_sampl, pct_16, pct_84
 
-        if PLOTTING:
+    def _plot02_results(self, results, imls, conv_data):
+        res_conv, exec_time, mem = conv_data
+        fig, axs = plt.subplots(3, 1)
+        fig.set_size_inches(7, 12)
+        nsam, etim, memu = self._get_sampling_performance(results)
+        self._plot_execution_time(axs[0], nsam, etim, exec_time)
+        self._plot_memory(axs[1], nsam, memu, mem)
+        reference = results[-1][3]
+        self._plot_ratios(axs[2], results, imls, reference, res_conv)
+        plt.savefig(TFF / 'figs' / 'test02_performance.png')
 
-            fig, axs = plt.subplots(3, 1)
-            fig.set_size_inches(7, 12)
-
-            nsam = [row[0] for row in results]
-            etim = [row[1] for row in results]
-            memu = np.array([row[2] for row in results])
-
-            plt.sca(axs[0])
-            plt.plot(nsam, etim, '-')
-            plt.plot(nsam, etim, 'o', label='sampl')
-
-            xlim = axs[0].get_xlim()
-            plt.hlines(exec_time, xlim[0], xlim[1], label='conv')
-
-            plt.xlabel('Number of samples')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-
-            plt.sca(axs[1])
-            plt.plot(nsam, memu[:, 0], '-')
-            plt.plot(nsam, memu[:, 0], 'o',  label='sampl - size')
-            plt.plot(nsam, memu[:, 1], '-')
-            plt.plot(nsam, memu[:, 1], 'x',  label='sampl - peak')
-
-            xlim = axs[1].get_xlim()
-            plt.hlines(mem[0], xlim[0], xlim[1], '--', label='conv - size')
-            plt.hlines(mem[1], xlim[0], xlim[1], ':', label='conv - peak')
-
-            plt.xlabel('Number of samples')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-
-            plt.sca(axs[2])
-            for row in results:
-                ratio = row[3] / results[-1][3]
-                plt.plot(imls['PGA'], ratio, label=f'# sampl {row[0]}')
-            ratio = res_conv[:, 0] / results[-1][3]
-            plt.plot(imls['PGA'], ratio, label='conv')
-            plt.xlabel('IMT [g]')
-            plt.ylabel('Ratio')
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-            plt.savefig(TFF / 'figs' / 'test02_performance.png')
+    def plot02(self, conf_conv, results, imls, afe):
+        self._run_performance_plot(
+            conf_conv, self._plot02_results, results, imls)
 
     @pytest.mark.slow
     def test_01_performance(self):
@@ -500,128 +460,102 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Create a dictionary with the content of the file
         conf_sampl = {s: dict(tmp_c.items(s)) for s in tmp_c.sections()}
 
-        # Compute sampling
-        results = []
         file_path = TFF / 'data_calc'
-        for nsam in NSAMPLES:
-
-            print(f"\n   Number of samples: {nsam}")
-            conf_sampl['analysis']['number_of_samples'] = f'{nsam}'
-            conf_sampl['analysis']['conf_file_path'] = file_path
-
-            tracemalloc.start()
-            start_time = time.time()
-
-            tmpdir = tempfile.mkdtemp()
-            imls, afes, _ = propagate(conf_sampl, override_folder_out=tmpdir)
-
-            # Mean and median from sampling
-            mean_sampl = np.mean(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            median_sampl = np.median(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            tmp = afes[0, :, :, 0].sum(axis=0)
-            pct_16 = np.percentile(tmp, 16, axis=0)
-            pct_84 = np.percentile(tmp, 84, axis=0)
-
-            exec_time = time.time() - start_time
-            mem = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-
-            results.append([nsam, exec_time, mem, mean_sampl, median_sampl,
-                            pct_16, pct_84])
-
-        conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
-        conf_conv['analysis']['resolution'] = '100'
-        conf_conv['analysis']['conf_file_path'] = file_path
+        results, imls, _ = self._run_sampling_performance(
+            conf_sampl, file_path)
+        conf_conv = self._prepare_conv_config(conf_conv, file_path)
         self.plot01(conf_conv, results, imls, afe)
 
-    def plot01(self, conf_conv, results, imls, afe):
-        # Compute convolution
+    def _run_performance_plot(self, conf_conv, plotter, *args):
+        conv_data = self._compute_convolution_stats(conf_conv)
+        self._print_convolution_performance(conv_data)
+        if PLOTTING:
+            plotter(*args, conv_data)
+
+    def _print_convolution_performance(self, conv_data):
+        _, exec_time, mem = conv_data
+        print(f"Execution time    : {exec_time}")
+        print(f"Memory occupation : {mem}")
+
+    def _compute_convolution_stats(self, conf_conv):
         tracemalloc.start()
         start_time = time.time()
         tmpdir = tempfile.mkdtemp()
         h, _ = propagate(conf_conv, override_folder_out=tmpdir)
-
-        # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
-
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()
         tracemalloc.stop()
+        return res_conv, exec_time, mem
 
-        print(f"Execution time    : {exec_time}")
-        print(f"Memory occupation : {mem}")
+    def _get_sampling_performance(self, results):
+        nsam = [row[0] for row in results]
+        etim = [row[1] for row in results]
+        memu = np.array([row[2] for row in results])
+        return nsam, etim, memu
 
-        if PLOTTING:
+    def _set_plot_style(self, xlabel, ylabel):
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.grid(which='major', ls='--', color='grey')
+        plt.grid(which='minor', ls=':', color='lightgrey')
+        plt.legend()
 
-            fig, axs = plt.subplots(2, 2)
-            fig.set_size_inches(10, 10)
+    def _plot_execution_time(self, ax, nsam, etim, exec_time):
+        plt.sca(ax)
+        plt.plot(nsam, etim, '-')
+        plt.plot(nsam, etim, 'o', label='sampl')
+        xlim = ax.get_xlim()
+        plt.hlines(exec_time, xlim[0], xlim[1], label='conv')
+        self._set_plot_style('Number of samples', 'Execution time [s]')
 
-            nsam = [row[0] for row in results]
-            etim = [row[1] for row in results]
-            memu = np.array([row[2] for row in results])
+    def _plot_memory(self, ax, nsam, memu, mem, mb=False):
+        plt.sca(ax)
+        scale = 1024 * 1024 if mb else 1
+        ylabel = 'Memory consumption [MB]' if mb else ''
+        plt.plot(nsam, memu[:, 0] / scale, '-')
+        plt.plot(nsam, memu[:, 0] / scale, 'o', label='sampl - size')
+        plt.plot(nsam, memu[:, 1] / scale, '-')
+        plt.plot(nsam, memu[:, 1] / scale, 'x', label='sampl - peak')
+        xlim = ax.get_xlim()
+        plt.hlines(mem[0] / scale, xlim[0], xlim[1], label='conv - size')
+        plt.hlines(mem[1] / scale, xlim[0], xlim[1], label='conv - peak')
+        self._set_plot_style('Number of samples', ylabel)
 
-            plt.sca(axs[0, 0])
-            plt.plot(nsam, etim, '-')
-            plt.plot(nsam, etim, 'o', label='sampl')
+    def _plot_ratios(self, ax, results, imls, reference, res_conv):
+        plt.sca(ax)
+        for row in results:
+            ratio = row[3] / reference
+            plt.plot(imls['PGA'], ratio, label=f'# sampl {row[0]}')
+        ratio = res_conv[:, 0] / reference
+        plt.plot(imls['PGA'], ratio, label='conv')
+        plt.xscale('log')
+        plt.yscale('log')
+        self._set_plot_style('IMT [g]', 'Ratio')
 
-            xlim = axs[0, 0].get_xlim()
-            plt.hlines(exec_time, xlim[0], xlim[1], label='conv')
+    def _plot_afe(self, ax, results, imls, afe, res_conv):
+        plt.sca(ax)
+        plt.plot(imls['PGA'], afe, lw=2, label='oq')
+        for row in results:
+            plt.plot(imls['PGA'], row[3], label=f'# sampl {row[0]}')
+        plt.plot(imls['PGA'], res_conv[:, 0], label='conv')
+        plt.xscale('log')
+        plt.yscale('log')
+        self._set_plot_style(
+            'IML [g]', 'Annual Frequency of Exceedance')
 
-            plt.xlabel('Number of samples')
-            plt.ylabel('Execution time [s]')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
+    def _plot01_results(self, results, imls, afe, conv_data):
+        res_conv, exec_time, mem = conv_data
+        fig, axs = plt.subplots(2, 2)
+        fig.set_size_inches(10, 10)
+        nsam, etim, memu = self._get_sampling_performance(results)
+        self._plot_execution_time(axs[0, 0], nsam, etim, exec_time)
+        self._plot_memory(axs[1, 0], nsam, memu, mem, mb=True)
+        self._plot_ratios(axs[0, 1], results, imls, afe, res_conv)
+        self._plot_afe(axs[1, 1], results, imls, afe, res_conv)
+        plt.tight_layout()
+        plt.savefig(TFF / 'figs' / 'test01_performance.png')
 
-            plt.sca(axs[1, 0])
-            plt.plot(nsam, memu[:, 0] / (1024 * 1024), '-')
-            lab = 'sampl - size'
-            plt.plot(nsam, memu[:, 0] / (1024 * 1024), 'o',  label=lab)
-            plt.plot(nsam, memu[:, 1] / (1024 * 1024), '-')
-            lab = 'sampl - peak'
-            plt.plot(nsam, memu[:, 1] / (1024 * 1024), 'x',  label=lab)
-
-            xlim = axs[1, 0].get_xlim()
-            lab = 'conv - size'
-            plt.hlines(mem[0] / (1024 * 1024), xlim[0], xlim[1], label=lab)
-            lab = 'conv - peak'
-            plt.hlines(mem[1] / (1024 * 1024), xlim[0], xlim[1], label=lab)
-
-            plt.xlabel('Number of samples')
-            plt.ylabel('Memory consumption [MB]')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-
-            plt.sca(axs[0, 1])
-            for row in results:
-                ratio = row[3] / afe
-                plt.plot(imls['PGA'], ratio, label=f'# sampl {row[0]}')
-
-            ratio = res_conv[:, 0] / afe
-            plt.plot(imls['PGA'], ratio, label='conv')
-
-            plt.xlabel('IMT [g]')
-            plt.ylabel('Ratio')
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-
-            plt.sca(axs[1, 1])
-            plt.plot(imls['PGA'], afe, lw=2, label='oq')
-            for row in results:
-                plt.plot(imls['PGA'], row[3], label=f'# sampl {row[0]}')
-
-            plt.plot(imls['PGA'], res_conv[:, 0], label='conv')
-
-            plt.xlabel('IML [g]')
-            plt.ylabel('Annual Frequency of Exceedance')
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.grid(which='major', ls='--', color='grey')
-            plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.legend()
-            plt.tight_layout()
-            plt.savefig(TFF / 'figs' / 'test01_performance.png')
+    def plot01(self, conf_conv, results, imls, afe):
+        self._run_performance_plot(
+            conf_conv, self._plot01_results, results, imls, afe)
