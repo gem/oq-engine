@@ -107,34 +107,20 @@ class SiteModelLogicTreeTest(unittest.TestCase):
 
     def test_parses_both_flat_and_branchinglevel_layouts(self):
         # Two accepted NRML nestings should yield identical branches
-        flat_path = _write(FLAT_XML)
-        wrap_path = _write(WRAPPED_XML)
-        try:
-            flat = SiteModelLogicTree(flat_path)
-            wrap = SiteModelLogicTree(wrap_path)
-            self.assertEqual(flat.branch_ids, wrap.branch_ids)
-            numpy.testing.assert_allclose(flat.weights, wrap.weights)
-        finally:
-            os.unlink(flat_path)
-            os.unlink(wrap_path)
+        flat = SiteModelLogicTree(_write(FLAT_XML))
+        wrap = SiteModelLogicTree(_write(WRAPPED_XML))
+        self.assertEqual(flat.branch_ids, wrap.branch_ids)
+        numpy.testing.assert_allclose(flat.weights, wrap.weights)
 
     def test_rejects_wrong_uncertainty_type(self):
-        path = _write(WRONG_UTYPE_XML)
-        try:
-            with self.assertRaises(InvalidFile) as ctx:
-                SiteModelLogicTree(path)
-            self.assertIn('siteModel', str(ctx.exception))
-        finally:
-            os.unlink(path)
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelLogicTree(_write(WRONG_UTYPE_XML))
+        self.assertIn('siteModel', str(ctx.exception))
 
     def test_rejects_weights_not_summing_to_one(self):
-        path = _write(BAD_WEIGHT_XML)
-        try:
-            with self.assertRaises(InvalidFile) as ctx:
-                SiteModelLogicTree(path)
-            self.assertIn('sum to', str(ctx.exception))
-        finally:
-            os.unlink(path)
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelLogicTree(_write(BAD_WEIGHT_XML))
+        self.assertIn('sum to', str(ctx.exception))
 
 
 class SiteModelsEpistemicTest(unittest.TestCase):
@@ -241,13 +227,10 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
         # Write the FullLogicTree to a temp HDF5 and read it back
         fd, path = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
-        try:
-            with hdf5.File(path, 'w') as f:
-                f['flt'] = full_lt
-            with hdf5.File(path, 'r') as f:
-                return f['flt']
-        finally:
-            os.unlink(path)
+        with hdf5.File(path, 'w') as f:
+            f['flt'] = full_lt
+        with hdf5.File(path, 'r') as f:
+            return f['flt']
 
     def test_roundtrip_with_site_lt_preserves_metadata(self):
         # names, weights, filenames, tree_filename, branchset_id
