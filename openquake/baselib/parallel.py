@@ -199,6 +199,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
+from concurrent.futures import ProcessPoolExecutor
 import psutil
 import numpy
 
@@ -246,12 +247,14 @@ def no_submit(self, func, args, monitor):
 
 @submit.add('processpool')
 def processpool_submit(self, func, args, monitor):
-    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
+    return self.pool.submit(
+        safely_call, func, args, self.task_no, monitor)
 
 
 @submit.add('threadpool')
 def threadpool_submit(self, func, args, monitor):
-    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
+    return self.pool.apply_async(
+        safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('zmq', 'slurm')
@@ -276,7 +279,7 @@ def oq_distribute(task=None):
     return dist
 
 
-def init_workers():
+def init_worker():
     """
     Used to initialize the process pool. Calls setproctitle (if available)
     and sets the flag Starmap.on, so that it is possible to determine if
@@ -711,33 +714,9 @@ class MasterKilled(KeyboardInterrupt):
     """Exception raised when a job is killed manually"""
 
 
-def kill_master(signum, frame):
-    try:
-        pid, wait_status = os.waitpid(-1, os.WNOHANG)
-    except ChildProcessError:  # no children
-        return
-    else:
-        if os.WIFEXITED(wait_status) or os.WIFSTOPPED(
-                wait_status) or os.WIFCONTINUED(wait_status):
-            pass
-        else:
-            raise MasterKilled(f'A worker was killed: {pid=}, {wait_status=}')
-
-
-def enable_sigchld():
-    if hasattr(signal, 'SIGCHLD'):
-        signal.signal(signal.SIGCHLD, kill_master)
-
-
-def disable_sigchld():
-    if hasattr(signal, 'SIGCHLD'):
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-
-
 class Starmap(object):
     on = False
     pids = ()
-    maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -745,16 +724,14 @@ class Starmap(object):
     def init(cls, distribute=None):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
-            enable_sigchld()
             with sighandler('SIGINT', signal.SIG_IGN):
                 # SIGINT not passed to the workers to reduce traceback
-                cls.pool = mp_context.Pool(
-                    num_cores, init_workers,
-                    maxtasksperchild=cls.maxtasksperchild)
+                cls.pool = ProcessPoolExecutor(
+                    num_cores, mp_context, init_worker)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pids = [proc.pid for proc in cls.pool._pool]
+            cls.pids = list(cls.pool._processes)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
 
@@ -763,17 +740,12 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
-        # shutting down the pool during the runtime causes mysterious
-        # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
-            cls.pool.close()
-            disable_sigchld()
-            cls.pool.terminate()
-            cls.pool.join()
-            del cls.pool
-            cls.pids = []
-        elif hasattr(cls, 'executor'):
-            cls.executor.shutdown()
+            # shutdown and recreate the executor
+            cls.pool.shutdown()
+            cls.pool = ProcessPoolExecutor(
+                num_cores, mp_context, init_worker)
+            cls.pids = list(cls.pool._processes)
 
     @classmethod
     def apply(cls, task, allargs, concurrent_tasks=None,
@@ -884,7 +856,10 @@ class Starmap(object):
         """
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
-            self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.socket = Socket(
+                self.receiver, zmq.PULL, 'bind',
+                starmap=self if self.distribute == 'processpool' else None
+            ).__enter__()
             self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
                 self.return_ip, self.socket.port)
@@ -903,8 +878,7 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        submit[dist](self, func, args, self.monitor)
-        self.tasks[self.task_no] = None
+        self.tasks[self.task_no] = submit[dist](self, func, args, self.monitor)
         self.task_no += 1
 
     def submit_all(self):
@@ -965,6 +939,15 @@ class Starmap(object):
         for name, shr in self._shared.items():
             logging.debug('Unlinking %s', name)
             shr.unlink()
+
+    # called by the zmq Socket
+    def check_tasks_alive(self):
+        """
+        Raise BrokenProcessPool if any task died abruptly
+        """
+        for task in self.tasks.values():
+            if task.done():
+                task.result(timeout=0)
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
