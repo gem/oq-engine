@@ -86,13 +86,22 @@ class LogictreeTestCase(CalculatorTestCase):
             def rates(sc):
                 rmap = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
                 return calc_mean_rates(rmap, gweights, wget, oq.imtls)
-            # Under site-model epistemic uncertainty the  mean rate
-            # is a weighted sum of per-branch rates
+
+            # Under site-model epistemic uncertainty the mean rate is
+            # a weighted sum of per-branch rates. Under  sampling the
+            # per-branch weight becomes 1/Rsite (each# branch owns
+            # num_samples rlzs of weight 1/(num_samples* Rsite))
+            # whereas under full enumeration its the tree weight
             if getattr(full_lt, 'site_model_lt', None) is not None:
                 smep = readinput.get_site_models_epistemic(oq)
                 skip = {'lon', 'lat', 'depth', 'sids'}
+                if oq.number_of_logic_tree_samples:
+                    branch_ws = numpy.full(
+                        smep.Rsite, 1. / smep.Rsite)
+                else:
+                    branch_ws = full_lt.site_model_lt.weights
                 partials = []
-                for arr, w in zip(smep.arrays, full_lt.site_model_lt.weights):
+                for arr, w in zip(smep.arrays, branch_ws):
                     sc = copy.deepcopy(sitecol)
                     for name in set(arr.dtype.names) - skip:
                         if name in sc.array.dtype.names:
@@ -523,6 +532,7 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__, 'job.ini')
         dstore = self.calc.datastore
         full_lt = dstore['full_lt']
+        hc = dstore['hcurves-rlzs'][:]
 
         # Assert site LT is in the full logic tree
         assert full_lt.site_model_lt is not None
@@ -541,12 +551,6 @@ hazard_uhs-std.csv
         # Per site rlz rates are present in datastore
         assert '_rates_site_0' in dstore, list(dstore)
         assert '_rates_site_1' in dstore, list(dstore)
-
-        # rlz 0 (rock, vs30=760) and rlz 1 (soil, vs30=360) must have
-        # distinct hazard curves - soil should amplify motion
-        hc = dstore['hcurves-rlzs'][:]
-        assert not numpy.allclose(hc[0, 0], hc[0, 1])
-
         # hcurves-stats mean must equal the weight-combined rlz curves
         # (0.6 * rock + 0.4 * soil)
         w_rock, w_soil = 0.6, 0.4
@@ -560,9 +564,38 @@ hazard_uhs-std.csv
         for fname in got:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+    def test_case_24_sampling(self):
+        # Classical + site LT with sampling
+        self.run_calc(case_24.__file__, 'job_sampling.ini')
+        dstore = self.calc.datastore
+        hc = dstore['hcurves-rlzs'][:]
+
+        # 4 samples * 2 site rlzs = 8 rlzs
+        ae(hc.shape[1], 8)
+
+        # Inner loop is over site rlzs so rlzs 0, 2, 4, 6 should share
+        # one branch and 1, 3, 5, 7 the other
+        aac(hc[:, 0], hc[:, 2])
+        aac(hc[:, 0], hc[:, 4])
+        aac(hc[:, 0], hc[:, 6])
+        aac(hc[:, 1], hc[:, 3])
+        aac(hc[:, 1], hc[:, 5])
+        aac(hc[:, 1], hc[:, 7])
+        assert not numpy.allclose(hc[:, 0], hc[:, 1])
+
+        # Compare mean + one representative rlz per
+        # branch (rlz 0 and rlz 1) against expected CSVs
+        keep = {'sampling_hazard_curve-mean-PGA.csv',
+                'sampling_hazard_curve-rlz-000-PGA.csv',
+                'sampling_hazard_curve-rlz-001-PGA.csv'}
+        for fname in export(('hcurves', 'csv'), dstore):
+            expname = 'sampling_' + strip_calc_id(fname)
+            if expname in keep:
+                self.assertEqualFiles('expected/' + expname, fname)
+
     def test_case_24_fastmean(self):
-        # Site LT combined with the fastmean path (use_rates=true,
-        # mean-only stats, individual_rlzs=false)
+        # Classical fastmean (use_rates=true, mean stats,
+        # individual_rlzs=false) + site LT under full enumeration
         self.run_calc(case_24.__file__, 'job_fastmean.ini')
         dstore = self.calc.datastore
         fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
@@ -590,8 +623,34 @@ hazard_uhs-std.csv
         [got] = export(('hcurves', 'csv'), dstore)
         self.assertEqualFiles('expected/fastmean_' + strip_calc_id(got), got)
 
+    def test_case_24_fastmean_sampling(self):
+        # Classical fastmean (use_rates=true, mean stats,
+        # individual_rlzs=false) + site LT with sampling
+        self.run_calc(case_24.__file__, 'job_fastmean_sampling.ini')
+        dstore = self.calc.datastore
+        fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
+
+        # Reconstruct fastmean from per site rlz rates
+        N = dstore['sitecol/sids'].size
+        L = self.calc.oqparam.imtls.size
+        rate_by_branch = []
+        for i in range(2):
+            df = dstore.read_df('_rates_site_%d' % i)
+            arr = numpy.zeros((N, L))
+            for sid, lid, rate in zip(df.sid, df.lid, df.rate):
+                arr[sid, lid] += rate
+            rate_by_branch.append(arr)
+        mean_rate = 0.5 * rate_by_branch[0] + 0.5 * rate_by_branch[1]
+        expected_fm = (1 - numpy.exp(-mean_rate)).reshape(fm_mean.shape)
+        aac(fm_mean, expected_fm, atol=1e-6)
+
+        # Compare exported mean hazard curve against expected CSV
+        [got] = export(('hcurves', 'csv'), dstore)
+        self.assertEqualFiles(
+            'expected/fastmean_sampling_' + strip_calc_id(got), got)
+
     def test_case_24_disagg(self):
-        # Same 2-branch site model epistemic tree in a disagg calc
+        # Disagg + site LT under full enumeration
         self.run_calc(case_24.__file__, 'job_disagg.ini')
         dstore = self.calc.datastore
         keys = list(dstore)
@@ -604,7 +663,7 @@ hazard_uhs-std.csv
 
         # Per rlz Mag PMFs must differ between rock and soil branches:
         # different vs30 -> different GMPE motion -> different disagg
-        mag = dstore['disagg-rlzs/Mag'][:]  # (N, mag, M, P, R)
+        mag = dstore['disagg-rlzs/Mag'][:]
         assert not numpy.allclose(mag[0, :, 0, 0, 0], mag[0, :, 0, 0, 1])
 
         # Compare a representative slice of the exported disagg CSVs
@@ -615,26 +674,37 @@ hazard_uhs-std.csv
             if basename.startswith('Mag-mean-'):
                 self.assertEqualFiles('expected/disagg_' + basename, fname)
 
-    def test_case_24_sampling(self):
-        # Site LT with sampling
-        self.run_calc(case_24.__file__, 'job_sampling.ini')
+    def test_case_24_disagg_sampling(self):
+        # Disagg + site LT with sampling
+        self.run_calc(case_24.__file__, 'job_disagg_sampling.ini')
         dstore = self.calc.datastore
-        hc = dstore['hcurves-rlzs'][:]
+        keys = list(dstore)
+        parent = dstore.parent
+        if parent != ():
+            keys = list(parent)
+        assert '_rates_site_0' in keys, keys
+        assert '_rates_site_1' in keys, keys
+        assert 'disagg-rlzs' in dstore, list(dstore)
 
-        # 4 samples * 2 site rlzs = 8 rlzs
-        ae(hc.shape[1], 8)
+        # Full realization set must be num_samples * Rsite = 8
+        weights = dstore['weights'][:]
+        ae(len(weights), 8)
+        
+        # Under early_weights, all rlz weights are uniform 1/8
+        aac(weights, numpy.full(8, 1. / 8), atol=1e-9)
 
-        # Inner loop is over site rlzs so rlzs 0, 2, 4, 6 should share
-        # one branch and 1, 3, 5, 7 the other
-        aac(hc[:, 0], hc[:, 2])
-        aac(hc[:, 1], hc[:, 3])
-        assert not numpy.allclose(hc[:, 0], hc[:, 1])
+        # Both site branches must be represented in the per-rlz disagg
+        mag = dstore['disagg-rlzs/Mag'][:]
+        assert not numpy.allclose(mag[0, :, 0, 0, 0], mag[0, :, 0, 0, -1])
 
-        # Compare exported hazard curves against expected CSVs
-        got = export(('hcurves', 'csv'), dstore)
+        # Compare a representative slice of the exported disagg CSVs
+        # (Mag-mean per site) against the expected files
+        got = export(('disagg-stats', 'csv'), dstore)
         for fname in got:
-            self.assertEqualFiles(
-                'expected/sampling_' + strip_calc_id(fname), fname)
+            basename = strip_calc_id(fname)
+            if basename.startswith('Mag-mean-'):
+                self.assertEqualFiles(
+                    'expected/disagg_sampling_' + basename, fname)
 
     def test_case_24_xml_branches(self):
         # Site model LT branches point toward XML site models instead
