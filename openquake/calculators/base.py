@@ -157,7 +157,11 @@ def get_weights(oq, dstore):
     :returns: float32 array of realization weights
     """
     samples = oq.number_of_logic_tree_samples
-    if samples:
+    # Under site-model epistemic uncertainty the effective rlz set is
+    # samples * Rsite, so fall back to dstore['weights'] which holds
+    # the full uniform 1/(samples*Rsite) array
+    has_site_lt = 'full_lt/site_model_lt' in dstore
+    if samples and not has_site_lt:
         weights = numpy.ones(samples, dtype=F32)/samples
     else:
         weights = dstore['weights'][:]
