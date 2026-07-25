@@ -40,7 +40,7 @@ F32 = numpy.float32
 
 class SiteModelLogicTree(object):
     """
-    Parser and container for a site-model logic tree.
+    Parser and container for a site model logic tree.
 
     :param filename:
         path to the NRML XML file
