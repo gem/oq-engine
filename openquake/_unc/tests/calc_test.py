@@ -62,6 +62,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     by propagating epistemic uncertainties with the two methods supported in
     this library
     """
+    @classmethod
+    def setUpClass(cls):
+        if PLOTTING:
+            figs = os.path.join(TFF, 'figs')
+            if not os.path.exists(figs):
+                print(f'Creating directory {figs}')
+                os.mkdir(figs)
+
     def test_against_oq(self):
         # Convolution Vs OQ
 
@@ -100,8 +108,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # ------------------------------------------------------------ FIGURE 1
         fig, axs = plt.subplots(1, 1)
 
-        n_rlz = self.dstore['hcurves-rlzs'].shape[1]
-        for i_rlz in range(0, n_rlz):
+        self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
+        for i_rlz in range(0, self.n_rlz):
             poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
@@ -114,7 +122,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
         plt.xscale('log')
         plt.yscale('log')
-        plt.xlim(self.xlim)
         plt.legend()
         plt.xlabel('Intensity measure level, IML [g]')
         plt.ylabel('Annual Frequency of exceedance, AFoE []')
@@ -129,8 +136,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # ------------------------------------------------------------ FIGURE 2
         fig, axs = plt.subplots(1, 1)
 
-        n_rlz = self.dstore['hcurves-rlzs'].shape[1]
-        for i_rlz in range(0, n_rlz):
+        self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
+        for i_rlz in range(0, self.n_rlz):
             poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
@@ -184,7 +191,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         lab = 'Mean from POINT'
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
 
-        plt.xlim(self.xlim)
         plt.yscale('log')
         plt.xscale('log')
         plt.legend()
