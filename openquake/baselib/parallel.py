@@ -253,8 +253,7 @@ def processpool_submit(self, func, args, monitor):
 
 @submit.add('threadpool')
 def threadpool_submit(self, func, args, monitor):
-    return self.pool.apply_async(
-        safely_call, (func, args, self.task_no, monitor))
+    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('zmq', 'slurm')
