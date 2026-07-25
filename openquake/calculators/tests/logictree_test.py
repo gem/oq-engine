@@ -612,7 +612,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles(
             'expected/fastmean_sampling_' + strip_calc_id(got), got)
 
-    def test_case_24_disagg(self):
+    def test_case_24_dsg(self):
         # Disagg + site LT under full enumeration
         self.run_calc(case_24.__file__, 'job_disagg.ini')
         dstore = self.calc.datastore
@@ -628,7 +628,7 @@ hazard_uhs-std.csv
             if basename.startswith('Mag-mean-'):
                 self.assertEqualFiles('expected/disagg_' + basename, fname)
 
-    def test_case_24_disagg_sampling(self):
+    def test_case_24_dsg_smpl(self):
         # Disagg + site LT with sampling
         self.run_calc(case_24.__file__, 'job_disagg_sampling.ini')
         dstore = self.calc.datastore
@@ -651,7 +651,7 @@ hazard_uhs-std.csv
                 self.assertEqualFiles(
                     'expected/disagg_sampling_' + basename, fname)
 
-    def test_case_24_xml_branches(self):
+    def test_case_24_xml(self):
         # Site model LT branches point toward XML site models instead
         self.run_calc(case_24.__file__, 'job_xml_branches.ini')
         xml_dstore = self.calc.datastore
