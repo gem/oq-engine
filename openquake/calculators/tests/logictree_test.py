@@ -53,8 +53,7 @@ class LogictreeTestCase(CalculatorTestCase):
                export(('uhs/' + kind, 'csv'), ds))
         self.assertEqual(len(expected), len(got), str(got))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual,
-                                  delta=delta)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=delta)
         return got
 
     def _reconstruct_fastmean_poes(self, dstore, branch_weights):
@@ -72,7 +71,7 @@ class LogictreeTestCase(CalculatorTestCase):
         return 1 - numpy.exp(-mean_rate)
 
     def _assert_site_lt_disagg_keys(self, dstore):
-        # Assert _rates_site_i and disagg-rlzs present
+        # Assert _rates_site_i/disagg-rlzs present
         keys = list(dstore.parent) if dstore.parent != () else list(dstore)
         assert '_rates_site_0' in keys, keys
         assert '_rates_site_1' in keys, keys
