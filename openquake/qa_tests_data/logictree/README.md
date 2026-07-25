@@ -27,7 +27,7 @@
 | case\_22           | Test sigma_model_alatik2015                                                |
 | case\_23           | Arctic region and IDL (no bounding box)                                    |
 | case\_23\_bis      | Correlated uncertainties                                                   |
-| case\_24           | Test site model LT in classical (full enum + sampling and disagg)          |
+| case\_24           | Test use of a site model logic tree                                        |
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_25           | BC Hydro NVA SSC LT source model LT                                        |
