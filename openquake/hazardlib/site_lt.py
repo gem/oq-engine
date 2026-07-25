@@ -125,14 +125,14 @@ class SiteModelLogicTree(object):
             raise InvalidFile(
                 '%s: a site-model logic tree needs at least 2 branches'
                 % self.filename)
-        # matches the SSC/GSIM cap in SourceModelLogicTree; keeps the
+        # Matches the SSC/GSIM cap in SourceModelLogicTree - keeps the
         # site leg of the composite path a single BASE183 character
         if len(self.branches) > len(BASE183):
             raise InvalidFile(
                 '%s: the site-model branchset has too many branches '
                 '(%d > %d), split it into multiple branchsets'
                 % (self.filename, len(self.branches), len(BASE183)))
-        # weights must sum to 1
+        # Weights must sum to 1
         wsum = sum(w for _, _, w in self.branches)
         if abs(wsum - 1.) > 1e-5:
             raise InvalidFile(
