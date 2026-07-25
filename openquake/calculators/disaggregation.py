@@ -299,23 +299,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         
         return combined
 
-    def _overlay_sitecol(self, arr):
-        """
-        Overlay arr's per-site params on the in-memory
-        sitecol and on dstore['sitecol/*'].
-        """
-        # Geometry fields are shared across branches - never overlay
-        skip = {'lon', 'lat', 'depth', 'sids'}
-        h5 = self.datastore.hdf5
-        for name in arr.dtype.names:
-            if name in skip:
-                continue
-            # In-memory sitecol used by this process
-            self.sitecol.array[name] = arr[name]
-            key = 'sitecol/' + name
-            if key in h5:
-                h5[key][:] = arr[name]
-
     def _read_src_mutex_by_grp(self, dstore):
         """
         Read the src_mutex and grp_probability tables from dstore and
@@ -390,8 +373,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic,
-                       rlz_filter=rlz_filter)
+                       self.bin_edges, src_mutex, rwdic, rlz_filter=rlz_filter)
                 continue
 
             # split by tiles

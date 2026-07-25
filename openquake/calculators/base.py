@@ -843,6 +843,24 @@ class HazardCalculator(BaseCalculator):
             return 1
         return len(get_weights(self.oqparam, self.datastore))
 
+    def _overlay_sitecol(self, arr):
+        """
+        Overlay arr's per-site params on the in-memory sitecol and
+        on dstore['sitecol/*']. arr is a structured array with the
+        same rows as the sitecol, either a per branch site model
+        array or a prior copy of the sitecol used to restore it.
+        """
+        # Geometry fields are shared across branches - never overlay
+        skip = {'lon', 'lat', 'depth', 'sids'}
+        h5 = self.datastore.hdf5
+        for name in arr.dtype.names:
+            if name in skip:
+                continue
+            self.sitecol.array[name] = arr[name]
+            key = 'sitecol/' + name
+            if key in h5:
+                h5[key][:] = arr[name]
+
     def read_exposure(self, haz_sitecol):  # after load_crmodel
         """
         Read the exposure, the risk models and update the attributes
