@@ -588,6 +588,25 @@ class SourceModelLogicTree(object):
                     "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
 
+    def _parse_source_model_value(self, branchnode, value_node, value):
+        vals = [] # Filenames with sources in it
+        try:
+            for fname in value_node.text.split():
+                if (fname.endswith(('.xml', '.nrml'))
+                        and not self.test_mode):
+                    if self.collect_source_model_data(
+                            branchnode['branchID'], fname):
+                        vals.append(fname)
+        except Exception as exc:
+            raise LogicTreeError(
+                value_node, self.filename, str(exc)) from exc
+        if self.branchID and self.branchID not in branchnode['branchID']:
+            return '' # Reduce all branches except branchID
+        if self.source_id: # Only the files containing source_id
+            srcid = self.source_id.split('@')[0]
+            return ' '.join(reduce_fnames(vals, srcid))
+        return value
+
     def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
@@ -635,24 +654,8 @@ class SourceModelLogicTree(object):
                 value = parse_uncertainty(branchset.uncertainty_type,
                                           value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-                vals = []  # filenames with sources in it
-                try:
-                    for fname in value_node.text.split():
-                        if (fname.endswith(('.xml', '.nrml'))
-                                and not self.test_mode):
-                            ok = self.collect_source_model_data(
-                                branchnode['branchID'], fname)
-                            if ok:
-                                vals.append(fname)
-                except Exception as exc:
-                    raise LogicTreeError(
-                        value_node, self.filename, str(exc)) from exc
-                if (self.branchID and self.branchID not in
-                        branchnode['branchID']):
-                    value = ''  # reduce all branches except branchID
-                elif self.source_id:  # only the files containing source_id
-                    srcid = self.source_id.split('@')[0]
-                    value = ' '.join(reduce_fnames(vals, srcid))
+                value = self._parse_source_model_value(
+                    branchnode, value_node, value)
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
