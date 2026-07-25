@@ -93,10 +93,12 @@ class Socket(object):
     :param socket_type: zmq socket type (integer)
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 30s, used when polling the underlying socket
+    :param starmap: associated Starmap (the regular case) or None
     """
     # NB: the timeout has to be large since starting a workerpool can be
     # slow due to numba compiling everything, so you have to wait
-    def __init__(self, end_point, socket_type, mode, timeout=60):
+    def __init__(self, end_point, socket_type, mode, timeout=30,
+                 starmap=None):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
@@ -105,6 +107,7 @@ class Socket(object):
         self.socket_type = socket_type
         self.mode = mode
         self.timeout = timeout * 1000  # milliseconds
+        self.starmap = starmap
         self.running = False
 
     def __enter__(self):
@@ -147,14 +150,19 @@ class Socket(object):
 
         1. the flag .running is set to False
         2. SIGTERM is sent
+        3. the underlying task pool is broken
         """
         # works with zmq.REP and zmq.PULL sockets
         self.running = True
         while self.running:
             try:
-                if self.zsocket.poll(self.timeout):
+                got_something = self.zsocket.poll(self.timeout)
+                if got_something:
                     yield self.zsocket.recv_pyobj()
-                elif self.socket_type == zmq.PULL:
+                elif self.starmap:
+                    # possibly raise BrokenProcessPool
+                    self.starmap.check_tasks_alive()
+                if self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
