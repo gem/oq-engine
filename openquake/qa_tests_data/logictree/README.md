@@ -28,6 +28,12 @@
 | case\_23           | Arctic region and IDL (no bounding box)                                    |
 | case\_23\_bis      | Correlated uncertainties                                                   |
 | case\_24           | Test use of a site model logic tree                                        |
+| case\_24\_disagg   | Site model logic tree + disaggregation, full enumeration                   |
+| case\_24\_disagg\_sampling | Site model logic tree + disaggregation, sampling                    |
+| case\_24\_fastmean | Site model logic tree + classical fastmean, full enumeration               |
+| case\_24\_fastmean\_sampling | Site model logic tree + classical fastmean, sampling              |
+| case\_24\_sampling | Site model logic tree + classical, sampling                                |
+| case\_24\_xml\_branches | Site model logic tree with NRML XML branch files (not CSV)            |
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_25           | BC Hydro NVA SSC LT source model LT                                        |
