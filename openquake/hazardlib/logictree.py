@@ -48,6 +48,8 @@ from openquake.hazardlib.gsim_lt import (
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     LogicTreeError, parse_uncertainty, attach_branches)
+from openquake.hazardlib.site_lt import (
+    SiteModelsEpistemic, site_model_lt_dt)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -350,18 +352,38 @@ def reduce_full(full_lt, rlz_clusters):
     :param rlz_clusters: list of paths for a realization cluster
     :returns: a dictionary with what can be reduced
     """
+    site_lt = getattr(full_lt, 'site_model_lt', None)
     smrlz_clusters = []
     gsrlz_clusters = []
+    site_shorts = set()  # site LT short chars appearing in the cluster
     for path in rlz_clusters:
-        smr, gsr = decode(path).split('~')
-        smrlz_clusters.append(smr)
-        gsrlz_clusters.append(gsr)
+        parts = decode(path).split('~')
+        smrlz_clusters.append(parts[0])
+        gsrlz_clusters.append(parts[1])
+        if site_lt is not None:
+            site_shorts.add(parts[2])
     f1, *p1 = reducible(full_lt.source_model_lt, smrlz_clusters)
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / prod(len(p[1]) for p in p1 + p2)
-    return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
+    result = {f1: dict(p1), f2: dict(p2)}
+    # Site LT has a single branchset, so the reduction logic is
+    # that if every rlz in the cluster uses the same site branch,
+    # that branch is the sole surviving one and the other R-1
+    # branches could be pruned
+    p3 = []
+    if site_lt is not None:
+        before *= site_lt.Rsite
+        if len(site_shorts) == 1:
+            short_to_name = {v: k for k, v in site_lt.shortener.items()}
+            [short] = site_shorts
+            surviving = short_to_name[short]
+            p3.append((site_lt.branchset_id, [surviving]))
+            result[site_lt.filename] = dict(p3)
+    after = before / prod(len(p[1]) for p in p1 + p2 + p3)
+    result['size_before_after'] = (before, after)
+
+    return result
 
 
 class SourceModelLogicTree(object):
@@ -962,17 +984,19 @@ def get_field(data, field, default):
 class LtRealization(object):
     """
     Composite realization build on top of a source model realization and
-    a GSIM realization.
+    a GSIM realization. Optionally carries a site-model realization when
+    a site-model logic tree is present.
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
     # saves little memory, from 95.3 GB down to 81.0 GB
-    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight', 'site_rlz']
 
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, site_rlz=None):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
+        self.site_rlz = site_rlz  # Realization of the site LT, or None
 
     def __repr__(self):
         return '<%d,w=%s>' % (self.ordinal, self.weight)
@@ -1039,27 +1063,39 @@ class FullLogicTree(object):
         self.source_model_lt = SourceModelLogicTree.fake()
         self.gsim_lt = gsim_lt
         self.sm_rlzs = [fakeSM]
+        self.site_model_lt = None
         return self
 
-    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate'):
+    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate',
+                 site_model_lt=None):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
         self.oversampling = oversampling
+        self.site_model_lt = site_model_lt
         self.init()  # set .sm_rlzs and .trts
 
     def __getstate__(self):
         # .sd will not be available in the workers
         return {'source_model_lt': self.source_model_lt,
                 'gsim_lt': self.gsim_lt,
-                'oversampling': self.oversampling}
+                'oversampling': self.oversampling,
+                'site_model_lt': self.site_model_lt}
 
     def init(self):
+        Rsite = (self.site_model_lt.Rsite
+                 if self.site_model_lt is not None else 1)
         if self.source_model_lt.num_samples:
             # NB: the number of effective rlzs can be less than the number
             # of realizations in case of sampling
             self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
+            if Rsite > 1:
+                # When a site-model logic tree is present, every (SM, GSIM)
+                # pair is multiplied by R_site, so each sm_rlz's samples is
+                # N_gsim * R_site
+                for sm_rlz in self.sm_rlzs:
+                    sm_rlz.samples *= Rsite
         else:  # full enumeration
-            samples = self.gsim_lt.get_num_paths()
+            samples = self.gsim_lt.get_num_paths() * Rsite
             self.sm_rlzs = []
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
@@ -1232,9 +1268,14 @@ class FullLogicTree(object):
         """
         :returns: number of the paths in the full logic tree
         """
+        Rsite = (self.site_model_lt.Rsite
+                 if self.site_model_lt is not None else 1)
         if self.num_samples:
-            return self.num_samples
-        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths()
+            # Sampling: num_samples pairs (SM, GSIM), each fully
+            # enumerated across the site-model branches
+            return self.num_samples * Rsite
+        
+        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * Rsite
 
     def get_realizations(self):
         """
@@ -1242,29 +1283,45 @@ class FullLogicTree(object):
         """
         num_samples = self.source_model_lt.num_samples
         self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
+        site_rlzs = (self.site_model_lt.get_realizations()
+                     if self.site_model_lt is not None else [None])
+        Rsite = len(site_rlzs)
         if num_samples:  # sampling
-            rlzs = numpy.empty(num_samples, object)
+            # Sample (SSC, GSIM) num_samples times, then form the outer
+            # product with the site rlzs so the site leg is enumerated
+            rlzs = numpy.empty(num_samples * Rsite, object)
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
+            k = 0
             for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlzs[i] = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                        sm_rlzs[i].weight * gsim_rlz.weight)
+                base_w = sm_rlzs[i].weight * gsim_rlz.weight
+                for site_rlz in site_rlzs:
+                    # Weight also by site rlz
+                    w = base_w if site_rlz is None else base_w * site_rlz.weight
+                    rlzs[k] = LtRealization(
+                        k, sm_rlzs[i].lt_path, gsim_rlz, w, site_rlz)
+                    k += 1
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
-                    rlz.weight[:] = 1. / num_samples
+                    rlz.weight[:] = 1. / (num_samples * Rsite)
         else:  # full enumeration
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
-            rlzs = numpy.empty(len(ws) * len(self.sm_rlzs), object)
-            i = 0
+            rlzs = numpy.empty(
+                len(ws) * len(self.sm_rlzs) * Rsite, object)
+            k = 0
             for sm_rlz in self.sm_rlzs:
                 smpath = sm_rlz.lt_path
                 for gsim_rlz, weight in zip(gsim_rlzs, sm_rlz.weight * ws):
-                    rlzs[i] = LtRealization(i, smpath, gsim_rlz, weight)
-                    i += 1
+                    for site_rlz in site_rlzs:
+                        w = (weight if site_rlz is None
+                             else weight * site_rlz.weight)
+                        rlzs[k] = LtRealization(
+                            k, smpath, gsim_rlz, w, site_rlz)
+                        k += 1
         # rescale the weights if not one, see case_52
         # and logictree/case_30 for IMT-dependent weights
         tot_weight = sum(rlz.weight for rlz in rlzs)
@@ -1323,20 +1380,35 @@ class FullLogicTree(object):
         for sm in self.sm_rlzs:
             sm_data.append((str(sm.value), sm.weight,
                             '~'.join(sm.lt_path), sm.samples))
-        return (dict(
+        dic = dict(
             source_model_lt=self.source_model_lt,
             gsim_lt=self.gsim_lt,
             source_data=self.source_model_lt.source_data,
-            sm_data=numpy.array(sm_data, source_model_dt)),
-                dict(seed=self.seed, num_samples=self.num_samples,
+            sm_data=numpy.array(sm_data, source_model_dt))
+        attrs = dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values),
-                     oversampling=self.oversampling))
+                     oversampling=self.oversampling)
+        if self.site_model_lt is not None:
+            # One row per branch: (name, weight, filename)
+            dic['site_model_lt'] = numpy.array(
+                [(n, w, f) for n, w, f in zip(
+                    self.site_model_lt.names,
+                    self.site_model_lt.weights,
+                    self.site_model_lt.filenames)],
+                site_model_lt_dt)
+            # Tree-level metadata needed by reduce_full and to fully
+            # reconstruct SiteModelsEpistemic in __fromh5__
+            attrs['site_model_tree_filename'] = self.site_model_lt.filename
+            attrs['site_model_branchset_id'] = self.site_model_lt.branchset_id
+        return dic, attrs
 
     # FullLogicTree
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
         sd = dic.pop('source_data', numpy.zeros(0))  # empty for engine <= 3.16
+        # None on datastores written before this feature was added
+        site_lt_arr = dic.pop('site_model_lt', None)
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
         self.source_model_lt.source_data = sd[:]
@@ -1347,6 +1419,27 @@ class FullLogicTree(object):
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
+            
+        self.site_model_lt = None
+        if site_lt_arr is not None and len(site_lt_arr):
+            # Restore the per-branch metadata (name, weight, filename)
+            names = [decode(r['name']) for r in site_lt_arr]
+            weights = numpy.array([r['weight'] for r in site_lt_arr])
+            filenames = [decode(r['filename']) for r in site_lt_arr]
+            # Bypass __init__ / validation - arrays reloaded as required
+            dummy = numpy.zeros(
+                0, [('lon', float), ('lat', float)])
+            self.site_model_lt = SiteModelsEpistemic.__new__(
+                SiteModelsEpistemic)
+            self.site_model_lt.names = names
+            self.site_model_lt.weights = weights
+            self.site_model_lt.arrays = [dummy] * len(names)
+            self.site_model_lt.filenames = filenames
+            # Tree-level attrs, with defaults for older datastores
+            self.site_model_lt.filename = attrs.get(
+                'site_model_tree_filename', '')
+            self.site_model_lt.branchset_id = attrs.get(
+                'site_model_branchset_id', 'bs_site')
 
     def get_num_potential_paths(self):
         """
@@ -1361,10 +1454,17 @@ class FullLogicTree(object):
         """
         sh1 = self.source_model_lt.shortener
         sh2 = self.gsim_lt.shortener
+        sh3 = (self.site_model_lt.shortener
+               if self.site_model_lt is not None else None)
         tups = []
         for r in self.get_realizations():
-            path = '%s~%s' % (shorten(r.sm_lt_path, sh1, 'smlt'),
-                              shorten(r.gsim_rlz.lt_path, sh2, 'gslt'))
+            sm_p = shorten(r.sm_lt_path, sh1, 'smlt')
+            gs_p = shorten(r.gsim_rlz.lt_path, sh2, 'gslt')
+            if sh3 is not None and r.site_rlz is not None:
+                si_p = sh3[r.site_rlz.value]
+                path = '%s~%s~%s' % (sm_p, gs_p, si_p)
+            else:
+                path = '%s~%s' % (sm_p, gs_p)
             tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 

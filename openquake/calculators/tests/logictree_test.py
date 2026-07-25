@@ -531,7 +531,7 @@ hazard_uhs-std.csv
 
         # Assert site LT is in the full logic tree
         assert full_lt.site_model_lt is not None
-        assert full_lt.site_model_lt.R == 2, full_lt.site_model_lt.R
+        assert full_lt.site_model_lt.Rsite == 2, full_lt.site_model_lt.Rsite
         rlzs = full_lt.rlzs
         ae(len(rlzs), 2)
 

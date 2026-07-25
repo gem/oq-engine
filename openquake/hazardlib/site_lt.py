@@ -52,7 +52,7 @@ class SiteModelLogicTree(object):
 
     @classmethod
     def _iter_branchsets(cls, lt_node):
-        # yield every <logicTreeBranchSet> under a <logicTree>, tolerating
+        # Yield every <logicTreeBranchSet> under a <logicTree>, tolerating
         # both flat and <logicTreeBranchingLevel>-wrapped layouts
         for child in lt_node:
             if child.tag.endswith('logicTreeBranchSet'):
@@ -185,8 +185,8 @@ class SiteModelsEpistemic(object):
         self.weights = numpy.asarray(weights, F32)
         self.arrays = list(arrays)
         self.filenames = list(filenames) if filenames else list(names)
-        # tree_filename and branchset_id are only used by reduce_full and
-        # by parent-restart when reconstructing the container from HDF5
+        # tree_filename and branchset_id are only used by reduce_full
+        # and when reconstructing SiteModelsEpsitemic from HDF5
         self.filename = tree_filename
         self.branchset_id = branchset_id
         self._validate()
@@ -218,7 +218,7 @@ class SiteModelsEpistemic(object):
         return len(self.arrays)
 
     @property
-    def R(self):
+    def Rsite(self):
         """
         :returns: number of site-model realizations
         """
@@ -245,8 +245,8 @@ class SiteModelsEpistemic(object):
         return {name: BASE183[i] for i, name in enumerate(self.names)}
 
     def __repr__(self):
-        return '<SiteModelsEpistemic R=%d weights=%s>' % (
-            self.R, self.weights.tolist())
+        return '<SiteModelsEpistemic Rsite=%d weights=%s>' % (
+            self.Rsite, self.weights.tolist())
 
 
 site_model_lt_dt = numpy.dtype([
