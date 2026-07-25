@@ -965,6 +965,8 @@ def fmtlist(lst):
     return '%s..%s' % (lst[0],lst[-1])
 
 
+# NB: this function cannot be used with monster logic trees like the one for
+# South Africa (ZAF), since the stack will explode; the engine uses a trick
 def count_paths(branches):
     """
     :param branches: a list of branches or a logic tree
