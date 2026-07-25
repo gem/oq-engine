@@ -262,3 +262,51 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
         self.assertEqual(smep.filenames, ['rock.csv', 'soil.csv'])
         self.assertEqual(smep.filename, 'site_lt.xml')
         self.assertEqual(smep.branchset_id, 'bs_site')
+
+
+class GetRealizationsWithSiteLTTest(unittest.TestCase):
+    """
+    FullLogicTree.get_realizations must produce the outer product
+    ssx * gsim * site with correctly multiplied weights, and each
+    LtRealization must carry a .site_rlz attribute.
+    """
+    def _build(self, num_samples=0):
+        # Trivial single-branch SSC and GSIM + 2-branch site LT
+        dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
+        a = numpy.array([(-65., 0., 760.)], dt)
+        b = numpy.array([(-65., 0., 360.)], dt)
+        full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
+        full_lt.source_model_lt = SourceModelLogicTree.fake()
+        full_lt.source_model_lt.num_samples = num_samples
+        full_lt.site_model_lt = SiteModelsEpistemic(
+            ['rock', 'soil'], [0.6, 0.4], [a, b])
+
+        # Re-run init to pick up the site LT and num_samples
+        full_lt.init()
+
+        return full_lt
+
+    def test_full_enumeration_produces_outer_product(self):
+        # 1 SSC * 1 GSIM * 2 SITE = 2 rlzs, weights = w_ssc * w_gmm * w_site
+        full_lt = self._build(num_samples=0)
+        rlzs = full_lt.get_realizations()
+        self.assertEqual(len(rlzs), 2)
+
+        # Each rlz has a non-None site_rlz
+        self.assertTrue(all(r.site_rlz is not None for r in rlzs))
+
+        # Weights = site weights (SSC and GSIM are both 1.0)
+        weights = sorted(r.weight[0] for r in rlzs)
+        numpy.testing.assert_allclose(weights, [0.4, 0.6], atol=1e-6)
+        numpy.testing.assert_allclose(
+            sum(r.weight[0] for r in rlzs), 1.0, atol=1e-6)
+
+    def test_early_weights_sampling_produces_uniform_weights(self):
+        # num_samples * R_site = 4 * 2 = 8 rlzs; early_weights forces
+        # uniform 1/8 weight per rlz
+        full_lt = self._build(num_samples=4)
+        rlzs = full_lt.get_realizations()
+        self.assertEqual(len(rlzs), 8)
+        self.assertTrue(all(r.site_rlz is not None for r in rlzs))
+        for r in rlzs:
+            numpy.testing.assert_allclose(r.weight[0], 1.0 / 8)
