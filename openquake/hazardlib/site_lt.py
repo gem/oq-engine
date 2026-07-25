@@ -161,10 +161,10 @@ class SiteModelLogicTree(object):
 
 class SiteModelsEpistemic(object):
     """
-    Containr objet for holding site-model realizations.
+    Container object for holding site model realizations.
 
     :param names:
-        List of short names, one per branch (branchIDs).s
+        List of short names, one per branch (branchIDs).
     :param weights:
         1D numpy array of branch weights, summing to 1.
     :param arrays:
