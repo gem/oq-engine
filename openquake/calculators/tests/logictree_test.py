@@ -563,7 +563,7 @@ hazard_uhs-std.csv
                       + export(('hmaps', 'csv'), dstore)):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-    def test_case_24_sampling(self):
+    def test_case_24_smpl(self):
         # Classical + site LT with sampling. 4 samples * Rsite=2 = 8
         # rlzs; inner loop is site rlzs so even indices share branch 0,
         # odd indices share branch 1
@@ -585,7 +585,7 @@ hazard_uhs-std.csv
             if expname in keep:
                 self.assertEqualFiles('expected/' + expname, fname)
 
-    def test_case_24_fastmean(self):
+    def test_case_24_fm(self):
         # Classical fastmean (use_rates=true, mean stats,
         # individual_rlzs=false) + site LT under full enumeration
         self.run_calc(case_24.__file__, 'job_fastmean.ini')
@@ -598,7 +598,7 @@ hazard_uhs-std.csv
         [got] = export(('hcurves', 'csv'), dstore)
         self.assertEqualFiles('expected/fastmean_' + strip_calc_id(got), got)
 
-    def test_case_24_fastmean_sampling(self):
+    def test_case_24_fm_smpl(self):
         # Classical fastmean + site LT with sampling. Under early_weights
         # all 8 rlzs get uniform weight 1/8, so each branch contributes
         # 4/8 = 0.5 * branch_rate to the mean
