@@ -199,7 +199,7 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import psutil
 import numpy
 
@@ -245,15 +245,10 @@ def no_submit(self, func, args, monitor):
     safely_call(func, args, self.task_no, monitor)
 
 
-@submit.add('processpool')
+@submit.add('processpool', 'threadpool')
 def processpool_submit(self, func, args, monitor):
     return self.pool.submit(
         safely_call, func, args, self.task_no, monitor)
-
-
-@submit.add('threadpool')
-def threadpool_submit(self, func, args, monitor):
-    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('zmq', 'slurm')
@@ -732,7 +727,7 @@ class Starmap(object):
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pids = list(cls.pool._processes)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(num_cores)
+            cls.pool = ThreadPoolExecutor(num_cores, mp_context, init_worker)
 
         if num_cores > tot_cores:
             logging.warning(f'{num_cores=} but {tot_cores=}')
