@@ -81,31 +81,26 @@ class LogictreeTestCase(CalculatorTestCase):
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
             wget = full_lt.gsim_lt.wget
-            # under site-model epistemic uncertainty the analytical
-            # mean rate is a weighted sum of per-branch rates computed
-            # with each branch's site params; get_rmap uses a single
-            # sitecol so we re-run it per branch and combine
+            gweights = full_lt.g_weights(trt_smrs)
+
+            def rates(sc):
+                rmap = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
+                return calc_mean_rates(rmap, gweights, wget, oq.imtls)
+            # Under site-model epistemic uncertainty the  mean rate
+            # is a weighted sum of per-branch rates
             if getattr(full_lt, 'site_model_lt', None) is not None:
-                site_lt = full_lt.site_model_lt
                 smep = readinput.get_site_models_epistemic(oq)
-                mean_rates = None
-                for i, arr in enumerate(smep.arrays):
+                skip = {'lon', 'lat', 'depth', 'sids'}
+                partials = []
+                for arr, w in zip(smep.arrays, full_lt.site_model_lt.weights):
                     sc = copy.deepcopy(sitecol)
-                    for name in arr.dtype.names:
-                        if name in ('lon', 'lat', 'depth', 'sids'):
-                            continue
+                    for name in set(arr.dtype.names) - skip:
                         if name in sc.array.dtype.names:
                             sc.array[name] = arr[name]
-                    rmap_i = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
-                    mr_i = calc_mean_rates(
-                        rmap_i, full_lt.g_weights(trt_smrs), wget, oq.imtls)
-                    w_i = float(site_lt.weights[i])
-                    mean_rates = mr_i * w_i if mean_rates is None \
-                        else mean_rates + w_i * mr_i
+                    partials.append(float(w) * rates(sc))
+                mean_rates = sum(partials)
             else:
-                rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
-                mean_rates = calc_mean_rates(
-                    rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
+                mean_rates = rates(sitecol)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=2e-5)
