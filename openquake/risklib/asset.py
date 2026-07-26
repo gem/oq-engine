@@ -597,6 +597,7 @@ class AssetCollection(object):
                 }
         return name_map
 
+    # tested in case_shakemap
     def aggregate_exposure_by_lse_tier(
             self, aggregate_by, avg_gmf_array, all_imts, secondary_peril,
             exposure_hdf5=None):
