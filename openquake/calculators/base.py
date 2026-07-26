@@ -614,6 +614,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+        self._read_risk4()
 
         if (oq.calculation_mode == 'event_based' and
                 oq.ground_motion_correlation_model and
@@ -1149,6 +1150,8 @@ class HazardCalculator(BaseCalculator):
                 # fix: the sitecol is not complete
                 self.sitecol.complete = self.datastore.parent['complete']
 
+    def _read_risk4(self):
+        oq = self.oqparam
         # store amplification functions if any
         if 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
