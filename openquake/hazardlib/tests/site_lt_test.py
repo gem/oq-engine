@@ -248,9 +248,11 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
 
 class GetRealizationsWithSiteLTTest(unittest.TestCase):
     """
-    FullLogicTree.get_realizations must produce the outer product
-    ssc * gsim * site with correctly multiplied weights, and each
-    LtRealization must carry a .site_rlz attribute.
+    FullLogicTree.get_realizations under full enumeration produces the
+    outer product ssc * gsim * site with correctly multiplied weights.
+    
+    Under sampling all three legs are Monte-Carlo sampled num_samples
+    times. In both cases each LtRealization carries a .site_rlz attribute.
     """
     def _build(self, num_samples=0, sampling_method='early_weights'):
         # Trivial single-branch SSC and GSIM + 2-branch site LT

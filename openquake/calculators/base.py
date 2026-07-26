@@ -154,16 +154,17 @@ def get_stats(seq):
 
 def get_weights(oq, dstore):
     """
-    :returns: float32 array of realization weights
+    :returns: array of realization weights
     """
     samples = oq.number_of_logic_tree_samples
-    # Under site-model epistemic uncertainty the effective rlz set is
-    # samples * Rsite, so fall back to dstore['weights'] which holds
-    # the full uniform 1/(samples*Rsite) array
     has_site_lt = 'full_lt/site_model_lt' in dstore
     if samples and not has_site_lt:
+        # Plain sampling: every rlz has uniform weight 1/num_samples
         weights = numpy.ones(samples, dtype=F32)/samples
     else:
+        # Full enumeration, or sampling with a site-model LT under
+        # late_weights (where rlz weights are the product of the
+        # sampled ssc/gmm/site branch weights and thus non-uniform)
         weights = dstore['weights'][:]
     return weights
 
