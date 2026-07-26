@@ -731,9 +731,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.cfactor = numpy.zeros(2)
             self.rel_ruptures = AccumDict(accum=0)
 
-            # Purge _rates/* group and grp_keys so _execute starts clean;
-            # rup/* group is source-only so it is written once (through
-            # _skip_store_ctxs gate below) and reused across iterations
+            # Purge the _rates group and grp_keys dataset so _execute
+            # starts clean; the rup group is source-only so it is written
+            # once (through the _skip_store_ctxs gate below) and reused
+            # across iterations
             h5 = self.datastore.hdf5
             purge = ['_rates/slice_by_idx', '_rates/sid', '_rates/lid',
                      '_rates/gid', '_rates/rate', '_rates', 'grp_keys']
@@ -745,8 +746,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset(
                 '_rates/slice_by_idx', getters.slice_dt)
 
-            # After iteration 0 the rup/* key is already populated with the
-            # canonical rupture data so suppress further appends
+            # After iteration 0 the rup group is already populated with
+            # the canonical rupture data so suppress further appends
             self._skip_store_ctxs = i > 0
 
             # Compute rates for this branch

@@ -154,7 +154,7 @@ def get_stats(seq):
 
 def get_weights(oq, dstore):
     """
-    :returns: array of realization weights
+    :returns: float32 array of realization weights
     """
     samples = oq.number_of_logic_tree_samples
     has_site_lt = 'full_lt/site_model_lt' in dstore
