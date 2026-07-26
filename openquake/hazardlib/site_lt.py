@@ -22,9 +22,9 @@ A site-model logic tree is a NRML XML file with a single branchset of
 ``uncertaintyType="siteModel"`` where each branch points at a site-model
 CSV (or XML) file and carries a weight.
 
-All branches must reference the same sites (identical lon/lat, in the same
-order); only per-site parameters (vs30, z1pt0, z2pt5, ...) may differ across
-branches.
+All branches must reference the same sites (identical lon/lat, and depth
+if present, in the same order); only per-site parameters (vs30, z1pt0,
+z2pt5, ...) may differ across branches.
 """
 import os
 import numpy
@@ -170,8 +170,8 @@ class SiteModelsEpistemic(object):
         1D numpy array of branch weights, summing to 1.
     :param arrays:
         List of structured site-model arrays (one per branch); all arrays
-        must have identical lon/lat (in the same order) and identical site
-        parameter sets.
+        must have identical lon/lat (and depth if present) in the same
+        order and identical site parameter sets.
     :param filenames:
         List of the CSV/XML site model files.
     """

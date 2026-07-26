@@ -137,9 +137,9 @@ The ``site_model_file`` can point to a NRML logic tree XML declaring alternative
 a single site model file. This adds a third leg to the SSC × GMM logic tree; under full enumeration realizations become
 ``R_SSC × R_GMM × R_SITE`` while under sampling all three legs are Monte-Carlo sampled ``num_samples`` times. Each
 realization path gains a third ``~``-separated branch ID (e.g. ``A~A~B``). All branches must reference the same sites
-(identical ``lon``/``lat`` in the same order and identical field sets); only per-site parameter values (``vs30``,
-``z1pt0``, ``z2pt5``, ...) may differ. Branch files may be CSV or NRML ``<siteModel>`` XML. *Site model logic trees
-are currently only supported in classical and disaggregation.*
+(identical ``lon``/``lat`` and ``depth`` if present, in the same order, and identical field sets); only per-site parameter
+values (``vs30``, ``z1pt0``, ``z2pt5``, ...) may differ. Branch files may be CSV or NRML ``<siteModel>`` XML. *Site model
+logic trees are currently only supported in classical and disaggregation.*
 
 Example logic tree XML::
 

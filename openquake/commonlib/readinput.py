@@ -772,7 +772,7 @@ def get_site_models_epistemic(oqparam):
         _parse_site_model_file(path, oqparam, arrays, sm_fieldsets)
         [arr] = arrays
         per_branch_arrays.append(arr)
-        
+
     return site_lt.SiteModelsEpistemic(
         names=tree.branch_ids,
         weights=tree.weights,
@@ -801,9 +801,9 @@ def get_site_model(oqparam, h5=None):
             h5['site_model'] = sm
         return sm
 
-    # Under a site-model LT, all branches share lon/lat so only the
-    # first (canonical) branch is loaded here - the per-branch overlays
-    # are applied later in the calc drivers
+    # Under a site-model LT, all branches share lon/lat (and depth if
+    # present) so only the first (canonical) branch is loaded here -
+    # the per-branch overlays are applied later
     tree = _expand_site_model_lt(oqparam)
     site_files = (oqparam.inputs['site_model'][:1] if tree
                   else oqparam.inputs['site_model'])
