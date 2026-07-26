@@ -249,10 +249,10 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
 class GetRealizationsWithSiteLTTest(unittest.TestCase):
     """
     FullLogicTree.get_realizations must produce the outer product
-    ssx * gsim * site with correctly multiplied weights, and each
+    ssc * gsim * site with correctly multiplied weights, and each
     LtRealization must carry a .site_rlz attribute.
     """
-    def _build(self, num_samples=0):
+    def _build(self, num_samples=0, sampling_method='early_weights'):
         # Trivial single-branch SSC and GSIM + 2-branch site LT
         dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
         a = numpy.array([(-65., 0., 760.)], dt)
@@ -260,6 +260,7 @@ class GetRealizationsWithSiteLTTest(unittest.TestCase):
         full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
         full_lt.source_model_lt = SourceModelLogicTree.fake()
         full_lt.source_model_lt.num_samples = num_samples
+        full_lt.source_model_lt.sampling_method = sampling_method
         full_lt.site_model_lt = SiteModelsEpistemic(
             ['rock', 'soil'], [0.6, 0.4], [a, b])
 
@@ -284,11 +285,30 @@ class GetRealizationsWithSiteLTTest(unittest.TestCase):
             sum(r.weight[0] for r in rlzs), 1.0, atol=1e-6)
 
     def test_early_weights_sampling_produces_uniform_weights(self):
-        # num_samples * R_site = 4 * 2 = 8 rlzs; early_weights forces
-        # uniform 1/8 weight per rlz
+        # early_weights forces uniform 1/num_samples weight per rlz
         full_lt = self._build(num_samples=4)
         rlzs = full_lt.get_realizations()
-        self.assertEqual(len(rlzs), 8)
+        self.assertEqual(len(rlzs), 4)
         self.assertTrue(all(r.site_rlz is not None for r in rlzs))
         for r in rlzs:
-            numpy.testing.assert_allclose(r.weight[0], 1.0 / 8)
+            numpy.testing.assert_allclose(r.weight[0], 1.0 / 4)
+
+    def test_late_weights_sampling_preserves_tree_weights(self):
+        # late_weights draws branches uniformly and keeps each rlz's
+        # tree weight product (rescaled to sum to 1 across all rlzs)
+        full_lt = self._build(num_samples=100,
+                              sampling_method='late_weights')
+        rlzs = full_lt.get_realizations()
+        self.assertEqual(len(rlzs), 100)
+        self.assertTrue(all(r.site_rlz is not None for r in rlzs))
+
+        # Weights sum to 1
+        numpy.testing.assert_allclose(
+            sum(r.weight[0] for r in rlzs), 1.0, atol=1e-6)
+
+        # Exactly two distinct weights appear (rock and soil) and their
+        # ratio equals the tree weight ratio 0.6 / 0.4 = 1.5
+        distinct = sorted(set(round(float(r.weight[0]), 9) for r in rlzs))
+        self.assertEqual(len(distinct), 2)
+        numpy.testing.assert_allclose(
+            distinct[1] / distinct[0], 0.6 / 0.4, atol=1e-6)

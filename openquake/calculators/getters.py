@@ -300,15 +300,15 @@ def _site_lt_variants(full_lt, trt_smrs, fastmean):
     rlzs_arr = full_lt.get_realizations()
     site_ords = numpy.array([r.site_rlz.ordinal for r in rlzs_arr])
     full_lt.gsim_lt.wget = _saved_wget
-    variants = [('_rates_site_%d' % i, site_ords == i)
-                for i in range(site_lt.Rsite)]
+    used_i = [i for i in range(site_lt.Rsite) if (site_ords == i).any()]
+    variants = [('_rates_site_%d' % i, site_ords == i) for i in used_i]
     if not fastmean:
         return variants, None
     # Per-site-rlz gweights: for each gid, sum weights of rlzs owned
     # by this branch only. Ensures fastmean's sum over sub-getters
     # (gid_rate * gid_weight_by_branch) reproduces sum_r w_r * rate_r
     gweights_by_site = []
-    for i in range(site_lt.Rsite):
+    for i in used_i:
         mask = site_ords == i
         gwi = []
         for _trt_smrs in trt_smrs:

@@ -278,13 +278,14 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         combined = None
         for i, arr in enumerate(smep.arrays):
-
-            # Overlay this branch's site params before computing
-            self._overlay_sitecol(arr)
-
             # Restrict this pass to rlzs bound to site branch i
             rlz_filter = {r.ordinal for r in all_rlzs
                           if r.site_rlz.ordinal == i}
+            if not rlz_filter:
+                continue
+
+            # Overlay this branch's site params before computing
+            self._overlay_sitecol(arr)
             part = self._compute_pass(rlz_filter=rlz_filter)
 
             if combined is None:

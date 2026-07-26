@@ -1085,19 +1085,13 @@ class FullLogicTree(object):
                 'site_model_lt': self.site_model_lt}
 
     def init(self):
-        Rsite = (self.site_model_lt.Rsite
-                 if self.site_model_lt is not None else 1)
         if self.source_model_lt.num_samples:
             # NB: the number of effective rlzs can be less than the number
             # of realizations in case of sampling
             self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
-            if Rsite > 1:
-                # When a site-model logic tree is present, every (SM, GSIM)
-                # pair is multiplied by R_site, so each sm_rlz's samples is
-                # N_gsim * R_site
-                for sm_rlz in self.sm_rlzs:
-                    sm_rlz.samples *= Rsite
         else:  # full enumeration
+            Rsite = (self.site_model_lt.Rsite
+                     if self.site_model_lt is not None else 1)
             samples = self.gsim_lt.get_num_paths() * Rsite
             self.sm_rlzs = []
             for sm_rlz in self.source_model_lt:
@@ -1271,13 +1265,10 @@ class FullLogicTree(object):
         """
         :returns: number of the paths in the full logic tree
         """
+        if self.num_samples:
+            return self.num_samples
         Rsite = (self.site_model_lt.Rsite
                  if self.site_model_lt is not None else 1)
-        if self.num_samples:
-            # Sampling: num_samples pairs (SM, GSIM), each fully
-            # enumerated across the site-model branches
-            return self.num_samples * Rsite
-        
         return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * Rsite
 
     def get_realizations(self):
@@ -1286,31 +1277,32 @@ class FullLogicTree(object):
         """
         num_samples = self.source_model_lt.num_samples
         self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
-        site_rlzs = (self.site_model_lt.get_realizations()
-                     if self.site_model_lt is not None else [None])
-        Rsite = len(site_rlzs)
         if num_samples:  # sampling
-            # Sample (SSC, GSIM) num_samples times, then form the outer
-            # product with the site rlzs so the site leg is enumerated
-            rlzs = numpy.empty(num_samples * Rsite, object)
+            rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
             for sm_rlz in self.sm_rlzs:
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
-            k = 0
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                base_w = sm_rlzs[i].weight * gsim_rlz.weight
-                for site_rlz in site_rlzs:
-                    # Weight also by site rlz
-                    w = base_w if site_rlz is None else base_w * site_rlz.weight
-                    rlzs[k] = LtRealization(
-                        k, sm_rlzs[i].lt_path, gsim_rlz, w, site_rlz)
-                    k += 1
+            if self.site_model_lt is not None:
+                site_rlzs = self.site_model_lt.sample(
+                    num_samples, self.seed + 2, self.sampling_method)
+            else:
+                site_rlzs = [None] * num_samples
+            for k, (gsim_rlz, site_rlz) in enumerate(
+                    zip(gsim_rlzs, site_rlzs)):
+                w = sm_rlzs[k].weight * gsim_rlz.weight
+                if site_rlz is not None:
+                    w = w * site_rlz.weight
+                rlzs[k] = LtRealization(
+                    k, sm_rlzs[k].lt_path, gsim_rlz, w, site_rlz)
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
-                    rlz.weight[:] = 1. / (num_samples * Rsite)
+                    rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
+            site_rlzs = (self.site_model_lt.get_realizations()
+                         if self.site_model_lt is not None else [None])
+            Rsite = len(site_rlzs)
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(

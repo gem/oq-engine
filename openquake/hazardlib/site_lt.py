@@ -32,6 +32,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import BASE183
 from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import lt
 from openquake.hazardlib.lt import Realization
 
 
@@ -237,6 +238,24 @@ class SiteModelsEpistemic(object):
                 value=name, weight=float(w), ordinal=i,
                 lt_path=(name,), samples=1))
         return rlzs
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        Monte-Carlo sample n site-model branches with prob = branch
+        weight.
+
+        :param n: number of samples
+        :param seed: random seed
+        :param sampling_method: default of early_weights
+        :returns: list of Realization objects; the same branch may appear
+                  multiple times or not at all. Each realization's ordinal
+                  is the underlying site-branch ordinal, which the classical
+                  or disagg outer loop uses to overlay the per branch site
+                  parameters
+        """
+        branch_rlzs = self.get_realizations()
+        probs = lt.random(n, seed, sampling_method)
+        return lt.sample(branch_rlzs, probs, sampling_method)
 
     @property
     def shortener(self):

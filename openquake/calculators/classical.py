@@ -715,9 +715,15 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         smep = readinput.get_site_models_epistemic(oq)
 
+        rlzs = self.full_lt.get_realizations()
+        used_site_ords = {r.site_rlz.ordinal for r in rlzs
+                          if r.site_rlz is not None}
+
         # Baseline site params from the canonical (first) branch
         baseline = self.sitecol.array.copy()
         for i, arr in enumerate(smep.arrays):
+            if i not in used_site_ords:
+                continue
             self._overlay_sitecol(arr)
 
             # Reset per iteration compute state
