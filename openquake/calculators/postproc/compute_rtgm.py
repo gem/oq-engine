@@ -1017,6 +1017,48 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
     return asce41
 
 
+def run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
+             notification_name, notification_items):
+    sid = site.id
+    loc = site.location
+    locs[loc.x, loc.y].append(sid)
+    if mce_df is None:  # high hazard site requiring calc_mce
+        rtgm[sid] = rtgm_df
+    else:  # low hazard
+        mce_dfs.append(mce_df)
+    if notification_name:
+        if notification_name in AELO_WARNINGS:
+            level = 'warning'
+            description = AELO_WARNINGS[notification_name]
+            logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
+        elif notification_name in AELO_NOTES:
+            level = 'info'
+            description = AELO_NOTES[notification_name]
+            logging.info('(%.1f,%.1f) ' + description, loc.x, loc.y)
+        else:
+            raise NotImplementedError(
+                f'Unexpected notification name: {notification_name}')
+        notification_items.append(
+            (sid, level, notification_name, description))
+    if site.vs30 < 200:
+        # NOTE: process_sites assumes one warning per site. We could change that
+        # and move this into that function. Here I am avoiding to hide other
+        # notifications for the same site
+        notification_name = 'vs30_below_200'
+        level = 'warning'
+        if oq.site_class != 'custom':
+            site_class = oq.site_class
+        else:
+            site_class = f'Vs30 = {site.vs30} m/s'
+        description = AELO_WARNINGS[notification_name] % site_class
+        logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
+        notification_items.append(
+            (sid, level, notification_name, description))
+    if rtgm_df is not None:
+        rtgm_dfs.append(rtgm_df)
+
+
+# tested in PostProcTestCase
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -1043,43 +1085,8 @@ def main(dstore, csm):
     locs = general.AccumDict(accum=[])  # lon, lat -> sids
     for site, rtgm_df, mce_df, notification_name in process_sites(
             dstore, csm, DLLs, ASCE_version):
-        sid = site.id
-        loc = site.location
-        locs[loc.x, loc.y].append(sid)
-        if mce_df is None:  # high hazard site requiring calc_mce
-            rtgm[sid] = rtgm_df
-        else:  # low hazard
-            mce_dfs.append(mce_df)
-        if notification_name:
-            if notification_name in AELO_WARNINGS:
-                level = 'warning'
-                description = AELO_WARNINGS[notification_name]
-                logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
-            elif notification_name in AELO_NOTES:
-                level = 'info'
-                description = AELO_NOTES[notification_name]
-                logging.info('(%.1f,%.1f) ' + description, loc.x, loc.y)
-            else:
-                raise NotImplementedError(
-                    f'Unexpected notification name: {notification_name}')
-            notification_items.append(
-                (sid, level, notification_name, description))
-        if site.vs30 < 200:
-            # NOTE: process_sites assumes one warning per site. We could change that
-            # and move this into that function. Here I am avoiding to hide other
-            # notifications for the same site
-            notification_name = 'vs30_below_200'
-            level = 'warning'
-            if oq.site_class != 'custom':
-                site_class = oq.site_class
-            else:
-                site_class = f'Vs30 = {site.vs30} m/s'
-            description = AELO_WARNINGS[notification_name] % site_class
-            logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
-            notification_items.append(
-                (sid, level, notification_name, description))
-        if rtgm_df is not None:
-            rtgm_dfs.append(rtgm_df)
+        run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
+                notification_name, notification_items)
     notifications = np.array(notification_items, dtype=notification_dtype)
 
     for sid, mag_dst_eps_sig, mce_df in calc_mce(
