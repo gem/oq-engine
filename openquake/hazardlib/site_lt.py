@@ -196,6 +196,9 @@ class SiteModelsEpistemic(object):
         ref = self.arrays[0]
         ref_name = self.filenames[0]
         n = len(ref)
+        # NOTE: custom_site_id is not checked for equality because
+        # the user might use different onces to denote diffs in the
+        # site parameters at same location in each site model
         for other, oname in zip(self.arrays[1:], self.filenames[1:]):
             if len(other) != n:
                 raise InvalidFile(
