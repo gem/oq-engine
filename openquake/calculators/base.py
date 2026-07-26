@@ -1528,11 +1528,11 @@ def import_gmfs_hdf5(dstore, oq):
     :param oq: an OqParam instance
     :returns: event_ids
     """
-    # NB: once we tried to use ExternalLinks to avoid copying the GMFs,
-    # but you cannot access an external link if the file it points to is
+    # NB: we tried to use ExternalLinks to avoid copying the GMFs,
+    # but you cannot access an external link if the file is
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs; moreover a calc_XXX.hdf5 downloaded
-    # from the webui would be small but orphan of the GMFs; moreover
+    # from the webui would be orphan of the GMFs; moreover
     # users changing the name of the external file or changing the
     # ownership would break calc_XXX.hdf5; therefore we copy everything
     # even if bloated (also because of SURA issues having the external
@@ -1597,7 +1597,10 @@ def import_gmfs_hdf5(dstore, oq):
             num_ev_rup_site.append((nE, len(rups), len(conv)))
         oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
-    # store the events
+    return _store_events(E, oq.number_of_logic_tree_samples, dstore)
+
+
+def _store_events(E, n, dstore):
     events = numpy.zeros(E, rupture.events_dt)
     rel = numpy.unique(dstore['gmf_data/eid'][:])
     e = len(rel)
@@ -1605,13 +1608,13 @@ def import_gmfs_hdf5(dstore, oq):
     events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
     logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    n = oq.number_of_logic_tree_samples
     if n:
         dstore['weights'] = numpy.full(n, 1/n)
     else:
         dstore['weights'] = numpy.ones(1)
     return events['id']
 
+    
 
 def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
                     N=None, E=None, R=None):
