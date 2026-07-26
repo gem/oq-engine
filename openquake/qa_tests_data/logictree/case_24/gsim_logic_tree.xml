@@ -5,9 +5,13 @@
         <logicTreeBranchSet uncertaintyType="gmpeModel"
                             branchSetID="bs_gsim"
                             applyToTectonicRegionType="Active Shallow Crust">
-            <logicTreeBranch branchID="b1">
+            <logicTreeBranch branchID="cy14">
                 <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
-                <uncertaintyWeight>1.0</uncertaintyWeight>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="bssa14">
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
     </logicTree>

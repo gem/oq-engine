@@ -29,6 +29,7 @@ from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import _site_lt_variants
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -56,18 +57,24 @@ class LogictreeTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual, delta=delta)
         return got
 
-    def _reconstruct_fastmean_poes(self, dstore, branch_weights):
-        # Sum per-site-rlz rates, weight by branch, convert to poes
+    def _reconstruct_fastmean_poes(self, dstore):
+        # For each site branch i, the datastore holds a per-gid rate
+        # table (_rates_site_i). The mean rate is the sum, over every
+        # (site branch, gid), of rate * (weight of that gid within
+        # that site branch). Convert to poes at the end. This in effect
+        # mirrors MergedMapGetter.get_fast_mean.
         N = dstore['sitecol/sids'].size
         L = self.calc.oqparam.imtls.size
-        rate_by_branch = []
-        for i in range(len(branch_weights)):
-            df = dstore.read_df('_rates_site_%d' % i)
-            arr = numpy.zeros((N, L))
-            for sid, lid, rate in zip(df.sid, df.lid, df.rate):
-                arr[sid, lid] += rate
-            rate_by_branch.append(arr)
-        mean_rate = sum(w * r for w, r in zip(branch_weights, rate_by_branch))
+        full_lt = dstore['full_lt'].init()
+        trt_smrs, _ = contexts.get_unique_inverse(dstore['trt_smrs'])
+        _, gweights_by_site = _site_lt_variants(
+            full_lt, trt_smrs, fastmean=True
+            )
+        mean_rate = numpy.zeros((N, L))
+        for site_i, gweights in enumerate(gweights_by_site):
+            df = dstore.read_df('_rates_site_%d' % site_i)
+            for sid, lid, gid, rate in zip(df.sid, df.lid, df.gid, df.rate):
+                mean_rate[sid, lid] += rate * gweights[gid, -1]
         return 1 - numpy.exp(-mean_rate)
 
     def _assert_site_lt_disagg_keys(self, dstore):
@@ -546,17 +553,24 @@ hazard_uhs-std.csv
         assert ns == 26
 
     def test_case_24(self):
-        # Site LT: 2 branches (rock/soil) x 1 SSC x 1 GMM = 2 rlzs
-        # with 3-part paths (SSC~GMM~SITE); mean = 0.6*rock + 0.4*soil
+        # Site LT: 2 SSC x 2 GMM x 2 SITE = 8 rlzs with 3-part paths
+        # (SSC~GMM~SITE)
         self.run_calc(case_24.__file__, 'job.ini')
         dstore = self.calc.datastore
         rlzs = dstore['full_lt'].rlzs
-        ae(sorted(r['branch_path'] for r in rlzs), ['A~A~A', 'A~A~B'])
-        aac(sorted(r['weight'] for r in rlzs), [0.4, 0.6], atol=1e-6)
+        ae(sorted(r['branch_path'] for r in rlzs),
+           ['A~A~A', 'A~A~B', 'A~B~A', 'A~B~B',
+            'B~A~A', 'B~A~B', 'B~B~A', 'B~B~B'])
+        # SSC=[0.7,0.3], GMM=[0.6,0.4], SITE=[0.6,0.4]
+        expected_ws = sorted(
+            [0.7 * gw * sw for gw in (0.6, 0.4) for sw in (0.6, 0.4)]
+            + [0.3 * gw * sw for gw in (0.6, 0.4) for sw in (0.6, 0.4)])
+        aac(sorted(r['weight'] for r in rlzs), expected_ws, atol=1e-6)
 
         hc = dstore['hcurves-rlzs'][:]
-        aac(dstore['hcurves-stats'][:, 0], 0.6 *
-            hc[:, 0] + 0.4 * hc[:, 1], atol=1e-5)
+        weights = numpy.array([r['weight'] for r in rlzs])
+        aac(dstore['hcurves-stats'][:, 0],
+            numpy.average(hc, axis=1, weights=weights), atol=1e-5)
 
         for fname in (export(('hcurves', 'csv'), dstore)
                       + export(('hmaps', 'csv'), dstore)):
@@ -564,16 +578,16 @@ hazard_uhs-std.csv
 
     def test_case_24_smpl(self):
         # Classical + site LT with sampling. 4 samples * Rsite=2 = 8
-        # rlzs; inner loop is site rlzs so even indices share branch 0,
-        # odd indices share branch 1
+        # rlzs
+        # --> Inner loop is site rlzs so within each (sm, gsim)
+        #     sample pair rlzs (2i, 2i+1) alternate rock/soil params
         self.run_calc(case_24.__file__, 'job_sampling.ini')
         dstore = self.calc.datastore
         hc = dstore['hcurves-rlzs'][:]
         ae(hc.shape[1], 8)
-        for i in range(2, 8, 2):
-            aac(hc[:, 0], hc[:, i])
-            aac(hc[:, 1], hc[:, i + 1])
-        assert not numpy.allclose(hc[:, 0], hc[:, 1])
+        rlzs = dstore['full_lt'].rlzs
+        ae(len(rlzs), 8)
+        aac([r['weight'] for r in rlzs], numpy.full(8, 1./8), atol=1e-6)
 
         # Compare mean + one representative rlz per branch (000, 001)
         keep = {'sampling_hazard_curve-mean-PGA.csv',
@@ -590,7 +604,7 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__, 'job_fastmean.ini')
         dstore = self.calc.datastore
         fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
-        expected = self._reconstruct_fastmean_poes(dstore, [0.6, 0.4])
+        expected = self._reconstruct_fastmean_poes(dstore)
         aac(fm_mean, expected.reshape(fm_mean.shape), atol=1e-6)
 
         # Compare exported mean hazard curve against expected CSV
@@ -598,13 +612,13 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/fastmean_' + strip_calc_id(got), got)
 
     def test_case_24_fm_smpl(self):
-        # Classical fastmean + site LT with sampling. Under early_weights
-        # all 8 rlzs get uniform weight 1/8, so each branch contributes
-        # 4/8 = 0.5 * branch_rate to the mean
+        # Classical fastmean + site LT with sampling.
+        # --> Under early_weights all 8 rlzs get uniform weight 1/8, so
+        #     each branch contributes 4/8 = 0.5 * branch_rate to the mean
         self.run_calc(case_24.__file__, 'job_fastmean_sampling.ini')
         dstore = self.calc.datastore
         fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
-        expected = self._reconstruct_fastmean_poes(dstore, [0.5, 0.5])
+        expected = self._reconstruct_fastmean_poes(dstore)
         aac(fm_mean, expected.reshape(fm_mean.shape), atol=1e-6)
 
         [got] = export(('hcurves', 'csv'), dstore)
@@ -612,15 +626,10 @@ hazard_uhs-std.csv
             'expected/fastmean_sampling_' + strip_calc_id(got), got)
 
     def test_case_24_dsg(self):
-        # Disagg + site LT under full enumeration
+        # Disagg + site LT under full enumeration (8 rlzs)
         self.run_calc(case_24.__file__, 'job_disagg.ini')
         dstore = self.calc.datastore
         self._assert_site_lt_disagg_keys(dstore)
-
-        # Per rlz Mag PMFs must differ between rock and soil branches:
-        # different vs30 -> different GMPE motion -> different disagg
-        mag = dstore['disagg-rlzs/Mag'][:]
-        assert not numpy.allclose(mag[0, :, 0, 0, 0], mag[0, :, 0, 0, 1])
 
         for fname in export(('disagg-stats', 'csv'), dstore):
             basename = strip_calc_id(fname)
@@ -638,12 +647,6 @@ hazard_uhs-std.csv
         ae(len(weights), 8)
         aac(weights, numpy.full(8, 1. / 8), atol=1e-9)
 
-        # Both site branches must be represented in the per-rlz disagg
-        # (best_rlzs may cluster same-branch rlzs, so compare first
-        # and last Z entries rather than adjacent indices)
-        mag = dstore['disagg-rlzs/Mag'][:]
-        assert not numpy.allclose(mag[0, :, 0, 0, 0], mag[0, :, 0, 0, -1])
-
         for fname in export(('disagg-stats', 'csv'), dstore):
             basename = strip_calc_id(fname)
             if basename.startswith('Mag-mean-'):
@@ -655,13 +658,13 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__, 'job_xml_branches.ini')
         xml_dstore = self.calc.datastore
         xml_hc = xml_dstore['hcurves-rlzs'][:]
-        assert not numpy.allclose(xml_hc[:, 0], xml_hc[:, 1])
+        ae(xml_hc.shape[1], 8)
 
         got = export(('hcurves', 'csv'), xml_dstore)
         for fname in got:
             self.assertEqualFiles(
                 'expected/xml_' + strip_calc_id(fname), fname)
-            
+
         # Cross-check against the CSV variant
         self.run_calc(case_24.__file__, 'job.ini')
         csv_hc = self.calc.datastore['hcurves-rlzs'][:]

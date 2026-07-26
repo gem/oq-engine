@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <sourceModel name="Site model epistemic - test source">
+    <sourceModel name="Site model epistemic - test source B">
         <sourceGroup name="grp1" tectonicRegion="Active Shallow Crust">
-            <areaSource id="1" name="area src" tectonicRegion="Active Shallow Crust">
+            <areaSource id="2" name="area src B" tectonicRegion="Active Shallow Crust">
                 <areaGeometry>
                     <gml:Polygon>
                         <gml:exterior>
@@ -19,8 +19,8 @@
                 </areaGeometry>
                 <magScaleRel>WC1994</magScaleRel>
                 <ruptAspectRatio>1.0</ruptAspectRatio>
-                <truncGutenbergRichterMFD aValue="3.5" bValue="1.0"
-                                           minMag="5.0" maxMag="6.5"/>
+                <truncGutenbergRichterMFD aValue="3.2" bValue="1.0"
+                                           minMag="5.0" maxMag="7.0"/>
                 <nodalPlaneDist>
                     <nodalPlane probability="1.0" strike="0.0"
                                 dip="90.0" rake="0.0"/>
