@@ -34,6 +34,7 @@
 | case\_24\_dsg      | Site model logic tree + disaggregation, full enumeration                   |
 | case\_24\_dsg_smpl | Site model logic tree + disaggregation, sampling                           |
 | case\_24\_xml      | Site model logic tree with NRML XML branch files (not CSV)                 |
+| case\_24\_hdf5     | Site model logic tree + disagg reading a classical with sampling dstore    |
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_25           | BC Hydro NVA SSC LT source model LT                                        |

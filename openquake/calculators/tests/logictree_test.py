@@ -100,6 +100,8 @@ class LogictreeTestCase(CalculatorTestCase):
             return
         if 'hcurves-stats' not in self.calc.datastore:  # not produced
             return
+        if not hasattr(self.calc, 'csm'):  # child calcs have no csm
+            return
         oq = self.calc.oqparam
         csm = self.calc.csm
         csm_read = source_group.read_csm(self.calc.datastore)
@@ -716,6 +718,24 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__, 'job.ini')
         csv_hc = self.calc.datastore['hcurves-rlzs'][:]
         aac(xml_hc, csv_hc, atol=1e-6)
+
+    def test_case_24_hdf5(self):
+        # Classical + sampling first, disagg then reads the dstore
+        self.run_calc(case_24.__file__,
+                      'job_sampling.ini,job_disagg_from_parent.ini')
+        dstore = self.calc.datastore
+        # Check site model LT metadata survived
+        assert dstore['full_lt'].init().site_model_lt is not None
+        self._assert_site_lt_disagg_keys(dstore)
+        self._assert_sampling_weights(dstore, n=4, uniform=True)
+        # Check expected results - values differ from standalone
+        # disagg since hcurves are read from parent dstore rather
+        # than recomputed in-process, so use dedicated expected files
+        for fname in export(('disagg-stats', 'csv'), dstore):
+            base = strip_calc_id(fname)
+            if base.startswith('Mag-mean-'):
+                self.assertEqualFiles(
+                    'expected/disagg_hdf5_' + base, fname)
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties
