@@ -671,7 +671,7 @@ def _expand_site_model_lt(oqparam):
         return None
     fname = files[0]
 
-    # Distinguish a site-model LT from regular a site model CSV
+    # Distinguish a site-model LT from a regular site model CSV
     # or site model XML
     if not site_lt.SiteModelLogicTree.is_site_model_lt(fname):
         return None
@@ -696,11 +696,12 @@ def _expand_site_model_lt(oqparam):
 
 def _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets):
     """
-    Parse a single site-model file (CSV or NRML XML) and append the
-    resulting structured array to arrays variable.
+    Parse a single site-model file (CSV or NRML XML), append the resulting
+    structured array to the "arrays" list, and record its field set in
+    the sm_fieldsets dict keyed by filename.
 
-    NOTE: Handles both formats so a site-model logic tree may mix
-    them across branches.
+    NOTE: Handles both formats so a site-model logic tree may mix them
+    across branches.
     """
     # CSV path delegates to the pre-existing _smparse helper
     if isinstance(fname, str) and not fname.endswith('.xml'):
@@ -751,7 +752,7 @@ def _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets):
     arrays.append(sm)
 
 
-def get_site_models_epistemic(oqparam, h5=None):
+def get_site_models_epistemic(oqparam):
     """
     :returns:
         a :class:`openquake.hazardlib.site_lt.SiteModelsEpistemic` when the
@@ -762,7 +763,7 @@ def get_site_models_epistemic(oqparam, h5=None):
     tree = _expand_site_model_lt(oqparam)
     if tree is None:
         return None
-    
+
     # One array per branch of site model LT
     per_branch_arrays = []
     for path in tree.filenames:
@@ -771,24 +772,14 @@ def get_site_models_epistemic(oqparam, h5=None):
         _parse_site_model_file(path, oqparam, arrays, sm_fieldsets)
         [arr] = arrays
         per_branch_arrays.append(arr)
-    smep = site_lt.SiteModelsEpistemic(
+        
+    return site_lt.SiteModelsEpistemic(
         names=tree.branch_ids,
         weights=tree.weights,
         arrays=per_branch_arrays,
         filenames=tree.filenames,
         tree_filename=tree.filename,
         branchset_id=tree.branchset_id)
-    
-    # Save one row per branch (name, weight, filename) so a downstream
-    # calc opening this datastore as its parent can reconstruct 
-    # SiteModelsEpistemic using FullLogicTree.__fromh5__
-    if h5:
-        h5['site_models_epistemic'] = numpy.array(
-            [(n, w, f) for n, w, f in zip(
-                smep.names, smep.weights, smep.filenames)],
-            site_lt.site_model_lt_dt)
-        
-    return smep
 
 
 def get_site_model(oqparam, h5=None):

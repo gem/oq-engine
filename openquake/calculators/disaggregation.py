@@ -46,7 +46,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges,src_mutex, rwdic,
+def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                    rlz_filter, monitor):
     """
     :param dstore:
@@ -71,8 +71,8 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges,src_mutex, rwdic,
         outer loop in compute method overlays one site branch onto the
         sitecol per pass and sets rlz_filter to the rlzs bound to
         that branch, so each pass disaggregates only those rlzs with
-        the correct site params. If set to None it disables filtering
-        which is (the normal non site-LT path).
+        the correct site params. If None, filtering is disabled (the
+        normal non-site-LT path).
     :returns:
         a list of dictionaries containing matrices of rates
     """

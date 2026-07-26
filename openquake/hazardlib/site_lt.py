@@ -187,7 +187,7 @@ class SiteModelsEpistemic(object):
         self.arrays = list(arrays)
         self.filenames = list(filenames) if filenames else list(names)
         # tree_filename and branchset_id are only used by reduce_full
-        # and when reconstructing SiteModelsEpsitemic from HDF5
+        # and when reconstructing SiteModelsEpistemic from HDF5
         self.filename = tree_filename
         self.branchset_id = branchset_id
         self._validate()
@@ -198,7 +198,7 @@ class SiteModelsEpistemic(object):
         ref_name = self.filenames[0]
         n = len(ref)
         # NOTE: custom_site_id is not checked for equality because
-        # the user might use different onces to denote diffs in the
+        # the user might use different ones to denote diffs in the
         # site parameters at same location in each site model
         for other, oname in zip(self.arrays[1:], self.filenames[1:]):
             if len(other) != n:
