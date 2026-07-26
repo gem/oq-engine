@@ -83,6 +83,18 @@ class LogictreeTestCase(CalculatorTestCase):
         assert any(k.startswith('_rates_site_') for k in keys), keys
         assert 'disagg-rlzs' in dstore, list(dstore)
 
+    def _assert_sampling_weights(self, dstore, n, uniform):
+        # Sampled rlz weights: n items summing to 1
+        ws = dstore['weights'][:]
+        ae(len(ws), n)
+        aac(ws.sum(), 1.0, atol=1e-6)
+        if uniform:
+            # Uniform 1/n under early_weights
+            aac(ws, numpy.full(n, 1./n), atol=1e-6)
+        else:
+            # Non-uniform under late_weights
+            assert len(numpy.unique(numpy.round(ws, 6))) > 1, ws
+
     def tearDown(self):
         if not hasattr(self, 'calc'):  # some test broke
             return
@@ -107,38 +119,31 @@ class LogictreeTestCase(CalculatorTestCase):
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
             wget = full_lt.gsim_lt.wget
-            gweights = full_lt.g_weights(trt_smrs)
 
-            def rates(sc):
+            def rates(sc, gws):
                 rmap = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
-                return calc_mean_rates(rmap, gweights, wget, oq.imtls)
+                return calc_mean_rates(rmap, gws, wget, oq.imtls)
 
             # Under site-model epistemic uncertainty the mean rate is
-            # a weighted sum of per-branch rates
+            # sum of per-branch rates using per-branch gweights (rlzs
+            # bound to that branch only)
             if getattr(full_lt, 'site_model_lt', None) is not None:
                 smep = readinput.get_site_models_epistemic(oq)
                 skip = {'lon', 'lat', 'depth', 'sids'}
-                if oq.number_of_logic_tree_samples:
-                    rlzs_all = full_lt.get_realizations()
-                    site_ords = numpy.array(
-                        [r.site_rlz.ordinal for r in rlzs_all])
-                    branch_ws = numpy.array(
-                        [(site_ords == i).sum() / len(rlzs_all)
-                         for i in range(smep.Rsite)])
-                else:
-                    branch_ws = full_lt.site_model_lt.weights
+                variants, gweights_by_site = _site_lt_variants(
+                    full_lt, trt_smrs, fastmean=True)
+                used_i = [int(name.rsplit('_', 1)[1]) for name, _ in variants]
                 partials = []
-                for arr, w in zip(smep.arrays, branch_ws):
-                    if w == 0:
-                        continue
+                for i, gws_i in zip(used_i, gweights_by_site):
+                    arr = smep.arrays[i]
                     sc = copy.deepcopy(sitecol)
                     for name in set(arr.dtype.names) - skip:
                         if name in sc.array.dtype.names:
                             sc.array[name] = arr[name]
-                    partials.append(float(w) * rates(sc))
+                    partials.append(rates(sc, gws_i))
                 mean_rates = sum(partials)
             else:
-                mean_rates = rates(sitecol)
+                mean_rates = rates(sitecol, full_lt.g_weights(trt_smrs))
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=2e-5)
@@ -574,8 +579,7 @@ hazard_uhs-std.csv
         aac(dstore['hcurves-stats'][:, 0],
             numpy.average(hc, axis=1, weights=weights), atol=1e-5)
 
-        # Compare mean + first / last rlz for both hcurves and hmaps;
-        # middle rlzs add no coverage beyond what the mean check catches
+        # Compare mean + first / last rlz for both hcurves and hmaps
         keep = {'hazard_curve-mean-PGA.csv',
                 'hazard_curve-rlz-000-PGA.csv',
                 'hazard_curve-rlz-007-PGA.csv',
@@ -590,42 +594,35 @@ hazard_uhs-std.csv
 
     def test_case_24_smpl(self):
         # Classical + site LT with sampling. All three legs (SSC, GMM,
-        # SITE) are Monte-Carlo sampled num_samples=4 times
+        # SITE) are Monte-Carlo sampled 4 times (num_samples=4)
+        keep = {'hazard_curve-mean-PGA.csv',
+                'hazard_curve-rlz-000-PGA.csv',
+                'hazard_curve-rlz-001-PGA.csv'}
+
+        # early_weights (uniformises rlz weights to 1/N)
         self.run_calc(case_24.__file__, 'job_sampling.ini')
         dstore = self.calc.datastore
-        hc = dstore['hcurves-rlzs'][:]
-        ae(hc.shape[1], 4)
-        rlzs = dstore['full_lt'].rlzs
-        ae(len(rlzs), 4)
-        aac([r['weight'] for r in rlzs], numpy.full(4, 1./4), atol=1e-6)
-
-        # Compare mean + first two exported rlz curves
-        keep = {'sampling_hazard_curve-mean-PGA.csv',
-                'sampling_hazard_curve-rlz-000-PGA.csv',
-                'sampling_hazard_curve-rlz-001-PGA.csv'}
+        ae(dstore['hcurves-rlzs'].shape[1], 4)
+        self._assert_sampling_weights(dstore, n=4, uniform=True)
         for fname in export(('hcurves', 'csv'), dstore):
-            expname = 'sampling_' + strip_calc_id(fname)
-            if expname in keep:
-                self.assertEqualFiles('expected/' + expname, fname)
+            base = strip_calc_id(fname)
+            if base in keep:
+                self.assertEqualFiles('expected/sampling_' + base, fname)
 
-        # Same tree under late_weights
+        # late_weights (preserve normalised w_ssc * w_gmm * w_site product)
         self.run_calc(case_24.__file__, 'job_sampling.ini',
                       sampling_method='late_weights')
-        rlzs_lw = self.calc.datastore['full_lt'].rlzs
-        ae(len(rlzs_lw), 4)
-        # SSC=[0.7,0.3], GMM=[0.6,0.4], SITE=[0.6,0.4]
-        valid = {round(sw * gw * stw, 6)
-                 for sw in (0.7, 0.3)
-                 for gw in (0.6, 0.4)
-                 for stw in (0.6, 0.4)}
-        ws = [round(r['weight'], 6) for r in rlzs_lw]
-        for w in ws:
-            assert w in valid, (w, valid)
-        assert len(set(ws)) > 1, ws  # Non-uniform under late_weights
+        dstore = self.calc.datastore
+        ae(dstore['hcurves-rlzs'].shape[1], 4)
+        self._assert_sampling_weights(dstore, n=4, uniform=False)
+        for fname in export(('hcurves', 'csv'), dstore):
+            base = strip_calc_id(fname)
+            if base in keep:
+                self.assertEqualFiles('expected/sampling_late_' + base, fname)
 
     def test_case_24_fm(self):
         # Classical fastmean (use_rates=true, mean stats,
-        # individual_rlzs=false) + site LT under full enumeration
+        # individual_rlzs=false) + site LT with full enumeration
         self.run_calc(case_24.__file__, 'job_fastmean.ini')
         dstore = self.calc.datastore
         fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
@@ -638,28 +635,32 @@ hazard_uhs-std.csv
 
     def test_case_24_fm_smpl(self):
         # Classical fastmean + site LT with sampling
+
+        # early_weights
         self.run_calc(case_24.__file__, 'job_fastmean_sampling.ini')
         dstore = self.calc.datastore
-        fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
-        expected = self._reconstruct_fastmean_poes(dstore)
-        aac(fm_mean, expected.reshape(fm_mean.shape), atol=1e-6)
-
+        self._assert_sampling_weights(dstore, n=4, uniform=True)
+        fm_mean = dstore['hcurves-stats'][:, 0]
+        aac(fm_mean, self._reconstruct_fastmean_poes(dstore).reshape(
+            fm_mean.shape), atol=1e-6)
         [got] = export(('hcurves', 'csv'), dstore)
         self.assertEqualFiles(
             'expected/fastmean_sampling_' + strip_calc_id(got), got)
 
-        # late_weights: fastmean reconstruction must still hold
+        # late_weights
         self.run_calc(case_24.__file__, 'job_fastmean_sampling.ini',
                       sampling_method='late_weights')
-        lw_dstore = self.calc.datastore
-        lw_mean = lw_dstore['hcurves-stats'][:, 0]
-        lw_expected = self._reconstruct_fastmean_poes(lw_dstore)
-        aac(lw_mean, lw_expected.reshape(lw_mean.shape), atol=1e-6)
-        lw_weights = lw_dstore['weights'][:]
-        assert len(numpy.unique(numpy.round(lw_weights, 6))) > 1, lw_weights
+        dstore = self.calc.datastore
+        self._assert_sampling_weights(dstore, n=4, uniform=False)
+        fm_mean = dstore['hcurves-stats'][:, 0]
+        aac(fm_mean, self._reconstruct_fastmean_poes(dstore).reshape(
+            fm_mean.shape), atol=1e-6)
+        [got] = export(('hcurves', 'csv'), dstore)
+        self.assertEqualFiles(
+            'expected/fastmean_sampling_late_' + strip_calc_id(got), got)
 
     def test_case_24_dsg(self):
-        # Disagg + site LT under full enumeration (8 rlzs)
+        # Disagg + site LT with full enumeration (8 rlzs)
         self.run_calc(case_24.__file__, 'job_disagg.ini')
         dstore = self.calc.datastore
         self._assert_site_lt_disagg_keys(dstore)
@@ -671,28 +672,30 @@ hazard_uhs-std.csv
 
     def test_case_24_dsg_smpl(self):
         # Disagg + site LT with sampling
+        prefix = 'Mag-mean-'
+
+        # early_weights
         self.run_calc(case_24.__file__, 'job_disagg_sampling.ini')
         dstore = self.calc.datastore
         self._assert_site_lt_disagg_keys(dstore)
-
-        weights = dstore['weights'][:]
-        ae(len(weights), 4)
-        aac(weights, numpy.full(4, 1. / 4), atol=1e-9)
-
+        self._assert_sampling_weights(dstore, n=4, uniform=True)
         for fname in export(('disagg-stats', 'csv'), dstore):
-            basename = strip_calc_id(fname)
-            if basename.startswith('Mag-mean-'):
+            base = strip_calc_id(fname)
+            if base.startswith(prefix):
                 self.assertEqualFiles(
-                    'expected/disagg_sampling_' + basename, fname)
+                    'expected/disagg_sampling_' + base, fname)
 
-        # late_weights: same 4 rlzs, but weights are the tree product
+        # late_weights
         self.run_calc(case_24.__file__, 'job_disagg_sampling.ini',
                       sampling_method='late_weights')
-        lw_dstore = self.calc.datastore
-        self._assert_site_lt_disagg_keys(lw_dstore)
-        lw_weights = lw_dstore['weights'][:]
-        ae(len(lw_weights), 4)
-        assert len(numpy.unique(numpy.round(lw_weights, 6))) > 1, lw_weights
+        dstore = self.calc.datastore
+        self._assert_site_lt_disagg_keys(dstore)
+        self._assert_sampling_weights(dstore, n=4, uniform=False)
+        for fname in export(('disagg-stats', 'csv'), dstore):
+            base = strip_calc_id(fname)
+            if base.startswith(prefix):
+                self.assertEqualFiles(
+                    'expected/disagg_sampling_late_' + base, fname)
 
     def test_case_24_xml(self):
         # Site model LT branches point toward XML site models instead
