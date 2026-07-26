@@ -701,22 +701,15 @@ class EventBasedCalculator(base.HazardCalculator):
             self.oqparam.concurrent_tasks or 1)
         return maxweight
 
-    def build_events_from_sources(self):
-        """
-        Prefilter the composite source model and store the source_info
-        """
+    def _build_smap(self):
+        # starmap for build_events_from_sources
         oq = self.oqparam
         maxw = self.counting_ruptures()
-        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        source_data = AccumDict(accum=[])
-        allargs = []
-        logging.info('Building ruptures from %d groups',
-                     len(self.csm.src_groups))
         trt_smrs = self.csm.get_trt_smrs()
         cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
-
+        allargs = []
         sent = []
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
@@ -749,11 +742,21 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
+        return smap
+        
+    def build_events_from_sources(self):
+        """
+        Prefilter the composite source model and store the source_info
+        """
+        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
+        source_data = AccumDict(accum=[])
+        logging.info('Building ruptures from %d groups',
+                     len(self.csm.src_groups))
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         t0 = time.time()
         tot_ruptures = 0
-        for dic in smap:
+        for dic in self._build_smap():
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
             if dic is None:

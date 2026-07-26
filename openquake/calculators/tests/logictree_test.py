@@ -398,7 +398,9 @@ hazard_uhs-std.csv
         # check the realizations contains only literals
         got = [dict(zip(rlz.lt_path, rlz.value))
                for rlz in self.calc.datastore['full_lt'].source_model_lt]
+        self._check(got)
 
+    def _check(got):
         exp0 = {'char_complex': [('complexFaultGeometry',
                                   ([[(-64.5, -0.38221, 2.0),
                                      (-64.5, 0.38221, 4.0)],
