@@ -137,7 +137,7 @@ class SiteModelsEpistemicTest(unittest.TestCase):
         b = self._arr([-65., -63.], [0., 0.], [400., 400.])
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
-        self.assertIn('identical (lon, lat)', str(ctx.exception))
+        self.assertIn('identical lon values', str(ctx.exception))
 
     def test_shortener_uses_base183_and_is_unique(self):
         # The site leg of the composite path uses BASE183, consistent
