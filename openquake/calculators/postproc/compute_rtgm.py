@@ -39,6 +39,7 @@ Useful abbreviations:
 import io
 import sys
 import logging
+from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from scipy.interpolate import RegularGridInterpolator
@@ -1017,15 +1018,14 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
     return asce41
 
 
-def run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
-             notification_name, notification_items):
+def run_site(site, oq, mce_df, rtgm_df, notification_name, acc):
     sid = site.id
     loc = site.location
-    locs[loc.x, loc.y].append(sid)
+    acc.locs[loc.x, loc.y].append(sid)
     if mce_df is None:  # high hazard site requiring calc_mce
-        rtgm[sid] = rtgm_df
+        acc.rtgm[sid] = rtgm_df
     else:  # low hazard
-        mce_dfs.append(mce_df)
+        acc.mce_dfs.append(mce_df)
     if notification_name:
         if notification_name in AELO_WARNINGS:
             level = 'warning'
@@ -1038,7 +1038,7 @@ def run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
         else:
             raise NotImplementedError(
                 f'Unexpected notification name: {notification_name}')
-        notification_items.append(
+        acc.notification_items.append(
             (sid, level, notification_name, description))
     if site.vs30 < 200:
         # NOTE: process_sites assumes one warning per site. We could change that
@@ -1052,12 +1052,21 @@ def run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
             site_class = f'Vs30 = {site.vs30} m/s'
         description = AELO_WARNINGS[notification_name] % site_class
         logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
-        notification_items.append(
+        acc.notification_items.append(
             (sid, level, notification_name, description))
     if rtgm_df is not None:
-        rtgm_dfs.append(rtgm_df)
+        acc.rtgm_dfs.append(rtgm_df)
 
 
+@dataclass
+class Accum:
+    notification_items: list
+    rtgm_dfs: list
+    mce_dfs: list
+    rtgm: dict
+    locs: general.AccumDict
+
+    
 # tested in PostProcTestCase
 def main(dstore, csm):
     """
@@ -1078,26 +1087,21 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    notification_items = []
-    rtgm_dfs = []
-    mce_dfs = []
-    rtgm = {}
-    locs = general.AccumDict(accum=[])  # lon, lat -> sids
+    acc = Accum([],[], [], {}, general.AccumDict(accum=[]))
     for site, rtgm_df, mce_df, notification_name in process_sites(
             dstore, csm, DLLs, ASCE_version):
-        run_site(site, oq, locs, mce_df, mce_dfs, rtgm, rtgm_df, rtgm_dfs,
-                notification_name, notification_items)
-    notifications = np.array(notification_items, dtype=notification_dtype)
+        run_site(site, oq, mce_df, rtgm_df, notification_name, acc)
+    notifications = np.array(acc.notification_items, dtype=notification_dtype)
 
     for sid, mag_dst_eps_sig, mce_df in calc_mce(
-            dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
+            dstore, csm, job_imts, DLLs, acc.rtgm, ASCE_version):
         dstore[f'mag_dst_eps_sig/{sid}'] = mag_dst_eps_sig
-        mce_dfs.append(mce_df)
+        acc.mce_dfs.append(mce_df)
 
-    if mce_dfs:
-        dstore.create_df('mce', pd.concat(mce_dfs))
-    if rtgm_dfs:
-        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
+    if acc.mce_dfs:
+        dstore.create_df('mce', pd.concat(acc.mce_dfs))
+    if acc.rtgm_dfs:
+        dstore.create_df('rtgm', pd.concat(acc.rtgm_dfs))
 
     # final MCE spectra
 
@@ -1107,12 +1111,12 @@ def main(dstore, csm):
     asce07 = compute_asce07(dstore, df, sitecol, custom_ids)
     dstore["asce07"] = to_array(asce07)
 
-    asce41 = compute_asce41(dstore, mce_dfs, sitecol, facts, locs,
+    asce41 = compute_asce41(dstore, acc.mce_dfs, sitecol, facts, acc.locs,
                             custom_ids, ASCE_version)
     dstore["asce41"] = to_array(asce41)
     if len(notifications):
         dstore['notifications'] = notifications
 
     plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and len(locs) == 1:
-        make_figure_sites(dstore, oq, locs, sitecol, notifications)
+    if acc.rtgm_dfs and len(acc.locs) == 1:
+        make_figure_sites(dstore, oq, acc.locs, sitecol, notifications)
