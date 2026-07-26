@@ -1276,7 +1276,11 @@ class FullLogicTree(object):
         :returns: the complete list of LtRealizations
         """
         num_samples = self.source_model_lt.num_samples
-        self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
+        # Preserve any weights already on wget so repeat calls don't wipe them
+        existing = getattr(self.gsim_lt, 'wget', None)
+        existing_weights = existing.weights if existing is not None else None
+        self.gsim_lt.wget = IMTWeigher(
+            self.gsim_lt, num_samples, existing_weights)
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []

@@ -206,17 +206,21 @@ class SiteModelsEpistemic(object):
                     'Site models %s (%d sites) and %s (%d sites) have '
                     'different numbers of sites'
                     % (ref_name, n, oname, len(other)))
-            if not numpy.allclose(ref['lon'], other['lon']) or \
-                    not numpy.allclose(ref['lat'], other['lat']):
-                raise InvalidFile(
-                    'Site models %s and %s must have identical (lon, lat) '
-                    'coordinates in the same order' % (ref_name, oname))
             if set(other.dtype.names) != set(ref.dtype.names):
                 diff = (set(ref.dtype.names) ^ set(other.dtype.names))
                 raise InvalidFile(
                     'Site models %s and %s have different field sets '
                     '(differing fields: %s)'
                     % (ref_name, oname, sorted(diff)))
+            # Geometry fields must match across branches; depth is optional
+            for name in ('lon', 'lat', 'depth'):
+                if name not in ref.dtype.names:
+                    continue
+                if not numpy.allclose(ref[name], other[name]):
+                    raise InvalidFile(
+                        'Site models %s and %s must have identical %s '
+                        'values in the same order'
+                        % (ref_name, oname, name))
 
     def __len__(self):
         return len(self.arrays)

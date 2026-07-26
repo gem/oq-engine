@@ -195,6 +195,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         try:
             full_lt = self.full_lt
         except AttributeError:
+            # Calling init method here would double-init (see
+            # logictree.FullLogicTree.init)
             full_lt = self.datastore['full_lt']
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = self.R  # 0 means all rlzs

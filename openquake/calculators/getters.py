@@ -292,14 +292,8 @@ def _site_lt_variants(full_lt, trt_smrs, fastmean):
     site_lt = getattr(full_lt, 'site_model_lt', None)
     if site_lt is None:
         return [('_rates', None)], None
-    # NB: get_realizations() rebuilds gsim_lt.wget as a fresh IMTWeigher
-    # with weights=None, wiping the population done by full_lt.init().
-    # build_stat_curve (used by disagg's full_disaggregation) reads
-    # full_lt.gsim_lt.wget after this call, so save + restore
-    _saved_wget = full_lt.gsim_lt.wget
     rlzs_arr = full_lt.get_realizations()
     site_ords = numpy.array([r.site_rlz.ordinal for r in rlzs_arr])
-    full_lt.gsim_lt.wget = _saved_wget
     used_i = [i for i in range(site_lt.Rsite) if (site_ords == i).any()]
     variants = [('_rates_site_%d' % i, site_ords == i) for i in used_i]
     if not fastmean:
@@ -556,9 +550,7 @@ class MergedMapGetter(object):
         r0 = numpy.zeros((self.L, self.R))
         for sub in self.sub_getters:
             sub_curve = sub.get_hcurve(sid)  # (L, R), zeros outside mask
-            for r in range(self.R):
-                if sub.rlz_mask[r]:
-                    r0[:, r] = sub_curve[:, r]
+            r0[:, sub.rlz_mask] = sub_curve[:, sub.rlz_mask]
         return r0
 
     def get_fast_mean(self):
