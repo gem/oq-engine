@@ -131,13 +131,26 @@ class SiteModelsEpistemicTest(unittest.TestCase):
         return numpy.array(
             list(zip(lon, lat, vs30)), self.dt)
 
-    def test_lonlat_mismatch_is_rejected(self):
-        # Make sure non-identical lon/lat raises error
+    def test_coords_mismatch_is_rejected(self):
+        # Make sure non-identical coords raise error
         a = self._arr([-65., -64.], [0., 0.], [760., 760.])
         b = self._arr([-65., -63.], [0., 0.], [400., 400.])
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
         self.assertIn('identical lon values', str(ctx.exception))
+
+    def test_depth_mismatch_is_rejected(self):
+        # When depth is present, mismatched depths across branches must
+        # also be rejected (lon/lat identical here to isolate depth)
+        dt = numpy.dtype([('lon', float), ('lat', float),
+                          ('depth', float), ('vs30', float)])
+        a = numpy.array([(-65., 0., 0., 760.),
+                         (-64., 0., 0., 760.)], dt)
+        b = numpy.array([(-65., 0., 0., 400.),
+                         (-64., 0., 10., 400.)], dt)
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
+        self.assertIn('identical depth values', str(ctx.exception))
 
     def test_shortener_uses_base183_and_is_unique(self):
         # The site leg of the composite path uses BASE183, consistent
