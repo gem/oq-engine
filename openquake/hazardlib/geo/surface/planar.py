@@ -158,8 +158,7 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
     corners = numpy.zeros((6, len(cdeps), 3))
     for d, cdep in enumerate(cdeps):
         vshift = vshifts[d]
-        # now we need to find the position of rupture's geometrical center.
-        # in any case the hypocenter point must lie on the surface, however
+        # the hypocenter point must lie on the surface, however
         # the rupture center might be off (below or above) along the dip
         if vshift == 0:
             corners[:4, d, 0:2] = lonlat

@@ -420,32 +420,7 @@ def local_time_to_time_event(local_time):
     return 'transit'
 
 
-def read_usgs_stations_json(js: bytes):
-    try:
-        stations_json_str = js.decode('utf8')
-    except UnicodeDecodeError:
-        stations_json_str = js.decode('latin1')
-    sj = json.loads(stations_json_str)
-    if 'features' not in sj or not sj['features']:
-        # tested in validate_test.py #4
-        return []
-    stations = pd.json_normalize(sj, 'features')
-    if 'metadata' in sj and 'eventid' in sj['metadata']:
-        stations['eventid'] = sj['metadata']['eventid']
-
-    # Rename columns
-    stations.columns = [
-        col.replace('properties.', '') for col in stations.columns]
-    # Extract lon and lat
-    stations[['lon', 'lat']] = pd.DataFrame(
-        stations['geometry.coordinates'].to_list())
-    # Get values for available IMTs (PGA and SA)
-    # ==========================================
-    # The "channels/amplitudes" dictionary contains the values recorded at
-    # the seismic stations. The values could report the 3 components, in such
-    # cases, take the component with maximum PGA (and in absence of PGA, the
-    # first IM reported).
-    channels = pd.DataFrame(stations.channels.to_list())
+def _build_vals(channels):
     vals = pd.Series([], dtype='object')
     for row, rec_station in channels.iterrows():
         rec_station.dropna(inplace=True)
@@ -472,6 +447,35 @@ def read_usgs_stations_json(js: bytes):
             vals[row] = data[max_component]
         else:
             vals[row] = None
+    return vals
+
+
+def read_usgs_stations_json(js: bytes):
+    try:
+        stations_json_str = js.decode('utf8')
+    except UnicodeDecodeError:
+        stations_json_str = js.decode('latin1')
+    sj = json.loads(stations_json_str)
+    if 'features' not in sj or not sj['features']:
+        # tested in validate_test.py #4
+        return []
+    stations = pd.json_normalize(sj, 'features')
+    if 'metadata' in sj and 'eventid' in sj['metadata']:
+        stations['eventid'] = sj['metadata']['eventid']
+
+    # Rename columns
+    stations.columns = [
+        col.replace('properties.', '') for col in stations.columns]
+    # Extract lon and lat
+    stations[['lon', 'lat']] = pd.DataFrame(
+        stations['geometry.coordinates'].to_list())
+    # Get values for available IMTs (PGA and SA)
+    # ==========================================
+    # The "channels/amplitudes" dictionary contains the values recorded at
+    # the seismic stations. The values could report the 3 components, in such
+    # cases, take the component with maximum PGA (and in absence of PGA, the
+    # first IM reported).
+    vals = _build_vals(pd.DataFrame(stations.channels.to_list()))
     # The "pgm_from_mmi" dictionary contains the values estimated from MMI.
     # Combine both dictionaries to extract the values.
     # They are generally mutually exclusive (if mixed, the priority is given
