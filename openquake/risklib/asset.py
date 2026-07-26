@@ -650,7 +650,11 @@ class AssetCollection(object):
         # resulting in a pandas Categorical column.
         gmf_df[tier_col] = pandas.cut(gmf_df[lse_col], bins=bins,
                                       labels=labels, right=False)
+        return self._aggreg(gmf_df, tier_col, aggregate_by, exposure_hdf5)
+
+    def _aggreg(self, gmf_df, tier_col, aggregate_by, exposure_hdf5):
         # Build the exposure DataFrame
+
         geo_columns = list(tagset(aggregate_by))
         dic = {"site_id": self.array["site_id"]}
         # Decode integer tag indices to string values by indexing into tagcol
@@ -662,6 +666,7 @@ class AssetCollection(object):
         for col in geo_columns:
             tag_values = numpy.array(getattr(self.tagcol, col))
             dic[col] = tag_values[self.array[col]]
+
         # self.fields contains names like 'structural', 'number' (i.e. the
         # exposure value columns)
         # self.array['value-structural'] is the corresponding numeric column
@@ -671,6 +676,7 @@ class AssetCollection(object):
             dic[field] = self.array[field]
         exp_df = pandas.DataFrame(dic)
         exposure_cols = list(self.fields) + list(self.occfields)
+
         # Merge on the shared 'site_id' column. Every asset row gets the
         # tier_col value of its site.
         merged_df = pandas.merge(exp_df, gmf_df, on="site_id")
