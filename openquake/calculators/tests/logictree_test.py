@@ -608,6 +608,21 @@ hazard_uhs-std.csv
             if expname in keep:
                 self.assertEqualFiles('expected/' + expname, fname)
 
+        # Same tree under late_weights
+        self.run_calc(case_24.__file__, 'job_sampling.ini',
+                      sampling_method='late_weights')
+        rlzs_lw = self.calc.datastore['full_lt'].rlzs
+        ae(len(rlzs_lw), 4)
+        # SSC=[0.7,0.3], GMM=[0.6,0.4], SITE=[0.6,0.4]
+        valid = {round(sw * gw * stw, 6)
+                 for sw in (0.7, 0.3)
+                 for gw in (0.6, 0.4)
+                 for stw in (0.6, 0.4)}
+        ws = [round(r['weight'], 6) for r in rlzs_lw]
+        for w in ws:
+            assert w in valid, (w, valid)
+        assert len(set(ws)) > 1, ws  # Non-uniform under late_weights
+
     def test_case_24_fm(self):
         # Classical fastmean (use_rates=true, mean stats,
         # individual_rlzs=false) + site LT under full enumeration
@@ -632,6 +647,16 @@ hazard_uhs-std.csv
         [got] = export(('hcurves', 'csv'), dstore)
         self.assertEqualFiles(
             'expected/fastmean_sampling_' + strip_calc_id(got), got)
+
+        # late_weights: fastmean reconstruction must still hold
+        self.run_calc(case_24.__file__, 'job_fastmean_sampling.ini',
+                      sampling_method='late_weights')
+        lw_dstore = self.calc.datastore
+        lw_mean = lw_dstore['hcurves-stats'][:, 0]
+        lw_expected = self._reconstruct_fastmean_poes(lw_dstore)
+        aac(lw_mean, lw_expected.reshape(lw_mean.shape), atol=1e-6)
+        lw_weights = lw_dstore['weights'][:]
+        assert len(numpy.unique(numpy.round(lw_weights, 6))) > 1, lw_weights
 
     def test_case_24_dsg(self):
         # Disagg + site LT under full enumeration (8 rlzs)
@@ -659,6 +684,15 @@ hazard_uhs-std.csv
             if basename.startswith('Mag-mean-'):
                 self.assertEqualFiles(
                     'expected/disagg_sampling_' + basename, fname)
+
+        # late_weights: same 4 rlzs, but weights are the tree product
+        self.run_calc(case_24.__file__, 'job_disagg_sampling.ini',
+                      sampling_method='late_weights')
+        lw_dstore = self.calc.datastore
+        self._assert_site_lt_disagg_keys(lw_dstore)
+        lw_weights = lw_dstore['weights'][:]
+        ae(len(lw_weights), 4)
+        assert len(numpy.unique(numpy.round(lw_weights, 6))) > 1, lw_weights
 
     def test_case_24_xml(self):
         # Site model LT branches point toward XML site models instead
