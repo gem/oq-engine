@@ -2138,9 +2138,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                       'applyToSources', str(ctx.exception))
 
 
-class SerializeSmltTestCase(unittest.TestCase):
-    def test(self):
-        sm = '''\
+sm_xml = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2174,7 +2172,7 @@ class SerializeSmltTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>'''
 
-        lt = '''\
+lt_xml = '''\
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2213,8 +2211,11 @@ class SerializeSmltTestCase(unittest.TestCase):
     </logicTree>
 </nrml>
 '''
+
+class SerializeSmltTestCase(unittest.TestCase):
+    def test(self):
         smlta = _TestableSourceModelLogicTree(
-            'lt', {'lt': lt, 'source_model.xml': sm})
+            'lt', {'lt': lt_xml, 'source_model.xml': sm_xml})
         with hdf5.File.temporary() as h5:
             h5['smlt'] = smlta
         with hdf5.File(h5.path) as h5:  # deserialize
