@@ -213,13 +213,6 @@ class SiteModelsEpistemic(object):
                     'Site models %s and %s have different field sets '
                     '(differing fields: %s)'
                     % (ref_name, oname, sorted(diff)))
-            # custom_site_id presence is already enforced by the field-set
-            # check above; when present in both, values must also match
-            if 'custom_site_id' in ref.dtype.names and not numpy.array_equal(
-                    ref['custom_site_id'], other['custom_site_id']):
-                raise InvalidFile(
-                    'Site models %s and %s have different custom_site_id '
-                    'values' % (ref_name, oname))
 
     def __len__(self):
         return len(self.arrays)
