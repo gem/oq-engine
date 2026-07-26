@@ -139,6 +139,18 @@ class SiteModelsEpistemicTest(unittest.TestCase):
             SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
         self.assertIn('identical (lon, lat)', str(ctx.exception))
 
+    def test_custom_site_id_mismatch_is_rejected(self):
+        # When both branches carry custom_site_id, values must match
+        dt = numpy.dtype([('lon', float), ('lat', float),
+                          ('vs30', float), ('custom_site_id', 'S8')])
+        a = numpy.array([(-65., 0., 760., b'siteA'),
+                         (-64., 0., 760., b'siteB')], dt)
+        b = numpy.array([(-65., 0., 360., b'siteA'),
+                         (-64., 0., 360., b'siteX')], dt)
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
+        self.assertIn('custom_site_id', str(ctx.exception))
+
     def test_shortener_uses_base183_and_is_unique(self):
         # The site leg of the composite path uses BASE183, consistent
         # with the SSC and GSIM shorteners; short chars must be unique
