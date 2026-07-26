@@ -480,8 +480,7 @@ def _update_azi(p, f, iso):
     for i in range(360):
         fir = i * D2R
         s2alphan = (2.0 + 2.0 * iso) / float(
-            3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir)
-        )
+            3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir))
         if s2alphan > 1.0:
             p.big_iso += 1
         else:
@@ -492,13 +491,8 @@ def _update_azi(p, f, iso):
             can = np.cos(alphan)
 
             xz = can * spd + san * sfi * spb + san * cfi * spm
-            xn = (
-                can * cpd * cad + san * sfi * cpb * cab + san * cfi * cpm * cam
-            )
-            xe = (
-                can * cpd * sad + san * sfi * cpb * sab + san * cfi * cpm * sam
-            )
-
+            xn = can*cpd*cad + san*sfi*cpb*cab + san*cfi*cpm*cam
+            xe = can*cpd*sad + san*sfi*cpb*sab + san*cfi*cpm*sam
             if np.fabs(xn) < EPSILON and np.fabs(xe) < EPSILON:
                 takeoff = 0.0
                 az = 0.0
