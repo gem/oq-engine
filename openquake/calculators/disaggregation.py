@@ -244,45 +244,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                      for z, r in enumerate(rlzs[s])}
         return self.compute()
 
-    def compute(self):
-        """
-        Submit disaggregation tasks and return the results
-        """
-        oq = self.oqparam
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        logging.info("Reading contexts")
-        cmakers = read_cmakers(dstore).to_array()
-        if 'src_mutex' in dstore:
-            gb = dstore.read_df('src_mutex').groupby('grp_id')
-            gp = dict(dstore['grp_probability'])  # grp_id -> probability
-            src_mutex_by_grp = {
-                grp_id: {'src_id': disagg.get_ints(df.src_id),
-                         'weight': df.mutex_weight.to_numpy(),
-                         'rup_mutex': df.rup_mutex.to_numpy(),
-                         'grp_probability': gp[grp_id]}
-                for grp_id, df in gb}
-        else:
-            src_mutex_by_grp = {}
-        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
-        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
-        logging.info('Read {:_d} contexts'.format(totctxs))
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        # IMPORTANT!! we rely on the fact that the classical part
-        # of the calculation stores the ruptures in chunks of constant
-        # grp_id, therefore it is possible to build (start, stop) slices;
-        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
-        # that would break the ordering of the indices causing an incredibly
-        # worse performance, but visible only in extra-large calculations!
-
+    def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp):
         # compute the total weight of the contexts and the maxsize
+        ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
                         for grp_id, ctx in ctx_by_grp.items())
-        maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
+        maxsize = int(numpy.ceil(totweight / ct))
         logging.debug(f'{totweight=}, {maxsize=}')
-
-        s = self.shapedic
         if self.Z > 1:
             weights = self.datastore['weights'][:]
         else:
@@ -328,6 +296,38 @@ class DisaggregationCalculator(base.HazardCalculator):
                     submit(smap, self.datastore, ctx, tile, cmaker,
                            self.bin_edges, src_mutex, rwdic)
 
+    def compute(self):
+        """
+        Submit disaggregation tasks and return the results
+        """
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        cmakers = read_cmakers(dstore).to_array()
+        if 'src_mutex' in dstore:
+            gb = dstore.read_df('src_mutex').groupby('grp_id')
+            gp = dict(dstore['grp_probability'])  # grp_id -> probability
+            src_mutex_by_grp = {
+                grp_id: {'src_id': disagg.get_ints(df.src_id),
+                         'weight': df.mutex_weight.to_numpy(),
+                         'rup_mutex': df.rup_mutex.to_numpy(),
+                         'grp_probability': gp[grp_id]}
+                for grp_id, df in gb}
+        else:
+            src_mutex_by_grp = {}
+        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
+        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(totctxs))
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        # IMPORTANT!! we rely on the fact that the classical part
+        # of the calculation stores the ruptures in chunks of constant
+        # grp_id, therefore it is possible to build (start, stop) slices;
+        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
+        # that would break the ordering of the indices causing an incredibly
+        # worse performance, but visible only in extra-large calculations!
+
+        self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp)
+        s = self.shapedic
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
         check_memory(self.N, self.Z, shape8D)
