@@ -91,6 +91,12 @@ def test_impact(n):
                 'aggexp_tags-ID_0.csv',
                 'aggexp_tags-ID_2.csv']
 
+            # test export aggrisk-stats
+            fnames = export(('aggrisk-stats', 'csv'), calc.datastore)
+            assert [strip(f) for f in fnames] == [
+                'aggrisk-stats-ID_0.csv',
+                'aggrisk-stats-ID_2.csv']
+
             # [job.ini, exposure.xml, rupture.csv, ...]
             fnames = check_export_job_zip(calc.datastore)
 
