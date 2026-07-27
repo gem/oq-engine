@@ -25,6 +25,7 @@ import tempfile
 import functools
 import subprocess
 from datetime import datetime, timezone
+from concurrent.futures import ProcessPoolExecutor
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -37,7 +38,7 @@ except ImportError:
 UTC = timezone.utc
 
 
-def init_workers():
+def init_worker():
     """Used to initialize the process pool"""
     setproctitle('oq-zworker')
 
@@ -260,15 +261,6 @@ def call(func, args, taskno, mon, executing):
     os.remove(fname)
 
 
-def errback(job_id, task_no, exc):
-    # NB: job_id can be None if the Starmap was invoked without h5
-    from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
-          '%s/%s' % (job_id, task_no), str(exc))
-    e = exc.__class__('in job %d, task %d' % (job_id, task_no))
-    raise e.with_traceback(exc.__traceback__)
-
-
 class WorkerPool(object):
     """
     A pool of workers accepting various commands.
@@ -310,8 +302,8 @@ class WorkerPool(object):
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
-        self.pool = general.mp.Pool(self.num_workers, init_workers)
-        pids = [proc.pid for proc in self.pool._pool]
+        self.pool = ProcessPoolExecutor(self.num_workers, general.mp, init_worker)
+        pids = [proc.pid for proc in self.pool._processes]
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -322,7 +314,9 @@ class WorkerPool(object):
                         break
                     elif cmd == 'restart':
                         self.stop()
-                        self.pool = general.mp.Pool(self.num_workers)
+                        self.pool = ProcessPoolExecutor(
+                            self.num_workers, general.mp, init_worker)
+                        pids = [proc.pid for proc in self.pool._processes]
                         ctrlsock.send('restarted')
                     elif cmd == 'getpid':
                         ctrlsock.send(self.proc.pid)
@@ -339,11 +333,9 @@ class WorkerPool(object):
                     elif cmd == 'memory_gb':
                         ctrlsock.send(performance.memory_gb(pids))
                     elif isinstance(cmd, tuple):
-                        _func, _args, taskno, mon = cmd
-                        self.pool.apply_async(
-                            call, cmd + (self.executing,),
-                            error_callback=functools.partial(
-                                errback, mon.calc_id, taskno))
+                        func, args, taskno, mon = cmd
+                        self.pool.submit(call, func, args, taskno, mon,
+                                         self.executing)
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')
@@ -354,9 +346,7 @@ class WorkerPool(object):
         """
         Terminate the pool
         """
-        self.pool.close()
-        self.pool.terminate()
-        self.pool.join()
+        self.pool.shutdown(wait=False, cancel_futures=True)
         return 'WorkerPool on %s stopped' % self.hostname
 
 
