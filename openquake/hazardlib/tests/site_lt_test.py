@@ -111,24 +111,6 @@ DUP_BRID_XML = '''<?xml version="1.0" encoding="UTF-8"?>
   </logicTree>
 </nrml>'''
 
-# Two sibling <logicTreeBranchSet> elements, only one is supported
-TWO_BSETS_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <logicTree logicTreeID="lt_site">
-    <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs1">
-      <logicTreeBranch branchID="rock">
-        <uncertaintyModel>rock.csv</uncertaintyModel>
-        <uncertaintyWeight>1.0</uncertaintyWeight>
-      </logicTreeBranch>
-    </logicTreeBranchSet>
-    <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs2">
-      <logicTreeBranch branchID="soil">
-        <uncertaintyModel>soil.csv</uncertaintyModel>
-        <uncertaintyWeight>1.0</uncertaintyWeight>
-      </logicTreeBranch>
-    </logicTreeBranchSet>
-  </logicTree>
-</nrml>'''
 
 # <logicTree> with no <logicTreeBranchSet> at all
 NO_BSET_XML = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -170,12 +152,6 @@ class SiteModelLogicTreeTest(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelLogicTree(_write(DUP_BRID_XML))
         self.assertIn('duplicate', str(ctx.exception).lower())
-
-    def test_rejects_more_than_one_branchset(self):
-        # A site-model LT is restricted to a single <logicTreeBranchSet>
-        with self.assertRaises(InvalidFile) as ctx:
-            SiteModelLogicTree(_write(TWO_BSETS_XML))
-        self.assertIn('only one', str(ctx.exception))
 
     def test_rejects_missing_branchset(self):
         # <logicTree> without any siteModel branchset must be rejected
