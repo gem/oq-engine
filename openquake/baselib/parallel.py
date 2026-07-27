@@ -205,7 +205,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode, sighandler
+from openquake.baselib.general import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_gb, init_performance)
@@ -280,6 +280,8 @@ def init_worker():
     and sets the flag Starmap.on, so that it is possible to determine if
     the current code is begin run in parallel or not.
     """
+    # SIGINT ignored in the workers to reduce tracebacks
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         from setproctitle import setproctitle
     except ImportError:
@@ -719,10 +721,8 @@ class Starmap(object):
     def init(cls, distribute=None):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
-            with sighandler('SIGINT', signal.SIG_IGN):
-                # SIGINT not passed to the workers to reduce traceback
-                cls.pool = ProcessPoolExecutor(
-                    num_cores, mp_context, init_worker)
+            cls.pool = ProcessPoolExecutor(
+                num_cores, mp_context, init_worker)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
