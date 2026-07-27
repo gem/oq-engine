@@ -1411,6 +1411,8 @@ def impact_run_with_shakemap(request):
     maxdist = request.POST.get('maximum_distance')
     if maxdist:  # set in the _success test for speed
         post['maximum_distance'] = maxdist
+    if 'make_impact_reports' in request.POST:
+        post['make_impact_reports'] = request.POST['make_impact_reports']
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]

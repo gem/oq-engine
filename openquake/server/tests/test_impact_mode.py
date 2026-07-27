@@ -412,7 +412,7 @@ class ImpactModeTestCase(django.test.TestCase):
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
                          if version['number'] == '10']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
-                    maximum_distance='100')
+                    maximum_distance='100', make_impact_reports=True)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in IMPACT mode
