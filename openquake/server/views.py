@@ -1404,8 +1404,8 @@ def impact_run_with_shakemap(request):
     if err:
         return JsonResponse(
             err, status=400 if 'invalid_inputs' in err else 500)
-    post = {key: str(val) for key, val in rupdic.items()
-            if key != 'shakemap_array'}
+    post.update({key: str(val) for key, val in rupdic.items()
+                 if key != 'shakemap_array'})
     if 'time_event' in request.POST:
         post['time_event'] = request.POST['time_event']
     maxdist = request.POST.get('maximum_distance')
