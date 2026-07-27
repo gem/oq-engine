@@ -94,6 +94,49 @@ WRONG_UTYPE_XML = '''<?xml version="1.0" encoding="UTF-8"?>
   </logicTree>
 </nrml>'''
 
+# Two branches sharing the same branchID, should be rejected
+DUP_BRID_XML = '''<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt_site">
+    <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs">
+      <logicTreeBranch branchID="rock">
+        <uncertaintyModel>rock.csv</uncertaintyModel>
+        <uncertaintyWeight>0.6</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="rock">
+        <uncertaintyModel>soil.csv</uncertaintyModel>
+        <uncertaintyWeight>0.4</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>'''
+
+# Two sibling <logicTreeBranchSet> elements, only one is supported
+TWO_BSETS_XML = '''<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt_site">
+    <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs1">
+      <logicTreeBranch branchID="rock">
+        <uncertaintyModel>rock.csv</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs2">
+      <logicTreeBranch branchID="soil">
+        <uncertaintyModel>soil.csv</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>'''
+
+# <logicTree> with no <logicTreeBranchSet> at all
+NO_BSET_XML = '''<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt_site">
+  </logicTree>
+</nrml>'''
+
 
 def _write(text):
     fd, path = tempfile.mkstemp(suffix='.xml', text=True)
@@ -121,6 +164,24 @@ class SiteModelLogicTreeTest(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelLogicTree(_write(BAD_WEIGHT_XML))
         self.assertIn('sum to', str(ctx.exception))
+
+    def test_rejects_duplicate_branch_ids(self):
+        # Two branches sharing the same branchID must be rejected
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelLogicTree(_write(DUP_BRID_XML))
+        self.assertIn('duplicate', str(ctx.exception).lower())
+
+    def test_rejects_more_than_one_branchset(self):
+        # A site-model LT is restricted to a single <logicTreeBranchSet>
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelLogicTree(_write(TWO_BSETS_XML))
+        self.assertIn('only one', str(ctx.exception))
+
+    def test_rejects_missing_branchset(self):
+        # <logicTree> without any siteModel branchset must be rejected
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelLogicTree(_write(NO_BSET_XML))
+        self.assertIn('no siteModel branchset', str(ctx.exception))
 
 
 class SiteModelsEpistemicTest(unittest.TestCase):
@@ -151,6 +212,20 @@ class SiteModelsEpistemicTest(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
         self.assertIn('identical depth values', str(ctx.exception))
+
+    def test_field_set_mismatch_is_rejected(self):
+        # Branches must expose the same site parameters; a differing
+        # field set (e.g. one branch has z1pt0, the other does not)
+        # must be rejected before the per-field geometry loop runs
+        dt_a = numpy.dtype([('lon', float), ('lat', float),
+                            ('vs30', float)])
+        dt_b = numpy.dtype([('lon', float), ('lat', float),
+                            ('vs30', float), ('z1pt0', float)])
+        a = numpy.array([(-65., 0., 760.)], dt_a)
+        b = numpy.array([(-65., 0., 400., 50.)], dt_b)
+        with self.assertRaises(InvalidFile) as ctx:
+            SiteModelsEpistemic(['A', 'B'], [0.6, 0.4], [a, b])
+        self.assertIn('different field sets', str(ctx.exception))
 
     def test_shortener_uses_base183_and_is_unique(self):
         # The site leg of the composite path uses BASE183, consistent

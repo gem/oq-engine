@@ -122,10 +122,13 @@ class SiteModelLogicTree(object):
         if not found_bset:
             raise InvalidFile(
                 '%s: no siteModel branchset found' % self.filename)
-        if len(self.branches) < 2:
+        # Branch IDs must be unique within the branchset
+        brids = [b for b, _, _ in self.branches]
+        if len(set(brids)) != len(brids):
+            dups = sorted({b for b in brids if brids.count(b) > 1})
             raise InvalidFile(
-                '%s: a site-model logic tree needs at least 2 branches'
-                % self.filename)
+                '%s: duplicate branchID(s) in site-model logic tree: %s'
+                % (self.filename, dups))
         # Matches the SSC/GSIM cap in SourceModelLogicTree - keeps the
         # site leg of the composite path a single BASE183 character
         if len(self.branches) > len(BASE183):
