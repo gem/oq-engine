@@ -19,12 +19,12 @@ import os
 import sys
 import time
 import shutil
+import signal
 import socket
 import getpass
 import tempfile
-import functools
 import subprocess
-from datetime import datetime, timezone
+from datetime import timezone
 from concurrent.futures import ProcessPoolExecutor
 import psutil
 from openquake.baselib import (
@@ -39,7 +39,11 @@ UTC = timezone.utc
 
 
 def init_worker():
-    """Used to initialize the process pool"""
+    """
+    Used to initialize the process pool
+    """
+    # SIGINT ignored in the workers to reduce tracebacks
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     setproctitle('oq-zworker')
 
 
@@ -258,7 +262,10 @@ def call(func, args, taskno, mon, executing):
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
     parallel.safely_call(func, args, taskno, mon)
-    os.remove(fname)
+    try:
+        os.remove(fname)
+    except FileNotFoundError:
+        pass
 
 
 class WorkerPool(object):
@@ -286,6 +293,11 @@ class WorkerPool(object):
             pass
         self.pid = os.getpid()
 
+    def set_pool(self):
+        self.pool = ProcessPoolExecutor(
+            self.num_workers, general.mp, init_worker)
+        self.pids = [proc.pid for proc in self.pool._processes]
+            
     def start(self):
         """
         Start worker processes and a control loop
@@ -302,8 +314,7 @@ class WorkerPool(object):
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
-        self.pool = ProcessPoolExecutor(self.num_workers, general.mp, init_worker)
-        pids = [proc.pid for proc in self.pool._processes]
+        self.set_pool()
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -314,9 +325,7 @@ class WorkerPool(object):
                         break
                     elif cmd == 'restart':
                         self.stop()
-                        self.pool = ProcessPoolExecutor(
-                            self.num_workers, general.mp, init_worker)
-                        pids = [proc.pid for proc in self.pool._processes]
+                        self.set_pool()
                         ctrlsock.send('restarted')
                     elif cmd == 'getpid':
                         ctrlsock.send(self.proc.pid)
@@ -331,7 +340,7 @@ class WorkerPool(object):
                         subprocess.Popen(lst)
                         ctrlsock.send("started %d" % self.job_id)
                     elif cmd == 'memory_gb':
-                        ctrlsock.send(performance.memory_gb(pids))
+                        ctrlsock.send(performance.memory_gb(self.pids))
                     elif isinstance(cmd, tuple):
                         func, args, taskno, mon = cmd
                         self.pool.submit(call, func, args, taskno, mon,
