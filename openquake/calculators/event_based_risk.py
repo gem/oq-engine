@@ -42,7 +42,8 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 400
+GMF1_MB = 80
+GMF2_MB = 400
 get_n_occ = operator.itemgetter(1)
 
 
@@ -335,13 +336,13 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
            if len(dic['gmfdata']))
-    for b, blk in enumerate(general.block_splitter(dfs, GMF_MB, size_mb)):
+    for b, blk in enumerate(general.block_splitter(dfs, GMF2_MB, size_mb)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        if b == 0:
+        size = round(sum(size_mb(df) for df in blk))
+        if b == 0 or size < GMF1_MB:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
-            size = round(sum(size_mb(df) for df in blk))
             print(f'{monitor.task_no=}, {size=}')
             yield event_based_risk, pandas.concat(blk)
 
