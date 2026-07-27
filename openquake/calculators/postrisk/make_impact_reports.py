@@ -63,6 +63,11 @@ LOSS_LABELS = [v["label"] for v in LOSS_METADATA.values()]
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 
+DISCLAIMER_TXT = '''
+    This is an automatically generated draft. Content has not been verified for
+    accuracy by a human reviewer. The metrics presented were estimated based on
+    ground shaking information from ShakeMap only. Impact assessments are
+    subject to changes as more information becomes available.'''
 
 @dataclass
 class EventContext:
@@ -1014,9 +1019,10 @@ def get_dynamic_threshold(mag):
         return 5.0  # ~555 km
 
 
-def main(dstore, adm_level=1, threshold_deg=None):
+def _open_dstore(dstore):
     """
-    Create an impact report in PDF and PNG formats
+    Resolve the dstore argument (path/int from CLI, or an open Datastore),
+    returning (dstore, calc_id).
     """
     if isinstance(dstore, (str, int)):
         # NOTE: called from the command line
@@ -1025,84 +1031,127 @@ def main(dstore, adm_level=1, threshold_deg=None):
         dstore = datastore.read(calc_id, mode='r+')
     else:
         calc_id = dstore.calc_id
-    adm_level = int(adm_level)
+    return dstore, calc_id
+
+
+def _get_basemap_path():
     try:
-        basemap_path = config.directory.basemap_file
+        return config.directory.basemap_file
     except AttributeError:
-        basemap_path = None
         logging.error('config.directory.basemap_file is missing!')
-    dstore.close()
-    dstore.open('r+')
-    dstore.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    oqparam = dstore['oqparam']
-    mag = oqparam.rupture_dict['mag']
-    lon = oqparam.rupture_dict['lon']
-    lat = oqparam.rupture_dict['lat']
+        return None
+
+
+def _is_no_uncertainty(oqparam):
     # If the ground motion is fully deterministic, we suppress uncertainty
     # ranges in the report and show only the central (point) estimate.
-    no_uncertainty = (
-        oqparam.number_of_ground_motion_fields == 1
-        and abs(oqparam.truncation_level) < 1e-8
-    )
-    hypocenter = (lon, lat)
-    avg_losses = extract(dstore, 'avg_losses?kind=stats')
-    # Use the median (quantile-0.5) as the representative point estimate for
-    # the spatial loss maps, consistent with how _get_impact_summary_data
-    # displays the central value.  Fall back to the mean only if the median is
-    # unavailable (e.g. a calculation run without quantile outputs).
-    loss_metric = None
-    if hasattr(avg_losses, 'quantile-0.5') and avg_losses[
-            'quantile-0.5'] is not None:
-        losses_df = pd.DataFrame(avg_losses['quantile-0.5'])
-        loss_metric = 'Median'
+    return (oqparam.number_of_ground_motion_fields == 1
+            and abs(oqparam.truncation_level) < 1e-8)
+
+
+def _get_losses_df(avg_losses):
+    """
+    Use the median (quantile-0.5) as the representative point estimate for
+    the spatial loss maps, consistent with how _get_impact_summary_data
+    displays the central value. Fall back to the mean only if the median is
+    unavailable (e.g. a calculation run without quantile outputs).
+    """
+    if (hasattr(avg_losses, 'quantile-0.5')
+            and avg_losses['quantile-0.5'] is not None):
+        return pd.DataFrame(avg_losses['quantile-0.5']), 'Median'
     elif hasattr(avg_losses, 'mean') and avg_losses.mean is not None:
         logging.warning(
-            "Median losses not available; falling back to mean for loss maps.")
-        losses_df = pd.DataFrame(avg_losses.mean)
-        loss_metric = 'Mean'
+            "Median losses not available; falling back to mean for "
+            "loss maps.")
+        return pd.DataFrame(avg_losses.mean), 'Mean'
     else:
         raise RuntimeError(
             "avg_losses has neither 'quantile' nor 'mean' attribute; "
             "cannot build losses DataFrame.")
-    rupdic = oqparam.rupture_dict
+
+
+def _get_event_name(rupdic):
     try:
-        event_name = rupdic['description']
+        return rupdic['description']
     except KeyError:
-        event_name = rupdic['title']
-    # FIXME: do we prefer to show UTC or perhaps it is more intuitive
-    #        to show the local time?
-    event_date = to_utc_string(oqparam.local_timestamp)
+        return rupdic['title']
+
+
+def _get_shakemap_version(rupdic):
     try:
-        shakemap_version = rupdic['shakemap_desc']
+        return rupdic['shakemap_desc']
     except KeyError:
-        shakemap_version = None
-    job = logs.dbcmd('get_job', calc_id)
-    time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
-    disclaimer_txt = '''
-    This is an automatically generated draft. Content has not been verified for
-    accuracy by a human reviewer. The metrics presented were estimated based on
-    ground shaking information from ShakeMap only. Impact assessments are
-    subject to changes as more information becomes available.'''
+        return None
+
+
+def _get_threshold_deg(threshold_deg, mag):
     if threshold_deg is None:
         threshold_deg = get_dynamic_threshold(mag)
         logging.info(f"Magnitude {mag} detected. Using dynamic"
                      f" threshold: {threshold_deg} degrees.")
-    else:
-        threshold_deg = float(threshold_deg)
+        return threshold_deg
+    return float(threshold_deg)
+
+
+def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
+    """
+    Gather everything needed to build per-country reports and return
+    (event_ctx, report_opts, losses_df, iso3_codes, time_of_calc).
+    """
+    mag = oqparam.rupture_dict['mag']
+    lon = oqparam.rupture_dict['lon']
+    lat = oqparam.rupture_dict['lat']
+    no_uncertainty = _is_no_uncertainty(oqparam)
+
+    avg_losses = extract(dstore, 'avg_losses?kind=stats')
+    losses_df, loss_metric = _get_losses_df(avg_losses)
+
+    rupdic = oqparam.rupture_dict
+    event_name = _get_event_name(rupdic)
+    # FIXME: do we prefer to show UTC or perhaps it is more intuitive
+    #        to show the local time?
+    event_date = to_utc_string(oqparam.local_timestamp)
+    shakemap_version = _get_shakemap_version(rupdic)
+
+    job = logs.dbcmd('get_job', calc_id)
+    time_of_calc = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
+
+    threshold_deg = _get_threshold_deg(threshold_deg, mag)
     # close countries are ordered by ascending distance
     iso3_codes = get_close_countries(lon, lat, buffer_radius=threshold_deg)
     if not iso3_codes:
         raise RuntimeError(
             "No country within {threshold_deg} from the hypocenter")
+
     event_ctx = EventContext(
-        name=event_name, date=event_date, hypocenter=hypocenter,
+        name=event_name, date=event_date, hypocenter=(lon, lat),
         shakemap_version=shakemap_version)
     report_opts = ReportOptions(
-        disclaimer_txt=disclaimer_txt,
-        basemap_path=basemap_path, threshold_deg=threshold_deg,
+        disclaimer_txt=DISCLAIMER_TXT,
+        basemap_path=_get_basemap_path(), threshold_deg=threshold_deg,
         no_uncertainty=no_uncertainty, loss_metric=loss_metric)
+
+    return event_ctx, report_opts, losses_df, iso3_codes, time_of_calc
+
+
+def main(dstore, adm_level=1, threshold_deg=None):
+    """
+    Create an impact report in PDF and PNG formats
+    """
+    dstore, calc_id = _open_dstore(dstore)
+    adm_level = int(adm_level)
+
+    dstore.close()
+    dstore.open('r+')
+    dstore.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    oqparam = dstore['oqparam']
+
+    event_ctx, report_opts, losses_df, iso3_codes, time_of_calc = (
+        _build_report_contexts(dstore, oqparam, calc_id, threshold_deg))
+
     for iso3 in iso3_codes:
-        summary_data = _get_impact_summary_data(dstore, iso3, no_uncertainty)
+        summary_data = _get_impact_summary_data(
+            dstore, iso3, report_opts.no_uncertainty)
         if summary_data is not None:
             make_report_for_country(
                 iso3, adm_level, event_ctx, report_opts,
