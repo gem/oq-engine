@@ -154,7 +154,12 @@ def export_aggrisk_stats(ekey, dstore):
         # tested in case_12
         aggnames = set()
         for aggby in oq.aggregate_by:
-            aggnames.update(aggby)
+            for aggfield in aggby:
+                if aggfield == 'ID_2':
+                    # to be consistent with extract aggrisk_tags
+                    aggnames.add('ID')
+                else:
+                    aggnames.add(aggfield)
         dataf = extract(dstore, 'aggrisk_tags')
         for tagnames, (start, stop) in dataf.slc.items():
             df = dataf[start:stop]
@@ -162,7 +167,7 @@ def export_aggrisk_stats(ekey, dstore):
                 del df[missing]
             fname = dest.format('-'.join(tagnames))
             writer.save(df, fname, df.columns, comment=dstore.metadata)
-            fnames.append(fname)            
+            fnames.append(fname)
     else:  # event based risk
         dataf = extract(dstore, 'risk_stats/' + key)
         assetcol = dstore['assetcol']
