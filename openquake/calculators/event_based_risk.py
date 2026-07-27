@@ -339,11 +339,11 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     for b, blk in enumerate(general.block_splitter(dfs, GMF2_MB, size_mb)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        size = round(sum(size_mb(df) for df in blk))
-        if b == 0 or size < GMF1_MB:  # don't spawn small tasks
+        mb = round(sum(size_mb(df) for df in blk))
+        if b == 0 or mb < GMF1_MB:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
-            print(f'{monitor.task_no=}, {size=}')
+            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=}')
             yield event_based_risk, pandas.concat(blk)
 
 
