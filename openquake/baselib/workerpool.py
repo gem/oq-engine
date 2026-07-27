@@ -350,6 +350,7 @@ class WorkerPool(object):
                         ctrlsock.send('unknown command')
         finally:
             shutil.rmtree(self.executing)
+            self.pool.shutdown(wait=False, cancel_futures=True)
 
     def stop(self):
         """
