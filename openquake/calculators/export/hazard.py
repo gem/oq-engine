@@ -634,11 +634,14 @@ def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
     fnames = []
     for site in sitecol:
-        suffix = '' if len(sitecol) == 1 else f'-{site.id}'
-        aw = dstore[f'mean_disagg_by_src/{site.id}']
+        try:
+            aw = dstore[f'mean_disagg_by_src/{site.id}']
+        except KeyError:  # some sites can be missing, this is normal
+            continue
         df = aw.to_dframe()
         df = df[df.value > 0]  # don't export zeros
         df.rename(columns={'value': 'afoe'}, inplace=True)
+        suffix = '' if len(sitecol) == 1 else f'-{site.id}'
         fname = dstore.export_path('%s%s.csv' % (ekey[0], suffix))
         com = dstore.metadata.copy()
         com['lon'] = site.location.x
@@ -812,7 +815,8 @@ def export_asce(ekey, dstore):
         comment['lat'] = sitecol.lats[s]
         comment['vs30'] = sitecol.vs30[s]
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
-        writer.save(dic.items(), fname, header=['parameter', 'value'], comment=comment)
+        writer.save(dic.items(), fname, header=['parameter', 'value'],
+                    comment=comment)
     return [fname]
 
 
@@ -838,8 +842,10 @@ def export_mag_dst_eps_sig(ekey, dstore):
         [site] = sitecol
         return [_export_mde(writer, dstore, ekey[0], site, oq.description)]
     else:
+        oksites = [site for site in sitecol
+                   if f'mag_dst_eps_sig/{site.id}' in dstore]
         return [_export_mde(writer, dstore, ekey[0], site, oq.description,
-                            f'-{site.id}') for site in sitecol]
+                            f'-{site.id}') for site in oksites]
 
 
 @export.add(('trt_gsim', 'csv'))
