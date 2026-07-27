@@ -63,16 +63,11 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
         a dictionary src_id -> weight, usually empty
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
+    :param rlz_filter:
+        set of rlz ordinals to keep, or ``None`` to disable filtering
+        (used by the site-model LT outer loop in :meth:`compute`)
     :param monitor:
         monitor of the currently running job
-    :param rlz_filter:
-        Optional set of rlz ordinals to disaggregate; rlzs not in the
-        set are skipped. Under site-model epistemic uncertainty the
-        outer loop in compute method overlays one site branch onto the
-        sitecol per pass and sets rlz_filter to the rlzs bound to
-        that branch, so each pass disaggregates only those rlzs with
-        the correct site params. If None, filtering is disabled (the
-        normal non-site-LT path).
     :returns:
         a list of dictionaries containing matrices of rates
     """
@@ -94,7 +89,6 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
             imtls = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
         if rlz_filter is not None:
-            # Filter rlz if required (site model LT)
             rlzs = numpy.array([r for r in rlzs if r in rlz_filter])
             if len(rlzs) == 0:
                 continue
@@ -195,8 +189,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         try:
             full_lt = self.full_lt
         except AttributeError:
-            # Calling init method here would double-init (see
-            # logictree.FullLogicTree.init)
+            # Skip .init() here: map_getters will call it below
             full_lt = self.datastore['full_lt']
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = self.R  # 0 means all rlzs
@@ -270,53 +263,26 @@ class DisaggregationCalculator(base.HazardCalculator):
         site_lt = getattr(full_lt, 'site_model_lt', None)
         if site_lt is None:
             return self._compute_pass(rlz_filter=None)
+        # Site-model epistemic uncertainty: one pass per site branch
         self.full_lt = full_lt
-
-        # Site model epistemic uncertainty: one pass per site branch
         smep = readinput.get_site_models_epistemic(oq)
         baseline = self.sitecol.array.copy()
-
         all_rlzs = self.full_lt.get_realizations()
-
         combined = None
         for i, arr in enumerate(smep.arrays):
-            # Restrict this pass to rlzs bound to site branch i
             rlz_filter = {r.ordinal for r in all_rlzs
                           if r.site_rlz.ordinal == i}
             if not rlz_filter:
                 continue
-
-            # Overlay this branch's site params before computing
             self._overlay_sitecol(arr)
             part = self._compute_pass(rlz_filter=rlz_filter)
-
             if combined is None:
                 combined = part
             else:
                 for k, v in part.items():
-                    # k = (sid, rlz), v is disagg matrix for (sid, rlz)
                     combined[k] = combined.get(k, 0) + v
-
-        # Restore the baseline sitecol
         self._overlay_sitecol(baseline)
-
         return combined
-
-    def _read_src_mutex_by_grp(self, dstore):
-        """
-        Read the src_mutex and grp_probability tables from dstore and
-        return a dict {grp_id: {src_id, weight, rup_mutex,
-        grp_probability}}.
-        """
-        if 'src_mutex' not in dstore:
-            return {}
-        gb = dstore.read_df('src_mutex').groupby('grp_id')
-        gp = dict(dstore['grp_probability'])  # grp_id -> probability
-        return {grp_id: {'src_id': disagg.get_ints(df.src_id),
-                         'weight': df.mutex_weight.to_numpy(),
-                         'rup_mutex': df.rup_mutex.to_numpy(),
-                         'grp_probability': gp[grp_id]}
-                for grp_id, df in gb}
 
     def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp,
                     rlz_filter):
@@ -377,14 +343,23 @@ class DisaggregationCalculator(base.HazardCalculator):
     def _compute_pass(self, rlz_filter):
         """
         Single pass of the disaggregation compute loop; used both by
-        the regular path (rlz_filter=None) and by the site-model
-        epistemic outer loop (one pass per site rlz).
+        the regular path (``rlz_filter=None``) and by the site-model
+        epistemic outer loop (one pass per site rlz)
         """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        logging.info("Reading contexts")
         cmakers = read_cmakers(dstore).to_array()
-        src_mutex_by_grp = self._read_src_mutex_by_grp(dstore)
+        if 'src_mutex' in dstore:
+            gb = dstore.read_df('src_mutex').groupby('grp_id')
+            gp = dict(dstore['grp_probability'])  # grp_id -> probability
+            src_mutex_by_grp = {
+                grp_id: {'src_id': disagg.get_ints(df.src_id),
+                         'weight': df.mutex_weight.to_numpy(),
+                         'rup_mutex': df.rup_mutex.to_numpy(),
+                         'grp_probability': gp[grp_id]}
+                for grp_id, df in gb}
+        else:
+            src_mutex_by_grp = {}
         ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))

@@ -355,7 +355,7 @@ def reduce_full(full_lt, rlz_clusters):
     site_lt = getattr(full_lt, 'site_model_lt', None)
     smrlz_clusters = []
     gsrlz_clusters = []
-    site_shorts = set()  # site LT short chars appearing in the cluster
+    site_shorts = set()
     for path in rlz_clusters:
         parts = decode(path).split('~')
         smrlz_clusters.append(parts[0])
@@ -367,22 +367,17 @@ def reduce_full(full_lt, rlz_clusters):
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
     result = {f1: dict(p1), f2: dict(p2)}
-    # Site LT has a single branchset, so the reduction logic is
-    # that if every rlz in the cluster uses the same site branch,
-    # that branch is the sole surviving one and the other R-1
-    # branches could be pruned
+    # Site LT reduces when every rlz in the cluster uses the same branch
     p3 = []
     if site_lt is not None:
         before *= site_lt.Rsite
         if len(site_shorts) == 1:
             short_to_name = {v: k for k, v in site_lt.shortener.items()}
-            [short] = site_shorts
-            surviving = short_to_name[short]
+            surviving = short_to_name[site_shorts.pop()]
             p3.append((site_lt.branchset_id, [surviving]))
             result[site_lt.filename] = dict(p3)
     after = before / prod(len(p[1]) for p in p1 + p2 + p3)
     result['size_before_after'] = (before, after)
-
     return result
 
 
@@ -588,25 +583,6 @@ class SourceModelLogicTree(object):
                     "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
 
-    def _parse_source_model_value(self, branchnode, value_node, value):
-        vals = [] # Filenames with sources in it
-        try:
-            for fname in value_node.text.split():
-                if (fname.endswith(('.xml', '.nrml'))
-                        and not self.test_mode):
-                    if self.collect_source_model_data(
-                            branchnode['branchID'], fname):
-                        vals.append(fname)
-        except Exception as exc:
-            raise LogicTreeError(
-                value_node, self.filename, str(exc)) from exc
-        if self.branchID and self.branchID not in branchnode['branchID']:
-            return '' # Reduce all branches except branchID
-        if self.source_id: # Only the files containing source_id
-            srcid = self.source_id.split('@')[0]
-            return ' '.join(reduce_fnames(vals, srcid))
-        return value
-
     def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
@@ -654,8 +630,24 @@ class SourceModelLogicTree(object):
                 value = parse_uncertainty(branchset.uncertainty_type,
                                           value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-                value = self._parse_source_model_value(
-                    branchnode, value_node, value)
+                vals = []  # filenames with sources in it
+                try:
+                    for fname in value_node.text.split():
+                        if (fname.endswith(('.xml', '.nrml'))
+                                and not self.test_mode):
+                            ok = self.collect_source_model_data(
+                                branchnode['branchID'], fname)
+                            if ok:
+                                vals.append(fname)
+                except Exception as exc:
+                    raise LogicTreeError(
+                        value_node, self.filename, str(exc)) from exc
+                if (self.branchID and self.branchID not in
+                        branchnode['branchID']):
+                    value = ''  # reduce all branches except branchID
+                elif self.source_id:  # only the files containing source_id
+                    srcid = self.source_id.split('@')[0]
+                    value = ' '.join(reduce_fnames(vals, srcid))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
@@ -987,8 +979,7 @@ def get_field(data, field, default):
 class LtRealization(object):
     """
     Composite realization build on top of a source model realization and
-    a GSIM realization. Optionally carries a site-model realization when
-    a site-model logic tree is present.
+    a GSIM realization; optionally carries a site-model realization
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
     # saves little memory, from 95.3 GB down to 81.0 GB
@@ -1277,10 +1268,11 @@ class FullLogicTree(object):
         """
         num_samples = self.source_model_lt.num_samples
         # Preserve any weights already on wget so repeat calls don't wipe them
-        existing = getattr(self.gsim_lt, 'wget', None)
-        existing_weights = existing.weights if existing is not None else None
+        prev = getattr(self.gsim_lt, 'wget', None)
         self.gsim_lt.wget = IMTWeigher(
-            self.gsim_lt, num_samples, existing_weights)
+            self.gsim_lt, num_samples,
+            prev.weights if prev is not None else None)
+        site_lt = self.site_model_lt
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
@@ -1288,11 +1280,9 @@ class FullLogicTree(object):
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
-            if self.site_model_lt is not None:
-                site_rlzs = self.site_model_lt.sample(
-                    num_samples, self.seed + 2, self.sampling_method)
-            else:
-                site_rlzs = [None] * num_samples
+            site_rlzs = (site_lt.sample(num_samples, self.seed + 2,
+                                        self.sampling_method)
+                         if site_lt is not None else [None] * num_samples)
             for k, (gsim_rlz, site_rlz) in enumerate(
                     zip(gsim_rlzs, site_rlzs)):
                 w = sm_rlzs[k].weight * gsim_rlz.weight
@@ -1304,13 +1294,12 @@ class FullLogicTree(object):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
-            site_rlzs = (self.site_model_lt.get_realizations()
-                         if self.site_model_lt is not None else [None])
-            Rsite = len(site_rlzs)
+            site_rlzs = (site_lt.get_realizations()
+                         if site_lt is not None else [None])
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(
-                len(ws) * len(self.sm_rlzs) * Rsite, object)
+                len(ws) * len(self.sm_rlzs) * len(site_rlzs), object)
             k = 0
             for sm_rlz in self.sm_rlzs:
                 smpath = sm_rlz.lt_path
@@ -1387,18 +1376,13 @@ class FullLogicTree(object):
         attrs = dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values),
                      oversampling=self.oversampling)
-        if self.site_model_lt is not None:
-            # One row per branch: (name, weight, filename)
+        smlt = self.site_model_lt
+        if smlt is not None:
             dic['site_model_lt'] = numpy.array(
-                [(n, w, f) for n, w, f in zip(
-                    self.site_model_lt.names,
-                    self.site_model_lt.weights,
-                    self.site_model_lt.filenames)],
+                list(zip(smlt.names, smlt.weights, smlt.filenames)),
                 site_model_lt_dt)
-            # Tree-level metadata needed by reduce_full and to fully
-            # reconstruct SiteModelsEpistemic in __fromh5__
-            attrs['site_model_tree_filename'] = self.site_model_lt.filename
-            attrs['site_model_branchset_id'] = self.site_model_lt.branchset_id
+            attrs['site_model_tree_filename'] = smlt.filename
+            attrs['site_model_branchset_id'] = smlt.branchset_id
         return dic, attrs
 
     # FullLogicTree
@@ -1406,7 +1390,6 @@ class FullLogicTree(object):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
         sd = dic.pop('source_data', numpy.zeros(0))  # empty for engine <= 3.16
-        # None on datastores written before this feature was added
         site_lt_arr = dic.pop('site_model_lt', None)
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
@@ -1418,27 +1401,18 @@ class FullLogicTree(object):
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
-            
         self.site_model_lt = None
         if site_lt_arr is not None and len(site_lt_arr):
-            # Restore the per-branch metadata (name, weight, filename)
             names = [decode(r['name']) for r in site_lt_arr]
-            weights = numpy.array([r['weight'] for r in site_lt_arr])
             filenames = [decode(r['filename']) for r in site_lt_arr]
-            # Bypass __init__ / validation - arrays reloaded as required
-            dummy = numpy.zeros(
-                0, [('lon', float), ('lat', float)])
-            self.site_model_lt = SiteModelsEpistemic.__new__(
-                SiteModelsEpistemic)
-            self.site_model_lt.names = names
-            self.site_model_lt.weights = weights
-            self.site_model_lt.arrays = [dummy] * len(names)
-            self.site_model_lt.filenames = filenames
-            # Tree-level attrs, with defaults for older datastores
-            self.site_model_lt.filename = attrs.get(
-                'site_model_tree_filename', '')
-            self.site_model_lt.branchset_id = attrs.get(
-                'site_model_branchset_id', 'bs_site')
+            # Zero-length placeholder arrays; the real arrays are reloaded
+            # on demand via readinput.get_site_models_epistemic
+            dummy = numpy.zeros(0, [('lon', float), ('lat', float)])
+            self.site_model_lt = SiteModelsEpistemic(
+                names, [r['weight'] for r in site_lt_arr],
+                [dummy] * len(names), filenames,
+                tree_filename=attrs.get('site_model_tree_filename', ''),
+                branchset_id=attrs.get('site_model_branchset_id', 'bs_site'))
 
     def get_num_potential_paths(self):
         """

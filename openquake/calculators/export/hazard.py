@@ -309,9 +309,8 @@ def get_metadata(rlzs, kind):
     """
     metadata = {}
     if kind.startswith('rlz-'):
+        # SSC~GMM or SSC~GMM~SITE when a site-model LT is active
         parts = rlzs[int(kind[4:])]['branch_path'].split('~')
-        # 2 parts for classic SSC~GMM, 3 for SSC~GMM~SITE when a
-        # site-model logic tree is active
         metadata['smlt_path'] = parts[0]
         metadata['gsimlt_path'] = parts[1]
         if len(parts) > 2:

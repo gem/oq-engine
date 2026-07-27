@@ -28,7 +28,7 @@ from openquake.hazardlib.site_lt import (
     SiteModelLogicTree, SiteModelsEpistemic)
 
 
-# Valid 2-branch site-model logic tree with branchsets directly under <logicTree>
+# Valid 2-branch site LT: branchsets directly under <logicTree>
 FLAT_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
   <logicTree logicTreeID="lt_site">
@@ -148,13 +148,11 @@ class SiteModelLogicTreeTest(unittest.TestCase):
         self.assertIn('sum to', str(ctx.exception))
 
     def test_rejects_duplicate_branch_ids(self):
-        # Two branches sharing the same branchID must be rejected
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelLogicTree(_write(DUP_BRID_XML))
         self.assertIn('duplicate', str(ctx.exception).lower())
 
     def test_rejects_missing_branchset(self):
-        # <logicTree> without any siteModel branchset must be rejected
         with self.assertRaises(InvalidFile) as ctx:
             SiteModelLogicTree(_write(NO_BSET_XML))
         self.assertIn('no siteModel branchset', str(ctx.exception))
@@ -215,66 +213,43 @@ class SiteModelsEpistemicTest(unittest.TestCase):
 
 
 class ReduceFullWithSiteLTTest(unittest.TestCase):
-    """
-    Check that reduce_full handles the site leg correctly.
-    """
 
     def _full_lt_with_site_lt(self):
-        # Create site model LT
         dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
         a = numpy.array([(-65., 0., 760.)], dt)
         b = numpy.array([(-65., 0., 360.)], dt)
         smep = SiteModelsEpistemic(
             ['rock', 'soil'], [0.6, 0.4], [a, b],
             tree_filename='site_lt.xml', branchset_id='bs_site')
-
-        # Trivial single-branch SSC and GSIM
         full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
         full_lt.source_model_lt = SourceModelLogicTree.fake()
-
-        # Set the site model LT
         full_lt.site_model_lt = smep
-
         return full_lt, smep
 
     def test_site_branch_shared_across_cluster_is_marked_reducible(self):
-        # Make full LT
-        full_lt, smep = self._full_lt_with_site_lt()
-
         # Two rlzs both pinned to rock: the soil branch is unused
+        full_lt, smep = self._full_lt_with_site_lt()
         rock_short = smep.shortener['rock']
         paths = ['A~A~%s' % rock_short, 'A~A~%s' % rock_short]
         res = logictree.reduce_full(full_lt, paths)
-
-        # Site LT filename in the result with 'rock' as sole survivor
         self.assertIn('site_lt.xml', res)
         self.assertEqual(res['site_lt.xml'], {'bs_site': ['rock']})
-
-        # Before = 1 (ssc) * 1 (gsim) * 2 (site) = 2
+        # before = 1 (ssc) * 1 (gsim) * 2 (site)
         before, _after = res['size_before_after']
         self.assertEqual(before, 2)
 
     def test_multiple_site_branches_in_cluster_not_reducible(self):
-        # Make full LT
-        full_lt, smep = self._full_lt_with_site_lt()
-
         # Two rlzs on different site branches: nothing to reduce
+        full_lt, smep = self._full_lt_with_site_lt()
         paths = ['A~A~%s' % smep.shortener['rock'],
                  'A~A~%s' % smep.shortener['soil']]
         res = logictree.reduce_full(full_lt, paths)
-        
-        # Site LT absent from result = not reducible (both branches used)
         self.assertNotIn('site_lt.xml', res)
 
 
 class FullLogicTreeRoundtripTest(unittest.TestCase):
-    """
-    __toh5__/__fromh5__ must preserve the site-model logic tree
-    metadata so that reading from the datastore reconstructs an
-    equivalent FullLogicTree.
-    """
+
     def _build(self):
-        # Trivial single-branch SSC and GSIM, plus a 2-branch site LT
         dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
         a = numpy.array([(-65., 0., 760.)], dt)
         b = numpy.array([(-65., 0., 360.)], dt)
@@ -284,11 +259,9 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
             ['rock', 'soil'], [0.6, 0.4], [a, b],
             filenames=['rock.csv', 'soil.csv'],
             tree_filename='site_lt.xml', branchset_id='bs_site')
-        
         return full_lt
 
     def _roundtrip(self, full_lt):
-        # Write the FullLogicTree to a temp HDF5 and read it back
         fd, path = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
         with hdf5.File(path, 'w') as f:
@@ -298,7 +271,7 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
 
     def test_roundtrip_with_site_lt_preserves_metadata(self):
         # names, weights, filenames, tree_filename, branchset_id
-        # must all survive the __toh5__/__fromh5__ cycle
+        # must survive __toh5__/__fromh5__
         full_lt = self._build()
         reloaded = self._roundtrip(full_lt)
         smep = reloaded.site_model_lt
@@ -311,15 +284,8 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
 
 
 class GetRealizationsWithSiteLTTest(unittest.TestCase):
-    """
-    FullLogicTree.get_realizations under full enumeration produces the
-    outer product ssc * gsim * site with correctly multiplied weights.
-    
-    Under sampling all three legs are Monte-Carlo sampled num_samples
-    times. In both cases each LtRealization carries a .site_rlz attribute.
-    """
+
     def _build(self, num_samples=0, sampling_method='early_weights'):
-        # Trivial single-branch SSC and GSIM + 2-branch site LT
         dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
         a = numpy.array([(-65., 0., 760.)], dt)
         b = numpy.array([(-65., 0., 360.)], dt)
@@ -329,22 +295,15 @@ class GetRealizationsWithSiteLTTest(unittest.TestCase):
         full_lt.source_model_lt.sampling_method = sampling_method
         full_lt.site_model_lt = SiteModelsEpistemic(
             ['rock', 'soil'], [0.6, 0.4], [a, b])
-
-        # Re-run init to pick up the site LT and num_samples
-        full_lt.init()
-
+        full_lt.init()  # Pick up the site LT and num_samples
         return full_lt
 
     def test_full_enumeration_produces_outer_product(self):
-        # 1 SSC * 1 GSIM * 2 SITE = 2 rlzs, weights = w_ssc * w_gmm * w_site
+        # 1 SSC * 1 GSIM * 2 SITE = 2 rlzs, weight = w_ssc * w_gmm * w_site
         full_lt = self._build(num_samples=0)
         rlzs = full_lt.get_realizations()
         self.assertEqual(len(rlzs), 2)
-
-        # Each rlz has a non-None site_rlz
         self.assertTrue(all(r.site_rlz is not None for r in rlzs))
-
-        # Weights = site weights (SSC and GSIM are both 1.0)
         weights = sorted(r.weight[0] for r in rlzs)
         numpy.testing.assert_allclose(weights, [0.4, 0.6], atol=1e-6)
         numpy.testing.assert_allclose(
@@ -360,20 +319,15 @@ class GetRealizationsWithSiteLTTest(unittest.TestCase):
             numpy.testing.assert_allclose(r.weight[0], 1.0 / 4)
 
     def test_late_weights_sampling_preserves_tree_weights(self):
-        # late_weights draws branches uniformly and keeps each rlz's
-        # tree weight product (rescaled to sum to 1 across all rlzs)
+        # late_weights preserves per-rlz tree-weight products (rescaled)
         full_lt = self._build(num_samples=100,
                               sampling_method='late_weights')
         rlzs = full_lt.get_realizations()
         self.assertEqual(len(rlzs), 100)
         self.assertTrue(all(r.site_rlz is not None for r in rlzs))
-
-        # Weights sum to 1
         numpy.testing.assert_allclose(
             sum(r.weight[0] for r in rlzs), 1.0, atol=1e-6)
-
-        # Exactly two distinct weights appear (rock and soil) and their
-        # ratio equals the tree weight ratio 0.6 / 0.4 = 1.5
+        # Exactly two distinct weights (rock/soil) with ratio 0.6 / 0.4
         distinct = sorted(set(round(float(r.weight[0]), 9) for r in rlzs))
         self.assertEqual(len(distinct), 2)
         numpy.testing.assert_allclose(

@@ -157,14 +157,11 @@ def get_weights(oq, dstore):
     :returns: float32 array of realization weights
     """
     samples = oq.number_of_logic_tree_samples
-    has_site_lt = 'full_lt/site_model_lt' in dstore
-    if samples and not has_site_lt:
-        # Plain sampling: every rlz has uniform weight 1/num_samples
-        weights = numpy.ones(samples, dtype=F32)/samples
+    # Under a site-model LT weights may be non-uniform (late_weights),
+    # so always read them from the datastore in that case
+    if samples and 'full_lt/site_model_lt' not in dstore:
+        weights = numpy.ones(samples, dtype=F32) / samples
     else:
-        # Full enumeration, or sampling with a site-model LT under
-        # late_weights (where rlz weights are the product of the
-        # sampled ssc/gmm/site branch weights and thus non-uniform)
         weights = dstore['weights'][:]
     return weights
 
@@ -851,10 +848,10 @@ class HazardCalculator(BaseCalculator):
 
     def _overlay_sitecol(self, arr):
         """
-        Overlay arr's per-site params on the in-memory sitecol and
-        on dstore['sitecol/*']. arr is a structured array with the
-        same rows as the sitecol, either a per branch site model
-        array or a prior copy of the sitecol used to restore it.
+        Overlay ``arr``'s per-site params on ``self.sitecol`` and
+        ``dstore['sitecol/*']``; ``arr`` is a structured array with the
+        same rows as the sitecol (either a per-branch site model or a
+        copy used to restore it)
         """
         # Geometry fields are shared across branches - never overlay
         skip = {'lon', 'lat', 'depth', 'sids'}

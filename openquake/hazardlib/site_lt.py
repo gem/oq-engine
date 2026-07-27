@@ -16,15 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Epistemic uncertainty on the site model.
-
-A site-model logic tree is a NRML XML file with a single branchset of
-``uncertaintyType="siteModel"`` where each branch points at a site-model
-CSV (or XML) file and carries a weight.
-
-All branches must reference the same sites (identical lon/lat, and depth
-if present, in the same order); only per-site parameters (vs30, z1pt0,
-z2pt5, ...) may differ across branches.
+Epistemic uncertainty on the site model: a NRML logic tree whose single
+``uncertaintyType="siteModel"`` branchset lists per-branch site-model
+files with weights summing to 1
 """
 import os
 import numpy
@@ -39,104 +33,84 @@ from openquake.hazardlib.lt import Realization
 F32 = numpy.float32
 
 
+def _iter_branchsets(lt_node):
+    # Tolerate both flat and <logicTreeBranchingLevel>-wrapped layouts
+    for child in lt_node:
+        if child.tag.endswith('logicTreeBranchSet'):
+            yield child
+        elif child.tag.endswith('logicTreeBranchingLevel'):
+            for bset in child:
+                if bset.tag.endswith('logicTreeBranchSet'):
+                    yield bset
+
+
 class SiteModelLogicTree(object):
     """
-    Parser and container for a site model logic tree.
-
-    :param filename:
-        path to the NRML XML file
-    :param base_path:
-        directory used to resolve relative CSV/XML filenames referenced
-        in the XML (defaults to the directory holding the XML itself)
+    Parser for a site-model logic tree NRML XML
     """
     filename = ''
 
     @classmethod
-    def _iter_branchsets(cls, lt_node):
-        # Yield every <logicTreeBranchSet> under a <logicTree>, tolerating
-        # both flat and <logicTreeBranchingLevel>-wrapped layouts
-        for child in lt_node:
-            if child.tag.endswith('logicTreeBranchSet'):
-                yield child
-            elif child.tag.endswith('logicTreeBranchingLevel'):
-                for bset in child:
-                    if bset.tag.endswith('logicTreeBranchSet'):
-                        yield bset
-
-    @classmethod
     def is_site_model_lt(cls, filename):
         """
-        :returns: True if the given XML file is a site-model logic tree
+        :returns: ``True`` if the given XML file is a site-model logic tree
         """
         try:
             root = nrml.read(filename)
-        except Exception:
-            return False
-        try:
-            lt = root.logicTree
-        except AttributeError:
-            return False
-        try:
-            for bset in cls._iter_branchsets(lt):
+            for bset in _iter_branchsets(root.logicTree):
                 if bset.attrib.get('uncertaintyType') == 'siteModel':
                     return True
         except Exception:
-            return False
+            pass
         return False
 
     def __init__(self, filename, base_path=None):
         self.filename = filename
         self.base_path = base_path or os.path.dirname(filename)
         self.branches = []  # list of (branchID, filename, weight)
-        self.branchset_id = ''  # captured during _parse
+        self.branchset_id = ''
         self._parse()
 
     def _parse(self):
         root = nrml.read(self.filename)
         try:
-            lt = root.logicTree
+            ltree = root.logicTree
         except AttributeError:
             raise InvalidFile(
                 '%s: missing <logicTree> element' % self.filename)
-        found_bset = False
-        for bset in self._iter_branchsets(lt):
-            utype = bset.attrib.get('uncertaintyType')
-            if utype != 'siteModel':
-                raise InvalidFile(
-                    '%s: only uncertaintyType="siteModel" is supported '
-                    'in a site-model logic tree, got %r'
-                    % (self.filename, utype))
-            if found_bset:
-                raise InvalidFile(
-                    '%s: only one <logicTreeBranchSet> is supported'
-                    % self.filename)
-            found_bset = True
-            self.branchset_id = bset.attrib.get('branchSetID', 'bs_site')
-            for br in bset:
-                brid = br.attrib.get('branchID', '')
-                csv_rel = br.uncertaintyModel.text.strip()
-                weight = float(br.uncertaintyWeight.text)
-                csv_abs = os.path.normpath(
-                    os.path.join(self.base_path, csv_rel))
-                self.branches.append((brid, csv_abs, weight))
-        if not found_bset:
+        bsets = list(_iter_branchsets(ltree))
+        if not bsets:
             raise InvalidFile(
                 '%s: no siteModel branchset found' % self.filename)
-        # Branch IDs must be unique within the branchset
+        if len(bsets) > 1:
+            raise InvalidFile(
+                '%s: only one <logicTreeBranchSet> is supported'
+                % self.filename)
+        [bset] = bsets
+        utype = bset.attrib.get('uncertaintyType')
+        if utype != 'siteModel':
+            raise InvalidFile(
+                '%s: only uncertaintyType="siteModel" is supported '
+                'in a site-model logic tree, got %r'
+                % (self.filename, utype))
+        self.branchset_id = bset.attrib.get('branchSetID', 'bs_site')
+        for br in bset:
+            brid = br.attrib.get('branchID', '')
+            rel = br.uncertaintyModel.text.strip()
+            weight = float(br.uncertaintyWeight.text)
+            fname = os.path.normpath(os.path.join(self.base_path, rel))
+            self.branches.append((brid, fname, weight))
         brids = [b for b, _, _ in self.branches]
         if len(set(brids)) != len(brids):
             dups = sorted({b for b in brids if brids.count(b) > 1})
             raise InvalidFile(
                 '%s: duplicate branchID(s) in site-model logic tree: %s'
                 % (self.filename, dups))
-        # Matches the SSC/GSIM cap in SourceModelLogicTree - keeps the
-        # site leg of the composite path a single BASE183 character
+        # Keeps the site leg of the composite path a single BASE183 char
         if len(self.branches) > len(BASE183):
             raise InvalidFile(
-                '%s: the site-model branchset has too many branches '
-                '(%d > %d), split it into multiple branchsets'
+                '%s: too many branches (%d > %d)'
                 % (self.filename, len(self.branches), len(BASE183)))
-        # Weights must sum to 1
         wsum = sum(w for _, _, w in self.branches)
         if abs(wsum - 1.) > 1e-5:
             raise InvalidFile(
@@ -165,44 +139,26 @@ class SiteModelLogicTree(object):
 
 class SiteModelsEpistemic(object):
     """
-    Container object for holding site model realizations.
-
-    :param names:
-        List of short names, one per branch (branchIDs).
-    :param weights:
-        1D numpy array of branch weights, summing to 1.
-    :param arrays:
-        List of structured site-model arrays (one per branch); all arrays
-        must have identical lon/lat (and depth if present) in the same
-        order and identical site parameter sets.
-    :param filenames:
-        List of the CSV/XML site model files.
+    Container holding one structured site-model array per branch; branches
+    share identical geometry (``lon``, ``lat``, and ``depth`` if present)
+    and field sets
     """
-
     def __init__(self, names, weights, arrays, filenames=None,
                  tree_filename='', branchset_id='bs_site'):
-        if not (len(names) == len(weights) == len(arrays)):
-            raise ValueError(
-                'Mismatched lengths: names=%d, weights=%d, arrays=%d'
-                % (len(names), len(weights), len(arrays)))
         self.names = list(names)
         self.weights = numpy.asarray(weights, F32)
         self.arrays = list(arrays)
         self.filenames = list(filenames) if filenames else list(names)
-        # tree_filename and branchset_id are only used by reduce_full
-        # and when reconstructing SiteModelsEpistemic from HDF5
         self.filename = tree_filename
         self.branchset_id = branchset_id
         self._validate()
 
     def _validate(self):
-        # Validate the site models specified in the logic tree XML
+        # NOTE: custom_site_id is intentionally not checked - users might
+        # use it to denote per-branch differences at the same location
         ref = self.arrays[0]
         ref_name = self.filenames[0]
         n = len(ref)
-        # NOTE: custom_site_id is not checked for equality because
-        # the user might use different ones to denote diffs in the
-        # site parameters at same location in each site model
         for other, oname in zip(self.arrays[1:], self.filenames[1:]):
             if len(other) != n:
                 raise InvalidFile(
@@ -210,16 +166,14 @@ class SiteModelsEpistemic(object):
                     'different numbers of sites'
                     % (ref_name, n, oname, len(other)))
             if set(other.dtype.names) != set(ref.dtype.names):
-                diff = (set(ref.dtype.names) ^ set(other.dtype.names))
+                diff = set(ref.dtype.names) ^ set(other.dtype.names)
                 raise InvalidFile(
                     'Site models %s and %s have different field sets '
                     '(differing fields: %s)'
                     % (ref_name, oname, sorted(diff)))
-            # Geometry fields must match across branches; depth is optional
             for name in ('lon', 'lat', 'depth'):
-                if name not in ref.dtype.names:
-                    continue
-                if not numpy.allclose(ref[name], other[name]):
+                if name in ref.dtype.names and not numpy.allclose(
+                        ref[name], other[name]):
                     raise InvalidFile(
                         'Site models %s and %s must have identical %s '
                         'values in the same order'
@@ -239,37 +193,23 @@ class SiteModelsEpistemic(object):
         """
         :returns: a list of :class:`Realization` objects, one per branch
         """
-        rlzs = []
-        for i, (name, w) in enumerate(zip(self.names, self.weights)):
-            rlzs.append(Realization(
-                value=name, weight=float(w), ordinal=i,
-                lt_path=(name,), samples=1))
-        return rlzs
+        return [Realization(value=name, weight=float(w), ordinal=i,
+                            lt_path=(name,), samples=1)
+                for i, (name, w) in enumerate(zip(self.names, self.weights))]
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
-        Monte-Carlo sample n site-model branches with prob = branch
-        weight.
-
-        :param n: number of samples
-        :param seed: random seed
-        :param sampling_method: default of early_weights
-        :returns: list of Realization objects; the same branch may appear
-                  multiple times or not at all. Each realization's ordinal
-                  is the underlying site-branch ordinal, which the classical
-                  or disagg outer loop uses to overlay the per branch site
-                  parameters
+        Monte-Carlo sample ``n`` site branches with prob = branch weight;
+        returns :class:`Realization` objects (branches may repeat or be absent)
         """
-        branch_rlzs = self.get_realizations()
         probs = lt.random(n, seed, sampling_method)
-        return lt.sample(branch_rlzs, probs, sampling_method)
+        return lt.sample(self.get_realizations(), probs, sampling_method)
 
     @property
     def shortener(self):
         """
-        :returns: dict branchID -> short character used to build the
-            third leg of the composite realization path; BASE183 is
-            used to stay consistent with the SSC and GSIM legs
+        :returns: dict ``branchID -> single BASE183 character`` (consistent
+            with the SSC and GSIM shorteners)
         """
         return {name: BASE183[i] for i, name in enumerate(self.names)}
 

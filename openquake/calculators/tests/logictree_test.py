@@ -58,41 +58,34 @@ class LogictreeTestCase(CalculatorTestCase):
         return got
 
     def _reconstruct_fastmean_poes(self, dstore):
-        # Mirrors MergedMapGetter.get_fast_mean
+        # Mirrors MergedMapGetter.get_fast_mean for the site-LT tests
         N = dstore['sitecol/sids'].size
         L = self.calc.oqparam.imtls.size
         full_lt = dstore['full_lt'].init()
         trt_smrs, _ = contexts.get_unique_inverse(dstore['trt_smrs'])
-        # One (dset, gweights) pair per site branch that owns at least
-        # one rlz (some may have been dropped under sampling)
         variants, gweights_by_site = _site_lt_variants(
             full_lt, trt_smrs, fastmean=True)
         mean_rate = numpy.zeros((N, L))
         for (dset, _), gweights in zip(variants, gweights_by_site):
-            # dset = per-gid rate table for this site branch
             df = dstore.read_df(dset)
             for sid, lid, gid, rate in zip(df.sid, df.lid, df.gid, df.rate):
-                # Accumulate rate * (weight of this gid within this branch)
                 mean_rate[sid, lid] += rate * gweights[gid, -1]
-        return 1 - numpy.exp(-mean_rate)  # rates -> poes
+        return 1 - numpy.exp(-mean_rate)  # Rates -> poes
 
     def _assert_site_lt_disagg_keys(self, dstore):
-        # At least one _rates_site_i must be present (under sampling
-        # some site branches may not have been drawn)
+        # At least one _rates_site_i must exist (sampling may drop some)
         keys = list(dstore.parent) if dstore.parent != () else list(dstore)
         assert any(k.startswith('_rates_site_') for k in keys), keys
         assert 'disagg-rlzs' in dstore, list(dstore)
 
     def _assert_sampling_weights(self, dstore, n, uniform):
-        # Sampled rlz weights: n items summing to 1
+        # Sampled rlz weights: n items summing to 1, uniform if early_weights
         ws = dstore['weights'][:]
         ae(len(ws), n)
         aac(ws.sum(), 1.0, atol=1e-6)
         if uniform:
-            # Uniform 1/n under early_weights
             aac(ws, numpy.full(n, 1./n), atol=1e-6)
         else:
-            # Non-uniform under late_weights
             assert len(numpy.unique(numpy.round(ws, 6))) > 1, ws
 
     def tearDown(self):
@@ -126,17 +119,16 @@ class LogictreeTestCase(CalculatorTestCase):
                 rmap = get_rmap(csm_read.src_groups, full_lt, sc, oq)[0]
                 return calc_mean_rates(rmap, gws, wget, oq.imtls)
 
-            # Under site-model epistemic uncertainty the mean rate is
-            # sum of per-branch rates using per-branch gweights (rlzs
-            # bound to that branch only)
+            # Under a site-model LT sum per-branch rates with per-branch
+            # gweights (rlzs bound to that branch only)
             if getattr(full_lt, 'site_model_lt', None) is not None:
                 smep = readinput.get_site_models_epistemic(oq)
                 skip = {'lon', 'lat', 'depth', 'sids'}
-                variants, gweights_by_site = _site_lt_variants(
+                variants, gws_by_site = _site_lt_variants(
                     full_lt, trt_smrs, fastmean=True)
                 used_i = [int(name.rsplit('_', 1)[1]) for name, _ in variants]
                 partials = []
-                for i, gws_i in zip(used_i, gweights_by_site):
+                for i, gws_i in zip(used_i, gws_by_site):
                     arr = smep.arrays[i]
                     sc = copy.deepcopy(sitecol)
                     for name in set(arr.dtype.names) - skip:
@@ -598,13 +590,12 @@ hazard_uhs-std.csv
                 self.assertEqualFiles('expected/' + basename, fname)
 
     def test_case_24_smpl(self):
-        # Classical + site LT with sampling. All three legs (SSC, GMM,
-        # SITE) are Monte-Carlo sampled 4 times (num_samples=4)
+        # Classical + site LT, sampling all three legs num_samples=4 times
         keep = {'hazard_curve-mean-PGA.csv',
                 'hazard_curve-rlz-000-PGA.csv',
                 'hazard_curve-rlz-001-PGA.csv'}
 
-        # early_weights (uniformises rlz weights to 1/N)
+        # early_weights: rlz weights uniformised to 1/N
         self.run_calc(case_24.__file__, 'job_sampling.ini')
         dstore = self.calc.datastore
         ae(dstore['hcurves-rlzs'].shape[1], 4)
@@ -614,7 +605,7 @@ hazard_uhs-std.csv
             if base in keep:
                 self.assertEqualFiles('expected/sampling_' + base, fname)
 
-        # late_weights (preserve normalised w_ssc * w_gmm * w_site product)
+        # late_weights: preserve normalised w_ssc * w_gmm * w_site
         self.run_calc(case_24.__file__, 'job_sampling.ini',
                       sampling_method='late_weights')
         dstore = self.calc.datastore
@@ -626,15 +617,12 @@ hazard_uhs-std.csv
                 self.assertEqualFiles('expected/sampling_late_' + base, fname)
 
     def test_case_24_fm(self):
-        # Classical fastmean (use_rates=true, mean stats,
-        # individual_rlzs=false) + site LT with full enumeration
+        # Classical fastmean + site LT, full enumeration
         self.run_calc(case_24.__file__, 'job_fastmean.ini')
         dstore = self.calc.datastore
-        fm_mean = dstore['hcurves-stats'][:, 0]  # Mean poes
-        expected = self._reconstruct_fastmean_poes(dstore)
-        aac(fm_mean, expected.reshape(fm_mean.shape), atol=1e-6)
-
-        # Compare exported mean hazard curve against expected CSV
+        fm_mean = dstore['hcurves-stats'][:, 0]
+        aac(fm_mean, self._reconstruct_fastmean_poes(dstore).reshape(
+            fm_mean.shape), atol=1e-6)
         [got] = export(('hcurves', 'csv'), dstore)
         self.assertEqualFiles('expected/fastmean_' + strip_calc_id(got), got)
 
@@ -723,17 +711,16 @@ hazard_uhs-std.csv
         aac(xml_hc, csv_hc, atol=1e-6)
 
     def test_case_24_hdf5(self):
-        # Classical + sampling first, disagg then reads the dstore
+        # Classical + sampling first, then disagg reading the parent dstore
         self.run_calc(case_24.__file__,
                       'job_sampling.ini,job_disagg_from_parent.ini')
         dstore = self.calc.datastore
-        # Check site model LT metadata survived
+        # Site-model LT metadata must survive the __toh5__/__fromh5__ round-trip
         assert dstore['full_lt'].init().site_model_lt is not None
         self._assert_site_lt_disagg_keys(dstore)
         self._assert_sampling_weights(dstore, n=4, uniform=True)
-        # Check expected results - values differ from standalone
-        # disagg since hcurves are read from parent dstore rather
-        # than recomputed in-process, so use dedicated expected files
+        # Values differ from standalone disagg since hcurves come from the
+        # parent dstore instead of being recomputed - dedicated expected files
         for fname in export(('disagg-stats', 'csv'), dstore):
             base = strip_calc_id(fname)
             if base.startswith('Mag-mean-'):
