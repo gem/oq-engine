@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Internal: reduced the hard limit on function length to 79 lines
+  * Fixed the exporters `mag_dst_eps_sig` and `mean_disagg_by_src` for low
+    hazard sites, when such outputs are not computed
   * Internal: switched to ProcessPoolExecutor
   * Extended smlt_branch to work with applyToSources and applyToBranches
   * Changed the `avg_gmf` exporter to export only nonzero values

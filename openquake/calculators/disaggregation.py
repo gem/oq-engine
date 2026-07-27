@@ -299,7 +299,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         # Restore the baseline sitecol
         self._overlay_sitecol(baseline)
-        
+
         return combined
 
     def _read_src_mutex_by_grp(self, dstore):
@@ -318,37 +318,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                          'grp_probability': gp[grp_id]}
                 for grp_id, df in gb}
 
-    def _compute_pass(self, rlz_filter):
-        """
-        Single pass of the disaggregation compute loop; used both by
-        the regular path (rlz_filter=None) and by the site-model
-        epistemic outer loop (one pass per site rlz).
-        """
-        oq = self.oqparam
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        logging.info("Reading contexts")
-        cmakers = read_cmakers(dstore).to_array()
-        src_mutex_by_grp = self._read_src_mutex_by_grp(dstore)
-        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
-        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
-        logging.info('Read {:_d} contexts'.format(totctxs))
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        # IMPORTANT!! we rely on the fact that the classical part
-        # of the calculation stores the ruptures in chunks of constant
-        # grp_id, therefore it is possible to build (start, stop) slices;
-        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
-        # that would break the ordering of the indices causing an incredibly
-        # worse performance, but visible only in extra-large calculations!
-
+    def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp,
+                    rlz_filter):
         # compute the total weight of the contexts and the maxsize
+        ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
                         for grp_id, ctx in ctx_by_grp.items())
-        maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
+        maxsize = int(numpy.ceil(totweight / ct))
         logging.debug(f'{totweight=}, {maxsize=}')
-
-        s = self.shapedic
         if self.Z > 1:
             weights = self.datastore['weights'][:]
         else:
@@ -376,7 +353,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic, rlz_filter=rlz_filter)
+                       self.bin_edges, src_mutex, rwdic,
+                       rlz_filter=rlz_filter)
                 continue
 
             # split by tiles
@@ -396,6 +374,32 @@ class DisaggregationCalculator(base.HazardCalculator):
                            self.bin_edges, src_mutex, rwdic,
                            rlz_filter=rlz_filter)
 
+    def _compute_pass(self, rlz_filter):
+        """
+        Single pass of the disaggregation compute loop; used both by
+        the regular path (rlz_filter=None) and by the site-model
+        epistemic outer loop (one pass per site rlz).
+        """
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        logging.info("Reading contexts")
+        cmakers = read_cmakers(dstore).to_array()
+        src_mutex_by_grp = self._read_src_mutex_by_grp(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
+        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        logging.info('Read {:_d} contexts'.format(totctxs))
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        # IMPORTANT!! we rely on the fact that the classical part
+        # of the calculation stores the ruptures in chunks of constant
+        # grp_id, therefore it is possible to build (start, stop) slices;
+        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
+        # that would break the ordering of the indices causing an incredibly
+        # worse performance, but visible only in extra-large calculations!
+
+        self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp,
+                         rlz_filter)
+        s = self.shapedic
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
         check_memory(self.N, self.Z, shape8D)

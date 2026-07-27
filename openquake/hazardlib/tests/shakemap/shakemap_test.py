@@ -61,7 +61,6 @@ class ShakemapTestCase(unittest.TestCase):
         aae(res, [0.09909498, 0.19870543, 0.29922175])
 
     def test_matrices(self):
-
         # distance matrix
         lons = numpy.array([84., 84., 84., 85.5, 85.5, 85.5, 87., 87., 87.])
         lats = numpy.array([26., 27.5, 29., 26., 27.5, 29., 26., 27.5, 29.])
@@ -98,6 +97,9 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['std'] = std
         gmf_dict.update({'kind': 'Silva&Horspool',
                          'spatialcorr': 'yes', 'crosscorr': 'no'})
+        self._check(shakemap, gmf_dict)
+
+    def _check(self, shakemap, gmf_dict):
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, vs30=None, truncation_level=3,
             num_gmfs=2, seed=42)

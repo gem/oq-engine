@@ -331,6 +331,45 @@ def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
     return p_intersect, vector1, vector2, vector3, vector4
 
 
+def build_seg(segment_s, segment_e, pp, pp_xyz, hypocenter_xyz,
+              x_min, y_min, x_max, y_max, atol):
+    n_seg = 0
+    pd = []
+    e = None
+    exit_flag = False
+    for seg_s, seg_e in zip(segment_s, segment_e):
+        seg_s = seg_s.flatten()
+        seg_e = seg_e.flatten()
+        p_intersect, vector1, vector2, vector3, vector4 = _intersection(
+            seg_s, seg_e, pp_xyz, hypocenter_xyz)
+
+        ppph = dst.pdist([pp, hypocenter_xyz])
+        pdph = dst.pdist([p_intersect.flatten(), hypocenter_xyz])
+        n_seg += 1
+
+        # Check that the direction of the hyp-pp and hyp-pd vectors
+        # have are the same.
+        if (np.allclose(vector1.flatten(), vector2, atol=atol, rtol=0.)):
+            if (np.allclose(vector3.flatten(), vector4, atol=atol, rtol=0.)):
+                if ppph >= pdph:
+                    if (p_intersect[0] >= x_min) & (
+                            p_intersect[0] <= x_max):
+                        if (p_intersect[1] >= y_min) & (
+                                p_intersect[1] <= y_max):
+                            e = pdph
+                            pd = p_intersect
+                            exit_flag = True
+                            break
+        # when the pp located within the fault rupture plane, e = ppph
+        if e is None:
+            if (pp_xyz[0] >= x_min) & (pp_xyz[0] <= x_max):
+                if (pp_xyz[1] >= y_min) & (pp_xyz[1] <= y_max):
+                    pd = pp_xyz
+                    e = ppph
+                    exit_flag = True
+    return n_seg, pd, e, exit_flag
+
+
 def directp(node0, node1, node2, node3, hypocenter, reference, pp):
     """
     Get the Direct Point and the corresponding E-path as described in
@@ -401,7 +440,6 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
     hypocenter_xyz = get_xyz_from_ll(hypocenter, reference)
     hypocenter_xyz = np.array(hypocenter_xyz).flatten()
     pp_xyz = pp
-    e = []
 
     # Loop each segments on the patch to find Pd
     segment_s = [node0_xyz, node1_xyz, node2_xyz, node3_xyz]
@@ -423,45 +461,11 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                                 node3_xyz[1]])) - buf
         y_max = np.max(np.array([node0_xyz[1], node1_xyz[1], node2_xyz[1],
                                 node3_xyz[1]])) + buf
-        n_seg = 0
-        exit_flag = False
-        for seg_s, seg_e in zip(segment_s, segment_e):
-            seg_s = seg_s.flatten()
-            seg_e = seg_e.flatten()
-            p_intersect, vector1, vector2, vector3, vector4 = _intersection(
-                seg_s, seg_e, pp_xyz, hypocenter_xyz)
-
-            ppph = dst.pdist([pp, hypocenter_xyz])
-            pdph = dst.pdist([p_intersect.flatten(), hypocenter_xyz])
-            n_seg = n_seg + 1
-
-            # Check that the direction of the hyp-pp and hyp-pd vectors
-            # have are the same.
-            if (np.allclose(vector1.flatten(), vector2,
-                            atol=atol, rtol=0.)):
-                if (np.allclose(vector3.flatten(), vector4, atol=atol,
-                                rtol=0.)):
-
-                    # Check if ppph >= pdph.
-                    if (ppph >= pdph):
-                        if (p_intersect[0] >= x_min) & (p_intersect[0] <=
-                                                        x_max):
-                            if (p_intersect[1] >= y_min) & (p_intersect[1]
-                                                            <= y_max):
-                                e = pdph
-                                pd = p_intersect
-                                exit_flag = True
-                                break
-            # when the pp located within the fault rupture plane, e = ppph
-            if not e:
-                if (pp_xyz[0] >= x_min) & (pp_xyz[0] <= x_max):
-                    if (pp_xyz[1] >= y_min) & (pp_xyz[1] <= y_max):
-                        pd = pp_xyz
-                        e = ppph
-                        exit_flag = True
+        n_seg, pd, e, exit_flag = build_seg(
+            segment_s, segment_e, pp, pp_xyz, hypocenter_xyz,
+            x_min, y_min, x_max, y_max, atol)
         if exit_flag:
             break
-
         if not e:
             looptime += 1
             atol = 0.0001 * looptime

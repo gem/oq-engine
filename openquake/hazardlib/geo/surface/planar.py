@@ -158,8 +158,7 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
     corners = numpy.zeros((6, len(cdeps), 3))
     for d, cdep in enumerate(cdeps):
         vshift = vshifts[d]
-        # now we need to find the position of rupture's geometrical center.
-        # in any case the hypocenter point must lie on the surface, however
+        # the hypocenter point must lie on the surface, however
         # the rupture center might be off (below or above) along the dip
         if vshift == 0:
             corners[:4, d, 0:2] = lonlat
@@ -342,13 +341,6 @@ def project(planar, points):
         dists = dot(mat, pla.normal)
         xx = dot(mat, pla.uv1)
         yy = dot(mat, pla.uv2)
-
-        # the actual resulting distance is a square root of squares
-        # of a distance from a point to a plane that contains the surface
-        # and a distance from a projection of that point on that plane
-        # and a surface rectangle. we have former (``dists``), now we need
-        # to find latter.
-        #
         # we process separately two coordinate components of the point
         # projection. for abscissa we consider three possible cases:
         #
@@ -357,9 +349,6 @@ def project(planar, points):
         #     0-----+                → x axis direction
         #     |     |
         #     +-----+
-        #     .     .
-        #     .     .
-        #
         mxx = numpy.select(
             condlist=[
                 # case "I": point on the left hand side from the rectangle
@@ -387,7 +376,6 @@ def project(planar, points):
         #   III  |   |
         #  - - - +---+ - - -
         #    II
-        #
         myy = numpy.select(
             condlist=[
                 # case "I": point is above the rectangle top edge
