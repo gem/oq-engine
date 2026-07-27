@@ -199,7 +199,8 @@ import collections
 from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
+                                as_completed)
 import psutil
 import numpy
 
@@ -1097,18 +1098,17 @@ def multispawn(func, allargs, names=(), nprocs=num_cores, logfinish=True):
         names = [f'job#{i}' for i, args in enumerate(allargs, 1)]
     tot = len(allargs)
     assert len(names) == tot, (len(names), tot)
-    p = mp_context.Pool(min(nprocs, tot))
-    n = 0
-    for name in p.imap_unordered(
-            safecall, [(func, args, name)
-                       for args, name in zip(allargs, names)]):
-        n += 1
-        if isinstance(name, BaseException):
-            logging.error(f'{name.name}: {name}')
-        elif logfinish:
-            logging.info('Finished job %s [%d of %d]', name, n, tot)
-    p.close()
-    p.join()  # not using `with Pool` to avoid mysterious atexit errors
+    with ProcessPoolExecutor(min(nprocs, tot), mp_context) as pool:
+        futs = [pool.submit(safecall, (func, args, name))
+                for args, name in zip(allargs, names)]
+        n = 0
+        for fut in as_completed(futs):
+            name = fut.result()
+            n += 1
+            if isinstance(name, BaseException):
+                logging.error(f'{name.name}: {name}')
+            elif logfinish:
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
 
 
 if oq_distribute() == 'slurm':
