@@ -72,6 +72,46 @@ def reduce_source_model(fname, reduction_factor, itime):
     sourcewriter.write_source_model(fname, smodel)
 
 
+def reduce_asc(fname: str, step: int):
+    """
+    Replace a large file in .asc format with a smaller file,
+    decimated by using the given integer step.
+    """
+    assert step > 1, step
+    metadata = {}
+    with open(fname, 'r') as f:
+        for _ in range(6):
+            line = next(f)
+            key, val = line.split(maxsplit=1)
+            key = key.lower()
+            if key in ['ncols', 'nrows']:
+                metadata[key] = int(val)
+            else:
+                metadata[key] = float(val)
+                
+        # Load the flat 1D array and reshape it to 2D
+        grid = numpy.fromiter(
+            (float(val) for line in f for val in line.split()), 
+            dtype=numpy.float32
+        ).reshape((metadata['nrows'], metadata['ncols']))
+
+    # determine the size of the reduced grid
+    ny = metadata['nrows'] // step
+    nx = metadata['ncols'] // step
+    decimated_grid = grid[::step, ::step]
+    new_cellsize = metadata['cellsize'] * step
+
+    # Write out the decimated Esri ASCII file
+    with open(fname, 'w') as f:
+        f.write(f"ncols         {nx}\n")
+        f.write(f"nrows         {ny}\n")
+        f.write(f"xllcorner     {metadata['xllcorner']:.2f}\n")
+        f.write(f"yllcorner     {metadata['yllcorner']:.2f}\n")
+        f.write(f"cellsize      {new_cellsize:.2f}\n")
+        f.write(f"NODATA_value  {int(metadata['nodata_value'])}\n")
+        numpy.savetxt(f, decimated_grid, fmt="%.0f", delimiter=" ")
+
+    
 def main(fname, reduction_factor: valid.probability,
          investigation_time: valid.positivefloat = 50.):
     """
@@ -104,6 +144,11 @@ def main(fname, reduction_factor: valid.probability,
         arr = numpy.array(general.random_filter(array, reduction_factor))
         numpy.save(fname, arr)
         print('Extracted %d rows out of %d' % (len(arr), len(array)))
+        return
+    elif fname.endswith('.asc'):
+        shutil.copy(fname, fname + '.bak')
+        print('Copied the original file in %s.bak' % fname)
+        reduce_asc(fname, int(1/reduction_factor))
         return
     elif fname.endswith('_test.py'):
         # tests are not installed, so this import cannot stay at top-level

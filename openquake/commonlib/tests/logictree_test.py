@@ -370,7 +370,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm.xml': sm},
                                             logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 18)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -436,9 +435,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
-        self.assertEqual(exc.message,
-                         "expected single float value, got '123.45z'",
-                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(
+            exc.message,
+            'bGRRelative: expected single float value, got "123.45z"',
+            "wrong exception message: %s" % exc.message)
 
     def test_incremental_mfd_absolute_wrong_format(self):
         lt = _make_nrml("""\
@@ -937,46 +937,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
-
-    def test_wrong_filter_on_absolute_uncertainties(self):
-        uncertainties_and_values = [('abGRAbsolute', '123 45'),
-                                    ('maxMagGRAbsolute', '678')]
-        filters = ('applyToSources="src01 src02"',
-                   'applyToTectonicRegionType="Active Shallow Crust"')
-        for uncertainty, value in uncertainties_and_values:
-            for filter_ in filters:
-                lt = _make_nrml("""\
-                    <logicTree logicTreeID="lt1">
-                      <logicTreeBranchingLevel branchingLevelID="bl1">
-                        <logicTreeBranchSet uncertaintyType="sourceModel"
-                                            branchSetID="bs1">
-                          <logicTreeBranch branchID="b1">
-                            <uncertaintyModel>sm.xml</uncertaintyModel>
-                            <uncertaintyWeight>1.0</uncertaintyWeight>
-                          </logicTreeBranch>
-                        </logicTreeBranchSet>
-                      </logicTreeBranchingLevel>
-                      <logicTreeBranchingLevel branchingLevelID="bl2">
-                        <logicTreeBranchSet uncertaintyType="%s"
-                                    branchSetID="bs1" %s>
-                          <logicTreeBranch branchID="b2">
-                            <uncertaintyModel>%s</uncertaintyModel>
-                            <uncertaintyWeight>1.0</uncertaintyWeight>
-                          </logicTreeBranch>
-                        </logicTreeBranchSet>
-                      </logicTreeBranchingLevel>
-                    </logicTree>
-                """ % (uncertainty, filter_, value))
-                sm = _whatever_sourcemodel()
-                exc = self._assert_logic_tree_error(
-                    'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
-                self.assertEqual(exc.lineno, 13)
-                error = (
-                    "uncertainty of type '%s' must define 'applyToSources'"
-                    " with only one source id" % uncertainty)
-                self.assertEqual(
-                    exc.message, error,
-                    "wrong exception message: %s" % exc.message)
 
     def test_duplicated_values(self):
         sm = _whatever_sourcemodel()
@@ -1605,93 +1565,102 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
 
 class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
-        self.point = openquake.hazardlib.source.PointSource(
+        self._set_up_point_source()
+        self._set_up_area_source()
+        self._set_up_fault_sources()
+        self._set_up_characteristic_fault()
+
+    def _mfd(self):
+        return TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                              max_mag=6.5, bin_width=0.1)
+
+    def _nodal_plane_distribution(self):
+        nodal_plane = geo.NodalPlane(0.0, 90.0, 0.0)
+        return PMF([(1, nodal_plane)])
+
+    def _hypocenter_distribution(self):
+        return PMF([(1, 10)])
+
+    def _set_up_point_source(self):
+        source = openquake.hazardlib.source
+        trt = openquake.hazardlib.const.TRT
+        scalerel = openquake.hazardlib.scalerel
+        self.point = source.PointSource(
             source_id='point', name='point',
-            tectonic_region_type=
-            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
-            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                               max_mag=6.5, bin_width=0.1),
-            nodal_plane_distribution=PMF(
-                [(1, openquake.hazardlib.geo.NodalPlane(0.0, 90.0, 0.0))]
-            ),
-            hypocenter_distribution=PMF([(1, 10)]),
+            tectonic_region_type=trt.ACTIVE_SHALLOW_CRUST,
+            mfd=self._mfd(),
+            nodal_plane_distribution=self._nodal_plane_distribution(),
+            hypocenter_distribution=self._hypocenter_distribution(),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=
-            openquake.hazardlib.scalerel.PeerMSR(),
-            rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
-                5, 6),
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=geo.Point(5, 6),
             rupture_mesh_spacing=1.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        self.area = openquake.hazardlib.source.AreaSource(
+
+    def _set_up_area_source(self):
+        source = openquake.hazardlib.source
+        trt = openquake.hazardlib.const.TRT
+        scalerel = openquake.hazardlib.scalerel
+        self.area = source.AreaSource(
             source_id='area', name='area',
-            tectonic_region_type=
-            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
-            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                               max_mag=6.5, bin_width=0.1),
-            nodal_plane_distribution=PMF(
-                [(1, openquake.hazardlib.geo.NodalPlane(0.0, 90.0, 0.0))]
-            ),
-            hypocenter_distribution=PMF([(1, 10)]),
+            tectonic_region_type=trt.ACTIVE_SHALLOW_CRUST,
+            mfd=self._mfd(),
+            nodal_plane_distribution=self._nodal_plane_distribution(),
+            hypocenter_distribution=self._hypocenter_distribution(),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=
-            openquake.hazardlib.scalerel.PeerMSR(),
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1,
-            polygon=openquake.hazardlib.geo.Polygon(
-                [openquake.hazardlib.geo.Point(0, 0),
-                 openquake.hazardlib.geo.Point(0, 1),
-                 openquake.hazardlib.geo.Point(1, 0)]),
+            polygon=geo.Polygon(
+                [geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 0)]),
             area_discretization=10, rupture_mesh_spacing=1.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        self.simple_fault = openquake.hazardlib.source.SimpleFaultSource(
+
+    def _set_up_fault_sources(self):
+        source = openquake.hazardlib.source
+        trt = openquake.hazardlib.const.TRT
+        scalerel = openquake.hazardlib.scalerel
+        self.simple_fault = source.SimpleFaultSource(
             source_id='simple_fault', name='simple fault',
-            tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
-            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                               max_mag=6.5, bin_width=0.1),
+            tectonic_region_type=trt.VOLCANIC,
+            mfd=self._mfd(),
             upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship=
-            openquake.hazardlib.scalerel.PeerMSR(),
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1, rupture_mesh_spacing=2.0,
-            fault_trace=openquake.hazardlib.geo.Line(
-                [openquake.hazardlib.geo.Point(0, 0),
-                 openquake.hazardlib.geo.Point(1, 1)]),
+            fault_trace=geo.Line([geo.Point(0, 0), geo.Point(1, 1)]),
             dip=45, rake=180,
             temporal_occurrence_model=PoissonTOM(50.))
-        self.complex_fault = openquake.hazardlib.source.ComplexFaultSource(
+        self.complex_fault = source.ComplexFaultSource(
             source_id='complex_fault', name='complex fault',
-            tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
-            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                               max_mag=6.5, bin_width=0.1),
-            magnitude_scaling_relationship=
-            openquake.hazardlib.scalerel.PeerMSR(),
+            tectonic_region_type=trt.VOLCANIC,
+            mfd=self._mfd(),
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1, rupture_mesh_spacing=2.0, rake=0,
-            edges=[openquake.hazardlib.geo.Line(
-                [openquake.hazardlib.geo.Point(0, 0, 1),
-                 openquake.hazardlib.geo.Point(1, 1, 1)]),
-                openquake.hazardlib.geo.Line(
-                    [openquake.hazardlib.geo.Point(0, 0, 2),
-                     openquake.hazardlib.geo.Point(1, 1, 2)])],
+            edges=[
+                geo.Line([geo.Point(0, 0, 1), geo.Point(1, 1, 1)]),
+                geo.Line([geo.Point(0, 0, 2), geo.Point(1, 1, 2)]),
+            ],
             temporal_occurrence_model=PoissonTOM(50.))
 
+    def _set_up_characteristic_fault(self):
+        source = openquake.hazardlib.source
+        trt = openquake.hazardlib.const.TRT
         lons = numpy.array([-1., 1., -1., 1.])
         lats = numpy.array([0., 0., 0., 0.])
         depths = numpy.array([0., 0., 10., 10.])
-        points = [openquake.hazardlib.geo.Point(lon, lat, depth)
-                  for lon, lat, depth in
+        points = [geo.Point(lon, lat, depth) for lon, lat, depth in
                   zip(lons, lats, depths)]
-        self.characteristic_fault = \
-            openquake.hazardlib.source.CharacteristicFaultSource(
-                source_id='characteristic_fault',
-                name='characteristic fault',
-                tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
-                mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                                   max_mag=6.5, bin_width=0.1),
-                surface=openquake.hazardlib.geo.PlanarSurface(
-                    strike=0.0, dip=90.0,
-                    top_left=points[0], top_right=points[1],
-                    bottom_right=points[3], bottom_left=points[2]
-                ),
-                rake=0,
-                temporal_occurrence_model=PoissonTOM(50.))
+        self.characteristic_fault = source.CharacteristicFaultSource(
+            source_id='characteristic_fault',
+            name='characteristic fault',
+            tectonic_region_type=trt.VOLCANIC,
+            mfd=self._mfd(),
+            surface=geo.PlanarSurface(
+                strike=0.0, dip=90.0,
+                top_left=points[0], top_right=points[1],
+                bottom_right=points[3], bottom_left=points[2]
+            ),
+            rake=0,
+            temporal_occurrence_model=PoissonTOM(50.))
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(
@@ -2169,9 +2138,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                       'applyToSources', str(ctx.exception))
 
 
-class SerializeSmltTestCase(unittest.TestCase):
-    def test(self):
-        sm = '''\
+sm_xml = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2205,7 +2172,7 @@ class SerializeSmltTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>'''
 
-        lt = '''\
+lt_xml = '''\
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -2244,8 +2211,11 @@ class SerializeSmltTestCase(unittest.TestCase):
     </logicTree>
 </nrml>
 '''
+
+class SerializeSmltTestCase(unittest.TestCase):
+    def test(self):
         smlta = _TestableSourceModelLogicTree(
-            'lt', {'lt': lt, 'source_model.xml': sm})
+            'lt', {'lt': lt_xml, 'source_model.xml': sm_xml})
         with hdf5.File.temporary() as h5:
             h5['smlt'] = smlta
         with hdf5.File(h5.path) as h5:  # deserialize

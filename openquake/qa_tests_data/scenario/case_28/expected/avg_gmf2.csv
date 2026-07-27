@@ -1,5 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.23.0-git377549a5d6', start_date='2025-01-31T04:27:56', checksum=75950812"
-custom_site_id,lon,lat,gmv_PGA,gsd_PGA
-7zzzzzzz,0.00000E+00,0.00000E+00,4.26940E-01,1.23826E+00
-ebpbxfpy,0.00000E+00,1.00000E-01,3.44641E-01,1.30190E+00
-ebpcpurv,0.00000E+00,2.00000E-01,0.00000E+00,0.00000E+00
+#,,,"generated_by='OpenQuake engine 3.27.0-gitb6f3282621', start_date='2026-07-21T07:21:53', checksum=3974559007"
+custom_site_id,lon,lat,PGA
+7zzzzzzz,0.00000E+00,0.00000E+00,4.26940E-01
+ebpbxfpy,0.00000E+00,1.00000E-01,3.44641E-01

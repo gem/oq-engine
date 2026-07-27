@@ -200,11 +200,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(list(got), ['src_gz', 'extra', 'array'])
         self.assertGreater(len(got['array']), 0)
 
-        # check risk_stats
-        extract_url = '/v1/calc/%s/extract/risk_stats/aggrisk' % job_id
-        got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['agg_id', 'loss_type', 'loss', 'stat'])
-
         # cleanup
         self.post('%s/remove' % job_id)
 

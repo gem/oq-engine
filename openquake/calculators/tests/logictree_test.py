@@ -32,10 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_28,
-    case_30, case_31, case_32, case_33, case_36, case_39, case_45, case_46,
-    case_52, case_56, case_58, case_59, case_67, case_68, case_71, case_73,
-    case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
+    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
+    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
+    case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -353,7 +353,8 @@ hazard_uhs-std.csv
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         window = self.calc.datastore['oqparam'].investigation_time
         mean_rates = to_rates(mean_poes, window)
-        rates_by_source = self.calc.datastore['mean_rates_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore[
+            'mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
@@ -398,7 +399,9 @@ hazard_uhs-std.csv
         # check the realizations contains only literals
         got = [dict(zip(rlz.lt_path, rlz.value))
                for rlz in self.calc.datastore['full_lt'].source_model_lt]
+        self._check(got)
 
+    def _check(self, got):
         exp0 = {'char_complex': [('complexFaultGeometry',
                                   ([[(-64.5, -0.38221, 2.0),
                                      (-64.5, 0.38221, 4.0)],
@@ -490,6 +493,38 @@ hazard_uhs-std.csv
         nc2 = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
         assert nc2 >= nc
 
+    def test_case_23_bis(self):
+        # correlated uncertainties
+        self.run_calc(case_23.__file__, 'correlated.ini')
+        [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
+        ns = len(self.calc.datastore['source_info'])
+        assert ns == 26
+
+    def test_case_25(self):
+        # BCHydro-style correlated uncertainties
+        self.run_calc(case_25.__file__, 'job_alt1.ini', exports='csv')
+        [got_alt1] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA_alt1.csv', got_alt1)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 24)
+
+        # test oq show rlz:15
+        tbl = general.gettemp(text_table(view('rlz:15', self.calc.datastore)))
+        self.assertEqualFiles('expected/show-rlz.org', tbl)
+
+        self.run_calc(case_25.__file__, 'job_alt2.ini', exports='csv')
+        [got_alt2] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA_alt2.csv', got_alt2)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 16)
+
+        self.run_calc(case_25.__file__, 'job_alt3.ini', exports='csv')
+        [got_alt3] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA_alt3.csv', got_alt3)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 8)
+
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
@@ -514,6 +549,12 @@ hazard_uhs-std.csv
             self.run_calc(case_28.__file__, 'job_wrong.ini')
         self.assertIn('reference_depth_to_1pt0km_per_sec not specified',
                       str(ctx.exception))
+
+    def test_case_29(self):
+        # Simple fault source and area source with epistemic uncertainty
+        # on hypoDepthDist
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
+                              case_29.__file__)
 
     def test_case_30(self):
         # point on the international data line
@@ -705,7 +746,7 @@ hazard_uhs-std.csv
         assert len(self.calc.datastore['weights']) == 3
         dic = dict(view('rlz:2', self.calc.datastore))
         assert str(dic) == ("{'sourceModel': 'common2.xml', "
-                            "'extendModel': '', "
+                            "'dummy': '', "
                             "'active shallow crust': [SadighEtAl1997]}")
 
     def test_case_68_bis(self):

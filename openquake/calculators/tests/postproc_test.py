@@ -124,20 +124,11 @@ class PostProcTestCase(CalculatorTestCase):
         mrd = self.calc.datastore['mrd'][:]
         # assert abs(mrd.mean() - 2.334333e-07) < 1e-12, mrd.mean()
 
-        # Settings
         imts = ['SA(0.2)', 'SA(1.0)']  # subset of the parent IMTs
-
-        # Load datastore
         dstore = self.calc.datastore
         oqp = dstore['oqparam']
-
-        # Read the context maker and set the IMTLS
         cmaker = read_cmakers(dstore)[0].restrict(imts)
-
-        # Read contexts
         ctx = read_ctx_by_grp(dstore)[0]
-
-        # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
 
         # Compute the MRD
@@ -147,11 +138,9 @@ class PostProcTestCase(CalculatorTestCase):
         len2 = len(imls2) - 1
         mrd = np.zeros((len1, len2, len(cmaker.gsims)))
         update_mrd(ctx, cmaker, self.crosscorr, mrd)
-
         mrd = np.average(mrd, axis=2, weights=[0.5, 0.5])
 
-        # Loading Hazard Curves.
-        # The poes array is 4D: |sites| x |stats| x |IMTs| x |IMLs|
+        # Loading the poes array |sites| x |stats| x |IMTs| x |IMLs|
         poes = dstore['hcurves-stats'][:]
         afe = -np.log(1-poes)
         afo = afe[:, :, :, :-1] - afe[:, :, :, 1:]

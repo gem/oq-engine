@@ -390,7 +390,7 @@ def main(what, report=False):
                 print('Generated', reportwriter.build_report(what))
             else:
                 oq = readinput.get_oqparam(what)
-                ltree = readinput.get_logic_tree(oq)
+                ltree = readinput.get_source_model_lt(oq)
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
@@ -398,6 +398,7 @@ def main(what, report=False):
                 print('input size: %s' % size)
                 for bset in ltree.branchsets:
                     pprint(bset)
+                lt.print_tree(ltree.branchsets[0])
         if mon.duration > 1:
             print(mon)
     elif what:

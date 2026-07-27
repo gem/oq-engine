@@ -1,7 +1,67 @@
   [Michele Simionato]
+  * Internal: reduced the hard limit on function length to 79 lines
+  * Fixed the exporters `mag_dst_eps_sig` and `mean_disagg_by_src` for low
+    hazard sites, when such outputs are not computed
+  * Internal: switched to ProcessPoolExecutor
+  * Extended smlt_branch to work with applyToSources and applyToBranches
+  * Changed the `avg_gmf` exporter to export only nonzero values
+  * Fixed bug in classical_risk from hazard_curves.csv manifesting as a
+    KeyError in U32([sid2idx[sid] for sid in df.sid])
+
+  [Christopher Brooks]
+  * Extended recurSet/recurRow epistemic uncertainties to simple fault
+    sources and added a rateSplit uncertainty to partition rate between
+    an area source and embedded faults, for the BC Hydro NVA alt2/alt3
+    LTs (tested inside logictree/case_25)
+
+  [Michele Simionato]
+  * Fixed a bug in `oq show rlz` showing wrong information for some trees
+  * Internal: extended `oq info job.ini` to display the source model logic tree
+  * Internal: extended `oq sample` to manage ESRI .asc files
+
+  [Michele Simionato, Christopher Brooks]
+  * Added recurSet and recurRow epistemic uncertainties for area sources
+    as required for alternative 1 of the BC Hydro NVA LT (tested inside
+    logictree/case_25)
+
+  [Christopher Brooks]
+  * Added filtering of hypoDepthDist in area, multi-point and point
+    sources to only depths within seismogenic depth range and then
+    renormalise the distribution. QA test in classical/case_45
+
+  [Michele Simionato]
+  * Internal: changed `oq mosaic run_site` to export CSVs in asce_dir/<model>
+
+  [Michele Simionato, Christopher Brooks]
+  * Added absolute epistemic uncertainty for hypoDepthDist for both
+    simple faults and background sources. QA test in logictree/case_29
+
+  [Michele Simionato]
+  * Experimental implementation of correlated uncertainties
+  * Fine tuned memory consumption and slow tasks in ebrisk
   * Changed the event_based_risk calculator to split the assets by region
     and not by taxonomy (thus generating slightly different random numbers)
   * Changed `oq engine --make-report` to generate a Markdown report (no HTML)
+
+python3-oq-engine (3.26.2-1~xenial01) xenial; urgency=low
+
+  [Paul Henshaw, Paolo Tormene, Antonio Ettorre]
+  * Fixed install.py to invoke the post installation operations correctly
+
+  [Michele Simionato]
+  * Internal: fixed get_nbytes for empty datasets
+  * Changed the `avg_gmf` exporter to export only nonzero values
+  * Fixed bug in classical_risk from hazard_curves.csv manifesting as a
+    KeyError in U32([sid2idx[sid] for sid in df.sid])
+
+ -- Paul Henshaw (GEM Foundation) <paul@openquake.org>  Fri, 24 Jul 2026 09:28:04 +0000
+
+python3-oq-engine (3.26.1-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi, Antonio Ettorre]
+  * Fix and improve of post installation scripts
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 15 Jul 2026 06:19:19 +0000
 
 python3-oq-engine (3.26.0-1~xenial01) xenial; urgency=low
 

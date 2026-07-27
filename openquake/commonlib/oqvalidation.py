@@ -448,6 +448,11 @@ job_id:
    Example: *job_id = 42*.
    Default: 0 (meaning create a new job)
 
+keep_rupdata:
+   By default store rupdata only if there are few sites
+   Example: *keep_rupdata = false*.
+   Default: true
+
 keep_trt:
    Tectonic region type to consider in the gsim logic tree
    Example: *keep_trt = Active Shallow Crust*.
@@ -1164,6 +1169,7 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     job_id = valid.Param(valid.positiveint, 0)
+    keep_rupdata = valid.Param(valid.boolean, True)
     keep_trt = valid.Param(valid.utf8, '')
     limit_states = valid.Param(valid.namelist, [])
     local_timestamp = valid.Param(valid.local_timestamp, None)
@@ -2602,7 +2608,8 @@ class OqParam(valid.ParamSet):
 
     def from_parent(self, oqparent, new=False):
         """
-        :returns: updated instance with missing parameters copied from oqparent
+        :returns:
+            updated instance with missing parameters copied from oqparent
         """
         params = {name: value for name, value in
                   vars(oqparent).items()

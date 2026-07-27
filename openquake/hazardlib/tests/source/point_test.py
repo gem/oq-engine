@@ -92,7 +92,8 @@ class PointSourceCreationTestCase(unittest.TestCase):
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
         self.assert_failed_creation(
             ValueError,
-            'depth=8.001 is below lower_seismogenic_depth=8',
+            "source_id='source_id' depth=8.001 is below "
+            "lower_seismogenic_depth=8",
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
             hypocenter_distribution=PMF([(0.3, 4), (0.7, 8.001)]))
 
@@ -481,3 +482,19 @@ class PointSourceDipFracsTestCase(unittest.TestCase):
         pla_cen = list(src_cen.get_planar().values())[0][0]
         pla_off = list(src_off.get_planar().values())[0][0]
         self.assertFalse(numpy.array_equal(pla_cen, pla_off))
+
+
+class PointSourceModifyLSDTestCase(unittest.TestCase):
+
+    def test_lsd_shrink_filters_and_renormalises_hypos(self):
+        hdd = PMF([(0.2, 4.0), (0.5, 8.0), (0.3, 12.0)])
+        hdd.hypo_dip_fracs = (0.5, 0.6, 0.7)
+        src = make_point_source(
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.0,
+            hypocenter_distribution=hdd,
+            nodal_plane_distribution=PMF([(1, NodalPlane(0, 60, 90))]))
+        src.modify_set_lower_seismogenic_depth(10.0)
+        data = src.hypocenter_distribution.data
+        self.assertEqual([d for _, d in data], [4.0, 8.0])
+        self.assertAlmostEqual(data[0][0], 0.2 / 0.7)
+        self.assertEqual(src.hypo_dip_fracs, (0.5, 0.6))

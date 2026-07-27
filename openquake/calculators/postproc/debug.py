@@ -22,7 +22,7 @@ from openquake.calculators.base import run_calc
 def main(calc_id: int):
     """
     An utility to debug postprocessors. Use it as
-    $ python -m openquake.calculators.postproc.debug <calc_id>
+    $ oq shell openquake.calculators.postproc.debug <calc_id>
     """
     dstore = datastore.read(calc_id)  # read the original calculation
     oq = dstore['oqparam']  # extract the original job.ini file

@@ -200,6 +200,7 @@ class Oq(object):
     cross_correl = None
     mea_tau_phi = False
     split_sources = True
+    keep_rupdata = True
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
@@ -659,8 +660,6 @@ class ContextMaker(object):
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
-        self.pla_mon = monitor('planar contexts', measuremem=False)
-        self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
@@ -1043,8 +1042,7 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None):
-            with self.pla_mon:
-                return genctxs_Pp(src, sitecol, self)
+            return genctxs_Pp(src, sitecol, self)
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1070,10 +1068,9 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
-        with self.ctx_mon:
-            if len(rups_sites) == 1 and not self.minimum_distance:
-                return ctxs
-            return (self.recarray([c]) for c in ctxs)
+        if len(rups_sites) == 1 and not self.minimum_distance:
+            return ctxs
+        return (self.recarray([c]) for c in ctxs)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1617,7 +1614,10 @@ class RmapMaker(object):
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.cfactor
-        dic['rup_data'] = concat(self.rupdata)
+        if self.oq.keep_rupdata:
+            dic['rup_data'] = concat(self.rupdata)
+        else:
+            dic['rup_data'] = ()
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20

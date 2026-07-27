@@ -55,21 +55,6 @@ jobs:
           else
             python install.py devel --version master
           fi
-      - name: Install Tools using master branch
-        run: |
-          set -x
-          # Standalone apps
-          source ~/openquake/bin/activate
-          echo "Downloading standalone apps"
-          cd ..
-          pwd
-          TOOLS_BRANCH=master
-          for app in oq-platform-standalone oq-platform-ipt oq-platform-taxonomy; do
-           echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
-           git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-           pip install -e ./${app}
-          done
-          deactivate
       - name: Actualize 'default' templates for email notifications
         run: |
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
@@ -344,7 +329,7 @@ jobs:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12", "3.13"]
     env:
-      OQ_APPLICATION_MODE: AELO
+      # We do not set OQ_APPLICATION_MODE: AELO here, but only after install.py
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -381,6 +366,8 @@ jobs:
               cp -- "$file" "${file%.aelo.tmpl}"
           done
       - name: Server 'AELO' mode tests
+        env:
+          OQ_APPLICATION_MODE: AELO
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
@@ -400,7 +387,6 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: IMPACT
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -440,6 +426,8 @@ jobs:
               cp -- "$file" "${file%.impact.tmpl}"
           done
       - name: Server 'IMPACT' mode tests
+        env:
+          OQ_APPLICATION_MODE: IMPACT
         run: |
           set -x
           date

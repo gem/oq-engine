@@ -548,6 +548,62 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         self.slip_rate = slip_rate
 
+    def modify_set_hypo_depth_dist(self, hdd: list):
+        """
+        Updates the hypoDepthDist assigned to the source.
+
+        :param hdd:
+            List of dictionaries where each dictionary contains
+            the keys of probability and depth, and also potentially
+            of down-dip fraction to place the hypocentre.
+        """
+        # Get fixedDipFrac values if any
+        fracs = tuple(
+            float(dic['fixedDipFrac']) if 'fixedDipFrac' in dic else None
+            for dic in hdd)
+        
+        if hasattr(self, 'hypocenter_distribution'):
+            # Distributed typologies (MPS, PS, area) - rebuild the PMF
+            pmf = PMF([(dic['probability'], dic['depth']) for dic in hdd])
+            if any(f is not None for f in fracs):
+                pmf.hypo_dip_fracs = fracs
+                self.hypo_dip_fracs = fracs
+            else:
+                self.hypo_dip_fracs = None
+            self.hypocenter_distribution = pmf
+        else:
+            # Simple Faults - rebuild the hypo_depth_list
+            self.hypo_depth_list = [
+                (dic['probability'], dic['depth'], frac)
+                for dic, frac in zip(hdd, fracs)]
+
+    def _shrink_hypo_depths_to_lsd(self, lsd: float):
+        """
+        Drop depths deeper than lsd from a hypocenter_distribution,
+        renormalise the surviving probabilities, and trim any matching
+        entries in hypo_dip_fracs.
+
+        Called by modify_set_lower_seismogenic_depth on the
+        distributed source typologies (point/area/multi-point) so
+        that a shrunk LSD does not leave orphan hypo depths that would
+        later fail within the PointSource instantiation.
+        """
+        hdd = self.hypocenter_distribution
+        fracs = getattr(hdd, 'hypo_dip_fracs', None)
+        keep = [(i, prob, depth) for i, (prob, depth) in enumerate(hdd.data)
+                if depth <= lsd]
+        if not keep:
+            raise ValueError(
+                f'No hypocenter depths remain at or above the new '
+                f'lower_seismogenic_depth={lsd}')
+        total = sum(prob for _, prob, _ in keep)
+        new_hdd = PMF([(prob / total, depth) for _, prob, depth in keep])
+        if fracs is not None:
+            new_fracs = tuple(fracs[i] for i, _, _ in keep)
+            new_hdd.hypo_dip_fracs = new_fracs
+            self.hypo_dip_fracs = new_fracs
+        self.hypocenter_distribution = new_hdd
+
     def modify_set_mmax_truncatedGR(self, mmax: float):
         """
         Updates the mmax assigned. This works on for parametric MFDs.

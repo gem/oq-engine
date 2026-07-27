@@ -27,6 +27,9 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 # Grouping all the "extra" hypo depth options to reduce num args in class
@@ -122,6 +125,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_mmax_truncatedGR',
         'set_msr',
         'set_slip_rate',
+        'set_hypo_depth_dist',
+        'set_recurrow',
     }
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -514,6 +519,106 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing)
         self.dip = dip
+
+    def modify_set_recurrow(self, recurrow):
+        """
+        Rebuild the MFD from a recurrow using self.recur_model + self.mmax
+        set by an earlier recurSet application.
+
+        Params are read from the recurrow dict, preferring fault-prefixed
+        keys (e.g. fault_b_value, fault_ref_mag, fault_rate) so a single
+        alt3-style recurRow branch can carry different but correlated
+        background and fault parameters; otherwise the unprefixed alt2-style
+        keys are used.
+
+        How it works is determined by the values of rate_split_fault_frac
+        (set by an earlier rateSplit application, absent otherwise) and
+        rate_frac (from the source's rateFrac XML attribute, defaults to
+        1.0 if not set):
+
+        - No rateSplit and rate_frac == 1.0: build the parametric TE or
+          AC MFD from the row params and use it as it is.
+
+        - Alt3 (no rateSplit, rate_frac != 1.0): scale every bin of the
+          parametric MFD by rate_frac and make an EvenlyDiscretizedMFD.
+
+        - Alt2 (rateSplit present): zero bins below Mmax-1 (their rate
+          belongs to the background via the alt2 partition, not the
+          fault) and scale the remaining bins by
+          rate_split_fault_frac * rate_frac; make an EvenlyDiscretizedMFD.
+
+        NOTE: This is currently only intended for support of the BC Hydro
+        NVA SSC logic tree. We may expand it to become a more general
+        capability.
+
+        :param recurrow:
+            Dict of values to use in given type of MFD (e.g. b_value,
+            ref_mag, rate). Alt3-style rows use prefixes of "fault" for
+            the same keys.
+        """
+        # Constants for BC Hydro NVA model
+        b_ac = 0.3
+        delta_mac = 1.0
+        gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        bin_width = 0.1
+
+        # Get params from recurRow, preferring fault-prefixed keys (alt3)
+        mmax = self.mmax
+        recur_model = self.recur_model
+        bval = float(recurrow.get("fault_b_value", recurrow.get("b_value")))
+        ref_mag = float(
+            recurrow.get("fault_ref_mag", recurrow.get("ref_mag")))
+        rate = float(recurrow.get("fault_rate", recurrow.get("rate")))
+
+        # Build the MFD
+        if recur_model == "TE":
+            a_val = math.log10(rate) + bval * ref_mag
+            parent = TruncatedGRMFD(
+                min_mag=ref_mag, max_mag=mmax,
+                bin_width=bin_width, a_val=a_val, b_val=bval,
+            )
+        else:
+            assert recur_model == "AC"
+            parent = AlternativeCharacteristicMFD(
+                min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
+                bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
+                total_rate=rate,
+            )
+
+        fault_frac = getattr(self, 'rate_split_fault_frac', None)
+        rate_frac = getattr(self, 'rate_frac', 1.0)
+
+        # Neither rateSplit nor rateFrac set: no BC Hydro partition to apply
+        if fault_frac is None and rate_frac == 1.0:
+            self.mfd = parent
+            return
+
+        # Alt3-style: rate_frac scaling
+        if fault_frac is None:
+            bins = parent.get_annual_occurrence_rates()
+            occ = [r * rate_frac for _, r in bins]
+            self.mfd = EvenlyDiscretizedMFD(
+                min_mag=bins[0][0], bin_width=bin_width,
+                occurrence_rates=occ)
+            return
+
+        # Alt2-style: zero rates below Mmax-1, scale rest by fault_frac x rate_frac
+        scale = fault_frac * rate_frac
+        threshold = mmax - 1.0
+        bins = parent.get_annual_occurrence_rates()
+        occ = [
+            (r * scale if m >= threshold - bin_width / 4 else 0.0)
+            for m, r in bins
+        ]
+
+        # Trim leading zeros to avoid rup-mesh warnings on tiny-M fault rups
+        first = next((i for i, r in enumerate(occ) if r > 0), None)
+        if first is None:
+            raise ValueError(
+                f"no rate remains above Mmax-1 for fault {self.source_id}")
+        self.mfd = EvenlyDiscretizedMFD(
+            min_mag=bins[first][0], bin_width=bin_width,
+            occurrence_rates=occ[first:])
 
     def __iter__(self):
         mag_rates = self.get_annual_occurrence_rates()

@@ -62,7 +62,8 @@ def unknown(utype, node, filename):
         return float(node.text)
     except (TypeError, ValueError):
         raise LogicTreeError(
-            node, filename, 'expected single float value, got %r' % node.text)
+            node, filename, f'{utype}: expected single float value, '
+            f'got "{node.text}"')
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -81,6 +82,15 @@ def abGR(utype, node, filename):
     except ValueError:
         raise LogicTreeError(
             node, filename, 'expected a pair of floats separated by space')
+
+
+@parse_uncertainty.add('setHypoDepthDistribution')
+def setHypoDepthDistribution(utype, node, filename):
+    try:
+        return [n.attrib for n in node.hypoDepthDist]
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a hypoDepthDist')
 
 
 @parse_uncertainty.add('maxMagAndDeltaMagACRelative',
@@ -209,6 +219,27 @@ def charGeom(utype, node, filename):
     return pairs
 
 
+# BCHydro NVA epistemic uncertainty
+@parse_uncertainty.add('recurSet')
+def recur_set(utype, node, filename):
+    # max_mag is returned as list because use of
+    # valid.positivefloats so we convert to scalar
+    node.row.attrib["max_mag"] = node.row.attrib["max_mag"][0]
+    return node.row.attrib
+
+
+# BCHydro NVA epistemic uncertainty
+@parse_uncertainty.add('recurRow')
+def recur_row(utype, node, filename):
+    return node.row.attrib
+
+
+# BCHydro NVA epistemic uncertainty
+@parse_uncertainty.add('rateSplit')
+def rate_split(utype, node, filename):
+    return node.row.attrib
+
+
 # validations
 
 def _validate_simple_fault_geometry(utype, node, filename):
@@ -283,7 +314,7 @@ def _simple_fault_dip_relative(utype, source, value):
 
 
 @apply_uncertainty.add('simpleFaultDipAbsolute')
-def _simple_fault_dip_absolute(bset, source, value):
+def _simple_fault_dip_absolute(utype, source, value):
     source.modify('set_dip', dict(dip=value))
 
 
@@ -423,12 +454,43 @@ def _setUSD(utype, source, value):
 
 @apply_uncertainty.add('setLowerSeismDepthRelative')
 def _setLSDRelative(utype, source, value):
-    source.modify('adjust_lower_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_lower_seismogenic_depth',
+                  dict(increment=float(value)))
 
 
 @apply_uncertainty.add('setUpperSeismDepthRelative')
 def _setUSDRelative(utype, source, value):
-    source.modify('adjust_upper_seismogenic_depth', dict(increment=float(value)))
+    source.modify('adjust_upper_seismogenic_depth',
+                  dict(increment=float(value)))
+
+
+@apply_uncertainty.add('setHypoDepthDistribution')
+def _set_hypo_depth_dist_absolute(utype, source, value):
+    source.modify('set_hypo_depth_dist', dict(hdd=value))
+
+
+# BCHydro NVA epistemic uncertainty
+@apply_uncertainty.add('recurRow')
+def _set_recurrow(utype, source, value):
+    source.modify('set_recurrow', dict(recurrow=value))
+
+
+# BCHydro NVA epistemic uncertainty
+@apply_uncertainty.add('recurSet')
+def _set_recurset(utype, source, value):
+    # A per-source mmax_offset (parsed from the optional mmaxOffset XML
+    # attribute) shifts the branchset max_mag. The alt3 uses this to enforce
+    # bg_mmax = fault_mmax - 0.5 while still sharing one recurSet branchset
+    source.recur_model = value["recur_model"]
+    source.mmax = float(value["max_mag"]) + getattr(source, 'mmax_offset', 0.0)
+    return
+
+
+# BCHydro NVA epistemic uncertainty
+@apply_uncertainty.add('rateSplit')
+def _set_rate_split(utype, source, value):
+    source.rate_split_bg_frac = float(value["bg_frac"])
+    source.rate_split_fault_frac = float(value["fault_frac"])
 
 
 @apply_uncertainty.add('dummy')  # do nothing
@@ -450,8 +512,21 @@ def apply_uncertainties(bset_values, src_group):
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
+    srcs = set(src.source_id for src in src_group)
+    for bset, value in bset_values:
+        if bset.correlated:
+            for source_id in value:
+                if source_id not in srcs:
+                    raise NameError(
+                        f'The source {source_id} in {bset.uncertainty_type} is'
+                        ' missing, maybe you mispelled the name?')
     for source in src_group:
-        oks = [bset.filter_source(source) for bset, _value in bset_values]
+        oks = []
+        for bset, value in bset_values:
+            if bset.correlated:
+                oks.append(source.source_id in value)
+            else:
+                oks.append(bset.filter_source(source))
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             srcs = []
@@ -471,7 +546,14 @@ def apply_uncertainties(bset_values, src_group):
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
-                    apply_uncertainty(bset.uncertainty_type, src, value)
+                    for s in srcs:
+                        # tested in test_mixed_collapsed_apply_uncertainties
+                        if bset.correlated:
+                            apply_uncertainty(
+                                bset.uncertainty_type, s,
+                                value[source.source_id])
+                        else:
+                            apply_uncertainty(bset.uncertainty_type, s, value)
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
@@ -579,8 +661,16 @@ class Branch(object):
         self.bs_id = bs_id
         self.bset = None
 
+    def is_dummy(self):
+        """
+        :returns: True with the parent branchset ID starts with 'dummy'
+        """
+        return self.bs_id.startswith('dummy')
+
     @property
     def id(self):
+        if self.is_dummy():
+            return '.'
         return self.branch_id if len(self.branch_id) == 1 else self.short_id
 
     def is_leaf(self):
@@ -683,6 +773,13 @@ class BranchSet(object):
         self.ordinal = ordinal
         self.collapsed = collapsed
         self.branches = []
+
+    @property
+    def correlated(self):
+        """
+        The branchset is applied to correlated sources
+        """
+        return self.filters.get('applyToSources') == ['*']
 
     def sample(self, probabilities, sampling_method):
         """
@@ -835,9 +932,14 @@ class BranchSet(object):
         """
         tot = 0
         for br in self.branches:
-            assert 0 <= br.weight <= 1, br.weight
+            if not (0 <= br.weight <= 1):
+                raise ValueError(
+                    f'Invalid weight {br.weight} for branch {br.branch_id}')
             tot += br.weight
-        assert abs(tot - 1.) < 1E-6, [br.weight for br in self.branches]
+        if abs(tot - 1.) >= 5E-6:
+            raise ValueError(
+                f'Branch weights sum to {tot}, expected 1.0 '
+                f'([{[br.weight for br in self.branches]}])')
 
     def __len__(self):
         return len(self.branches)
@@ -846,34 +948,96 @@ class BranchSet(object):
         return repr(self.branches)
 
     def __repr__(self):
-        kvs = ', '.join('%s=%s' % item for item in self.filters.items())
+        kvs = ', '.join(f'{k}={fmtlist(v)}' for k, v in self.filters.items())
         if kvs:
             kvs = ', ' + kvs
         return '<%s(%d%s)>' % (self.uncertainty_type, len(self), kvs)
 
 
+def fmtlist(lst):
+    """
+    Format a list of strings for display purposes.
+    """
+    if not isinstance(lst, list):
+        return lst
+    if len(lst) <= 3:
+        return  ' '.join(lst)
+    return '%s..%s' % (lst[0],lst[-1])
+
+
 # NB: this function cannot be used with monster logic trees like the one for
-# South Africa (ZAF), since it is too slow; the engine uses a trick instead
+# South Africa (ZAF), since the stack will explode; the engine uses a trick
 def count_paths(branches):
     """
-    :param branches: a list of branches (endpoints or nodes)
-    :returns: the number of paths in the branchset (slow)
+    :param branches: a list of branches or a logic tree
+    :returns: the total number of paths including sub-branches
     """
-    return sum(1 if br.bset is None else count_paths(br.bset.branches)
-               for br in branches)
+    if hasattr(branches, 'branchsets'):  # a LogicTree
+        branches = branches.branchsets[0].branches
+    count = 0
+    stack = list(branches)
+    while stack:
+        br = stack.pop()
+        if br.bset is None:
+            count += 1
+        else:
+            # push sub-branches onto the stack to process next
+            stack.extend(br.bset.branches)
+    return count
 
 
 dummy_counter = itertools.count(1)
 
 
-def dummy_branchset():
+def dummy_branchset(branch_id):
     """
     :returns: a dummy BranchSet with a single branch
     """
+    br = Branch(branch_id, None, 1, f'dummy{next(dummy_counter)}')
+    br.short_id = '.'
     bset = BranchSet('dummy')
-    bset.branches = [Branch('.', None, 1, 'dummy%d' % next(dummy_counter))]
-    bset.branches[0].short_id = '.'
+    bset.branches = [br]
     return bset
+
+
+def print_tree(bob, prefix="", is_last=True):
+    """
+    Recursively prints a tree structure using ASCII art.
+
+    :param bob: a tree, a branchset or a branch
+    :param prefix: The visual padding/lines accumulated from parent levels.
+    :param is_last: Boolean indicating if this node is the last child
+    """
+    if hasattr(bob, 'branchsets'):  # a tree
+        bob = bob.branchsets[0]
+    try:
+        id = bob.branch_id  # if branch
+    except AttributeError:
+        try:
+            id = bob.id  # if branchset
+        except AttributeError:
+            id = 'root'
+    print(f"{prefix}{'└── ' if is_last else '├── '}{id}")
+
+    # Update the prefix for the children.
+    # If this node is the last child, its vertical line ends here (add spaces).
+    # Otherwise, extend the vertical line downwards.
+    new_prefix = prefix + ("    " if is_last else "│   ")
+   
+    # Recursively print all branches
+    if hasattr(bob, 'bset') and bob.bset:
+        branches = bob.bset.branches
+    elif hasattr(bob, 'branches'):
+        branches = bob.branches
+    else:
+        branches = []
+    if len(branches) > 3:
+        br1 = copy.copy(branches[1])
+        br1.branch_id = '...'
+        branches = [branches[0], br1, branches[-1]]
+    count = len(branches)
+    for i, branch in enumerate(branches, 1):
+        print_tree(branch, new_prefix, is_last=(i == count))
 
 
 class Realization(object):
@@ -901,20 +1065,75 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
-def add_path(bset, bsno, brno, num_prev, tot, paths):
-    base = BASE183
-    if brno + len(bset.branches) >= len(BASE183):
-        brno = 0
-    for br in bset.branches:
-        br.short_id = base[brno]
-        path = ['*'] * tot
-        path[bsno] = br.id
-        paths.append(''.join(path))
-        brno += 1
-    if 'applyToBranches' not in bset.filters or len(
-            bset.filters['applyToBranches']) == num_prev:
-        return 0
-    return brno
+def set_short_id(branches, short_ids):
+    for branch, short_id in zip(branches, short_ids):
+        branch.short_id = short_id
+
+
+def attach_branches(ltree, override=False):
+    """
+    Attach branchsets to branches depending on `applyToBranches`, plus
+    attach dummy branchsets to dummy branches.
+    """
+    fname = getattr(ltree, 'filename', '?')
+    # example branchsets [<abGRAbsolute(2)>, <maxMagGRAbsolute(2)]
+    set_short_id(ltree.branchsets[0].branches, BASE183)
+    branchdic = {br.branch_id: br for br in ltree.branchsets[0].branches}
+    previous_branches = list(branchdic.values())
+    brno = 0  # for legacy instead of the more correct len(branchdic)
+    for bset in ltree.branchsets[1:]:
+        # build4: abGRAbsolute(ssm1), abGRAbsolute(ssm2), maxMagGRAbsolute
+        for br in bset.branches:
+            if br.branch_id in branchdic:
+                raise NameError(f'The branch ID {br.branch_id} is duplicated')
+            branchdic[br.branch_id] = br
+
+        prev_ids = [pb.branch_id for pb in previous_branches]
+        app2brs = [brid for brid in bset.filters.get('applyToBranches', [])
+                   if brid in branchdic]
+        dummies = []
+        next_previous = []
+        if app2brs and app2brs != prev_ids:
+            bset.applied = app2brs
+            target_bs_ids = {
+                branchdic[brid].bs_id for brid in app2brs
+                if brid in branchdic
+            }  # bs00 for build4
+            for branch_id in app2brs:
+                br = branchdic[branch_id]  # the branch_ids are checked before
+                if not br.is_leaf() and not override:
+                    raise LogicTreeError(
+                        fname, '?',
+                        f"branch {br.branch_id!r} already has child "
+                        f"branchset")
+                br.bset = bset
+            for br in previous_branches:
+                if br.branch_id not in app2brs:
+                    if br.bs_id in target_bs_ids:
+                        # attach dummy branchset only at the current level
+                        br.bset = dummy = dummy_branchset(br.branch_id)
+                        dummies.append(dummy.branches[0])
+                    else:
+                        next_previous.append(br)
+        else:
+            for br in previous_branches:
+                br.bset = bset
+        set_short_id(bset.branches, BASE183[brno:])
+        brno += len(bset)
+        previous_branches = bset.branches + dummies + next_previous
+
+
+def smlt_path(branches):
+    """
+    :returns: a tuple with the branch IDs (dots for dummy branches)
+    """
+    path = []
+    for br in branches:
+        if br.is_dummy():
+            path.append('.')
+        else:
+            path.append(br.branch_id)
+    return tuple(path)
 
 
 class CompositeLogicTree(object):
@@ -932,42 +1151,7 @@ class CompositeLogicTree(object):
             bset.ordinal = i
             bset.check_duplicates()
             bset.check_weights()
-        self.basepaths = self._attach_to_branches()
-
-    def _attach_to_branches(self):
-        # attach branchsets to branches depending on the applyToBranches
-        # attribute; also attaches dummy branchsets to dummy branches.
-        paths = []
-        nb = len(self.branchsets)
-        brno = add_path(self.branchsets[0], 0, 0, 0, nb, paths)
-        previous_branches = self.branchsets[0].branches
-        branchdic = {br.branch_id: br for br in previous_branches}
-        for i, bset in enumerate(self.branchsets[1:]):
-            for br in bset.branches:
-                if br.branch_id != '.' and br.branch_id in branchdic:
-                    raise NameError('The branch ID %s is duplicated'
-                                    % br.branch_id)
-                branchdic[br.branch_id] = br
-            dummies = []
-            prev_ids = [pb.branch_id for pb in previous_branches]
-            app2brs = list(bset.filters.get('applyToBranches', '')) or prev_ids
-            if app2brs != prev_ids:
-                for branch_id in app2brs:
-                    # NB: if branch_id has already a branchset it is overridden
-                    branchdic[branch_id].bset = bset
-                for brid in prev_ids:
-                    br = branchdic[brid]
-                    if brid not in app2brs:
-                        br.bset = dummy = dummy_branchset()
-                        [dummybranch] = dummy.branches
-                        branchdic[dummybranch.branch_id] = dummybranch
-                        dummies.append(dummybranch)
-            else:  # apply to all previous branches
-                for branch in previous_branches:
-                    branch.bset = bset
-            brno = add_path(bset, i+1, brno, len(previous_branches), nb, paths)
-            previous_branches = bset.branches + dummies
-        return paths
+        attach_branches(self, override=True)
 
     def __iter__(self):
         """
@@ -983,21 +1167,19 @@ class CompositeLogicTree(object):
             for branches in self.branchsets[0].sample(
                     probs, self.sampling_method):
                 value = [br.value for br in branches]
-                smlt_path_ids = [br.branch_id for br in branches]
                 if self.sampling_method.startswith('early_'):
                     weight = 1. / self.num_samples  # already accounted
                 elif self.sampling_method.startswith('late_'):
                     weight = numpy.prod([br.weight for br in branches])
                 else:
                     raise NotImplementedError(self.sampling_method)
-                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
+                yield Realization(value, weight, ordinal, smlt_path(branches))
                 ordinal += 1
         else:  # full enumeration
             rlzs = []
             for weight, branches in self.branchsets[0].enumerate_paths():
                 value = [br.value for br in branches]
-                branch_ids = [branch.branch_id for branch in branches]
-                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlz = Realization(value, weight, 0, smlt_path(branches))
                 rlzs.append(rlz)
             rlzs.sort(key=operator.attrgetter('pid'))
             for r, rlz in enumerate(rlzs):
@@ -1100,6 +1282,8 @@ def build(*bslists, applyToSources=''):
     for i, (utype, applyto, *brlists) in enumerate(bslists):
         bsid = 'bs%02d' % i
         branches = []
+        first = brlists[0]
+        assert len(first) == 3, 'Expected (brid, value, weight) got %s' % first
         for brid, value, weight in brlists:
             branches.append(Branch(brid, value, weight, bsid))
         bset = BranchSet(utype, dict(applyToBranches=applyto))

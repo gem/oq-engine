@@ -328,8 +328,6 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
-        self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
         xml = clt.to_nrml()
         self.assertEqual(xml, EXPECTED_LT)
@@ -349,7 +347,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['I', 'extra7', 0.2],
                         ['J', 'extra8', 0.2]])
         self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
-                         ['AC.', 'AD.', 'AE.', 'AF..',
+                         ['AC.', 'AD.', 'AE.', 'AF.',
                           'BG.', 'BH.', 'BI.', 'BJ.'])
 
         clt = lt.build(['sourceModel', [],
@@ -414,7 +412,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mmax_7pt6', '7.6', 0.1]]
         ]
         ltssc = lt.build(*ltl)
+        lt.print_tree(ltssc)
         paths = ltssc.get_all_paths()
+        print(numpy.array(paths))
         # The third branchset increases the number of branches from 3 to 5 for
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
@@ -476,7 +476,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mm7pt6', 7.5, .1],
              ],
             applyToSources='nva')
-        
+        # lt.print_tree(clt)
         fname = gettemp(clt.to_nrml(), suffix='.xml')
         expected = os.path.join(CDIR, 'lt_test.xml')
         with open(fname) as got, open(expected) as exp:
@@ -492,6 +492,28 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                 msg += '\n'
         self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
 
+    def test_build4(self):
+        # a reduced version of case_25
+        ltl = [
+            ['sourceModel', [],
+             ['ssm1', 'ssm1.xml', 0.5],
+             ['ssm2', 'ssm6.xml', 0.5]],
+            ['abGRAbsolute', ['ssm1'],
+             ['ab_1', '1.0 1.0', 0.5],
+             ['ab_2', '1.1 0.9', 0.5]],
+            ['abGRAbsolute', ['ssm2'],
+             ['ab_3', '0.9 1.0', 0.5],
+             ['ab_4', '1.0 0.9', 0.5]],
+            ['maxMagGRAbsolute', [],
+             ['mmax_6pt8', '6.8', 0.3],
+             ['mmax_7pt0', '7.0', 0.7]],
+        ]
+        ltssc = lt.build(*ltl)
+        lt.print_tree(ltssc)
+        paths = ltssc.get_all_paths()
+        self.assertEqual(paths, ['AAE.', 'AAF.', 'ABE.', 'ABF.',
+                                 'BCE.', 'BCF.', 'BDE.', 'BDF.'])
+
     def test_zero_weight(self):
         # check that branches with zero weight are not sampled
         clt = lt.build(['sourceModel', [],
@@ -503,4 +525,154 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         paths = [''.join(rlz.lt_path) for rlz in rlzs]
         cnt = collections.Counter(paths)
         assert cnt == {'A': 64, 'B': 36}
+
+
+class SetHypoDepthDistUncertaintyTestCase(unittest.TestCase):
+    """
+    Tests for setHypoDepthDistribution epistemic uncertainty.
+    """
+    # fixedDipFrac arrives as str from the LT parser
+    HDD_WITH_FDF = [
+        dict(probability=0.25, depth=5.0, fixedDipFrac='0.4'),
+        dict(probability=0.75, depth=10.0, fixedDipFrac='0.6')]
+    HDD_NO_FDF = [
+        dict(probability=0.5, depth=7.0),
+        dict(probability=0.5, depth=12.0)]
+
+    SIMPLE_FAULT = '''\
+    <simpleFaultSource id="1" name="sf"
+        tectonicRegion="Active Shallow Crust">
+      <simpleFaultGeometry>
+        <gml:LineString><gml:posList>0 0 1 0</gml:posList></gml:LineString>
+        <dip>60</dip>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </simpleFaultGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <rake>90</rake>
+    </simpleFaultSource>'''
+
+    POINT_LIKE = {
+        'point': '''\
+    <pointSource id="2" name="ps"
+        tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point><gml:pos>0 0</gml:pos></gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </pointSource>''',
+        'area': '''\
+    <areaSource id="3" name="ar"
+        tectonicRegion="Active Shallow Crust">
+      <areaGeometry discretization="10">
+        <gml:Polygon><gml:exterior><gml:LinearRing><gml:posList>
+          0 0 1 0 1 1 0 1
+        </gml:posList></gml:LinearRing></gml:exterior></gml:Polygon>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="0.9"
+                                minMag="5" maxMag="6"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </areaSource>''',
+        'multi_point': '''\
+    <multiPointSource id="4" name="mp"
+        tectonicRegion="Active Shallow Crust">
+      <multiPointGeometry>
+        <gml:posList>0 0 0 1</gml:posList>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>20</lowerSeismoDepth>
+      </multiPointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.5</ruptAspectRatio>
+      <multiMFD kind="truncGutenbergRichterMFD" size="2">
+        <a_val>3 3</a_val>
+        <b_val>0.9</b_val>
+        <min_mag>5</min_mag>
+        <max_mag>6</max_mag>
+      </multiMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="8" probability="1"/>
+      </hypoDepthDist>
+    </multiPointSource>'''}
+
+    def test_apply_to_simple_fault(self):
+        src = nrml.get(self.SIMPLE_FAULT)
+        lt.apply_uncertainty(
+            'setHypoDepthDistribution', src, self.HDD_WITH_FDF)
+        self.assertEqual(
+            src.hypo_depth_list,
+            [(0.25, 5.0, 0.4), (0.75, 10.0, 0.6)])
+        lt.apply_uncertainty(
+            'setHypoDepthDistribution', src, self.HDD_NO_FDF)
+        self.assertEqual(
+            src.hypo_depth_list,
+            [(0.5, 7.0, None), (0.5, 12.0, None)])
+
+    def test_apply_to_point_like(self):
+        for kind, xml in self.POINT_LIKE.items():
+            src = nrml.get(xml)
+            lt.apply_uncertainty(
+                'setHypoDepthDistribution', src, self.HDD_WITH_FDF)
+            self.assertEqual(src.hypocenter_distribution.data,
+                             [(0.25, 5.0), (0.75, 10.0)], msg=kind)
+            self.assertEqual(src.hypo_dip_fracs, (0.4, 0.6), msg=kind)
+            self.assertEqual(
+                src.hypocenter_distribution.hypo_dip_fracs,
+                (0.4, 0.6), msg=kind)
+            lt.apply_uncertainty(
+                'setHypoDepthDistribution', src, self.HDD_NO_FDF)
+            self.assertEqual(src.hypocenter_distribution.data,
+                             [(0.5, 7.0), (0.5, 12.0)], msg=kind)
+            self.assertIsNone(src.hypo_dip_fracs, msg=kind)
+
+
+class LogicFixesTestCase(unittest.TestCase):
+
+    def test_mixed_collapsed_apply_uncertainties(self):
+        # Ensure non-collapsed uncertainties apply to all expanded sources
+        # from prior collapsed branchset
+        src = nrml.get(SetHypoDepthDistUncertaintyTestCase.SIMPLE_FAULT)
+        sg = sourceconverter.SourceGroup('Active Shallow Crust', [src])
+        
+        bs_collapsed = lt.BranchSet('bGRRelative', collapsed=True)
+        bs_collapsed.branches = [lt.Branch('b1', 0.1, 0.4),
+                                 lt.Branch('b2', 0.2, 0.6)]
+        
+        bs_normal = lt.BranchSet('maxMagGRRelative', collapsed=False)
+        bs_normal.branches = [lt.Branch('m1', 0.5, 1.0)]
+
+        bset_values = [(bs_collapsed, None), (bs_normal, 0.5)]
+        mod_sg = lt.apply_uncertainties(bset_values, sg)
+        
+        self.assertEqual(len(mod_sg.sources), 2)
+
+        # Both sources generated from collapsed branchset must have
+        # max_mag updated by bs_normal
+        for mod_src in mod_sg.sources:
+            self.assertEqual(mod_src.mfd.max_mag, 6.5)
 

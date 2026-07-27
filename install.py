@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 #
 # Copyright (C) 2020-2026 GEM Foundation
 #
@@ -97,6 +97,11 @@ class server:
     Parameters for a server installation (with root permissions)
     """
 
+    #
+    # For server and devel_server we do not (yet) support changing venv
+    # if we support changing venv, we need also to replace CFG and other
+    # dependent fields with methods
+    #
     VENV = "/opt/openquake/venv"
     CFG = os.path.join(VENV, "openquake.cfg")
     OQ = "/usr/bin/oq"
@@ -113,6 +118,14 @@ class server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join(cls.VENV, 'lib',
+                            f'python{PYVER[0]}.{PYVER[1]}',
+                            'site-packages', 'openquake',
+                            'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -145,7 +158,12 @@ class devel_server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
     exit = server.exit
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
 
 
 class user:
@@ -171,6 +189,19 @@ class user:
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     DBPORT = 1908
     CONFIG = ""
+    USER = None
+
+    @classmethod
+    def manage_py(cls):
+        if sys.platform == "win32":
+            return os.path.join(cls.VENV, 'lib',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
+        else:
+            return os.path.join(cls.VENV, 'lib',
+                                f'python{PYVER[0]}.{PYVER[1]}',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
 
     @classmethod
     def exit(cls):
@@ -183,8 +214,11 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-
     exit = user.exit
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
 
 
 PACKAGES = """It looks like you have an installation from packages.
@@ -222,6 +256,7 @@ GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 # FIXME just for devel test
 # URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
 
 
 def ensure(pip=None, pyvenv=None):
@@ -273,7 +308,17 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
-def install_or_postinstall_standalone(venv, is_install=True):
+def _run_subprocess(inst, args):
+    # Run subprocess use sudo if inst.USER != None
+    if inst.USER is None:
+        subprocess.check_call(args)
+    else:
+        # user=inst.USER does not appear to work in the same
+        # way as sudo -u $USER
+        subprocess.check_call(['sudo', '-u', inst.USER] + args)
+
+
+def install_or_postinstall_standalone(inst, is_install=True):
     """
     Install the standalone Django applications if possible or
     run '<app>_postinstall' command if it exists
@@ -293,93 +338,114 @@ def install_or_postinstall_standalone(venv, is_install=True):
         pycmd = inst.VENV + "/bin/python3"
 
     STANDALONE_APP_INFO = [
-        {"pkg": "oq-platform-standalone", "name": None},
-        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
-        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
-        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
+        # All engine Django app need oq-platform-standalone
+        {"pkg": "oq-platform-standalone", "name": None,
+         "ver": "~=2.16.4"},
+        # Django apps to install
+        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
+         "ver": "~=1.21.0"},
+        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
+         "ver": "~=1.2.0"},
+        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
+         "ver": "~=1.4.4"},
     ]
 
     if is_install:
         for app in STANDALONE_APP_INFO:
             try:
-                print("Applications " + app['pkg'] + " are not installed yet \n")
+                print(f"Applications {app['pkg']} are not installed yet \n")
 
                 subprocess.check_call(
-                    [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
-                     app['pkg']]
+                    [pycmd, "-m", "pip", "install",
+                     "--no-index", "--no-cache-dir",
+                     "--find-links", WHEELHOUSE_URL,
+                     "--find-links", URL_STANDALONE,
+                     app['pkg'] + app['ver']]
                 )
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: could not install %s" % (exc, app['pkg']))
     else:
+        # Obtain paths for python and manage.py in VENV, we cannot use
+        # site.getsitepackages here since we are not yet running in the venv
+        if sys.platform == "win32":
+            python = ['Scripts', 'python.exe']
+        else:
+            python = ["bin", "python"]
+
+        # Run python manage.py migrate before running app postinstall
+        _run_subprocess(
+            inst,
+            [os.path.join(inst.VENV, *python), inst.manage_py(), "migrate"])
+
         for app in STANDALONE_APP_INFO:
             if not app['name']:
                 continue
 
             try:
-                if sys.platform == "win32":
-                    django_admin = ['Scripts', 'django-admin.exe']
-                else:
-                    django_admin = ["bin", "django-admin"]
-
-                django_env = os.environ.copy()
-                django_env["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-
-                subprocess.check_call(
-                    [os.path.join(inst.VENV, *django_admin),
-                     "openquake_engine_postinstall", app['name']],
-                    env=django_env)
+                # Run python manage.py postinstall
+                _run_subprocess(
+                    inst,
+                    [os.path.join(inst.VENV, *python),
+                        inst.manage_py(), "openquake_engine_postinstall",
+                        app['name']])
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
-                errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
+                errors.append(
+                    "%s: error during %s postinstall command execution" % (
+                        exc, app['name']))
 
     return errors
 
 
-def install_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=True)
+def install_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=True)
 
-def postinstall_standalone(venv):
-    return install_or_postinstall_standalone(venv, is_install=False)
+
+def postinstall_standalone(inst):
+    return install_or_postinstall_standalone(inst, is_install=False)
+
 
 def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
+    # TODO consider moving the inst specific checks to inst.check(args, usage)
+
+    # check venv
+    if sys.prefix != sys.base_prefix:
+        sys.exit("You are inside a virtual environment! Please deactivate")
+
+    # server and devel_server installs are linux only and with fixed venv
+    if (inst is server or inst is devel_server):
+        if (sys.platform != "linux"):
+            sys.exit("Error: this installation method is meant for linux!")
+        if args.venv:
+            sys.exit("Error: --venv with server install is not supported")
+        if getpass.getuser() != "root":
+            sys.exit(
+                "Error: you cannot perform a server or devel_server "
+                "installation unless "
+                "you are root. If you do not have root permissions, you "
+                "can install the engine in user mode.\n\n" + usage
+            )
+
     if args.venv:
         inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
     if args.dbport:
         inst.DBPORT = int(args.dbport)
 
     if args.novenv:
+        # TODO REMOVE or add check for non Windows OS and non "user" usage
         inst.VENV = os.path.join(os.getenv('LocalAppData'), 'Programs',
                                  'OpenQuake Engine', 'python3')
 
-    # check platform
-    if (inst is server and sys.platform != "linux") or (
-        inst is devel_server and sys.platform != "linux"
-    ):
-        sys.exit("Error: this installation method is meant for linux!")
-
-    # check venv
-    if sys.prefix != sys.base_prefix:
-        sys.exit("You are inside a virtual environment! Please deactivate")
-
     # check user
-    user = getpass.getuser()
-    if (inst is server and user != "root") or (
-            inst is devel_server and user != "root"):
-        sys.exit(
-            "Error: you cannot perform a server or devel_server "
-            "installation unless "
-            "you are root. If you do not have root permissions, you "
-            "can install the engine in user mode.\n\n" + usage
-        )
-    elif (inst is user and user == "root") or (
-            inst is devel and user == "root"):
+    if ((inst is user or inst is devel) and getpass.getuser() == "root"):
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
     elif inst is devel:
+        # TODO should we not be checking for devel_server here too?
         if shutil.which("git") is None:
             raise RuntimeError("git is missing, please install it")
         try:
@@ -577,7 +643,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
                 env=custom_env)
         fix_version(commit, inst.VENV)
 
-    errors = install_standalone(inst.VENV)
+    errors = install_standalone(inst)
 
     # create openquake.cfg
     if inst is server or inst is devel_server:
@@ -604,7 +670,7 @@ def install(inst, version, from_fork, novenv, noupgrade):
     if inst in (user, devel):  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
 
-    errors += postinstall_standalone(inst.VENV)
+    errors += postinstall_standalone(inst)
 
     if (
         inst is server
@@ -699,14 +765,19 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
+    # FIXME --novenv is only for use on Windows with user install
+    # TODO update documentation and/or add checks and/or make --novenv
+    # work in all environments
     parser.add_argument("--novenv", action="store_true",
                         help="keep the current python environment")
     parser.add_argument("--noupgrade", action="store_true",
                         help="not use '--upgrade' in pip install calls")
     parser.add_argument("--remove", action="store_true",
                         help="disinstall the engine")
-    parser.add_argument("--version", help="version to install (default stable)")
-    parser.add_argument("--dbport", help="DbServer port (default 1907 or 1908)")
+    parser.add_argument("--version",
+                        help="version to install (default stable)")
+    parser.add_argument("--dbport",
+                        help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
@@ -715,12 +786,14 @@ if __name__ == "__main__":
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
+        # set inst to the class named as the string args.inst
         inst = globals()[args.inst]
         before_checks(inst, args, parser.format_usage())
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.novenv, args.noupgrade)
+            errors = install(inst, args.version, args.from_fork, args.novenv,
+                             args.noupgrade)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))

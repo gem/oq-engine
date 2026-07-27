@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+    <description>Chennai-IS1893</description>
+    <conversions>
+      <costTypes>
+	<costType name="structural" type="aggregated" unit="EUR"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="1" number="42439"  taxonomy="CR" >
+	<location lon="80.2364" lat="12.9252" />
+	<costs>
+	  <cost type="structural" value="762"/>
+	</costs>
+	<occupancies>
+	  <occupancy occupants="16976" period="day"/>
+	  <occupancy occupants="152780" period="night"/>
+	  <occupancy occupants="25463" period="transit"/>
+	</occupancies>
+      </asset>
+      <asset id="2" number="39988"  taxonomy="CR" >
+	<location lon="80.2373" lat="13.0149" />
+	<costs>
+	  <cost type="structural" value="762"/>
+	</costs>
+	<occupancies>
+	  <occupancy occupants="15995" period="day"/>
+	  <occupancy occupants="143957" period="night"/>
+	  <occupancy occupants="23993" period="transit"/>
+	</occupancies>
+      </asset>
+      <asset id="3" number="40643"  taxonomy="CR" >
+	<location lon="80.2263" lat="12.9795" />
+	<costs>
+	  <cost type="structural" value="762"/>
+	</costs>
+	<occupancies>
+	  <occupancy occupants="16257" period="day"/>
+	  <occupancy occupants="146315" period="night"/>
+	  <occupancy occupants="24386" period="transit"/>
+	</occupancies>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

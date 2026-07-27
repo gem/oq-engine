@@ -17,13 +17,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.qa_tests_data.classical_risk import (
-    case_2, case_3, case_4, case_5, case_lisa, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_lisa, case_master)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.baselib import InvalidFile
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
+    def test_case_1(self):
+        self.run_calc(case_1.__file__, 'job.ini', exports='csv')
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')

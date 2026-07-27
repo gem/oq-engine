@@ -42,8 +42,16 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 250
+GMF1_MB = 80
+GMF2_MB = 400
 get_n_occ = operator.itemgetter(1)
+
+
+def size_mb(df):
+    """
+    :returns: the size in MB of the dataframe
+    """
+    return df.memory_usage().sum() / 1024**2
 
 
 def get_assetdf_startstop(assetcol):
@@ -267,6 +275,7 @@ def event_based_risk(gmf_df, monitor):
     R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
     X = len(xtypes)
     loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
     if os.environ.get('OQ_DEBUG_SITE'):
         print(gmf_df)
 
@@ -289,7 +298,6 @@ def event_based_risk(gmf_df, monitor):
         countries = ["?"]  # assume a single contry
     for id01, adf_ in items:
         id0, id1 = numpy.divmod(id01, TWO16)
-        loss3 = {'aids': [], 'bids': [], 'loss': []}
         for taxo in adf_.taxonomy.unique():
             with fil_mon:
                 # filtering is *crucial* for the performance of the next step
@@ -308,11 +316,9 @@ def event_based_risk(gmf_df, monitor):
                     adf, gdf, crmodel.oqparam._sec_losses, rng, country)
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-        avg = build_avg(loss3, oq.A, R*X)
-        yield dict(avg=avg)
-
+    avg = build_avg(loss3, oq.A, R*X)
     alt = build_alt(loss2, xtypes)
-    yield dict(alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
+    return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 
 def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
@@ -327,13 +333,18 @@ def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = [dic['gmfdata'] for dic in event_based.event_based(
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if len(dic['gmfdata'])]
-    if dfs:
+           if len(dic['gmfdata']))
+    for b, blk in enumerate(general.block_splitter(dfs, GMF2_MB, size_mb)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        yield from event_based_risk(pandas.concat(dfs), monitor)
+        mb = round(sum(size_mb(df) for df in blk))
+        if b == 0 or mb < GMF1_MB:  # don't spawn small tasks
+            yield event_based_risk(pandas.concat(blk), monitor)
+        else:
+            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=}')
+            yield event_based_risk, pandas.concat(blk)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")

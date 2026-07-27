@@ -98,3 +98,18 @@ multiPointSource{id='mp1', name='multi point source'}
                                mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh)
         for ps in mps:
             self.assertEqual(ps.hypo_dip_fracs, fracs)
+
+    def test_lsd_shrink_filters_and_renormalises_hypos(self):
+        hd = PMF([(0.2, 4.0), (0.5, 8.0), (0.3, 12.0)])
+        hd.hypo_dip_fracs = (0.5, 0.6, 0.7)
+        npd = PMF([(1, NodalPlane(0, 60, 90))])
+        mesh = Mesh(numpy.array([0., 1.]), numpy.array([0., 0.]))
+        mmfd = MultiMFD('incrementalMFD', size=2, min_mag=[4.5],
+                        bin_width=[1.0], occurRates=[[0.1], [0.2]])
+        mps = MultiPointSource('mp3', 'test', 'Active Shallow Crust',
+                               mmfd, PeerMSR(), 1.0, 0, 15, npd, hd, mesh)
+        mps.modify_set_lower_seismogenic_depth(10.0)
+        data = mps.hypocenter_distribution.data
+        self.assertEqual([d for _, d in data], [4.0, 8.0])
+        self.assertAlmostEqual(data[0][0], 0.2 / 0.7)
+        self.assertEqual(mps.hypo_dip_fracs, (0.5, 0.6))
