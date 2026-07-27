@@ -159,39 +159,36 @@ class ParseNDKtoGCMT(object):
         Reads the file
         """
         raw_data = getlines(self.filename)
+        self._validate_line_count(raw_data)
+        self._read_events(raw_data)
+        self._set_catalogue_years(start_year, end_year)
+        self.to_hmtk(use_centroid)
+        return self.catalogue
+
+    def _validate_line_count(self, raw_data):
         num_lines = len(raw_data)
-        if ((float(num_lines) / 5.0) - float(num_lines / 5)) > 1e-9:
+        if num_lines % 5:
             raise IOError(
                 "GCMT represented by 5 lines - number in file not"
                 " a multiple of 5!"
             )
-        self.catalogue.number_gcmts = num_lines // 5
+
+    def _read_events(self, raw_data):
+        self.catalogue.number_gcmts = len(raw_data) // 5
         self.catalogue.gcmts = [None] * self.catalogue.number_gcmts
-        # Pre-allocates list
-        id0 = 0
         print("Parsing catalogue ...")
-        for iloc in range(0, self.catalogue.number_gcmts):
-            self.catalogue.gcmts[iloc] = self.read_ndk_event(raw_data, id0)
-            id0 += 5
+        for iloc in range(self.catalogue.number_gcmts):
+            self.catalogue.gcmts[iloc] = self.read_ndk_event(
+                raw_data, 5 * iloc)
         print(
             "complete. Contains %s moment tensors"
             % self.catalogue.get_number_tensors()
         )
-        if not start_year:
-            min_years = []
-            min_years = [
-                cent.centroid.date.year for cent in self.catalogue.gcmts
-            ]
-            self.catalogue.start_year = np.min(min_years)
 
-        if not end_year:
-            max_years = []
-            max_years = [
-                cent.centroid.date.year for cent in self.catalogue.gcmts
-            ]
-            self.catalogue.end_year = np.max(max_years)
-        self.to_hmtk(use_centroid)
-        return self.catalogue
+    def _set_catalogue_years(self, start_year, end_year):
+        years = [gcmt.centroid.date.year for gcmt in self.catalogue.gcmts]
+        self.catalogue.start_year = start_year or np.min(years)
+        self.catalogue.end_year = end_year or np.max(years)
 
     def read_ndk_event(self, raw_data, id0):
         """
@@ -239,96 +236,54 @@ class ParseNDKtoGCMT(object):
 
     def to_hmtk(self, use_centroid=True):
         """
-        Convert the content of the GCMT catalogue to a HMTK
-        catalogue.
+        Convert the content of the GCMT catalogue to a HMTK catalogue.
         """
         self._preallocate_data_dict()
         for iloc, gcmt in enumerate(self.catalogue.gcmts):
             self.catalogue.data["eventID"][iloc] = iloc
-            if use_centroid:
-                self.catalogue.data["year"][iloc] = gcmt.centroid.date.year
-                self.catalogue.data["month"][iloc] = gcmt.centroid.date.month
-                self.catalogue.data["day"][iloc] = gcmt.centroid.date.day
-                self.catalogue.data["hour"][iloc] = gcmt.centroid.time.hour
-                self.catalogue.data["minute"][iloc] = gcmt.centroid.time.minute
-                self.catalogue.data["second"][iloc] = gcmt.centroid.time.second
-                self.catalogue.data["longitude"][
-                    iloc
-                ] = gcmt.centroid.longitude
-                self.catalogue.data["latitude"][iloc] = gcmt.centroid.latitude
-                self.catalogue.data["depth"][iloc] = gcmt.centroid.depth
-            else:
-                self.catalogue.data["year"][iloc] = gcmt.hypocentre.date.year
-                self.catalogue.data["month"][iloc] = gcmt.hypocentre.date.month
-                self.catalogue.data["day"][iloc] = gcmt.hypocentre.date.day
-                self.catalogue.data["hour"][iloc] = gcmt.hypocentre.time.hour
-                self.catalogue.data["minute"][
-                    iloc
-                ] = gcmt.hypocentre.time.minute
-                self.catalogue.data["second"][
-                    iloc
-                ] = gcmt.hypocentre.time.second
-                self.catalogue.data["longitude"][
-                    iloc
-                ] = gcmt.hypocentre.longitude
-                self.catalogue.data["latitude"][
-                    iloc
-                ] = gcmt.hypocentre.latitude
-                self.catalogue.data["depth"][iloc] = gcmt.hypocentre.depth
-            # Moment, magnitude and relative errors
-            self.catalogue.data["moment"][iloc] = gcmt.moment
-            self.catalogue.data["magnitude"][iloc] = gcmt.magnitude
-            self.catalogue.data["f_clvd"][iloc] = gcmt.f_clvd
-            self.catalogue.data["e_rel"][iloc] = gcmt.e_rel
-            self.catalogue.data["centroidID"][iloc] = gcmt.identifier
-            # Nodal planes
-            self.catalogue.data["strike1"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_1["strike"]
-            self.catalogue.data["dip1"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_1["dip"]
-            self.catalogue.data["rake1"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_1["rake"]
-            self.catalogue.data["strike2"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_2["strike"]
-            self.catalogue.data["dip2"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_2["dip"]
-            self.catalogue.data["rake2"][
-                iloc
-            ] = gcmt.nodal_planes.nodal_plane_2["rake"]
-            # Principal axes
-            self.catalogue.data["eigenvalue_b"][
-                iloc
-            ] = gcmt.principal_axes.b_axis["eigenvalue"]
-            self.catalogue.data["azimuth_b"][
-                iloc
-            ] = gcmt.principal_axes.b_axis["azimuth"]
-            self.catalogue.data["plunge_b"][iloc] = gcmt.principal_axes.b_axis[
-                "plunge"
-            ]
-            self.catalogue.data["eigenvalue_p"][
-                iloc
-            ] = gcmt.principal_axes.p_axis["eigenvalue"]
-            self.catalogue.data["azimuth_p"][
-                iloc
-            ] = gcmt.principal_axes.p_axis["azimuth"]
-            self.catalogue.data["plunge_p"][iloc] = gcmt.principal_axes.p_axis[
-                "plunge"
-            ]
-            self.catalogue.data["eigenvalue_t"][
-                iloc
-            ] = gcmt.principal_axes.t_axis["eigenvalue"]
-            self.catalogue.data["azimuth_t"][
-                iloc
-            ] = gcmt.principal_axes.t_axis["azimuth"]
-            self.catalogue.data["plunge_t"][iloc] = gcmt.principal_axes.t_axis[
-                "plunge"
-            ]
+            origin = gcmt.centroid if use_centroid else gcmt.hypocentre
+            self._write_origin(iloc, origin)
+            self._write_moment_data(iloc, gcmt)
+            self._write_nodal_planes(iloc, gcmt.nodal_planes)
+            self._write_principal_axes(iloc, gcmt.principal_axes)
         return self.catalogue
+
+    def _write_origin(self, iloc, origin):
+        self.catalogue.data["year"][iloc] = origin.date.year
+        self.catalogue.data["month"][iloc] = origin.date.month
+        self.catalogue.data["day"][iloc] = origin.date.day
+        self.catalogue.data["hour"][iloc] = origin.time.hour
+        self.catalogue.data["minute"][iloc] = origin.time.minute
+        self.catalogue.data["second"][iloc] = origin.time.second
+        self.catalogue.data["longitude"][iloc] = origin.longitude
+        self.catalogue.data["latitude"][iloc] = origin.latitude
+        self.catalogue.data["depth"][iloc] = origin.depth
+
+    def _write_moment_data(self, iloc, gcmt):
+        self.catalogue.data["moment"][iloc] = gcmt.moment
+        self.catalogue.data["magnitude"][iloc] = gcmt.magnitude
+        self.catalogue.data["f_clvd"][iloc] = gcmt.f_clvd
+        self.catalogue.data["e_rel"][iloc] = gcmt.e_rel
+        self.catalogue.data["centroidID"][iloc] = gcmt.identifier
+
+    def _write_nodal_planes(self, iloc, nodal_planes):
+        plane1 = nodal_planes.nodal_plane_1
+        plane2 = nodal_planes.nodal_plane_2
+        for idx, plane in ((1, plane1), (2, plane2)):
+            self.catalogue.data[f"strike{idx}"][iloc] = plane["strike"]
+            self.catalogue.data[f"dip{idx}"][iloc] = plane["dip"]
+            self.catalogue.data[f"rake{idx}"][iloc] = plane["rake"]
+
+    def _write_principal_axes(self, iloc, axes):
+        for label, axis in self._iter_axes(axes):
+            self.catalogue.data[f"eigenvalue_{label}"][iloc] = axis[
+                "eigenvalue"
+            ]
+            self.catalogue.data[f"azimuth_{label}"][iloc] = axis["azimuth"]
+            self.catalogue.data[f"plunge_{label}"][iloc] = axis["plunge"]
+
+    def _iter_axes(self, axes):
+        return (("b", axes.b_axis), ("p", axes.p_axis), ("t", axes.t_axis))
 
     def _preallocate_data_dict(self):
         """ """
@@ -425,26 +380,18 @@ class ParseNDKtoGCMT(object):
         of the GCMTPrincipalAxes class
         """
         axes = GCMTPrincipalAxes()
-        # The principal axes is defined in characters 3:48 of the 5th line
-        exponent = 10.0**exponent
-        axes.t_axis = {
-            "eigenvalue": exponent * float(ndk_string[0:8]),
-            "plunge": float(ndk_string[8:11]),
-            "azimuth": float(ndk_string[11:15]),
-        }
-
-        axes.b_axis = {
-            "eigenvalue": exponent * float(ndk_string[15:23]),
-            "plunge": float(ndk_string[23:26]),
-            "azimuth": float(ndk_string[26:30]),
-        }
-
-        axes.p_axis = {
-            "eigenvalue": exponent * float(ndk_string[30:38]),
-            "plunge": float(ndk_string[38:41]),
-            "azimuth": float(ndk_string[41:]),
-        }
+        scale = 10.0**exponent
+        axes.t_axis = self._parse_axis(ndk_string, scale, 0, 8, 11, 15)
+        axes.b_axis = self._parse_axis(ndk_string, scale, 15, 23, 26, 30)
+        axes.p_axis = self._parse_axis(ndk_string, scale, 30, 38, 41)
         return axes
+
+    def _parse_axis(self, ndk_string, scale, val0, plunge0, azim0, azim1=None):
+        return {
+            "eigenvalue": scale * float(ndk_string[val0:plunge0]),
+            "plunge": float(ndk_string[plunge0:azim0]),
+            "azimuth": float(ndk_string[azim0:azim1]),
+        }
 
     def _get_nodal_planes_from_ndk_string(self, ndk_string):
         """
@@ -453,17 +400,16 @@ class ParseNDKtoGCMT(object):
         class
         """
         planes = GCMTNodalPlanes()
-        planes.nodal_plane_1 = {
-            "strike": float(ndk_string[0:3]),
-            "dip": float(ndk_string[3:6]),
-            "rake": float(ndk_string[6:11]),
-        }
-        planes.nodal_plane_2 = {
-            "strike": float(ndk_string[11:15]),
-            "dip": float(ndk_string[15:18]),
-            "rake": float(ndk_string[18:]),
-        }
+        planes.nodal_plane_1 = self._parse_plane(ndk_string, 0, 3, 6, 11)
+        planes.nodal_plane_2 = self._parse_plane(ndk_string, 11, 15, 18)
         return planes
+
+    def _parse_plane(self, ndk_string, strike0, dip0, rake0, rake1=None):
+        return {
+            "strike": float(ndk_string[strike0:dip0]),
+            "dip": float(ndk_string[dip0:rake0]),
+            "rake": float(ndk_string[rake0:rake1]),
+        }
 
     def _get_moment_from_ndk_string(self, ndk_string, exponent):
         """

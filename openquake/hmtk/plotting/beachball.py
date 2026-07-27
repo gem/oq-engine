@@ -480,8 +480,7 @@ def _update_azi(p, f, iso):
     for i in range(360):
         fir = i * D2R
         s2alphan = (2.0 + 2.0 * iso) / float(
-            3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir)
-        )
+            3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir))
         if s2alphan > 1.0:
             p.big_iso += 1
         else:
@@ -492,13 +491,8 @@ def _update_azi(p, f, iso):
             can = np.cos(alphan)
 
             xz = can * spd + san * sfi * spb + san * cfi * spm
-            xn = (
-                can * cpd * cad + san * sfi * cpb * cab + san * cfi * cpm * cam
-            )
-            xe = (
-                can * cpd * sad + san * sfi * cpb * sab + san * cfi * cpm * sam
-            )
-
+            xn = can*cpd*cad + san*sfi*cpb*cab + san*cfi*cpm*cam
+            xe = can*cpd*sad + san*sfi*cpb*sab + san*cfi*cpm*sam
             if np.fabs(xn) < EPSILON and np.fabs(xe) < EPSILON:
                 takeoff = 0.0
                 az = 0.0
@@ -618,7 +612,6 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
     (S2, D2, _R2) = AuxPlane(S1, D1, R1)
 
     D = size / 2
-
     if D1 >= 90:
         D1 = 89.9999
     if D2 >= 90:
@@ -628,18 +621,12 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
     phi = np.arange(np.pi, 0.01)
     l1 = np.sqrt(
         np.power(90 - D1, 2)
-        / (
-            np.power(np.sin(phi), 2)
-            + np.power(np.cos(phi), 2) * np.power(90 - D1, 2) / np.power(90, 2)
-        )
-    )
+        / (np.power(np.sin(phi), 2)
+           + np.power(np.cos(phi), 2) * np.power(90 - D1, 2) / np.power(90, 2)))
     l2 = np.sqrt(
         np.power(90 - D2, 2)
-        / (
-            np.power(np.sin(phi), 2)
-            + np.power(np.cos(phi), 2) * np.power(90 - D2, 2) / np.power(90, 2)
-        )
-    )
+        / (np.power(np.sin(phi), 2)
+           + np.power(np.cos(phi), 2) * np.power(90 - D2, 2) / np.power(90, 2)))
 
     inc = 1
     (X1, Y1) = Pol2Cart(phi + S1 * D2R, l1)

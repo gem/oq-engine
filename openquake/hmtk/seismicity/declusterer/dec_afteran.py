@@ -74,8 +74,7 @@ class Afteran(BaseCatalogueDecluster):
         catalogue_matrix, window_opt=TDW_GARDNERKNOPOFF, time_window=60.):
 
         :param catalogue: a catalogue object
-        :type catalogue: Instance of the openquake.hmtk.seismicity.catalogue.Catalogue()
-                         class
+        :type catalogue: openquake.hmtk.seismicity.catalogue.Catalogue
         :keyword window_opt: method used in calculating distance and time
             windows
         :type window_opt: string
@@ -96,12 +95,10 @@ class Afteran(BaseCatalogueDecluster):
         year_dec = decimal_year(
             catalogue.data["year"],
             catalogue.data["month"],
-            catalogue.data["day"],
-        )
+            catalogue.data["day"])
         # Get space windows corresponding to each event
         sw_space, _ = config["time_distance_window"].calc(
-            catalogue.data["magnitude"]
-        )
+            catalogue.data["magnitude"])
 
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
@@ -123,15 +120,12 @@ class Afteran(BaseCatalogueDecluster):
 
                 # Select earthquakes inside distance window, later than
                 # mainshock and not already assigned to a cluster
-                vsel1 = np.where(
+                vsel1, = np.where(
                     np.logical_and(
                         vcl == 0,
                         np.logical_and(
                             mdist <= sw_space[imarker],
-                            year_dec > year_dec[imarker],
-                        ),
-                    )
-                )[0]
+                            year_dec > year_dec[imarker])))
                 has_aftershocks = False
                 if len(vsel1) > 0:
                     # Earthquakes after event inside distance window
@@ -145,20 +139,16 @@ class Afteran(BaseCatalogueDecluster):
                 # Select earthquakes inside distance window, earlier than
                 # mainshock and not already assigned to a cluster
                 has_foreshocks = False
-                vsel2 = np.where(
+                vsel2, = np.where(
                     np.logical_and(
                         vcl == 0,
                         np.logical_and(
                             mdist <= sw_space[imarker],
-                            year_dec < year_dec[imarker],
-                        ),
-                    )
-                )[0]
+                            year_dec < year_dec[imarker])))
                 if len(vsel2) > 0:
                     # Earthquakes before event inside distance window
                     temp_vsel2, has_foreshocks = self._find_foreshocks(
-                        vsel2, year_dec, time_window, imarker, neq
-                    )
+                        vsel2, year_dec, time_window, imarker, neq)
                     if has_foreshocks:
                         flagvector[temp_vsel2] = -1
                         vcl[temp_vsel2] = clust_index + 1
