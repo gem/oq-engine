@@ -119,7 +119,7 @@ def manage_signals(job_id, signum, _stack):
     :param _stack: the current frame object, ignored
     """
     if signum == signal.SIGINT:
-        raise MasterKilled('The openquake master process was killed manually')
+        raise MasterKilled('The oq-job process was killed manually')
 
     if signum == signal.SIGTERM:
         sys.exit(f'Killed {job_id}')
@@ -350,7 +350,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
                 run_calc(jobctx)
     except MasterKilled as e:
         if ('pytest' in sys.argv[0] and str(e) ==
-                'The openquake master process was killed manually'):
+                'The master process was killed manually'):
             logging.warning(e)
         else:
             raise
