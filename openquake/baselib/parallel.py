@@ -737,6 +737,7 @@ class Starmap(object):
     def shutdown(cls):
         if hasattr(cls, 'pool'):
             # shutdown and recreate the executor
+            logging.info('Shutting down the pool')
             cls.pool.shutdown(wait=False, cancel_futures=True)
             cls.pool = ProcessPoolExecutor(
                 num_cores, mp_context, init_worker)
