@@ -343,9 +343,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = min(totw / (oq.concurrent_tasks or 1), 60_000_000)
-    logging.info(f'{round(maxw)=:_d}')
-    return filrups, maxw, acc
+    return filrups, acc
 
 
 def get_allargs(oq, sitecol, sec_perils, dstore):
@@ -356,7 +354,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
     # NB: _filter_rups calls close_ruptures which can raise an error
-    filrups, maxw, acc = _filter_rups(oq, sitecol, trts, dstore)
+    filrups, acc = _filter_rups(oq, sitecol, trts, dstore)
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         if model == '???':
@@ -394,7 +392,9 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
     allargs = []
+    num_rups = 0
     for (model, trt_smr), rups in acc.items():
+        num_rups += len(rups)
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
             model = '???'
@@ -418,22 +418,23 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
         for rupblock in block_splitter(rups, 100):
             allargs.append((rupblock, cmaker, model))
 
-    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
+    blocksize = (num_rups // (oq.concurrent_tasks or 1)) or 1
+    allargs = _collect(allargs, blocksize, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return allargs, oq_by
 
 
-def _collect(allargs, maxw, sids, sec_perils, dstore):
+def _collect(allargs, blocksize, sids, sec_perils, dstore):
     # allargs is a list [(rupblock, cmaker, model) ...]
     # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
     out = []
-    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
+    for triples in block_splitter(allargs, blocksize, lambda item: len(item[0]),
                                   key=lambda item: item[2]):  # by model
         rupblks, cmakers, models = zip(*triples)
         allrups = general.WeightedSequence([
-            (numpy.array(rb), rb.weight) for rb in rupblks])
+            (numpy.array(rb), len(rb)) for rb in rupblks])
         out.append((allrups, cmakers, sids, sec_perils, dstore))
     # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
     return out
