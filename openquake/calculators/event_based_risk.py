@@ -345,16 +345,15 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
            if len(dic['gmfdata']))
     num_assets = monitor.read('num_assets')
     affected = partial(affected_assets, num_assets=num_assets)
-    for b, blk in enumerate(general.block_splitter(dfs, 1E6, affected)):
+    for b, blk in enumerate(general.block_splitter(dfs, 1E7, affected)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
         aff = round(sum(affected(df) for df in blk))
-        print(f'{aff=}')
         if b == 0 or mb < GMF1_MB:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
-            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=}')
+            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {aff=}')
             yield event_based_risk, pandas.concat(blk)
 
 
