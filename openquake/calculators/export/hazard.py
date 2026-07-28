@@ -806,7 +806,14 @@ def export_mce(ekey, dstore):
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
     for s, site in enumerate(sitecol):
-        js = dstore[ekey[0]][s].decode('utf8')
+        try:
+            js = dstore[ekey[0]][s].decode('utf8')
+        except IndexError:
+            # e.g., for the "default" site class (with multiple Vs30 values),
+            # we have 1 actual site, represented as 3 sites with equal
+            # coordinates and different site classes. In that case, we have
+            # only one asce07 table and one asce41 table
+            pass
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
