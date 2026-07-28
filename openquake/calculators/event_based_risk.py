@@ -337,7 +337,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
            if len(dic['gmfdata']))
     num_assets = monitor.read('num_assets')
     for b, blk in enumerate(general.block_splitter(
-            dfs, 1E8, lambda gmf_df: num_assets[gmf_df.sid].sum())):
+            dfs, 2E8, lambda gmf_df: num_assets[gmf_df.sid].sum())):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
