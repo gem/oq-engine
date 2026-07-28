@@ -341,7 +341,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+    logging.info('Affected ~%.0f sites per rupture, max=%.0f',
                  nsites / len(filrups), affected)
     return filrups, acc
 
@@ -418,7 +418,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
         for rupblock in block_splitter(rups, 100):
             allargs.append((rupblock, cmaker, model))
 
-    blocksize = (num_rups // (oq.concurrent_tasks or 1)) or 1
+    blocksize = (num_rups // (oq.concurrent_tasks//2 or 1)) or 1
     allargs = _collect(allargs, blocksize, sitecol.sids, sec_perils, dstore)
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
