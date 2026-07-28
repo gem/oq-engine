@@ -54,8 +54,11 @@ def size_mb(df):
     return df.memory_usage().sum() / 1024**2
 
 
-def affected_assets(df, num_assets):
-    return sum(num_assets[sid] for sid in df.sid)
+def affected_assets(gmf_df, num_assets):
+    """
+    :returns: the total number of affected assets multiplied by n_occ
+    """
+    return sum(num_assets[sid] for sid in gmf_df.sid)
 
 
 def get_assetdf_startstop(assetcol):
@@ -340,10 +343,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, dstore, monitor)
            if len(dic['gmfdata']))
-    if dstore.parent:
-        num_assets = general.fast_agg(dstore.parent['assetcol/array']['site_id'])
-    else:
-        num_assets = {sid: 1 for sid in sids}
+    num_assets = monitor.read('num_assets')
     affected = partial(affected_assets, num_assets=num_assets)
     for b, blk in enumerate(general.block_splitter(dfs, 1E6, affected)):
         # NB: it is essential to concatenate the small dataframes to have
@@ -385,6 +385,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         max_assets_per_region = (iss[:, 2] - iss[:, 1]).max()
         logging.info(f'{max_assets_per_region=:_d}')
         monitor.save('assets', adf)
+        monitor.save('num_assets', general.fast_agg(self.assetcol['site_id']))
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
