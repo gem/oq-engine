@@ -19,7 +19,6 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
-      OQ_APPLICATION_MODE: IMPACT
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -50,6 +49,8 @@ jobs:
             python install.py devel --version master
           fi
       - name: Server 'IMPACT' mode tests
+        env:
+          OQ_APPLICATION_MODE: IMPACT
         run: |
           set -x
           date
