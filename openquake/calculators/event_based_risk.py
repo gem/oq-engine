@@ -54,6 +54,10 @@ def size_mb(df):
     return df.memory_usage().sum() / 1024**2
 
 
+def affected_assets(df, num_assets):
+    return sum(num_assets[sid].sum() for sid in df.sid)
+
+
 def get_assetdf_startstop(assetcol):
     """
     :param assetcol: an AssetCollection
@@ -321,22 +325,25 @@ def event_based_risk(gmf_df, monitor):
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 
-def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
+def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmakers: ContextMaker instances associated to each trt_smr
     :param sids: array of site indices
     :param secperils: list of secondary peril instances
-    :param hdf5path: path to the ses.hdf5 file
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :yields: dictionaries with keys 'avg', 'alt' and 'gmfbytes'
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = (dic['gmfdata'] for dic in event_based.event_based(
-        allrups, cmakers, sids, secperils, hdf5path, monitor)
-           if len(dic['gmfdata']))
-    for b, blk in enumerate(general.block_splitter(dfs, GMF2_MB, size_mb)):
+    dfs = [dic['gmfdata'] for dic in event_based.event_based(
+        allrups, cmakers, sids, secperils, dstore, monitor)
+           if len(dic['gmfdata'])]
+    num_assets = general.fast_agg(dstore['assetcol/array']['site_id'])
+    affected = partial(affected_assets, num_assets=num_assets)
+    print('---------------', sum(affected(df) for df in dfs))
+    for b, blk in enumerate(general.block_splitter(dfs, 1E6, affected)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
