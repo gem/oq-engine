@@ -83,7 +83,6 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None, jobcfg=None):
         cfg = jobcfg
     if ini is None:
         ini = os.path.join(mosaic_dir, models[0], 'in', cfg)
-    breakpoint()
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
     # NB: or the description is passed explicitly or it is generated from
