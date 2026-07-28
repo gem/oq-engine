@@ -55,7 +55,7 @@ def size_mb(df):
 
 
 def affected_assets(df, num_assets):
-    return sum(num_assets[sid].sum() for sid in df.sid)
+    return sum(num_assets[sid] for sid in df.sid)
 
 
 def get_assetdf_startstop(assetcol):
@@ -337,16 +337,20 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
-    dfs = [dic['gmfdata'] for dic in event_based.event_based(
+    dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, dstore, monitor)
-           if len(dic['gmfdata'])]
-    num_assets = general.fast_agg(dstore['assetcol/array']['site_id'])
+           if len(dic['gmfdata']))
+    if dstore.parent:
+        num_assets = general.fast_agg(dstore.parent['assetcol/array']['site_id'])
+    else:
+        num_assets = {sid: 1 for sid in sids}
     affected = partial(affected_assets, num_assets=num_assets)
-    print('---------------', sum(affected(df) for df in dfs))
     for b, blk in enumerate(general.block_splitter(dfs, 1E6, affected)):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
+        aff = round(sum(affected(df) for df in blk))
+        print(f'{aff=}')
         if b == 0 or mb < GMF1_MB:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
