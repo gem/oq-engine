@@ -42,7 +42,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 50
 get_n_occ = operator.itemgetter(1)
 
 
@@ -342,7 +341,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
         aff = round(sum(num_assets[df.sid].sum() for df in blk))
-        if b == 0 or mb < GMF_MB:  # don't spawn small tasks
+        if b == 0 or mb < 2E7:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
             print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {aff=:_d}')
