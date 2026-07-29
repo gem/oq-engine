@@ -805,15 +805,15 @@ def export_mce(ekey, dstore):
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
-    for s, site in enumerate(sitecol):
-        try:
-            js = dstore[ekey[0]][s].decode('utf8')
-        except IndexError:
-            # e.g., for the "default" site class (with multiple Vs30 values),
-            # we have 1 actual site, represented as 3 sites with equal
-            # coordinates and different site classes. In that case, we have
-            # only one asce07 table and one asce41 table
-            pass
+    if len(sitecol) == 3 and len(dstore[ekey[0]]) == 1:
+        # In the "default" site class case we have 1 actual site, represented
+        # as 3 sites with equal coordinates and different site classes, and we
+        # have only one asce07 table and one asce41 table
+        sids = [0]
+    else:
+        sids = sitecol.sids
+    for s in sids:
+        js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
