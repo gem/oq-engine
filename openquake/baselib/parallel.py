@@ -1002,6 +1002,8 @@ class Starmap(object):
                     mem_gb = memory_gb()
                 elif hasattr(Starmap, 'pool'):
                     mem_gb = memory_gb(Starmap.pool._processes)
+                else:
+                    mem_gb = 0
                 if self.h5.mode != 'r':
                     res.mon.save_task_info(self.h5, res, name, mem_gb)
                     res.mon.flush(self.h5)
