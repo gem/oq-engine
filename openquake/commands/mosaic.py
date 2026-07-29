@@ -169,7 +169,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760,
              asce_version: str = oqvalidation.OqParam.asce_version.default, 
-             jobconfig: str = None):
+             job_ini: str = None):
     """
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
@@ -185,11 +185,11 @@ def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
         return from_file(lonlat_or_fname, mosaic_dir, asce_dir,
-                         concurrent_jobs, asce_version, vs30, jobconfig)
+                         concurrent_jobs, asce_version, vs30, job_ini)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
         dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir, 
-        config=jobconfig) 
+        config=job_ini) 
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)

@@ -52,7 +52,7 @@ def get_boundaries_file(mosaic_dir, other_dir):
     raise FileNotFoundError('aelo_boundaries')
 
 
-def get_params_from(inputs, mosaic_dir, exclude=(), ini=None, jobcfg=None):
+def get_params_from(inputs, mosaic_dir, exclude=(), ini=None, job_ini=None):
     """
     :param inputs:
         a dictionary with key sites, vs30, asce_version, site_class,
@@ -77,10 +77,10 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None, jobcfg=None):
     if models[0] == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
-    if jobcfg is None:
+    if job_ini is None:
         cfg = 'job_vs30.ini'
     else:
-        cfg = jobcfg
+        cfg = job_ini
     if ini is None:
         ini = os.path.join(mosaic_dir, models[0], 'in', cfg)
     params = readinput.get_params(ini)
