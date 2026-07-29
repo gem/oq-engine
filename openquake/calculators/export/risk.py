@@ -161,7 +161,7 @@ def export_aggrisk_stats(ekey, dstore):
                 else:
                     aggnames.add(aggfield)
         dataf = extract(dstore, 'aggrisk_tags')
-        for tagnames, (start, stop) in dataf.slc.items():
+        for tagnames, (start, stop) in dataf.attrs['slc'].items():
             df = dataf[start:stop]
             for missing in aggnames - set(tagnames):
                 del df[missing]
