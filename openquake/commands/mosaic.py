@@ -210,7 +210,7 @@ run_site.vs30 = 'vs30 value for the calculation; ignored if in lonlat csv file'
 run_site.asce_version = dict(
     help='ASCE version',
     choices=oqvalidation.OqParam.asce_version.validator.choices)
-run_site.jobconfig = 'job file in mosaic model dir to use'
+run_site.job_ini = 'job file in mosaic model dir to use'
 
 # ######################### sample rups and gmfs ######################### #
 
