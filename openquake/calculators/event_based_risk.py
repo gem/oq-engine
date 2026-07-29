@@ -342,12 +342,12 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         # long arrays (around GMF_MB) and hence a good performance
         mb = round(sum(size_mb(df) for df in blk))
         na = numpy.round([num_assets[df.sid].sum() for df in blk])
-        aff = int(na.sum())
+        ae = int(na.sum())
         # print(f'{monitor.task_no=}, {na/1E6=}')
-        if b == 0 or aff < AE_MIN:  # don't spawn small tasks
+        if b == 0 or ae < AE_MIN:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
-            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {aff=:_d}')
+            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {ae=:_d}')
             yield event_based_risk, pandas.concat(blk)
 
 
