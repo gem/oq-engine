@@ -726,7 +726,6 @@ class Starmap(object):
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pids = list(cls.pool._processes)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = ThreadPoolExecutor(num_cores, mp_context, init_worker)
 
@@ -739,6 +738,9 @@ class Starmap(object):
             # shutdown and recreate the executor
             logging.info('Shutting down the pool')
             cls.pool.shutdown(wait=False, cancel_futures=True)
+            if cls.pool._processes:
+                for p in cls.pool._processes.values():
+                    p.terminate()
             del cls.pool
 
     @classmethod
@@ -1000,7 +1002,7 @@ class Starmap(object):
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
                 else:
-                    mem_gb = memory_gb(Starmap.pids)
+                    mem_gb = memory_gb(Starmap.pool._processes)
                 if self.h5.mode != 'r':
                     res.mon.save_task_info(self.h5, res, name, mem_gb)
                     res.mon.flush(self.h5)
