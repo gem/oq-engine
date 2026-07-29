@@ -88,6 +88,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
+        # check aggrisk_tags extraction
+        aggrisk_tags = extract(self.calc.datastore, 'aggrisk_tags')
+
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
 
