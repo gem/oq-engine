@@ -713,7 +713,6 @@ class MasterKilled(KeyboardInterrupt):
 
 class Starmap(object):
     on = False
-    pids = ()
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -1001,7 +1000,7 @@ class Starmap(object):
                     # do not measure the memory on the workers
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
-                else:
+                elif hasattr(Starmap, 'pool'):
                     mem_gb = memory_gb(Starmap.pool._processes)
                 if self.h5.mode != 'r':
                     res.mon.save_task_info(self.h5, res, name, mem_gb)
