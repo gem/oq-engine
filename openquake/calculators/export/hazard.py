@@ -813,6 +813,9 @@ def unique_sites(sitecol):
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
+    # In the "default" site class case we have 1 actual site, represented
+    # as 3 sites with equal coordinates and different site classes, and we
+    # have only one asce07 table and one asce41 table
     groups = unique_sites(sitecol)
     for s, (xy, sites) in enumerate(groups.items()):
         x, y = xy
