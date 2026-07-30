@@ -23,14 +23,12 @@ import io
 import os
 import sys
 import ast
-import signal
 import inspect
 import importlib
 import unittest
 from contextlib import redirect_stdout
 import pytest
 from openquake import qa_tests_data
-from openquake.baselib.general import sighandler
 from openquake.calculators import tests
 import numba
 
@@ -39,6 +37,7 @@ REPO = os.path.dirname(
     os.path.dirname(
         os.path.dirname(
             os.path.dirname(__file__))))
+MAX_FUN_LEN = 79
 LF = ord('\n')
 CR = ord('\r')
 
@@ -124,7 +123,7 @@ def test_serious_violations():
 
     app = application.Application()
     buf = io.BytesIO()
-    with redirect_stdout(buf) as out, sighandler('SIGCHLD', signal.SIG_DFL):
+    with redirect_stdout(buf) as out:
         out.buffer = buf
         app.run([REPO, '--select', 'F82'])
     assert out.getvalue().decode('utf8') == ''
@@ -202,7 +201,7 @@ def test_forbid_long_funcs():
                                  'openquake.hmtk',
                                  'openquake.sep',
                                  'openquake._unc',
-                                 ], 90)
+                                 ], MAX_FUN_LEN)
     if long_funcs:
         raise RuntimeError(long_funcs)
 

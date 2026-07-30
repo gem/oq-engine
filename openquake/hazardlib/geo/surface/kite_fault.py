@@ -1073,10 +1073,8 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Process each edge obtained from the resampled profiles
     csegs = []
     for i_edge in range(parr.shape[1]):
-
         # Find the continuous parts of an edge
         for tmp in _find_continuous_segments(parr[:, i_edge], i_edge):
-
             # Here `tmp` contains many triples with the indexes of the first
             # and last profile and the index of the edge
             csegs.append(tmp)
@@ -1100,7 +1098,6 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
     # Loop over the unique-start indexes of continuous parts of an edge
     for i_from in unique:
-
         # Process all the sub-edges that start with index `i_from`
         for cseg in csegs[csegs[:, 0] == i_from, :]:
 
@@ -1140,7 +1137,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
         _check_sampling(edg, proj)
 
     # INFO: this is used only for debugging purposes
-    #ax = _dbg_plot(new_edges, profs, npr, ref_idx)
+    # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
 

@@ -42,7 +42,8 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-GMF_MB = 400
+# AE_MIN, AE_MAX chosen so that East_Asia.toml run with 3 GB per core
+AE_MIN, AE_MAX = 6E7, 1.2E8
 get_n_occ = operator.itemgetter(1)
 
 
@@ -320,29 +321,34 @@ def event_based_risk(gmf_df, monitor):
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 
-def ebrisk(allrups, cmakers, sids, secperils, hdf5path, monitor):
+def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmakers: ContextMaker instances associated to each trt_smr
     :param sids: array of site indices
     :param secperils: list of secondary peril instances
-    :param hdf5path: path to the ses.hdf5 file
+    :param dstore: a DataStore instance
     :param monitor: a Monitor instance
     :yields: dictionaries with keys 'avg', 'alt' and 'gmfbytes'
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
-        allrups, cmakers, sids, secperils, hdf5path, monitor)
+        allrups, cmakers, sids, secperils, dstore, monitor)
            if len(dic['gmfdata']))
-    for b, blk in enumerate(general.block_splitter(dfs, GMF_MB, size_mb)):
+    num_assets = monitor.read('num_assets')
+    for b, blk in enumerate(general.block_splitter(
+            dfs, AE_MAX, lambda gmf_df: num_assets[gmf_df.sid].sum())):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around GMF_MB) and hence a good performance
-        if b == 0:
+        mb = round(sum(size_mb(df) for df in blk))
+        na = numpy.round([num_assets[df.sid].sum() for df in blk])
+        ae = int(na.sum())
+        # print(f'{monitor.task_no=}, {na/1E6=}')
+        if b == 0 or ae < AE_MIN:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
-            size = round(sum(size_mb(df) for df in blk))
-            print(f'{monitor.task_no=}, {size=}')
+            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {ae=:_d}')
             yield event_based_risk, pandas.concat(blk)
 
 
@@ -373,6 +379,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         max_assets_per_region = (iss[:, 2] - iss[:, 1]).max()
         logging.info(f'{max_assets_per_region=:_d}')
         monitor.save('assets', adf)
+        monitor.save('num_assets', general.fast_agg(self.assetcol['site_id']))
         monitor.save('start-stop', iss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)

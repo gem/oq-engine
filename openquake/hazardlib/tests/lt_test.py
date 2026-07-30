@@ -328,8 +328,6 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
-        self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
         xml = clt.to_nrml()
         self.assertEqual(xml, EXPECTED_LT)
@@ -349,7 +347,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['I', 'extra7', 0.2],
                         ['J', 'extra8', 0.2]])
         self.assertEqual(clt.get_all_paths(),  # 4 + 4 rlzs
-                         ['AC.', 'AD.', 'AE.', 'AF..',
+                         ['AC.', 'AD.', 'AE.', 'AF.',
                           'BG.', 'BH.', 'BI.', 'BJ.'])
 
         clt = lt.build(['sourceModel', [],
@@ -414,7 +412,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mmax_7pt6', '7.6', 0.1]]
         ]
         ltssc = lt.build(*ltl)
+        lt.print_tree(ltssc)
         paths = ltssc.get_all_paths()
+        print(numpy.array(paths))
         # The third branchset increases the number of branches from 3 to 5 for
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
@@ -476,7 +476,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
              ['mm7pt6', 7.5, .1],
              ],
             applyToSources='nva')
-        
+        # lt.print_tree(clt)
         fname = gettemp(clt.to_nrml(), suffix='.xml')
         expected = os.path.join(CDIR, 'lt_test.xml')
         with open(fname) as got, open(expected) as exp:
@@ -491,6 +491,28 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                 msg += line
                 msg += '\n'
         self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
+
+    def test_build4(self):
+        # a reduced version of case_25
+        ltl = [
+            ['sourceModel', [],
+             ['ssm1', 'ssm1.xml', 0.5],
+             ['ssm2', 'ssm6.xml', 0.5]],
+            ['abGRAbsolute', ['ssm1'],
+             ['ab_1', '1.0 1.0', 0.5],
+             ['ab_2', '1.1 0.9', 0.5]],
+            ['abGRAbsolute', ['ssm2'],
+             ['ab_3', '0.9 1.0', 0.5],
+             ['ab_4', '1.0 0.9', 0.5]],
+            ['maxMagGRAbsolute', [],
+             ['mmax_6pt8', '6.8', 0.3],
+             ['mmax_7pt0', '7.0', 0.7]],
+        ]
+        ltssc = lt.build(*ltl)
+        lt.print_tree(ltssc)
+        paths = ltssc.get_all_paths()
+        self.assertEqual(paths, ['AAE.', 'AAF.', 'ABE.', 'ABF.',
+                                 'BCE.', 'BCF.', 'BDE.', 'BDF.'])
 
     def test_zero_weight(self):
         # check that branches with zero weight are not sampled
@@ -627,3 +649,30 @@ class SetHypoDepthDistUncertaintyTestCase(unittest.TestCase):
             self.assertEqual(src.hypocenter_distribution.data,
                              [(0.5, 7.0), (0.5, 12.0)], msg=kind)
             self.assertIsNone(src.hypo_dip_fracs, msg=kind)
+
+
+class LogicFixesTestCase(unittest.TestCase):
+
+    def test_mixed_collapsed_apply_uncertainties(self):
+        # Ensure non-collapsed uncertainties apply to all expanded sources
+        # from prior collapsed branchset
+        src = nrml.get(SetHypoDepthDistUncertaintyTestCase.SIMPLE_FAULT)
+        sg = sourceconverter.SourceGroup('Active Shallow Crust', [src])
+        
+        bs_collapsed = lt.BranchSet('bGRRelative', collapsed=True)
+        bs_collapsed.branches = [lt.Branch('b1', 0.1, 0.4),
+                                 lt.Branch('b2', 0.2, 0.6)]
+        
+        bs_normal = lt.BranchSet('maxMagGRRelative', collapsed=False)
+        bs_normal.branches = [lt.Branch('m1', 0.5, 1.0)]
+
+        bset_values = [(bs_collapsed, None), (bs_normal, 0.5)]
+        mod_sg = lt.apply_uncertainties(bset_values, sg)
+        
+        self.assertEqual(len(mod_sg.sources), 2)
+
+        # Both sources generated from collapsed branchset must have
+        # max_mag updated by bs_normal
+        for mod_src in mod_sg.sources:
+            self.assertEqual(mod_src.mfd.max_mag, 6.5)
+

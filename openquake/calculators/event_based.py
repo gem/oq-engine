@@ -264,7 +264,7 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
         srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
     for rups, cmaker in zip(allrups, cmakers):
-        if not hasattr(cmaker, 'ctx_mon'):  # not already initialized
+        if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
         with rmon:
             try:
@@ -415,7 +415,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw/4, rup_weight):
+        for rupblock in block_splitter(rups, maxw/5, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
     allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
@@ -701,22 +701,15 @@ class EventBasedCalculator(base.HazardCalculator):
             self.oqparam.concurrent_tasks or 1)
         return maxweight
 
-    def build_events_from_sources(self):
-        """
-        Prefilter the composite source model and store the source_info
-        """
+    def _build_smap(self):
+        # starmap for build_events_from_sources
         oq = self.oqparam
         maxw = self.counting_ruptures()
-        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        source_data = AccumDict(accum=[])
-        allargs = []
-        logging.info('Building ruptures from %d groups',
-                     len(self.csm.src_groups))
         trt_smrs = self.csm.get_trt_smrs()
         cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
-
+        allargs = []
         sent = []
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
@@ -749,11 +742,21 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
+        return smap
+        
+    def build_events_from_sources(self):
+        """
+        Prefilter the composite source model and store the source_info
+        """
+        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
+        source_data = AccumDict(accum=[])
+        logging.info('Building ruptures from %d groups',
+                     len(self.csm.src_groups))
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         t0 = time.time()
         tot_ruptures = 0
-        for dic in smap:
+        for dic in self._build_smap():
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
             if dic is None:
@@ -985,7 +988,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Compute and save avg_gmf, unless there are too many GMFs
         """
         oq = self.oqparam
-        N = len(self.sitecol.complete)
+        N = len(self.sitecol)
         C = len(self.oqparam.all_imts())
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
@@ -1014,9 +1017,10 @@ class EventBasedCalculator(base.HazardCalculator):
         avg_gmf = numpy.zeros((2, N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
-        for sid, avgstd in compute_avg_gmf(
-                gmf_df, self.weights, min_iml).items():
-            avg_gmf[:, sid] = avgstd
+        avgstd = compute_avg_gmf(
+            gmf_df, self.weights, min_iml)
+        for i, sid in enumerate(self.sitecol.sids):
+            avg_gmf[:, i] = avgstd.get(sid, 0)
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
         if oq.impact:

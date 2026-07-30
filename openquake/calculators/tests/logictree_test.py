@@ -353,7 +353,8 @@ hazard_uhs-std.csv
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         window = self.calc.datastore['oqparam'].investigation_time
         mean_rates = to_rates(mean_poes, window)
-        rates_by_source = self.calc.datastore['mean_rates_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore[
+            'mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
@@ -398,7 +399,9 @@ hazard_uhs-std.csv
         # check the realizations contains only literals
         got = [dict(zip(rlz.lt_path, rlz.value))
                for rlz in self.calc.datastore['full_lt'].source_model_lt]
+        self._check(got)
 
+    def _check(self, got):
         exp0 = {'char_complex': [('complexFaultGeometry',
                                   ([[(-64.5, -0.38221, 2.0),
                                      (-64.5, 0.38221, 4.0)],

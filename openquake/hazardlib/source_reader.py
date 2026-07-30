@@ -529,6 +529,8 @@ def _build_groups(full_lt, smdict):
         src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
         for srcid in src_id:
             if srcid not in source_ids:
+                if full_lt.source_model_lt.branchID:
+                    continue
                 raise ValueError(
                     "The source %s is not in the source model,"
                     " please fix applyToSources in %s or the "

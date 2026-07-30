@@ -182,6 +182,8 @@ def get_nbytes(dset):
         if dset.dtype == 'O':  # array of strings or bytes
             try:
                 return dset.size * len(dset[0])
+            except IndexError:  # empty dataset
+                return 0
             except ValueError:  # scalar dataspace (i.e. 'oqparam')
                 return len(dset[()])
         else:
