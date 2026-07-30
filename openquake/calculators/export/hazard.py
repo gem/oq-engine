@@ -802,7 +802,7 @@ def export_mce(ekey, dstore):
     return [fname]
 
 
-def unique_sites(sitecol):
+def sites_by_xy(sitecol):
     by_xy = {}
     for site in sitecol:
         xy = site.location.x, site.location.y
@@ -810,15 +810,14 @@ def unique_sites(sitecol):
     return by_xy  # {(x, y): [site, site, ...]}
 
 
+# tested in commands_test:RunSiteTestCase
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
     # In the "default" site class case we have 1 actual site, represented
     # as 3 sites with equal coordinates and different site classes, and we
     # have only one asce07 table and one asce41 table
-    groups = unique_sites(sitecol)
-    for s, (xy, sites) in enumerate(groups.items()):
-        x, y = xy
+    for s, ((x, y), sites) in enumerate(sites_by_xy(sitecol).items()):
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
@@ -826,7 +825,7 @@ def export_asce(ekey, dstore):
         comment = dstore.metadata.copy()
         comment['lon'] = x
         comment['lat'] = y
-        comment['vs30'] = ','.join(str(s.vs30) for s in sites)
+        comment['vs30'] = ' '.join(str(s.vs30) for s in sites)
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
                     comment=comment)
