@@ -92,7 +92,7 @@ jobs:
             {
               Write-Host "Install on PR"
               Write-Host "Head ref: $env:GITHUB_HEAD_REF"
-              Write-Host "python install.py devel "
+              Write-Host "python install.py devel --version ${env:GITHUB_HEAD_REF}"
               python install.py devel --version ${env:GITHUB_HEAD_REF}
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
