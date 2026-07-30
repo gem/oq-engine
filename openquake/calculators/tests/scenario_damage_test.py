@@ -88,9 +88,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
-        # check aggrisk_tags extraction
-        aggrisk_tags = extract(self.calc.datastore, 'aggrisk_tags')
-
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
 
@@ -244,6 +241,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk2.csv', fname)
+
+        # check aggrisk_tags extraction
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
 
     def test_case_13(self):
         # 3 realizations and consequences
