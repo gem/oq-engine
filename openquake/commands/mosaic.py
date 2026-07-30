@@ -52,7 +52,7 @@ def engine_profile(jobctx, nrows):
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
-              asce_version, vs30):
+              asce_version, vs30, job_ini=None):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -116,7 +116,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
                              for lonlat in lonlats[df.index])
             dic = dict(sites=sites, vs30=str(vs30), asce_version=asce_version,
                        siteid=' '.join(map(str, ids[model])))
-            params = get_params_from(dic, mosaic_dir)
+            params = get_params_from(dic, mosaic_dir, job_ini=job_ini)
             params['exports'] = 'csv'
             params['export_dir'] = os.path.abspath(os.path.join(asce_dir, model))
             # del params['postproc_func']
@@ -168,7 +168,8 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
 def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760,
-             asce_version: str = oqvalidation.OqParam.asce_version.default):
+             asce_version: str = oqvalidation.OqParam.asce_version.default, 
+             job_ini: str = None):
     """
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
@@ -184,10 +185,11 @@ def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
         return from_file(lonlat_or_fname, mosaic_dir, asce_dir,
-                         concurrent_jobs, asce_version, vs30)
+                         concurrent_jobs, asce_version, vs30, job_ini)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
-        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
+        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir, 
+        config=job_ini) 
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -208,6 +210,7 @@ run_site.vs30 = 'vs30 value for the calculation; ignored if in lonlat csv file'
 run_site.asce_version = dict(
     help='ASCE version',
     choices=oqvalidation.OqParam.asce_version.validator.choices)
+run_site.job_ini = 'job file in mosaic model dir to use'
 
 # ######################### sample rups and gmfs ######################### #
 
