@@ -802,25 +802,27 @@ def export_mce(ekey, dstore):
     return [fname]
 
 
+def unique_sites(sitecol):
+    by_xy = {}
+    for site in sitecol:
+        xy = site.location.x, site.location.y
+        if xy not in by_xy:
+            by_xy[xy] = site
+    return list(by_xy.values())
+
+    
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
-    if len(sitecol) == 3 and len(dstore[ekey[0]]) == 1:
-        # In the "default" site class case we have 1 actual site, represented
-        # as 3 sites with equal coordinates and different site classes, and we
-        # have only one asce07 table and one asce41 table
-        sids = [0]
-    else:
-        sids = sitecol.sids
-    for s in sids:
+    for s, site in enumerate(unique_sites(sitecol)):
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
         comment = dstore.metadata.copy()
-        comment['lon'] = sitecol.lons[s]
-        comment['lat'] = sitecol.lats[s]
-        comment['vs30'] = sitecol.vs30[s]
+        comment['lon'] = site.location.x
+        comment['lat'] = site.location.y
+        comment['vs30'] = site.vs30  # only the first vs30
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
                     comment=comment)
