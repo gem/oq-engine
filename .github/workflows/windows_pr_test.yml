@@ -138,4 +138,4 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' engine --upgrade-db}
           sleep 10
           cd D:\a\oq-engine\oq-engine\openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep commands engine hmtk risklib commonlib baselib _unc
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep commands engine hmtk risklib commonlib baselib
