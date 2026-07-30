@@ -983,7 +983,7 @@ def extract_aggrisk_tags(dstore, what):
         slc[tuple(aggby)] = (start, start + len(df))
         start += len(df)
     totdf = pandas.concat(outs)
-    totdf.slc = slc
+    totdf.attrs['slc'] = slc
     return totdf
 
 
