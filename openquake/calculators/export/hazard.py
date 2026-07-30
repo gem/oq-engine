@@ -806,15 +806,16 @@ def unique_sites(sitecol):
     by_xy = {}
     for site in sitecol:
         xy = site.location.x, site.location.y
-        if xy not in by_xy:
-            by_xy[xy] = site
-    return list(by_xy.values())
+        by_xy.setdefault(xy, []).append(site)
+    return by_xy  # {(x, y): [site, site, ...]}
 
-    
+
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
-    for s, site in enumerate(unique_sites(sitecol)):
+    groups = unique_sites(sitecol)
+    for s, (xy, sites) in enumerate(groups.items()):
+        site = sites[0]
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
@@ -822,7 +823,7 @@ def export_asce(ekey, dstore):
         comment = dstore.metadata.copy()
         comment['lon'] = site.location.x
         comment['lat'] = site.location.y
-        comment['vs30'] = site.vs30  # only the first vs30
+        comment['vs30'] = ','.join(str(s.vs30) for s in sites)
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
                     comment=comment)
