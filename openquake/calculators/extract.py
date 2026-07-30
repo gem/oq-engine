@@ -921,6 +921,10 @@ def extract_aggrisk_tags(dstore, what):
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
     oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        df = pandas.DataFrame()
+        df.attrs['slc'] = {}
+        return df
     ws = base.get_weights(oq, dstore)
     aggrdf = dstore.read_df('aggrisk')
     dmg_cols = [c for c in aggrdf.columns if c.startswith('dmg_')]
