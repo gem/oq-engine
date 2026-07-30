@@ -49,6 +49,11 @@ class GriddedSurface(BaseSurface):
         self.idx = None
         self.strike = None
         self.dip = None
+        # Cached results of the plane fit used by `get_strike` and
+        # `get_width`. `_vers` is None when the cloud has fewer than
+        # three points and no plane can be fitted
+        self._coo = None
+        self._vers = None
 
     @property
     def surface_nodes(self):
@@ -176,6 +181,7 @@ class GriddedSurface(BaseSurface):
         coo[:, 1] = tmp[:, 1]
         coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
+        self._coo = coo
 
         # Some surfaces (observed in non-parametric rups with gridded surfaces
         # in NEA) have only two points which is not enough for fitting a plane
@@ -192,6 +198,7 @@ class GriddedSurface(BaseSurface):
             return self.strike
 
         _pnt0, vers = geo_utils.plane_fit(coo)
+        self._vers = vers
 
         # Find the angle between the surface projection of the unit vector and
         # the north direction
@@ -232,15 +239,29 @@ class GriddedSurface(BaseSurface):
 
     def get_width(self):
         """
-        Compute surface's width (that is surface extension along the
-        dip direction) in km.
+        Compute surface's width (extension along the dip direction) in km.
 
-        The actual definition depends on the type of surface geometry.
+        The width is measured as the range of the mesh points'
+        projections onto the down-dip direction of the plane fitted
+        through the cloud (see :meth:`get_strike`).
 
         :returns:
-            Float value, the surface width
+            Float value, the surface width in km. Returns
+            ``numpy.nan`` when the surface has fewer than three points
+            and no plane can be fitted.
         """
-        raise NotImplementedError('GriddedSurface')
+        if self.strike is None:
+            _ = self.get_strike()
+        if self._vers is None:
+            return np.nan
+        # Dip direction in the fitted plane: projection of the vertical
+        # unit vector onto the plane. Sign does not matter here since
+        # width is the range of projections
+        n = self._vers
+        dip_dir = np.array([-n[0] * n[2], -n[1] * n[2], 1 - n[2] ** 2])
+        dip_dir /= la.norm(dip_dir)
+        projections = self._coo @ dip_dir
+        return float(projections.max() - projections.min())
 
     def get_area(self):
         """

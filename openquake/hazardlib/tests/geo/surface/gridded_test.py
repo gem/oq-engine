@@ -78,7 +78,19 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_width(self):
-        self.assertRaises(NotImplementedError, self.surf.get_width)
+        # Fault-like corners: top edge at surface, bottom edge offset
+        # ~11 km horizontally (0.1 deg) and reaching 12 km depth
+        # --> Dip approx. atan2(vertical=12, horizontal=11) ~ 47 deg
+        # --> Width along dip approx. sqrt(11^2 + 12^2) ~ 16.3 km
+        pts = [Point(0, 0, 0), Point(1, 0, 0),
+               Point(1, 0.1, 12), Point(0, 0.1, 12)]
+        surf = GriddedSurface.from_points_list(pts)
+        aae(surf.get_width(), 16.360, decimal=3)
+
+    def test_get_width_two_points(self):
+        # Two points are not enough to fit a plane
+        surf = GriddedSurface.from_points_list(POINTS[:2])
+        self.assertTrue(np.isnan(surf.get_width()))
 
     def test_get_area(self):
         self.assertRaises(NotImplementedError, self.surf.get_area)
@@ -119,6 +131,15 @@ class GriddedSurfaceSfc1Test(unittest.TestCase):
 
     def test_strike_sf1(self):
         aae(self.sfc_grd.get_strike(), self.azim, decimal=2)
+
+    def test_width_sf1(self):
+        # For a planar dipping surface width * sin(dip) equals the vertical
+        # extent of the mesh points
+        width = self.sfc_grd.get_width()
+        depth_extent = (
+            self.sfc_grd.mesh.depths.max() - self.sfc_grd.mesh.depths.min()
+            )
+        aae(width * np.sin(np.radians(self.dip)), depth_extent, decimal=2)
 
 
 class GriddedSurfaceSfc2Test(unittest.TestCase):
