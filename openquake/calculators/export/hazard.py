@@ -596,7 +596,7 @@ def _add_iml(df, imtls):
     out = []
     for imt in imtls:
         imls = imtls[imt]
-        dframe = df[df.imt == imt]
+        dframe = df[df.imt == imt].copy()
         dframe['iml'] = imls[dframe.lvl]
         del dframe['lvl']
         out.append(dframe)
