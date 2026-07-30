@@ -344,7 +344,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         na = numpy.round([num_assets[df.sid].sum() for df in blk])
         ae = int(na.sum())
         # print(f'{monitor.task_no=}, {na/1E6=}')
-        if b == 0 or ae < AE_MIN:  # don't spawn small tasks
+        if b % 3 == 0 or ae < AE_MIN:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
             print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {ae=:_d}')

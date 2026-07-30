@@ -736,10 +736,10 @@ class Starmap(object):
         if hasattr(cls, 'pool'):
             # shutdown and recreate the executor
             logging.info('Shutting down the pool')
-            cls.pool.shutdown(wait=False, cancel_futures=True)
             if cls.pool._processes:
                 for p in cls.pool._processes.values():
-                    p.terminate()
+                    p.terminate()  # SIGTERM is graceful
+            cls.pool.shutdown()
             del cls.pool
 
     @classmethod
