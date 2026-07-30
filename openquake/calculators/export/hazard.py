@@ -815,14 +815,14 @@ def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
     groups = unique_sites(sitecol)
     for s, (xy, sites) in enumerate(groups.items()):
-        site = sites[0]
+        x, y = xy
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
         comment = dstore.metadata.copy()
-        comment['lon'] = site.location.x
-        comment['lat'] = site.location.y
+        comment['lon'] = x
+        comment['lat'] = y
         comment['vs30'] = ','.join(str(s.vs30) for s in sites)
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
