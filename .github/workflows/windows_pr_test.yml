@@ -10,8 +10,9 @@ on:
   pull_request:
 
 jobs:
-  install_oq:
+  install_oq_test:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
