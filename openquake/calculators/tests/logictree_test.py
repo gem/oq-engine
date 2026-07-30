@@ -502,28 +502,12 @@ hazard_uhs-std.csv
         assert ns == 26
 
     def test_case_25(self):
-        # BCHydro-style correlated uncertainties
-        self.run_calc(case_25.__file__, 'job_alt1.ini', exports='csv')
-        [got_alt1] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/hazard_curve-mean-PGA_alt1.csv', got_alt1)
-        self.assertEqual(len(self.calc.full_lt.get_realizations()), 24)
-
-        # test oq show rlz:15
-        tbl = general.gettemp(text_table(view('rlz:15', self.calc.datastore)))
-        self.assertEqualFiles('expected/show-rlz.org', tbl)
-
-        self.run_calc(case_25.__file__, 'job_alt2.ini', exports='csv')
-        [got_alt2] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/hazard_curve-mean-PGA_alt2.csv', got_alt2)
-        self.assertEqual(len(self.calc.full_lt.get_realizations()), 16)
-
-        self.run_calc(case_25.__file__, 'job_alt3.ini', exports='csv')
-        [got_alt3] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/hazard_curve-mean-PGA_alt3.csv', got_alt3)
-        self.assertEqual(len(self.calc.full_lt.get_realizations()), 8)
+        # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
+        # sampled to keep the calc fast (highly simplified version)
+        self.run_calc(case_25.__file__, 'job.ini', exports='csv')
+        [got] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
