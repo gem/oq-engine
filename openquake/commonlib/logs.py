@@ -300,10 +300,10 @@ class LogContext:
                 post_mortem(tb)
         else:
             dbcmd('finish', self.calc_id, 'complete')
+        parallel.Starmap.shutdown()
         for handler in root.handlers:
             root.removeHandler(handler)
         root.handlers = self.orig_handlers
-        parallel.Starmap.shutdown()
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')

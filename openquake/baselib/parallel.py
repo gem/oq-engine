@@ -205,7 +205,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode, sighandler
+from openquake.baselib.general import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_gb, init_performance)
@@ -280,6 +280,8 @@ def init_worker():
     and sets the flag Starmap.on, so that it is possible to determine if
     the current code is begin run in parallel or not.
     """
+    # SIGINT not passed to the workers to reduce traceback
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         from setproctitle import setproctitle
     except ImportError:
@@ -711,7 +713,6 @@ class MasterKilled(KeyboardInterrupt):
 
 class Starmap(object):
     on = False
-    pids = ()
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -719,14 +720,11 @@ class Starmap(object):
     def init(cls, distribute=None):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
-            with sighandler('SIGINT', signal.SIG_IGN):
-                # SIGINT not passed to the workers to reduce traceback
-                cls.pool = ProcessPoolExecutor(
-                    num_cores, mp_context, init_worker)
+            cls.pool = ProcessPoolExecutor(
+                num_cores, mp_context, init_worker)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pids = list(cls.pool._processes)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = ThreadPoolExecutor(num_cores, mp_context, init_worker)
 
@@ -737,10 +735,12 @@ class Starmap(object):
     def shutdown(cls):
         if hasattr(cls, 'pool'):
             # shutdown and recreate the executor
+            logging.info('Shutting down the pool')
+            if cls.pool._processes:
+                for p in cls.pool._processes.values():
+                    p.terminate()  # SIGTERM is graceful
             cls.pool.shutdown()
-            cls.pool = ProcessPoolExecutor(
-                num_cores, mp_context, init_worker)
-            cls.pids = list(cls.pool._processes)
+            del cls.pool
 
     @classmethod
     def apply(cls, task, allargs, concurrent_tasks=None,
@@ -1000,8 +1000,10 @@ class Starmap(object):
                     # do not measure the memory on the workers
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
+                elif hasattr(Starmap, 'pool'):
+                    mem_gb = memory_gb(Starmap.pool._processes)
                 else:
-                    mem_gb = memory_gb(Starmap.pids)
+                    mem_gb = 0
                 if self.h5.mode != 'r':
                     res.mon.save_task_info(self.h5, res, name, mem_gb)
                     res.mon.flush(self.h5)

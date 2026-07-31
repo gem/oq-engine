@@ -119,7 +119,7 @@ def manage_signals(job_id, signum, _stack):
     :param _stack: the current frame object, ignored
     """
     if signum == signal.SIGINT:
-        raise MasterKilled('The openquake master process was killed manually')
+        raise MasterKilled('The oq-job process was killed manually')
 
     if signum == signal.SIGTERM:
         sys.exit(f'Killed {job_id}')
@@ -339,7 +339,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
-            args = [(job, 1.5) for job in jobctxs]
+            args = [(job, 2) for job in jobctxs]
             names = []
             for job in jobctxs:
                 name = f"{job.params['mosaic_model']}{job.calc_id}"
@@ -350,7 +350,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
                 run_calc(jobctx)
     except MasterKilled as e:
         if ('pytest' in sys.argv[0] and str(e) ==
-                'The openquake master process was killed manually'):
+                'The master process was killed manually'):
             logging.warning(e)
         else:
             raise

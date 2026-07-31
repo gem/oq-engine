@@ -9,6 +9,7 @@ on:
 jobs:
   calculators:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +43,7 @@ jobs:
 
   hazardlib:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -79,6 +81,7 @@ jobs:
 
   server:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -103,6 +106,7 @@ jobs:
           fi
       - name: Server tests
         run: |
+          set -x
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
@@ -114,7 +118,7 @@ jobs:
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py
           OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py
           OQ_APPLICATION_MODE=AELO pytest -vx openquake/server/tests/test_aelo_mode.py
-          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine,_unc}
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine}  # _unc moved to nightly tests
           OQ_APPLICATION_MODE=AELO pytest \
             --browser chromium \
             --capture=no \

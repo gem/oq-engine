@@ -343,7 +343,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = min(totw / (oq.concurrent_tasks or 1), 60_000_000)
+    maxw = min(totw / (oq.concurrent_tasks or 1), 5E7)
     logging.info(f'{round(maxw)=:_d}')
     return filrups, maxw, acc
 
@@ -415,7 +415,7 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         logging.debug('%s: sending %d ruptures for trt_smr=%d',
                       model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw/4, rup_weight):
+        for rupblock in block_splitter(rups, maxw/5, rup_weight):
             allargs.append((rupblock, cmaker, model))
 
     allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
