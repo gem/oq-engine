@@ -712,8 +712,10 @@ class ContextMaker(object):
             if not imc:  # for GMPETables
                 continue
             elif not isinstance(imc, IMC):
-                raise ValueError(f"{gsim.__class__.__name__}'s component "
-                                 f"def. is not an instance of const.IMC.<>")
+                raise ValueError(
+                    f"{gsim.__class__.__name__}."
+                    f"DEFINED_FOR_INTENSITY_MEASURE_COMPONENT "
+                    f"is not an instance of const.IMC")
             elif imc.name == 'GEOMETRIC_MEAN':
                 pass  # nothing to do
             elif imc.name in OK_COMPONENTS:
