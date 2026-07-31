@@ -144,3 +144,30 @@ jobs:
           name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
           path: test-results
           retention-days: 7
+
+  trigger_qgis_integration:
+    name: Trigger oq-irmt-qgis integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            oq-irmt-qgis
+
+      - name: Trigger Dispatch to oq-irmt-qgis
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: ${{ github.repository_owner }}/oq-irmt-qgis
+          event-type: run-integration-tests
+          client-payload: |-
+            {
+              "pr_number": "${{ github.event.pull_request.number }}",
+              "pr_sha": "${{ github.event.pull_request.head.sha }}",
+              "pr_repo": "${{ github.event.pull_request.head.repo.full_name }}"
+            }
