@@ -4,27 +4,27 @@
 
         <!-- Top-level sourceModel: 6 branches (3 alts x 2 kept SCM*SVA geoms). Weight per branch = W_alt x W_SCM x W_SVA. Downstream branchsets applyToBranches these ids to skip other alts chains -->
         <logicTreeBranchSet branchSetID="bs_sm" uncertaintyType="sourceModel">
-            <logicTreeBranch branchID="alt1_NVA" subcalc="alt1">
+            <logicTreeBranch branchID="alt1_NVA">
                 <uncertaintyModel>ssm/alt1_NVA.xml</uncertaintyModel>
                 <uncertaintyWeight>0.469000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt1_NVA_AB" subcalc="alt1">
+            <logicTreeBranch branchID="alt1_NVA_AB">
                 <uncertaintyModel>ssm/alt1_NVA-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.231000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_NVA" subcalc="alt2">
+            <logicTreeBranch branchID="alt2_NVA">
                 <uncertaintyModel>ssm/alt2_NVA.xml</uncertaintyModel>
                 <uncertaintyWeight>0.067000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_NVA_AB" subcalc="alt2">
+            <logicTreeBranch branchID="alt2_NVA_AB">
                 <uncertaintyModel>ssm/alt2_NVA-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.033000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_NVA" subcalc="alt3">
+            <logicTreeBranch branchID="alt3_NVA">
                 <uncertaintyModel>ssm/alt3_NVA.xml</uncertaintyModel>
                 <uncertaintyWeight>0.134000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_NVA_AB" subcalc="alt3">
+            <logicTreeBranch branchID="alt3_NVA_AB">
                 <uncertaintyModel>ssm/alt3_NVA-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.066000</uncertaintyWeight>
             </logicTreeBranch>

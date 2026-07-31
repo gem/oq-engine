@@ -32,10 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
-    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    case_25, case_28, case_29, case_30, case_31, case_32, case_33, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -501,14 +501,33 @@ hazard_uhs-std.csv
         ns = len(self.calc.datastore['source_info'])
         assert ns == 26
 
+    def test_case_24(self):
+        # Parity check: subcalc-mode mean hazard curves must match the
+        # non-subcalc approach for both full enumeration and sampling
+
+        # Full enumeration
+        self.run_calc(case_24.__file__, 'job.ini') # Using subcalc
+        sub_full = self.calc.datastore['hcurves-stats'][:]
+        self.run_calc(case_24.__file__, 'job_nosub.ini') # Regular
+        nosub_full = self.calc.datastore['hcurves-stats'][:]
+        aac(sub_full, nosub_full, atol=0, rtol=0)
+
+        # Sampling
+        self.run_calc(case_24.__file__, 'job.ini', # Using subcalc
+                      number_of_logic_tree_samples='10')
+        sub_sampled = self.calc.datastore['hcurves-stats'][:]
+        self.run_calc(case_24.__file__, 'job_nosub.ini', # Regular
+                      number_of_logic_tree_samples='10')
+        nosub_sampled = self.calc.datastore['hcurves-stats'][:]
+        aac(sub_sampled, nosub_sampled, atol=0, rtol=0)
+
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
-        # run in subcalc mode: three sequential subcalcs grouped by the
-        # "subcalc" attribute on the top-level sourceModel branches
+        # sampled to keep the calc fast (highly simplified version)
         self.run_calc(case_25.__file__, 'job.ini', exports='csv')
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
-        self.assertEqual(len(self.calc.full_lt.get_realizations()), 144)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
