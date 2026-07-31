@@ -120,9 +120,7 @@ def _get_style_of_faulting_term(rake):
 def extract_im_names(imts, imc):
     """
     Convert the im strings of openquake to the im naming convention
-    used in the GMM. ``imc`` is the GMM's
-    ``DEFINED_FOR_INTENSITY_MEASURE_COMPONENT`` (a ``const.IMC`` member),
-    looked up in ``COMPONENT_MAPPING`` for the SA / Sa_avg suffix.
+    used in the GMM.
     """
     component_name = COMPONENT_MAPPING[imc]
     im_names = []
