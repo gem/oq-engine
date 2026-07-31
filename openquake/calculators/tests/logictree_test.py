@@ -502,8 +502,9 @@ hazard_uhs-std.csv
         assert ns == 26
 
     def test_case_24(self):
-        # Parity check: subcalc-mode mean hazard curves must match the
-        # non-subcalc approach for both full enumeration and sampling
+        # Parity check: subcalc-mode hazard statistics (mean and
+        # quantiles) must match the non-subcalc approach for both
+        # full enumeration and sampling
 
         # Full enumeration
         self.run_calc(case_24.__file__, 'job.ini') # Using subcalc
