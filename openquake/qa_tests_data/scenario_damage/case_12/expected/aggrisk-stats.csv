@@ -1,0 +1,3 @@
+#,,,"generated_by='OpenQuake engine 3.27.0-git4ef5b7ed33', start_date='2026-07-30T14:52:57', checksum=1049699720"
+loss_type,dmg_0,dmg_1,stat
+structural,3.36250E+01,1.37495E+00,mean

@@ -242,6 +242,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
+        # check aggrisk_tags extraction
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
+
     def test_case_13(self):
         # 3 realizations and consequences
         self.run_calc(case_13.__file__, 'job.ini')
