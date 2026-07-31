@@ -505,13 +505,15 @@ hazard_uhs-std.csv
         # Parity check: subcalc-mode hazard statistics (mean and
         # quantiles) must match the non-subcalc approach for both
         # full enumeration and sampling
+        # --> Using a small tolerance because of diff task
+        #     reduction order on remote
 
         # Full enumeration
         self.run_calc(case_24.__file__, 'job.ini') # Using subcalc
         sub_full = self.calc.datastore['hcurves-stats'][:]
         self.run_calc(case_24.__file__, 'job_nosub.ini') # Regular
         nosub_full = self.calc.datastore['hcurves-stats'][:]
-        aac(sub_full, nosub_full, atol=0, rtol=0)
+        aac(sub_full, nosub_full, atol=1e-6, rtol=1e-6)
 
         # Sampling
         self.run_calc(case_24.__file__, 'job.ini', # Using subcalc
@@ -520,7 +522,7 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__, 'job_nosub.ini', # Regular
                       number_of_logic_tree_samples='10')
         nosub_sampled = self.calc.datastore['hcurves-stats'][:]
-        aac(sub_sampled, nosub_sampled, atol=0, rtol=0)
+        aac(sub_sampled, nosub_sampled, atol=1e-6, rtol=1e-6)
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
