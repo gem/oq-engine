@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Add ability to run a single calculation in subcalcs by specifying
+    a `subcalc` attribute on each base source. Works in both full enum.
+    and sampling (tested inside logictree/case24) and unit tests.
+  
   [Michele Simionato]
   * Internal: reduced the hard limit on function length to 79 lines
   * Fixed the exporters `mag_dst_eps_sig` and `mean_disagg_by_src` for low
