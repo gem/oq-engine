@@ -644,7 +644,7 @@ class ClassicalCalculator(base.HazardCalculator):
         task_func = (classical_disagg if (self.few_sites or oq.disagg_by_src)
                      else classical)
         smlt = self.full_lt.source_model_lt
-        # Subcalc mode is triggered by "subcalc" labels in smlt.xml
+        # Subcalc mode is triggered by "subcalc" labels in the SSC LT
         use_subcalcs = smlt.has_subcalcs and not OQ_TASK_NO
         if use_subcalcs:
             acc = self._run_subcalcs(allargs, task_func)
