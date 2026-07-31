@@ -1687,7 +1687,6 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
-        # perils = {'groundshaking'}
         perils = {peril for _, peril in self.wdic} or {'groundshaking'}
         for riskid, rm in self.items():
             for (peril, lt), res in rm(asset_df, haz, rndgen).items():
