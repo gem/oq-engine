@@ -254,7 +254,7 @@ class AristeidouEtAl2024(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, PGD, SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD50}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -368,7 +368,7 @@ class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
         SA, Sa_avg2, Sa_avg3, RSD595, RSD575, FIV3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.GEOMETRIC_MEAN}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     component_definition = "geomean"
 
@@ -378,6 +378,6 @@ class AristeidouEtAl2024RotD100(AristeidouEtAl2024):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD100}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD100
 
     component_definition = "RotD100"
