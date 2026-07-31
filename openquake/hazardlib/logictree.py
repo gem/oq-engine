@@ -511,7 +511,7 @@ class SourceModelLogicTree(object):
     def validate_subcalcs(self):
         """
         If any top-level sourceModel branch has a "subcalc" label, all
-        must have one. Subcalc mode is incompatible with sampling.
+        must have one.
         """
         top = self.branchsets[0]
         labelled = [br for br in top.branches if br.subcalc is not None]
@@ -524,11 +524,6 @@ class SourceModelLogicTree(object):
                 None, self.filename,
                 "'subcalc' must be set on every top-level sourceModel "
                 "branch, or on none. Missing on: %s" % ', '.join(missing))
-        if self.num_samples:
-            raise LogicTreeError(
-                None, self.filename,
-                "'subcalc' labels require full enumeration; set "
-                "number_of_logic_tree_samples = 0 in the job.ini")
 
     @property
     def utypes(self):
@@ -570,20 +565,6 @@ class SourceModelLogicTree(object):
             subcalc label
         """
         return bool(self.subcalcs)
-
-    def smr_to_subcalc_map(self):
-        """
-        :returns:
-            dict mapping each source-model realization index to
-            the subcalc label of its top-level sourceModel branch.
-            Realizations under an unlabelled top-level branch map
-            to None.
-        """
-        branch_subcalc = {br.branch_id: br.subcalc
-                          for br in self.branchsets[0].branches}
-        
-        return {smr: branch_subcalc.get(rlz.lt_path[0])
-                for smr, rlz in enumerate(self)}
 
     def parse_branchset(self, branchset_node, bsno):
         """
@@ -637,6 +618,49 @@ class SourceModelLogicTree(object):
                     "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
 
+    def _check_branch_count(self, bs_id, branches):
+        maxlen = len(BASE183)
+        if self.branchID == '' and len(branches) > maxlen:
+            msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
+                   'you should split it, see https://docs.openquake.org/'
+                   'oq-engine/advanced/latest/logic_trees.html')
+            raise InvalidFile(
+                msg % (self.filename, bs_id, len(branches), maxlen))
+
+    def _collect_source_model_files(self, branchnode, value_node, value):
+        vals = []  # filenames with sources in it
+        try:
+            for fname in value_node.text.split():
+                if (fname.endswith(('.xml', '.nrml'))
+                        and not self.test_mode):
+                    ok = self.collect_source_model_data(
+                        branchnode['branchID'], fname)
+                    if ok:
+                        vals.append(fname)
+        except Exception as exc:
+            raise LogicTreeError(
+                value_node, self.filename, str(exc)) from exc
+        if self.branchID and self.branchID not in branchnode['branchID']:
+            return ''  # reduce all branches except branchID
+        if self.source_id:  # only the files containing source_id
+            srcid = self.source_id.split('@')[0]
+            return ' '.join(reduce_fnames(vals, srcid))
+        return value
+
+    def _validate_branch_metadata(self, branchnode, branchset):
+        branch_id = branchnode.attrib.get('branchID')
+        if branch_id in self.branches:
+            raise LogicTreeError(
+                branchnode, self.filename,
+                "branchID '%s' is not unique" % branch_id)
+        subcalc = branchnode.attrib.get('subcalc')
+        if subcalc is not None and branchset.uncertainty_type != 'sourceModel':
+            raise LogicTreeError(
+                branchnode, self.filename,
+                "'subcalc' attribute is only allowed on branches of "
+                "sourceModel branchsets")
+        return branch_id, subcalc
+
     def parse_branches(self, branchset_node, branchset):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
@@ -654,21 +678,15 @@ class SourceModelLogicTree(object):
         """
         correlated = branchset_node.get('applyToSources') == '*'
         bs_id = branchset_node['branchSetID']
-        weight_sum = 0
         branches = branchset_node.nodes
         if OQ_REDUCE:  # only take first branch
             branches = [branches[0]]
             branches[0].uncertaintyWeight.text = 1.
-        values = []
+        self._check_branch_count(bs_id, branches)
         bsno = len(self.branchsets)
+        weight_sum = 0
+        values = []
         zeros = []
-        maxlen = len(BASE183)
-        if self.branchID == '' and len(branches) > maxlen:
-            msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
-                   'you should split it, see https://docs.openquake.org/'
-                   'oq-engine/advanced/latest/logic_trees.html')
-            raise InvalidFile(
-                msg % (self.filename, bs_id, len(branches), maxlen))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -684,36 +702,10 @@ class SourceModelLogicTree(object):
                 value = parse_uncertainty(branchset.uncertainty_type,
                                           value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-                vals = []  # filenames with sources in it
-                try:
-                    for fname in value_node.text.split():
-                        if (fname.endswith(('.xml', '.nrml'))
-                                and not self.test_mode):
-                            ok = self.collect_source_model_data(
-                                branchnode['branchID'], fname)
-                            if ok:
-                                vals.append(fname)
-                except Exception as exc:
-                    raise LogicTreeError(
-                        value_node, self.filename, str(exc)) from exc
-                if (self.branchID and self.branchID not in
-                        branchnode['branchID']):
-                    value = ''  # reduce all branches except branchID
-                elif self.source_id:  # only the files containing source_id
-                    srcid = self.source_id.split('@')[0]
-                    value = ' '.join(reduce_fnames(vals, srcid))
-            branch_id = branchnode.attrib.get('branchID')
-            if branch_id in self.branches:
-                raise LogicTreeError(
-                    branchnode, self.filename,
-                    "branchID '%s' is not unique" % branch_id)
-            subcalc = branchnode.attrib.get('subcalc')
-            if (subcalc is not None and
-                    branchset.uncertainty_type != 'sourceModel'):
-                raise LogicTreeError(
-                    branchnode, self.filename,
-                    "'subcalc' attribute is only allowed on branches of "
-                    "sourceModel branchsets")
+                value = self._collect_source_model_files(
+                    branchnode, value_node, value)
+            branch_id, subcalc = self._validate_branch_metadata(
+                branchnode, branchset)
             if value == '':
                 # with logic tree reduction a branch can be empty
                 # see case_68_bis

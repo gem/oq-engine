@@ -364,11 +364,15 @@ class CompositeSourceModel:
         :returns:
             dict grouping src_groups by the subcalc label of the top-level
             "sourceModel" branch they trace back to (via "trt_smrs").
-            
+
             Raises a ValueError if a src_group spans more than one subcalc.
         """
-        smlt = self.full_lt.source_model_lt
-        smr_subcalc = smlt.smr_to_subcalc_map()
+        # Build an smr -> subcalc map
+        branch_subcalc = {
+            br.branch_id: br.subcalc for br
+            in self.full_lt.source_model_lt.branchsets[0].branches}
+        smr_subcalc = {smr: branch_subcalc.get(rlz.lt_path[0])
+                       for smr, rlz in enumerate(self.full_lt.sm_rlzs)}
         out = {}
         for grp_id, sg in enumerate(self.src_groups):
             labels = set()
@@ -382,7 +386,6 @@ class CompositeSourceModel:
                     % (grp_id, sg.trt, sorted(labels)))
             if labels:
                 out.setdefault(labels.pop(), []).append(grp_id)
-
         return out
 
     def get_trt_smrs(self):

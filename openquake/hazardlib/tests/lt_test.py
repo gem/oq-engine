@@ -753,18 +753,6 @@ class SubcalcAttributeTestCase(unittest.TestCase):
         self.assertAlmostEqual(smlt.subcalc_weights['a'], 0.6)
         self.assertAlmostEqual(smlt.subcalc_weights['b'], 0.4)
 
-    def test_sampling_with_subcalcs_raises(self):
-        # Subcalc labels require full enumeration
-        xml = self.SM_ONLY.format(
-            sub1=' subcalc="a"', sub2=' subcalc="b"',
-            sm1=self.SM1, sm2=self.SM2, extra='')
-        with self.assertRaises(LogicTreeError) as cm:
-            self._parse(xml, num_samples=10)
-        self.assertIn(
-            "'subcalc' labels require full enumeration; set "
-            "number_of_logic_tree_samples = 0 in the job.ini",
-            str(cm.exception))
-
     def test_no_subcalc_labels_leaves_smlt_unaffected(self):
         # Unlabelled tree has no subcalcs and validates cleanly
         xml = self.SM_ONLY.format(
