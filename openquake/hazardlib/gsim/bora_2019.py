@@ -166,7 +166,8 @@ class BoraEtAl2019(GMPE):
             C = self.COEFFS[imt]
             mean[m], sigma[m], tau[m], phi[m] = _get_mean_stddevs(C, ctx)
 
-    COEFFS = CoeffsTable(sa_damping=5, table=open(B_COEFFS).read(), opt=1)
+    with open(B_COEFFS) as _f:
+        COEFFS = CoeffsTable(sa_damping=5, table=_f.read(), opt=1)
 
 
 def _get_mean_stddevs_dur(C, ctx):
@@ -194,4 +195,5 @@ class BoraEtAl2019Drvt(BoraEtAl2019):
             C = self.COEFFS[imt]
             mean[m], sigma[m], tau[m], phi[m] = _get_mean_stddevs_dur(C, ctx)
 
-    COEFFS = CoeffsTable(sa_damping=5, table=open(B_DVRT_COEFFS).read(), opt=1)
+    with open(B_DVRT_COEFFS) as _f:
+        COEFFS = CoeffsTable(sa_damping=5, table=_f.read(), opt=1)
