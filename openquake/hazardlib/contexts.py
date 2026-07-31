@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.general import decode
 from openquake.hazardlib import valid, imt as imt_module, InvalidFile
-from openquake.hazardlib.const import StdDev, OK_COMPONENTS
+from openquake.hazardlib.const import IMC, StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
@@ -711,6 +711,9 @@ class ContextMaker(object):
             imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
             if not imc:  # for GMPETables
                 continue
+            elif not isinstance(imc, IMC):
+                raise ValueError(f"{gsim.__class__.__name__}'s component "
+                                 f"def. is not an instance of const.IMC.<>")
             elif imc.name == 'GEOMETRIC_MEAN':
                 pass  # nothing to do
             elif imc.name in OK_COMPONENTS:
