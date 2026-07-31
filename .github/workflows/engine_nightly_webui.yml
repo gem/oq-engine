@@ -63,10 +63,10 @@ jobs:
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pip install https://wheelhouse.openquake.org/unified/playwright-1.57.0-py3-none-manylinux1_x86_64.whl
-          pip install https://wheelhouse.openquake.org/unified/pytest_playwright-0.7.2-py3-none-any.whl
           pip install https://wheelhouse.openquake.org/unified/text_unidecode-1.3-py2.py3-none-any.whl
           pip install https://wheelhouse.openquake.org/unified/python_slugify-8.0.4-py2.py3-none-any.whl
           pip install https://wheelhouse.openquake.org/unified/pytest_base_url-2.1.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_playwright-0.7.2-py3-none-any.whl
           playwright install ${{ matrix.browser }}
           pytest -v \
             --browser ${{ matrix.browser }} \
