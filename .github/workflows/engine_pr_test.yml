@@ -29,9 +29,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Calculators tests
         run: |
@@ -62,9 +62,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Hazardlib tests
         run: |
@@ -100,9 +100,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Server tests
         run: |
@@ -140,9 +140,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Server tests
         run: |

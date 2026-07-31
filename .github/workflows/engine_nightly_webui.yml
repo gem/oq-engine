@@ -43,12 +43,7 @@ jobs:
           pip3 install -U pip wheel setuptools
           #
           echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]]
-          then
-            python install.py devel --version ${BRANCH}
-          else
-            python install.py devel --version master
-          fi
+          python install.py devel
       - name: Server 'IMPACT' mode tests
         env:
           OQ_APPLICATION_MODE: IMPACT
