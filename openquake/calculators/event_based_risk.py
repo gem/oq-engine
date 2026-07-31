@@ -43,7 +43,7 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 # AE_MIN, AE_MAX chosen so that East_Asia.toml runs with 3 GB per core
-AE_MIN, AE_MAX = 7E7, 1.4E8
+AE_MIN, AE_MAX = 8E7, 1.2E8
 get_n_occ = operator.itemgetter(1)
 
 
