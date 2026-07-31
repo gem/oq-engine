@@ -832,7 +832,7 @@ def aggexp_tags(dstore):
         lines = numpy.array([
             line.decode('utf8') for line in dstore['agg_keys'][start:stop]])
         values = dstore['agg_values'][start:stop]
-        ok = values['structural'] > 0
+        ok = values['number'] > 0  # NOTE: structural might be missing
         okvalues = values[ok]
         dic = {'agg_id': numpy.arange(start, stop)[ok]}
         ks = numpy.array([ln.split('\t') for ln in lines[ok]])
@@ -921,9 +921,17 @@ def extract_aggrisk_tags(dstore, what):
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
     oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        df = pandas.DataFrame()
+        df.attrs['slc'] = {}
+        return df
     ws = base.get_weights(oq, dstore)
     aggrdf = dstore.read_df('aggrisk')
-    aggrdf.loss *= ws[aggrdf.rlz_id]
+    dmg_cols = [c for c in aggrdf.columns if c.startswith('dmg_')]
+    is_damage = bool(dmg_cols)
+    value_cols = dmg_cols if is_damage else ['loss']
+    for col in value_cols:
+        aggrdf[col] *= ws[aggrdf.rlz_id]
     del aggrdf['rlz_id']
     aggdf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
     if 'aggrisk_quantiles' in dstore:
@@ -941,19 +949,25 @@ def extract_aggrisk_tags(dstore, what):
     for aggby, df in zip(oq.aggregate_by, dfs):
         adf = aggdf[numpy.isin(aggdf.agg_id, df.index)]
         acc = general.AccumDict(accum=[])
-        for agg_id, loss_id, loss in zip(
-                adf.agg_id, adf.loss_id, adf.loss):
+        for row in adf.itertuples(index=False):
+            agg_id, loss_id = row.agg_id, row.loss_id
             lt = LOSSTYPE[loss_id]
             if lt in oq.loss_types:
                 for kfield, key in zip(aggby, df.loc[agg_id][aggby]):
                     acc[kfield].append(key)
                 acc['loss_type'].append(lt)
-                if lt == 'affectedpop':
-                    lt = 'residents'
-                elif lt in ['occupants', 'injured']:
-                    lt = 'occupants_' + oq.time_event
-                acc['value'].append(df.loc[agg_id][lt])
-                acc['lossmea'].append(loss)
+                if is_damage:
+                    acc['value'].append(df.loc[agg_id]['number'])
+                    for col in dmg_cols:
+                        acc[col].append(getattr(row, col))
+                else:
+                    valuelt = lt
+                    if lt == 'affectedpop':
+                        valuelt = 'residents'
+                    elif lt in ['occupants', 'injured']:
+                        valuelt = 'occupants_' + oq.time_event
+                    acc['value'].append(df.loc[agg_id][valuelt])
+                    acc['lossmea'].append(row.loss)
                 if len(qdf):
                     qvalues = qdf.loc[agg_id, loss_id].to_numpy()
                     for qfield, qvalue in zip(qfields, qvalues):
