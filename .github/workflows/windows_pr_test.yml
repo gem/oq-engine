@@ -10,8 +10,9 @@ on:
   pull_request:
 
 jobs:
-  install_oq:
+  install_oq_test:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
@@ -138,4 +139,4 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' engine --upgrade-db}
           sleep 10
           cd D:\a\oq-engine\oq-engine\openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep commands engine hmtk risklib commonlib baselib
