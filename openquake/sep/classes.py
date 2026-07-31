@@ -1023,11 +1023,11 @@ class Volcanic(SecondaryPeril):
 
 class Tsunami(SecondaryPeril):
     """
-    Import FlowDepth, FlowVel, Flux from CSV files
+    Import FlowDepth, FlowVel, MomFlux from CSV files
     """
     peril = 'tsunami'
     inputs = []
-    outputs = ["FlowDepth", "FlowVel", "Flux"]
+    outputs = ["FlowDepth", "FlowVel", "MomFlux"]
 
     def prepare(self, sites=None):
         """

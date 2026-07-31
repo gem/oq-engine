@@ -318,7 +318,7 @@ def JMA():
 # secondary IMTs
 sec_imts = '''ASH LAVA LAHAR PYRO
 Disp DispProb LiqProb LiqOccur LSE PGDMax PGDGeomMean LsProb
-FlowDepth FlowVel Flux
+FlowDepth FlowVel MomFlux
 '''.split()
 for sec in sec_imts:
     assert '_' not in sec, sec
@@ -434,8 +434,8 @@ def FlowVel():
     """
     return IMT('FlowVel')
 
-def Flux():
+def MomFlux():
     """
-    Flow flux in m^3/s.
+    Momentum flux in m^3/s.
     """
-    return IMT('Flux')
+    return IMT('MomFlux')
