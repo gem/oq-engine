@@ -503,9 +503,32 @@ class SourceModelLogicTree(object):
         attach_branches(self)
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
+        self.validate_subcalcs()
         dt = time.time() - t0
         logging.debug('Validated source model logic tree with %d underlying '
                       'files in %.2f seconds', len(unique), dt)
+
+    def validate_subcalcs(self):
+        """
+        If any top-level sourceModel branch has a "subcalc" label, all
+        must have one. Subcalc mode is incompatible with sampling.
+        """
+        top = self.branchsets[0]
+        labelled = [br for br in top.branches if br.subcalc is not None]
+        if not labelled:
+            return
+        if len(labelled) != len(top.branches):
+            missing = [br.branch_id for br in top.branches
+                       if br.subcalc is None]
+            raise LogicTreeError(
+                None, self.filename,
+                "'subcalc' must be set on every top-level sourceModel "
+                "branch, or on none. Missing on: %s" % ', '.join(missing))
+        if self.num_samples:
+            raise LogicTreeError(
+                None, self.filename,
+                "'subcalc' labels require full enumeration; set "
+                "number_of_logic_tree_samples = 0 in the job.ini")
 
     @property
     def utypes(self):
@@ -513,6 +536,54 @@ class SourceModelLogicTree(object):
         Returns the uncertainty types for each branchset
         """
         return [bs.uncertainty_type for bs in self.branchsets]
+
+    @property
+    def subcalcs(self):
+        """
+        :returns:
+            dict grouping the top-level "sourceModel" branches by their
+            "subcalc" attribute. Empty dict if no branch carries a "subcalc"
+            label.
+        """
+        out = {}
+        for br in self.branchsets[0].branches:
+            if br.subcalc is None:
+                continue
+            out.setdefault(br.subcalc, []).append(br)
+        return out
+
+    @property
+    def subcalc_weights(self):
+        """
+        :returns:
+            dict giving the summed weight of the top-level sourceModel
+            branches for each subcalc
+        """
+        return {label: float(sum(br.weight for br in brs))
+                for label, brs in self.subcalcs.items()}
+
+    @property
+    def has_subcalcs(self):
+        """
+        :returns:
+            True if any top-level sourceModel branch has a 
+            subcalc label
+        """
+        return bool(self.subcalcs)
+
+    def smr_to_subcalc_map(self):
+        """
+        :returns:
+            dict mapping each source-model realization index to
+            the subcalc label of its top-level sourceModel branch.
+            Realizations under an unlabelled top-level branch map
+            to None.
+        """
+        branch_subcalc = {br.branch_id: br.subcalc
+                          for br in self.branchsets[0].branches}
+        
+        return {smr: branch_subcalc.get(rlz.lt_path[0])
+                for smr, rlz in enumerate(self)}
 
     def parse_branchset(self, branchset_node, bsno):
         """
@@ -636,13 +707,21 @@ class SourceModelLogicTree(object):
                 raise LogicTreeError(
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
+            subcalc = branchnode.attrib.get('subcalc')
+            if (subcalc is not None and
+                    branchset.uncertainty_type != 'sourceModel'):
+                raise LogicTreeError(
+                    branchnode, self.filename,
+                    "'subcalc' attribute is only allowed on branches of "
+                    "sourceModel branchsets")
             if value == '':
                 # with logic tree reduction a branch can be empty
                 # see case_68_bis
                 zero_id = branch_id
                 zeros.append(weight)
             else:
-                branch = Branch(branch_id, value, weight, bs_id)
+                branch = Branch(branch_id, value, weight, bs_id,
+                                subcalc=subcalc)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, BASE183)

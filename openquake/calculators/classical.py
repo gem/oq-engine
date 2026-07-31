@@ -641,13 +641,45 @@ class ClassicalCalculator(base.HazardCalculator):
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
         if OQ_TASK_NO:
             allargs = [allargs[int(OQ_TASK_NO)]]
-        if self.few_sites or oq.disagg_by_src:
-            smap = parallel.Starmap(
-                classical_disagg, allargs, h5=self.datastore.hdf5)
+        task_func = (classical_disagg if (self.few_sites or oq.disagg_by_src)
+                     else classical)
+        smlt = self.full_lt.source_model_lt
+        # Subcalc mode is triggered by "subcalc" labels in smlt.xml
+        use_subcalcs = smlt.has_subcalcs and not OQ_TASK_NO
+        if use_subcalcs:
+            acc = self._run_subcalcs(allargs, task_func)
         else:
-            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+            smap = parallel.Starmap(
+                task_func, allargs, h5=self.datastore.hdf5)
+            acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
+
+    def _run_subcalcs(self, allargs, task_func):
+        """
+        Run one Starmap per subcalc sequentially.
+        """
+        # Map each src_group id to its subcalc label
+        grp_ids_by_lbl = self.csm.grp_ids_by_subcalc()
+        label_of_grp = {gid: lbl
+                        for lbl, gids in grp_ids_by_lbl.items()
+                        for gid in gids}
+        
+        # Group the task-arg tuples by subcalc label
+        partitions = {}
+        for args in allargs:
+            #  strip any tile suffix ("5-2" -> 5) to recover grp_id
+            gid = int(args[0][0].split('-')[0])
+            partitions.setdefault(label_of_grp[gid], []).append(args)
+
+        # Run subcalcs one at a time
+        acc = AccumDict(accum=0.)
+        for lbl in sorted(partitions):
+            logging.info('Subcalc %r: %d tasks', lbl, len(partitions[lbl]))
+            smap = parallel.Starmap(
+                task_func, partitions[lbl], h5=self.datastore.hdf5)
+            acc = smap.reduce(self.agg_dicts, acc)
+
+        return acc
 
     def _post_execute(self, acc):
         # save the rates and performs some checks

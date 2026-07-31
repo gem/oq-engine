@@ -27,6 +27,8 @@ from openquake.hazardlib import (
     nrml, lt, sourceconverter, calc, site, valid, contexts)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.logictree import SourceModelLogicTree
+from openquake.hazardlib.lt import LogicTreeError
 
 CDIR = os.path.dirname(__file__)
 ae = numpy.testing.assert_equal
@@ -676,3 +678,98 @@ class LogicFixesTestCase(unittest.TestCase):
         for mod_src in mod_sg.sources:
             self.assertEqual(mod_src.mfd.max_mag, 6.5)
 
+
+class SubcalcAttributeTestCase(unittest.TestCase):
+    """
+    Tests for the ``subcalc`` attribute on top-level ``sourceModel``
+    branches (see :class:`SourceModelLogicTree`).
+    """
+
+    SM_ONLY = '''<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt">
+    <logicTreeBranchSet branchSetID="bs_sm" uncertaintyType="sourceModel">
+      <logicTreeBranch branchID="b1"{sub1}>
+        <uncertaintyModel>{sm1}</uncertaintyModel>
+        <uncertaintyWeight>0.6</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b2"{sub2}>
+        <uncertaintyModel>{sm2}</uncertaintyModel>
+        <uncertaintyWeight>0.4</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>{extra}
+  </logicTree>
+</nrml>'''
+
+    EXTRA_LSD = '''
+    <logicTreeBranchSet branchSetID="bs_lsd" applyToSources="*"
+        uncertaintyType="setLowerSeismDepthAbsolute">
+      <logicTreeBranch branchID="lsd1"{sub}>
+        <uncertaintyModel>15.0</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>'''
+
+    SM1 = 'sm1.xml'
+    SM2 = 'sm2.xml'
+
+    def _parse(self, xml, **kw):
+        # Parse from a temp file with test_mode=True so referenced
+        # source-model XMLs are not loaded from disk
+        path = gettemp(xml, suffix='.xml')
+        return SourceModelLogicTree(path, test_mode=True, **kw)
+
+    def test_subcalc_on_non_source_model_raises(self):
+        # A subcalc attribute on a non-sourceModel branch is an error
+        xml = self.SM_ONLY.format(
+            sub1=' subcalc="a"', sub2=' subcalc="a"',
+            sm1=self.SM1, sm2=self.SM2,
+            extra=self.EXTRA_LSD.format(sub=' subcalc="erroneous"'))
+        with self.assertRaises(LogicTreeError) as cm:
+            self._parse(xml)
+        self.assertIn(
+            "'subcalc' attribute is only allowed on branches of "
+            "sourceModel branchsets", str(cm.exception))
+
+    def test_partial_subcalc_labelling_raises(self):
+        # Subcalc must be on every top-level branch, or none
+        xml = self.SM_ONLY.format(
+            sub1=' subcalc="a"', sub2='',
+            sm1=self.SM1, sm2=self.SM2, extra='')
+        with self.assertRaises(LogicTreeError) as cm:
+            self._parse(xml)
+        self.assertIn(
+            "'subcalc' must be set on every top-level sourceModel "
+            "branch, or on none. Missing on: b2", str(cm.exception))
+
+    def test_subcalc_grouping_and_weights(self):
+        # Subcalcs group top-level branches by label and sum weights
+        xml = self.SM_ONLY.format(
+            sub1=' subcalc="a"', sub2=' subcalc="b"',
+            sm1=self.SM1, sm2=self.SM2, extra='')
+        smlt = self._parse(xml)
+        self.assertTrue(smlt.has_subcalcs)
+        self.assertEqual(sorted(smlt.subcalcs), ['a', 'b'])
+        self.assertAlmostEqual(smlt.subcalc_weights['a'], 0.6)
+        self.assertAlmostEqual(smlt.subcalc_weights['b'], 0.4)
+
+    def test_sampling_with_subcalcs_raises(self):
+        # Subcalc labels require full enumeration
+        xml = self.SM_ONLY.format(
+            sub1=' subcalc="a"', sub2=' subcalc="b"',
+            sm1=self.SM1, sm2=self.SM2, extra='')
+        with self.assertRaises(LogicTreeError) as cm:
+            self._parse(xml, num_samples=10)
+        self.assertIn(
+            "'subcalc' labels require full enumeration; set "
+            "number_of_logic_tree_samples = 0 in the job.ini",
+            str(cm.exception))
+
+    def test_no_subcalc_labels_leaves_smlt_unaffected(self):
+        # Unlabelled tree has no subcalcs and validates cleanly
+        xml = self.SM_ONLY.format(
+            sub1='', sub2='',
+            sm1=self.SM1, sm2=self.SM2, extra='')
+        smlt = self._parse(xml)
+        self.assertFalse(smlt.has_subcalcs)
+        self.assertEqual(smlt.subcalcs, {})

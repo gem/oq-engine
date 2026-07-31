@@ -359,6 +359,32 @@ class CompositeSourceModel:
             srcs.extend(grp)
         return srcs
 
+    def grp_ids_by_subcalc(self):
+        """
+        :returns:
+            dict grouping src_groups by the subcalc label of the top-level
+            "sourceModel" branch they trace back to (via "trt_smrs").
+            
+            Raises a ValueError if a src_group spans more than one subcalc.
+        """
+        smlt = self.full_lt.source_model_lt
+        smr_subcalc = smlt.smr_to_subcalc_map()
+        out = {}
+        for grp_id, sg in enumerate(self.src_groups):
+            labels = set()
+            for trt_smr in sg.sources[0].trt_smrs:
+                labels.add(smr_subcalc.get(trt_smr % TWO24))
+            labels.discard(None)
+            if len(labels) > 1:
+                raise ValueError(
+                    'src_group %d (%s) spans multiple subcalcs %s; '
+                    'cross-subcalc source sharing is not supported'
+                    % (grp_id, sg.trt, sorted(labels)))
+            if labels:
+                out.setdefault(labels.pop(), []).append(grp_id)
+
+        return out
+
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)

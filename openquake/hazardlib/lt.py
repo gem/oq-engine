@@ -653,13 +653,18 @@ class Branch(object):
         of ``<uncertaintyWeight />`` child node.
     :param bs_id:
         BranchSetID of the branchset to which the branch belongs
+    :param subcalc:
+        Optional subcalc label; when set on a top-level "sourceModel"
+        branch, all downstream branches reachable via "applyToBranches"
+        chains inherit this label and are grouped into one subcalc
     """
-    def __init__(self, branch_id, value, weight, bs_id=''):
+    def __init__(self, branch_id, value, weight, bs_id='', subcalc=None):
         self.branch_id = branch_id
         self.value = value
         self.weight = weight
         self.bs_id = bs_id
         self.bset = None
+        self.subcalc = subcalc
 
     def is_dummy(self):
         """
@@ -681,6 +686,8 @@ class Branch(object):
 
     def to_node(self):
         attrib = dict(branchID=self.branch_id)
+        if self.subcalc is not None:
+            attrib['subcalc'] = self.subcalc
         nodes = [Node('uncertaintyModel', {}, self.value),
                  Node('uncertaintyWeight', {}, self.weight)]
         return Node('logicTreeBranch', attrib, None, nodes)

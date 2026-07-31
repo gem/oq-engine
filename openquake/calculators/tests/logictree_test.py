@@ -503,11 +503,12 @@ hazard_uhs-std.csv
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
-        # sampled to keep the calc fast (highly simplified version)
+        # run in subcalc mode: three sequential subcalcs grouped by the
+        # "subcalc" attribute on the top-level sourceModel branches
         self.run_calc(case_25.__file__, 'job.ini', exports='csv')
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
-        self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 144)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
