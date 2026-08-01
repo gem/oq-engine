@@ -38,7 +38,9 @@ calc_path = None  # set only when the flag --slowest is given
 def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
          params, user_name, host=None):
     global calc_path
-    if 'hazard_calculation_id' in params:
+    hc_string = 'hazard_calculation_id' in params and isinstance(
+            params['hazard_calculation_id'], str)
+    if 'hazard_calculation_id' in params and not hc_string:
         hc_id = int(params['hazard_calculation_id'])
         if hc_id < 0:  # interpret negative calculation ids
             calc_ids = logs.get_calc_ids()
@@ -51,6 +53,9 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
         else:
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
+    if hc_string:
+        dic['hazard_calculation_id'] = params['hazard_calculation_id']
+
     # set the logs first of all
     log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
                     user_name=user_name, host=host, pdb=pdb)
