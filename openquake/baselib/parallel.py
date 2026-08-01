@@ -1025,6 +1025,10 @@ class Starmap(object):
             if self.h5.mode != 'r':
                 self.monitor.save_starmap_info(self.h5, self.name, times)
 
+    def __del__(self):
+        if hasattr(self, 'socket'):
+            self.socket.close()
+
 
 # as of Python 3.13 this is terribly inefficient compared to a processpool,
 # even for numba functions releasing the GIL(!), so don't use it for the
