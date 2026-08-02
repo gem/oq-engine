@@ -988,9 +988,9 @@ class SourceModelLogicTree(object):
             ats = self.bsetdict[bsid].get('applyToSources')
             atb = self.bsetdict[bsid].get('applyToBranches')
             if ats:
-                filters['applyToSources'] = ats.split()
+                filters['applyToSources'] = sorted(ats.split())
             if atb:
-                filters['applyToBranches'] = atb.split()
+                filters['applyToBranches'] = sorted(atb.split())
             bset = BranchSet(utype, filters, ordinal)
             bset.id = bsid
             for no, row in enumerate(rows):
