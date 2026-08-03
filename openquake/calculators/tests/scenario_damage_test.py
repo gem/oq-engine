@@ -339,6 +339,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [agg_csv] = export(('aggrisk', 'csv'), dstore)
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
 
+    def test_case_23(self):
+        # tsunami damage
+        self.run_calc(case_23.__file__, 'job_damage.ini')
+        [fname1, fname2] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname1)
+        self.assertEqualFiles('expected/aggrisk-NAME_2.csv', fname2)
+
 
 def losses(aid, alt):
     E = len(alt.event_id.unique())
