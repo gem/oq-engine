@@ -1,6 +1,7 @@
-  [Mohsen Kohrangi, Christopher Brooks]
-  * Fixed a bug in the USGS basin scaling of the CB14 GMM and update
-    the expected results in the affected unit test.
+  [Christopher Brooks]
+  * Fixed a bug in the USGS basin scaling of the CB14 GMM using the
+    fix provided/reported by Mohsen Kohrangi. Existing unit test's
+    expected results were updated accordingly.
   
   [Michele Simionato]
   * Internal: reduced the hard limit on function length to 79 lines
