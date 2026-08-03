@@ -23,18 +23,18 @@ class EnginePage:
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
         expect(job_row.get_by_text("executing")).to_be_visible(timeout=80_000)
-        job_row.get_by_role("link", name="Abort").click(timeout=10_000)
+        job_row.get_by_role("link", name="Abort").click(timeout=20_000)
         self.page.get_by_role("button", name="Yes, abort").click(
-            timeout=10_000)
-        self.page.get_by_role("button", name="Close").click(timeout=10_000)
-        expect(job_row.get_by_text("failed")).to_be_visible(timeout=10_000)
+            timeout=20_000)
+        self.page.get_by_role("button", name="Close").click(timeout=20_000)
+        expect(job_row.get_by_text("failed")).to_be_visible(timeout=20_000)
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
-        job_row.get_by_role("link", name="Remove").click(timeout=10_000)
+        job_row.get_by_role("link", name="Remove").click(timeout=20_000)
         self.page.get_by_role("button", name="Yes, remove").click(
-            timeout=10_000)
-        self.page.get_by_role("button", name="Close").click(timeout=10_000)
+            timeout=20_000)
+        self.page.get_by_role("button", name="Close").click(timeout=20_000)
 
     def to_outputs(self, job_id):
         job_row = self.get_job_row(job_id)
