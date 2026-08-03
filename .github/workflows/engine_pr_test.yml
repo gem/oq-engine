@@ -29,9 +29,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Calculators tests
         run: |
@@ -62,9 +62,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Hazardlib tests
         run: |
@@ -100,9 +100,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+            python install.py devel --from_fork
           else
-            python install.py devel --version=$GITHUB_HEAD_REF
+            python install.py devel
           fi
       - name: Server tests
         run: |
@@ -110,8 +110,6 @@ jobs:
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pip install pytest-playwright
-          playwright install
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
@@ -119,8 +117,48 @@ jobs:
           OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py
           OQ_APPLICATION_MODE=AELO pytest -vx openquake/server/tests/test_aelo_mode.py
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine}  # _unc moved to nightly tests
+
+  server_UI:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11"]
+        browser: ['chromium', 'firefox']
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --from_fork
+          else
+            python install.py devel
+          fi
+      - name: Server tests
+        run: |
+          set -x
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/playwright-1.57.0-py3-none-manylinux1_x86_64.whl
+          pip install https://wheelhouse.openquake.org/unified/text_unidecode-1.3-py2.py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/python_slugify-8.0.4-py2.py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_base_url-2.1.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_playwright-0.7.2-py3-none-any.whl
+          playwright install chromium firefox
+          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
           OQ_APPLICATION_MODE=AELO pytest \
-            --browser chromium \
+            --browser ${{ matrix.browser }} \
             --capture=no \
             --maxfail=1 \
             --tb=short \
@@ -129,7 +167,7 @@ jobs:
             --screenshot only-on-failure \
             --video retain-on-failure
           OQ_APPLICATION_MODE=RESTRICTED pytest \
-            --browser chromium \
+            --browser ${{ matrix.browser }} \
             --capture=no \
             --maxfail=1 \
             --tb=short \
@@ -141,6 +179,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-aelo-python${{ matrix.python-version }}-{{ matrix.os }}
+          name: playwright-artifacts-python${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.browser }}
           path: test-results
           retention-days: 7
