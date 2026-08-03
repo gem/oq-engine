@@ -550,21 +550,16 @@ class SourceModelLogicTree(object):
 
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
-        if not branchset.branches:
-            del self.bsetdict[bsid]
-            return
-        app2brs = branchset_node.attrib.get('applyToBranches', '')
-        lineno = branchset_node.lineno
-        for branch_id in app2brs.split():
-            if branch_id not in self.branches:
-                if self.source_id or self.branchID:
-                    # the branch cannot be attached, but it is okay since
-                    # this is a reduced logic tree, not the original
-                    continue
-                raise LogicTreeError(
-                    lineno, self.filename,
-                    "branch '%s' is not yet defined" % branch_id)
         self.branchsets.append(branchset)
+
+        # check missing branches
+        app2brs = branchset_node.attrib.get('applyToBranches', '')
+        for branch_id in app2brs.split():
+            if (branch_id not in self.branches and not self.source_id
+                and not self.branchID):
+                raise LogicTreeError(
+                    branchset_node.lineno, self.filename,
+                    "branch '%s' is not yet defined" % branch_id)
 
     def parse_branches(self, branchset_node, branchset):
         """
@@ -677,6 +672,7 @@ class SourceModelLogicTree(object):
         if 'applyToSources' in filters:
             srcs = filters['applyToSources'].split()
             if self.source_id:
+                # srcs is empty or [self.source_id]
                 srcs = [src for src in srcs if src == self.source_id]
             filters['applyToSources'] = srcs
         if 'applyToBranches' in filters:
@@ -821,6 +817,13 @@ class SourceModelLogicTree(object):
         :returns: a list of B - 1 pairs (branchset, value)
         """
         return self.root_branchset.get_bset_values(lt_path)[1:]
+
+    def split_by_src(self):
+        """
+        :returns: src_id -> source-specific-logic-tree
+        """
+        dic = {src: self.reduce(src) for src in self.source_data['source']}
+        return dic
 
     # used in the sslt page of the advanced manual
     def decompose(self):
