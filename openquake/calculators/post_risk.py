@@ -580,7 +580,8 @@ class PostRiskCalculator(base.RiskCalculator):
 
             # now aggregate risk_by_event by policy
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
-                       for pdf in numpy.array_split(self.policy_df, ct)]
+                       for pdf in general.split_in_blocks(
+                           self.policy_df, ct)]
             self.datastore.swmr_on()
             smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
                                     h5=self.datastore.hdf5)

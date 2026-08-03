@@ -596,7 +596,7 @@ def _add_iml(df, imtls):
     out = []
     for imt in imtls:
         imls = imtls[imt]
-        dframe = df[df.imt == imt]
+        dframe = df[df.imt == imt].copy()
         dframe['iml'] = imls[dframe.lvl]
         del dframe['lvl']
         out.append(dframe)
@@ -802,25 +802,30 @@ def export_mce(ekey, dstore):
     return [fname]
 
 
+def sites_by_xy(sitecol):
+    by_xy = {}
+    for site in sitecol:
+        xy = site.location.x, site.location.y
+        by_xy.setdefault(xy, []).append(site)
+    return by_xy  # {(x, y): [site, site, ...]}
+
+
+# tested in commands_test:RunSiteTestCase
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
-    if len(sitecol) == 3 and len(dstore[ekey[0]]) == 1:
-        # In the "default" site class case we have 1 actual site, represented
-        # as 3 sites with equal coordinates and different site classes, and we
-        # have only one asce07 table and one asce41 table
-        sids = [0]
-    else:
-        sids = sitecol.sids
-    for s in sids:
+    # In the "default" site class case we have 1 actual site, represented
+    # as 3 sites with equal coordinates and different site classes, and we
+    # have only one asce07 table and one asce41 table
+    for s, ((x, y), sites) in enumerate(sites_by_xy(sitecol).items()):
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
         comment = dstore.metadata.copy()
-        comment['lon'] = sitecol.lons[s]
-        comment['lat'] = sitecol.lats[s]
-        comment['vs30'] = sitecol.vs30[s]
+        comment['lon'] = x
+        comment['lat'] = y
+        comment['vs30'] = ' '.join(str(s.vs30) for s in sites)
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
                     comment=comment)

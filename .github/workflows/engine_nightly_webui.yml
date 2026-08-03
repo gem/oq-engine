@@ -17,6 +17,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12", "3.13"]
+        browser: ['chromium', 'firefox']
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
     steps:
@@ -42,12 +43,7 @@ jobs:
           pip3 install -U pip wheel setuptools
           #
           echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]]
-          then
-            python install.py devel --version ${BRANCH}
-          else
-            python install.py devel --version master
-          fi
+          python install.py devel
       - name: Server 'IMPACT' mode tests
         env:
           OQ_APPLICATION_MODE: IMPACT
@@ -68,10 +64,14 @@ jobs:
           oq engine --upgrade-db
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pip install pytest-playwright
-          playwright install
+          pip install https://wheelhouse.openquake.org/unified/playwright-1.57.0-py3-none-manylinux1_x86_64.whl
+          pip install https://wheelhouse.openquake.org/unified/text_unidecode-1.3-py2.py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/python_slugify-8.0.4-py2.py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_base_url-2.1.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_playwright-0.7.2-py3-none-any.whl
+          playwright install ${{ matrix.browser }}
           pytest -v \
-            --browser chromium \
+            --browser ${{ matrix.browser }} \
             --capture=no \
             --maxfail=1 \
             --tb=short \
@@ -83,6 +83,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-impact-python${{ matrix.python-version }}-${{ matrix.os }}
+          name: playwright-artifacts-impact-python${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.browser }}
           path: test-results
           retention-days: 7
