@@ -643,40 +643,39 @@ class ClassicalCalculator(base.HazardCalculator):
             allargs = [allargs[int(OQ_TASK_NO)]]
         task_func = (classical_disagg if (self.few_sites or oq.disagg_by_src)
                      else classical)
-        smlt = self.full_lt.source_model_lt
-        # Subcalc mode is triggered by "subcalc" labels in the SSC LT
-        use_subcalcs = smlt.has_subcalcs and not OQ_TASK_NO
-        if use_subcalcs:
-            acc = self._run_subcalcs(allargs, task_func)
+        if oq.sequential_source_models and not OQ_TASK_NO:
+            acc = self._run_sequential_source_models(allargs, task_func)
         else:
             smap = parallel.Starmap(
                 task_func, allargs, h5=self.datastore.hdf5)
             acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
 
-    def _run_subcalcs(self, allargs, task_func):
+    def _run_sequential_source_models(self, allargs, task_func):
         """
-        Run one Starmap per subcalc sequentially.
+        Run one Starmap per top-level ``sourceModel`` branch sequentially,
+        so that at most one source model's tasks are in flight at a time.
         """
-        # Map each src_group id to its subcalc label
-        grp_ids_by_lbl = self.csm.grp_ids_by_subcalc()
-        label_of_grp = {gid: lbl
-                        for lbl, gids in grp_ids_by_lbl.items()
-                        for gid in gids}
-        
-        # Group the task-arg tuples by subcalc label
+        # Map each src_group id to its top-level sourceModel branch_id
+        grp_ids_by_smb = self.csm.grp_ids_by_source_model()
+        smb_of_grp = {gid: smb
+                      for smb, gids in grp_ids_by_smb.items()
+                      for gid in gids}
+
+        # Partition the task-arg tuples by top-level sourceModel branch
         partitions = {}
         for args in allargs:
-            #  strip any tile suffix ("5-2" -> 5) to recover grp_id
+            # Strip any tile suffix ("5-2" -> 5) to recover grp_id
             gid = int(args[0][0].split('-')[0])
-            partitions.setdefault(label_of_grp[gid], []).append(args)
+            partitions.setdefault(smb_of_grp[gid], []).append(args)
 
-        # Run subcalcs one at a time
+        # Run one source model at a time
         acc = AccumDict(accum=0.)
-        for lbl in sorted(partitions):
-            logging.info('Subcalc %r: %d tasks', lbl, len(partitions[lbl]))
+        for smb in sorted(partitions):
+            logging.info('Source model %r: %d tasks',
+                         smb, len(partitions[smb]))
             smap = parallel.Starmap(
-                task_func, partitions[lbl], h5=self.datastore.hdf5)
+                task_func, partitions[smb], h5=self.datastore.hdf5)
             acc = smap.reduce(self.agg_dicts, acc)
 
         return acc

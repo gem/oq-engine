@@ -964,12 +964,6 @@ def get_source_model_lt(oqparam):
     if oqparam.calculation_mode.startswith('scenario'):
         return logictree.SourceModelLogicTree.fake()
     smlt = get_smlt(vars(oqparam))
-    if smlt.has_subcalcs and oqparam.calculation_mode not in (
-            'classical', 'disaggregation'):
-        raise InvalidFile(
-            "%s: 'subcalc' labels are only supported in classical and "
-            "disaggregation calculations (calculation_mode = %r)"
-            % (smlt.filename, oqparam.calculation_mode))
     for bset in smlt.branchsets:
         bset.check_duplicates(smlt.filename)
     srcids = set(smlt.source_data['source'])
