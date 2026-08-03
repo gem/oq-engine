@@ -1,3 +1,7 @@
+  [Mohsen Kohrangi, Christopher Brooks]
+  * Fixed a bug in the USGS basin scaling of the CB14 GMM and update
+    the expected results in the affected unit test.
+  
   [Michele Simionato]
   * Internal: reduced the hard limit on function length to 79 lines
   * Fixed the exporters `mag_dst_eps_sig` and `mean_disagg_by_src` for low
