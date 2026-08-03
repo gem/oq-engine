@@ -653,8 +653,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _run_sequential_source_models(self, allargs, task_func):
         """
-        Run one Starmap per top-level ``sourceModel`` branch sequentially,
-        so that at most one source model's tasks are in flight at a time.
+        Run one Starmap per top-level sourceModel branch sequentially,
+        so that at most one source model's tasks are running at one time.
         """
         # Map each src_group id to its top-level sourceModel branch_id
         grp_ids_by_smb = self.csm.grp_ids_by_source_model()

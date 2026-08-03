@@ -2239,7 +2239,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_sequential_source_models(self):
         """
-        sequential_source_models is only meaningful for classical and
+        sequential_source_models is only useable in classical and
         disaggregation calculations
         """
         if self.sequential_source_models:
