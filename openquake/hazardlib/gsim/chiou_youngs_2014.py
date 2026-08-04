@@ -520,36 +520,6 @@ def get_nonlinear_site_term(C, ctx, y_ref):
     return f_nl, f_nl_scaling
 
 
-def get_emme_site_term(C, ctx, C_EMME, conf):
-    """
-    Returns the EMME24 backbone model site term (both linear
-    and non-linear components). The site term is combination
-    of CY14 and IC23 GMMs site terms.
-    
-    Implementation based on slides and excel files provided by
-    A. Sandıkkaya to GEM which describe the EMME24 site model.
-    """
-    # Get prediction on ref velocity (800 m/s)
-    ref_vs = 800.
-    rock_ctx = ctx.copy()
-    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs)
-    ln_gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
-
-    # Linear component
-    linear = C_EMME["a1"] * np.log(np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
-    
-    # Part 1 of non-linear component
-    non_linear_p1 = C_EMME["a2"] * (
-        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
-        np.exp(440. * C_EMME["a3"])
-        ) 
-    
-    # Part 2 of non-linear component
-    non_linear_p2 = np.log(1 + (np.exp(ln_gm_rock) / C_EMME["a4"]))
-
-    return linear + (non_linear_p1 * non_linear_p2)
-
-
 def get_phi(C, mag, ctx, nl0):
     """
     Returns the within-event variability described in equation 13, line 3
@@ -651,8 +621,9 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
             conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     else:
-        # Compute EMME24 site term instead (no basin effects considered here)
-        mean = ln_y_ref + get_emme_site_term(C, ctx, emme_coeffs[imt], conf)
+        # For EMME24 backbones the site term is applied inside the subclass
+        # compute, after the BB scale factor and distance correction
+        mean = ln_y_ref
 
         # Sigma components are determined within EMME backbone's compute method
         sig, tau, phi =\
@@ -820,10 +791,11 @@ class ChiouYoungs2014(GMPE):
                 
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
-                # value of PGA when it falls below the predicted PGA
+                # value of PGA when it falls below the predicted PGA 
+                # NOTE: Not used in the EMME24 backbone model
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
-                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
-                    else imt_mean
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 and \
+                        not self.COEFFS_EMME else imt_mean
                 
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 

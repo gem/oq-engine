@@ -101,6 +101,33 @@ def _get_intra_event_phi(C_BB, ctx):
     return phi
 
 
+def _get_emme_site_term(ctx, C_EMME, ln_anchor):
+    """
+    Returns the EMME24 backbone model site term (both linear
+    and non-linear components). The site term is combination
+    of CY14 and IC23 GMMs site terms.
+
+    Implementation based on slides and excel files provided by
+    A. Sandıkkaya to GEM which describe the EMME24 site model.
+    """
+    ref_vs = 800.
+
+    # Linear component
+    linear = C_EMME["a1"] * np.log(
+        np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
+
+    # Part 1 of non-linear component
+    non_linear_p1 = C_EMME["a2"] * (
+        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
+        np.exp(440. * C_EMME["a3"])
+        )
+
+    # Part 2 of non-linear component
+    non_linear_p2 = np.log(1 + (np.exp(ln_anchor) / C_EMME["a4"]))
+
+    return linear + (non_linear_p1 * non_linear_p2)
+
+
 def _compute_distance_correction(ctx, imt):
     """
     Return the distance correction for the given IMT.
@@ -172,14 +199,16 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # First get mean from CY14 but with EMME site model
+        # First get mean from CY14 (site term not applied
+        # in superclass for EMME24 backbone)
         super().compute(ctx, imts, mean, sig, tau, phi)
-        
+
         # Now make adjustments per IMT
         for m, imt in enumerate(imts):
 
             # Get coeffs
             C_BB = self.COEFFS_BB[imt]
+            C_EMME = self.COEFFS_EMME[imt]
 
             # Get scaling factor and apply
             scfact = _compute_scalefactor(ctx, C_BB)
@@ -189,7 +218,11 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
             dist_corr = _compute_distance_correction(ctx, imt)
             mean[m] += dist_corr
 
-            # Get tau and phi            
+            # Apply EMME24 site term (uses the scaled vs30=800 motion
+            # as the anchor for the non-linear soil response)
+            mean[m] += _get_emme_site_term(ctx, C_EMME, mean[m])
+
+            # Get tau and phi
             std_inter = _get_inter_event_tau(C_BB, ctx)
             std_intra = _get_intra_event_phi(C_BB, ctx)
 
