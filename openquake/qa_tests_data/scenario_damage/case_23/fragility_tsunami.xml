@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<fragilityModel id="tsunami_adriano2025" assetCategory="buildings" lossCategory="structural">
+<description>Structural Fragility Model - Tsunami (Adriano 2025)</description>
+<limitStates>slight moderate extensive complete</limitStates>
+<fragilityFunction id="W/LFM/CDH+ERH/H:2/RES" format="discrete">
+<imls imt="FlowDepth" noDamageLimit="0.01"> 0.1 0.3 0.5 0.7 1.0 1.3 1.5 1.8 2.0 2.3 2.5 2.8 3.0 3.5 4.0 4.5 5.0 6.0 8.0 10.0 </imls>
+<poes ls="slight"> 0.131 0.156 0.180 0.208 0.273 0.327 0.384 0.450 0.505 0.566 0.626 0.682 0.736 0.822 0.894 0.943 0.969 0.993 1.000 1.000 </poes>
+<poes ls="moderate"> 0.131 0.156 0.180 0.208 0.273 0.327 0.384 0.450 0.505 0.566 0.626 0.682 0.736 0.822 0.894 0.943 0.969 0.993 1.000 1.000 </poes>
+<poes ls="extensive"> 0.131 0.156 0.180 0.208 0.273 0.327 0.384 0.450 0.505 0.566 0.626 0.682 0.736 0.822 0.894 0.943 0.969 0.993 1.000 1.000 </poes>
+<poes ls="complete"> 0.131 0.156 0.180 0.208 0.273 0.327 0.384 0.450 0.505 0.566 0.626 0.682 0.736 0.822 0.894 0.943 0.969 0.993 1.000 1.000 </poes>
+</fragilityFunction>
+</fragilityModel>
+</nrml>

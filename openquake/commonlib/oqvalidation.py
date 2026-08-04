@@ -1078,6 +1078,8 @@ class OqParam(valid.ParamSet):
         'liquefaction_vulnerability',
         'landslide_fragility',
         'landslide_vulnerability',
+        'tsunami_fragility',
+        'tsunami_vulnerability',
         'post_loss_amplification',
     } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
