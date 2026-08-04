@@ -34,7 +34,6 @@ from openquake.hazardlib.contexts import get_cmakers
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
-TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
