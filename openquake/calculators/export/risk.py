@@ -947,7 +947,6 @@ def export_job_zip(ekey, dstore):
             config.directory.custom_tmp or tempfile.gettempdir())
     inputs = {}
     oq = dstore['oqparam']
-    # Prevent UnboundLocalError if consequence exists without damage mode
     ddic = {}
 
     if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap

@@ -83,7 +83,6 @@ oq info usgs_rupture:us70006sj8
 # display the calculations
 oq db find %
 
-# test job zip exporter for all generated jobs
 echo "Testing job exporter for all generated jobs"
 failed_export_job_zips=()
 for job_id in $(oq db "SELECT id FROM job" | grep -oE '[0-9]+'); do
