@@ -197,7 +197,6 @@ import tempfile
 import traceback
 import collections
 from unittest import mock
-import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
                                 as_completed)
