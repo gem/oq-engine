@@ -520,32 +520,37 @@ def _src_groups_by_key(source_model_lt, rlzs, smdict):
     return out
 
 
+def apply_unc(full_lt, groups_by_key, slc=slice(None)):
+    n = sum(1 for bset in full_lt.source_model_lt.branchsets
+            if bset.uncertainty_type in ('sourceModel', 'extendModel'))
+    for rlz in full_lt.sm_rlzs[slc]:
+        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)[n-1:]
+        # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+        # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+        # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+        # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+        # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
+        for src_group in groups_by_key[rlz.lt_path[:n]]:
+            yield rlz, apply_uncertainties(bset_values, src_group)
+
+
 def _build_groups(full_lt, groups_by_key):
     # build all the possible source groups from the full logic tree
     groups = []
-    n = len(next(iter(groups_by_key)))  # sourceModel+extendModel..
-    for rlz in full_lt.sm_rlzs:
+    for rlz, sg in apply_unc(full_lt, groups_by_key):
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
-        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)[n-1:]
-        for src_group in groups_by_key[rlz.lt_path[:n]]:
-            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
-            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
-            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
-            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
-            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
-            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            sg = apply_uncertainties(bset_values, src_group)
-            for src in sg:  # tested in case_83_eb
-                sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
-                if src.sampling is None:
-                    # the first time
-                    src.sampling = [sampl]
-                else:
-                    # if the same source belongs to multiple realizations
-                    src.sampling.append(sampl)
-            groups.append(sg)
+        trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[sg.trt]
+        for src in sg:  # tested in case_83_eb
+            sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
+            if src.sampling is None:
+                # the first time
+                src.sampling = [sampl]
+            else:
+                # if the same source belongs to multiple realizations
+                src.sampling.append(sampl)
+        groups.append(sg)
 
         # check applyToSources
         sm_branch = rlz.lt_path[0]
