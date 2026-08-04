@@ -1,0 +1,7 @@
+#,,,,,,"generated_by='OpenQuake engine 3.27.0-git6324164569', start_date='2026-07-31T08:32:26', checksum=3056893362"
+loss_type,NAME_2,no_damage,slight,moderate,extensive,complete
+structural,Anamizu-machi,5.27314E-01,0.00000E+00,0.00000E+00,0.00000E+00,3.47269E+00
+structural,Nanao-shi,1.54345E-02,0.00000E+00,0.00000E+00,0.00000E+00,2.98457E+00
+structural,Noto-cho,2.05279E+00,0.00000E+00,0.00000E+00,0.00000E+00,4.49472E+01
+structural,Shika-machi,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,1.50000E+01
+structural,Suzu-shi,9.91373E-01,0.00000E+00,0.00000E+00,0.00000E+00,1.50086E+01
