@@ -975,44 +975,7 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                finished.add(res.mon.task_no)
-                self.busytime += {res.workerid: res.mon.duration}
-                del self.tasks[res.mon.task_no]
-                self._submit_many(1)
-                todo = set(range(self.task_no)) - finished
-                logging.debug('%d tasks todo %s', len(todo),
-                              shortlist(sorted(todo)))
-                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-                task_sent.update(self.sent)
-                if self.h5.mode != 'r':
-                    del self.h5['task_sent']
-                    self.h5['task_sent'] = str(task_sent)
-                name = res.mon.operation[6:]  # strip 'total '
-                if self.distribute in ('zmq', 'slurm'):
-                    mem_gb = 0
-                    if res.mon.task_no % 10 == 0:
-                        # measure the memory only for 1 task out of 10
-                        # with 8 nodes the time to get the memory is 0.01 secs
-                        for line in host_cores:
-                            host, _cores = line.split()
-                            addr = 'tcp://%s:%s' % (
-                                host, config.zworkers.ctrl_port)
-                            with Socket(addr, zmq.REQ, 'connect') as sock:
-                                mem_gb += sock.send('memory_gb')
-                elif self._shared:
-                    # do not measure the memory on the workers
-                    # otherwise memory_rss would double count the shared memory
-                    mem_gb = memory_gb()
-                elif hasattr(Starmap, 'pool'):
-                    if hasattr(Starmap.pool, '_processes'):
-                        mem_gb = memory_gb(Starmap.pool._processes)
-                    else:
-                        mem_gb = memory_gb()
-                else:
-                    mem_gb = 0
-                if self.h5.mode != 'r':
-                    res.mon.save_task_info(self.h5, res, name, mem_gb)
-                    res.mon.flush(self.h5)
+                self._task_ended(res, finished)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
@@ -1030,6 +993,46 @@ class Starmap(object):
             times = numpy.array(list(self.busytime.values()))
             if self.h5.mode != 'r':
                 self.monitor.save_starmap_info(self.h5, self.name, times)
+
+    def _task_ended(self, res, finished):
+        finished.add(res.mon.task_no)
+        self.busytime += {res.workerid: res.mon.duration}
+        del self.tasks[res.mon.task_no]
+        self._submit_many(1)
+        todo = set(range(self.task_no)) - finished
+        logging.debug('%d tasks todo %s', len(todo),
+                      shortlist(sorted(todo)))
+        task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+        task_sent.update(self.sent)
+        if self.h5.mode != 'r':
+            del self.h5['task_sent']
+            self.h5['task_sent'] = str(task_sent)
+        name = res.mon.operation[6:]  # strip 'total '
+        if self.distribute in ('zmq', 'slurm'):
+            mem_gb = 0
+            if res.mon.task_no % 10 == 0:
+                # measure the memory only for 1 task out of 10
+                # with 8 nodes the time to get the memory is 0.01 secs
+                for line in host_cores:
+                    host, _cores = line.split()
+                    addr = 'tcp://%s:%s' % (
+                        host, config.zworkers.ctrl_port)
+                    with Socket(addr, zmq.REQ, 'connect') as sock:
+                        mem_gb += sock.send('memory_gb')
+        elif self._shared:
+            # do not measure the memory on the workers
+            # otherwise memory_rss would double count the shared memory
+            mem_gb = memory_gb()
+        elif hasattr(Starmap, 'pool'):
+            if hasattr(Starmap.pool, '_processes'):
+                mem_gb = memory_gb(Starmap.pool._processes)
+            else:
+                mem_gb = memory_gb()
+        else:
+            mem_gb = 0
+        if self.h5.mode != 'r':
+            res.mon.save_task_info(self.h5, res, name, mem_gb)
+            res.mon.flush(self.h5)
 
     def __del__(self):
         if hasattr(self, 'socket'):
