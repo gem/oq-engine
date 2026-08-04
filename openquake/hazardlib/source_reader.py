@@ -515,7 +515,7 @@ def _src_groups_by_key(source_model_lt, rlzs, n, smdict):
 def _build_groups(full_lt, groups_by_key):
     # build all the possible source groups from the full logic tree
     groups = []
-    n = len(next(iter(groups_by_key)))  # length of sourceModel+extendModel..
+    n = len(next(iter(groups_by_key)))  # sourceModel+extendModel..
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
