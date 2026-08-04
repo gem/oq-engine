@@ -318,6 +318,7 @@ def JMA():
 # secondary IMTs
 sec_imts = '''ASH LAVA LAHAR PYRO
 Disp DispProb LiqProb LiqOccur LSE PGDMax PGDGeomMean LsProb
+FlowDepth FlowVel MomFlux
 '''.split()
 for sec in sec_imts:
     assert '_' not in sec, sec
@@ -353,7 +354,7 @@ def PYRO():
     return IMT('PYRO')
 
 
-# Liquefaction IMTs
+# Liquefaction and Landslide IMTs
 
 def Disp():
     """
@@ -417,3 +418,24 @@ def LsProb():
     Probability of landsliding.
     """
     return IMT('LsProb')
+
+
+# Tsunami IMTs
+
+def FlowDepth():
+    """
+    Flow depth in meters.
+    """
+    return IMT('FlowDepth')
+
+def FlowVel():
+    """
+    Flow velocity in m/s.
+    """
+    return IMT('FlowVel')
+
+def MomFlux():
+    """
+    Momentum flux in m^3/s.
+    """
+    return IMT('MomFlux')

@@ -240,7 +240,10 @@ class PerilDict(dict):
         if isinstance(lt, tuple):
             return dict.__getitem__(self, lt)
         else:  # assume lt is a loss_type string
-            return dict.__getitem__(self, ('groundshaking', lt))
+            for key in self:
+                if key[1] == lt:
+                    return dict.__getitem__(self, key)
+            raise KeyError(('groundshaking', lt))
 
 
 class RiskModel(object):
@@ -285,7 +288,9 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions['groundshaking'])
+        for peril in self.risk_functions:
+            return sorted(self.risk_functions[peril])
+        return []
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
@@ -299,7 +304,7 @@ class RiskModel(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        assert 'groundshaking' in dic, list(dic)
+        assert len(dic) > 0, list(dic)
         self.risk_functions = dic
 
     def __repr__(self):
@@ -782,8 +787,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions['groundshaking'].items():
-                iml[rf.imt].append(rf.imls[0])
+            for peril in rm.risk_functions:
+                for lt, rf in rm.risk_functions[peril].items():
+                    iml[rf.imt].append(rf.imls[0])
 
         if oq.impact:
             pass  # don't set minimum_intensity
