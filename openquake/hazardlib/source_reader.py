@@ -484,34 +484,43 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, {src.source_id for grp in groups for src in grp}
 
 
-def _bset_values_src_groups(source_model_lt, rlz, smdict):
+def _src_groups_by_key(source_model_lt, rlzs, n, smdict):
     smlt_dir = os.path.dirname(source_model_lt.filename)
-    src_groups, source_ids = _groups_ids(
-        smlt_dir, smdict, rlz.value[0].split())
-    bset_values = source_model_lt.bset_values(rlz.lt_path)
-    while (bset_values and
-           bset_values[0][0].uncertainty_type == 'extendModel'):
-        (_bset, value), *bset_values = bset_values
-        extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-        common = source_ids & extra_ids
-        if common:
-            raise InvalidFile(
-                '%s contains source(s) %s already present in %s' %
-                (value, common, rlz.value))
-        src_groups.extend(extra)
-    return bset_values, src_groups
+    out = {}
+    for rlz in rlzs:
+        key = rlz.lt_path[:n]  # sourceModel+extendModel
+        if key in out:  # avoid regenerating the same groups
+            continue
+        src_groups, source_ids = _groups_ids(
+            smlt_dir, smdict, rlz.value[0].split())
+        bset_values = source_model_lt.bset_values(rlz.lt_path)
+        while (bset_values and
+               bset_values[0][0].uncertainty_type == 'extendModel'):
+            (_bset, value), *bset_values = bset_values
+            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+            common = source_ids & extra_ids
+            if common:
+                raise InvalidFile(
+                    '%s contains source(s) %s already present in %s' %
+                    (value, common, rlz.value))
+            src_groups.extend(extra)
+        out[key] = src_groups
+    return out
 
 
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
     groups = []
+    n = sum(1 for bset in full_lt.source_model_lt.branchsets
+            if bset.uncertainty_type in ('sourceModel', 'extendModel'))
+    groups_by_key = _src_groups_by_key(
+        full_lt.source_model_lt, full_lt.sm_rlzs, n, smdict)
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
-        bset_values, src_groups = _bset_values_src_groups(
-            full_lt.source_model_lt, rlz, smdict)
-        for src_group in src_groups:
+        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)[n-1:]
+        for src_group in groups_by_key[rlz.lt_path[:n]]:
             trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
