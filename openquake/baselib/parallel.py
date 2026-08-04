@@ -197,7 +197,6 @@ import tempfile
 import traceback
 import collections
 from unittest import mock
-import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
                                 as_completed)
@@ -281,7 +280,11 @@ def init_worker():
     the current code is begin run in parallel or not.
     """
     # SIGINT not passed to the workers to reduce traceback
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except ValueError:
+        # signal only works in the main thread
+        pass
     try:
         from setproctitle import setproctitle
     except ImportError:
@@ -726,7 +729,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = ThreadPoolExecutor(num_cores, mp_context, init_worker)
+            cls.pool = ThreadPoolExecutor(num_cores, initializer=init_worker)
 
         if num_cores > tot_cores:
             logging.warning(f'{num_cores=} but {tot_cores=}')
@@ -736,7 +739,7 @@ class Starmap(object):
         if hasattr(cls, 'pool'):
             # shutdown and recreate the executor
             logging.info('Shutting down the pool')
-            if cls.pool._processes:
+            if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
             cls.pool.shutdown()
@@ -972,41 +975,7 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                finished.add(res.mon.task_no)
-                self.busytime += {res.workerid: res.mon.duration}
-                del self.tasks[res.mon.task_no]
-                self._submit_many(1)
-                todo = set(range(self.task_no)) - finished
-                logging.debug('%d tasks todo %s', len(todo),
-                              shortlist(sorted(todo)))
-                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-                task_sent.update(self.sent)
-                if self.h5.mode != 'r':
-                    del self.h5['task_sent']
-                    self.h5['task_sent'] = str(task_sent)
-                name = res.mon.operation[6:]  # strip 'total '
-                if self.distribute in ('zmq', 'slurm'):
-                    mem_gb = 0
-                    if res.mon.task_no % 10 == 0:
-                        # measure the memory only for 1 task out of 10
-                        # with 8 nodes the time to get the memory is 0.01 secs
-                        for line in host_cores:
-                            host, _cores = line.split()
-                            addr = 'tcp://%s:%s' % (
-                                host, config.zworkers.ctrl_port)
-                            with Socket(addr, zmq.REQ, 'connect') as sock:
-                                mem_gb += sock.send('memory_gb')
-                elif self._shared:
-                    # do not measure the memory on the workers
-                    # otherwise memory_rss would double count the shared memory
-                    mem_gb = memory_gb()
-                elif hasattr(Starmap, 'pool'):
-                    mem_gb = memory_gb(Starmap.pool._processes)
-                else:
-                    mem_gb = 0
-                if self.h5.mode != 'r':
-                    res.mon.save_task_info(self.h5, res, name, mem_gb)
-                    res.mon.flush(self.h5)
+                self._task_ended(res, finished)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
@@ -1025,23 +994,49 @@ class Starmap(object):
             if self.h5.mode != 'r':
                 self.monitor.save_starmap_info(self.h5, self.name, times)
 
+    def _task_ended(self, res, finished):
+        finished.add(res.mon.task_no)
+        self.busytime += {res.workerid: res.mon.duration}
+        del self.tasks[res.mon.task_no]
+        self._submit_many(1)
+        todo = set(range(self.task_no)) - finished
+        logging.debug('%d tasks todo %s', len(todo),
+                      shortlist(sorted(todo)))
+        task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+        task_sent.update(self.sent)
+        if self.h5.mode != 'r':
+            del self.h5['task_sent']
+            self.h5['task_sent'] = str(task_sent)
+        name = res.mon.operation[6:]  # strip 'total '
+        if self.distribute in ('zmq', 'slurm'):
+            mem_gb = 0
+            if res.mon.task_no % 10 == 0:
+                # measure the memory only for 1 task out of 10
+                # with 8 nodes the time to get the memory is 0.01 secs
+                for line in host_cores:
+                    host, _cores = line.split()
+                    addr = 'tcp://%s:%s' % (
+                        host, config.zworkers.ctrl_port)
+                    with Socket(addr, zmq.REQ, 'connect') as sock:
+                        mem_gb += sock.send('memory_gb')
+        elif self._shared:
+            # do not measure the memory on the workers
+            # otherwise memory_rss would double count the shared memory
+            mem_gb = memory_gb()
+        elif hasattr(Starmap, 'pool'):
+            if hasattr(Starmap.pool, '_processes'):
+                mem_gb = memory_gb(Starmap.pool._processes)
+            else:
+                mem_gb = memory_gb()
+        else:
+            mem_gb = 0
+        if self.h5.mode != 'r':
+            res.mon.save_task_info(self.h5, res, name, mem_gb)
+            res.mon.flush(self.h5)
+
     def __del__(self):
         if hasattr(self, 'socket'):
             self.socket.close()
-
-
-# as of Python 3.13 this is terribly inefficient compared to a processpool,
-# even for numba functions releasing the GIL(!), so don't use it for the
-# moment; it may become useful with the noGIL built of Python 3.14 or not
-class Threadmap(Starmap):
-    """
-    A Starmap subclass spawing only threadpools
-    """
-    def __init__(self, task_func, task_args=(),
-                 progress=logging.info, h5=None):
-        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
-        super().__init__(task_func, task_args, 'threadpool',
-                         logging.info, h5)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
