@@ -490,6 +490,11 @@ def _groups_ids(smlt_dir, smdict, fnames):
 
 
 def _src_groups_by_key(source_model_lt, rlzs, smdict):
+    # the key is sourceModel plus extendModel; for instance in case_83
+    # keys = [('b01', 'b11', 'b21'), ('b01', 'b11', 'b22'),
+    #         ('b01', 'b12', 'b21'), ('b01', 'b12', 'b22'),
+    #         ('b02', 'b11', 'b21'), ('b02', 'b11', 'b22'),
+    #         ('b02', 'b12', 'b21'), ('b02', 'b12', 'b22')]
     smlt_dir = os.path.dirname(source_model_lt.filename)
     n = sum(1 for bset in source_model_lt.branchsets
             if bset.uncertainty_type in ('sourceModel', 'extendModel'))
