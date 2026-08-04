@@ -22,8 +22,9 @@ import itertools
 import collections
 import numpy
 import pandas
+import tempfile
 
-from openquake.baselib import hdf5, writers, general, node
+from openquake.baselib import config, hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2, mean_curve
@@ -940,6 +941,10 @@ def export_job_zip(ekey, dstore):
     - taxonomy_mapping.csv (if present)
     - consequences.csv (if present)
     """
+    # Ensure dstore export path resolves to a valid temp dir for restored jobs
+    if not os.path.exists(dstore.export_dir):
+        dstore.export_dir = os.path.join(
+            config.directory.custom_tmp or tempfile.gettempdir())
     inputs = {}
     oq = dstore['oqparam']
     # Prevent UnboundLocalError if consequence exists without damage mode
