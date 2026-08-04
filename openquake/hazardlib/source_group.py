@@ -32,7 +32,7 @@ from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.contexts import get_cmakers
 
-U16 = numpy.uint16
+U32 = numpy.uint32
 TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
@@ -43,10 +43,10 @@ CALC_TIME, NUM_CTXS, EST_CTXS, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7, 8
 
 def _grp_id(blk):
     # NB: grp_id may by passed instead of a source or a block
-    if isinstance(blk, (U16, int)):
+    if isinstance(blk, (U32, int)):
         return blk
     src = blk[0]
-    return src if isinstance(src, U16) else src.grp_id
+    return src if isinstance(src, U32) else src.grp_id
 
 
 def get_unique(sources):
@@ -389,7 +389,7 @@ class CompositeSourceModel:
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
         """
         keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
-        assert len(keys) < TWO16, len(keys)
+        assert len(keys) < TWO32, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_cmakers(self):
