@@ -797,8 +797,12 @@ def convert_df_to_vulnerability(loss_type, df):
     descr = N('description', {}, f"{loss_type} vulnerability model")
     root.append(descr)
     for riskfunc in df.riskfunc:
-        rfunc = json.loads(riskfunc)[
-            'openquake.risklib.scientific.VulnerabilityFunction']
+        dic = json.loads(riskfunc)
+        key = 'openquake.risklib.scientific.VulnerabilityFunction'
+        if key not in dic:
+            # Skip non-vulnerability functions (e.g. FragilityFunctionList)
+            continue
+        rfunc = dic[key]
         vfunc = N('vulnerabilityFunction',
                   {'id': rfunc['id'], 'dist': rfunc['distribution_name']})
         imls = N('imls', {'imt': rfunc['imt']}, rfunc['imls'])
@@ -928,16 +932,19 @@ def export_job_zip(ekey, dstore):
     """
     Exports:
     - job.ini
-    - rupture.csv
-    - gsim_lt.xml
-    - site_model.csv
-    - exposure.xml and assetcol.csv
-    - vulnerability functions.xml
-    - taxonomy_mapping.csv
-    - consequences.csv
+    - rupture.csv (if present)
+    - gsim_lt.xml (if present)
+    - site_model.csv (if present)
+    - exposure.xml and assetcol.csv (if present)
+    - vulnerability/fragility functions.xml (if present)
+    - taxonomy_mapping.csv (if present)
+    - consequences.csv (if present)
     """
     inputs = {}
     oq = dstore['oqparam']
+    # Prevent UnboundLocalError if consequence exists without damage mode
+    ddic = {}
+
     if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap
         df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
         ren = {'sid': 'site_id', 'eid': 'event_id'}
@@ -955,27 +962,44 @@ def export_job_zip(ekey, dstore):
             oq.inputs.pop('rupture', None)
             oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
-    else:
+    elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
         model = dstore['ruptures'][0]['model'].decode('ascii')
         # FIXME: extracts the gsim_lt of the first model only
         [(model, lt)] = base.get_model_lts(dstore, model)
         gsim_lt = lt.gsim_lt
+    else:
+        gsim_lt = None
+
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
     inputs['job_ini'] = job_ini
-    [exposure_xml, assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
-    inputs['exposure'] = exposure_xml
-    csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-    if len(csv.splitlines()) > 2:  # comment + header + data
-        dest = dstore.export_path('rupture.csv')
-        with open(dest, 'w', encoding='utf8') as out:
-            out.write(csv)
-        inputs['rupture_model'] = dest
+
+    assetcol_csv = None
+    if 'assetcol' in dstore or 'exposure' in dstore:
+        try:
+            [exposure_xml, assetcol_csv] = export_exposure(
+                ('exposure', 'zip'), dstore)
+            inputs['exposure'] = exposure_xml
+        except KeyError:
+            pass
+
+    if 'ruptures' in dstore:
+        try:
+            csv = extract(dstore, 'ruptures?slice=0&slice=1').array
+            if len(csv.splitlines()) > 2:  # comment + header + data
+                dest = dstore.export_path('rupture.csv')
+                with open(dest, 'w', encoding='utf8') as out:
+                    out.write(csv)
+                inputs['rupture_model'] = dest
+        except Exception:
+            pass
+
     if gsim_lt and (oq.gsim is None or oq.gsim == '[FromFile]'):
         dest = dstore.export_path('gsim_logic_tree.xml')
         with open(dest, 'wb') as out:
             nrml.write([gsim_lt.to_node()], out)
         inputs['gsim_logic_tree'] = dest
+
     if oq.calculation_mode.endswith('risk'):
         inputs.update(export_vulnerability_xml(dstore))
     elif oq.calculation_mode.endswith('damage'):
@@ -986,15 +1010,18 @@ def export_job_zip(ekey, dstore):
                 # needed for PAPERS
                 oq.inputs.pop(f'{ltype}_fragility', None)
 
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dest = dstore.export_path('taxonomy_mapping.csv')
-    taxmap = dstore.read_df('taxmap')
-    taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
-    taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
-    del taxmap['taxi']
-    writer.save(taxmap, dest)
-    inputs['taxonomy_mapping'] = dest
+    if 'taxmap' in dstore and 'assetcol/tagcol/taxonomy' in dstore:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        dest = dstore.export_path('taxonomy_mapping.csv')
+        taxmap = dstore.read_df('taxmap')
+        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
+        del taxmap['taxi']
+        writer.save(taxmap, dest)
+        inputs['taxonomy_mapping'] = dest
+
     if 'consequence' in oq.inputs:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
         dic = {}
         for name_by_key, df in consdict.items():
@@ -1004,15 +1031,22 @@ def export_job_zip(ekey, dstore):
             writer.save(df, dest)
             dic[name_by_key] = dest
         inputs['consequence'] = dic
-    inputs['site_model'] = dstore.export_path('sites.csv')
-    sitecol = dstore['sitecol']
-    sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['site_model'])
+
+    if 'sitecol' in dstore:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        inputs['site_model'] = dstore.export_path('sites.csv')
+        sitecol = dstore['sitecol']
+        sitecol.make_complete()  # needed for test_impact[1]
+        writer.save(sitecol.array, inputs['site_model'])
+
     with open(job_ini, 'w', encoding='utf8') as out:
         if 'gmfs' in inputs:
             oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
-    fnames = list(inputs.values()) + [assetcol_csv]
+
+    # Filter out None values before flattening file paths
+    fnames = [f for f in list(inputs.values()) + [assetcol_csv]
+              if f is not None]
     return flatten(fnames)
 
 
