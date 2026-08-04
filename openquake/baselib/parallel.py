@@ -281,7 +281,11 @@ def init_worker():
     the current code is begin run in parallel or not.
     """
     # SIGINT not passed to the workers to reduce traceback
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except ValueError:
+        # signal only works in the main thread
+        pass
     try:
         from setproctitle import setproctitle
     except ImportError:
@@ -726,7 +730,7 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = ThreadPoolExecutor(num_cores, mp_context, init_worker)
+            cls.pool = ThreadPoolExecutor(num_cores, initializer=init_worker)
 
         if num_cores > tot_cores:
             logging.warning(f'{num_cores=} but {tot_cores=}')
@@ -736,7 +740,7 @@ class Starmap(object):
         if hasattr(cls, 'pool'):
             # shutdown and recreate the executor
             logging.info('Shutting down the pool')
-            if cls.pool._processes:
+            if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
             cls.pool.shutdown()
@@ -1001,7 +1005,10 @@ class Starmap(object):
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
                 elif hasattr(Starmap, 'pool'):
-                    mem_gb = memory_gb(Starmap.pool._processes)
+                    if hasattr(Starmap.pool, '_processes'):
+                        mem_gb = memory_gb(Starmap.pool._processes)
+                    else:
+                        mem_gb = memory_gb()
                 else:
                     mem_gb = 0
                 if self.h5.mode != 'r':
@@ -1028,20 +1035,6 @@ class Starmap(object):
     def __del__(self):
         if hasattr(self, 'socket'):
             self.socket.close()
-
-
-# as of Python 3.13 this is terribly inefficient compared to a processpool,
-# even for numba functions releasing the GIL(!), so don't use it for the
-# moment; it may become useful with the noGIL built of Python 3.14 or not
-class Threadmap(Starmap):
-    """
-    A Starmap subclass spawing only threadpools
-    """
-    def __init__(self, task_func, task_args=(),
-                 progress=logging.info, h5=None):
-        Threadmap.pool = multiprocessing.dummy.Pool(num_cores)
-        super().__init__(task_func, task_args, 'threadpool',
-                         logging.info, h5)
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

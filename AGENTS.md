@@ -8,4 +8,7 @@ when possible.
 
 # tips
 
-The calculators tests should be run with OQ_DISTRIBUTE=no and pytest-xdist.
+Build a .repo_map with `git ls-files` if it helps. Skip
+`.git` and `__pycache__` directories when searching files with find.
+The openquake/calculators tests are meant to be run with OQ_DISTRIBUTE=no and
+pytest -n auto, having activated the ~/openquake venv if necessary.
