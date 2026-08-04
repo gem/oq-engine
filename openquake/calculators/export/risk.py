@@ -927,6 +927,56 @@ def export_exposure(ekey, dstore):
     return [exposure_xml, assetcol_csv]
 
 
+def _get_gsim_lt(dstore, oq, inputs):
+    if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap
+        df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
+        ren = {'sid': 'site_id', 'eid': 'event_id'}
+        df.rename(columns=ren, inplace=True)
+        gmf_fname = dstore.build_fname('gmf', 'data', 'csv')
+        writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+            df, gmf_fname, comment=dstore.metadata)
+        inputs['gmfs'] = gmf_fname
+        oq.ground_motion_fields = True
+        if not oq.shakemap_uri:
+            oq.shakemap_uri = {'kind': 'usgs_id',
+                               'id': oq.rupture_dict['usgs_id']}
+            oq.rupture_dict.pop('rupture_file', None)
+            oq.rupture_dict.pop('mmi_file', None)
+            oq.inputs.pop('rupture', None)
+            oq.inputs.pop('mmi', None)
+        return None  # from shakemap
+    elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
+        model = dstore['ruptures'][0]['model'].decode('ascii')
+        # FIXME: extracts the gsim_lt of the first model only
+        [(model, lt)] = base.get_model_lts(dstore, model)
+        return lt.gsim_lt
+    return None
+
+
+def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
+    if 'taxmap' in dstore and 'assetcol/tagcol/taxonomy' in dstore:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        dest = dstore.export_path('taxonomy_mapping.csv')
+        taxmap = dstore.read_df('taxmap')
+        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
+        del taxmap['taxi']
+        writer.save(taxmap, dest)
+        inputs['taxonomy_mapping'] = dest
+
+    if 'consequence' in oq.inputs:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
+        dic = {}
+        for name_by_key, df in consdict.items():
+            name, key = name_by_key.split('_by_')
+            df['consequence'] = name
+            dest = dstore.export_path(f'consequence_{name_by_key}.csv')
+            writer.save(df, dest)
+            dic[name_by_key] = dest
+        inputs['consequence'] = dic
+
+
 # tested in impact_test[1]
 @export.add(('job', 'zip'))
 def export_job_zip(ekey, dstore):
@@ -949,30 +999,7 @@ def export_job_zip(ekey, dstore):
     oq = dstore['oqparam']
     ddic = {}
 
-    if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap
-        df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
-        ren = {'sid': 'site_id', 'eid': 'event_id'}
-        df.rename(columns=ren, inplace=True)
-        gmf_fname = dstore.build_fname('gmf', 'data', 'csv')
-        writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
-            df, gmf_fname, comment=dstore.metadata)
-        inputs['gmfs'] = gmf_fname
-        oq.ground_motion_fields = True
-        if not oq.shakemap_uri:
-            oq.shakemap_uri = {'kind': 'usgs_id',
-                               'id': oq.rupture_dict['usgs_id']}
-            oq.rupture_dict.pop('rupture_file', None)
-            oq.rupture_dict.pop('mmi_file', None)
-            oq.inputs.pop('rupture', None)
-            oq.inputs.pop('mmi', None)
-        gsim_lt = None  # from shakemap
-    elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
-        model = dstore['ruptures'][0]['model'].decode('ascii')
-        # FIXME: extracts the gsim_lt of the first model only
-        [(model, lt)] = base.get_model_lts(dstore, model)
-        gsim_lt = lt.gsim_lt
-    else:
-        gsim_lt = None
+    gsim_lt = _get_gsim_lt(dstore, oq, inputs)
 
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
@@ -1014,27 +1041,7 @@ def export_job_zip(ekey, dstore):
                 # needed for PAPERS
                 oq.inputs.pop(f'{ltype}_fragility', None)
 
-    if 'taxmap' in dstore and 'assetcol/tagcol/taxonomy' in dstore:
-        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-        dest = dstore.export_path('taxonomy_mapping.csv')
-        taxmap = dstore.read_df('taxmap')
-        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
-        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
-        del taxmap['taxi']
-        writer.save(taxmap, dest)
-        inputs['taxonomy_mapping'] = dest
-
-    if 'consequence' in oq.inputs:
-        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-        consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
-        dic = {}
-        for name_by_key, df in consdict.items():
-            name, key = name_by_key.split('_by_')
-            df['consequence'] = name
-            dest = dstore.export_path(f'consequence_{name_by_key}.csv')
-            writer.save(df, dest)
-            dic[name_by_key] = dest
-        inputs['consequence'] = dic
+    _export_taxmap_and_consequences(dstore, oq, ddic, inputs)
 
     if 'sitecol' in dstore:
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
