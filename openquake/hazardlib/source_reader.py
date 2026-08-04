@@ -319,7 +319,11 @@ def build_csm(oq, full_lt, smdict, dstore):
     """
     mon = performance.Monitor('_build_groups', measuremem=True)
     with mon:
-        groups = _build_groups(full_lt, smdict)  # fast
+        n = sum(1 for bset in full_lt.source_model_lt.branchsets
+                if bset.uncertainty_type in ('sourceModel', 'extendModel'))
+        groups_by_key = _src_groups_by_key(
+            full_lt.source_model_lt, full_lt.sm_rlzs, n, smdict)
+        groups = _build_groups(full_lt, groups_by_key)  # fast
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
@@ -508,13 +512,10 @@ def _src_groups_by_key(source_model_lt, rlzs, n, smdict):
     return out
 
 
-def _build_groups(full_lt, smdict):
+def _build_groups(full_lt, groups_by_key):
     # build all the possible source groups from the full logic tree
     groups = []
-    n = sum(1 for bset in full_lt.source_model_lt.branchsets
-            if bset.uncertainty_type in ('sourceModel', 'extendModel'))
-    groups_by_key = _src_groups_by_key(
-        full_lt.source_model_lt, full_lt.sm_rlzs, n, smdict)
+    n = len(next(iter(groups_by_key)))  # length of sourceModel+extendModel..
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
