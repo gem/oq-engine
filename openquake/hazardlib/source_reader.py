@@ -481,31 +481,36 @@ def _groups_ids(smlt_dir, smdict, fnames):
     for fname in fnames:
         fullname = os.path.abspath(os.path.join(smlt_dir, fname))
         groups.extend(smdict[fullname].src_groups)
-    return groups, set(src.source_id for grp in groups for src in grp)
+    return groups, {src.source_id for grp in groups for src in grp}
+
+
+def _bset_values_src_groups(source_model_lt, rlz, smdict):
+    smlt_dir = os.path.dirname(source_model_lt.filename)
+    src_groups, source_ids = _groups_ids(
+        smlt_dir, smdict, rlz.value[0].split())
+    bset_values = source_model_lt.bset_values(rlz.lt_path)
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        (_bset, value), *bset_values = bset_values
+        extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+        common = source_ids & extra_ids
+        if common:
+            raise InvalidFile(
+                '%s contains source(s) %s already present in %s' %
+                (value, common, rlz.value))
+        src_groups.extend(extra)
+    return bset_values, src_groups
 
 
 def _build_groups(full_lt, smdict):
     # build all the possible source groups from the full logic tree
-    smlt_file = full_lt.source_model_lt.filename
-    smlt_dir = os.path.dirname(smlt_file)
     groups = []
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
                          f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
-        src_groups, source_ids = _groups_ids(
-            smlt_dir, smdict, rlz.value[0].split())
-        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while (bset_values and
-               bset_values[0][0].uncertainty_type == 'extendModel'):
-            (_bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
+        bset_values, src_groups = _bset_values_src_groups(
+            full_lt.source_model_lt, rlz, smdict)
         for src_group in src_groups:
             trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
@@ -527,6 +532,8 @@ def _build_groups(full_lt, smdict):
         # check applyToSources
         sm_branch = rlz.lt_path[0]
         src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+        source_ids = {src.source_id for grp in groups for src in grp}
+        smlt_file = full_lt.source_model_lt.filename
         for srcid in src_id:
             if srcid not in source_ids:
                 if full_lt.source_model_lt.branchID:
