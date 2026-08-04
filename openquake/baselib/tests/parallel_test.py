@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-import platform
 import unittest.mock as mock
 import time
 import shutil
