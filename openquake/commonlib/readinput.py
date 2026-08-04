@@ -1061,6 +1061,21 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
+def get_src_groups(oqparam, dstore=None):
+    """
+    :returns: a dictionary key->src_groups
+
+    The key is sourceModel plus extendModel; for instance in case_83
+    keys = [('b01', 'b11', 'b21'), ('b01', 'b11', 'b22'),
+            ('b01', 'b12', 'b21'), ('b01', 'b12', 'b22'),
+            ('b02', 'b11', 'b21'), ('b02', 'b11', 'b22'),
+            ('b02', 'b12', 'b21'), ('b02', 'b12', 'b22')]
+    """
+    full_lt = get_full_lt(oqparam)  # builds the weights
+    dic = source_reader.get_csm(oqparam, full_lt, dstore, groups_only=True)
+    return dic
+
+
 def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.

@@ -251,7 +251,7 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
-def get_csm(oq, full_lt, dstore=None):
+def get_csm(oq, full_lt, dstore=None, groups_only=False):
     """
     Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
@@ -309,6 +309,9 @@ def get_csm(oq, full_lt, dstore=None):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
+    if groups_only:
+        return _src_groups_by_key(
+            full_lt.source_model_lt, full_lt.sm_rlzs, smdict)
     return build_csm(oq, full_lt, smdict, dstore)
 
 
@@ -319,10 +322,8 @@ def build_csm(oq, full_lt, smdict, dstore):
     """
     mon = performance.Monitor('_build_groups', measuremem=True)
     with mon:
-        n = sum(1 for bset in full_lt.source_model_lt.branchsets
-                if bset.uncertainty_type in ('sourceModel', 'extendModel'))
         groups_by_key = _src_groups_by_key(
-            full_lt.source_model_lt, full_lt.sm_rlzs, n, smdict)
+            full_lt.source_model_lt, full_lt.sm_rlzs, smdict)
         groups = _build_groups(full_lt, groups_by_key)  # fast
     logging.info(mon)
 
@@ -488,8 +489,10 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, {src.source_id for grp in groups for src in grp}
 
 
-def _src_groups_by_key(source_model_lt, rlzs, n, smdict):
+def _src_groups_by_key(source_model_lt, rlzs, smdict):
     smlt_dir = os.path.dirname(source_model_lt.filename)
+    n = sum(1 for bset in source_model_lt.branchsets
+            if bset.uncertainty_type in ('sourceModel', 'extendModel'))
     out = {}
     for rlz in rlzs:
         key = rlz.lt_path[:n]  # sourceModel+extendModel
