@@ -308,7 +308,7 @@ def event_based_risk(gmf_df, monitor):
             # filtering is *crucial* for the performance of the next step
             adf = adf_[adf_.taxonomy == taxo]
             sids = adf.site_id.unique()
-            chunks = numpy.arange(0, len(sids), 500)
+            chunks = numpy.arange(0, len(sids), 5000)
             if len(chunks) > 1:
                 print('----------------', chunks, len(sids), len(gmf_df))
             for sids in numpy.array_split(sids, chunks):
