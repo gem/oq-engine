@@ -141,29 +141,32 @@ class Sampler(object):
         self.cols = cols  # for the PM distribution
 
     def get_losses(self, df, covs):
-        vals = df['val'].to_numpy()
+        vals = numpy.asarray(df['val'])
         if not self.rng or not covs:  # fast lane
-            losses = vals * df['mean'].to_numpy()
+            losses = vals * numpy.asarray(df['mean'])
         else:  # slow lane
             losses = vals * getattr(self, 'sample' + self.distname)(df)
         return losses
 
     def sampleLN(self, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
+        means = numpy.asarray(df['mean'])
+        covs = numpy.asarray(df['cov'])
+        eids = numpy.asarray(df['eid'])
         losses = self.rng.lognormal(eids, means, covs)
         return losses
 
     def sampleBT(self, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
+        means = numpy.asarray(df['mean'])
+        covs = numpy.asarray(df['cov'])
+        eids = numpy.asarray(df['eid'])
         return self.rng.beta(eids, means, covs)
 
     def samplePM(self, df):
-        eids = df['eid'].to_numpy()
-        allprobs = df[self.cols].to_numpy()
+        eids = numpy.asarray(df['eid'])
+        if isinstance(df, pandas.DataFrame):
+            allprobs = df[self.cols].to_numpy()
+        else:
+            allprobs = numpy.column_stack([df[c] for c in self.cols])
         pmf = []
         for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
@@ -174,6 +177,108 @@ class Sampler(object):
                     name='pmf', values=(self.arange, probs),
                     seed=self.rng.master_seed + eid).rvs())
         return self.lratios[pmf]
+
+
+class DictDF(dict):
+    """Lightweight dict wrapper supporting attribute and item access."""
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+
+def fast_join(ratio_df, asset_df):
+    """
+    Perform a fast, memory-efficient inner join on site ID index.
+    Returns a DictDF mapping column names to NumPy arrays.
+    """
+    r_sids = ratio_df.index.to_numpy()
+    a_sids = asset_df.index.to_numpy()
+
+    if len(r_sids) == 0 or len(a_sids) == 0:
+        dic = DictDF(
+            eid=numpy.array([], dtype=numpy.int32),
+            mean=numpy.array([], dtype=numpy.float64),
+            cov=numpy.array([], dtype=numpy.float64),
+            aid=numpy.array([], dtype=numpy.int32),
+            val=numpy.array([], dtype=numpy.float64),
+            sid=numpy.array([], dtype=r_sids.dtype),
+        )
+        for col in ratio_df.columns:
+            if isinstance(col, int):
+                dic[col] = numpy.array([], dtype=ratio_df[col].dtype)
+        return dic
+
+    unique_sids, r_sid_codes = numpy.unique(r_sids, return_inverse=True)
+    a_sid_map = {sid: i for i, sid in enumerate(unique_sids)}
+    a_sid_codes = numpy.array(
+        [a_sid_map.get(sid, -1) for sid in a_sids], dtype=numpy.int32
+    )
+
+    valid_a = a_sid_codes >= 0
+    if not valid_a.any():
+        dic = DictDF(
+            eid=numpy.array([], dtype=numpy.int32),
+            mean=numpy.array([], dtype=numpy.float64),
+            cov=numpy.array([], dtype=numpy.float64),
+            aid=numpy.array([], dtype=numpy.int32),
+            val=numpy.array([], dtype=numpy.float64),
+            sid=numpy.array([], dtype=r_sids.dtype),
+        )
+        for col in ratio_df.columns:
+            if isinstance(col, int):
+                dic[col] = numpy.array([], dtype=ratio_df[col].dtype)
+        return dic
+
+    if not valid_a.all():
+        a_sid_codes = a_sid_codes[valid_a]
+        a_indices = numpy.where(valid_a)[0]
+    else:
+        a_indices = numpy.arange(len(a_sids), dtype=numpy.int32)
+
+    num_unique = len(unique_sids)
+    a_order = numpy.argsort(a_sid_codes, kind="stable")
+    a_sids_sorted = a_sid_codes[a_order]
+    a_counts = numpy.bincount(a_sids_sorted, minlength=num_unique)
+    a_offsets = numpy.concatenate([[0], numpy.cumsum(a_counts)])
+
+    gmf_a_counts = a_counts[r_sid_codes]
+    valid_gmf = gmf_a_counts > 0
+
+    gmf_idx_base = numpy.where(valid_gmf)[0].astype(numpy.int32)
+    gmf_counts_valid = gmf_a_counts[valid_gmf]
+    r_codes_valid = r_sid_codes[valid_gmf]
+
+    gmf_idx_expanded = numpy.repeat(gmf_idx_base, gmf_counts_valid)
+    cumsum_valid = numpy.cumsum(gmf_counts_valid)
+    k_offsets = numpy.arange(
+        len(gmf_idx_expanded), dtype=numpy.int32
+    ) - numpy.repeat(
+        cumsum_valid - gmf_counts_valid, gmf_counts_valid
+    )
+    gmf_a_starts = a_offsets[r_codes_valid]
+    asset_idx_expanded = a_indices[
+        a_order[numpy.repeat(gmf_a_starts, gmf_counts_valid) + k_offsets]
+    ]
+
+    try:
+        ratio_df["mean"]
+    except KeyError:
+        breakpoint()
+    dic = DictDF(
+        eid=ratio_df["eid"].to_numpy()[gmf_idx_expanded],
+        mean=ratio_df["mean"].to_numpy()[gmf_idx_expanded],
+        cov=ratio_df["cov"].to_numpy()[gmf_idx_expanded],
+        aid=asset_df["aid"].to_numpy()[asset_idx_expanded],
+        val=asset_df["val"].to_numpy()[asset_idx_expanded],
+        sid=r_sids[gmf_idx_expanded],
+    )
+    for col in ratio_df.columns:
+        if isinstance(col, int):
+            dic[col] = ratio_df[col].to_numpy()[gmf_idx_expanded]
+
+    return dic
 
 #
 # Input models
@@ -323,7 +428,7 @@ class VulnerabilityFunction(object):
         else:
             lratios = ()
             cols = None
-        df = ratio_df.join(asset_df, how='inner')
+        df = fast_join(ratio_df, asset_df)
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
         sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
@@ -333,16 +438,13 @@ class VulnerabilityFunction(object):
         if self.distribution_name == 'PM':  # special case
             variances_ok = numpy.zeros(len(losses_ok))
         else:
-            covs_ok = df['cov'].to_numpy()[ok]
+            covs_ok = numpy.asarray(df['cov'])[ok]
             variances_ok = (losses_ok * covs_ok) ** 2
-        return pandas.DataFrame(
-            dict(
-                eid=df.eid[ok],
-                aid=df.aid[ok],
-                variance=variances_ok,
-                loss=losses_ok,
-            )
-        )
+        return pandas.DataFrame(dict(
+            eid=df.eid[ok],
+            aid=df.aid[ok],
+            variance=variances_ok,
+            loss=losses_ok))
 
     def strictly_increasing(self):
         """
