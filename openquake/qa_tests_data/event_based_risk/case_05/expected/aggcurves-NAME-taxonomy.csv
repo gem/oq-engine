@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:44', checksum=2703572957, risk_investigation_time=1000.0, num_events=2328, effective_time=2000.0, limit_states=''"
+#,,,,,,"generated_by='OpenQuake engine 3.27.0-git9998404238', start_date='2026-08-05T04:54:25', checksum=2703572957, risk_investigation_time=1000.0, num_events=2328, effective_time=2000.0, limit_states=''"
 NAME_1,taxonomy,return_period,loss_type,rlz_id,loss_value,loss_ratio
 Far-Western,Adobe/Com,1,structural,0,0.00000E+00,0.00000E+00
 Far-Western,Adobe/Com,2,structural,0,0.00000E+00,0.00000E+00
@@ -18,7 +18,7 @@ Far-Western,Adobe/Com,20,structural,1,0.00000E+00,0.00000E+00
 Far-Western,Adobe/Com,50,structural,1,0.00000E+00,0.00000E+00
 Far-Western,Adobe/Com,100,structural,1,0.00000E+00,0.00000E+00
 Far-Western,Adobe/Com,200,structural,1,0.00000E+00,0.00000E+00
-Far-Western,Adobe/Com,500,structural,1,1.22770E+03,1.08263E-01
+Far-Western,Adobe/Com,500,structural,1,1.28936E+03,1.13700E-01
 Far-Western,Adobe/Com,1000,structural,1,2.67917E+03,2.36258E-01
 Mid-Western,Adobe/Res,1,structural,0,0.00000E+00,0.00000E+00
 Mid-Western,Adobe/Res,2,structural,0,0.00000E+00,0.00000E+00

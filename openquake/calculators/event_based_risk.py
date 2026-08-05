@@ -63,12 +63,7 @@ def get_assetdf_startstop(assetcol):
     del assetdf['id']
     if 'ID_0' not in assetdf.columns:
         assetdf['ID_0'] = U32(0)
-    if 'NAME_1' in assetdf:
-        assetdf = assetdf.sort_values(['ID_0', 'NAME_1', 'ordinal'])
-        id1 = assetdf.NAME_1.to_numpy()
-    else:
-        assetdf = assetdf.sort_values(['ID_0', 'ordinal'])
-        id1 = numpy.zeros(len(assetdf), U32)
+    assetdf = assetdf.sort_values(['ID_0', 'ordinal'])
     # NB: this is subtle! without the ordering by 'ordinal'
     # the asset dataframe will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
@@ -76,7 +71,7 @@ def get_assetdf_startstop(assetcol):
 
     # building start-stop indices, so that the assets are read by region
     maxsize = int(config.memory.max_assets_chunk)
-    id01 = assetdf.ID_0.to_numpy() * TWO16 + id1
+    id01 = assetdf.ID_0.to_numpy() * TWO16
     iss = []
     for idx, start, stop in performance.idx_start_stop(id01):
         for slc in general.gen_slices(start, stop, maxsize):

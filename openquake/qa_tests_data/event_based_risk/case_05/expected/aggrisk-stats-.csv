@@ -1,5 +1,5 @@
-#,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:44', checksum=2703572957"
+#,,"generated_by='OpenQuake engine 3.27.0-git9998404238', start_date='2026-08-05T04:54:25', checksum=2703572957"
 loss_type,loss,stat
-structural,62386.99,mean
-structural,26810.72351655515,quantile-0.15
-structural,59578.338099878274,quantile-0.85
+structural,62396.848,mean
+structural,26903.852748344125,quantile-0.15
+structural,59594.7726681772,quantile-0.85

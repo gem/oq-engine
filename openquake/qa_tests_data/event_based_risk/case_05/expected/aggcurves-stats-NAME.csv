@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:44', checksum=2703572957"
+#,,,,"generated_by='OpenQuake engine 3.27.0-git9998404238', start_date='2026-08-05T04:54:25', checksum=2703572957"
 return_period,loss_type,loss,stat,NAME_1
 1,structural,0.0,mean,Far-Western
 1,structural,0.0,quantile-0.15,Far-Western
@@ -24,9 +24,9 @@ return_period,loss_type,loss,stat,NAME_1
 200,structural,2311.1797,mean,Far-Western
 200,structural,142.66541836438765,quantile-0.15,Far-Western
 200,structural,2139.981334990468,quantile-0.85,Far-Western
-500,structural,6458.4507,mean,Far-Western
-500,structural,1550.5853532059791,quantile-0.15,Far-Western
-500,structural,6070.987952339433,quantile-0.85,Far-Western
+500,structural,6464.616,mean,Far-Western
+500,structural,1608.81775474727,quantile-0.15,Far-Western
+500,structural,6081.264257232718,quantile-0.85,Far-Western
 1000,structural,7829.7197,mean,Far-Western
 1000,structural,2997.1028364037957,quantile-0.15,Far-Western
 1000,structural,7448.1979521474095,quantile-0.85,Far-Western

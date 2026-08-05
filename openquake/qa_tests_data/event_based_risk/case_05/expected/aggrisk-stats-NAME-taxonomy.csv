@@ -1,8 +1,8 @@
-#,,,,"generated_by='OpenQuake engine 3.26.0-git1744ee2b5f', start_date='2026-07-12T01:05:44', checksum=2703572957"
+#,,,,"generated_by='OpenQuake engine 3.27.0-git9998404238', start_date='2026-08-05T04:54:25', checksum=2703572957"
 loss_type,loss,stat,NAME_1,taxonomy
-structural,36317.285,mean,Far-Western,Adobe/Com
-structural,7969.716953459806,quantile-0.15,Far-Western,Adobe/Com
-structural,34079.323439399,quantile-0.85,Far-Western,Adobe/Com
+structural,36327.15,mean,Far-Western,Adobe/Com
+structural,8062.844340630723,quantile-0.15,Far-Western,Adobe/Com
+structural,34095.757682177136,quantile-0.85,Far-Western,Adobe/Com
 structural,24385.053,mean,Mid-Western,Adobe/Res
 structural,14911.53238725908,quantile-0.15,Mid-Western,Adobe/Res
 structural,23637.144272054687,quantile-0.85,Mid-Western,Adobe/Res
