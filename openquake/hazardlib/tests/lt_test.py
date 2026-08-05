@@ -675,3 +675,4 @@ class LogicFixesTestCase(unittest.TestCase):
         # max_mag updated by bs_normal
         for mod_src in mod_sg.sources:
             self.assertEqual(mod_src.mfd.max_mag, 6.5)
+
