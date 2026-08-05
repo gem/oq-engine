@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+import os
+import ast
+from pathlib import Path
+
+ROOT = Path(".")
+
+EXCLUDE = {
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+}
+
+
+def bases(node):
+    out = []
+    for b in node.bases:
+        if isinstance(b, ast.Name):
+            out.append(b.id)
+        elif isinstance(b, ast.Attribute):
+            out.append(b.attr)
+    return out
+
+
+def build_repo_map(basedir, out):
+    func = ast.FunctionDef, ast.AsyncFunctionDef
+    for py in sorted(basedir.rglob("*.py")):
+        if any(part in EXCLUDE for part in py.parts):
+            continue
+
+        try:
+            tree = ast.parse(py.read_text(encoding="utf8"))
+        except Exception:
+            print(f'Could not parse {py}')
+            continue
+
+        print(py, file=out)
+
+        for node in tree.body:
+            if isinstance(node, func[0]):
+                print(f"  def {node.name}", file=out)
+
+            elif isinstance(node, func[1]):
+                print(f"  async def {node.name}", file=out)
+
+            elif isinstance(node, ast.ClassDef):
+                b = bases(node)
+                inherit = f"({', '.join(b)})" if b else ""
+                print(f"  class {node.name}{inherit}", file=out)
+                for item in node.body:
+                    if isinstance(item, func):
+                        print(f"      {item.name}", file=out)
+        print(file=out)
+
+
+pkgs =  '''baselib hazardlib commonlib risklib sep calculators engine
+commands server hmtk _unc'''.split()
+
+if __name__ == '__main__':
+    base = Path('openquake')
+    if not os.path.exists('repo_map'):
+        os.mkdir('repo_map')
+    for pkg in pkgs:
+        with open(f'repo_map/{pkg}.md', 'w') as out:
+            print(f'Generating repo_map/{pkg}.md')
+            build_repo_map(base / pkg, out)
