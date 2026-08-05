@@ -298,24 +298,28 @@ def event_based_risk(gmf_df, monitor):
         countries = ["?"]  # assume a single contry
     for id01, adf_ in items:
         id0, id1 = numpy.divmod(id01, TWO16)
+        # passing the contry is crucial for impact_test,
+        # where the exposure contains multiple countries
+        try:
+            country = countries[id0]
+        except IndexError:
+            raise IndexError(f'Index {id0} not in {countries}')
         for taxo in adf_.taxonomy.unique():
-            with fil_mon:
-                # filtering is *crucial* for the performance of the next step
-                adf = adf_[adf_.taxonomy == taxo]
-                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
+            # filtering is *crucial* for the performance of the next step
+            adf = adf_[adf_.taxonomy == taxo]
+            sids = adf.site_id.unique()
+            chunks = numpy.arange(0, len(sids), 100)
+            print('----------------', chunks, len(sids), len(gmf_df))
+            for sids in numpy.array_split(sids, chunks):
+                with fil_mon:
+                    gdf = gmf_df[numpy.isin(gmf_df.sid, sids)]
                 if len(gdf) == 0:
                     continue
-            # passing the contry is crucial for impact_test,
-            # where the exposure contains multiple countries
-            try:
-                country = countries[id0]
-            except IndexError:
-                raise IndexError(f'Index {id0} not in {countries}')
-            with risk_mon:
-                [out] = crmodel.get_outputs(
-                    adf, gdf, crmodel.oqparam._sec_losses, rng, country)
-            with agg_mon:
-                aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+                with risk_mon:
+                    [out] = crmodel.get_outputs(
+                        adf, gdf, crmodel.oqparam._sec_losses, rng, country)
+                with agg_mon:
+                    aggreg(out, aggids, rlz_id, oq, loss2, loss3)
     avg = build_avg(loss3, oq.A, R*X)
     alt = build_alt(loss2, xtypes)
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
