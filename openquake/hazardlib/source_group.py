@@ -393,6 +393,26 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
+    def iter_source_model_batches(self):
+        """
+        Iterate "src_groups" in batches, one per sourceModel branch
+        """
+        # Map sourceModel branch id -> list of global grp_ids
+        grp_ids_by_sm = self.grp_ids_by_source_model()
+
+        # Sorted iteration makes batch_id constant across runs
+        for batch_id, sm_branch_id in enumerate(sorted(grp_ids_by_sm)):
+            grp_ids = grp_ids_by_sm[sm_branch_id]
+
+            # Pick this batch's src_groups by their global grp_ids
+            src_groups_batch = [self.src_groups[gid] for gid in grp_ids]
+
+            # Per-batch trt_smrs arrays
+            trt_smrs_batch = [
+                numpy.array(sg.sources[0].trt_smrs, numpy.uint32)
+                for sg in src_groups_batch]
+            yield batch_id, sm_branch_id, src_groups_batch, trt_smrs_batch
+
     def get_cmakers(self):
         """
         :param oq: the OqParam used to build the CompositeSourceModel
