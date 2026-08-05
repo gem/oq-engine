@@ -329,12 +329,20 @@ class VulnerabilityFunction(object):
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
         ok = losses > minloss
+        losses_ok = losses[ok]
         if self.distribution_name == 'PM':  # special case
-            variances = numpy.zeros(len(losses))
+            variances_ok = numpy.zeros(len(losses_ok))
         else:
-            variances = (losses * df['cov'].to_numpy())**2
-        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     variance=variances[ok], loss=losses[ok]))
+            covs_ok = df['cov'].to_numpy()[ok]
+            variances_ok = (losses_ok * covs_ok) ** 2
+        return pandas.DataFrame(
+            dict(
+                eid=df.eid[ok],
+                aid=df.aid[ok],
+                variance=variances_ok,
+                loss=losses_ok,
+            )
+        )
 
     def strictly_increasing(self):
         """
@@ -858,9 +866,15 @@ class MultiEventRNG(object):
         :returns: array of floats
         """
         corrcache = {}
-        eps = numpy.array([self._get_eps(eid, corrcache) for eid in eids])
-        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-        div = numpy.sqrt(1 + covs ** 2)
+        eps = numpy.fromiter(
+            (self._get_eps(eid, corrcache) for eid in eids),
+            dtype=numpy.float64,
+            count=len(eids),
+        )
+        covs2 = covs ** 2
+        covs2_1 = covs2 + 1.0
+        sigma = numpy.sqrt(numpy.log1p(covs2))
+        div = numpy.sqrt(covs2_1)
         return means * numpy.exp(eps * sigma) / div
 
     # NB: asset correlation is ignored
