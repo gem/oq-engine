@@ -44,7 +44,7 @@ sampling_dt = numpy.dtype([
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_id', U32),                   # 1
+    ('grp_id', U16),                   # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', F32),                # 3
     ('num_ctxs', numpy.uint64),        # 4
