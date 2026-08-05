@@ -335,26 +335,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             secparams = ()
         if oq.sequential_source_models:
             # Bound preclassical memory by iterating one source model
-            # at a time; rebuild cmakers at end for post_execute
+            # at a time and rebuild cmakers at end
             self._run_batched(sf, secparams, reqv)
             self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         else:
-            self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
-            atomic_sources = []
-            normal_sources = []
-            cmakers = self.cmakers.to_array()
-            for sg in csm.src_groups:
-                for src in sg:
-                    if reqv and sg.trt in oq.inputs['reqv']:
-                        if src.source_id not in oq.reqv_ignore_sources:
-                            collapse_nphc(src)
-                grp_id = sg.sources[0].grp_id
-                if sg.atomic:
-                    cmakers[grp_id].set_weight(sg, sf)
-                    atomic_sources.extend(sg)
-                else:
-                    normal_sources.extend(sg)
-            self._process(atomic_sources, normal_sources, sf, secparams)
+            self._run_regular(trt_smrs, sf, secparams, reqv)
         L = oq.imtls.size
         Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
@@ -397,6 +382,30 @@ class PreClassicalCalculator(base.HazardCalculator):
                     normal_batch.extend(sg)
             self._process(atomic_batch, normal_batch, sf, secparams,
                           cmaker_by_grp=cmaker_by_grp)
+
+    def _run_regular(self, trt_smrs, sf, secparams, reqv):
+        """
+        Run preclassical in a single pass over all src_groups when
+        sequential_source_models is False.
+        """
+        oq = self.oqparam
+        csm = self.csm
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
+        atomic_sources = []
+        normal_sources = []
+        cmakers = self.cmakers.to_array()
+        for sg in csm.src_groups:
+            for src in sg:
+                if reqv and sg.trt in oq.inputs['reqv']:
+                    if src.source_id not in oq.reqv_ignore_sources:
+                        collapse_nphc(src)
+            grp_id = sg.sources[0].grp_id
+            if sg.atomic:
+                cmakers[grp_id].set_weight(sg, sf)
+                atomic_sources.extend(sg)
+            else:
+                normal_sources.extend(sg)
+        self._process(atomic_sources, normal_sources, sf, secparams)
 
     def _process(self, atomic_sources, normal_sources, sf, secparams,
                  cmaker_by_grp=None):
