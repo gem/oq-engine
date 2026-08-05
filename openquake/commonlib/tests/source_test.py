@@ -824,3 +824,24 @@ class SequentialSourcesTestCase(unittest.TestCase):
         self.assertIn('spans multiple source models', msg)
         self.assertIn('sm_a', msg)
         self.assertIn('sm_b', msg)
+
+    def test_iter_source_model_batches(self):
+        # Three top-level source models with 4, 2, 5 src_groups
+        # respectively; batches must partition src_groups cleanly and
+        # be yielded in sorted sm_branch_id order
+        csm = self._build_csm(
+            sm_branch_ids=['smA', 'smB', 'smC'],
+            smrs_per_group=[[0]]*4 + [[1]]*2 + [[2]]*5)
+        batches = list(csm.iter_source_model_batches())
+
+        self.assertEqual(len(batches), 3)
+        self.assertEqual([b[0] for b in batches], [0, 1, 2])
+        self.assertEqual([b[1] for b in batches], ['smA', 'smB', 'smC'])
+        self.assertEqual([len(b[2]) for b in batches], [4, 2, 5])
+        self.assertEqual([len(b[3]) for b in batches], [4, 2, 5])
+        # Union of per-batch src_groups recontructs the full list
+        union = []
+        for _, _, sgs, _ in batches:
+            union.extend(sgs)
+        self.assertEqual({id(sg) for sg in union},
+                         {id(sg) for sg in csm.src_groups})
