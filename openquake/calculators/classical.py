@@ -653,16 +653,16 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _run_sequential_source_models(self, allargs, task_func):
         """
-        Run one Starmap per top-level sourceModel branch sequentially,
-        so that at most one source model's tasks are running at one time.
+        Run one Starmap per sourceModel branch sequentially, so that
+        at most one source model's tasks are running at one time.
         """
-        # Map each src_group id to its top-level sourceModel branch_id
+        # Map each src_group id to its sourceModel branch_id
         smb_of_grp = {
             gid: smb
             for smb, gids in self.csm.grp_ids_by_source_model().items()
             for gid in gids}
 
-        # Partition the task-arg tuples by top-level sourceModel branch
+        # Partition the task-arg tuples by sourceModel branch
         partitions = AccumDict(accum=[])
         for args in allargs:
             # Strip any tile suffix ("5-2" -> 5) to recover grp_id
@@ -675,6 +675,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Source model %r: %d tasks', smb, len(part))
             smap = parallel.Starmap(task_func, part, h5=self.datastore.hdf5)
             acc = smap.reduce(self.agg_dicts, acc)
+
         return acc
 
     def _post_execute(self, acc):
