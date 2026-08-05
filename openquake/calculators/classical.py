@@ -453,7 +453,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 elif param == 'rup_id':
                     dt = I64
                 elif param == 'grp_id':
-                    dt = U32
+                    dt = U16
                 else:
                     dt = F32
                 descr.append((param, dt))
