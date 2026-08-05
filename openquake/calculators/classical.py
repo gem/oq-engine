@@ -657,27 +657,24 @@ class ClassicalCalculator(base.HazardCalculator):
         so that at most one source model's tasks are running at one time.
         """
         # Map each src_group id to its top-level sourceModel branch_id
-        grp_ids_by_smb = self.csm.grp_ids_by_source_model()
-        smb_of_grp = {gid: smb
-                      for smb, gids in grp_ids_by_smb.items()
-                      for gid in gids}
+        smb_of_grp = {
+            gid: smb
+            for smb, gids in self.csm.grp_ids_by_source_model().items()
+            for gid in gids}
 
         # Partition the task-arg tuples by top-level sourceModel branch
-        partitions = {}
+        partitions = AccumDict(accum=[])
         for args in allargs:
             # Strip any tile suffix ("5-2" -> 5) to recover grp_id
             gid = int(args[0][0].split('-')[0])
-            partitions.setdefault(smb_of_grp[gid], []).append(args)
+            partitions[smb_of_grp[gid]].append(args)
 
         # Run one source model at a time
         acc = AccumDict(accum=0.)
-        for smb in sorted(partitions):
-            logging.info('Source model %r: %d tasks',
-                         smb, len(partitions[smb]))
-            smap = parallel.Starmap(
-                task_func, partitions[smb], h5=self.datastore.hdf5)
+        for smb, part in sorted(partitions.items()):
+            logging.info('Source model %r: %d tasks', smb, len(part))
+            smap = parallel.Starmap(task_func, part, h5=self.datastore.hdf5)
             acc = smap.reduce(self.agg_dicts, acc)
-
         return acc
 
     def _post_execute(self, acc):
