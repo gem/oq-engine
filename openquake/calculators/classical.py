@@ -654,7 +654,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _run_sequential_source_models(self, allargs, task_func):
         """
         Run one Starmap per sourceModel branch sequentially, so that
-        at most one source model's tasks are running at one time.
+        only a single source model's tasks are running at one time.
         """
         # Map each src_group id to its sourceModel branch_id
         smb_of_grp = {
@@ -669,7 +669,7 @@ class ClassicalCalculator(base.HazardCalculator):
             gid = int(args[0][0].split('-')[0])
             partitions[smb_of_grp[gid]].append(args)
 
-        # Run one source model at a time
+        # Run one source modl at a time
         acc = AccumDict(accum=0.)
         for smb, part in sorted(partitions.items()):
             logging.info('Source model %r: %d tasks', smb, len(part))
