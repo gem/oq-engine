@@ -329,12 +329,20 @@ class VulnerabilityFunction(object):
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
         ok = losses > minloss
+        losses_ok = losses[ok]
         if self.distribution_name == 'PM':  # special case
-            variances = numpy.zeros(len(losses))
+            variances_ok = numpy.zeros(len(losses_ok))
         else:
-            variances = (losses * df['cov'].to_numpy())**2
-        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     variance=variances[ok], loss=losses[ok]))
+            covs_ok = df['cov'].to_numpy()[ok]
+            variances_ok = (losses_ok * covs_ok) ** 2
+        return pandas.DataFrame(
+            dict(
+                eid=df.eid[ok],
+                aid=df.aid[ok],
+                variance=variances_ok,
+                loss=losses_ok,
+            )
+        )
 
     def strictly_increasing(self):
         """
@@ -846,9 +854,9 @@ class MultiEventRNG(object):
             try:
                 return corrcache[eid]
             except KeyError:
-                corrcache[eid] = eps = self.rng[eid].normal()
+                corrcache[eid] = eps = self.rng[eid].standard_normal()
                 return eps
-        return self.rng[eid].normal()
+        return self.rng[eid].standard_normal()
 
     def lognormal(self, eids, means, covs):
         """
@@ -858,9 +866,12 @@ class MultiEventRNG(object):
         :returns: array of floats
         """
         corrcache = {}
-        eps = numpy.array([self._get_eps(eid, corrcache) for eid in eids])
-        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-        div = numpy.sqrt(1 + covs ** 2)
+        eps = numpy.fromiter(
+            (self._get_eps(eid, corrcache) for eid in eids),
+            dtype=F32, count=len(eids))
+        covs2 = covs ** 2
+        sigma = numpy.sqrt(numpy.log1p(covs2))
+        div = numpy.sqrt(1. + covs2)
         return means * numpy.exp(eps * sigma) / div
 
     # NB: asset correlation is ignored
