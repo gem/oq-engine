@@ -8,4 +8,8 @@ when possible.
 
 # tips
 
-The calculators tests should be run with OQ_DISTRIBUTE=no and pytest-xdist.
+Build a repo_map with `bin/make_repo_map` if it is missing, and use it to
+understand the repository structure.
+The openquake/calculators tests are meant to be run with OQ_DISTRIBUTE=no and
+pytest -n auto, having activated the ~/openquake venv if necessary.
+After a refactoring run `ruff check` and make sure it does not fail.

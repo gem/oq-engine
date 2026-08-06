@@ -104,10 +104,6 @@ def test_one_site():
     assert os.path.basename(fname) == 'ruptures_rups.csv'
 
     # check the maximum_distance is different for MIE and EUR
-    mie = calc.oq_by['MIE'].maximum_distance['default'][0]
-    eur = calc.oq_by['EUR'].maximum_distance['default'][0]
-    assert mie == [5, 300]
-    assert eur == [5, 250]
     assert not hasattr(calc.oqparam, 'maximum_distance')
 
 

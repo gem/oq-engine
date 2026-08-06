@@ -658,7 +658,10 @@ class RiskComputerTestCase(unittest.TestCase):
                      "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
                      "mean_loss_ratios": [0.0035, 0.07, 0.14, 0.28, 0.56],
                      "covs": [0.0, 0.0, 0.0, 0.0, 0.0],
-                     "distribution_name": "LN"}}}}
+                     "distribution_name": "LN",
+                     'sampler': {
+                         'openquake.risklib.scientific.Sampler':
+                         {'distname': 'LN', 'arange': [], 'lratios': []}}}}}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
                 'PGA': [.23, .31]}

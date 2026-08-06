@@ -133,37 +133,34 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, lratios=(), cols=None):
+    def __init__(self, distname, lratios=(), cols=None):
         self.distname = distname
-        self.rng = rng
         self.arange = numpy.arange(len(lratios))  # for the PM distribution
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
 
-    def get_losses(self, df, covs):
-        vals = df['val'].to_numpy()
-        if not self.rng or not covs:  # fast lane
-            losses = vals * df['mean'].to_numpy()
+    def get_losses(self, rng, dic, covs):
+        if not rng or not covs:  # fast lane
+            losses = dic['val'] * dic['mean']
         else:  # slow lane
-            losses = vals * getattr(self, 'sample' + self.distname)(df)
+            sample = getattr(self, 'sample' + self.distname)
+            losses = dic['val'] * sample(rng, dic)
         return losses
 
-    def sampleLN(self, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
-        losses = self.rng.lognormal(eids, means, covs)
+    def sampleLN(self, rng, dic):
+        means = dic['mean']
+        covs = dic['cov']
+        eids = dic['eid']
+        losses = rng.lognormal(eids, means, covs)
         return losses
 
-    def sampleBT(self, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
-        return self.rng.beta(eids, means, covs)
+    def sampleBT(self, rng, dic):
+        return rng.beta(dic['eid'], dic['mean'], dic['cov'])
 
-    def samplePM(self, df):
-        eids = df['eid'].to_numpy()
-        allprobs = df[self.cols].to_numpy()
+    def samplePM(self, rng, dic):
+        # in case_1g self.cols = [0, 1, 2, 3, 4, 5, 6], len(dic)=4
+        eids = dic['eid']
+        allprobs = numpy.array([dic[c] for c in self.cols]).T  # (4, 7)
         pmf = []
         for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
@@ -172,13 +169,18 @@ class Sampler(object):
             else:
                 pmf.append(stats.rv_discrete(
                     name='pmf', values=(self.arange, probs),
-                    seed=self.rng.master_seed + eid).rvs())
+                    seed=rng.master_seed + eid).rvs())
         return self.lratios[pmf]
+
+
+def join_dic(ratio_df, asset_df):
+    # in the common case df has columns eid mean cov aid val
+    df = ratio_df.join(asset_df, how='inner')
+    return {col: df[col].to_numpy() for col in df.columns}
 
 #
 # Input models
 #
-
 
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
@@ -261,6 +263,7 @@ class VulnerabilityFunction(object):
                                              fill_value="extrapolate")
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
                                               fill_value="extrapolate")
+        self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
         """
@@ -317,24 +320,22 @@ class VulnerabilityFunction(object):
             # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         # dataset with fields eid, mean, cov and key sid
-        if self.distribution_name == 'PM':  # special case
-            lratios = F64(self.loss_ratios)
-            cols = [col for col in ratio_df.columns if isinstance(col, int)]
-        else:
-            lratios = ()
-            cols = None
-        df = ratio_df.join(asset_df, how='inner')
+        dic = join_dic(ratio_df, asset_df)
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
-        sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
-        losses = sampler.get_losses(df, covs)
+        losses = self.sampler.get_losses(rng, dic, covs)
         ok = losses > minloss
+        losses_ok = losses[ok]
         if self.distribution_name == 'PM':  # special case
-            variances = numpy.zeros(len(losses))
+            variances_ok = numpy.zeros(len(losses_ok))
         else:
-            variances = (losses * df['cov'].to_numpy())**2
-        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     variance=variances[ok], loss=losses[ok]))
+            covs_ok = dic['cov'][ok]
+            variances_ok = (losses_ok * covs_ok) ** 2
+        return pandas.DataFrame(
+            dict(eid=dic['eid'][ok],
+                 aid=dic['aid'][ok],
+                 variance=variances_ok,
+                 loss=losses_ok))
 
     def strictly_increasing(self):
         """
@@ -490,6 +491,9 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def init(self):
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        lratios = F64(self.loss_ratios)
+        cols = list(range(len(self.probs)))
+        self.sampler = Sampler(self.distribution_name, lratios, cols)
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -518,7 +522,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         :param gmvs:
            DataFrame of GMFs
-        :param col:           name of the column to consider
+        :param col:
+           name of the column to consider
         :returns:
            DataFrame of interpolated probabilities
         """
@@ -846,9 +851,9 @@ class MultiEventRNG(object):
             try:
                 return corrcache[eid]
             except KeyError:
-                corrcache[eid] = eps = self.rng[eid].normal()
+                corrcache[eid] = eps = self.rng[eid].standard_normal()
                 return eps
-        return self.rng[eid].normal()
+        return self.rng[eid].standard_normal()
 
     def lognormal(self, eids, means, covs):
         """
@@ -858,9 +863,12 @@ class MultiEventRNG(object):
         :returns: array of floats
         """
         corrcache = {}
-        eps = numpy.array([self._get_eps(eid, corrcache) for eid in eids])
-        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-        div = numpy.sqrt(1 + covs ** 2)
+        eps = numpy.fromiter(
+            (self._get_eps(eid, corrcache) for eid in eids),
+            dtype=F32, count=len(eids))
+        covs2 = covs ** 2
+        sigma = numpy.sqrt(numpy.log1p(covs2))
+        div = numpy.sqrt(1. + covs2)
         return means * numpy.exp(eps * sigma) / div
 
     # NB: asset correlation is ignored
