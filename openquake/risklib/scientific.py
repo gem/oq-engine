@@ -868,13 +868,10 @@ class MultiEventRNG(object):
         corrcache = {}
         eps = numpy.fromiter(
             (self._get_eps(eid, corrcache) for eid in eids),
-            dtype=numpy.float64,
-            count=len(eids),
-        )
+            dtype=F32, count=len(eids))
         covs2 = covs ** 2
-        covs2_1 = covs2 + 1.0
         sigma = numpy.sqrt(numpy.log1p(covs2))
-        div = numpy.sqrt(covs2_1)
+        div = numpy.sqrt(1. + covs2)
         return means * numpy.exp(eps * sigma) / div
 
     # NB: asset correlation is ignored
