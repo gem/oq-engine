@@ -133,35 +133,34 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, lratios=(), cols=None):
+    def __init__(self, distname, lratios=(), cols=None):
         self.distname = distname
-        self.rng = rng
         self.arange = numpy.arange(len(lratios))  # for the PM distribution
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
 
-    def get_losses(self, df, covs):
+    def get_losses(self, rng, df, covs):
         vals = df['val'].to_numpy()
-        if not self.rng or not covs:  # fast lane
+        if not rng or not covs:  # fast lane
             losses = vals * df['mean'].to_numpy()
         else:  # slow lane
-            losses = vals * getattr(self, 'sample' + self.distname)(df)
+            losses = vals * getattr(self, 'sample' + self.distname)(rng, df)
         return losses
 
-    def sampleLN(self, df):
+    def sampleLN(self, rng, df):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        losses = self.rng.lognormal(eids, means, covs)
+        losses = rng.lognormal(eids, means, covs)
         return losses
 
-    def sampleBT(self, df):
+    def sampleBT(self, rng, df):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.beta(eids, means, covs)
+        return rng.beta(eids, means, covs)
 
-    def samplePM(self, df):
+    def samplePM(self, rng, df):
         eids = df['eid'].to_numpy()
         allprobs = df[self.cols].to_numpy()
         pmf = []
@@ -172,7 +171,7 @@ class Sampler(object):
             else:
                 pmf.append(stats.rv_discrete(
                     name='pmf', values=(self.arange, probs),
-                    seed=self.rng.master_seed + eid).rvs())
+                    seed=rng.master_seed + eid).rvs())
         return self.lratios[pmf]
 
 #
@@ -261,6 +260,7 @@ class VulnerabilityFunction(object):
                                              fill_value="extrapolate")
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
                                               fill_value="extrapolate")
+        self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
         """
@@ -317,17 +317,10 @@ class VulnerabilityFunction(object):
             # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         # dataset with fields eid, mean, cov and key sid
-        if self.distribution_name == 'PM':  # special case
-            lratios = F64(self.loss_ratios)
-            cols = [col for col in ratio_df.columns if isinstance(col, int)]
-        else:
-            lratios = ()
-            cols = None
         df = ratio_df.join(asset_df, how='inner')
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
-        sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
-        losses = sampler.get_losses(df, covs)
+        losses = self.sampler.get_losses(rng, df, covs)
         ok = losses > minloss
         losses_ok = losses[ok]
         if self.distribution_name == 'PM':  # special case
@@ -336,13 +329,10 @@ class VulnerabilityFunction(object):
             covs_ok = df['cov'].to_numpy()[ok]
             variances_ok = (losses_ok * covs_ok) ** 2
         return pandas.DataFrame(
-            dict(
-                eid=df.eid[ok],
-                aid=df.aid[ok],
-                variance=variances_ok,
-                loss=losses_ok,
-            )
-        )
+            dict(eid=df.eid[ok],
+                 aid=df.aid[ok],
+                 variance=variances_ok,
+                 loss=losses_ok))
 
     def strictly_increasing(self):
         """
@@ -498,6 +488,9 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def init(self):
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        lratios = F64(self.loss_ratios)
+        cols = list(range(len(self.probs)))
+        self.sampler = Sampler(self.distribution_name, lratios, cols)
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -526,7 +519,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         :param gmvs:
            DataFrame of GMFs
-        :param col:           name of the column to consider
+        :param col:
+           name of the column to consider
         :returns:
            DataFrame of interpolated probabilities
         """

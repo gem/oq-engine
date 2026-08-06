@@ -660,7 +660,7 @@ def dumps(dic):
         elif isinstance(v, dict):
             new[k] = dumps(v)
         elif hasattr(v, '__dict__'):
-            new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
+            new[k] = dumps({cls2dotname(v.__class__): vars(v)})
         else:
             new[k] = json.dumps(v)
     return "{%s}" % ','.join('\n"%s": %s' % it for it in new.items())
