@@ -105,6 +105,12 @@ class HcurvesGetter(object):
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
+        # Source-specific LT + site LT is unsupported: _rates is split
+        # across _rates_site_i groups so there is no unambiguous curve
+        if '_rates' not in self.dstore:
+            raise NotImplementedError(
+                'HcurvesGetter is not supported when a site-model logic '
+                'tree is present')
         dset = self.dstore['_rates']
         if gsim_idx is None:
             curves = dset[start:start + len(gsims), site_id, imt_slc]
@@ -193,6 +199,7 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     _req_gb, trt_rlzs, trt_smrs = get_rmap_gb(dstore, full_lt)
     attrs = vars(full_lt)
     full_lt.init()
+    gweights, wgets = None, None
     if oq.fastmean:
         gweights = [full_lt.g_weights(trt_smrs)]
     else:
@@ -212,19 +219,67 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
         for f in os.listdir(calc_dir):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(calc_dir, f))
-    out = []
+
     sids = dstore['sitecol/sids'][:]
+
+    # Under a site-model LT there are Rsite variants
+    # (rates_dset, rlz_mask); otherwise a single ('_rates', None) variant
+    variants, gws_by_site = _site_lt_variants(full_lt, trt_smrs, oq.fastmean)
+    site_lt_on = getattr(full_lt, 'site_model_lt', None) is not None
+    out = []
     for chunk in range(n):
         tile = sids[sids % n == chunk]
-        getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq)
-        if oq.fastmean:
-            getter.gweights = gweights
+        sub_getters = []
+        for j, (rates_dset, rlz_mask) in enumerate(variants):
+            getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq,
+                               rates_dset=rates_dset, rlz_mask=rlz_mask)
+            if oq.fastmean:
+                getter.gweights = [gws_by_site[j]] if site_lt_on else gweights
+            else:
+                getter.wgets = wgets
+            if oq.site_labels:
+                getter.ilabels = dstore['sitecol'].ilabel
+            sub_getters.append(getter)
+        if site_lt_on and (disagg or oq.fastmean):
+            out.append(MergedMapGetter(sub_getters))
         else:
-            getter.wgets = wgets
-        if oq.site_labels:
-            getter.ilabels = dstore['sitecol'].ilabel
-        out.append(getter)
+            out.extend(sub_getters)
     return out
+
+
+def _site_lt_variants(full_lt, trt_smrs, fastmean):
+    """
+    :returns: ``(variants, gweights_by_site)``
+        ``variants`` is a list of ``(rates_dset, rlz_mask)``; for the
+        no-site-LT case that's a single ``('_rates', None)`` entry.
+        ``gweights_by_site`` is ``None`` unless ``fastmean`` is on
+        together with a site LT
+    """
+    site_lt = getattr(full_lt, 'site_model_lt', None)
+    if site_lt is None:
+        return [('_rates', None)], None
+    site_ords = numpy.array([r.site_rlz.ordinal
+                             for r in full_lt.get_realizations()])
+    used_i = [i for i in range(site_lt.Rsite) if (site_ords == i).any()]
+    variants = [('_rates_site_%d' % i, site_ords == i) for i in used_i]
+    if not fastmean:
+        return variants, None
+    # Per-site-rlz gweights: for each gid, sum weights of rlzs owned by
+    # this branch only, so fastmean's sum over sub-getters reproduces
+    # sum_r w_r * rate_r
+    gws_by_site = []
+    for i in used_i:
+        mask = site_ords == i
+        gwi = []
+        for _trt_smrs in trt_smrs:
+            for grlzs in full_lt.get_rlzs_by_gsim(_trt_smrs).values():
+                mrlzs = numpy.array([r for r in grlzs if mask[r]], dtype=int)
+                if len(mrlzs):
+                    gwi.append(full_lt.weights[mrlzs].sum(axis=0))
+                else:
+                    gwi.append(numpy.zeros_like(full_lt.weights[0]))
+        gws_by_site.append(numpy.array(gwi))
+    return variants, gws_by_site
 
 
 class ZeroGetter(object):
@@ -294,7 +349,8 @@ class MapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
     """
-    def __init__(self, filenames, chunk, trt_rlzs, sids, R, oq):
+    def __init__(self, filenames, chunk, trt_rlzs, sids, R, oq,
+                 rates_dset='_rates', rlz_mask=None):
         self.filenames = filenames
         self.chunk = chunk
         self.trt_rlzs = trt_rlzs
@@ -306,6 +362,10 @@ class MapGetter(object):
         self.eids = None
         self.ilabels = ()  # overridden in case of ilabels
         self.array = None
+        # Under site-model LT, rates are split into _rates_site_i groups
+        # and rlz_mask picks the rlzs owned by that site branch
+        self.rates_dset = rates_dset
+        self.rlz_mask = rlz_mask
 
     @property
     def imts(self):
@@ -335,12 +395,16 @@ class MapGetter(object):
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
         self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
+        slice_key = '%s/slice_by_idx' % self.rates_dset
         for fname in self.filenames:
             with hdf5.File(fname) as dstore:
-                slices = dstore['_rates/slice_by_idx'][:]
+                if self.rates_dset not in dstore:
+                    continue
+                slices = dstore[slice_key][:]
                 slices = slices[slices['idx'] == self.chunk]
                 for start, stop in zip(slices['start'], slices['stop']):
-                    df = dstore.read_df('_rates', slc=slice(start, stop))
+                    df = dstore.read_df(
+                        self.rates_dset, slc=slice(start, stop))
                     idxs = U32([sid2idx[sid] for sid in df.sid])
                     lid = df.lid.to_numpy()
                     gid = df.gid.to_numpy()
@@ -360,6 +424,8 @@ class MapGetter(object):
             rlzs = t_rlzs % TWO24
             rates = array[idx, :, g]
             for rlz in rlzs:
+                if self.rlz_mask is not None and not self.rlz_mask[rlz]:
+                    continue
                 r0[:, rlz] += rates
         return to_probs(r0)
 
@@ -380,6 +446,80 @@ class MapGetter(object):
             for m in range(M):
                 means.array[sidx, m] = rates[m*L1: m*L1+L1] @ gweights[
                     :, m if imt_dep_weights else -1]
+        means.array[:] = to_probs(means.array)
+        return means
+
+
+class MergedMapGetter(object):
+    """
+    Wraps a list of per-site-rlz :class:`MapGetter` instances (all sharing
+    ``chunk``, ``sids``, ``trt_rlzs``, ``R``) into one getter with a single
+    hcurve per ``sid``; used by disagg and fastmean under a site-model LT
+    """
+    def __init__(self, sub_getters):
+        first = sub_getters[0]
+        self.sub_getters = sub_getters
+        self.filenames = first.filenames
+        self.chunk = first.chunk
+        self.trt_rlzs = first.trt_rlzs
+        self.sids = first.sids
+        self.R = first.R
+        self.imtls = first.imtls
+        self.poes = first.poes
+        self.use_rates = first.use_rates
+        self.eids = None
+        self.ilabels = first.ilabels
+        self.wgets = getattr(first, 'wgets', None)
+        self.gweights = getattr(first, 'gweights', None)
+        self.array = None
+
+    @property
+    def imts(self):
+        return list(self.imtls)
+
+    @property
+    def L(self):
+        return self.imtls.size
+
+    @property
+    def M(self):
+        return len(self.imtls)
+
+    def init(self):
+        for sub in self.sub_getters:
+            sub.init()
+        self.sid2idx = self.sub_getters[0].sid2idx
+
+    def get_hcurve(self, sid):
+        """
+        :returns: an array of shape ``(L, R)``; each column ``r`` is taken
+            from the sub-getter whose ``rlz_mask`` includes ``r``
+        """
+        r0 = numpy.zeros((self.L, self.R))
+        for sub in self.sub_getters:
+            r0[:, sub.rlz_mask] = sub.get_hcurve(sid)[:, sub.rlz_mask]
+        return r0
+
+    def get_fast_mean(self):
+        """
+        :returns: a :class:`MapArray` of shape ``(N, M, L1)`` with the mean
+            hcurves, aggregated across sub-getter rates before ``to_probs``
+        """
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
+        for sub in self.sub_getters:
+            sub.init()
+            gweights = sub.gweights[0]
+            imt_dep = gweights.shape[1] > 1
+            for sid in self.sids:
+                gw = (sub.gweights[sub.ilabels[sid]]
+                      if len(sub.ilabels) else gweights)
+                rates = sub.array[sub.sid2idx[sid]]  # shape (L, G)
+                sidx = means.sidx[sid]
+                for m in range(M):
+                    means.array[sidx, m] += rates[m*L1:m*L1+L1] @ gw[
+                        :, m if imt_dep else -1]
         means.array[:] = to_probs(means.array)
         return means
 

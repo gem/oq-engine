@@ -31,7 +31,7 @@ from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
-from openquake.commonlib import util
+from openquake.commonlib import util, readinput
 from openquake.calculators import base, getters
 
 POE_TOO_BIG = '''\
@@ -47,7 +47,7 @@ F32 = numpy.float32
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                   monitor):
+                   rlz_filter, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -63,6 +63,9 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
         a dictionary src_id -> weight, usually empty
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
+    :param rlz_filter:
+        set of rlz ordinals to keep, or ``None`` to disable filtering
+        (used by the site-model LT outer loop in :meth:`compute`)
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -85,6 +88,10 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
 
             imtls = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
+        if rlz_filter is not None:
+            rlzs = numpy.array([r for r in rlzs if r in rlz_filter])
+            if len(rlzs) == 0:
+                continue
         res = dis.disagg_by_magi(imtls, rlzs, rwdic, src_mutex,
                                  mon0, mon1, mon2, mon3)
         out.extend(res)
@@ -112,12 +119,14 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+           rlz_filter=None):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
-    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+                 rlz_filter))
 
 
 def check_memory(N, Z, shape8D):
@@ -180,7 +189,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         try:
             full_lt = self.full_lt
         except AttributeError:
-            full_lt = self.datastore['full_lt'].init()
+            # Skip .init() here: map_getters will call it below
+            full_lt = self.datastore['full_lt']
         if oq.rlz_index is None and oq.num_rlzs_disagg == 0:
             oq.num_rlzs_disagg = self.R  # 0 means all rlzs
         self.oqparam.mags_by_trt = self.datastore['source_mags']
@@ -244,7 +254,38 @@ class DisaggregationCalculator(base.HazardCalculator):
                      for z, r in enumerate(rlzs[s])}
         return self.compute()
 
-    def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp):
+    def compute(self):
+        """
+        Submit disaggregation tasks and return the results
+        """
+        oq = self.oqparam
+        full_lt = getattr(self, 'full_lt', None) or self.datastore['full_lt']
+        site_lt = getattr(full_lt, 'site_model_lt', None)
+        if site_lt is None:
+            return self._compute_pass(rlz_filter=None)
+        # Site-model epistemic uncertainty: one pass per site branch
+        self.full_lt = full_lt
+        smep = readinput.get_site_models_epistemic(oq)
+        baseline = self.sitecol.array.copy()
+        all_rlzs = self.full_lt.get_realizations()
+        combined = None
+        for i, arr in enumerate(smep.arrays):
+            rlz_filter = {r.ordinal for r in all_rlzs
+                          if r.site_rlz.ordinal == i}
+            if not rlz_filter:
+                continue
+            self._overlay_sitecol(arr)
+            part = self._compute_pass(rlz_filter=rlz_filter)
+            if combined is None:
+                combined = part
+            else:
+                for k, v in part.items():
+                    combined[k] = combined.get(k, 0) + v
+        self._overlay_sitecol(baseline)
+        return combined
+
+    def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp,
+                    rlz_filter):
         # compute the total weight of the contexts and the maxsize
         ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
@@ -278,7 +319,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic)
+                       self.bin_edges, src_mutex, rwdic,
+                       rlz_filter=rlz_filter)
                 continue
 
             # split by tiles
@@ -290,15 +332,19 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for c in disagg.split_by_magbin(
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
-                               self.bin_edges, src_mutex, rwdic)
+                               self.bin_edges, src_mutex, rwdic,
+                               rlz_filter=rlz_filter)
                 elif len(ctx):
                     # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, rwdic)
+                           self.bin_edges, src_mutex, rwdic,
+                           rlz_filter=rlz_filter)
 
-    def compute(self):
+    def _compute_pass(self, rlz_filter):
         """
-        Submit disaggregation tasks and return the results
+        Single pass of the disaggregation compute loop; used both by
+        the regular path (``rlz_filter=None``) and by the site-model
+        epistemic outer loop (one pass per site rlz)
         """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
@@ -326,7 +372,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
 
-        self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp)
+        self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp,
+                         rlz_filter)
         s = self.shapedic
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])

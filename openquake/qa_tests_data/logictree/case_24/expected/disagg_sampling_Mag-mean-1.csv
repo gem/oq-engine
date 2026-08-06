@@ -1,0 +1,6 @@
+#,,,,"generated_by='OpenQuake engine 3.27.0-git74b1f464a5', start_date='2026-07-26T12:13:40', checksum=1127840431, investigation_time=50.0, mag_bin_edges=[5.0, 5.5, 6.0, 6.5, 7.0], dist_bin_edges=[0.0, 25.0, 50.0, 75.0, 100.0, 125.0, 150.0, 175.0, 200.0], lon_bin_edges=[-66.84864068487155, -65.05, -63.25135931512843], lat_bin_edges=[-1.74864, 0.05, 1.84864], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=-65.05, lat=0.05"
+imt,iml,poe,mag,mean
+PGA,1.20570E-01,1.00000E-01,5.25000E+00,5.80196E-02
+PGA,1.20570E-01,1.00000E-01,5.75000E+00,2.76877E-02
+PGA,1.20570E-01,1.00000E-01,6.25000E+00,2.34087E-02
+PGA,1.20570E-01,1.00000E-01,6.75000E+00,0.00000E+00

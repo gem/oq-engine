@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt_gsim">
+        <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs_gsim"
+                            applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="cy14">
+                <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="bssa14">
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

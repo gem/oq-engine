@@ -157,8 +157,10 @@ def get_weights(oq, dstore):
     :returns: float32 array of realization weights
     """
     samples = oq.number_of_logic_tree_samples
-    if samples:
-        weights = numpy.ones(samples, dtype=F32)/samples
+    # Under a site-model LT weights may be non-uniform (late_weights),
+    # so always read them from the datastore in that case
+    if samples and 'full_lt/site_model_lt' not in dstore:
+        weights = numpy.ones(samples, dtype=F32) / samples
     else:
         weights = dstore['weights'][:]
     return weights
@@ -843,6 +845,24 @@ class HazardCalculator(BaseCalculator):
                 'hazard_curves' in self.oqparam.inputs):
             return 1
         return len(get_weights(self.oqparam, self.datastore))
+
+    def _overlay_sitecol(self, arr):
+        """
+        Overlay ``arr``'s per-site params on ``self.sitecol`` and
+        ``dstore['sitecol/*']``; ``arr`` is a structured array with the
+        same rows as the sitecol (either a per-branch site model or a
+        copy used to restore it)
+        """
+        # Geometry fields are shared across branches - never overlay
+        skip = {'lon', 'lat', 'depth', 'sids'}
+        h5 = self.datastore.hdf5
+        for name in arr.dtype.names:
+            if name in skip:
+                continue
+            self.sitecol.array[name] = arr[name]
+            key = 'sitecol/' + name
+            if key in h5:
+                h5[key][:] = arr[name]
 
     def read_exposure(self, haz_sitecol):  # after load_crmodel
         """
