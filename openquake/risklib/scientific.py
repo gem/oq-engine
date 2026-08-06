@@ -139,31 +139,28 @@ class Sampler(object):
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
 
-    def get_losses(self, rng, df, covs):
-        vals = df['val'].to_numpy()
+    def get_losses(self, rng, dic, covs):
+        vals = dic['val']
         if not rng or not covs:  # fast lane
-            losses = vals * df['mean'].to_numpy()
+            losses = vals * dic['mean']
         else:  # slow lane
-            losses = vals * getattr(self, 'sample' + self.distname)(rng, df)
+            losses = vals * getattr(self, 'sample' + self.distname)(rng, dic)
         return losses
 
-    def sampleLN(self, rng, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
+    def sampleLN(self, rng, dic):
+        means = dic['mean']
+        covs = dic['cov']
+        eids = dic['eid']
         losses = rng.lognormal(eids, means, covs)
         return losses
 
-    def sampleBT(self, rng, df):
-        means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
-        eids = df['eid'].to_numpy()
-        return rng.beta(eids, means, covs)
+    def sampleBT(self, rng, dic):
+        return rng.beta(dic['eid'], dic['mean'], dic['cov'])
 
-    def samplePM(self, rng, df):
-        # in case_1g self.cols = [0, 1, 2, 3, 4, 5, 6], len(df)=4
-        eids = df['eid'].to_numpy()
-        allprobs = numpy.array([df[c] for c in self.cols]).T  # (4, 7)
+    def samplePM(self, rng, dic):
+        # in case_1g self.cols = [0, 1, 2, 3, 4, 5, 6], len(dic)=4
+        eids = dic['eid']
+        allprobs = numpy.array([dic[c] for c in self.cols]).T  # (4, 7)
         pmf = []
         for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
@@ -178,6 +175,9 @@ class Sampler(object):
 #
 # Input models
 #
+def join_dic(ratio_df, asset_df):
+    df = ratio_df.join(asset_df, how='inner')
+    return {col: df[col].to_numpy() for col in df.columns}
 
 
 class VulnerabilityFunction(object):
@@ -318,20 +318,20 @@ class VulnerabilityFunction(object):
             # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         # dataset with fields eid, mean, cov and key sid
-        df = ratio_df.join(asset_df, how='inner')
+        dic = join_dic(ratio_df, asset_df)
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
         covs = not hasattr(self, 'covs') or self.covs.any()
-        losses = self.sampler.get_losses(rng, df, covs)
+        losses = self.sampler.get_losses(rng, dic, covs)
         ok = losses > minloss
         losses_ok = losses[ok]
         if self.distribution_name == 'PM':  # special case
             variances_ok = numpy.zeros(len(losses_ok))
         else:
-            covs_ok = df['cov'].to_numpy()[ok]
+            covs_ok = dic['cov'][ok]
             variances_ok = (losses_ok * covs_ok) ** 2
         return pandas.DataFrame(
-            dict(eid=df.eid[ok],
-                 aid=df.aid[ok],
+            dict(eid=dic['eid'][ok],
+                 aid=dic['aid'][ok],
                  variance=variances_ok,
                  loss=losses_ok))
 
