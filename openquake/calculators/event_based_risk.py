@@ -42,7 +42,8 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-AE_MIN, AE_MAX = 4E7, 1.2E8
+# AE_MIN, AE_MAX chosen so that East_Asia.toml runs with 3 GB per core
+AE_MIN, AE_MAX = 8E7, 1.2E8
 get_n_occ = operator.itemgetter(1)
 
 
@@ -344,7 +345,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         na = numpy.round([num_assets[df.sid].sum() for df in blk])
         ae = int(na.sum())
         # print(f'{monitor.task_no=}, {na/1E6=}')
-        if b % 3 == 0 or ae < AE_MIN:  # don't spawn small tasks
+        if b == 0 or ae < AE_MIN:  # don't spawn small tasks
             yield event_based_risk(pandas.concat(blk), monitor)
         else:
             print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {ae=:_d}')

@@ -455,9 +455,13 @@ def before_checks(inst, args, usage):
         except subprocess.CalledProcessError:
             raise RuntimeError('install.py must be called from the engine '
                                f'repository, not from {os.getcwd()}')
-        if branch.startswith('engine-') and not args.version:
-            # use version consistent with the branch
-            args.version == branch
+#        if branch.startswith('engine-'):
+        print(f'Devel install on branch {branch}')
+        if args.version:
+            print('WARNING: Ignoring version flag for devel install on branch '
+                  f'{branch}')
+        # use version consistent with the branch, even if --version flag
+        args.version = branch
 
     # check if there is a DbServer running
     if not args.remove:
@@ -596,10 +600,16 @@ def install(inst, version, from_fork, novenv, noupgrade):
         mac = ("_" + platform.machine(),)  # x86_64 or arm64
     else:
         mac = ("",)
-    req = (
-        f"https://raw.githubusercontent.com/gem/oq-engine/{branch}/"
-        "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform]
-                                          + mac))
+    # TODO move this to inst classes
+    if (inst is devel or inst is devel_server):
+        # use local requirements file for devel installs
+        req_pre = CDIR
+    else:
+        # use github for user and server installs
+        req_pre = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/'
+    req = f"{req_pre}/requirements-py%d%d-%s%s.txt" % \
+          (PYVER[:2] + PLATFORM[sys.platform] + mac)
+
     subprocess.check_call(
         [
             pycmd,

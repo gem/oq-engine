@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_16, case_17, case_18, case_19, case_20, case_22)
+    case_14, case_16, case_17, case_18, case_19, case_20, case_22, case_23)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators import base
 from openquake.calculators.extract import extract
@@ -242,6 +242,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk2.csv', fname)
 
+        # check aggrisk_tags extraction
+        [fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk-stats.csv', fname)
+
     def test_case_13(self):
         # 3 realizations and consequences
         self.run_calc(case_13.__file__, 'job.ini')
@@ -327,12 +331,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # exporting job.zip
         fnames = export(('job', 'zip'), self.calc.datastore)
-        print(open(fnames[0]).read())
+        with open(fnames[0]) as f:
+            print(f.read())
         dstore = base.run_calc(fnames[0]).datastore
         [fname] = export(('damages-rlzs', 'csv'), dstore)
         self.assertEqualFiles('expected/dmg.csv', dmg_csv, delta=4E-5)
         [agg_csv] = export(('aggrisk', 'csv'), dstore)
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
+
+    def test_case_23(self):
+        # tsunami damage
+        self.run_calc(case_23.__file__, 'job_damage.ini')
+        [fname1, fname2] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggrisk.csv', fname1)
+        self.assertEqualFiles('expected/aggrisk-NAME_2.csv', fname2)
 
 
 def losses(aid, alt):

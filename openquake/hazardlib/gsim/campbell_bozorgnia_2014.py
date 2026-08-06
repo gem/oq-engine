@@ -134,22 +134,16 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
 
     # Apply USGS basin scaling model if required
     if usgs_bs:
-        # Get the scaling factor per site
+        # Get the scaling factor per site (the 0.585 factor at T = 0.75 s
+        # and the shallow-site zeroing are handled inside the helper, so
+        # sites with z2pt5 <= basin_upper already collapse to z_ref_term)
         usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
         z_scaled = z_ref_term * (1.0 - usgs_baf) + z2pt5_term * usgs_baf
         # Apply additional CyberShake (CY_CSIM) adjustment if required
         if cy and imt.period > 1.9:
-            z_scaled += 0.1 
-        # If period is 0.075 seconds scale by factor of 0.585
-        if imt.period == 0.075:
-            return z_scaled * 0.585
-        # Otherwise return basin term adjusted except for sites shallower than
-        # upper z2pt5 value in USGS basin model (use z_ref_term instead here)
-        if imt.period > 0.5:
-            idx = z2pt5 > 1.0 # Upper z2pt5 depth in USGS basin model is 1 km
-            z_scaled[idx] = z_ref_term[idx]
+            z_scaled += 0.1
         return z_scaled
-        
+
     return z2pt5_term
 
 

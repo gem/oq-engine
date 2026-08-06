@@ -140,9 +140,15 @@ class Socket(object):
         self.num_sent = 0
         return self
 
+    def close(self):
+        if hasattr(self, 'zsocket') and not self.zsocket.closed:
+            self.zsocket.close()
+
     def __exit__(self, *args):
-        self.zsocket.__exit__(*args)
-        del self.zsocket
+        self.close()
+
+    def __del__(self):
+        self.close()
 
     def __iter__(self):
         """

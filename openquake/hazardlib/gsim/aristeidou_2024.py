@@ -38,6 +38,12 @@ import h5py
 
 ASSET_DIR = pathlib.Path(__file__).resolve().parent / "aristeidou_2024_assets"
 
+COMPONENT_MAPPING = {
+    const.IMC.RotD50: "RotD50",
+    const.IMC.GEOMETRIC_MEAN: "geomean",
+    const.IMC.RotD100: "RotD100",
+}
+
 
 def load_hdf5_to_list(group):
     """
@@ -111,18 +117,19 @@ def _get_style_of_faulting_term(rake):
     return sof
 
 
-def extract_im_names(imts, component_definition):
+def extract_im_names(imts, imc):
     """
     Convert the im strings of openquake to the im naming convention
-    used in the GMM
+    used in the GMM.
     """
+    component_name = COMPONENT_MAPPING[imc]
     im_names = []
     for imt in imts:
         base = imt.name
 
         # 1. Handle Spectral Acceleration and Averages
         if base == "SA" or base.startswith("Sa_avg"):
-            name = f"{base}_{component_definition}({imt.period})"
+            name = f"{base}_{component_name}({imt.period})"
             # i.e. SA_RotD100(1.0)
 
         # 2. Handle Duration and Velocity/Displacement/Acceleration
@@ -144,13 +151,13 @@ def extract_im_names(imts, component_definition):
     return np.array(im_names)
 
 
-def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
+def _get_means_stddevs(DATA, imts, means, stddevs, imc):
     """
     Extract the means and standard deviations of the requested IMs and
-    horizontal compoent definitions
+    horizontal component definitions
     """
     supported_ims = np.char.decode(DATA["output_ims"], 'UTF-8')
-    im_names = extract_im_names(imts, component_definition)
+    im_names = extract_im_names(imts, imc)
 
     if len(means.shape) == 1:
         means = means.reshape(1, means.shape[0])
@@ -254,7 +261,7 @@ class AristeidouEtAl2024(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, PGD, SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD50}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -282,8 +289,6 @@ class AristeidouEtAl2024(GMPE):
         "Rx": [-297.13, 292.39],
         "Ztor": [0, 16.23],
     }
-
-    component_definition = "RotD50"
 
     def __init__(self):
         # Load background information about the model from a hdf5 file
@@ -355,7 +360,8 @@ class AristeidouEtAl2024(GMPE):
 
         # Get the means and stddevs at index corresponding to the IM
         mean[:], stddevs = _get_means_stddevs(
-            self.DATA, imts, means, stddevs, self.component_definition)
+            self.DATA, imts, means, stddevs,
+            self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT)
 
         sig[:] = stddevs[0, :, :]
         tau[:] = stddevs[1, :, :]
@@ -368,9 +374,7 @@ class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
         SA, Sa_avg2, Sa_avg3, RSD595, RSD575, FIV3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.GEOMETRIC_MEAN}
-
-    component_definition = "geomean"
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
 
 class AristeidouEtAl2024RotD100(AristeidouEtAl2024):
@@ -378,6 +382,4 @@ class AristeidouEtAl2024RotD100(AristeidouEtAl2024):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, Sa_avg2, Sa_avg3}
 
     #: Supported intensity measure components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = {const.IMC.RotD100}
-
-    component_definition = "RotD100"
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD100

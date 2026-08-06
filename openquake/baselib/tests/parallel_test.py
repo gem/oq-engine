@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-import platform
 import unittest.mock as mock
 import time
 import shutil
@@ -165,10 +163,6 @@ class StarmapTestCase(unittest.TestCase):
 
 
 class ThreadPoolTestCase(unittest.TestCase):
-    @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor() == 'i386',
-        reason=('Skipped on MacOS Intel (it would raise "socket.gaierror:'
-                ' [Errno 8] nodename nor servname provided, or not known"'))
     def test(self):
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
             parallel.Starmap.init()

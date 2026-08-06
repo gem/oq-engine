@@ -1,3 +1,12 @@
+  [Lana Todorovic]
+  * Added support for tsunami as an independent peril in scenario damage 
+  calculations.
+
+  [Christopher Brooks]
+  * Fixed a bug in the USGS basin scaling of the CB14 GMM using the
+    fix provided/reported by Mohsen Kohrangi. Existing unit test's
+    expected results were updated accordingly.
+  
   [Michele Simionato]
   * Internal: reduced the hard limit on function length to 79 lines
   * Fixed the exporters `mag_dst_eps_sig` and `mean_disagg_by_src` for low

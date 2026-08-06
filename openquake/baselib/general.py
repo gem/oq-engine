@@ -405,11 +405,10 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     >>> split_in_blocks(items, 3)
     [['A'], ['B'], ['C'], ['D'], ['E']]
     """
-    if isinstance(sequence, pandas.DataFrame):
+    if isinstance(sequence, (pandas.DataFrame, pandas.Series)):
         num_elements = len(sequence)
-        out = numpy.array_split(
-            sequence, num_elements if num_elements < hint else hint)
-        return out
+        n = num_elements if num_elements < hint else hint
+        return [sequence[slc] for slc in gen_slices(0, num_elements, n)]
     elif isinstance(sequence, int):
         return split_in_slices(sequence, hint)
     elif hint in (0, 1) and key is nokey:  # do not split

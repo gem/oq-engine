@@ -153,8 +153,8 @@ class KothaEtAl2016(GMPE):
             sig[m] = C['sigma']
             tau[m] = C['tau']
             phi[m] = np.sqrt(C['phi0'] ** 2. + C["phiS2S"] ** 2.)
-
-    COEFFS = CoeffsTable(sa_damping=5, table=open(KOTHA_CSV).read())
+    with open(KOTHA_CSV) as f:
+        COEFFS = CoeffsTable(sa_damping=5, table=f.read())
 
 
 class KothaEtAl2016Italy(KothaEtAl2016):

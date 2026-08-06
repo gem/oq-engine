@@ -5,3 +5,11 @@ and of 79 lines for function-length (not counting the docstring).
 When refactoring, prefer middle-size functions (i.e. dozen of lines,
 not too short). Do not strip comments away. Prefer the use of numpy
 when possible.
+
+# tips
+
+Build a repo_map with `bin/make_repo_map` if it is missing, and use it to
+understand the repository structure.
+The openquake/calculators tests are meant to be run with OQ_DISTRIBUTE=no and
+pytest -n auto, having activated the ~/openquake venv if necessary.
+After a refactoring run `ruff check` and make sure it does not fail.
