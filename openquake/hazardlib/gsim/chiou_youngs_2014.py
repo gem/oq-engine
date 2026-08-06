@@ -622,7 +622,7 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
         # For EMME24 backbone apply CY14 native site term at vs30 of 800 m/s
         # to shift the reference motion from CY14's native 1130 m/s down to
         # the EMME24 reference of 800 m/s (the EMME24 site term itself is
-        # applied in the EMME24 subclass)
+        # applied in the EMME24 subclass following backbone scaling)
         emme_vs30 = np.full_like(ctx.vs30, 800.)
         f_lin = get_linear_site_term(region, C, emme_vs30)
         f_nl, _ = get_nonlinear_site_term(C, emme_vs30, y_ref)
