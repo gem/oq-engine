@@ -24,8 +24,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, general, config
-from openquake.hazardlib import stats, InvalidFile
+from openquake.baselib import hdf5, parallel, performance, general, config
+from openquake.hazardlib import contexts, stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -499,7 +499,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if not hasattr(self, 'sec_perils'):
                 self.add_sec_perils(oq)
             self.datastore.create_dset('ruptimes', event_based.rup_dt)
-            event_based.run(ebrisk, oq, rup0, self)
+            if oq.calculation_mode.startswith('scenario'):
+                event_based.run(ebrisk, oq, rup0, self)
+            else:
+                self.run_ebrisk()
             if self.gmf_bytes == 0:
                 logging.error(
                     'No GMFs were generated, perhaps they were '
@@ -520,6 +523,31 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             assert self.parent_events == len(self.datastore['events'])
         return 1
 
+    def run_ebrisk(self):
+        oq = self.oqparam
+        allrups = self.datastore['ruptures'][:]
+        logging.info(f'Read {len(allrups):_d} ruptures')
+        if oq.mosaic_model and 'scenario' not in oq.calculation_mode:
+            allrups = allrups[event_based.in_mosaic(allrups)]
+        rup_id = os.environ.get('OQ_RUPTURE')
+        if rup_id is not None:
+            rup_id = numpy.uint64(rup_id.split(','))
+            allrups = allrups[numpy.isin(allrups['id'], rup_id)]
+
+        smap = parallel.Starmap(ebrisk)
+        self.save_tmp(smap.monitor)
+        self.datastore.swmr_on()
+        mags = numpy.round(allrups['mag'], 1)
+        cmakers = contexts.read_cmakers(self.datastore)
+        breakpoint()
+        for mag in F32(numpy.arange(3, 11, .1)):
+            ok = mags == mag
+            if ok.sum() == 0:  # no ruptures in this magnitude range
+                continue
+            smap.submit((allrups[ok], cmakers, self.sitecol.sids,
+                         self.sec_perils, self.datastore))
+        smap.reduce(self.agg_dicts)
+                     
     def log_info(self, eids):
         """
         Printing some information about the risk calculation

@@ -214,6 +214,7 @@ def get_proxies(filename, rup_array=slice(None), min_mag=0):
         rupgeoms = h5['rupgeoms']
         for rec in recs:
             proxy = rupture.RuptureProxy(rec)
+            breakpoint()
             if proxy['mag'] < min_mag:
                 # discard small magnitudes
                 continue
