@@ -877,8 +877,12 @@ def ensure_npy_serializable(df):
     for col in df.columns:
         if df[col].dtype != object and df[col].dtype.name != 'category':
             continue
-        df[col] = numpy.array(
-            [s.encode('utf-8') for s in decode(df[col].values)], dtype='S')
+        # Explicitly encode strings to UTF-8 bytes to handle non-ASCII
+        # characters (e.g., 'é', 'ñ') before casting to the fixed-width byte
+        # string type ('S')
+        df[col] = df[col].apply(
+            lambda x: x.encode('utf-8') if isinstance(x, str) else x
+        ).astype('S')
     return df
 
 

@@ -216,6 +216,11 @@ def export_exposure_by_lse(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname(dskey, '', 'csv')
     df = extract(dstore, f'exposure_by_lse?secondary_peril={secondary_peril}')
+    # Decode UTF-8 bytes back to standard strings for Pandas CSV export
+    for col in df.columns:
+        if df[col].dtype.kind == 'S' or df[col].dtype == object:
+            df[col] = df[col].apply(lambda x: x.decode('utf-8')
+                                    if isinstance(x, bytes) else x)
     writer.save(df, dest, df.columns, comment=dstore.metadata)
     return [dest]
 
