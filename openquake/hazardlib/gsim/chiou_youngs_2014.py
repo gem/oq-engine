@@ -498,22 +498,20 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
-def get_linear_site_term(region, C, ctx):
+def get_linear_site_term(region, C, vs30):
     """
     Returns the linear site scaling term
     """
-    if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
-        
-    return C["phi1"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+    coeff = C["phi1jp"] if region == "JPN" else C["phi1"]
+    return coeff * np.clip(np.log(vs30 / REF_VS), -np.inf, 0.0)
 
 
-def get_nonlinear_site_term(C, ctx, y_ref):
+def get_nonlinear_site_term(C, vs30, y_ref):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, REF_VS)
+    vs = np.clip(vs30, -np.inf, REF_VS)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
                                 np.exp(C["phi3"] * (REF_VS - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
@@ -608,10 +606,10 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
         f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
         # Get linear amplification term
-        f_lin = get_linear_site_term(region, C, ctx)
+        f_lin = get_linear_site_term(region, C, ctx.vs30)
 
         # Get nonlinear amplification term
-        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx.vs30, y_ref)
 
         # Add on the site amplification
         mean = ln_y_ref + f_lin + f_nl + f_z1pt0
@@ -621,9 +619,14 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
             conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     else:
-        # For EMME24 backbones the site term is applied inside the subclass
-        # compute, after the BB scale factor and distance correction
-        mean = ln_y_ref
+        # For EMME24 backbone apply CY14 native site term at vs30 of 800 m/s
+        # to shift the reference motion from CY14's native 1130 m/s down to
+        # the EMME24 reference of 800 m/s (the EMME24 site term itself is
+        # applied in the EMME24 subclass)
+        emme_vs30 = np.full_like(ctx.vs30, 800.)
+        f_lin = get_linear_site_term(region, C, emme_vs30)
+        f_nl, _ = get_nonlinear_site_term(C, emme_vs30, y_ref)
+        mean = ln_y_ref + f_lin + f_nl
 
         # Sigma components are determined within EMME backbone's compute method
         sig, tau, phi =\

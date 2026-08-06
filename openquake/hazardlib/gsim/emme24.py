@@ -199,8 +199,10 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # First get mean from CY14 (site term not applied
-        # in superclass for EMME24 backbone)
+        # First get mean from CY14 - the CY14 site term is first
+        # used to shift down from vs30 of 1130 m/s to the EMME24
+        # reference condition of 800 m/s, and then the EMME site
+        # term is applied post-backbone scaling
         super().compute(ctx, imts, mean, sig, tau, phi)
 
         # Now make adjustments per IMT
