@@ -343,7 +343,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = min(totw / (oq.concurrent_tasks or 1), 60_000_000)
+    maxw = min(totw / (oq.concurrent_tasks or 1), 5E7)
     logging.info(f'{round(maxw)=:_d}')
     return filrups, maxw, acc
 
@@ -352,11 +352,29 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     """
     :returns: (list of starmap arguments, oq_by dictionary)
     """
-    trts = {}
-    for model, full_lt in get_model_lts(dstore):
-        trts[model] = full_lt.trts
+    trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, sitecol, trts, dstore)
+    cmakers_rups = read_cmakers_rups_by_model(oq, acc, dstore)
+    allargs = []
+    if dstore.parent and dstore.hdf5.mode != 'r':
+        dstore['filtered_ruptures'] = filrups
+        events = dstore['events'][:]
+        dstore['relevant_events'] = events[
+            numpy.isin(events['rup_id'], filrups['id'])]
+
+    for model, pairs in cmakers_rups.items():
+        for cmaker, rups in pairs:
+            for rupblock in block_splitter(rups, maxw/5, rup_weight):
+                allargs.append((rupblock, cmaker, model))
+
+    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
+    return allargs
+
+
+# tested in global_ses_test
+def read_cmakers_rups_by_model(oq, rup_acc, dstore):
+    trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
         if model == '???':
@@ -369,11 +387,6 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     # store the filtered ruptures for debugging purposes
     oq.mags_by_trt = AccumDict(accum=set())
     if dstore.parent and dstore.hdf5.mode != 'r':
-        dstore['filtered_ruptures'] = filrups
-        events = dstore['events'][:]
-        dstore['relevant_events'] = events[
-            numpy.isin(events['rup_id'], filrups['id'])]
-
         # populate oq_by when the parent is a SES.hdf5 file
         grp = dstore.parent['oqparam']
         if isinstance(grp, h5py.Group):
@@ -391,10 +404,8 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
     else:
         oq_by = {'???': oq}  # parent is not a SES.hdf5 file
 
-    # computing mags_by_trt, essential for oq-risk-tests:case_canada
-    # NB: must be done before instantiating the ContextMaker
-    allargs = []
-    for (model, trt_smr), rups in acc.items():
+    cmakers_rups = AccumDict(accum=[])
+    for (model, trt_smr), rups in rup_acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
             model = '???'
@@ -410,19 +421,14 @@ def get_allargs(oq, sitecol, sec_perils, dstore):
             oqparam = oq_by[model]  # early error in risk calculations
         oqparam.mags_by_trt[trt].update(
             magstr(mag) for mag in numpy.unique(numpy.round(rups['mag'], 2)))
-        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
-                              oqparam, extraparams=sitecol.array.dtype.names)
+        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr], oqparam)
+        # extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
-        logging.debug('%s: sending %d ruptures for trt_smr=%d',
-                      model, len(rups), trt_smr)
-        for rupblock in block_splitter(rups, maxw/5, rup_weight):
-            allargs.append((rupblock, cmaker, model))
-
-    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
+        cmakers_rups[model].append((cmaker, rups))
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
-    return allargs, oq_by
+    return cmakers_rups
 
 
 def _collect(allargs, maxw, sids, sec_perils, dstore):
@@ -519,8 +525,7 @@ def run(func, oq, rup0, calc):
                             station_data, station_sites)
             return
 
-    allargs, calc.oq_by = get_allargs(
-        oq, calc.sitecol, calc.sec_perils, dstore)
+    allargs = get_allargs(oq, calc.sitecol, calc.sec_perils, dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
