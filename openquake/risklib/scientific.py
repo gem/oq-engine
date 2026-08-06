@@ -161,8 +161,9 @@ class Sampler(object):
         return rng.beta(eids, means, covs)
 
     def samplePM(self, rng, df):
+        # in case_1g self.cols = [0, 1, 2, 3, 4, 5, 6], len(df)=4
         eids = df['eid'].to_numpy()
-        allprobs = df[self.cols].to_numpy()
+        allprobs = numpy.array([df[c] for c in self.cols]).T  # (4, 7)
         pmf = []
         for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
