@@ -854,9 +854,9 @@ class MultiEventRNG(object):
             try:
                 return corrcache[eid]
             except KeyError:
-                corrcache[eid] = eps = self.rng[eid].normal()
+                corrcache[eid] = eps = self.rng[eid].standard_normal()
                 return eps
-        return self.rng[eid].normal()
+        return self.rng[eid].standard_normal()
 
     def lognormal(self, eids, means, covs):
         """
