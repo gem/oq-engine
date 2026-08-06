@@ -507,6 +507,8 @@ def run(func, oq, rup0, calc):
     # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
     cmaker_rups = read_cmaker_rups(oq, acc, dstore)
+    p = sum(len(pairs) for pairs in cmaker_rups.values())
+    logging.info(f'There are {p:_d} pairs cmaker_rups')
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
