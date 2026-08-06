@@ -541,9 +541,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             acc[model, trt_smr] = allrups[ok]
         cmaker_rups = event_based.read_cmaker_rups(oq, acc, self.datastore)
 
-        smap = parallel.Starmap(ebrisk)
-        self.save_tmp(smap.monitor)
         self.datastore.swmr_on()
+        smap = parallel.Starmap(ebrisk, h5=self.datastore.hdf5)
+        self.save_tmp(smap.monitor)
         for model in cmaker_rups:
             cmakers, rupss = zip(*cmaker_rups[model])
             for mag in F32(numpy.arange(3, 11, .1)):
