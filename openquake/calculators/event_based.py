@@ -349,7 +349,7 @@ def _filter_rups(oq, sitecol, trts, dstore):
 
 
 # tested in global_ses_test
-def read_cmakers_rups(oq, rup_acc, dstore):
+def read_cmaker_rups(oq, rup_acc, dstore):
     """
     :returns: dictionary {model: [(cmaker, rups), ...]}
     """
@@ -383,7 +383,7 @@ def read_cmakers_rups(oq, rup_acc, dstore):
     else:
         oq_by = {'???': oq}  # parent is not a SES.hdf5 file
 
-    cmakers_rups = AccumDict(accum=[])
+    cmaker_rups = AccumDict(accum=[])
     for (model, trt_smr), rups in rup_acc.items():
         if list(trts) == ['???']:
             # regular case, full_lt is simple and associated to '???'
@@ -403,11 +403,11 @@ def read_cmakers_rups(oq, rup_acc, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr], oqparam)
         # extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
-        cmakers_rups[model].append((cmaker, rups))
+        cmaker_rups[model].append((cmaker, rups))
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
-    return cmakers_rups
+    return cmaker_rups
 
 
 def _collect(allargs, maxw, sids, sec_perils, dstore):
@@ -506,7 +506,7 @@ def run(func, oq, rup0, calc):
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
-    cmakers_rups = read_cmakers_rups(oq, acc, dstore)
+    cmaker_rups = read_cmaker_rups(oq, acc, dstore)
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
@@ -514,7 +514,7 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = []
-    for model, pairs in cmakers_rups.items():
+    for model, pairs in cmaker_rups.items():
         for cmaker, rups in pairs:
             for rupblock in block_splitter(rups, maxw/5, rup_weight):
                 allargs.append((rupblock, cmaker, model))
