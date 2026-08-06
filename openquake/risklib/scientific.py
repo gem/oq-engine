@@ -140,11 +140,11 @@ class Sampler(object):
         self.cols = cols  # for the PM distribution
 
     def get_losses(self, rng, dic, covs):
-        vals = dic['val']
         if not rng or not covs:  # fast lane
-            losses = vals * dic['mean']
+            losses = dic['val'] * dic['mean']
         else:  # slow lane
-            losses = vals * getattr(self, 'sample' + self.distname)(rng, dic)
+            sample = getattr(self, 'sample' + self.distname)
+            losses = dic['val'] * sample(rng, dic)
         return losses
 
     def sampleLN(self, rng, dic):
@@ -172,13 +172,15 @@ class Sampler(object):
                     seed=rng.master_seed + eid).rvs())
         return self.lratios[pmf]
 
-#
-# Input models
-#
+
 def join_dic(ratio_df, asset_df):
+    # in the common case df has columns eid mean cov aid val
     df = ratio_df.join(asset_df, how='inner')
     return {col: df[col].to_numpy() for col in df.columns}
 
+#
+# Input models
+#
 
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
