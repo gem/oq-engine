@@ -303,6 +303,10 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
+def rups_by_model_trt_smr(oq, filrups):
+    pass
+    
+
 def _filter_rups(oq, sitecol, trts, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
@@ -407,6 +411,8 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     for oqp in oq_by.values():
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
+    p = sum(len(pairs) for pairs in cmaker_rups.values())
+    logging.info(f'There are {p:_d} pairs cmaker_rups')
     return cmaker_rups
 
 
@@ -507,8 +513,6 @@ def run(func, oq, rup0, calc):
     # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
     cmaker_rups = read_cmaker_rups(oq, acc, dstore)
-    p = sum(len(pairs) for pairs in cmaker_rups.values())
-    logging.info(f'There are {p:_d} pairs cmaker_rups')
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]

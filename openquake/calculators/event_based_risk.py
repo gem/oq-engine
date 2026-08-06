@@ -25,7 +25,7 @@ import pandas
 from scipy import sparse
 
 from openquake.baselib import hdf5, parallel, performance, general, config
-from openquake.hazardlib import contexts, stats, InvalidFile
+from openquake.hazardlib import stats, InvalidFile
 from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -534,18 +534,28 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             rup_id = numpy.uint64(rup_id.split(','))
             allrups = allrups[numpy.isin(allrups['id'], rup_id)]
 
+        acc = {}
+        pairs = numpy.unique(allrups[['model', 'trt_smr']])
+        for model, trt_smr in pairs:
+            ok = (allrups['model'] == model) & (allrups['trt_smr'] == trt_smr)
+            acc[model, trt_smr] = allrups[ok]
+        cmaker_rups = event_based.read_cmaker_rups(oq, acc, self.datastore)
+
         smap = parallel.Starmap(ebrisk)
         self.save_tmp(smap.monitor)
         self.datastore.swmr_on()
-        mags = numpy.round(allrups['mag'], 1)
-        cmakers = contexts.read_cmakers(self.datastore)
-        breakpoint()
-        for mag in F32(numpy.arange(3, 11, .1)):
-            ok = mags == mag
-            if ok.sum() == 0:  # no ruptures in this magnitude range
-                continue
-            smap.submit((allrups[ok], cmakers, self.sitecol.sids,
-                         self.sec_perils, self.datastore))
+        for model in cmaker_rups:
+            cmakers, rupss = zip(*cmaker_rups[model])
+            for mag in F32(numpy.arange(3, 11, .1)):
+                c, r = [], []
+                for cm, rups in zip(cmakers, rupss):
+                    ok = numpy.round(rups['mag'], 1) == mag
+                    if ok.any():
+                        c.append(cm)
+                        r.append(rups[ok])
+                if c:
+                    smap.submit((r, c, self.sitecol.sids,
+                                 self.sec_perils, self.datastore))
         smap.reduce(self.agg_dicts)
                      
     def log_info(self, eids):
