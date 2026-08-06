@@ -348,32 +348,11 @@ def _filter_rups(oq, sitecol, trts, dstore):
     return filrups, maxw, acc
 
 
-def get_allargs(oq, sitecol, sec_perils, dstore):
-    """
-    :returns: (list of starmap arguments, oq_by dictionary)
-    """
-    trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
-    # NB: _filter_rups calls close_ruptures which can raise an error
-    filrups, maxw, acc = _filter_rups(oq, sitecol, trts, dstore)
-    cmakers_rups = read_cmakers_rups_by_model(oq, acc, dstore)
-    allargs = []
-    if dstore.parent and dstore.hdf5.mode != 'r':
-        dstore['filtered_ruptures'] = filrups
-        events = dstore['events'][:]
-        dstore['relevant_events'] = events[
-            numpy.isin(events['rup_id'], filrups['id'])]
-
-    for model, pairs in cmakers_rups.items():
-        for cmaker, rups in pairs:
-            for rupblock in block_splitter(rups, maxw/5, rup_weight):
-                allargs.append((rupblock, cmaker, model))
-
-    allargs = _collect(allargs, maxw*2, sitecol.sids, sec_perils, dstore)
-    return allargs
-
-
 # tested in global_ses_test
-def read_cmakers_rups_by_model(oq, rup_acc, dstore):
+def read_cmakers_rups(oq, rup_acc, dstore):
+    """
+    :returns: dictionary {model: [(cmaker, rups), ...]}
+    """
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
@@ -501,7 +480,6 @@ def run(func, oq, rup0, calc):
     """
     dstore = calc.datastore
     model = rup0['model'].decode('ascii')
-    _model, full_lt = base.get_model_lts(dstore, model)[0]
     if "station_data" in oq.inputs:        
         # assume scenario with a single true rupture
         assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
@@ -510,7 +488,7 @@ def run(func, oq, rup0, calc):
         if parallel.oq_distribute() in ('zmq', 'slurm'):
             logging.error('Conditioned scenarios are not meant to be run'
                           ' on a cluster')
-        dstore = calc.datastore
+        _model, full_lt = base.get_model_lts(dstore, model)[0]
         trt = full_lt.trts[0]
         proxy = RuptureProxy(rup0)
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
@@ -525,8 +503,25 @@ def run(func, oq, rup0, calc):
                             station_data, station_sites)
             return
 
-    allargs = get_allargs(oq, calc.sitecol, calc.sec_perils, dstore)
+    trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
+    # NB: _filter_rups calls close_ruptures which can raise an error
+    filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
+    cmakers_rups = read_cmakers_rups(oq, acc, dstore)
+    if dstore.parent and dstore.hdf5.mode != 'r':
+        dstore['filtered_ruptures'] = filrups
+        events = dstore['events'][:]
+        dstore['relevant_events'] = events[
+            numpy.isin(events['rup_id'], filrups['id'])]
+
+    allargs = []
+    for model, pairs in cmakers_rups.items():
+        for cmaker, rups in pairs:
+            for rupblock in block_splitter(rups, maxw/5, rup_weight):
+                allargs.append((rupblock, cmaker, model))
+    allargs = _collect(allargs, maxw*2, calc.sitecol.sids, calc.sec_perils,
+                       dstore)
     assert len(allargs) < TWO16, len(allargs)
+
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
