@@ -618,7 +618,8 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
         [fname] = out['event_based_mfd', 'csv']
-        self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/event_based_mfd.csv', fname,
+                              delta=1E-6)
 
     def test_30(self):
         # build the ruptures, then the GMFs
