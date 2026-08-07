@@ -548,14 +548,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         for model in cmaker_rups:
             cmakers, rupss = zip(*cmaker_rups[model])
             for ch in range(nchunks):
-                c, r = [], []
+                cs, rs = [], []
                 for cm, rups in zip(cmakers, rupss):
-                    ok = rups[ch::nchunks]
-                    if len(ok):
-                        c.append(cm)
-                        r.append(ok)
-                if c:
-                    smap.submit((r, c, self.sitecol.sids,
+                    chrups = rups[ch::nchunks]
+                    if len(chrups):
+                        cs.append(cm)
+                        rs.append(chrups)
+                if cs:
+                    smap.submit((rs, cs, self.sitecol.sids,
                                  self.sec_perils, self.datastore))
         smap.reduce(self.agg_dicts)
                      
