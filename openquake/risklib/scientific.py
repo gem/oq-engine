@@ -173,8 +173,38 @@ class Sampler(object):
         return self.lratios[pmf]
 
 
+class Joiner:
+    def __init__(self, adf, bdf):
+        self.adf = adf
+        self.bdf = bdf
+        a_idxs, a_counts = numpy.unique(adf.index, return_counts=1)
+        b_idxs, b_counts = numpy.unique(bdf.index, return_counts=1)
+        self.c_idxs, ia, ib = numpy.intersect1d(
+            a_idxs, b_idxs, assume_unique=1, return_indices=True)
+        self.a_counts = a_counts[ia]
+        self.b_counts = b_counts[ib]
+        self.n = self.a_counts @ self.b_counts
+
+    def __getitem__(self, field):
+        if field in self.adf.columns:
+            dt = self.adf.dtypes[field]
+            out = []
+            for idx, counts in zip(self.c_idxs, self.b_counts):
+                a = self.adf[field].loc[idx]
+                out.append(numpy.repeat(a, counts))
+            return numpy.concatenate(out, dtype=dt)
+        else:  # assume field is in the bdf columns
+            dt = self.bdf.dtypes[field]
+            out = []
+            for idx, counts in zip(self.c_idxs, self.a_counts):
+                b = self.bdf[field].loc[idx]
+                out.append(numpy.tile(b, counts))
+            return numpy.concatenate(out, dtype=dt)
+
+
 def join_dic(ratio_df, asset_df):
     # in the common case df has columns eid mean cov aid val
+    return Joiner(ratio_df, asset_df)
     df = ratio_df.join(asset_df, how='inner')
     return {col: df[col].to_numpy() for col in df.columns}
 
