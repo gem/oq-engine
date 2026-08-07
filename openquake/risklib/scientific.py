@@ -183,10 +183,11 @@ class Joiner:
         self.bdf = bdf
         a_idxs, a_counts = numpy.unique(adf.index, return_counts=1)
         b_idxs, b_counts = numpy.unique(bdf.index, return_counts=1)
-        self.c_idxs, ia, ib = numpy.intersect1d(
+        c_idxs, ia, ib = numpy.intersect1d(
             a_idxs, b_idxs, assume_unique=1, return_indices=True)
-        self.a_counts = a_counts[ia]
-        self.b_counts = b_counts[ib]
+        self.a_counts = a_counts[ia].astype(U32)
+        self.b_counts = b_counts[ib].astype(U32)
+        self.c_idxs = c_idxs.astype(U32)
         self.n = self.a_counts @ self.b_counts
 
     def __getitem__(self, field):
