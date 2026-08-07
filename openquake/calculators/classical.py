@@ -641,13 +641,42 @@ class ClassicalCalculator(base.HazardCalculator):
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
         if OQ_TASK_NO:
             allargs = [allargs[int(OQ_TASK_NO)]]
-        if self.few_sites or oq.disagg_by_src:
-            smap = parallel.Starmap(
-                classical_disagg, allargs, h5=self.datastore.hdf5)
+        task_func = (classical_disagg if (self.few_sites or oq.disagg_by_src)
+                     else classical)
+        if oq.sequential_source_models and not OQ_TASK_NO:
+            acc = self._run_sequential_source_models(allargs, task_func)
         else:
-            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
+            smap = parallel.Starmap(
+                task_func, allargs, h5=self.datastore.hdf5)
+            acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
+
+    def _run_sequential_source_models(self, allargs, task_func):
+        """
+        Run one Starmap per sourceModel branch sequentially, so that
+        only a single source model's tasks are running at one time.
+        """
+        # Map each src_group id to its sourceModel branch_id
+        smb_of_grp = {
+            gid: smb
+            for smb, gids in self.csm.grp_ids_by_source_model().items()
+            for gid in gids}
+
+        # Partition the task-arg tuples by sourceModel branch
+        partitions = AccumDict(accum=[])
+        for args in allargs:
+            # Strip any tile suffix ("5-2" -> 5) to recover grp_id
+            gid = int(args[0][0].split('-')[0])
+            partitions[smb_of_grp[gid]].append(args)
+
+        # Run one source modl at a time
+        acc = AccumDict(accum=0.)
+        for smb, part in sorted(partitions.items()):
+            logging.info('Source model %r: %d tasks', smb, len(part))
+            smap = parallel.Starmap(task_func, part, h5=self.datastore.hdf5)
+            acc = smap.reduce(self.agg_dicts, acc)
+
+        return acc
 
     def _post_execute(self, acc):
         # save the rates and performs some checks

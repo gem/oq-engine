@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import copy
 import unittest
 from io import BytesIO
 
@@ -29,7 +30,10 @@ from openquake.hazardlib import (
     site, geo, mfd, pmf, scalerel, valid, tests as htests)
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.lt import Realization
 from openquake.hazardlib.logictree import FullLogicTree
+from openquake.hazardlib.source_group import CompositeSourceModel, SourceGroup
+from openquake.hazardlib.source_reader import sampling_dt
 from openquake.hazardlib import nrml
 from openquake.commonlib import tests, readinput
 
@@ -751,3 +755,93 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
 
     def tearDown(self):
         Starmap.shutdown()
+
+
+class SequentialSourcesTestCase(unittest.TestCase):
+    """
+    Tests for the sequential_source_models dispatch including the
+    grp_ids_by_source_model method, which is used to partition
+    src_groups by top-level sourceModel branch.
+    """
+    @classmethod
+    def setUpClass(cls):
+        # Load a real source, and once per-test have
+        # their sampling param set to control trt_smrs
+        conv = s.SourceConverter(investigation_time=50.,
+                                 rupture_mesh_spacing=1,
+                                 complex_fault_mesh_spacing=1,
+                                 width_of_mfd_bin=1.,
+                                 area_source_discretization=1.)
+        [point_grp, *_] = nrml.to_python(MIXED_SRC_MODEL, conv)
+        cls.template_src = point_grp[0]
+
+    def _build_csm(self, sm_branch_ids, smrs_per_group):
+        # sm_branch_ids[i] is the top-level branch_id of smr i;
+        # smrs_per_group[j] lists the smrs of the j-th src_group
+
+        # One Realization per smr - lt_path[0] is the top-level branch
+        sm_rlzs = [Realization(bid, 1., i, (bid,))
+                   for i, bid in enumerate(sm_branch_ids)]
+        full_lt = object.__new__(FullLogicTree)
+        full_lt.sm_rlzs = sm_rlzs
+
+        # One SourceGroup per entry - sampling drives trt_smrs
+        src_groups = []
+        for smrs in smrs_per_group:
+            src = copy.copy(self.template_src)
+            # Pack given smrs into the sampling array
+            src.sampling = numpy.array(
+                [(smr, 1) for smr in smrs], sampling_dt)
+            # Empty SourceGroup
+            sg = SourceGroup(self.template_src.tectonic_region_type)
+            # Store sources
+            sg.sources = [src]
+            src_groups.append(sg)
+
+        # Make the CSM
+        csm = object.__new__(CompositeSourceModel)
+        csm.full_lt = full_lt
+        csm.src_groups = src_groups
+
+        return csm
+
+    def test_grp_ids_by_source_model_disjoint(self):
+        # Two src_groups, each belonging to a distinct top-level
+        # source model, group cleanly by branch_id
+        csm = self._build_csm(sm_branch_ids=['sm_a', 'sm_b'],
+                              smrs_per_group=[[0], [1]])
+        self.assertEqual(csm.grp_ids_by_source_model(),
+                         {'sm_a': [0], 'sm_b': [1]})
+
+    def test_grp_ids_by_source_model_shared_raises(self):
+        # A src_group whose trt_smrs point at smrs from more than
+        # one top-level sourceModel branch must raise an error
+        csm = self._build_csm(sm_branch_ids=['sm_a', 'sm_b'],
+                              smrs_per_group=[[0, 1]])
+        with self.assertRaises(ValueError) as cm:
+            csm.grp_ids_by_source_model()
+        msg = str(cm.exception)
+        self.assertIn('spans multiple source models', msg)
+        self.assertIn('sm_a', msg)
+        self.assertIn('sm_b', msg)
+
+    def test_iter_source_model_batches(self):
+        # Three top-level source models with 4, 2, 5 src_groups
+        # respectively; batches must partition src_groups cleanly and
+        # be yielded in sorted sm_branch_id order
+        csm = self._build_csm(
+            sm_branch_ids=['smA', 'smB', 'smC'],
+            smrs_per_group=[[0]]*4 + [[1]]*2 + [[2]]*5)
+        batches = list(csm.iter_source_model_batches())
+
+        self.assertEqual(len(batches), 3)
+        self.assertEqual([b[0] for b in batches], [0, 1, 2])
+        self.assertEqual([b[1] for b in batches], ['smA', 'smB', 'smC'])
+        self.assertEqual([len(b[2]) for b in batches], [4, 2, 5])
+        self.assertEqual([len(b[3]) for b in batches], [4, 2, 5])
+        # Union of per-batch src_groups recontructs the full list
+        union = []
+        for _, _, sgs, _ in batches:
+            union.extend(sgs)
+        self.assertEqual({id(sg) for sg in union},
+                         {id(sg) for sg in csm.src_groups})

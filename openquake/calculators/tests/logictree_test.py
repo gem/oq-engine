@@ -32,10 +32,10 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
-    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
-    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_80, case_83, case_84)
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    case_25, case_28, case_29, case_30, case_31, case_32, case_33, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -500,6 +500,31 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
         ns = len(self.calc.datastore['source_info'])
         assert ns == 26
+
+    def test_case_24(self):
+        # Parity check: with sequential_source_models=true the hazard
+        # statistics (mean and quantiles) must match the regular
+        # (all-in-one Starmap) approach for both full enumeration and
+        # sampling. A small tolerance is used because task reduction
+        # order can differ across runs
+
+        # Full enumeration
+        self.run_calc(case_24.__file__, 'job.ini',
+                      sequential_source_models='true')
+        seq_full = self.calc.datastore['hcurves-stats'][:]
+        self.run_calc(case_24.__file__, 'job.ini')
+        reg_full = self.calc.datastore['hcurves-stats'][:]
+        aac(seq_full, reg_full, atol=1e-6, rtol=1e-6)
+
+        # Sampling
+        self.run_calc(case_24.__file__, 'job.ini',
+                      sequential_source_models='true',
+                      number_of_logic_tree_samples='10')
+        seq_sampled = self.calc.datastore['hcurves-stats'][:]
+        self.run_calc(case_24.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        reg_sampled = self.calc.datastore['hcurves-stats'][:]
+        aac(seq_sampled, reg_sampled, atol=1e-6, rtol=1e-6)
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
