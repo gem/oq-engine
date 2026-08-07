@@ -174,6 +174,10 @@ class Sampler(object):
 
 
 class Joiner:
+    """
+    A dict-like object corresponding to a pandas join but implemented
+    in numpy and using less memory.
+    """
     def __init__(self, adf, bdf):
         self.adf = adf
         self.bdf = bdf
@@ -186,27 +190,21 @@ class Joiner:
         self.n = self.a_counts @ self.b_counts
 
     def __getitem__(self, field):
+        s = 0
         if field in self.adf.columns:
-            dt = self.adf.dtypes[field]
-            out = []
+            out = numpy.empty(self.n, self.adf.dtypes[field])
             for idx, counts in zip(self.c_idxs, self.b_counts):
-                a = self.adf[field].loc[idx]
-                out.append(numpy.repeat(a, counts))
-            return numpy.concatenate(out, dtype=dt)
+                arr = numpy.repeat(self.adf[field].loc[idx], counts)
+                out[s: s + len(arr)] = arr
+                s += len(arr)
+            return out
         else:  # assume field is in the bdf columns
-            dt = self.bdf.dtypes[field]
-            out = []
+            out = numpy.empty(self.n, self.bdf.dtypes[field])
             for idx, counts in zip(self.c_idxs, self.a_counts):
-                b = self.bdf[field].loc[idx]
-                out.append(numpy.tile(b, counts))
-            return numpy.concatenate(out, dtype=dt)
-
-
-def join_dic(ratio_df, asset_df):
-    # in the common case df has columns eid mean cov aid val
-    return Joiner(ratio_df, asset_df)
-    df = ratio_df.join(asset_df, how='inner')
-    return {col: df[col].to_numpy() for col in df.columns}
+                arr = numpy.tile(self.bdf[field].loc[idx], counts)
+                out[s: s + len(arr)] = arr
+                s += len(arr)
+            return out
 
 #
 # Input models
@@ -350,7 +348,7 @@ class VulnerabilityFunction(object):
             # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         # dataset with fields eid, mean, cov and key sid
-        dic = join_dic(ratio_df, asset_df)
+        dic = Joiner(ratio_df, asset_df)
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = self.sampler.get_losses(rng, dic, covs)
