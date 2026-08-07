@@ -544,18 +544,17 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(ebrisk, h5=self.datastore.hdf5)
         self.save_tmp(smap.monitor)
+        blocksize = len(allrups) // (oq.concurrent_tasks or 1)
         for model in cmaker_rups:
             cmakers, rupss = zip(*cmaker_rups[model])
-            for mag in F32(numpy.arange(3, 11, .1)):
-                c, r = [], []
-                for cm, rups in zip(cmakers, rupss):
-                    ok = numpy.round(rups['mag'], 1) == mag
-                    if ok.any():
-                        c.append(cm)
-                        r.append(rups[ok])
-                if c:
-                    smap.submit((r, c, self.sitecol.sids,
-                                 self.sec_perils, self.datastore))
+            c, r = [], []
+            for cm, rups in zip(cmakers, rupss):
+                for block in general.block_splitter(rups, blocksize):
+                    c.append(cm)
+                    r.append(block)
+            if c:
+                smap.submit((r, c, self.sitecol.sids,
+                             self.sec_perils, self.datastore))
         smap.reduce(self.agg_dicts)
                      
     def log_info(self, eids):
