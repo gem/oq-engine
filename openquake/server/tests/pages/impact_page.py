@@ -125,12 +125,13 @@ class ImpactPageLevel2(ImpactPage):
     def retrieve_stations_from_usgs(self, expect_no_seismic_stations=False):
         get_stations_btn = self.page.get_by_role("button",
                                                  name="Retrieve from the USGS")
-        expect(get_stations_btn).to_be_visible()
-        get_stations_btn.click()
+        expect(get_stations_btn).to_be_visible(timeout=15_000)
+        get_stations_btn.click(timeout=15_000)
         station_data_loaded = self.page.locator(
             'input#station_data_file_loaded')
         if expect_no_seismic_stations:
-            self.page.get_by_role("button", name="Close").click()
+            self.page.get_by_role("button", name="Close").click(
+                timeout=15_000)
             expect(station_data_loaded).to_have_value(
                 'N.A. (conversion issue)', timeout=30_000)
         else:
