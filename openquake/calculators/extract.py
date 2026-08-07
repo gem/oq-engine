@@ -1322,12 +1322,21 @@ def extract_avg_gmf(dstore, what):
     [imt] = qdict['imt']
     imti = info['imt'][imt]
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    if 'station_data' in dstore:
-        # discard the stations from the avg_gmf plot
-        stations = dstore['station_data/site_id'][:]
-        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
+
+    # Check if filtering zero values is disabled via 'filter=0'
+    filter_zeros = int(qdict.get('filter_zeros', [1])[0]) != 0
+
+    if filter_zeros:
+        if 'station_data' in dstore:
+            # discard the stations from the avg_gmf plot
+            stations = dstore['station_data/site_id'][:]
+            ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
+        else:
+            ok = avg_gmf > 0
     else:
-        ok = avg_gmf > 0
+        # Keep all sites (length = N) for CSV exports
+        ok = slice(None)
+
     if 'custom_site_id' in sitecol.array.dtype.names:
         yield 'custom_site_id', decode(sitecol.custom_site_id[ok])
     else:
