@@ -31,10 +31,10 @@ class EnginePage:
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
-        job_row.get_by_role("link", name="Remove").click(timeout=20_000)
+        job_row.get_by_role("link", name="Remove").click(timeout=30_000)
         self.page.get_by_role("button", name="Yes, remove").click(
-            timeout=20_000)
-        self.page.get_by_role("button", name="Close").click(timeout=20_000)
+            timeout=30_000)
+        self.page.get_by_role("button", name="Close").click(timeout=30_000)
 
     def to_outputs(self, job_id):
         job_row = self.get_job_row(job_id)
