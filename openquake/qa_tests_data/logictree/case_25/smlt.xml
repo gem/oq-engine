@@ -4,34 +4,34 @@
 
         <!-- Top-level sourceModel: 6 branches (3 alts x 2 kept SCM*SVA geoms). Weight per branch = W_alt x W_SCM x W_SVA. Downstream branchsets applyToBranches these ids to skip other alts chains -->
         <logicTreeBranchSet branchSetID="bs_sm" uncertaintyType="sourceModel">
-            <logicTreeBranch branchID="alt1_NVA">
-                <uncertaintyModel>ssm/alt1_NVA.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt1">
+                <uncertaintyModel>ssm/alt1.xml</uncertaintyModel>
                 <uncertaintyWeight>0.469000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt1_NVA_AB">
-                <uncertaintyModel>ssm/alt1_NVA-AB.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt1_AB">
+                <uncertaintyModel>ssm/alt1-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.231000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_NVA">
-                <uncertaintyModel>ssm/alt2_NVA.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt2">
+                <uncertaintyModel>ssm/alt2.xml</uncertaintyModel>
                 <uncertaintyWeight>0.067000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_NVA_AB">
-                <uncertaintyModel>ssm/alt2_NVA-AB.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt2_AB">
+                <uncertaintyModel>ssm/alt2-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.033000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_NVA">
-                <uncertaintyModel>ssm/alt3_NVA.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt3">
+                <uncertaintyModel>ssm/alt3.xml</uncertaintyModel>
                 <uncertaintyWeight>0.134000</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_NVA_AB">
-                <uncertaintyModel>ssm/alt3_NVA-AB.xml</uncertaintyModel>
+            <logicTreeBranch branchID="alt3_AB">
+                <uncertaintyModel>ssm/alt3-AB.xml</uncertaintyModel>
                 <uncertaintyWeight>0.066000</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 1 / NVA: recurSet (2) -> recurRow (2 per rset) -> LSD (2) -->
-        <logicTreeBranchSet applyToBranches="alt1_NVA" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rset_NVA" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt1" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rset" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt1_rs132">
                 <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -42,7 +42,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs132" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rrow_NVA_132" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt1_rs132" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rrow_132" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt1_rs132_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -53,7 +53,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs255" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rrow_NVA_255" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt1_rs255" applyToSources="alt1-NVA-bkg" branchSetID="alt1_rrow_255" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt1_rs255_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -64,19 +64,19 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs132_r00 alt1_rs132_r01 alt1_rs255_r00 alt1_rs255_r01" applyToSources="alt1-NVA-bkg" branchSetID="alt1_lsd_NVA" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt1_lsd15_NVA">
+        <logicTreeBranchSet applyToBranches="alt1_rs132_r00 alt1_rs132_r01 alt1_rs255_r00 alt1_rs255_r01" applyToSources="alt1-NVA-bkg" branchSetID="alt1_lsd" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt1_lsd15">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt1_lsd20_NVA">
+            <logicTreeBranch branchID="alt1_lsd20">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 1 / NVA-AB -->
-        <logicTreeBranchSet applyToBranches="alt1_NVA_AB" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rset_NVA-AB" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt1_AB" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rset-AB" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt1_rs154">
                 <uncertaintyModel><row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -87,7 +87,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs154" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rrow_NVA-AB_154" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt1_rs154" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rrow-AB_154" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt1_rs154_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -98,7 +98,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs155" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rrow_NVA-AB_155" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt1_rs155" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_rrow-AB_155" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt1_rs155_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -109,19 +109,19 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt1_rs154_r00 alt1_rs154_r01 alt1_rs155_r00 alt1_rs155_r01" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_lsd_NVA-AB" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt1_lsd15_NVA_AB">
+        <logicTreeBranchSet applyToBranches="alt1_rs154_r00 alt1_rs154_r01 alt1_rs155_r00 alt1_rs155_r01" applyToSources="alt1-NVA-AB-bkg" branchSetID="alt1_lsd-AB" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt1_lsd15_AB">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt1_lsd20_NVA_AB">
+            <logicTreeBranch branchID="alt1_lsd20_AB">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 2 / NVA: recurSet (2) -> rateSplit (3) -> recurRow (2) -> dip (2) -> LSD (2) -->
-        <logicTreeBranchSet applyToBranches="alt2_NVA" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rset_NVA" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt2" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rset" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt2_rs132">
                 <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -132,7 +132,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs132" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rspl_NVA_132" uncertaintyType="rateSplit">
+        <logicTreeBranchSet applyToBranches="alt2_rs132" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rspl_132" uncertaintyType="rateSplit">
             <logicTreeBranch branchID="alt2_rspl_rs132_scn1">
                 <uncertaintyModel><row bg_frac="0.05" fault_frac="0.95"/></uncertaintyModel>
                 <uncertaintyWeight>0.2</uncertaintyWeight>
@@ -147,7 +147,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs255" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rspl_NVA_255" uncertaintyType="rateSplit">
+        <logicTreeBranchSet applyToBranches="alt2_rs255" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rspl_255" uncertaintyType="rateSplit">
             <logicTreeBranch branchID="alt2_rspl_rs255_scn1">
                 <uncertaintyModel><row bg_frac="0.05" fault_frac="0.95"/></uncertaintyModel>
                 <uncertaintyWeight>0.2</uncertaintyWeight>
@@ -162,7 +162,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn1" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_132_scn1" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn1" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_132_scn1" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs132_scn1_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -173,7 +173,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn2" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_132_scn2" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn2" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_132_scn2" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs132_scn2_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -184,7 +184,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn3" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_132_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs132_scn3" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_132_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs132_scn3_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -195,7 +195,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn1" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_255_scn1" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn1" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_255_scn1" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs255_scn1_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -206,7 +206,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn2" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_255_scn2" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn2" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_255_scn2" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs255_scn2_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -217,7 +217,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn3" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_NVA_255_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs255_scn3" applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_rrow_255_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs255_scn3_r00">
                 <uncertaintyModel><row b_value="0.8" ref_mag="3.25" rate="0.371113"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801543401</uncertaintyWeight>
@@ -228,30 +228,30 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs132_scn1_r00 alt2_rs132_scn1_r01 alt2_rs132_scn2_r00 alt2_rs132_scn2_r01 alt2_rs132_scn3_r00 alt2_rs132_scn3_r01 alt2_rs255_scn1_r00 alt2_rs255_scn1_r01 alt2_rs255_scn2_r00 alt2_rs255_scn2_r01 alt2_rs255_scn3_r00 alt2_rs255_scn3_r01" applyToSources="alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_dip_NVA" uncertaintyType="simpleFaultDipAbsolute">
-            <logicTreeBranch branchID="alt2_dip45_NVA">
+        <logicTreeBranchSet applyToBranches="alt2_rs132_scn1_r00 alt2_rs132_scn1_r01 alt2_rs132_scn2_r00 alt2_rs132_scn2_r01 alt2_rs132_scn3_r00 alt2_rs132_scn3_r01 alt2_rs255_scn1_r00 alt2_rs255_scn1_r01 alt2_rs255_scn2_r00 alt2_rs255_scn2_r01 alt2_rs255_scn3_r00 alt2_rs255_scn3_r01" applyToSources="alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2 alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4" branchSetID="alt2_dip" uncertaintyType="simpleFaultDipAbsolute">
+            <logicTreeBranch branchID="alt2_dip45">
                 <uncertaintyModel>45.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_dip60_NVA">
+            <logicTreeBranch branchID="alt2_dip60">
                 <uncertaintyModel>60.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_dip45_NVA alt2_dip60_NVA" applyToSources="alt2-NVA-bkg" branchSetID="alt2_lsd_NVA" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt2_lsd15_NVA">
+        <logicTreeBranchSet applyToBranches="alt2_dip45 alt2_dip60" applyToSources="alt2-NVA-bkg" branchSetID="alt2_lsd" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt2_lsd15">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_lsd20_NVA">
+            <logicTreeBranch branchID="alt2_lsd20">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 2 / NVA-AB -->
-        <logicTreeBranchSet applyToBranches="alt2_NVA_AB" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rset_NVA-AB" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt2_AB" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rset-AB" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt2_rs154">
                 <uncertaintyModel><row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -262,7 +262,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs154" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rspl_NVA-AB_154" uncertaintyType="rateSplit">
+        <logicTreeBranchSet applyToBranches="alt2_rs154" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rspl-AB_154" uncertaintyType="rateSplit">
             <logicTreeBranch branchID="alt2_rspl_rs154_scn1">
                 <uncertaintyModel><row bg_frac="0.05" fault_frac="0.95"/></uncertaintyModel>
                 <uncertaintyWeight>0.2</uncertaintyWeight>
@@ -277,7 +277,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs155" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rspl_NVA-AB_155" uncertaintyType="rateSplit">
+        <logicTreeBranchSet applyToBranches="alt2_rs155" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rspl-AB_155" uncertaintyType="rateSplit">
             <logicTreeBranch branchID="alt2_rspl_rs155_scn1">
                 <uncertaintyModel><row bg_frac="0.05" fault_frac="0.95"/></uncertaintyModel>
                 <uncertaintyWeight>0.2</uncertaintyWeight>
@@ -292,7 +292,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn1" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_154_scn1" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn1" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_154_scn1" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs154_scn1_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -303,7 +303,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn2" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_154_scn2" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn2" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_154_scn2" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs154_scn2_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -314,7 +314,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn3" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_154_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs154_scn3" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_154_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs154_scn3_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -325,7 +325,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn1" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_155_scn1" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn1" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_155_scn1" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs155_scn1_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -336,7 +336,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn2" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_155_scn2" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn2" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_155_scn2" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs155_scn2_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -347,7 +347,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn3" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow_NVA-AB_155_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt2_rspl_rs155_scn3" applyToSources="alt2-NVA-AB-bkg alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_rrow-AB_155_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt2_rs155_scn3_r00">
                 <uncertaintyModel><row b_value="0.882" ref_mag="3.25" rate="0.233258"/></uncertaintyModel>
                 <uncertaintyWeight>0.5739190301</uncertaintyWeight>
@@ -358,30 +358,30 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_rs154_scn1_r00 alt2_rs154_scn1_r01 alt2_rs154_scn2_r00 alt2_rs154_scn2_r01 alt2_rs154_scn3_r00 alt2_rs154_scn3_r01 alt2_rs155_scn1_r00 alt2_rs155_scn1_r01 alt2_rs155_scn2_r00 alt2_rs155_scn2_r01 alt2_rs155_scn3_r00 alt2_rs155_scn3_r01" applyToSources="alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_dip_NVA-AB" uncertaintyType="simpleFaultDipAbsolute">
-            <logicTreeBranch branchID="alt2_dip45_NVA_AB">
+        <logicTreeBranchSet applyToBranches="alt2_rs154_scn1_r00 alt2_rs154_scn1_r01 alt2_rs154_scn2_r00 alt2_rs154_scn2_r01 alt2_rs154_scn3_r00 alt2_rs154_scn3_r01 alt2_rs155_scn1_r00 alt2_rs155_scn1_r01 alt2_rs155_scn2_r00 alt2_rs155_scn2_r01 alt2_rs155_scn3_r00 alt2_rs155_scn3_r01" applyToSources="alt2-NVA-AB-NVA-EF1 alt2-NVA-AB-NVA-EF2 alt2-NVA-AB-NVA-EF3 alt2-NVA-AB-NVA-EF4" branchSetID="alt2_dip-AB" uncertaintyType="simpleFaultDipAbsolute">
+            <logicTreeBranch branchID="alt2_dip45_AB">
                 <uncertaintyModel>45.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_dip60_NVA_AB">
+            <logicTreeBranch branchID="alt2_dip60_AB">
                 <uncertaintyModel>60.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt2_dip45_NVA_AB alt2_dip60_NVA_AB" applyToSources="alt2-NVA-AB-bkg" branchSetID="alt2_lsd_NVA-AB" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt2_lsd15_NVA_AB">
+        <logicTreeBranchSet applyToBranches="alt2_dip45_AB alt2_dip60_AB" applyToSources="alt2-NVA-AB-bkg" branchSetID="alt2_lsd-AB" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt2_lsd15_AB">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt2_lsd20_NVA_AB">
+            <logicTreeBranch branchID="alt2_lsd20_AB">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 3 / NVA: recurSet (2) -> recurRow (2 per rset) -> dip (2) -> LSD (2) -->
-        <logicTreeBranchSet applyToBranches="alt3_NVA" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rset_NVA" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt3" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rset" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt3_rs187_scn3">
                 <uncertaintyModel><row recur_model="TE" alt_bound="west" unc_bound="central" max_mag="6.8" scenario="3"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -392,7 +392,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs187_scn3" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rrow_NVA_187_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt3_rs187_scn3" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rrow_187_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt3_rs187_scn3_r00">
                 <uncertaintyModel><row bg_b_value="0.81" bg_ref_mag="3.25" bg_rate="0.364775" fault_b_value="0.3" fault_ref_mag="5.8" fault_rate="0.0066076897"/></uncertaintyModel>
                 <uncertaintyWeight>0.5800914075</uncertaintyWeight>
@@ -403,7 +403,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs2_scn3" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rrow_NVA_2_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt3_rs2_scn3" applyToSources="alt3-NVA-bkg alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_rrow_2_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt3_rs2_scn3_r00">
                 <uncertaintyModel><row bg_b_value="0.799" bg_ref_mag="3.25" bg_rate="0.365226" fault_b_value="0.3" fault_ref_mag="6.0" fault_rate="0.0048054103"/></uncertaintyModel>
                 <uncertaintyWeight>0.5801784026</uncertaintyWeight>
@@ -414,30 +414,30 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs187_scn3_r00 alt3_rs187_scn3_r01 alt3_rs2_scn3_r00 alt3_rs2_scn3_r01" applyToSources="alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_dip_NVA" uncertaintyType="simpleFaultDipAbsolute">
-            <logicTreeBranch branchID="alt3_dip45_NVA">
+        <logicTreeBranchSet applyToBranches="alt3_rs187_scn3_r00 alt3_rs187_scn3_r01 alt3_rs2_scn3_r00 alt3_rs2_scn3_r01" applyToSources="alt3-NVA-NVA-EF1 alt3-NVA-NVA-EF2 alt3-NVA-NVA-EF3 alt3-NVA-NVA-EF4" branchSetID="alt3_dip" uncertaintyType="simpleFaultDipAbsolute">
+            <logicTreeBranch branchID="alt3_dip45">
                 <uncertaintyModel>45.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_dip60_NVA">
+            <logicTreeBranch branchID="alt3_dip60">
                 <uncertaintyModel>60.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_dip45_NVA alt3_dip60_NVA" applyToSources="alt3-NVA-bkg" branchSetID="alt3_lsd_NVA" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt3_lsd15_NVA">
+        <logicTreeBranchSet applyToBranches="alt3_dip45 alt3_dip60" applyToSources="alt3-NVA-bkg" branchSetID="alt3_lsd" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt3_lsd15">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_lsd20_NVA">
+            <logicTreeBranch branchID="alt3_lsd20">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
         <!-- ALT 3 / NVA-AB -->
-        <logicTreeBranchSet applyToBranches="alt3_NVA_AB" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rset_NVA-AB" uncertaintyType="recurSet">
+        <logicTreeBranchSet applyToBranches="alt3_AB" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rset-AB" uncertaintyType="recurSet">
             <logicTreeBranch branchID="alt3_rs230_scn3">
                 <uncertaintyModel><row recur_model="TE" alt_bound="east" unc_bound="central" max_mag="6.8" scenario="3"/></uncertaintyModel>
                 <uncertaintyWeight>0.500000</uncertaintyWeight>
@@ -448,7 +448,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs230_scn3" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rrow_NVA-AB_230_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt3_rs230_scn3" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rrow-AB_230_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt3_rs230_scn3_r00">
                 <uncertaintyModel><row bg_b_value="0.894" bg_ref_mag="3.25" bg_rate="0.230119" fault_b_value="0.3" fault_ref_mag="5.8" fault_rate="0.0029008881"/></uncertaintyModel>
                 <uncertaintyWeight>0.5738551631</uncertaintyWeight>
@@ -459,7 +459,7 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs101_scn3" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rrow_NVA-AB_101_scn3" uncertaintyType="recurRow">
+        <logicTreeBranchSet applyToBranches="alt3_rs101_scn3" applyToSources="alt3-NVA-AB-bkg alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_rrow-AB_101_scn3" uncertaintyType="recurRow">
             <logicTreeBranch branchID="alt3_rs101_scn3_r00">
                 <uncertaintyModel><row bg_b_value="0.884" bg_ref_mag="3.25" bg_rate="0.23056" fault_b_value="0.3" fault_ref_mag="6.0" fault_rate="0.0020187936"/></uncertaintyModel>
                 <uncertaintyWeight>0.5738229900</uncertaintyWeight>
@@ -470,23 +470,23 @@
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_rs230_scn3_r00 alt3_rs230_scn3_r01 alt3_rs101_scn3_r00 alt3_rs101_scn3_r01" applyToSources="alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_dip_NVA-AB" uncertaintyType="simpleFaultDipAbsolute">
-            <logicTreeBranch branchID="alt3_dip45_NVA_AB">
+        <logicTreeBranchSet applyToBranches="alt3_rs230_scn3_r00 alt3_rs230_scn3_r01 alt3_rs101_scn3_r00 alt3_rs101_scn3_r01" applyToSources="alt3-NVA-AB-NVA-EF1 alt3-NVA-AB-NVA-EF2 alt3-NVA-AB-NVA-EF3 alt3-NVA-AB-NVA-EF4" branchSetID="alt3_dip-AB" uncertaintyType="simpleFaultDipAbsolute">
+            <logicTreeBranch branchID="alt3_dip45_AB">
                 <uncertaintyModel>45.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_dip60_NVA_AB">
+            <logicTreeBranch branchID="alt3_dip60_AB">
                 <uncertaintyModel>60.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
 
-        <logicTreeBranchSet applyToBranches="alt3_dip45_NVA_AB alt3_dip60_NVA_AB" applyToSources="alt3-NVA-AB-bkg" branchSetID="alt3_lsd_NVA-AB" uncertaintyType="setLowerSeismDepthAbsolute">
-            <logicTreeBranch branchID="alt3_lsd15_NVA_AB">
+        <logicTreeBranchSet applyToBranches="alt3_dip45_AB alt3_dip60_AB" applyToSources="alt3-NVA-AB-bkg" branchSetID="alt3_lsd-AB" uncertaintyType="setLowerSeismDepthAbsolute">
+            <logicTreeBranch branchID="alt3_lsd15_AB">
                 <uncertaintyModel>15.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
-            <logicTreeBranch branchID="alt3_lsd20_NVA_AB">
+            <logicTreeBranch branchID="alt3_lsd20_AB">
                 <uncertaintyModel>20.0</uncertaintyModel>
                 <uncertaintyWeight>0.5</uncertaintyWeight>
             </logicTreeBranch>
