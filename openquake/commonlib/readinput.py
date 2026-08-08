@@ -1061,6 +1061,20 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
+def get_all_sources(oqparam, dstore=None):
+    """
+    :returns: all sources without applying uncertainties (except extendModel)
+    NB: assume sources with equal IDs are equal
+    """
+    full_lt = get_full_lt(oqparam)
+    groups = source_reader.build_csm(full_lt, dstore, groups_only=True)
+    sources = {}
+    for grp in groups:
+        for src in grp:
+            sources[src.source_id] = src
+    return list(sources.values())
+
+
 def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -1074,7 +1088,7 @@ def get_composite_source_model(oqparam, dstore=None):
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
-    full_lt = get_full_lt(oqparam)  # builds the weights
+    full_lt = get_full_lt(oqparam)
     csm = source_reader.get_csm(oqparam, full_lt, dstore)
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)

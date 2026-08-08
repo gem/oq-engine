@@ -243,7 +243,7 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
-def get_csm(oq, full_lt, dstore=None):
+def get_csm(oq, full_lt, dstore=None, groups_only=False):
     """
     Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
@@ -305,18 +305,23 @@ def get_csm(oq, full_lt, dstore=None):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
-    return build_csm(oq, full_lt, smdict, dstore)
+    return build_csm(oq, full_lt, smdict, not groups_only, dstore)
 
 
-def build_csm(oq, full_lt, smdict, dstore):
+def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     """
-    Applies uncertainties, builds the source groups and returns
-    a CompositeSourceModel instance
+    Builds the source groups and returns a CompositeSourceModel instance
+    if apply_unc is True, else returns source groups only.
     """
     mon = performance.Monitor('_build_groups', measuremem=True)
     with mon:
-        groups = _build_groups(full_lt, smdict)  # fast
+        groups = []
+        for rlz in full_lt.sm_rlzs:
+            groups.extend(gen_groups(full_lt, smdict, rlz, apply_unc))
     logging.info(mon)
+
+    if not apply_unc:
+        return groups
 
     logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
@@ -473,61 +478,59 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def _build_groups(full_lt, smdict):
-    # build all the possible source groups from the full logic tree
+def gen_groups(full_lt, smdict, rlz, apply_unc):
+    # yield all the possible source groups from the given rlz
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
-    groups = []
-    print(full_lt.sources_by_trt_smrs())
-    breakpoint()
-    for rlz in full_lt.sm_rlzs:
-        if rlz.ordinal % 100 == 0:
-            logging.info('Building source groups for rlz'
-                         f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
-        src_groups, source_ids = _groups_ids(
-            smlt_dir, smdict, rlz.value[0].split())
-        bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
-        while (bset_values and
-               bset_values[0][0].uncertainty_type == 'extendModel'):
-            (_bset, value), *bset_values = bset_values
-            extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
-            common = source_ids & extra_ids
-            if common:
-                raise InvalidFile(
-                    '%s contains source(s) %s already present in %s' %
-                    (value, common, rlz.value))
-            src_groups.extend(extra)
-        for src_group in src_groups:
-            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
-            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
-            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
-            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
-            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
-            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            sg = apply_uncertainties(bset_values, src_group)
-            for src in sg:  # tested in case_83_eb
-                sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
-                if src.sampling is None:
-                    # the first time
-                    src.sampling = [sampl]
-                else:
-                    # if the same source belongs to multiple realizations
-                    src.sampling.append(sampl)
-            groups.append(sg)
+    src_groups, source_ids = _groups_ids(
+        smlt_dir, smdict, rlz.value[0].split())
+    bset_values = full_lt.source_model_lt.bset_values(rlz.lt_path)
+    if rlz.ordinal % 100 == 0:
+        logging.info('Building source groups for rlz'
+                     f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        (_bset, value), *bset_values = bset_values
+        extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
+        common = source_ids & extra_ids
+        if common:
+            raise InvalidFile(
+                '%s contains source(s) %s already present in %s' %
+                (value, common, rlz.value))
+        src_groups.extend(extra)
+    if apply_unc is False:
+        yield from src_groups
+        return
+    for src_group in src_groups:
+        trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
+        # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+        # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+        # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+        # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+        # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
+        sg = apply_uncertainties(bset_values, src_group)
+        for src in sg:  # tested in case_83_eb
+            sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
+            if src.sampling is None:
+                # the first time
+                src.sampling = [sampl]
+            else:
+                # if the same source belongs to multiple realizations
+                src.sampling.append(sampl)
+        yield sg
 
-        # check applyToSources
-        sm_branch = rlz.lt_path[0]
-        src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
-        for srcid in src_id:
-            if srcid not in source_ids:
-                if full_lt.source_model_lt.branchID:
-                    continue
-                raise ValueError(
-                    "The source %s is not in the source model,"
-                    " please fix applyToSources in %s or the "
-                    "source model(s) %s" % (srcid, smlt_file,
-                                            rlz.value[0].split()))
-    return groups
+    # check applyToSources
+    sm_branch = rlz.lt_path[0]
+    src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+    for srcid in src_id:
+        if srcid not in source_ids:
+            if full_lt.source_model_lt.branchID:
+                continue
+            raise ValueError(
+                "The source %s is not in the source model,"
+                " please fix applyToSources in %s or the "
+                "source model(s) %s" % (srcid, smlt_file,
+                                        rlz.value[0].split()))
 
 
 def reduce_sources(sources_with_same_id, full_lt, event_based):
