@@ -1488,8 +1488,8 @@ def import_ruptures_hdf5(h5, fnames):
             events['rup_id'] += offset
             if fileno == 0:  # first time
                 h5.create_dataset(
-                    'events', (0,), events.dtype, maxshape=(None,),
-                    chunks=True, compression='gzip')
+                    'events', (0,), events.dtype, maxshape=(None,), chunks=True,
+                    compression='gzip')
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
@@ -1614,6 +1614,7 @@ def _store_events(E, n, dstore):
         dstore['weights'] = numpy.ones(1)
     return events['id']
 
+    
 
 def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
                     N=None, E=None, R=None):
@@ -1797,7 +1798,9 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+        if oq.impact:
+            gmf_dict = {'kind': 'basic'}  # possibly add correlation
+        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatialcorr': oq.spatial_correlation,
