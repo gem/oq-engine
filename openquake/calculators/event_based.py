@@ -353,6 +353,7 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     """
     :returns: dictionary {model: [(cmaker, rups), ...]}
     """
+    siteparams = list(dstore.getitem('sitecol'))
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):
@@ -400,8 +401,9 @@ def read_cmaker_rups(oq, rup_acc, dstore):
             oqparam = oq_by[model]  # early error in risk calculations
         oqparam.mags_by_trt[trt].update(
             magstr(mag) for mag in numpy.unique(numpy.round(rups['mag'], 2)))
-        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr], oqparam)
-        # extraparams=sitecol.array.dtype.names)
+        cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr], oqparam,
+                              extraparams=siteparams)
+        # NB: extraparam are for secondary perils without minimum_distance
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         cmaker_rups[model].append((cmaker, rups))
     for oqp in oq_by.values():
