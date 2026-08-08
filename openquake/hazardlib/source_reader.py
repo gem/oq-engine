@@ -478,6 +478,8 @@ def _build_groups(full_lt, smdict):
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
     groups = []
+    print(full_lt.sources_by_trt_smrs())
+    breakpoint()
     for rlz in full_lt.sm_rlzs:
         if rlz.ordinal % 100 == 0:
             logging.info('Building source groups for rlz'
