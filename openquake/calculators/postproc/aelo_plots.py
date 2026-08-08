@@ -31,14 +31,6 @@ from PIL import Image
 ASCE_version = 'ASCE7-22'
 
 
-def import_plt():
-    if os.environ.get('TEXT'):
-        import plotext as plt
-    else:
-        import matplotlib.pyplot as plt
-    return plt
-
-
 def _convert_imt(imt):
     # Convert the imt string from USGS format, for instance SA1P1 -> SA(1.1)
     if imt == "PGA":
@@ -129,7 +121,7 @@ def plot_mean_hcurves_rtgm(dstore, sid=0, plot_mce=False, axes=None):
     :param axes: optional matplotlib axes to draw on
     :returns: figure of hazard curves
     """
-    plt = import_plt()
+    import matplotlib.pyplot as plt
 
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
@@ -212,7 +204,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     :param dstore: the datastore
     :returns: image of governing MCE
     """
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     MCE_calc = dstore.read_df('mce', sel=dict(sid=site_idx))
     imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
     imts_idxs = numpy.where(numpy.isin(list(dstore['oqparam'].imtls), imts))[0]
@@ -282,7 +274,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     :param dstore: the datastore
     :returns: image of MCE spectra
     """
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
     mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
@@ -351,7 +343,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     :param dstore: the datastore
     :returns: image of governing MCE (log-log plot)
     """
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     plt.subplots_adjust(bottom=0.1)
 
@@ -529,7 +521,7 @@ def plot_disagg_by_src(dstore, sid=0, axes=None):
     :param axes: list of 3 Axes (for PGA, SA(0.2), SA(1.0)), or None
     :returns: figure of disaggregation by source
     """
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     dinfo = get_info(dstore)
     imtls = dinfo['imtls']
     imts = list(imtls)
@@ -569,7 +561,7 @@ def plot_disagg_by_src(dstore, sid=0, axes=None):
 
 
 def plot_sites(dstore, update_dstore=False):
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     sites = dstore['sitecol']
     lons, lats = sites['lon'], sites['lat']
     fig, ax = plt.subplots(figsize=(10, 10))
