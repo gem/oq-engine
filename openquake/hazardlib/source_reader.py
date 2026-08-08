@@ -138,14 +138,6 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
-def _sample(srcs, sample, applied):
-    if not srcs:
-        return []
-    out = [src for src in srcs if src.source_id in applied]
-    rand = general.random_filter(srcs, sample)
-    return (out + rand) or [srcs[0]]
-
-
 def read_source_model(fname, branch, converter, applied, sample, monitor):
     """
     :param fname: path to a source model XML file
@@ -167,7 +159,12 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                     srcs.append(src)
                 else:
                     srcs.extend(calc.filters.split_source(src))
-            sg.sources = _sample(srcs, float(sample), applied)
+            if srcs:
+                kept = [src for src in srcs if src.source_id in applied]
+                rand = general.random_filter(srcs, float(sample))
+                sg.sources = (kept + rand) or [srcs[0]]
+            else:
+                sg.sources = []
     sm.rtime = time.time() - t0  # save the read time
     return {fname: sm}
 
@@ -235,11 +232,6 @@ def check_duplicates(smdict, strict):
             fnames.append(sm.fname)
         check_unique(srcids, 'in branch %s' % branch, strict=strict)
 
-    found = add_bangs(smdict)
-    if found:
-        logging.info('Found different sources with same ID %s',
-                     general.shortlist(found))
-
 
 def save_read_times(dstore, source_models):
     """
@@ -294,6 +286,10 @@ def get_csm(oq, full_lt, dstore=None):
     if dstore:
         save_read_times(dstore, smdict.values())
     check_duplicates(smdict, strict=oq.disagg_by_src)
+    found = add_bangs(smdict)
+    if found:
+        logging.info('Found different sources with same ID %s',
+                     general.shortlist(found))
 
     # checking ps_grid_spacing
     pointlike_sources = 0
@@ -366,7 +362,7 @@ def build_csm(oq, full_lt, smdict, dstore):
         smdict, csm.src_groups, dstore.tempname if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
-    if len(secparams):
+    if secparams is not None and len(secparams):
         logging.info('Spent %.1f seconds in fix_geometry_sections',
                      time.time()-t0)
     return csm
@@ -422,20 +418,6 @@ def add_bangs(smdict):
     return found
 
 
-def replace(lst, splitdic, key):
-    """
-    Replace a list of named elements with the split elements in splitdic
-    """
-    new = []
-    for el in lst:
-        tag = getattr(el, key)
-        if tag in splitdic:
-            new.extend(splitdic[tag])
-        else:
-            new.append(el)
-    lst[:] = new
-
-
 def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
                           split=True):
     """
@@ -470,9 +452,16 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
             split_dic, secparams = save_and_split(
                 mfsources, sections, hdf5path, site1, split=split)
             for sg in src_groups:
-                replace(sg.sources, split_dic, 'source_id')
+                new = []
+                for src in sg.sources:
+                    tag = src.source_id
+                    if tag in split_dic:
+                        new.extend(split_dic[tag])
+                    else:
+                        new.append(src)
+                sg.sources[:] = new
             return secparams
-    return ()
+    return None
 
 
 def _groups_ids(smlt_dir, smdict, fnames):
@@ -574,6 +563,26 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
+def _group_sources(trt, sources, full_lt, event_based):
+    """
+    Reduce identical sources, regroup by trt_smrs and TOM,
+    then return (source_groups, reduction_count).
+    """
+    key = operator.attrgetter('source_id', 'code')
+    lst = []
+    red = 0
+    for srcs in general.groupby(sources, key).values():
+        if len(srcs) > 1:
+            srcs = reduce_sources(srcs, full_lt, event_based)
+            red += 1
+        lst.extend(srcs)
+    src_groups = []
+    for sources in general.groupby(lst, trt_smrs).values():
+        for grp in split_by_tom(sources):
+            src_groups.append(sourceconverter.SourceGroup(trt, grp))
+    return src_groups, red
+
+
 def _build_csm(oq, full_lt, groups, event_based):
     acc = general.AccumDict(accum=[])
     atomic = []
@@ -585,11 +594,6 @@ def _build_csm(oq, full_lt, groups, event_based):
             if isinstance(src.sampling, list):
                 src.sampling = numpy.concatenate(
                     src.sampling, dtype=sampling_dt)
-            else:
-                # already concatenated at the previous iteration;
-                # happens for sources belonging to multiple groups,
-                # such as <AreaSource 002> in classical case_10
-                pass
         splitMF(grp.sources, oq.disagg_by_src)
         if grp and grp.atomic:
             atomic.append(grp)
@@ -603,19 +607,12 @@ def _build_csm(oq, full_lt, groups, event_based):
 
     # reduce identical sources by concatenating the sampling records,
     # then regroup by trt_smrs
-    key = operator.attrgetter('source_id', 'code')
     src_groups = []
     red_sources = 0
     for trt in acc:
-        lst = []
-        for srcs in general.groupby(acc[trt], key).values():
-            if len(srcs) > 1:  # reduce_sources is ultra-fast
-                srcs = reduce_sources(srcs, full_lt, event_based)
-                red_sources += 1
-            lst.extend(srcs)
-        for sources in general.groupby(lst, trt_smrs).values():
-            for grp in split_by_tom(sources):
-                src_groups.append(sourceconverter.SourceGroup(trt, grp))
+        grps, red = _group_sources(trt, acc[trt], full_lt, event_based)
+        src_groups.extend(grps)
+        red_sources += red
     src_groups.extend(atomic)
     logging.info('reduce_sources was called %d times', red_sources)
     add_semicolons(src_groups)
