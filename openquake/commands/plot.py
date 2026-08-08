@@ -426,6 +426,58 @@ def make_figure_event_based_mfd(extractors, what):
     return plt
 
 
+def _print_task_duration_histogram(task_name, durations):
+    durations = durations[numpy.isfinite(durations)]
+    if not len(durations):
+        print("Task duration histogram: %s\n  no finite durations" %
+              task_name)
+        return
+
+    count = len(durations)
+    mean = durations.mean()
+    median = numpy.median(durations)
+    std = durations.std(ddof=1) if count > 1 else 0.0
+    minimum, maximum = durations.min(), durations.max()
+    spread = maximum - minimum
+    bins = min(12, max(5, int(numpy.ceil(numpy.sqrt(count)))))
+    if spread:
+        counts, edges = numpy.histogram(durations, bins=bins)
+    else:
+        counts, edges = numpy.histogram(
+            durations, bins=bins, range=(minimum - 0.5, maximum + 0.5))
+
+    value_format = ".0f" if spread >= 10 else ".2f"
+    label_format = "%%%s" % (value_format,)
+    labels = [
+        (label_format % edges[index], label_format % edges[index + 1])
+        for index in range(len(counts))]
+    label_width = max(len(left) + len(right) + 3
+                      for left, right in labels)
+    bar_width = 42
+    max_count = max(counts.max(), 1)
+    title = "Task duration histogram: %s" % task_name
+    summary = ("%d tasks  mean %s s  median %s s  std %s s" % (
+        count, format(mean, value_format), format(median, value_format),
+        format(std, value_format)))
+
+    row_width = label_width + bar_width + 9
+    content_width = max(len(title), len(summary), row_width)
+    line = "+-%s-+" % ("-" * content_width)
+    print(line)
+    print("| %-*s |" % (content_width, title))
+    print(line)
+    print("| %-*s |" % (content_width, summary))
+    print(line)
+    for index, number in enumerate(counts):
+        bar_length = int(round(number / max_count * bar_width))
+        bar = "#" * bar_length
+        interval = "%s - %s" % labels[index]
+        row = "%*s | %-*s %5d" % (
+            label_width, interval, bar_width, bar, number)
+        print("| %-*s |" % (content_width, row))
+    print(line)
+
+
 def make_figure_task_info(extractors, what):
     """
     $ oq plot "task_info?kind=classical"
@@ -437,19 +489,7 @@ def make_figure_task_info(extractors, what):
     [(_task_name, task_info)] = dic.items()
     x = task_info['duration']
     if os.environ.get('TEXT'):
-        mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
-        # Manually generate ASCII histogram
-        counts, edges = numpy.histogram(x, bins=50)
-        max_count = max(counts.max(), 1)
-        width = 50  # character width for histogram bar
-        print("Task Duration Histogram "
-              f"({mean=:.1f}, {std=:.2f}, {med=:.1f})\n")
-        for i, count in enumerate(counts):
-            bar_len = int(count / max_count * width)
-            bar = '#' * bar_len
-            print("%8.0f | %s %d" % (edges[i], bar, count))
-        print("          |" + "_" * width)
-        print("          %d to %d seconds" % (edges[0], edges[-1]))
+        _print_task_duration_histogram(_task_name, x)
         return plt
     fig = plt.figure()
     ax = fig.add_subplot(2, 1, 1)
