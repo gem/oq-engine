@@ -1,3 +1,7 @@
+  [Lana Todorovic]
+  * Added support for tsunami as an independent peril in scenario damage 
+  calculations.
+
   [Christopher Brooks]
   * Fixed a bug in the USGS basin scaling of the CB14 GMM using the
     fix provided/reported by Mohsen Kohrangi. Existing unit test's

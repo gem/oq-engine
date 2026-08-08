@@ -1074,6 +1074,7 @@ class ContextMaker(object):
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
         if len(rups_sites) == 1 and not self.minimum_distance:
+            # fast lane for event based with no minimum_distance
             return ctxs
         return (self.recarray([c]) for c in ctxs)
 
