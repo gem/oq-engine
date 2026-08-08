@@ -46,6 +46,7 @@ from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
 from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
+from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
@@ -589,7 +590,7 @@ def read_gsim_lt(oq):
             elif oq.rupture_xml:
                 hypo = readinput.get_rupture(oq).hypocenter
                 lon, lat = [hypo.x, hypo.y]
-            mosaic_models = readinput.get_close_mosaic_models(lon, lat, 5)
+            mosaic_models = get_close_mosaic_models(lon, lat, 5)
             # NOTE: using the first mosaic model
             oq.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
