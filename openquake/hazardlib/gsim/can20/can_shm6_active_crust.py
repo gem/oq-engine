@@ -22,7 +22,6 @@ models for the 6th Generation Seismic Hazard Model of Canada. 12th Canadian
 Conference on Earthquake Engineering, Quebec City, Canada.
 
 """
-import types
 import numpy as np
 
 import openquake.hazardlib.gsim.boore_2014 as BA14
@@ -126,17 +125,9 @@ def shm6_site_correction(C, mean, ctx, imt):
 
     # Computing linear amplification factors for the default case (i.e. NOT
     # for Japan)
-    fake = types.SimpleNamespace()
-    fake.vs30 = np.array([760.])
-    cy14_760 = CY14.get_linear_site_term("", C, fake)
-
-    fake = types.SimpleNamespace()
-    fake.vs30 = np.array([1100.])
-    cy14_1100 = CY14.get_linear_site_term("", C, fake)
-
-    fake = types.SimpleNamespace()
-    fake.vs30 = np.array([2000.])
-    cy14_2000 = CY14.get_linear_site_term("", C, fake)
+    cy14_760 = CY14.get_linear_site_term("", C, np.array([760.]))
+    cy14_1100 = CY14.get_linear_site_term("", C, np.array([1100.]))
+    cy14_2000 = CY14.get_linear_site_term("", C, np.array([2000.]))
 
     # CY14 amplification factors relative to Vs30=760 to be consistent
     # with CanadaSHM6 hardrock site factor
@@ -163,10 +154,10 @@ def get_mean_stddevs_cy14(region, C, ctx, conf):
     f_z1pt0 = 0.0
 
     # Get linear amplification term
-    f_lin = CY14.get_linear_site_term(region, C, ctx)
+    f_lin = CY14.get_linear_site_term(region, C, ctx.vs30)
 
     # Get nonlinear amplification term
-    f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx.vs30, y_ref)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)

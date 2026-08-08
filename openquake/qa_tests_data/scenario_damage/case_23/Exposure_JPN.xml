@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+
+  <exposureModel category="buildings" id="exposure" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="USD"/>
+        <costType name="contents" type="aggregated" unit="USD"/>
+      </costTypes>
+    </conversions>
+
+  <exposureFields>
+    <field oq="id" input="ASSET_ID" />
+    <field oq="lon" input="LONGITUDE" />
+    <field oq="lat" input="LATITUDE" />
+    <field oq="taxonomy" input="TAXONOMY" />
+    <field oq="number" input="BUILDINGS"/>
+    <field oq="area" input="TOTAL_AREA_SQM" />
+    <field oq="structural" input="BLDG_REPL_COST_USD" />
+    <field oq="contents" input="CONTENTS_COST_USD"/>
+  </exposureFields>
+    <tagNames>ID_0 ID_2 NAME_0 NAME_2 MACRO_TAXONOMY</tagNames>
+    <assets>Exposure_JPN_RES.csv</assets>
+  </exposureModel>
+
+</nrml>

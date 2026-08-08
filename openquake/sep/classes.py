@@ -1021,6 +1021,48 @@ class Volcanic(SecondaryPeril):
         return []
 
 
+class Tsunami(SecondaryPeril):
+    """
+    Import FlowDepth, FlowVel, MomFlux from CSV files
+    """
+    peril = 'tsunami'
+    inputs = []
+    outputs = ["FlowDepth", "FlowVel", "MomFlux"]
+
+    def prepare(self, sites=None):
+        """
+        Import the CSV files for tsunami subperils.
+        """
+        if sites is None:
+            return
+        if 'multi_peril' not in self.oq.inputs:
+            return
+        for peril in self.oq.inputs['multi_peril']:
+            assert peril in self.outputs, peril
+        self.fname_by_peril = self.oq.inputs['multi_peril']
+        N = len(sites)
+        self.data = {'sid': sites.sids, 'eid': numpy.zeros(N, numpy.uint32)}
+        names = []
+        for name, fname in self.fname_by_peril.items():
+            fname = os.path.join(self.oq.base_path, fname)
+            tofloat = valid.positivefloat
+            with open(fname) as f:
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, sites)
+            else:
+                peril = csv2peril(fname, name, sites, tofloat,
+                                  self.oq.asset_hazard_distance)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            self.data[f'{self.__class__.__name__}_{name}'] = peril
+            names.append(name)
+
+    def compute(self, mag, imt_gmf, sites):
+        # doing nothing, since all the work is in the `prepare` method
+        return []
+
+
 LIQUEFACTION_MODELS = {cls.__name__ for cls in SecondaryPeril.__subclasses__()
                        if cls.peril == 'liquefaction'}
 LANDSLIDE_MODELS = {cls.__name__ for cls in SecondaryPeril.__subclasses__()
@@ -1034,6 +1076,8 @@ def corresponds(col, peril, imt):
     if not col.endswith(imt):
         return False
     if peril == 'groundshaking':
+        return True
+    if peril == 'tsunami':
         return True
     name, _ = col.split('_')
     if peril == 'liquefaction':

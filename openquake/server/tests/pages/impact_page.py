@@ -109,7 +109,8 @@ class ImpactPageLevel2(ImpactPage):
         )
 
     def confirm_relocated_hypocenter_warning(self):
-        expect(self.page.get_by_text("it was moved")).to_be_visible(timeout=15_000)
+        expect(self.page.get_by_text("it was moved")).to_be_visible(
+            timeout=15_000)
         modal = self.page.get_by_text("it was moved")
         self.page.get_by_role("button", name="Close").click()
         expect(modal).not_to_be_visible()
@@ -124,11 +125,14 @@ class ImpactPageLevel2(ImpactPage):
     def retrieve_stations_from_usgs(self, expect_no_seismic_stations=False):
         get_stations_btn = self.page.get_by_role("button",
                                                  name="Retrieve from the USGS")
-        expect(get_stations_btn).to_be_visible()
-        get_stations_btn.click()
-        station_data_loaded = self.page.locator('input#station_data_file_loaded')
+        expect(get_stations_btn).to_be_visible(timeout=15_000)
+        get_stations_btn.click(timeout=15_000)
+        station_data_loaded = self.page.locator(
+            'input#station_data_file_loaded')
         if expect_no_seismic_stations:
-            self.page.get_by_role("button", name="Close").click()
-            expect(station_data_loaded).to_have_value('N.A. (conversion issue)')
+            self.page.get_by_role("button", name="Close").click(
+                timeout=15_000)
+            expect(station_data_loaded).to_have_value(
+                'N.A. (conversion issue)', timeout=15_000)
         else:
-            expect(station_data_loaded).not_to_have_value('')
+            expect(station_data_loaded).not_to_have_value('', timeout=15_000)
