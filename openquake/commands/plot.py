@@ -429,13 +429,12 @@ def make_figure_event_based_mfd(extractors, what):
 def _print_task_duration_histogram(task_name, durations):
     durations = durations[numpy.isfinite(durations)]
     if not len(durations):
-        print("Task duration histogram: %s\n  no finite durations" %
-              task_name)
+        print(f"Task duration histogram: {task_name}\n"
+              "  no finite durations")
         return
 
     count = len(durations)
     mean = durations.mean()
-    median = numpy.median(durations)
     std = durations.std(ddof=1) if count > 1 else 0.0
     minimum, maximum = durations.min(), durations.max()
     spread = maximum - minimum
@@ -446,35 +445,29 @@ def _print_task_duration_histogram(task_name, durations):
         counts, edges = numpy.histogram(
             durations, bins=bins, range=(minimum - 0.5, maximum + 0.5))
 
-    value_format = ".0f" if spread >= 10 else ".2f"
-    label_format = "%%%s" % (value_format,)
-    labels = [
-        (label_format % edges[index], label_format % edges[index + 1])
-        for index in range(len(counts))]
-    label_width = max(len(left) + len(right) + 3
-                      for left, right in labels)
+    format = ".0f" if spread >= 10 else ".2f"
+    labels = [(f"{edges[index]:{format}}",
+               f"{edges[index + 1]:{format}}")
+              for index in range(len(counts))]
+    label_width = max(len(left) + len(right) + 3 for left, right in labels)
     bar_width = 42
     max_count = max(counts.max(), 1)
-    title = "Task duration histogram: %s" % task_name
-    summary = ("%d tasks  mean %s s  median %s s  std %s s" % (
-        count, format(mean, value_format), format(median, value_format),
-        format(std, value_format)))
+    summary = (f"{count} {task_name} tasks, mean={mean:{format}}s, "
+               f"std={std:{format}}s")
 
     row_width = label_width + bar_width + 9
-    content_width = max(len(title), len(summary), row_width)
-    line = "+-%s-+" % ("-" * content_width)
+    content_width = max(len(summary), row_width)
+    line = f"+-{'-' * content_width}-+"
     print(line)
-    print("| %-*s |" % (content_width, title))
-    print(line)
-    print("| %-*s |" % (content_width, summary))
+    print(f"| {summary:<{content_width}} |")
     print(line)
     for index, number in enumerate(counts):
         bar_length = int(round(number / max_count * bar_width))
         bar = "#" * bar_length
-        interval = "%s - %s" % labels[index]
-        row = "%*s | %-*s %5d" % (
-            label_width, interval, bar_width, bar, number)
-        print("| %-*s |" % (content_width, row))
+        left, right = labels[index]
+        interval = f"{left} - {right}"
+        row = f"{interval:>{label_width}} | {bar:<{bar_width}} {number:5d}"
+        print(f"| {row:<{content_width}} |")
     print(line)
 
 
