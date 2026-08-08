@@ -1076,9 +1076,10 @@ class FullLogicTree(object):
         :returns: trt_smrs -> source IDs
         """
         data = self.source_model_lt.source_data
+        bset_values = self.source_model_lt.root_branchset.get_bset_values
         acc = AccumDict(accum=set())
         for rlz in self.sm_rlzs:
-            for bset, values in self.source_model_lt.bset_values(rlz.lt_path):
+            for bset, values in bset_values(rlz.lt_path)[1:]:
                 ats = bset.filters.get('applyToSources')
                 for source_id, trt in zip(data['source'], data['trt']):
                     if ats is None or source_id in ats:

@@ -1061,18 +1061,14 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-def get_all_sources(oqparam, dstore=None):
+def get_src_groups(oqparam, dstore=None):
     """
     :returns: all sources without applying uncertainties (except extendModel)
     NB: assume sources with equal IDs are equal
     """
     full_lt = get_full_lt(oqparam)
-    groups = source_reader.build_csm(full_lt, dstore, groups_only=True)
-    sources = {}
-    for grp in groups:
-        for src in grp:
-            sources[src.source_id] = src
-    return list(sources.values())
+    groups = source_reader.get_csm(oqparam, full_lt, dstore, apply_unc=False)
+    return groups
 
 
 def get_composite_source_model(oqparam, dstore=None):

@@ -243,7 +243,7 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
-def get_csm(oq, full_lt, dstore=None, groups_only=False):
+def get_csm(oq, full_lt, dstore=None, apply_unc=True):
     """
     Build source models from the logic tree and store
     them inside the `source_full_lt` dataset.
@@ -305,7 +305,7 @@ def get_csm(oq, full_lt, dstore=None, groups_only=False):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
-    return build_csm(oq, full_lt, smdict, not groups_only, dstore)
+    return build_csm(oq, full_lt, smdict, apply_unc, dstore)
 
 
 def build_csm(oq, full_lt, smdict, apply_unc, dstore):
@@ -321,7 +321,22 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     logging.info(mon)
 
     if not apply_unc:
-        return groups
+        # assume equal ID means equal sources
+        dic = {}
+        for grp in groups:
+            for src in grp:
+                dic[src.source_id] = src
+        id_by = full_lt.sources_by_trt_smrs()
+        assert id_by
+        out = []
+        for trt_smrs, src_ids in id_by.items():
+            srcs = [dic[src_id] for src_id in src_ids]
+            for src in srcs:
+                src.trt_smr = trt_smrs
+            trt = srcs[0].tectonic_region_type
+            sg = sourceconverter.SourceGroup(trt, srcs)
+            out.append(sg)
+        return out
 
     logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
@@ -500,24 +515,24 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
         src_groups.extend(extra)
     if apply_unc is False:
         yield from src_groups
-        return
-    for src_group in src_groups:
-        trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
-        # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
-        # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
-        # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
-        # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
-        # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-        sg = apply_uncertainties(bset_values, src_group)
-        for src in sg:  # tested in case_83_eb
-            sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
-            if src.sampling is None:
-                # the first time
-                src.sampling = [sampl]
-            else:
-                # if the same source belongs to multiple realizations
-                src.sampling.append(sampl)
-        yield sg
+    else:
+        for src_group in src_groups:
+            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
+            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
+            sg = apply_uncertainties(bset_values, src_group)
+            for src in sg:  # tested in case_83_eb
+                sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
+                if src.sampling is None:
+                    # the first time
+                    src.sampling = [sampl]
+                else:
+                    # if the same source belongs to multiple realizations
+                    src.sampling.append(sampl)
+            yield sg
 
     # check applyToSources
     sm_branch = rlz.lt_path[0]
@@ -568,7 +583,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _group_sources(trt, sources, full_lt, event_based):
+def _group_sources(trt, sources, full_lt, event_based=False):
     """
     Reduce identical sources, regroup by trt_smrs and TOM,
     then return (source_groups, reduction_count).
