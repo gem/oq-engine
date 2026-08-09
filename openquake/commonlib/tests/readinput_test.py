@@ -467,10 +467,10 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             list(ssclt.source_model_lt.source_data[0]),
             ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
 
-    def test_get_src_groups(self):
+    def test_no_uncertainties(self):
         oq = readinput.get_oqparam('job.ini', case_25)
-        src_groups = readinput.get_src_groups(oq)
-        self.assertEqual(len(src_groups), 6)
+        csm = readinput.get_composite_source_model(oq, apply_unc=False)
+        self.assertEqual(len(csm.src_groups), 6)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

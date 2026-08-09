@@ -320,31 +320,41 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
             groups.extend(gen_groups(full_lt, smdict, rlz, apply_unc))
     logging.info(mon)
 
+    logging.info('Building CompositeSourceModel')
     if not apply_unc:
-        # assume equal ID means equal sources
+        # assume equal ID == equal sources
         dic = {}
         for grp in groups:
             for src in grp:
                 dic[src.source_id] = src
-        id_by = full_lt.sources_by_trt_smrs()
-        assert id_by
+        id_by_ts = full_lt.sources_by_trt_smrs()
+        assert id_by_ts
         out = []
-        for trt_smrs, src_ids in id_by.items():
+        for trt_smrs, src_ids in id_by_ts.items():
             srcs = [dic[src_id] for src_id in src_ids]
             for src in srcs:
                 src.trt_smr = trt_smrs
             trt = srcs[0].tectonic_region_type
             sg = sourceconverter.SourceGroup(trt, srcs)
             out.append(sg)
-        return out
+        csm = CompositeSourceModel(oq, full_lt, out)
+        store_data(oq, smdict, csm, dstore)
+        return csm
 
-    logging.info('Building CompositeSourceModel')
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     mon = performance.Monitor('_build_csm', measuremem=True)
     with mon:
         csm = _build_csm(oq, full_lt, groups, is_event_based)
     logging.info(mon)
+    store_data(oq, smdict, csm, dstore)
+    return csm
 
+
+def store_data(oq, smdict, csm, dstore):
+    """
+    Create src_mutex, grp_probability in calc_XXX.hdf5 and sources
+    and mf_sections in calc_XXX_tmp.hdf5
+    """
     out = []
     probs = []
     for sg in csm.src_groups:
@@ -385,7 +395,6 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     if secparams is not None and len(secparams):
         logging.info('Spent %.1f seconds in fix_geometry_sections',
                      time.time()-t0)
-    return csm
 
 
 # called by reduce_sources
