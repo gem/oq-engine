@@ -54,7 +54,7 @@ from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src,
     plot_governing_mce_asce_7_16, plot_mce_spectra,
-    plot_governing_mce, plot_sites, _find_fact_maxC, import_plt)
+    plot_governing_mce, plot_sites, _find_fact_maxC)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -918,7 +918,7 @@ def make_figure_sites(dstore, oq, locs, sitecol, notifications):
     assert n_sids == len(vs30s), (
         f'The number of sites ({n_sids}) must be equal to'
         f' the number of values of vs30 ({len(vs30s)})')
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     # Mean Hazard Curves (1 row, n_sids columns)
     mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
     sids_to_exclude = notifications['sid'][mask].tolist()
