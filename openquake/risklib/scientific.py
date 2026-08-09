@@ -45,7 +45,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
+PERILTYPE = numpy.array(
+    ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -190,22 +191,24 @@ class Joiner:
         self.c_idxs = c_idxs.astype(U32)
         self.n = self.a_counts @ self.b_counts
 
-    def __getitem__(self, field):
-        s = 0
-        if field in self.adf.columns:
-            out = numpy.empty(self.n, self.adf.dtypes[field])
-            for idx, counts in zip(self.c_idxs, self.b_counts):
-                arr = numpy.repeat(self.adf[field].loc[idx], counts)
-                out[s: s + len(arr)] = arr
-                s += len(arr)
-            return out
-        else:  # assume field is in the bdf columns
-            out = numpy.empty(self.n, self.bdf.dtypes[field])
-            for idx, counts in zip(self.c_idxs, self.a_counts):
-                arr = numpy.tile(self.bdf[field].loc[idx], counts)
-                out[s: s + len(arr)] = arr
-                s += len(arr)
-            return out
+    def dict(self):
+        dic = {}
+        for field in numpy.concatenate([self.adf.columns, self.bdf.columns]):
+            s = 0
+            if field in self.adf.columns:
+                out = numpy.empty(self.n, self.adf.dtypes[field])
+                for idx, counts in zip(self.c_idxs, self.b_counts):
+                    arr = numpy.repeat(self.adf[field].loc[idx], counts)
+                    out[s: s + len(arr)] = arr
+                    s += len(arr)
+            else:  # assume field is in the bdf columns
+                out = numpy.empty(self.n, self.bdf.dtypes[field])
+                for idx, counts in zip(self.c_idxs, self.a_counts):
+                    arr = numpy.tile(self.bdf[field].loc[idx], counts)
+                    out[s: s + len(arr)] = arr
+                    s += len(arr)
+            dic[field] = out
+        return dic
 
 #
 # Input models
@@ -349,7 +352,7 @@ class VulnerabilityFunction(object):
             # dataset with fields aid, val and key site_id
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         # dataset with fields eid, mean, cov and key sid
-        dic = Joiner(ratio_df, asset_df)
+        dic = Joiner(ratio_df, asset_df).dict()
         # df is a dataset with fields eid, mean, cov, aid, val and key sid
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = self.sampler.get_losses(rng, dic, covs)
