@@ -1397,26 +1397,32 @@ class Exposure(object):
             rename[f] = 'value-' + f
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
+        max_assets = int(config.memory.max_assets_chunk)
         for fname in self.datafiles:
-            t0 = time.time()
-            df = hdf5.read_csv(fname, conv, rename, errors=errors, dframe=True)
-            asset = os.environ.get('OQ_DEBUG_ASSET')
-            if asset:
-                df = df[df.id == asset]
-                if len(df) == 0:
-                    continue
-            add_dupl_fields(df, oqfields)
-            df['lon'] = numpy.round(df.lon, 5)
-            df['lat'] = numpy.round(df.lat, 5)
-            sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
-            if sa:
-                # tested in scenario_risk/case_13
-                rdf = general.random_filter(df, sa)
-                if len(rdf):  # reduce only if there are samples
-                    df = rdf
-            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
-                len(df), time.time() - t0, fname))
-            yield fname, df.set_index('id')
+            for df in pandas.read_csv(
+                fname, converters={k: v for k, v in conv.items() if v is str},
+                dtype={k: v for k, v in conv.items() if v is not str},
+                encoding='utf-8-sig', encoding_errors=errors or 'strict',
+                keep_default_na=False, na_filter=False, chunksize=max_assets):
+                t0 = time.time()
+                df = df.rename(columns=rename)
+                asset = os.environ.get('OQ_DEBUG_ASSET')
+                if asset:
+                    df = df[df.id == asset]
+                    if len(df) == 0:
+                        continue
+                add_dupl_fields(df, oqfields)
+                df['lon'] = numpy.round(df.lon, 5)
+                df['lat'] = numpy.round(df.lat, 5)
+                sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
+                if sa:
+                    # tested in scenario_risk/case_13
+                    rdf = general.random_filter(df, sa)
+                    if len(rdf):  # reduce only if there are samples
+                        df = rdf
+                logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                    len(df), time.time() - t0, fname))
+                yield fname, df.set_index('id')
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """
