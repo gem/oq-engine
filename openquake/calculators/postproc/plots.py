@@ -17,21 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import os
 import base64
 import numpy
-# import descartes
 from shapely.geometry import Polygon, box
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
-
-
-def import_plt():
-    if os.environ.get('TEXT'):
-        import plotext as plt
-    else:
-        import matplotlib.pyplot as plt
-    return plt
 
 
 def auto_limits(ax):
@@ -47,7 +37,7 @@ def auto_limits(ax):
 
 
 def adjust_limits(ax, xlim, ylim, padding=1):
-    # Add some padding around the given limits and give a square aspect to the plot
+    # Add some padding around the limits and give a square aspect to the plot
     x_min, x_max = xlim
     y_min, y_max = ylim
     x_min, x_max = x_min - padding, x_max + padding
@@ -266,7 +256,7 @@ def plt_to_base64(plt):
 def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                   with_cities=False, return_base64=False,
                   rupture=None, data_alpha=0.8):
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
@@ -324,7 +314,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
 
 
 def plot_avg_gmf(ex, imt):
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
     ax.grid(True)
@@ -402,7 +392,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
                  with_cities=False, with_borders=True,
                  with_region_labels=False, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     if backend is not None:
         # we may need to use a non-interactive backend
         import matplotlib
@@ -441,7 +431,7 @@ def add_surface_3d(ax, surface, label):
 
 def plot_rupture_3d(rup):
     # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     if hasattr(rup.surface, 'surfaces'):
@@ -463,7 +453,7 @@ def plot_rupture_3d(rup):
 
 # useful for plotting mmi_tags
 def plot_geom(multipol, lons, lats):
-    plt = import_plt()
+    import matplotlib.pyplot as plt
     ax = plt.figure().add_subplot(111)
     for pol in list(multipol.geoms):
         ax.add_patch(PolygonPatch(pol, alpha=0.1))
