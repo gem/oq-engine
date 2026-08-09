@@ -43,6 +43,7 @@ dependencies = [
     "numba~=0.61.2",
     "alpha_shapes~=1.1.0",
     "django_cors_headers~=4.3.1",
+    "django_cookie_consent~=0.6.0",
 
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",

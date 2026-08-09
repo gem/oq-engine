@@ -498,56 +498,24 @@ def get_magnitude_scaling(C, mag, delta_cm):
     return f_m
 
 
-def get_linear_site_term(region, C, ctx):
+def get_linear_site_term(region, C, vs30):
     """
     Returns the linear site scaling term
     """
-    if region == "JPN":
-        return C["phi1jp"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
-        
-    return C["phi1"] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0.0)
+    coeff = C["phi1jp"] if region == "JPN" else C["phi1"]
+    return coeff * np.clip(np.log(vs30 / REF_VS), -np.inf, 0.0)
 
 
-def get_nonlinear_site_term(C, ctx, y_ref):
+def get_nonlinear_site_term(C, vs30, y_ref):
     """
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = ctx.vs30.clip(-np.inf, REF_VS)
+    vs = np.clip(vs30, -np.inf, REF_VS)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
                                 np.exp(C["phi3"] * (REF_VS - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
     return f_nl, f_nl_scaling
-
-
-def get_emme_site_term(C, ctx, C_EMME, conf):
-    """
-    Returns the EMME24 backbone model site term (both linear
-    and non-linear components). The site term is combination
-    of CY14 and IC23 GMMs site terms.
-    
-    Implementation based on slides and excel files provided by
-    A. Sandıkkaya to GEM which describe the EMME24 site model.
-    """
-    # Get prediction on ref velocity (800 m/s)
-    ref_vs = 800.
-    rock_ctx = ctx.copy()
-    rock_ctx.vs30 = np.full_like(rock_ctx.vs30, ref_vs)
-    ln_gm_rock = get_ln_y_ref("CAL", C, rock_ctx, conf) # CAL is global
-
-    # Linear component
-    linear = C_EMME["a1"] * np.log(np.minimum(ctx.vs30, C_EMME["Vc"]) / ref_vs)
-    
-    # Part 1 of non-linear component
-    non_linear_p1 = C_EMME["a2"] * (
-        np.exp((np.minimum(ctx.vs30, 800) - 360.) * C_EMME["a3"]) -
-        np.exp(440. * C_EMME["a3"])
-        ) 
-    
-    # Part 2 of non-linear component
-    non_linear_p2 = np.log(1 + (np.exp(ln_gm_rock) / C_EMME["a4"]))
-
-    return linear + (non_linear_p1 * non_linear_p2)
 
 
 def get_phi(C, mag, ctx, nl0):
@@ -638,10 +606,10 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
         f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
         # Get linear amplification term
-        f_lin = get_linear_site_term(region, C, ctx)
+        f_lin = get_linear_site_term(region, C, ctx.vs30)
 
         # Get nonlinear amplification term
-        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+        f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx.vs30, y_ref)
 
         # Add on the site amplification
         mean = ln_y_ref + f_lin + f_nl + f_z1pt0
@@ -651,8 +619,14 @@ def get_mean_stddevs(region, C, ctx, imt, emme_coeffs, conf, usgs_bs=False,
             conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     else:
-        # Compute EMME24 site term instead (no basin effects considered here)
-        mean = ln_y_ref + get_emme_site_term(C, ctx, emme_coeffs[imt], conf)
+        # For EMME24 backbone apply CY14 native site term at vs30 of 800 m/s
+        # to shift the reference motion from CY14's native 1130 m/s down to
+        # the EMME24 reference of 800 m/s (the EMME24 site term itself is
+        # applied in the EMME24 subclass following backbone scaling)
+        emme_vs30 = np.full_like(ctx.vs30, 800.)
+        f_lin = get_linear_site_term(region, C, emme_vs30)
+        f_nl, _ = get_nonlinear_site_term(C, emme_vs30, y_ref)
+        mean = ln_y_ref + f_lin + f_nl
 
         # Sigma components are determined within EMME backbone's compute method
         sig, tau, phi =\
@@ -820,10 +794,11 @@ class ChiouYoungs2014(GMPE):
                 
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
-                # value of PGA when it falls below the predicted PGA
+                # value of PGA when it falls below the predicted PGA 
+                # NOTE: Not used in the EMME24 backbone model
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
-                    if repr(imt).startswith("SA") and imt.period <= 0.3 \
-                    else imt_mean
+                    if repr(imt).startswith("SA") and imt.period <= 0.3 and \
+                        not self.COEFFS_EMME else imt_mean
                 
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 

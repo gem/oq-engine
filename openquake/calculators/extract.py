@@ -877,7 +877,12 @@ def ensure_npy_serializable(df):
     for col in df.columns:
         if df[col].dtype != object:
             continue
-        df[col] = df[col].astype('S')
+        # Explicitly encode strings to UTF-8 bytes to handle non-ASCII
+        # characters (e.g., 'é', 'ñ') before casting to the fixed-width byte
+        # string type ('S')
+        df[col] = df[col].apply(
+            lambda x: x.encode('utf-8') if isinstance(x, str) else x
+        ).astype('S')
     return df
 
 
@@ -1322,12 +1327,21 @@ def extract_avg_gmf(dstore, what):
     [imt] = qdict['imt']
     imti = info['imt'][imt]
     avg_gmf = dstore['avg_gmf'][0, :, imti]
-    if 'station_data' in dstore:
-        # discard the stations from the avg_gmf plot
-        stations = dstore['station_data/site_id'][:]
-        ok = (avg_gmf > 0) & ~numpy.isin(sitecol.sids, stations)
+
+    # Check if filtering zero values is disabled via 'filter_zeros=0'
+    filter_zeros = int(qdict.get('filter_zeros', [1])[0]) != 0
+    if filter_zeros:
+        cond = (avg_gmf > 0)
     else:
-        ok = avg_gmf > 0
+        cond = numpy.ones(len(sitecol), dtype=bool)
+
+    # Station filtering (always active if station_data exists)
+    if 'station_data' in dstore:
+        stations = dstore['station_data/site_id'][:]
+        ok = cond & ~numpy.isin(sitecol.sids, stations)
+    else:
+        ok = cond
+
     if 'custom_site_id' in sitecol.array.dtype.names:
         yield 'custom_site_id', decode(sitecol.custom_site_id[ok])
     else:

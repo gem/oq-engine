@@ -550,7 +550,7 @@ def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     dic = {}
     for m, imt in enumerate(oq.all_imts()):
-        dic.update(extract(dstore, f'avg_gmf?imt={imt}'))
+        dic.update(extract(dstore, f'avg_gmf?imt={imt}&filter_zeros=0'))
     del dic['extra']
     fname = dstore.build_fname('avg_gmf', '', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
