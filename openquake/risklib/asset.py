@@ -1094,7 +1094,6 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             df['id'] = asset_prefix + df.id
             dfs.append(df)
         assets_df = pandas.concat(dfs)
-    del fname_dfs  # save memory
     del dfs  # save memory
 
     # check_dupl is False only in oq prepare_site_model since
