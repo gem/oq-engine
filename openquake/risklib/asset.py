@@ -1094,7 +1094,6 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             df['id'] = asset_prefix + df.id
             dfs.append(df)
         assets_df = pandas.concat(dfs)
-    del fname_dfs  # save memory
     del dfs  # save memory
 
     # check_dupl is False only in oq prepare_site_model since
@@ -1382,17 +1381,17 @@ class Exposure(object):
                     (fname, len(fields), header, len(header)))
             elif missing:
                 raise InvalidFile('%s: missing %s' % (fname, missing))
-        conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
-                'residents': float, 'retrofitted': float, 'ideductible': float,
-                'occupants_day': float, 'occupants_night': float,
-                'occupants_transit': float, None: object}
+        conv = {'lon': F32, 'lat': F32, 'number': F32, 'area': F32,
+                'residents': F32, 'retrofitted': F32, 'ideductible': F32,
+                'occupants_day': F32, 'occupants_night': F32,
+                'occupants_transit': F32, None: object}
         for f in strfields:
             conv[f] = str
         for inp, oq in self.fieldmap.items():
             if oq in conv:
                 conv[inp] = conv[oq]
             elif oq not in strfields:
-                conv[inp] = float
+                conv[inp] = F32
         rename = self.fieldmap.copy()
         for f in ANR_FIELDS:
             rename[f] = 'value-' + f
