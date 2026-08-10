@@ -1051,7 +1051,7 @@ def check_exposure_for_infr_conn_analysis(df, fname):
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,
-                aggregate_by=None, monitor=None):
+                aggregate_by=None, monitor=performance.Monitor()):
     # NB: errors is not None only for scenario_test/case_17
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
@@ -1065,35 +1065,35 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         fname_dfs = exposure._read_csv(errors)
     # loop on each CSV file associated to exposure.xml
     dfs = []
-    for fname, df in fname_dfs:
-        if len(df) == 0 and errors != 'ignore':
-            raise InvalidFile('%s is empty' % fname)
-        elif asset_prefix:  # multiple exposure files
-            df['exposure'] = asset_prefix[:-1]
-        names = df.columns
-        df = df.reset_index()
-        occupants = any(n.startswith('occupants_') for n in names)
-        if occupants and 'occupants_avg' not in names:
-            df['occupants_avg'] = calc_occupants_avg(df)
-        if 'retrofitted' in df.columns:
-            df['retrofitted'] = exposure.cost_calculator(
-                'structural', {'value-structural': df.retrofitted,
-                               'value-number': df['value-number']})
-        if infr_conn_analysis:
-            check_exposure_for_infr_conn_analysis(df, fname)
-        if aggregate_by:
-            for taglist in aggregate_by:
-                for tag in taglist:
-                    if tag == 'site_id':
-                        # 'site_id' is added later in Exposure.init
-                        continue
-                    if (tag not in df.columns
-                            and f'value-{tag}' not in df.columns):
-                        raise InvalidFile(f'Missing tag "{tag}" in {fname}')
-        df['id'] = asset_prefix + df.id
-        dfs.append(df)
-
-    assets_df = pandas.concat(dfs)
+    with monitor:
+        for fname, df in fname_dfs:
+            if len(df) == 0 and errors != 'ignore':
+                raise InvalidFile('%s is empty' % fname)
+            elif asset_prefix:  # multiple exposure files
+                df['exposure'] = asset_prefix[:-1]
+            names = df.columns
+            df = df.reset_index()
+            occupants = any(n.startswith('occupants_') for n in names)
+            if occupants and 'occupants_avg' not in names:
+                df['occupants_avg'] = calc_occupants_avg(df)
+            if 'retrofitted' in df.columns:
+                df['retrofitted'] = exposure.cost_calculator(
+                    'structural', {'value-structural': df.retrofitted,
+                                   'value-number': df['value-number']})
+            if infr_conn_analysis:
+                check_exposure_for_infr_conn_analysis(df, fname)
+            if aggregate_by:
+                for taglist in aggregate_by:
+                    for tag in taglist:
+                        if tag == 'site_id':
+                            # 'site_id' is added later in Exposure.init
+                            continue
+                        if (tag not in df.columns
+                                and f'value-{tag}' not in df.columns):
+                            raise InvalidFile(f'Missing tag "{tag}" in {fname}')
+            df['id'] = asset_prefix + df.id
+            dfs.append(df)
+        assets_df = pandas.concat(dfs)
     del fname_dfs  # save memory
     del dfs  # save memory
 
@@ -1218,7 +1218,8 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, errors=None,
-                 infr_conn_analysis=False, aggregate_by=None, rupfilter=None):
+                 infr_conn_analysis=False, aggregate_by=None,
+                 rupfilter=None, monitor=performance.Monitor()):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -1234,7 +1235,7 @@ class Exposure(object):
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
                             check_dupl, prefix, tagcol, errors,
-                            infr_conn_analysis, aggregate_by))
+                            infr_conn_analysis, aggregate_by, monitor))
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):
