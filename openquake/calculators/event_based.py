@@ -471,7 +471,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
         totr += rups_by[model]
         totw += sum(rup_weight(rups).sum() for rups in rupss)
 
-    ct = max(concurrent_tasks, totw / 5E7)
+    ct = max(concurrent_tasks, totw / 1E8)
     rng = numpy.random.default_rng(42)
     ntasks = rng.multinomial(ct, [rups_by[model] / totr for model in rups_by])
     return {model: int(ntasks[i]) or 1 for i, model in enumerate(rups_by)}
