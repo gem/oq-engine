@@ -486,7 +486,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
     rng = numpy.random.default_rng(42)
     ntasks = rng.multinomial(
         concurrent_tasks, [rups_by[model] / tot for model in rups_by])
-    return ntasks
+    return {model: ntasks[i] for i, model in enumerate(rups_by)}
 
 
 def run(func, oq, rup0, calc):
@@ -532,7 +532,10 @@ def run(func, oq, rup0, calc):
 
     allargs = []
     ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks or 1)
-    for nt, (model, pairs) in zip(ntasks, cmaker_rups.items()):
+    if len(ntasks) > 1:
+        logging.info(f'ntasks by model={ntasks}')
+    for model, pairs in cmaker_rups.items():
+        nt = ntasks[model]
         cmakers, rupss = zip(*pairs)
         for ch in range(nt):
             cs, rs = [], []
@@ -542,14 +545,11 @@ def run(func, oq, rup0, calc):
                     cs.append(cm)
                     rs.append(chrups)
             if cs:
-                if model != '???':
-                    logging.info(f'Producing {nt:_d} tasks for {model}')
                 allargs.append((rs, cs, calc.sitecol.sids,
                                 calc.sec_perils, calc.datastore))
     assert len(allargs) < TWO16, len(allargs)
 
     dstore.swmr_on()
-    breakpoint()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
         calc.save_tmp(smap.monitor)
