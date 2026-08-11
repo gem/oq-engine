@@ -476,6 +476,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
+def ntasks_by_model(cmaker_rups, concurrent_tasks):
+    rups_by = {}
+    tot = 0
+    for model, pairs in cmaker_rups.items():
+        cmakers, rupss = zip(*pairs)
+        rups_by[model] = sum(len(rups) for rups in rupss)
+        tot += rups_by[model]
+    rng = numpy.random.default_rng(42)
+    ntasks = rng.multinomial(
+        concurrent_tasks, [rups_by[model] / tot for model in rups_by])
+    return ntasks
+
+
 def run(func, oq, rup0, calc):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -518,22 +531,25 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = []
-    nchunks = (oq.concurrent_tasks // len(cmaker_rups) // 2) or 1
-    for model, pairs in cmaker_rups.items():
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks or 1)
+    for nt, (model, pairs) in zip(ntasks, cmaker_rups.items()):
         cmakers, rupss = zip(*pairs)
-        for ch in range(nchunks):
+        for ch in range(nt):
             cs, rs = [], []
             for cm, rups in zip(cmakers, rupss):
-                chrups = rups[ch::nchunks]
+                chrups = rups[ch::nt]
                 if len(chrups):
                     cs.append(cm)
                     rs.append(chrups)
             if cs:
+                if model != '???':
+                    logging.info(f'Producing {nt:_d} tasks for {model}')
                 allargs.append((rs, cs, calc.sitecol.sids,
                                 calc.sec_perils, calc.datastore))
     assert len(allargs) < TWO16, len(allargs)
 
     dstore.swmr_on()
+    breakpoint()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
         calc.save_tmp(smap.monitor)
