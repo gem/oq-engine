@@ -811,6 +811,28 @@ hazard_uhs-std.csv
         self.run_calc(case_83.__file__, 'job_expanded_LT.ini')
         [fname_ex] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles(fname_em, fname_ex)
+        reg_full = self.calc.datastore['hcurves-stats'][:]
+
+        # Check that sequential approach matches regular with
+        # full enumeration
+        self.run_calc(case_83.__file__, 'job_extendModel.ini',
+                      sequential_source_models='true')
+        seq_full = self.calc.datastore['hcurves-stats'][:]
+        aac(seq_full, reg_full, atol=1e-6, rtol=1e-6)
+
+        # Run regular approach with sampling
+        self.run_calc(case_83.__file__, 'job_extendModel.ini',
+                      number_of_logic_tree_samples='10')
+        reg_sampled = self.calc.datastore['hcurves-stats'][:]
+
+        # Check that sequential approach matches regular with
+        # sampling
+        self.run_calc(case_83.__file__, 'job_extendModel.ini',
+                      sequential_source_models='true',
+                      number_of_logic_tree_samples='10')
+        seq_sampled = self.calc.datastore['hcurves-stats'][:]
+
+        aac(seq_sampled, reg_sampled, atol=1e-6, rtol=1e-6)
 
     def test_case_83_eb(self):
         # event based sampling with double extendModel

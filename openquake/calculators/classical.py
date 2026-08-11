@@ -655,6 +655,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run one Starmap per sourceModel branch sequentially, so that
         only a single source model's tasks are running at one time.
+
+        NOTE: Unless extendModel is being used, the sharing of src_groups
+        over base source models is not permitted. If extendModel is being
+        used, then the sharing of src_groups over base source models is
+        permitted and a "shared" batch is dispatched last. The memory
+        footprint of this "shared" batch could be similar (or equal) to
+        that observed in the "regular" (i.e., none-sequential) approach
+        if extendModel is heavily used in the logic tree (because many
+        of the src_grps would be piled into this final "shared" batch).
         """
         # Map each src_group id to its sourceModel branch_id
         smb_of_grp = {
@@ -669,9 +678,16 @@ class ClassicalCalculator(base.HazardCalculator):
             gid = int(args[0][0].split('-')[0])
             partitions[smb_of_grp[gid]].append(args)
 
-        # Run one source modl at a time
+        # Sort per-source model partitions for reproducible
+        # order with "shared" batch last
+        per_sm_keys = sorted(k for k in partitions if k is not None)
+        ordered_keys = per_sm_keys + (
+            [None] if None in partitions else [])
+
+        # Run one source model at a time
         acc = AccumDict(accum=0.)
-        for smb, part in sorted(partitions.items()):
+        for smb in ordered_keys:
+            part = partitions[smb]
             logging.info('Source model %r: %d tasks', smb, len(part))
             smap = parallel.Starmap(task_func, part, h5=self.datastore.hdf5)
             acc = smap.reduce(self.agg_dicts, acc)

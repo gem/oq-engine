@@ -30,8 +30,8 @@ from openquake.hazardlib import (
     site, geo, mfd, pmf, scalerel, valid, tests as htests)
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.lt import Realization
-from openquake.hazardlib.logictree import FullLogicTree
+from openquake.hazardlib.lt import Realization, BranchSet
+from openquake.hazardlib.logictree import FullLogicTree, SourceModelLogicTree
 from openquake.hazardlib.source_group import CompositeSourceModel, SourceGroup
 from openquake.hazardlib.source_reader import sampling_dt
 from openquake.hazardlib import nrml
@@ -775,17 +775,23 @@ class SequentialSourcesTestCase(unittest.TestCase):
         [point_grp, *_] = nrml.to_python(MIXED_SRC_MODEL, conv)
         cls.template_src = point_grp[0]
 
-    def _build_csm(self, sm_branch_ids, smrs_per_group):
-        # sm_branch_ids[i] is the top-level branch_id of smr i;
-        # smrs_per_group[j] lists the smrs of the j-th src_group
+    def _build_csm(self, sm_branch_ids, smrs_per_group, has_extend=False):
+        # sm_branch_ids[i] = branch id of smr i; smrs_per_group[j] =
+        # smrs of the j-th src_group
 
-        # One Realization per smr - lt_path[0] is the top-level branch
+        # One Realization per smr
         sm_rlzs = [Realization(bid, 1., i, (bid,))
                    for i, bid in enumerate(sm_branch_ids)]
         full_lt = object.__new__(FullLogicTree)
         full_lt.sm_rlzs = sm_rlzs
 
-        # One SourceGroup per entry - sampling drives trt_smrs
+        # Minimal source_model_lt 
+        utypes = ['sourceModel'] + (['extendModel'] if has_extend else [])
+        smlt = object.__new__(SourceModelLogicTree)
+        smlt.branchsets = [BranchSet(ut) for ut in utypes]
+        full_lt.source_model_lt = smlt
+
+        # One SourceGroup per entry
         src_groups = []
         for smrs in smrs_per_group:
             src = copy.copy(self.template_src)
@@ -813,35 +819,54 @@ class SequentialSourcesTestCase(unittest.TestCase):
         self.assertEqual(csm.grp_ids_by_source_model(),
                          {'sm_a': [0], 'sm_b': [1]})
 
-    def test_grp_ids_by_source_model_shared_raises(self):
+    def test_grp_ids_by_source_model_shared_raises_without_extend(self):
         # A src_group whose trt_smrs point at smrs from more than
         # one top-level sourceModel branch must raise an error
+        # if extendModel is not used in the logic tree
         csm = self._build_csm(sm_branch_ids=['sm_a', 'sm_b'],
                               smrs_per_group=[[0, 1]])
         with self.assertRaises(ValueError) as cm:
             csm.grp_ids_by_source_model()
-        msg = str(cm.exception)
-        self.assertIn('spans multiple source models', msg)
-        self.assertIn('sm_a', msg)
-        self.assertIn('sm_b', msg)
+        self.assertEqual(
+            str(cm.exception),
+            "src_group 0 (Stable Continental Crust) spans multiple "
+            "source models ['sm_a', 'sm_b']; "
+            "sequential_source_models=true does not support sources "
+            "shared across source models outside of extendModel"
+            )
+
+    def test_grp_ids_by_source_model_shared_with_extend(self):
+        # With extendModel the src_grp sharing is permitted and
+        # it results in a cross-SM group under a key of None
+        csm = self._build_csm(sm_branch_ids=['sm_a', 'sm_b'],
+                              smrs_per_group=[[0], [1], [0, 1]],
+                              has_extend=True)
+        self.assertEqual(csm.grp_ids_by_source_model(),
+                         {'sm_a': [0], 'sm_b': [1], None: [2]})
 
     def test_iter_source_model_batches(self):
-        # Three top-level source models with 4, 2, 5 src_groups
-        # respectively; batches must partition src_groups cleanly and
-        # be yielded in sorted sm_branch_id order
+        # 12 src_groups total across three SMs plus one cross-SM group:
+        #   4 groups belong to smA only
+        #   2 groups belong to smB only
+        #   5 groups belong to smC only
+        #   1 group spans all three SMs (smrs=[0, 1, 2]) -> shared
+        # Expected: four batches, per-SM ones sorted (4, 2, 5 groups),
+        # shared batch last with the single cross-SM group (12 total)
         csm = self._build_csm(
             sm_branch_ids=['smA', 'smB', 'smC'],
-            smrs_per_group=[[0]]*4 + [[1]]*2 + [[2]]*5)
+            smrs_per_group=[[0]]*4 + [[1]]*2 + [[2]]*5 + [[0, 1, 2]],
+            has_extend=True)
         batches = list(csm.iter_source_model_batches())
 
-        self.assertEqual(len(batches), 3)
-        self.assertEqual([b[0] for b in batches], [0, 1, 2])
-        self.assertEqual([b[1] for b in batches], ['smA', 'smB', 'smC'])
-        self.assertEqual([len(b[2]) for b in batches], [4, 2, 5])
-        self.assertEqual([len(b[3]) for b in batches], [4, 2, 5])
-        # Union of per-batch src_groups recontructs the full list
+        self.assertEqual(len(batches), 4)
+        self.assertEqual([b[0] for b in batches], [0, 1, 2, 3])
+        self.assertEqual([b[1] for b in batches],
+                         ['smA', 'smB', 'smC', None])
+        self.assertEqual([len(b[2]) for b in batches], [4, 2, 5, 1])
+        # Shared batch trt_smrs cover every SM
+        self.assertEqual(sorted(batches[-1][3][0].tolist()), [0, 1, 2])
+        # Batches together cover every src_group exactly once
         union = []
         for _, _, sgs, _ in batches:
             union.extend(sgs)
-        self.assertEqual({id(sg) for sg in union},
-                         {id(sg) for sg in csm.src_groups})
+        self.assertEqual(set(union), set(csm.src_groups))
