@@ -518,12 +518,23 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = []
+    #for model, pairs in cmaker_rups.items():
+    #    cmakers, rupss = zip(*pairs)
+    #    allargs.append((rupss, cmakers, calc.sitecol.sids,
+    #                    calc.sec_perils, calc.datastore))
+    nchunks = (oq.concurrent_tasks // len(cmaker_rups) // 2) or 1
     for model, pairs in cmaker_rups.items():
-        for cmaker, rups in pairs:
-            for rupblock in block_splitter(rups, maxw/5, rup_weight):
-                allargs.append((rupblock, cmaker, model))
-    allargs = _collect(allargs, maxw*2, calc.sitecol.sids, calc.sec_perils,
-                       dstore)
+        cmakers, rupss = zip(*pairs)
+        for ch in range(nchunks):
+            cs, rs = [], []
+            for cm, rups in zip(cmakers, rupss):
+                chrups = rups[ch::nchunks]
+                if len(chrups):
+                    cs.append(cm)
+                    rs.append(chrups)
+            if cs:
+                allargs.append((rs, cs, calc.sitecol.sids,
+                                calc.sec_perils, calc.datastore))
     assert len(allargs) < TWO16, len(allargs)
 
     dstore.swmr_on()
