@@ -831,7 +831,6 @@ hazard_uhs-std.csv
                       sequential_source_models='true',
                       number_of_logic_tree_samples='10')
         seq_sampled = self.calc.datastore['hcurves-stats'][:]
-
         aac(seq_sampled, reg_sampled, atol=1e-6, rtol=1e-6)
 
     def test_case_83_eb(self):
