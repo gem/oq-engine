@@ -194,7 +194,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     Implementation of paper by Silva and Horspool 2019
     https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
 
-    :param shakemap: site coordinates with shakemap values
+    :param shakemap: site coordinates with median ShakeMap values
     :param imts: list of required imts
     :param spatialcorr: 'no', 'yes' or 'full'
     :param crosscorr: 'no', 'yes' or 'full'
@@ -233,12 +233,10 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    sig = numpy.array(stddev).reshape(-1, 1)  # (M,N) -> (M*N, 1)
-
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
-    # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / scale
+    # mu contains the ShakeMap medians; L @ Z contains ln-unit residuals
+    return mu * numpy.exp(L @ Z) / scale
 
 
 @calculate_gmfs.add('basic')
@@ -246,7 +244,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     Basic calculation method to sample data from shakemap values
 
-    :param shakemap: site coordinates with shakemap values
+    :param shakemap: site coordinates with median ShakeMap values
     :param imts: list of required imts
     :returns: F(Z, mu) to calculate gmfs
     """
@@ -255,9 +253,8 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
 
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
-    # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
-    # multiply Z and sig column-wise, add mean and apply the correct IMT scale
-    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / scale
+    # mu contains the ShakeMap medians; Z * sig contains ln-unit residuals
+    return mu * numpy.exp(Z * sig) / scale
 
 
 @ calculate_gmfs.add('mmi')
@@ -304,11 +301,17 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
 
-    # generate standard normal random variables of shape (M*N, E)
-    Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
-                      size=(M * N, num_gmfs), random_state=seed)
+    # A zero truncation_level in the job file is converted to 1E-9 by OqParam.
+    # Treat as exact zero so that a no-uncertainty GMF reproduces the ShakeMap
+    # grid.xml field.
+    if truncation_level <= 1E-9:
+        Z = numpy.zeros((M * N, num_gmfs))
+    else:
+        Z = truncnorm.rvs(
+            -truncation_level, truncation_level, loc=0, scale=1,
+            size=(M * N, num_gmfs), random_state=seed)
 
-    # build array of mean values of shape (M*N, E)
+    # build array of median values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
