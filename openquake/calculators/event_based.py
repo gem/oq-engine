@@ -518,10 +518,6 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = []
-    #for model, pairs in cmaker_rups.items():
-    #    cmakers, rupss = zip(*pairs)
-    #    allargs.append((rupss, cmakers, calc.sitecol.sids,
-    #                    calc.sec_perils, calc.datastore))
     nchunks = (oq.concurrent_tasks // len(cmaker_rups) // 2) or 1
     for model, pairs in cmaker_rups.items():
         cmakers, rupss = zip(*pairs)
