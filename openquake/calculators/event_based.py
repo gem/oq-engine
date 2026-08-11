@@ -248,12 +248,10 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    cmaker = cmakers[0]
     rmon = monitor('reading ruptures', measuremem=True)
     smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    maxdist = cmaker.oq.maximum_distance(cmaker.trt)
     with smon:
         with dstore as f:
             try:
@@ -261,11 +259,13 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
-        srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
+        # NB: the maximum distance can vary between TRTs/CMakers
+        maxdist = cmaker.oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sites, maxdist)
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
@@ -472,7 +472,8 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
         totw += sum(rup_weight(rups).sum() for rups in rupss)
 
     ct = max(concurrent_tasks, totw / 1E8)
-    return {model: int(ct * nr / totr) or 1 for model, nr in rups_by.items()}
+    return {model: int(numpy.ceil(ct * nr / totr))
+            for model, nr in rups_by.items()}
 
 
 def run(func, oq, rup0, calc):
@@ -521,7 +522,6 @@ def run(func, oq, rup0, calc):
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     nr = 0
-    no = 0
     for model, pairs in cmaker_rups.items():
         nt = ntasks[model]
         cmakers, rupss = zip(*pairs)
@@ -533,13 +533,11 @@ def run(func, oq, rup0, calc):
                     cs.append(cm)
                     rs.append(chrups)
                     nr += len(chrups)
-                    no += chrups['n_occ'].sum()
             if cs:
                 allargs.append((rs, cs, calc.sitecol.sids,
                                 calc.sec_perils, calc.datastore))
     assert len(allargs) < TWO16, len(allargs)
     assert nr == len(filrups), (nr, len(filrups))  # sanity check
-    assert no == filrups['n_occ'].sum()  # sanity check
 
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
