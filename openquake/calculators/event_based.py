@@ -321,7 +321,6 @@ def _filter_rups(oq, sitecol, trts, dstore):
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
-    totw = 0
     nsites = 0
     affected = 0
     acc = {}
@@ -338,14 +337,11 @@ def _filter_rups(oq, sitecol, trts, dstore):
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
-            totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = min(totw / (oq.concurrent_tasks or 1), 5E7)
-    logging.info(f'{round(maxw)=:_d}')
-    return filrups, maxw, acc
+    return filrups, acc
 
 
 # tested in global_ses_test
@@ -410,20 +406,6 @@ def read_cmaker_rups(oq, rup_acc, dstore):
         for trt, mags in oqp.mags_by_trt.items():
             oqp.mags_by_trt[trt] = sorted(mags)
     return cmaker_rups
-
-
-def _collect(allargs, maxw, sids, sec_perils, dstore):
-    # allargs is a list [(rupblock, cmaker, model) ...]
-    # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
-    out = []
-    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
-                                  key=lambda item: item[2]):  # by model
-        rupblks, cmakers, models = zip(*triples)
-        allrups = general.WeightedSequence([
-            (numpy.array(rb), rb.weight) for rb in rupblks])
-        out.append((allrups, cmakers, sids, sec_perils, dstore))
-    # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
-    return out
 
 
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
@@ -520,7 +502,7 @@ def run(func, oq, rup0, calc):
 
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     # NB: _filter_rups calls close_ruptures which can raise an error
-    filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
+    filrups, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
     cmaker_rups = read_cmaker_rups(oq, acc, dstore)
     p = sum(len(pairs) for pairs in cmaker_rups.values())
     logging.info(f'There are {p:_d} pairs cmaker_rups')
