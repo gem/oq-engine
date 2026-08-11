@@ -459,15 +459,21 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
 
 
 def ntasks_by_model(cmaker_rups, concurrent_tasks):
+    """
+    :returns: dictionary model->num_tasks
+    """
     rups_by = {}
-    tot = 0
+    totr = 0
+    totw = 0
     for model, pairs in cmaker_rups.items():
         cmakers, rupss = zip(*pairs)
         rups_by[model] = sum(len(rups) for rups in rupss)
-        tot += rups_by[model]
+        totr += rups_by[model]
+        totw += sum(rup_weight(rups).sum() for rups in rupss)
+
+    ct = max(concurrent_tasks, totw / 5E7)
     rng = numpy.random.default_rng(42)
-    ntasks = rng.multinomial(
-        concurrent_tasks, [rups_by[model] / tot for model in rups_by])
+    ntasks = rng.multinomial(ct, [rups_by[model] / totr for model in rups_by])
     return {model: int(ntasks[i]) or 1 for i, model in enumerate(rups_by)}
 
 
