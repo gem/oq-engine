@@ -395,9 +395,12 @@ def convert_to_oq_xml(input_json_file, output_xml_file):
 
 def utc_to_local_time(utc_timestamp, lon, lat):
     """
-    Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
+    Convert a timestamp string or a datetime into a local datetime object
     """
-    utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+    if isinstance(utc_timestamp, str):
+        utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+    else:
+        utc_time = utc_timestamp
     try:
         from timezonefinder import TimezoneFinder
     except ImportError:
@@ -925,14 +928,19 @@ def download_mmi(usgs_id, shakemap_contents, user):
     return mmi_file
 
 
-def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
+def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_properties,
+                     shakemap_array=None):
     """
     Convert JSON data coming from the USGS into a rupdic
     """
     md = rup_data['metadata']
     lon = md['lon']
     lat = md['lat']
-    local_time = utc_to_local_time(md['time'], lon, lat)
+    # NOTE: retrieving the local timestamp from rup_data['metadata'] is not
+    # reliable
+    utc_time_ms = shakemap_properties['time']
+    utc_time = datetime.fromtimestamp(utc_time_ms / 1000.0, tz=timezone.utc)
+    local_time = utc_to_local_time(utc_time, lon, lat)
     time_event = local_time_to_time_event(local_time)
     return {
         'lon': lon, 'lat': lat, 'dep': md['depth'],
@@ -1347,7 +1355,7 @@ def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
     new_rupdic = dict(rupdic)
     if rup_data:
         converted_rup_data = convert_rup_data(
-            rup_data, usgs_id, rupture_file, shakemap)
+            rup_data, usgs_id, rupture_file, properties, shakemap)
         if 'rupture_file' in new_rupdic:  # already converted: do not overwrite
             converted_rup_data.pop('rupture_file')
         new_rupdic.update(converted_rup_data)
