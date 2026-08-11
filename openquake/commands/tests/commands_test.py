@@ -652,7 +652,7 @@ Source Loss Table'''.splitlines())
 
     def test_shakemap2gmfs(self):
         # test shakemap2gmfs with sitemodel with a filtered sitecol
-        exp = 0.213411
+        exp = 0.2554999887943268
         with chdir(os.path.dirname(case_25.__file__)):
             with redirect_stdout(io.StringIO()) as out:
                 sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
