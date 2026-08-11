@@ -1218,8 +1218,9 @@ def get_exposure(oqparam, h5=None):
         rupfilter = RuptureFilter(rup, dist)
     else:
         rupfilter = None
-    with Monitor('reading exposure', measuremem=True, h5=h5):
-        if oqparam.impact:
+    mon = Monitor('reading exposure', measuremem=True, h5=h5)
+    if oqparam.impact:
+        with mon:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             hexes = sorted(set(hex6(sm['lon'], sm['lat'])))
             hexes = [h.encode('ascii') for h in hexes]
@@ -1231,13 +1232,13 @@ def get_exposure(oqparam, h5=None):
                 loss_types = f['crmAfrica'].attrs['loss_types']
                 oq.all_cost_types = loss_types
                 oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
-        else:
-            exposure = asset.Exposure.read_all(
-                oq.inputs['exposure'], oq.calculation_mode,
-                oq.ignore_missing_costs,
-                errors='ignore' if oq.ignore_encoding_errors else None,
-                infr_conn_analysis=oq.infrastructure_connectivity_analysis,
-                aggregate_by=oq.aggregate_by, rupfilter=rupfilter)
+    else:
+        exposure = asset.Exposure.read_all(
+            oq.inputs['exposure'], oq.calculation_mode,
+            oq.ignore_missing_costs,
+            errors='ignore' if oq.ignore_encoding_errors else None,
+            infr_conn_analysis=oq.infrastructure_connectivity_analysis,
+            aggregate_by=oq.aggregate_by, rupfilter=rupfilter, monitor=mon)
     return exposure
 
 
