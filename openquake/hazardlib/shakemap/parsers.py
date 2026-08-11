@@ -1283,10 +1283,8 @@ def make_rup_from_dic(inputdic, rupture_file):
 
 def _load_rupdic_for_approach(
         usgs_id, approach, inputdic, properties, contents):
-    """
-    Build the initial rupdic for approaches that derive it directly from
-    USGS origin/finite-fault data, before any rupture-file download step.
-    """
+    # Build the initial rupdic for approaches that derive it directly from
+    # USGS origin/finite-fault data, before any rupture-file download step.
     rupdic = {}
     err = {}
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
@@ -1303,15 +1301,12 @@ def _load_rupdic_for_approach(
 
 
 def _download_rup_data(usgs_id, approach, inputdic, contents, user, monitor):
-    """
-    Download rupture geometry for approaches that need it from USGS
-    (shakemap, shakemap+fault rupture, or finite fault model) and convert
-    it via _convert_rupture_file when a rupture file is obtained.
-
-    Only called when approach is one of:
-      'use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs',
-      'use_finite_fault_model_from_usgs'
-    """
+    # Download rupture geometry for approaches that need it from USGS
+    # (shakemap, shakemap+fault rupture, or finite fault model) and convert
+    # it via _convert_rupture_file when a rupture file is obtained.
+    # Only called when approach is one of:
+    #   'use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs',
+    #   'use_finite_fault_model_from_usgs'
     rup = None
     rupdic = {}
     rup_data = {}
@@ -1345,13 +1340,10 @@ def _download_rup_data(usgs_id, approach, inputdic, contents, user, monitor):
 def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
                      shakemap_desc, contents, inputdic, approach, properties,
                      user):
-    """
-    Merge downloaded/converted rupture data into rupdic, backfill any
-    fields still missing from inputdic, and attach metadata (mmi file,
-    shakemap array, title, shakemap description).
-
-    Returns a new dict
-    """
+    # Merge downloaded/converted rupture data into rupdic, backfill any
+    # fields still missing from inputdic, and attach metadata (mmi file,
+    # shakemap array, title, shakemap description).
+    # Returns a new dict
     new_rupdic = dict(rupdic)
     if rup_data:
         converted_rup_data = convert_rup_data(
@@ -1375,10 +1367,8 @@ def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
 
 
 def _build_planar_rupture(rupdic):
-    """
-    Try to build a planar rupture from rupdic.
-    Returns (rup, error_msg) where error_msg is None on success.
-    """
+    # Try to build a planar rupture from rupdic.
+    # Returns (rup, error_msg) where error_msg is None on success.
     try:
         return build_planar_rupture_from_dict(rupdic), None
     except ValueError as exc:
