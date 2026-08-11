@@ -23,7 +23,7 @@ import functools
 from pathlib import Path
 from shapely.geometry import Polygon, box
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Union, Dict
+from typing import Any
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
 
@@ -628,11 +628,11 @@ class MapStyleConfig:
     """
     Encapsulates sizing, text fonts, and styling properties for rendering.
     """
-    font_size: Union[int, float] = 18
-    city_font_size: Union[int, float] = 10
-    legend_font_size: Union[int, float] = 10
-    title_font_size: Union[int, float] = 20
-    figsize: Tuple[float, float] = (10, 10)
+    font_size: int = 18
+    city_font_size: int = 10
+    legend_font_size: int = 10
+    title_font_size: int = 20
+    figsize: tuple[float, float] = (10, 10)
     region_alpha: float = 0.7
     legend_digits: int = 0
 
@@ -642,13 +642,13 @@ class MapDataElements:
     """
     Groups optional geographical annotations, basemaps, and layout limits.
     """
-    plot_title: Optional[str] = None
-    legend_title: Optional[str] = None
-    cities: Optional[Dict[str, Tuple[float, float]]] = None
-    x_limits: Optional[Tuple[float, float]] = None
-    y_limits: Optional[Tuple[float, float]] = None
-    basemap_path: Optional[Any] = None
-    epicenter: Optional[Tuple[float, float]] = None
+    plot_title: str | None = None
+    legend_title: str | None = None
+    cities: dict[str, tuple[float, float]] | None = None
+    x_limits: tuple[float, float] | None = None
+    y_limits: tuple[float, float] | None = None
+    basemap_path: str | Path | Any | None = None
+    epicenter: tuple[float, float] | None = None
 
 
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
