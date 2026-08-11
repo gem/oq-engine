@@ -521,6 +521,7 @@ def run(func, oq, rup0, calc):
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     nr = 0
+    no = 0
     for model, pairs in cmaker_rups.items():
         nt = ntasks[model]
         cmakers, rupss = zip(*pairs)
@@ -532,11 +533,13 @@ def run(func, oq, rup0, calc):
                     cs.append(cm)
                     rs.append(chrups)
                     nr += len(chrups)
+                    no += chrups['n_occ'].sum()
             if cs:
                 allargs.append((rs, cs, calc.sitecol.sids,
                                 calc.sec_perils, calc.datastore))
     assert len(allargs) < TWO16, len(allargs)
     assert nr == len(filrups), (nr, len(filrups))  # sanity check
+    assert no == filrups['n_occ'].sum()  # sanity check
 
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
