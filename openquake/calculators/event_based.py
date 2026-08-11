@@ -486,7 +486,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
     rng = numpy.random.default_rng(42)
     ntasks = rng.multinomial(
         concurrent_tasks, [rups_by[model] / tot for model in rups_by])
-    return {model: ntasks[i] for i, model in enumerate(rups_by)}
+    return {model: int(ntasks[i]) for i, model in enumerate(rups_by)}
 
 
 def run(func, oq, rup0, calc):
@@ -531,7 +531,7 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = []
-    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks or 1)
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks // 2 or 1)
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     for model, pairs in cmaker_rups.items():
