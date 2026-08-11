@@ -577,8 +577,8 @@ class GetCloseRegionsTestCase(unittest.TestCase):
         lon, lat = 124.0, 8.5
         mosaic_models = get_close_mosaic_models(lon, lat, buffer_radius=5)
         self.assertEqual(mosaic_models, ['PHL', 'IDN', 'OPA'])
-        get_close_mosaic_models(lon, lat, buffer_radius=0.5)
-        mosaic_models = ['PHL']
+        mosaic_models = get_close_mosaic_models(lon, lat, buffer_radius=0.5)
+        self.assertEqual(mosaic_models, ['PHL'])
 
     def test_get_close_countries(self):
         lon, lat = 124.0, 8.5
