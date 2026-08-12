@@ -37,7 +37,7 @@ COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 
 class CountryImpactReportBuilder:
     """
-    Builds and stores a single-country impact PDF report.
+    Builds and stores a single-country impact report.
     """
     # Layout constants
     MARGIN = 20
@@ -55,7 +55,7 @@ class CountryImpactReportBuilder:
             from reportlab import platypus
         except ImportError as exc:
             raise RuntimeError(
-                "In order to create an Impact PDF report,"
+                "In order to create an impact report,"
                 " 'reportlab' should be installed"
                 ) from exc
         try:
@@ -697,7 +697,7 @@ class CountryImpactReportBuilder:
         return story
 
     def build(self):
-        logging.info(f'Making impact PDF report for {self.iso3}...')
+        logging.info(f'Making impact report for {self.iso3}...')
         images = self._generate_country_plots()
 
         buffer = BytesIO()
@@ -742,7 +742,8 @@ class CountryImpactReportBuilder:
         pdf_path = f'impact/{self.iso3}/report_pdf'
         self.dstore[pdf_path] = pdf_bytes
         logging.info(
-            f'The report PDF was saved into the datastore as {pdf_path}')
+            f'The impact report in PDF format was saved into the datastore'
+            f' as {pdf_path}')
 
         # Generate and save an exact PNG duplicate of the layout
         pdf_doc = self.fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -754,4 +755,5 @@ class CountryImpactReportBuilder:
         self.dstore[png_path] = pix.tobytes("png")
         pdf_doc.close()
         logging.info(
-            f'The report PNG was saved into the datastore as {png_path}')
+            f'The impact report in PNG format was saved into the datastore'
+            f' as {png_path}')
