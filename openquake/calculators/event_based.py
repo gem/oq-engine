@@ -476,6 +476,37 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
             for model, nr in rups_by.items()}
 
 
+def get_allargs(oq, acc, filrups, calc):
+    """
+    :returns: [(allrups, cmakers, sids, sec_perils, dstore), ...]
+    """
+    cmaker_rups = read_cmaker_rups(oq, acc, calc.datastore)
+    p = sum(len(pairs) for pairs in cmaker_rups.values())
+    logging.info(f'There are {p:_d} pairs cmaker_rups')
+    allargs = []
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks // 2 or 1)
+    if len(ntasks) > 1:
+        logging.info(f'ntasks by model={ntasks}')
+    nr = 0
+    for model, pairs in cmaker_rups.items():
+        nt = ntasks[model]
+        cmakers, rupss = zip(*pairs)
+        for ch in range(nt):
+            cs, rs = [], []
+            for cm, rups in zip(cmakers, rupss):
+                chrups = rups[ch::nt]
+                if len(chrups):
+                    cs.append(cm)
+                    rs.append(chrups)
+                    nr += len(chrups)
+            if cs:
+                allargs.append((rs, cs, calc.sitecol.sids,
+                                calc.sec_perils, calc.datastore))
+    assert len(allargs) < TWO16, len(allargs)
+    assert nr == len(filrups), (nr, len(filrups))  # sanity check
+    return allargs
+
+
 def run(func, oq, rup0, calc):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -508,37 +539,13 @@ def run(func, oq, rup0, calc):
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     # NB: _filter_rups calls close_ruptures which can raise an error
     filrups, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
-    cmaker_rups = read_cmaker_rups(oq, acc, dstore)
-    p = sum(len(pairs) for pairs in cmaker_rups.values())
-    logging.info(f'There are {p:_d} pairs cmaker_rups')
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
         dstore['relevant_events'] = events[
             numpy.isin(events['rup_id'], filrups['id'])]
 
-    allargs = []
-    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks // 2 or 1)
-    if len(ntasks) > 1:
-        logging.info(f'ntasks by model={ntasks}')
-    nr = 0
-    for model, pairs in cmaker_rups.items():
-        nt = ntasks[model]
-        cmakers, rupss = zip(*pairs)
-        for ch in range(nt):
-            cs, rs = [], []
-            for cm, rups in zip(cmakers, rupss):
-                chrups = rups[ch::nt]
-                if len(chrups):
-                    cs.append(cm)
-                    rs.append(chrups)
-                    nr += len(chrups)
-            if cs:
-                allargs.append((rs, cs, calc.sitecol.sids,
-                                calc.sec_perils, calc.datastore))
-    assert len(allargs) < TWO16, len(allargs)
-    assert nr == len(filrups), (nr, len(filrups))  # sanity check
-
+    allargs = get_allargs(oq, acc, filrups, calc)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):
