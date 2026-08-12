@@ -471,7 +471,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
         totr += rups_by[model]
         totw += sum(rup_weight(rups).sum() for rups in rupss)
 
-    ct = max(concurrent_tasks, totw / 8E7)
+    ct = max(concurrent_tasks, totw / 8E7)  # 8E7 fine-tuned on China
     return {model: int(numpy.ceil(ct * nr / totr))
             for model, nr in rups_by.items()}
 
@@ -484,7 +484,7 @@ def get_allargs(oq, acc, filrups, calc):
     p = sum(len(pairs) for pairs in cmaker_rups.values())
     logging.info(f'There are {p:_d} pairs cmaker_rups')
     allargs = []
-    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks // 2 or 1)
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks * .75 or 1)
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     nr = 0
