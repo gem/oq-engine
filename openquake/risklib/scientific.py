@@ -890,8 +890,13 @@ class MultiEventRNG(object):
         res = numpy.array(means)
         ok = (means != 0) & (covs != 0)  # nonsingular values
         alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
-        res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
-                   for i, eid in enumerate(eids[ok])]
+
+        # inversion gimmick to speed up the beta calculation, which is
+        # expensive; it makes a big difference in the China risk model
+        u_eids, inv = numpy.unique(eids[ok], return_inverse=True)
+        arr = numpy.array([self.rng[eid].beta(alpha[i], beta[i])
+                           for i, eid in enumerate(u_eids)])
+        res[ok] = arr[inv]
         return res
 
     def discrete_dmg_dist(self, eids, fractions, numbers):
