@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, performance
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -45,7 +45,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
+PERILTYPE = numpy.array(
+    ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -889,14 +890,16 @@ class MultiEventRNG(object):
         # of steps with cov == 0 and cov != 0
         res = numpy.array(means)
         ok = (means != 0) & (covs != 0)  # nonsingular values
-        alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
+        if not ok.any():
+            return res
 
-        # inversion gimmick to speed up the beta calculation, which is
-        # expensive; it makes a big difference in the China risk model
-        u_eids, inv = numpy.unique(eids[ok], return_inverse=True)
-        arr = numpy.array([self.rng[eid].beta(alpha[i], beta[i])
-                           for i, eid in enumerate(u_eids)])
-        res[ok] = arr[inv]
+        alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
+        # to speedup the calculation we group together alphas and betas
+        out = numpy.empty(len(alpha), F32)
+        for eid, start, stop in performance.idx_start_stop(eids[ok]):
+            out[start:stop] = self.rng[eid].beta(
+                alpha[start:stop], beta[start:stop])
+        res[ok] = out
         return res
 
     def discrete_dmg_dist(self, eids, fractions, numbers):
