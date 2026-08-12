@@ -42,8 +42,8 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
-# AE_MIN, AE_MAX chosen so that East_Asia.toml runs with 3 GB per core
-AE_MIN, AE_MAX = 8E7, 1.2E8
+# AE_MAX chosen so that China runs with 3 GB per core
+AE_MAX = 1.2E8
 get_n_occ = operator.itemgetter(1)
 
 
@@ -337,19 +337,11 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         allrups, cmakers, sids, secperils, dstore, monitor)
            if len(dic['gmfdata']))
     num_assets = monitor.read('num_assets')
-    for b, blk in enumerate(general.block_splitter(
-            dfs, AE_MAX, lambda gmf_df: num_assets[gmf_df.sid].sum())):
+    for blk in general.block_splitter(
+            dfs, AE_MAX, lambda gmf_df: num_assets[gmf_df.sid].sum()):
         # NB: it is essential to concatenate the small dataframes to have
-        # long arrays (around GMF_MB) and hence a good performance
-        mb = round(sum(size_mb(df) for df in blk))
-        na = numpy.round([num_assets[df.sid].sum() for df in blk])
-        ae = int(na.sum())
-        # print(f'{monitor.task_no=}, {na/1E6=}')
-        if b == 0 or ae < AE_MIN:  # don't spawn small tasks
-            yield event_based_risk(pandas.concat(blk), monitor)
-        else:
-            print(f'{monitor.calc_id=}, {monitor.task_no=}, {mb=} {ae=:_d}')
-            yield event_based_risk, pandas.concat(blk)
+        # long arrays (around AE_MAX) and hence a good performance
+        yield event_based_risk(pandas.concat(blk), monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
