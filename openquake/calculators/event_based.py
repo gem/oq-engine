@@ -484,7 +484,7 @@ def get_allargs(oq, acc, filrups, calc):
     p = sum(len(pairs) for pairs in cmaker_rups.values())
     logging.info(f'There are {p:_d} pairs cmaker_rups')
     allargs = []
-    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks / 1.33 or 1)
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks * .75 or 1)
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     nr = 0
