@@ -471,7 +471,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
         totr += rups_by[model]
         totw += sum(rup_weight(rups).sum() for rups in rupss)
 
-    ct = max(concurrent_tasks, totw / 1E8)
+    ct = max(concurrent_tasks, totw / 8E7)
     return {model: int(numpy.ceil(ct * nr / totr))
             for model, nr in rups_by.items()}
 
