@@ -213,6 +213,15 @@ class OqParamTestCase(unittest.TestCase):
             'vs30_clustering': False}
         assert oq.cross_imt_correlation_model == 'GodaAtkinson2009'
 
+    def test_cross_imt_model_uses_split_truncation_level(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3', truncation_level_between='2',
+            cross_imt_correlation_model='GodaAtkinson2009')
+        model = oq.get_cross_imt_correlation_model()
+        assert model.truncation_level == 2
+
     def test_shakemap_switches_are_not_model_names(self):
         for value in ('yes', 'no', 'full'):
             with self.subTest(value=value), self.assertRaises(KeyError):

@@ -2115,8 +2115,11 @@ class OqParam(valid.ParamSet):
         params = self.cross_imt_correlation_params
         if issubclass(cls, TruncatedCrossIMTCorrelationModel):
             params = dict(params)
-            params.setdefault(
-                'truncation_level', self.truncation_level_between or 99.)
+            truncation_level = self.truncation_level_between
+            if truncation_level is None:
+                truncation_level = (
+                    getattr(self, 'truncation_level', None) or 99.)
+            params.setdefault('truncation_level', truncation_level)
         return get_model(
             self.cross_imt_correlation_model, 'cross_imt', **params)
 

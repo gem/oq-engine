@@ -64,10 +64,10 @@ def _load_models():
     global _models_loaded
     if _models_loaded:
         return
-    _models_loaded = True
     root = 'openquake.hazardlib.correlation_models'
     for model_type in ('spatial', 'cross_imt', 'spatial_cross_imt'):
         import_all(f'{root}.{model_type}')
+    _models_loaded = True
 
 
 def _model_type(cls):
