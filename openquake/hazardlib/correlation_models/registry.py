@@ -18,8 +18,7 @@
 from dataclasses import dataclass
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel, CorrelationModel,
-    CrossIMTCorrelationModel, SpatialCorrelationModel,
+    CorrelationModel, CrossIMTCorrelationModel, SpatialCorrelationModel,
     SpatialCrossIMTCorrelationModel)
 
 
@@ -59,8 +58,6 @@ _specs = {}
 
 
 def _model_type(cls):
-    if issubclass(cls, BetweenEventCrossIMTCorrelationModel):
-        return 'between_event_cross_imt'
     if issubclass(cls, SpatialCorrelationModel):
         return 'spatial'
     if issubclass(cls, CrossIMTCorrelationModel):

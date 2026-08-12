@@ -38,7 +38,9 @@ from openquake.baselib.general import (
     DictArray, AccumDict, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
-from openquake.hazardlib import correlation, cross_correlation, stats, calc
+from openquake.hazardlib import stats, calc
+from openquake.hazardlib.correlation_models import (
+    BetweenEventCrossIMTCorrelationModel, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.sep.classes import SecondaryPeril
@@ -2092,27 +2094,27 @@ class OqParam(valid.ParamSet):
     @property
     def correl_model(self):
         """
-        Return a correlation object. See :mod:`openquake.hazardlib.correlation`
-        for more info.
+        Return a spatial correlation object. See
+        :mod:`openquake.hazardlib.correlation_models` for more info.
         """
         correl_name = self.ground_motion_correlation_model
         if correl_name is None:  # no correlation model
             return
-        correl_model_cls = getattr(
-            correlation, '%sCorrelationModel' % correl_name)
+        correl_model_cls = get_model_class(
+            correl_name, model_type='spatial')
         return correl_model_cls(**self.ground_motion_correlation_params)
 
     @property
     def cross_correl(self):
         """
         Return a cross correlation object (or None). See
-        :mod:`openquake.hazardlib.cross_correlation` for more info.
+        :mod:`openquake.hazardlib.correlation_models` for more info.
         """
         try:
-            cls = getattr(cross_correlation, self.cross_correlation)
-        except AttributeError:
+            cls = get_model_class(self.cross_correlation)
+        except KeyError:
             return None
-        if issubclass(cls, cross_correlation.CrossCorrelationBetween):
+        if issubclass(cls, BetweenEventCrossIMTCorrelationModel):
             tlb = self.truncation_level_between
             if tlb is None:
                 tlb = getattr(self, 'truncation_level', None) or 99.
