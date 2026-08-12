@@ -39,8 +39,10 @@ from openquake.baselib.general import (
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import stats, calc
-from openquake.hazardlib.correlation_models import (
-    TruncatedCrossIMTCorrelationModel, get_model_class)
+from openquake.hazardlib.correlation_models.base import (
+    TruncatedCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.registry import (
+    get_model, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.sep.classes import SecondaryPeril
@@ -219,13 +221,16 @@ countries:
   Example: *countries = ITA*.
   Default: ()
 
-cross_correlation:
-  When used in Conditional Spectrum calculation is the name of a cross
-  correlation class (i.e. "BakerJayaram2008").
-  When used in ShakeMap calculations the valid choices are "yes", "no" "full",
-  same as for *spatial_correlation*.
-  Example: *cross_correlation = no*.
-  Default: "yes"
+cross_imt_correlation_model:
+  Name of a registered cross-IMT correlation model. It is used consistently
+  by regular and ShakeMap calculations.
+  Example: *cross_imt_correlation_model = BakerJayaram2008*.
+  Default: empty, meaning no cross-IMT correlation
+
+cross_imt_correlation_params:
+  Parameters passed to the cross-IMT correlation model constructor.
+  Example: *cross_imt_correlation_params = {}*.
+  Default: empty dictionary
 
 siteid:
   Used in combination with sites to give an 8 character name to each site.
@@ -336,14 +341,15 @@ exports:
   Example: *exports = csv, rst*.
   Default: empty list
 
-ground_motion_correlation_model:
-  Enable ground motion correlation.
-  Example: *ground_motion_correlation_model = JB2009*.
+spatial_correlation_model:
+  Name of a registered spatial correlation model. It is used consistently
+  by regular and ShakeMap calculations.
+  Example: *spatial_correlation_model = JayaramBaker2009*.
   Default: None
 
-ground_motion_correlation_params:
-  To be used together with ground_motion_correlation_model.
-  Example: *ground_motion_correlation_params = {"vs30_clustering": False}*.
+spatial_correlation_params:
+  Parameters passed to the spatial correlation model constructor.
+  Example: *spatial_correlation_params = {"vs30_clustering": False}*.
   Default: empty dictionary
 
 ground_motion_fields:
@@ -833,11 +839,6 @@ source_id:
 source_nodes:
   INTERNAL
 
-spatial_correlation:
-  Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
-  Example: *spatial_correlation = full*.
-  Default: "yes"
-
 specific_assets:
   INTERNAL
 
@@ -935,7 +936,6 @@ with_betw_ratio:
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
 U16 = numpy.uint16
@@ -1077,7 +1077,13 @@ class OqParam(valid.ParamSet):
     ALIASES = {'individual_curves': 'individual_rlzs',
                'quantile_hazard_curves': 'quantiles',
                'mean_hazard_curves': 'mean',
-               'max_hazard_curves': 'max'}
+               'max_hazard_curves': 'max',
+               'ground_motion_correlation_model':
+               'spatial_correlation_model',
+               'ground_motion_correlation_params':
+               'spatial_correlation_params',
+               'cross_correlation': 'cross_imt_correlation_model',
+               'spatial_correlation': 'spatial_correlation_model'}
 
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
@@ -1115,7 +1121,9 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     countries = valid.Param(valid.namelist, ())
-    cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
+    cross_imt_correlation_model = valid.Param(
+        valid.NoneOr(valid.utf8_not_empty), None)
+    cross_imt_correlation_params = valid.Param(valid.dictionary, {})
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
     siteid = valid.Param(valid.base64names, ())
@@ -1138,9 +1146,9 @@ class OqParam(valid.ParamSet):
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
-    ground_motion_correlation_model = valid.Param(
-        valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
-    ground_motion_correlation_params = valid.Param(valid.dictionary, {})
+    spatial_correlation_model = valid.Param(
+        valid.NoneOr(valid.utf8_not_empty), None)
+    spatial_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
@@ -1251,7 +1259,6 @@ class OqParam(valid.ParamSet):
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
     source_nodes = valid.Param(valid.namelist, [])
-    spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     split_time = valid.Param(valid.positiveint, None)
@@ -2091,35 +2098,37 @@ class OqParam(valid.ParamSet):
         """
         return sum(sum(imls) for imls in self.imtls.values()) == 0
 
+    def get_spatial_correlation_model(self):
+        """Return the configured spatial correlation model, if any."""
+        if self.spatial_correlation_model is None:
+            return
+        return get_model(
+            self.spatial_correlation_model, 'spatial',
+            **self.spatial_correlation_params)
+
+    def get_cross_imt_correlation_model(self):
+        """Return the configured cross-IMT correlation model, if any."""
+        if self.cross_imt_correlation_model is None:
+            return
+        cls = get_model_class(
+            self.cross_imt_correlation_model, model_type='cross_imt')
+        params = self.cross_imt_correlation_params
+        if issubclass(cls, TruncatedCrossIMTCorrelationModel):
+            params = dict(params)
+            params.setdefault(
+                'truncation_level', self.truncation_level_between or 99.)
+        return get_model(
+            self.cross_imt_correlation_model, 'cross_imt', **params)
+
     @property
     def correl_model(self):
-        """
-        Return a spatial correlation object. See
-        :mod:`openquake.hazardlib.correlation_models` for more info.
-        """
-        correl_name = self.ground_motion_correlation_model
-        if correl_name is None:  # no correlation model
-            return
-        correl_model_cls = get_model_class(
-            correl_name, model_type='spatial')
-        return correl_model_cls(**self.ground_motion_correlation_params)
+        """Compatibility alias for the configured spatial model."""
+        return self.get_spatial_correlation_model()
 
     @property
     def cross_correl(self):
-        """
-        Return a cross correlation object (or None). See
-        :mod:`openquake.hazardlib.correlation_models` for more info.
-        """
-        try:
-            cls = get_model_class(self.cross_correlation)
-        except KeyError:
-            return None
-        if issubclass(cls, TruncatedCrossIMTCorrelationModel):
-            tlb = self.truncation_level_between
-            if tlb is None:
-                tlb = getattr(self, 'truncation_level', None) or 99.
-            return cls(tlb)
-        return cls()
+        """Compatibility alias for the configured cross-IMT model."""
+        return self.get_cross_imt_correlation_model()
 
     @property
     def rupture_xml(self):
@@ -2259,11 +2268,23 @@ class OqParam(valid.ParamSet):
             return True
         return self.hazard_calculation_id if self.shakemap_id else True
 
+    def is_valid_correlation_models(self):
+        """
+        Correlation model names must be registered for the requested type
+        """
+        models = (
+            (self.spatial_correlation_model, 'spatial'),
+            (self.cross_imt_correlation_model, 'cross_imt'))
+        for name, model_type in models:
+            if name:
+                get_model_class(name, model_type)
+        return True
+
     def is_valid_truncation_level(self):
         """
         In presence of a correlation model the truncation level must be nonzero
         """
-        if self.ground_motion_correlation_model:
+        if self.spatial_correlation_model:
             return self.truncation_level_within != 0
         else:
             return True
@@ -2339,12 +2360,24 @@ class OqParam(valid.ParamSet):
         `intensity_measure_types_and_levels` is set directly,
         `intensity_measure_types` must not be set.
         """
-        if self.ground_motion_correlation_model:
-            for imt in self.imtls:
-                if not (imt.startswith('SA') or imt in ['PGA', 'PGV']):
+        models = (
+            (self.spatial_correlation_model, 'spatial'),
+            (self.cross_imt_correlation_model, 'cross_imt'))
+        for name, model_type in models:
+            if not name:
+                continue
+            cls = get_model_class(name, model_type)
+            if cls.supported_imts is None:
+                continue
+            for imt_str in self.imtls:
+                imt_name = from_string(imt_str).name
+                if (imt_name == 'MMI' and
+                        ('shakemap' in self.inputs or self.shakemap_id)):
+                    continue
+                if imt_name not in cls.supported_imts:
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
-                            self.ground_motion_correlation_model, imt))
+                            name, imt_str))
         if self.risk_files:  # IMTLs extracted from the risk files
             return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)

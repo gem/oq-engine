@@ -27,11 +27,20 @@
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel as CrossCorrelation,
     TruncatedCrossIMTCorrelationModel as CrossCorrelationBetween)
-from openquake.hazardlib.correlation_models.cross_imt import (
-    BakerJayaram2008, Bradley2012, FullCrossCorrelation,
-    GodaAtkinson2009, NoCrossCorrelation)
+from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
+    BakerCornell2006)
+from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
+    BakerJayaram2008)
+from openquake.hazardlib.correlation_models.cross_imt.bradley_2012 import (
+    Bradley2012)
+from openquake.hazardlib.correlation_models.cross_imt.full_cross_correlation import (
+    FullCrossCorrelation)
+from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 import (
+    GodaAtkinson2009)
+from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation import (
+    NoCrossCorrelation)
 
 __all__ = [
-    'BakerJayaram2008', 'Bradley2012', 'CrossCorrelation',
+    'BakerCornell2006', 'BakerJayaram2008', 'Bradley2012', 'CrossCorrelation',
     'CrossCorrelationBetween', 'FullCrossCorrelation',
     'GodaAtkinson2009', 'NoCrossCorrelation']

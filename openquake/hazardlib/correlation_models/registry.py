@@ -17,6 +17,7 @@
 
 from dataclasses import dataclass
 
+from openquake.baselib.general import import_all
 from openquake.hazardlib.correlation_models.base import (
     CorrelationModel, CrossIMTCorrelationModel, SpatialCorrelationModel,
     SpatialCrossIMTCorrelationModel)
@@ -55,6 +56,18 @@ class ModelSpec:
 
 registry = {}
 _specs = {}
+_models_loaded = False
+
+
+def _load_models():
+    """Import model modules the first time the registry is queried."""
+    global _models_loaded
+    if _models_loaded:
+        return
+    _models_loaded = True
+    root = 'openquake.hazardlib.correlation_models'
+    for model_type in ('spatial', 'cross_imt', 'spatial_cross_imt'):
+        import_all(f'{root}.{model_type}')
 
 
 def _model_type(cls):
@@ -89,6 +102,7 @@ def register_model(*aliases, description=''):
 
 def get_model_class(name, model_type=None):
     """Return the class registered under ``name``."""
+    _load_models()
     try:
         cls = registry[name]
     except KeyError as exc:
@@ -102,15 +116,16 @@ def get_model_class(name, model_type=None):
     return cls
 
 
-def get_model(name, **parameters):
+def get_model(name, model_type=None, **parameters):
     """Instantiate and validate the model registered under ``name``."""
-    model = get_model_class(name)(**parameters)
+    model = get_model_class(name, model_type)(**parameters)
     model.validate()
     return model
 
 
 def get_model_specs(model_type=None):
     """Return canonical model specifications, optionally by model type."""
+    _load_models()
     if model_type is None:
         return dict(_specs)
     return {name: spec for name, spec in _specs.items()

@@ -191,12 +191,35 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 maximum_distance='400',
                 truncation_level='3',
-                ground_motion_correlation_model='JB2009',
+                spatial_correlation_model='JayaramBaker2009',
                 intensity_measure_types_and_levels=imtls,
             ).validate()
         self.assertEqual(
             str(ctx.exception),
-            f'Correlation model JB2009 does not accept IMT={imt}')
+            'Correlation model JayaramBaker2009 does not accept IMT='
+            f'{imt}')
+
+    def test_correlation_parameter_aliases(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3',
+            ground_motion_correlation_model='JB2009',
+            ground_motion_correlation_params=(
+                '{"vs30_clustering": False}'),
+            cross_correlation='GodaAtkinson2009')
+        assert oq.spatial_correlation_model == 'JB2009'
+        assert oq.spatial_correlation_params == {
+            'vs30_clustering': False}
+        assert oq.cross_imt_correlation_model == 'GodaAtkinson2009'
+
+    def test_shakemap_switches_are_not_model_names(self):
+        for value in ('yes', 'no', 'full'):
+            with self.subTest(value=value), self.assertRaises(KeyError):
+                OqParam(
+                    calculation_mode='scenario', inputs=fakeinputs,
+                    sites='0.1 0.2', truncation_level='3',
+                    spatial_correlation=value).validate()
 
     def test_duplicated_levels(self):
         with self.assertRaises(ValueError) as ctx:

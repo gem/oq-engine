@@ -22,8 +22,8 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
-def jayaram_baker_2009(sites_or_distances, imt,
-                       vs30_clustering=False):
+def _correlation_matrix(sites_or_distances, imt,
+                        vs30_clustering=False):
     """Return the Jayaram and Baker (2009) correlation matrix."""
     if hasattr(sites_or_distances, 'mesh'):
         distances = sites_or_distances.mesh.get_distance_matrix()
@@ -57,5 +57,5 @@ class JayaramBaker2009(SpatialCorrelationModel):
 
     def correlation_matrix(self, sites, imt, component=None, context=None):
         self._get_component(component)
-        return jayaram_baker_2009(
+        return _correlation_matrix(
             sites, imt, self.vs30_clustering)

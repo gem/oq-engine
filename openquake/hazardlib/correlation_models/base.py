@@ -76,6 +76,17 @@ class CorrelationModel:
     def validate(self):
         """Validate model parameters after construction."""
 
+    def validate_imts(self, imts):
+        """Raise when an IMT is outside the model's declared scope."""
+        if self.supported_imts is None:
+            return
+        unsupported = sorted({imt.name for imt in imts
+                              if imt.name not in self.supported_imts})
+        if unsupported:
+            raise ValueError(
+                f'{self.name or self.__class__.__name__} does not support '
+                f'{", ".join(unsupported)}')
+
     def _get_component(self, component=None):
         if component is None:
             return self.calibrated_component

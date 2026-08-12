@@ -26,15 +26,14 @@
 
 from openquake.hazardlib.correlation_models.base import (
     SpatialCorrelationModel as BaseCorrelationModel)
-from openquake.hazardlib.correlation_models.spatial import (
-    HeresiMiranda2018, JayaramBaker2009,
-    heresi_miranda_2018, jayaram_baker_2009)
+from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2018 import (
+    HeresiMiranda2018, _correlation_matrix as hmcorrelation)
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009, _correlation_matrix as jbcorrelation)
 
 
 JB2009CorrelationModel = JayaramBaker2009
 HM2018CorrelationModel = HeresiMiranda2018
-jbcorrelation = jayaram_baker_2009
-hmcorrelation = heresi_miranda_2018
 
 __all__ = [
     'BaseCorrelationModel', 'HM2018CorrelationModel',

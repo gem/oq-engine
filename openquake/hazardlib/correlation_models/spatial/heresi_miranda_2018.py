@@ -22,7 +22,7 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
-def heresi_miranda_2018(sites_or_distances, imt,
+def _correlation_matrix(sites_or_distances, imt,
                         uncertainty_multiplier=0):
     """Return the Heresi and Miranda (2018) correlation matrix."""
     if hasattr(sites_or_distances, 'mesh'):
@@ -61,7 +61,7 @@ class HeresiMiranda2018(SpatialCorrelationModel):
 
     def correlation_matrix(self, sites, imt, component=None, context=None):
         self._get_component(component)
-        return heresi_miranda_2018(
+        return _correlation_matrix(
             sites, imt, self.uncertainty_multiplier)
 
     def apply_correlation(self, sites, imt, residuals, stddev_intra):

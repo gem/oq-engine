@@ -18,10 +18,21 @@ import numpy
 import pytest
 
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.correlation_models import (
-    BakerJayaram2008, Bradley2012, GodaAtkinson2009, JayaramBaker2009,
-    ResidualComponent, SpatialCrossIMTCorrelationModel, get_model,
-    get_model_class, get_model_specs)
+from openquake.hazardlib import correlation_models
+from openquake.hazardlib.correlation_models.base import (
+    ResidualComponent, SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
+    BakerCornell2006)
+from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
+    BakerJayaram2008)
+from openquake.hazardlib.correlation_models.cross_imt.bradley_2012 import (
+    Bradley2012)
+from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 import (
+    GodaAtkinson2009)
+from openquake.hazardlib.correlation_models.registry import (
+    get_model, get_model_class, get_model_specs)
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
 from openquake.hazardlib.imt import PGA, SA
 
 
@@ -30,6 +41,7 @@ def test_registry_aliases_and_metadata():
     assert get_model_class('JayaramBaker2009') is JayaramBaker2009
     assert get_model_class('GodaAtkinson2009') is GodaAtkinson2009
     assert get_model_class('Bradley2012') is Bradley2012
+    assert get_model_class('BakerCornell2006') is BakerCornell2006
     specs = get_model_specs('spatial')
     assert specs['JayaramBaker2009'].aliases == (
         'JB2009', 'JB2009CorrelationModel')
@@ -45,12 +57,18 @@ def test_registry_aliases_and_metadata():
 
 
 def test_registry_instantiation_and_type_validation():
-    model = get_model('JB2009', vs30_clustering=False)
+    model = get_model(
+        'JB2009', 'spatial', vs30_clustering=False)
     assert isinstance(model, JayaramBaker2009)
     with pytest.raises(TypeError, match='not spatial'):
         get_model_class('BakerJayaram2008', model_type='spatial')
     with pytest.raises(KeyError, match='Unknown correlation model'):
         get_model_class('MissingModel')
+
+
+def test_package_does_not_reexport_models():
+    assert not hasattr(correlation_models, 'JayaramBaker2009')
+    assert not hasattr(correlation_models, 'get_model')
 
 
 def test_residual_component_validation():
