@@ -40,7 +40,7 @@ from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import stats, calc
 from openquake.hazardlib.correlation_models import (
-    BetweenEventCrossIMTCorrelationModel, get_model_class)
+    TruncatedCrossIMTCorrelationModel, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.sep.classes import SecondaryPeril
@@ -2114,7 +2114,7 @@ class OqParam(valid.ParamSet):
             cls = get_model_class(self.cross_correlation)
         except KeyError:
             return None
-        if issubclass(cls, BetweenEventCrossIMTCorrelationModel):
+        if issubclass(cls, TruncatedCrossIMTCorrelationModel):
             tlb = self.truncation_level_between
             if tlb is None:
                 tlb = getattr(self, 'truncation_level', None) or 99.

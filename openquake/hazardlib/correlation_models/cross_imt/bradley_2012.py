@@ -18,12 +18,12 @@
 import numpy
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel, ResidualComponent)
+    ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
 @register_model(description='Bradley (2012) PGV and spectrum correlation')
-class Bradley2012(BetweenEventCrossIMTCorrelationModel):
+class Bradley2012(TruncatedCrossIMTCorrelationModel):
     """Total-residual correlation between PGV and spectrum-based IMTs."""
 
     name = 'Bradley2012'

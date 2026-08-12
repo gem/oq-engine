@@ -19,7 +19,7 @@ import pytest
 
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.correlation_models import (
-    BakerJayaram2008, GodaAtkinson2009, JayaramBaker2009,
+    BakerJayaram2008, Bradley2012, GodaAtkinson2009, JayaramBaker2009,
     ResidualComponent, SpatialCrossIMTCorrelationModel, get_model,
     get_model_class, get_model_specs)
 from openquake.hazardlib.imt import PGA, SA
@@ -29,6 +29,7 @@ def test_registry_aliases_and_metadata():
     assert get_model_class('JB2009') is JayaramBaker2009
     assert get_model_class('JayaramBaker2009') is JayaramBaker2009
     assert get_model_class('GodaAtkinson2009') is GodaAtkinson2009
+    assert get_model_class('Bradley2012') is Bradley2012
     specs = get_model_specs('spatial')
     assert specs['JayaramBaker2009'].aliases == (
         'JB2009', 'JB2009CorrelationModel')
@@ -39,6 +40,8 @@ def test_registry_aliases_and_metadata():
     cross_imt = get_model_specs('cross_imt')
     assert cross_imt['GodaAtkinson2009'].calibrated_component == (
         ResidualComponent.BETWEEN_EVENT)
+    assert cross_imt['Bradley2012'].calibrated_component == (
+        ResidualComponent.TOTAL)
 
 
 def test_registry_instantiation_and_type_validation():

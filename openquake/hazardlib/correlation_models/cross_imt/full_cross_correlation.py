@@ -18,12 +18,12 @@
 import numpy
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel, ResidualComponent)
+    ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
 @register_model(description='Identical residuals across IMTs')
-class FullCrossCorrelation(BetweenEventCrossIMTCorrelationModel):
+class FullCrossCorrelation(TruncatedCrossIMTCorrelationModel):
     """Represent perfect cross-IMT correlation."""
 
     name = 'FullCrossCorrelation'

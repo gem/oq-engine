@@ -225,8 +225,8 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
         return covariance
 
 
-class BetweenEventCrossIMTCorrelationModel(CrossIMTCorrelationModel):
-    """Cross-IMT model able to sample between-event residuals."""
+class TruncatedCrossIMTCorrelationModel(CrossIMTCorrelationModel):
+    """Cross-IMT model able to sample truncated normal residuals."""
 
     matrix_dtype = float
 

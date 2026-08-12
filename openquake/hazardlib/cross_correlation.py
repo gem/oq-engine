@@ -25,8 +25,8 @@
 # internal callers.
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel as CrossCorrelationBetween,
-    CrossIMTCorrelationModel as CrossCorrelation)
+    CrossIMTCorrelationModel as CrossCorrelation,
+    TruncatedCrossIMTCorrelationModel as CrossCorrelationBetween)
 from openquake.hazardlib.correlation_models.cross_imt import (
     BakerJayaram2008, Bradley2012, FullCrossCorrelation,
     GodaAtkinson2009, NoCrossCorrelation)

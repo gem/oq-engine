@@ -18,14 +18,14 @@
 import numpy
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel, ResidualComponent)
+    ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
 @register_model(
     'GA2009',
     description='Goda and Atkinson (2009) cross-IMT correlation')
-class GodaAtkinson2009(BetweenEventCrossIMTCorrelationModel):
+class GodaAtkinson2009(TruncatedCrossIMTCorrelationModel):
     """Between-event cross-IMT correlation by Goda and Atkinson (2009)."""
 
     name = 'GodaAtkinson2009'

@@ -18,12 +18,12 @@
 import numpy
 
 from openquake.hazardlib.correlation_models.base import (
-    BetweenEventCrossIMTCorrelationModel, ResidualComponent)
+    ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
 @register_model(description='Independent residuals across IMTs')
-class NoCrossCorrelation(BetweenEventCrossIMTCorrelationModel):
+class NoCrossCorrelation(TruncatedCrossIMTCorrelationModel):
     """Represent the absence of cross-IMT correlation."""
 
     name = 'NoCrossCorrelation'
