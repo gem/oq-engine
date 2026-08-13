@@ -831,7 +831,7 @@ class MultiEventRNG(object):
     >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
-    array([0.4372343 , 0.57308132, 0.56392573])
+    array([0.43723431, 0.57308131, 0.56392574])
     >>> fractions = numpy.array([[[.8, .1, .1]]])
     >>> rng.discrete_dmg_dist([0], fractions, [10])
     array([[[8, 2, 0]]], dtype=uint32)
