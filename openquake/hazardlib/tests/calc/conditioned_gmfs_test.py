@@ -22,12 +22,15 @@ U.S. Geological Survey. DOI: https://doi.org/10.5066/F7D21VPQ, see
 https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
 import unittest
+from unittest import mock
 
 import numpy
 
+from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.conditioned_gmfs import get_mean_covs, Input
+from openquake.hazardlib.calc.conditioned_gmfs import (
+    build_precomputed, compute_distance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
@@ -47,6 +50,39 @@ def mc(rupture, cmaker, station_sitecol, station_data,
 
 
 class SetUSGSTestCase(unittest.TestCase):
+    def test_mean_only(self):
+        cmaker = simple_cmaker(
+            [test_data.ZeroMeanGMM()], [],
+            maximum_distance=test_data.MAX_DIST, truncation_level=0)
+        inp = Input(
+            test_data.CASE01_TARGET_SITECOL,
+            test_data.CASE01_STATION_SITECOL,
+            test_data.CASE01_TARGET_IMTS,
+            [from_string(imt) for imt in test_data.CASE01_OBSERVED_IMTS],
+            test_data.CASE01_STATION_DATA,
+            test_data.DummySpatialCorrelationModel(),
+            test_data.DummyCrossCorrelationBetween(),
+            test_data.DummyCrossCorrelationWithin())
+
+        with mock.patch(
+                'openquake.hazardlib.calc.conditioned_gmfs.'
+                'compute_distance_matrix',
+                wraps=compute_distance_matrix) as compute_distances:
+            pre = build_precomputed(
+                test_data.RUP, cmaker, inp, compute_covs=False)
+        self.assertEqual(compute_distances.call_count, 2)
+        self.assertIsNone(pre.YY)
+        self.assertIsNone(pre.DY)
+        monitor = performance.Monitor()
+        monitor.set_shared(YD=pre.YD, DD=pre.DD)
+        mu, cov_within, cov_between, _ = (
+            pre.conditioners[0].get_mu_tau_phi(
+                0, inp.imts_Y[0], monitor, compute_covs=False))
+
+        aac(mu, 0)
+        self.assertIsNone(cov_within)
+        self.assertIsNone(cov_between)
+
     def test_case_01(self):
         case_name = "test_case_01"
         rupture = test_data.RUP

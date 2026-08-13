@@ -19,7 +19,9 @@
 import io
 import os
 import math
+from unittest import mock
 from unittest.mock import patch
+import numpy
 import pandas
 import numpy.testing
 
@@ -33,7 +35,7 @@ from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
+from openquake.calculators import event_based
 from openquake.calculators.postproc import debug_rupture
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.event_based import (
@@ -86,13 +88,89 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
 class EventBasedTestCase(CalculatorTestCase):
 
+    def test_cmakers_maximum_distance(self):
+        # A task containing multiple CMakers must not lose later GMFs
+
+        class Oq:
+            def maximum_distance(self, trt):
+                return {'short': 10.0, 'long': 100.0}[trt]
+
+        class Cmaker:
+            def __init__(self, trt):
+                self.trt = trt
+                self.oq = Oq()
+
+            def init_monitoring(self, monitor):
+                pass
+
+        class Dstore:
+            filename = 'dummy.hdf5'
+            parent = None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+            def __getitem__(self, key):
+                if key == 'complete':
+                    return self
+                raise KeyError(key)
+
+            def filtered(self, sids):
+                return self
+
+        class SourceFilter:
+            def __init__(self, sites, maxdist):
+                self.maxdist = maxdist
+
+        class Monitor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                return self
+
+        dtype = numpy.dtype([('id', 'i8'), ('distance', 'f4')])
+        rups = [
+            numpy.array([(1, 5.0)], dtype),
+            numpy.array([(2, 50.0)], dtype),
+        ]
+        cmakers = [Cmaker('short'), Cmaker('long')]
+        received = []
+
+        def get_proxies(_filename, rows):
+            return list(rows)
+
+        def fake_event_based(
+                block, cmaker, _sec_perils, srcfilter, _cmon, _umon):
+            for rup in block:
+                if rup['distance'] <= srcfilter.maxdist:
+                    received.append((cmaker.trt, int(rup['id'])))
+            yield {'gmfdata': {}}
+
+        with mock.patch.object(event_based, 'SourceFilter', SourceFilter), \
+                mock.patch.object(event_based, 'get_proxies', get_proxies), \
+                mock.patch.object(
+                    event_based, '_event_based', fake_event_based):
+            for result in event_based.event_based(
+                    rups, cmakers, numpy.array([0]), (), Dstore(), Monitor()):
+                list(result)
+
+        self.assertEqual(received, [('short', 1), ('long', 2)])
+
     def check_avg_gmf(self):
         # checking avg_gmf with a single site
         min_iml = self.calc.oqparam.min_iml
         df = self.calc.datastore.read_df('gmf_data', 'sid')
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
-        [(_sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
+        [(_sid, avgstd)] = event_based.compute_avg_gmf(
+            df, weights[rlzs], min_iml).items()
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
         aac(avg_gmf[:, 0], avgstd)
 
@@ -107,7 +185,8 @@ class EventBasedTestCase(CalculatorTestCase):
         gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
                                   numpy.zeros(E, int)[ok])
         weights = numpy.ones(E)
-        [(_sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
+        [(_sid, avgstd)] = event_based.compute_avg_gmf(
+            gmf_df, weights, min_iml).items()
         aac(avgstd, [[0.134056], [1.620217]], atol=1E-6)
 
     def test_spatial_correlation(self):
@@ -329,10 +408,12 @@ class EventBasedTestCase(CalculatorTestCase):
                          dic)
 
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curve(self.calc.datastore, 'PGA', slice(None))
+        mean_eb = event_based.get_mean_curve(
+            self.calc.datastore, 'PGA', slice(None))
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curve(self.calc.cl.datastore, 'PGA', slice(None))
+        mean_cl = event_based.get_mean_curve(
+            self.calc.cl.datastore, 'PGA', slice(None))
         reldiff, _index = max_rel_diff_index(mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.06)
 
@@ -618,7 +699,8 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
         [fname] = out['event_based_mfd', 'csv']
-        self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/event_based_mfd.csv', fname,
+                              delta=1E-6)
 
     def test_30(self):
         # build the ruptures, then the GMFs

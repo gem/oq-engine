@@ -126,8 +126,9 @@ F32 = numpy.float32
 Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD conditioners')
 
 
-def get_precomputed(rupture, cmaker, inp):
+def get_precomputed(rupture, cmaker, inp, compute_covs=True):
     """
+    :param compute_covs: build matrices required only for random fields
     :returns: (ctx_Y, ctx_D, dist)
     """
     if hasattr(rupture, 'rupture'):
@@ -144,9 +145,12 @@ def get_precomputed(rupture, cmaker, inp):
     inp.sites_D = inp.sites_D.filter(mask_D)
     inp.stations = inp.stations[mask_D].copy()
 
-    YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+    if compute_covs:
+        YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+        DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
+    else:
+        YY = DY = None
     YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
-    DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
     DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
     return Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, [])
 
@@ -298,7 +302,7 @@ class DResult:
     native_data_available: bool
     corr_HD_HD: numpy.ndarray = 0
     cov_WD_WD_inv: numpy.ndarray = 0
-    phi_D_diag: numpy.ndarray = 0
+    phi_D: numpy.ndarray = 0
     T_D: numpy.ndarray = 0
     zeta_D: numpy.ndarray = 0
 
@@ -363,7 +367,6 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
         sdata[im.string + "_tau"] = ms[2, 0]
         sdata[im.string + "_phi"] = ms[3, 0]
     sdata = pandas.DataFrame(sdata)
-
     t = _createD(g, m, target_imt, inp.imts_D, sdata)
 
     # Observations (recorded values at the stations)
@@ -404,11 +407,11 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
 
     # The raw residuals
     t.zeta_D = yD - mu_yD
-    t.phi_D_diag = numpy.diag(phi_D.flatten())
+    t.phi_D = phi_D.flatten()
 
     cov_WD_WD = compute_spatial_cross_covariance_matrix(
         inp.spatial_correl, inp.cross_correl_within, DD,
-        t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
+        t.conditioning_imts, t.conditioning_imts, t.phi_D, t.phi_D)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -468,7 +471,7 @@ def _compute_spatial_cross_correlation_matrix(
 
 def compute_spatial_cross_covariance_matrix(
         spatial_correl, cross_correl_within, distance_matrix,
-        imts1, imts2, diag1, diag2):
+        imts1, imts2, stddev1, stddev2):
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
     # assume here that the correlation between differing IMs at differing
@@ -479,7 +482,10 @@ def compute_spatial_cross_covariance_matrix(
     rho = [[_compute_spatial_cross_correlation_matrix(
         imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
             for imt_2 in imts2] for imt_1 in imts1]
-    return diag1.astype(F32) @ numpy.block(rho) @ diag2.astype(F32)
+    covariance = numpy.block(rho)
+    covariance *= stddev1.astype(F32)[:, numpy.newaxis]
+    covariance *= stddev2.astype(F32)[numpy.newaxis, :]
+    return covariance
 
 
 # In scenario/case_21 one has
@@ -517,7 +523,7 @@ class Conditioner:
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance
-    def get_mu_tau_phi(self, m, target_imt, monitor):
+    def get_mu_tau_phi(self, m, target_imt, monitor, compute_covs=True):
         # NB: mean_stds matrices have shape (4, 1, M, N)
         g, gsim, inp, mean_stds, mean_stds_D = self.args
 
@@ -526,7 +532,8 @@ class Conditioner:
             t = createD(g, m, target_imt, inp, mean_stds_D, DD)
 
         cov_HD_HD_yD = numpy.linalg.pinv(
-            t.T_D.T @ t.cov_WD_WD_inv @ t.T_D + numpy.linalg.pinv(t.corr_HD_HD))
+            t.T_D.T @ t.cov_WD_WD_inv @ t.T_D +
+            numpy.linalg.pinv(t.corr_HD_HD))
 
         mu_HD_yD = cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @ t.zeta_D
 
@@ -550,7 +557,7 @@ class Conditioner:
 
         # Predicted uncertainty components at the target sites, from GSIM
         tau_Y = mean_stds[2, 0, 0, :, numpy.newaxis]
-        phi_Y_diag = numpy.diag(mean_stds[3, 0, 0])
+        phi_Y = mean_stds[3, 0, 0]
 
         # Compute the within-event covariance matrices for the
         # target sites and observation sites; the shapes are
@@ -558,12 +565,7 @@ class Conditioner:
         with monitor.shared['YD'] as YD:
             cov_WY_WD = compute_spatial_cross_covariance_matrix(
                 inp.spatial_correl, inp.cross_correl_within, YD,
-                [t.imt], t.conditioning_imts, phi_Y_diag, t.phi_D_diag)
-
-        with monitor.shared['DY'] as DY:
-            cov_WD_WY = compute_spatial_cross_covariance_matrix(
-                inp.spatial_correl, inp.cross_correl_within, DY,
-                t.conditioning_imts, [t.imt], t.phi_D_diag, phi_Y_diag)
+                [t.imt], t.conditioning_imts, phi_Y, t.phi_D)
 
         # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
         RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
@@ -573,41 +575,55 @@ class Conditioner:
         mu_Y_yD = (mu_Y + tau_Y @ mu_HD_yD[0, numpy.newaxis] +
                    RC @ (t.zeta_D - mu_BD_yD)).astype(F32)
 
-        # Compute the within-event covariance matrix for the target sites:
-        # this is the dominant piece, both in time and memory
-        with (monitor.shared['YY'] as YY,
-              monitor('computing cov_Y_Y', measuremem=True)):
-            cov_WY_WY = compute_spatial_cross_covariance_matrix(
-                inp.spatial_correl, inp.cross_correl_within, YY,
-                [t.imt], [t.imt], phi_Y_diag, phi_Y_diag)
+        if not compute_covs:
+            return mu_Y_yD, None, None, msg
 
-            # Compute the conditioned within-event covariance matrix
-            # for the target sites clipped to zero, shape (nsites, nsites)
-            cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0).astype(F32)
-
-            # Compute the scaling matrix C for the conditioned between-event
-            # covariance matrix
-            if t.native_data_available:
-                C = (tau_Y - RC @ t.T_D).astype(F32)
-            else:
-                N = len(inp.sites_Y)
-                zeros = numpy.zeros((N, len(t.conditioning_imts)), F32)
-                C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
-
-            # Compute the conditioned between-event covariance matrix
-            # for the target sites clipped to zero, shape (nsites, nsites)
-            cov_BY_BY_yD = (C @ cov_HD_HD_yD.astype(F32) @ C.T).clip(min=0)
+        cov_WY_WY_wD, cov_BY_BY_yD = _compute_target_covs(
+            t, inp, phi_Y, tau_Y, RC, cov_HD_HD_yD, monitor)
         return mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg
 
 
-def build_precomputed(rupture, cmaker, inp):
+def _compute_target_covs(
+        t, inp, phi_Y, tau_Y, RC, cov_HD_HD_yD, monitor):
+    """Compute the covariance matrices required for random fields."""
+    with monitor.shared['DY'] as DY:
+        cov_WD_WY = compute_spatial_cross_covariance_matrix(
+            inp.spatial_correl, inp.cross_correl_within, DY,
+            t.conditioning_imts, [t.imt], t.phi_D, phi_Y)
+
+    # This is the dominant piece, both in time and memory.
+    with (monitor.shared['YY'] as YY,
+          monitor('computing cov_Y_Y', measuremem=True)):
+        cov_WY_WY = compute_spatial_cross_covariance_matrix(
+            inp.spatial_correl, inp.cross_correl_within, YY,
+            [t.imt], [t.imt], phi_Y, phi_Y)
+
+        # Conditioned within-event covariance, clipped to zero.
+        cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(
+            min=0).astype(F32)
+
+        # Scaling matrix for the conditioned between-event covariance.
+        if t.native_data_available:
+            C = (tau_Y - RC @ t.T_D).astype(F32)
+        else:
+            N = len(inp.sites_Y)
+            zeros = numpy.zeros((N, len(t.conditioning_imts)), F32)
+            C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
+
+        # Conditioned between-event covariance, clipped to zero.
+        cov_BY_BY_yD = (C @ cov_HD_HD_yD.astype(F32) @ C.T).clip(min=0)
+    return cov_WY_WY_wD, cov_BY_BY_yD
+
+
+def build_precomputed(rupture, cmaker, inp, compute_covs=True):
     """
     :param rupture: hazardlib rupture
     :param cmaker: ContextMaker
     :param inp: Input with sites, imts, stations and correlation params
+    :param compute_covs: build matrices required only for random fields
     :return: Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, mtp_args) tuple
     """
-    pre = get_precomputed(rupture, cmaker, inp)
+    pre = get_precomputed(rupture, cmaker, inp, compute_covs)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -634,9 +650,11 @@ def conditioned(computer, conditioner, monitor):
     E = computer.E // len(computer.cmaker.gsims)
     MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
     g = conditioner.g
+    compute_covs = max(computer.tlw, computer.tlb) > TRUNCATION_THRESHOLD
     for m, imt in enumerate(conditioner.inp.imts_Y):
-        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(m, imt, monitor)
-        if max(computer.tlw, computer.tlb) <= TRUNCATION_THRESHOLD:
+        mu, ta, ph, _msg = conditioner.get_mu_tau_phi(
+            m, imt, monitor, compute_covs)
+        if not compute_covs:
             MNE[m, :, :E] = mu.repeat(E, axis=1)
         else:
             MNE[m, :, :E] = computer._compute_mvn(mu, ta, ph, E)
