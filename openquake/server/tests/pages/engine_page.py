@@ -6,6 +6,13 @@ class EnginePage:
         self.page = page
         self.calculation_table = page.locator('#calculation_table')
 
+    def _click_clear_of_backdrop(self, locator, timeout=30_000):
+        # Guard against a stale/fading .modal-backdrop from a prior
+        # modal intercepting pointer events on this click.
+        self.page.locator(".modal-backdrop").wait_for(
+            state="detached", timeout=10_000)
+        locator.click(timeout=timeout)
+
     def get_job_row(self, job_id):
         return self.page.locator("tr").filter(has_text=job_id)
 
@@ -23,7 +30,8 @@ class EnginePage:
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
         expect(job_row.get_by_text("executing")).to_be_visible(timeout=80_000)
-        job_row.get_by_role("link", name="Abort").click(timeout=20_000)
+        self._click_clear_of_backdrop(
+            job_row.get_by_role("link", name="Abort"))
         self.page.get_by_role("button", name="Yes, abort").click(
             timeout=20_000)
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
@@ -31,7 +39,8 @@ class EnginePage:
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
-        job_row.get_by_role("link", name="Remove").click(timeout=30_000)
+        self._click_clear_of_backdrop(
+            job_row.get_by_role("link", name="Remove"))
         self.page.get_by_role("button", name="Yes, remove").click(
             timeout=30_000)
         self.page.get_by_role("button", name="Close").click(timeout=30_000)
