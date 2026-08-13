@@ -861,7 +861,8 @@ def export_fragility_xml(dstore):
     crm = dstore.read_df('crm')
     ddic = {peril: {} for peril in crm.peril.unique()}
     for (peril, loss_type), df in crm.groupby(['peril', 'loss_type']):
-        nodeobj = convert_df_to_fragility(peril, loss_type, oq.limit_states, df)
+        nodeobj = convert_df_to_fragility(
+            peril, loss_type, oq.limit_states, df)
         dest = dstore.export_path('%s_%s_fragility.xml' % (peril, loss_type))
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
@@ -1012,23 +1013,17 @@ def export_job_zip(ekey, dstore):
 
     assetcol_csv = None
     if 'assetcol' in dstore or 'exposure' in dstore:
-        try:
-            [exposure_xml, assetcol_csv] = export_exposure(
-                ('exposure', 'zip'), dstore)
-            inputs['exposure'] = exposure_xml
-        except KeyError:
-            pass
+        [exposure_xml, assetcol_csv] = export_exposure(
+            ('exposure', 'zip'), dstore)
+        inputs['exposure'] = exposure_xml
 
     if 'ruptures' in dstore:
-        try:
-            csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-            if len(csv.splitlines()) > 2:  # comment + header + data
-                dest = dstore.export_path('rupture.csv')
-                with open(dest, 'w', encoding='utf8') as out:
-                    out.write(csv)
-                inputs['rupture_model'] = dest
-        except Exception:
-            pass
+        csv = extract(dstore, 'ruptures?slice=0&slice=1').array
+        if len(csv.splitlines()) > 2:  # comment + header + data
+            dest = dstore.export_path('rupture.csv')
+            with open(dest, 'w', encoding='utf8') as out:
+                out.write(csv)
+            inputs['rupture_model'] = dest
 
     if gsim_lt and (oq.gsim is None or oq.gsim == '[FromFile]'):
         dest = dstore.export_path('gsim_logic_tree.xml')

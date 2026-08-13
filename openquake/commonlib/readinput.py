@@ -1162,9 +1162,6 @@ def read_consdict(oqparam, limit_states, perils):
         for fname in fnames:
             if os.path.exists(fname):
                 dfs.append(pandas.read_csv(fname))
-            else:
-                logging.warning(
-                    "Consequence file not found, skipping: %s", fname)
         if not dfs:
             continue
         df = pandas.concat(dfs)
