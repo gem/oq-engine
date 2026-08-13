@@ -124,9 +124,9 @@ class CountryImpactReportBuilder:
         try:
             fonts_dir = config.directory.fonts_dir
         except AttributeError:
-            # checking if the directory is present in oq-engine
+            # checking if the directory is present in the oq-engine directory
             if not os.path.exists(
-                    fonts_dir := cd.parent.parent.parent / 'fonts'):
+                    fonts_dir := cd.parent.parent / 'fonts'):
                 raise AttributeError(
                     'config.directory.fonts_dir is missing')
         fonts_dir = Path(fonts_dir)
@@ -263,9 +263,9 @@ class CountryImpactReportBuilder:
         try:
             countries_info_file = config.directory.countries_info_file
         except AttributeError:
-            # checking if the file is present in oq-engine
+            # checking if the file is present in the oq-engine directory
             if not os.path.exists(
-                    countries_info_file := cd.parent.parent.parent /
+                    countries_info_file := cd.parent.parent /
                     'countries_info.csv'):
                 raise AttributeError(
                     'config.directory.countries_info_file is missing')
@@ -322,9 +322,9 @@ class CountryImpactReportBuilder:
             # the expected column names.
             world_cities_file = config.directory.world_cities_file
         except AttributeError:
-            # checking if the file is present in oq-engine
+            # checking if the file is present in the oq-engine directory
             if not os.path.exists(
-                    world_cities_file := cd.parent.parent.parent /
+                    world_cities_file := cd.parent.parent /
                     'worldcities.csv'):
                 raise AttributeError(
                     'config.directory.world_cities_file is missing')
