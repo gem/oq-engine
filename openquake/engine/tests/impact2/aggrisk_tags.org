@@ -132,7 +132,7 @@
 | nan     | area            | 212_146     | 302.7     | 0.0014    | 23.7225   | 1_108     | ET-SW   | Southwest Ethiopia Peoples |
 | nan     | number          | 2_588       | 3.1035    | 1.519E-05 | 0.1922    | 11.2436   | ET-SW   | Southwest Ethiopia Peoples |
 | nan     | residents       | 10_250      | 14.4684   | 6.029E-05 | 0.7500    | 50.2116   | ET-SW   | Southwest Ethiopia Peoples |
-| nan     | affectedpop     | 10_250      | 24.9259   | 0.0014    | 1.8551    | 88.6340   | ET-SW   | Southwest Ethiopia Peoples |
+| nan     | affectedpop     | 10_250      | 24.9259   | 0.0014    | 1.8551    | 88.6339   | ET-SW   | Southwest Ethiopia Peoples |
 | nan     | injured         | 7_813       | 0.3081    | 4.420E-05 | 0.0146    | 1.0674    | ET-SW   | Southwest Ethiopia Peoples |
 | nan     | embodied_carbon | 10_788      | 25.2331   | 2.3153    | 12.9819   | 65.8913   | ET-SW   | Southwest Ethiopia Peoples |
 | nan     | contents        | 637_615     | 2.141E-04 | 0.0       | 1.489E-04 | 5.251E-04 | ET-TI   | Tigray                     |
@@ -221,7 +221,7 @@
 | nan     | occupants       | 1_820       | 0.0208    | 1.655E-04 | 0.0036    | 0.0882    | SD-SI   | Sennar                     |
 | nan     | area            | 35_424      | 90.4553   | 2.5964    | 23.0657   | 334.8     | SD-SI   | Sennar                     |
 | nan     | number          | 379.0       | 0.5847    | 0.0236    | 0.0862    | 2.5773    | SD-SI   | Sennar                     |
-| nan     | residents       | 2_397       | 6.7955    | 0.1545    | 2.3391    | 20.3473   | SD-SI   | Sennar                     |
+| nan     | residents       | 2_397       | 6.7955    | 0.1545    | 2.3391    | 20.3474   | SD-SI   | Sennar                     |
 | nan     | affectedpop     | 2_397       | 14.0738   | 0.2991    | 9.1550    | 32.9482   | SD-SI   | Sennar                     |
 | nan     | injured         | 1_820       | 0.1442    | 0.0018    | 0.0358    | 0.4643    | SD-SI   | Sennar                     |
 | nan     | embodied_carbon | 7_785       | 39.9246   | 2.2554    | 18.3734   | 130.5879  | SD-SI   | Sennar                     |
