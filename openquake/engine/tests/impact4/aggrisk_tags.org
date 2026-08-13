@@ -75,7 +75,7 @@
 | nan     | injured         | 17.3267     | 9.504E-11 | 0.0       | 0.0       | 1.200E-08 | 053     | Marlborough District         |
 | nan     | embodied_carbon | 1_023       | 2.746E-05 | 0.0       | 0.0       | 6.571E-07 | 053     | Marlborough District         |
 | nan     | contents        | 46_278_672  | 0.0011    | 0.0       | 0.0011    | 0.0021    | 076     | Auckland                     |
-| nan     | structural      | 193_304_016 | 1_323     | 0.0       | 96.1257   | 2_881     | 076     | Auckland                     |
+| nan     | structural      | 193_304_016 | 1_323     | 0.0       | 96.1258   | 2_881     | 076     | Auckland                     |
 | nan     | occupants       | 958.0       | 1.049E-07 | 0.0       | 3.100E-08 | 6.140E-08 | 076     | Auckland                     |
 | nan     | area            | 106_308     | 0.0047    | 0.0       | 3.240E-06 | 6.420E-06 | 076     | Auckland                     |
 | nan     | number          | 492.0       | 3.033E-05 | 0.0       | 2.000E-08 | 4.000E-08 | 076     | Auckland                     |

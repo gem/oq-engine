@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, performance
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -45,7 +45,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
+PERILTYPE = numpy.array(
+    ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -830,7 +831,7 @@ class MultiEventRNG(object):
     >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
-    array([0.4372343 , 0.57308132, 0.56392573])
+    array([0.43723431, 0.57308131, 0.56392574])
     >>> fractions = numpy.array([[[.8, .1, .1]]])
     >>> rng.discrete_dmg_dist([0], fractions, [10])
     array([[[8, 2, 0]]], dtype=uint32)
@@ -889,9 +890,16 @@ class MultiEventRNG(object):
         # of steps with cov == 0 and cov != 0
         res = numpy.array(means)
         ok = (means != 0) & (covs != 0)  # nonsingular values
+        if not ok.any():
+            return res
+
         alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
-        res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
-                   for i, eid in enumerate(eids[ok])]
+        # to speedup the calculation we group together alphas and betas
+        out = numpy.empty(len(alpha), F32)
+        for eid, start, stop in performance.idx_start_stop(eids[ok]):
+            out[start:stop] = self.rng[eid].beta(
+                alpha[start:stop], beta[start:stop])
+        res[ok] = out
         return res
 
     def discrete_dmg_dist(self, eids, fractions, numbers):

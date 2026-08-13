@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Improved the task distribution for ebrisk calculations, removed subtasks
-    and saved memory
+  * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model
+  * Improved the task distribution for ebrisk calculations and saved memory
 
   [Paolo Tormene]
   * Added to the extractor for 'avg_gmf' by IMT an optional 'filter_zeros'
