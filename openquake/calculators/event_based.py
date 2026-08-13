@@ -38,7 +38,7 @@ from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
-from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditioned)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
@@ -430,9 +430,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
         N = len(computer.ctx)
-        size = 2 * G * N * N * 8  # tau, phi
-        msg = f'{G=} * {humansize(N*N*8)} * 2'
-        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
+        compute_covs = max(computer.tlw, computer.tlb) > \
+            TRUNCATION_THRESHOLD
+        if compute_covs:
+            size = 2 * G * N * N * 8  # tau, phi
+            msg = f'{G=} * {humansize(N*N*8)} * 2'
+            matrices = 'tau, phi'
+        else:
+            D = len(station_sites)
+            size = 2 * G * N * D * 8  # target-station matrices
+            msg = f'{G=} * {humansize(N*D*8)} * 2'
+            matrices = 'target-station matrices'
+        logging.info(
+            'Requiring %s for %s [%s]', humansize(size), matrices, msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {N=}. '
@@ -443,8 +453,12 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
 
     dstore.swmr_on()
     smap = parallel.Starmap(conditioned, h5=dstore)
-    pre = build_precomputed(ebr.rupture, cmaker, computer.inp)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    pre = build_precomputed(
+        ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
+    shared = dict(YD=pre.YD, DD=pre.DD)
+    if compute_covs:
+        shared.update(YY=pre.YY, DY=pre.DY)
+    smap.share(**shared)
     computer.init_eid_rlz_sig_eps()
     for conditioner in pre.conditioners:
         smap.submit((computer, conditioner))
