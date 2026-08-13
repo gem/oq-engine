@@ -38,7 +38,7 @@ from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
-from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditioned)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
@@ -249,12 +249,10 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    cmaker = cmakers[0]
     rmon = monitor('reading ruptures', measuremem=True)
     smon = monitor('reading sites', measuremem=True)
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
-    maxdist = cmaker.oq.maximum_distance(cmaker.trt)
     with smon:
         with dstore as f:
             try:
@@ -262,11 +260,13 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
-        srcfilter = SourceFilter(sites, maxdist)
     chunksize = int(config.memory.max_ruptures_chunk)
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
+        # NB: the maximum distance can vary between TRTs/CMakers
+        maxdist = cmaker.oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sites, maxdist)
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
@@ -322,7 +322,6 @@ def _filter_rups(oq, sitecol, trts, dstore):
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
-    totw = 0
     nsites = 0
     affected = 0
     acc = {}
@@ -339,14 +338,11 @@ def _filter_rups(oq, sitecol, trts, dstore):
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
-            totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
             affected = max(affected, rups['nsites'].max())
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
-    maxw = min(totw / (oq.concurrent_tasks or 1), 5E7)
-    logging.info(f'{round(maxw)=:_d}')
-    return filrups, maxw, acc
+    return filrups, acc
 
 
 # tested in global_ses_test
@@ -413,20 +409,6 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     return cmaker_rups
 
 
-def _collect(allargs, maxw, sids, sec_perils, dstore):
-    # allargs is a list [(rupblock, cmaker, model) ...]
-    # returns less arguments [(rup_arrays, cmakers, sids, perils, dstore) ...]
-    out = []
-    for triples in block_splitter(allargs, maxw, lambda item: item[0].weight,
-                                  key=lambda item: item[2]):  # by model
-        rupblks, cmakers, models = zip(*triples)
-        allrups = general.WeightedSequence([
-            (numpy.array(rb), rb.weight) for rb in rupblks])
-        out.append((allrups, cmakers, sids, sec_perils, dstore))
-    # the arguments are reduced in event_based_risk_test/case_03 (from 6 to 5)
-    return out
-
-
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     """
     Run a conditioned scenario calculation amd store the GMFs
@@ -449,9 +431,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
         N = len(computer.ctx)
-        size = 2 * G * N * N * 8  # tau, phi
-        msg = f'{G=} * {humansize(N*N*8)} * 2'
-        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
+        compute_covs = max(computer.tlw, computer.tlb) > \
+            TRUNCATION_THRESHOLD
+        if compute_covs:
+            size = 2 * G * N * N * 8  # tau, phi
+            msg = f'{G=} * {humansize(N*N*8)} * 2'
+            matrices = 'tau, phi'
+        else:
+            D = len(station_sites)
+            size = 2 * G * N * D * 8  # target-station matrices
+            msg = f'{G=} * {humansize(N*D*8)} * 2'
+            matrices = 'target-station matrices'
+        logging.info(
+            'Requiring %s for %s [%s]', humansize(size), matrices, msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {N=}. '
@@ -462,8 +454,12 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
 
     dstore.swmr_on()
     smap = parallel.Starmap(conditioned, h5=dstore)
-    pre = build_precomputed(ebr.rupture, cmaker, computer.inp)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    pre = build_precomputed(
+        ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
+    shared = dict(YD=pre.YD, DD=pre.DD)
+    if compute_covs:
+        shared.update(YY=pre.YY, DY=pre.DY)
+    smap.share(**shared)
     computer.init_eid_rlz_sig_eps()
     for conditioner in pre.conditioners:
         smap.submit((computer, conditioner))
@@ -475,6 +471,55 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     del gmf_df['rlz']
     for col in gmf_df.columns:
         hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+
+
+def ntasks_by_model(cmaker_rups, concurrent_tasks):
+    """
+    :returns: dictionary model->num_tasks
+    """
+    rups_by = {}
+    totr = 0
+    totw = 0
+    for model, pairs in cmaker_rups.items():
+        cmakers, rupss = zip(*pairs)
+        rups_by[model] = sum(len(rups) for rups in rupss)
+        totr += rups_by[model]
+        totw += sum(rup_weight(rups).sum() for rups in rupss)
+
+    ct = max(concurrent_tasks, totw / 8E7)  # 8E7 fine-tuned on China
+    return {model: int(numpy.ceil(ct * nr / totr))
+            for model, nr in rups_by.items()}
+
+
+def get_allargs(oq, acc, filrups, calc):
+    """
+    :returns: [(allrups, cmakers, sids, sec_perils, dstore), ...]
+    """
+    cmaker_rups = read_cmaker_rups(oq, acc, calc.datastore)
+    p = sum(len(pairs) for pairs in cmaker_rups.values())
+    logging.info(f'There are {p:_d} pairs cmaker_rups')
+    allargs = []
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks * .75 or 1)
+    if len(ntasks) > 1:
+        logging.info(f'ntasks by model={ntasks}')
+    nr = 0
+    for model, pairs in cmaker_rups.items():
+        nt = ntasks[model]
+        cmakers, rupss = zip(*pairs)
+        for ch in range(nt):
+            cs, rs = [], []
+            for cm, rups in zip(cmakers, rupss):
+                chrups = rups[ch::nt]
+                if len(chrups):
+                    cs.append(cm)
+                    rs.append(chrups)
+                    nr += len(chrups)
+            if cs:
+                allargs.append((rs, cs, calc.sitecol.sids,
+                                calc.sec_perils, calc.datastore))
+    assert len(allargs) < TWO16, len(allargs)
+    assert nr == len(filrups), (nr, len(filrups))  # sanity check
+    return allargs
 
 
 def run(func, oq, rup0, calc):
@@ -508,25 +553,14 @@ def run(func, oq, rup0, calc):
 
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     # NB: _filter_rups calls close_ruptures which can raise an error
-    filrups, maxw, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
-    cmaker_rups = read_cmaker_rups(oq, acc, dstore)
-    p = sum(len(pairs) for pairs in cmaker_rups.values())
-    logging.info(f'There are {p:_d} pairs cmaker_rups')
+    filrups, acc = _filter_rups(oq, calc.sitecol, trts, dstore)
     if dstore.parent and dstore.hdf5.mode != 'r':
         dstore['filtered_ruptures'] = filrups
         events = dstore['events'][:]
         dstore['relevant_events'] = events[
             numpy.isin(events['rup_id'], filrups['id'])]
 
-    allargs = []
-    for model, pairs in cmaker_rups.items():
-        for cmaker, rups in pairs:
-            for rupblock in block_splitter(rups, maxw/5, rup_weight):
-                allargs.append((rupblock, cmaker, model))
-    allargs = _collect(allargs, maxw*2, calc.sitecol.sids, calc.sec_perils,
-                       dstore)
-    assert len(allargs) < TWO16, len(allargs)
-
+    allargs = get_allargs(oq, acc, filrups, calc)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if hasattr(calc, 'save_tmp'):

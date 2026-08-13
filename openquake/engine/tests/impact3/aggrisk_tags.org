@@ -19,7 +19,7 @@
 | MAR     | injured         | 26_523        | 0.3116     | 6.521E-07 | 2.485E-05 | 1.1402      | nan        | nan                              |
 | MAR     | embodied_carbon | 294_368       | 128.8358   | 0.0254    | 10.8290   | 369.9       | nan        | nan                              |
 | PRT     | contents        | 247_515_312   | 1_393_218  | 1.1577    | 165_620   | 5_344_324   | nan        | nan                              |
-| PRT     | structural      | 1_199_247_616 | 16_851_112 | 1_144_033 | 6_399_207 | 58_172_457  | nan        | nan                              |
+| PRT     | structural      | 1_199_247_616 | 16_851_112 | 1_144_033 | 6_399_207 | 58_172_455  | nan        | nan                              |
 | PRT     | occupants       | 9_373         | 0.5613     | 5.246E-04 | 0.1436    | 2.3577      | nan        | nan                              |
 | PRT     | area            | 998_570       | 7_712      | 7.8520    | 1_578     | 26_831      | nan        | nan                              |
 | PRT     | number          | 3_908         | 47.3288    | 0.0117    | 8.4000    | 154.7971    | nan        | nan                              |
@@ -35,7 +35,7 @@
 | *total* | number          | 14_813        | 69.4616    | 0.0117    | 9.0527    | 244.3       | nan        | nan                              |
 | *total* | occupants       | 43_989        | 0.8165     | 5.287E-04 | 0.1495    | 3.7263      | nan        | nan                              |
 | *total* | residents       | 55_030        | 180.6      | 0.1419    | 31.5309   | 695.0       | nan        | nan                              |
-| *total* | structural      | 2_244_419_072 | 21_669_618 | 1_170_467 | 7_281_455 | 80_277_212  | nan        | nan                              |
+| *total* | structural      | 2_244_419_072 | 21_669_618 | 1_170_467 | 7_281_455 | 80_277_211  | nan        | nan                              |
 | nan     | contents        | 344_085       | 295.4      | 0.0       | 0.0026    | 0.0175      | 1001       | Division No.  1                  |
 | nan     | structural      | 1_654_183     | 10_421     | 0.0       | 2_196     | 41_997      | 1001       | Division No.  1                  |
 | nan     | occupants       | 21.6707       | 2.387E-05  | 0.0       | 1.471E-07 | 1.932E-07   | 1001       | Division No.  1                  |
@@ -137,7 +137,7 @@
 | nan     | structural      | 13_765_536    | 193_597    | 0.0035    | 6_958     | 1_231_567   | 1015       | Pombal                           |
 | nan     | occupants       | 78.7829       | 0.0033     | 1.213E-08 | 7.641E-07 | 0.0196      | 1015       | Pombal                           |
 | nan     | area            | 12_086        | 118.9099   | 3.105E-06 | 1.198E-04 | 756.8       | 1015       | Pombal                           |
-| nan     | number          | 83.3780       | 0.7632     | 8.372E-09 | 8.315E-07 | 4.8566      | 1015       | Pombal                           |
+| nan     | number          | 83.3780       | 0.7632     | 1.993E-08 | 8.315E-07 | 4.8566      | 1015       | Pombal                           |
 | nan     | residents       | 138.3052      | 1.3184     | 2.196E-08 | 1.383E-06 | 7.1058      | 1015       | Pombal                           |
 | nan     | affectedpop     | 138.3052      | 1.7016     | 2.196E-08 | 1.383E-06 | 9.2600      | 1015       | Pombal                           |
 | nan     | injured         | 78.7829       | 0.0230     | 1.213E-08 | 7.641E-07 | 0.1264      | 1015       | Pombal                           |
@@ -311,7 +311,7 @@
 | nan     | affectedpop     | 70.0061       | 0.8554     | 1.181E-07 | 0.0017    | 8.3333      | 1113       | GAYO LUES Regency                |
 | nan     | injured         | 37.8525       | 0.0109     | 6.384E-08 | 3.785E-07 | 0.0926      | 1113       | GAYO LUES Regency                |
 | nan     | embodied_carbon | 1_257         | 16.3189    | 0.0672    | 2.6183    | 127.5226    | 1113       | GAYO LUES Regency                |
-| nan     | contents        | 1_038_030     | 377.0      | 0.0       | 3.133E-10 | 3.616E-04   | 1114       | ACEH TAMIANG Regency             |
+| nan     | contents        | 1_038_030     | 377.0      | 0.0       | 3.133E-10 | 3.615E-04   | 1114       | ACEH TAMIANG Regency             |
 | nan     | structural      | 4_212_379     | 6_625      | 0.0       | 299.8     | 37_848      | 1114       | ACEH TAMIANG Regency             |
 | nan     | occupants       | 77.9471       | 2.222E-04  | 0.0       | 7.568E-08 | 8.267E-04   | 1114       | ACEH TAMIANG Regency             |
 | nan     | area            | 3_068         | 3.8153     | 0.0       | 1.382E-06 | 15.0604     | 1114       | ACEH TAMIANG Regency             |
@@ -343,8 +343,8 @@
 | nan     | occupants       | 3.3529        | 1.632E-07  | 0.0       | 3.353E-08 | 3.353E-08   | 113        | Sawai Madhopur                   |
 | nan     | area            | 413.0         | 0.0037     | 0.0       | 4.130E-06 | 4.130E-06   | 113        | Sawai Madhopur                   |
 | nan     | number          | 3.0004        | 2.690E-05  | 0.0       | 3.000E-08 | 3.000E-08   | 113        | Sawai Madhopur                   |
-| nan     | residents       | 6.0685        | 5.446E-05  | 0.0       | 6.069E-08 | 6.069E-08   | 113        | Sawai Madhopur                   |
-| nan     | affectedpop     | 6.0685        | 4.553E-04  | 0.0       | 6.069E-08 | 6.069E-08   | 113        | Sawai Madhopur                   |
+| nan     | residents       | 6.0685        | 5.446E-05  | 0.0       | 6.068E-08 | 6.068E-08   | 113        | Sawai Madhopur                   |
+| nan     | affectedpop     | 6.0685        | 4.553E-04  | 0.0       | 6.068E-08 | 6.068E-08   | 113        | Sawai Madhopur                   |
 | nan     | injured         | 3.3529        | 3.735E-08  | 0.0       | 3.353E-08 | 3.353E-08   | 113        | Sawai Madhopur                   |
 | nan     | embodied_carbon | 123.7333      | 0.2609     | 0.0       | 0.0483    | 0.9915      | 113        | Sawai Madhopur                   |
 | nan     | contents        | 22_185        | 0.1304     | 0.0       | 2.219E-04 | 2.219E-04   | 114        | Sikar                            |
@@ -383,7 +383,7 @@
 | nan     | embodied_carbon | 861.3         | 6.6354     | 0.0       | 0.1060    | 17.3540     | 118        | Agra                             |
 | nan     | contents        | 139_273       | 21.9807    | 0.0       | 0.0       | 0.0014      | 119        | Aligarh                          |
 | nan     | structural      | 789_213       | 4_115      | 0.0       | 410.6     | 9_228       | 119        | Aligarh                          |
-| nan     | occupants       | 4.1421        | 6.143E-05  | 0.0       | 2.758E-08 | 3.355E-05   | 119        | Aligarh                          |
+| nan     | occupants       | 4.1421        | 6.143E-05  | 0.0       | 4.142E-08 | 3.355E-05   | 119        | Aligarh                          |
 | nan     | area            | 692.3         | 1.6417     | 0.0       | 6.923E-06 | 0.8949      | 119        | Aligarh                          |
 | nan     | number          | 5.0288        | 0.0119     | 0.0       | 5.029E-08 | 0.0065      | 119        | Aligarh                          |
 | nan     | residents       | 7.4968        | 0.0194     | 0.0       | 7.497E-08 | 0.0087      | 119        | Aligarh                          |
@@ -479,8 +479,8 @@
 | nan     | contents        | 1_608_180     | 18_494     | 0.0       | 0.0059    | 0.0789      | 1306       | Hebei                            |
 | nan     | structural      | 8_840_568     | 145_854    | 0.0       | 3_158     | 542_239     | 1306       | Hebei                            |
 | nan     | occupants       | 64.7726       | 0.0055     | 0.0       | 6.117E-07 | 0.0136      | 1306       | Hebei                            |
-| nan     | area            | 6_008         | 81.8979    | 0.0       | 5.524E-05 | 211.7       | 1306       | Hebei                            |
-| nan     | number          | 39.7619       | 0.5830     | 0.0       | 3.670E-07 | 1.5356      | 1306       | Hebei                            |
+| nan     | area            | 6_008         | 81.8979    | 0.0       | 5.532E-05 | 211.7       | 1306       | Hebei                            |
+| nan     | number          | 39.7619       | 0.5830     | 0.0       | 3.671E-07 | 1.5356      | 1306       | Hebei                            |
 | nan     | residents       | 95.6668       | 1.5994     | 0.0       | 8.901E-07 | 4.9325      | 1306       | Hebei                            |
 | nan     | affectedpop     | 95.6668       | 1.9773     | 0.0       | 8.901E-07 | 5.2896      | 1306       | Hebei                            |
 | nan     | injured         | 64.7726       | 0.0309     | 0.0       | 6.117E-07 | 0.0906      | 1306       | Hebei                            |
@@ -556,7 +556,7 @@
 | nan     | contents        | 1_071_417     | 18_146     | 0.0       | 0.0055    | 0.0107      | 1315       | Gloucester                       |
 | nan     | structural      | 5_151_568     | 74_412     | 0.0       | 9_063     | 190_685     | 1315       | Gloucester                       |
 | nan     | occupants       | 190.5         | 0.0032     | 0.0       | 1.905E-06 | 0.0066      | 1315       | Gloucester                       |
-| nan     | area            | 3_600         | 38.5318    | 0.0       | 2.899E-05 | 81.4776     | 1315       | Gloucester                       |
+| nan     | area            | 3_600         | 38.5318    | 0.0       | 3.600E-05 | 81.4776     | 1315       | Gloucester                       |
 | nan     | number          | 16.7886       | 0.2789     | 0.0       | 1.679E-07 | 0.6228      | 1315       | Gloucester                       |
 | nan     | residents       | 40.8136       | 0.8952     | 0.0       | 4.081E-07 | 2.5982      | 1315       | Gloucester                       |
 | nan     | affectedpop     | 40.8136       | 1.1344     | 0.0       | 4.081E-07 | 5.1214      | 1315       | Gloucester                       |
@@ -781,7 +781,7 @@
 | nan     | number          | 91.6139       | 0.0147     | 7.533E-08 | 9.161E-07 | 0.0104      | 1508       | Nei Mongol                       |
 | nan     | residents       | 22.8175       | 0.0691     | 6.348E-08 | 2.282E-07 | 0.0412      | 1508       | Nei Mongol                       |
 | nan     | affectedpop     | 22.8175       | 0.1770     | 6.348E-08 | 2.282E-07 | 0.1827      | 1508       | Nei Mongol                       |
-| nan     | injured         | 50.7205       | 0.0011     | 1.478E-07 | 5.072E-07 | 5.586E-04   | 1508       | Nei Mongol                       |
+| nan     | injured         | 50.7205       | 0.0011     | 1.524E-07 | 5.072E-07 | 5.586E-04   | 1508       | Nei Mongol                       |
 | nan     | embodied_carbon | 20_295        | 22.3269    | 0.1220    | 2.1553    | 76.3020     | 1508       | Nei Mongol                       |
 | nan     | contents        | 4_355_949     | 4_416      | 0.0       | 0.0387    | 19.1816     | 1510       | Seixal                           |
 | nan     | structural      | 23_871_168    | 263_196    | 0.0       | 147_452   | 832_638     | 1510       | Seixal                           |
@@ -802,7 +802,7 @@
 | nan     | injured         | 109.0583      | 0.0028     | 9.952E-07 | 1.091E-06 | 0.0097      | 1511       | Sesimbra                         |
 | nan     | embodied_carbon | 2_911         | 17.5171    | 1.6727    | 8.1162    | 54.3264     | 1511       | Sesimbra                         |
 | nan     | contents        | 1_402_109     | 26_108     | 0.0       | 0.0122    | 164_569     | 1512       | Setúbal                          |
-| nan     | structural      | 7_827_816     | 258_877    | 0.0061    | 35_938    | 1_017_870   | 1512       | Setúbal                          |
+| nan     | structural      | 7_827_816     | 258_877    | 0.0061    | 35_938    | 1_017_871   | 1512       | Setúbal                          |
 | nan     | occupants       | 75.0667       | 0.0061     | 3.560E-08 | 7.026E-07 | 0.0159      | 1512       | Setúbal                          |
 | nan     | area            | 5_298         | 96.8810    | 4.129E-06 | 5.092E-05 | 271.7       | 1512       | Setúbal                          |
 | nan     | number          | 37.9939       | 0.7037     | 2.999E-08 | 3.699E-07 | 1.9736      | 1512       | Setúbal                          |
@@ -831,7 +831,7 @@
 | nan     | contents        | 506_161       | 1_225      | 0.0       | 0.0       | 0.0051      | 1603       | MUARA ENIM Regency               |
 | nan     | structural      | 2_809_736     | 34_320     | 0.0       | 636.1     | 43_570      | 1603       | MUARA ENIM Regency               |
 | nan     | occupants       | 3.6124        | 2.176E-04  | 0.0       | 3.612E-08 | 1.693E-04   | 1603       | MUARA ENIM Regency               |
-| nan     | area            | 2_478         | 21.1161    | 0.0       | 2.478E-05 | 16.4745     | 1603       | MUARA ENIM Regency               |
+| nan     | area            | 2_478         | 21.1162    | 0.0       | 2.478E-05 | 16.4745     | 1603       | MUARA ENIM Regency               |
 | nan     | number          | 18.8350       | 0.1589     | 0.0       | 1.884E-07 | 0.1209      | 1603       | MUARA ENIM Regency               |
 | nan     | residents       | 6.4192        | 0.0661     | 0.0       | 6.419E-08 | 0.0599      | 1603       | MUARA ENIM Regency               |
 | nan     | affectedpop     | 6.4192        | 0.0895     | 0.0       | 6.419E-08 | 0.1588      | 1603       | MUARA ENIM Regency               |
@@ -1111,8 +1111,8 @@
 | nan     | occupants       | 1.7195        | 5.064E-05  | 0.0       | 1.230E-08 | 5.099E-05   | 1816       | São Pedro do Sul                 |
 | nan     | area            | 522.0         | 2.4976     | 0.0       | 3.077E-06 | 2.0938      | 1816       | São Pedro do Sul                 |
 | nan     | number          | 3.0033        | 0.0124     | 0.0       | 1.974E-08 | 0.0101      | 1816       | São Pedro do Sul                 |
-| nan     | residents       | 3.1126        | 0.0129     | 0.0       | 2.227E-08 | 0.0094      | 1816       | São Pedro do Sul                 |
-| nan     | affectedpop     | 3.1126        | 0.0178     | 0.0       | 2.227E-08 | 0.0152      | 1816       | São Pedro do Sul                 |
+| nan     | residents       | 3.1126        | 0.0129     | 0.0       | 2.226E-08 | 0.0094      | 1816       | São Pedro do Sul                 |
+| nan     | affectedpop     | 3.1126        | 0.0178     | 0.0       | 2.226E-08 | 0.0152      | 1816       | São Pedro do Sul                 |
 | nan     | injured         | 1.7195        | 2.428E-04  | 0.0       | 1.230E-08 | 1.978E-04   | 1816       | São Pedro do Sul                 |
 | nan     | embodied_carbon | 169.8598      | 1.0349     | 0.0       | 0.0103    | 1.1391      | 1816       | São Pedro do Sul                 |
 | nan     | contents        | 363_800       | 914.2      | 0.0       | 0.0014    | 0.0036      | 1817       | Sátão                            |
@@ -1142,7 +1142,7 @@
 | nan     | affectedpop     | 1.1794        | 0.0336     | 0.0       | 1.179E-08 | 0.1662      | 1820       | Tarouca                          |
 | nan     | injured         | 0.6514        | 2.662E-04  | 0.0       | 6.514E-09 | 4.691E-04   | 1820       | Tarouca                          |
 | nan     | embodied_carbon | 44.9528       | 0.5078     | 0.0       | 4.495E-07 | 2.3130      | 1820       | Tarouca                          |
-| nan     | contents        | 27_594        | 124.0887   | 0.0       | 0.0       | 2.759E-04   | 1821       | Tondela                          |
+| nan     | contents        | 27_594        | 124.0887   | 0.0       | 3.956E-06 | 2.759E-04   | 1821       | Tondela                          |
 | nan     | structural      | 156_368       | 2_348      | 0.0       | 552.7     | 4_115       | 1821       | Tondela                          |
 | nan     | occupants       | 0.5824        | 2.553E-05  | 0.0       | 5.824E-09 | 5.089E-06   | 1821       | Tondela                          |
 | nan     | area            | 137.1645      | 0.8129     | 0.0       | 1.372E-06 | 0.1425      | 1821       | Tondela                          |
@@ -1450,7 +1450,7 @@
 | nan     | contents        | 45_417        | 889.9      | 0.0       | 1.771E-04 | 2.0922      | 506        | Guntur                           |
 | nan     | structural      | 257_365       | 5_258      | 0.0       | 477.5     | 22_577      | 506        | Guntur                           |
 | nan     | occupants       | 0.6118        | 6.355E-05  | 0.0       | 1.289E-08 | 3.071E-04   | 506        | Guntur                           |
-| nan     | area            | 225.8         | 3.0926     | 0.0       | 2.258E-06 | 21.5187     | 506        | Guntur                           |
+| nan     | area            | 225.8         | 3.0926     | 0.0       | 2.258E-06 | 21.5186     | 506        | Guntur                           |
 | nan     | number          | 1.6399        | 0.0225     | 0.0       | 1.640E-08 | 0.1563      | 506        | Guntur                           |
 | nan     | residents       | 1.1090        | 0.0203     | 0.0       | 1.109E-08 | 0.1183      | 506        | Guntur                           |
 | nan     | affectedpop     | 1.1090        | 0.0299     | 0.0       | 1.109E-08 | 0.2074      | 506        | Guntur                           |
@@ -1504,7 +1504,7 @@
 | nan     | contents        | 2_673_214     | 14_859     | 0.0011    | 0.0131    | 181.7       | 603        | South East                       |
 | nan     | structural      | 13_852_013    | 186_586    | 52.8348   | 37_833    | 1_287_491   | 603        | South East                       |
 | nan     | occupants       | 125.1724      | 0.0072     | 3.486E-08 | 5.002E-06 | 0.0423      | 603        | South East                       |
-| nan     | area            | 9_522         | 53.8868    | 4.103E-06 | 7.494E-05 | 552.5       | 603        | South East                       |
+| nan     | area            | 9_522         | 53.8869    | 4.103E-06 | 7.494E-05 | 552.5       | 603        | South East                       |
 | nan     | number          | 33.2953       | 0.2159     | 2.981E-08 | 2.323E-07 | 1.1712      | 603        | South East                       |
 | nan     | residents       | 108.2295      | 1.1579     | 6.447E-08 | 9.792E-07 | 9.6212      | 603        | South East                       |
 | nan     | affectedpop     | 108.2295      | 2.3995     | 6.447E-08 | 0.0011    | 15.0558     | 603        | South East                       |
@@ -1708,7 +1708,7 @@
 | nan     | occupants       | 182.8         | 0.0036     | 1.489E-07 | 1.295E-04 | 0.0226      | 808        | Loulé                            |
 | nan     | area            | 13_789        | 76.5321    | 2.428E-05 | 1.9397    | 440.2       | 808        | Loulé                            |
 | nan     | number          | 49.5347       | 0.3861     | 9.529E-08 | 0.0126    | 2.0460      | 808        | Loulé                            |
-| nan     | residents       | 68.1863       | 1.0480     | 2.701E-07 | 0.0270    | 5.9739      | 808        | Loulé                            |
+| nan     | residents       | 68.1863       | 1.0480     | 2.753E-07 | 0.0270    | 5.9739      | 808        | Loulé                            |
 | nan     | affectedpop     | 68.1863       | 1.4799     | 2.753E-07 | 0.0406    | 7.9331      | 808        | Loulé                            |
 | nan     | injured         | 182.8         | 0.0191     | 1.489E-07 | 3.687E-07 | 0.1157      | 808        | Loulé                            |
 | nan     | embodied_carbon | 5_477         | 32.4900    | 0.2128    | 3.0622    | 166.7518    | 808        | Loulé                            |
@@ -1860,7 +1860,7 @@
 | nan     | contents        | 467_701       | 1_480      | 0.0       | 7.127E-04 | 2_262       | ES-CL      | Castilla y León                  |
 | nan     | structural      | 1_870_803     | 29_573     | 0.0       | 5_309     | 163_979     | ES-CL      | Castilla y León                  |
 | nan     | occupants       | 61.1757       | 0.0041     | 0.0       | 3.401E-07 | 0.0217      | ES-CL      | Castilla y León                  |
-| nan     | area            | 1_361         | 9.4147     | 0.0       | 7.527E-06 | 54.0920     | ES-CL      | Castilla y León                  |
+| nan     | area            | 1_361         | 9.4147     | 0.0       | 7.566E-06 | 54.0920     | ES-CL      | Castilla y León                  |
 | nan     | number          | 3.3284        | 0.0248     | 0.0       | 2.164E-08 | 0.1057      | ES-CL      | Castilla y León                  |
 | nan     | injured         | 61.1757       | 0.0120     | 0.0       | 3.401E-07 | 0.0631      | ES-CL      | Castilla y León                  |
 | nan     | embodied_carbon | 611.2         | 6.9703     | 0.0       | 0.8110    | 45.3102     | ES-CL      | Castilla y León                  |
@@ -1972,7 +1972,7 @@
 | nan     | area            | 19_248        | 410.2      | 0.0       | 4.784E-07 | 3_918       | ESP.12.1_1 | A Coruña                         |
 | nan     | number          | 96.0354       | 2.0497     | 0.0       | 3.365E-10 | 19.5883     | ESP.12.1_1 | A Coruña                         |
 | nan     | residents       | 235.3         | 6.2065     | 0.0       | 0.0       | 65.2073     | ESP.12.1_1 | A Coruña                         |
-| nan     | affectedpop     | 235.3         | 8.4238     | 0.0       | 0.0       | 100.4387    | ESP.12.1_1 | A Coruña                         |
+| nan     | affectedpop     | 235.3         | 8.4239     | 0.0       | 0.0       | 100.4387    | ESP.12.1_1 | A Coruña                         |
 | nan     | injured         | 132.1895      | 0.1188     | 0.0       | 1.600E-09 | 1.1851      | ESP.12.1_1 | A Coruña                         |
 | nan     | embodied_carbon | 7_264         | 92.7578    | 0.0       | 0.0194    | 449.3       | ESP.12.1_1 | A Coruña                         |
 | nan     | contents        | 19_411        | 150.7762   | 0.0       | 1.941E-04 | 1.941E-04   | ESP.12.2_1 | Lugo                             |
@@ -1994,7 +1994,7 @@
 | nan     | injured         | 91.7700       | 0.0397     | 2.045E-08 | 5.738E-07 | 0.3161      | ESP.12.3_1 | Ourense                          |
 | nan     | embodied_carbon | 5_961         | 71.9548    | 0.0174    | 2.9925    | 524.0       | ESP.12.3_1 | Ourense                          |
 | nan     | contents        | 14_162_123    | 95_238     | 0.0       | 0.0638    | 337_150     | ESP.12.4_1 | Pontevedra                       |
-| nan     | structural      | 80_252_016    | 824_812    | 0.0       | 63_129    | 5_529_526   | ESP.12.4_1 | Pontevedra                       |
+| nan     | structural      | 80_252_016    | 824_812    | 0.0       | 63_129    | 5_529_527   | ESP.12.4_1 | Pontevedra                       |
 | nan     | occupants       | 599.1         | 0.0298     | 0.0       | 8.387E-05 | 0.1591      | ESP.12.4_1 | Pontevedra                       |
 | nan     | area            | 63_429        | 493.3      | 0.0       | 1.0989    | 3_105       | ESP.12.4_1 | Pontevedra                       |
 | nan     | number          | 255.4         | 2.6777     | 0.0       | 0.0055    | 15.5904     | ESP.12.4_1 | Pontevedra                       |
@@ -2083,7 +2083,7 @@
 | nan     | affectedpop     | 3_555         | 0.2720     | 0.0       | 3.093E-06 | 1.6844      | MA-03      | Fez-Meknes                       |
 | nan     | injured         | 3_236         | 0.0038     | 0.0       | 0.0       | 0.0018      | MA-03      | Fez-Meknes                       |
 | nan     | embodied_carbon | 31_095        | 2.8517     | 0.0       | 0.0       | 20.0584     | MA-03      | Fez-Meknes                       |
-| nan     | contents        | 6_847_760     | 587.1      | 0.0       | 0.0018    | 43.6251     | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
+| nan     | contents        | 6_847_760     | 587.1      | 0.0       | 0.0021    | 45.3058     | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
 | nan     | structural      | 33_139_916    | 24_176     | 0.0       | 2_481     | 100_490     | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
 | nan     | occupants       | 4_161         | 0.0083     | 0.0       | 2.287E-06 | 0.0131      | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
 | nan     | area            | 97_854        | 12.9335    | 0.0       | 3.697E-05 | 23.1305     | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
@@ -2092,7 +2092,7 @@
 | nan     | affectedpop     | 4_132         | 1.8732     | 0.0       | 1.735E-06 | 2.5401      | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
 | nan     | injured         | 4_161         | 0.0243     | 0.0       | 2.280E-06 | 0.0395      | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
 | nan     | embodied_carbon | 40_888        | 13.8169    | 0.0       | 1.0044    | 55.8349     | MA-04      | Al-Rabat-Salé-Al-Kénitra         |
-| nan     | contents        | 2_874_461     | 242.8      | 0.0       | 5.833E-04 | 298.8       | MA-05      | Béni Mellal-Khénifra             |
+| nan     | contents        | 2_874_461     | 242.8      | 0.0       | 5.921E-04 | 314.0       | MA-05      | Béni Mellal-Khénifra             |
 | nan     | structural      | 15_000_907    | 9_710      | 0.0       | 48.8167   | 42_464      | MA-05      | Béni Mellal-Khénifra             |
 | nan     | occupants       | 1_512         | 0.0036     | 0.0       | 4.777E-07 | 0.0050      | MA-05      | Béni Mellal-Khénifra             |
 | nan     | area            | 43_962        | 7.1330     | 0.0       | 7.556E-06 | 17.9061     | MA-05      | Béni Mellal-Khénifra             |
@@ -2148,10 +2148,10 @@
 | nan     | embodied_carbon | 2_351         | 0.0052     | 0.0       | 0.0015    | 0.0900      | MA-10      | Guelmim-Wadi Noun                |
 | nan     | affectedpop     | 55_030        | 263.5      | 3.925E-05 | 1.4504    | 1_514       | *total*    | *total*                          |
 | nan     | area            | 2_407_935     | 10_866     | 0.0019    | 18.9305   | 56_259      | *total*    | *total*                          |
-| nan     | contents        | 442_346_176   | 2_054_326  | 0.0476    | 2.7954    | 7_847_076   | *total*    | *total*                          |
+| nan     | contents        | 442_346_176   | 2_054_326  | 0.0476    | 2.7957    | 7_847_092   | *total*    | *total*                          |
 | nan     | embodied_carbon | 870_944       | 4_703      | 12.2346   | 432.6     | 22_299      | *total*    | *total*                          |
-| nan     | injured         | 43_954        | 3.5798     | 7.126E-06 | 0.0041    | 17.4540     | *total*    | *total*                          |
-| nan     | number          | 14_807        | 69.4616    | 2.626E-06 | 0.0708    | 319.4       | *total*    | *total*                          |
+| nan     | injured         | 43_954        | 3.5798     | 7.131E-06 | 0.0041    | 17.4540     | *total*    | *total*                          |
+| nan     | number          | 14_807        | 69.4616    | 2.638E-06 | 0.0708    | 319.4       | *total*    | *total*                          |
 | nan     | occupants       | 43_954        | 0.8165     | 1.127E-05 | 0.0017    | 4.2746      | *total*    | *total*                          |
-| nan     | residents       | 55_030        | 180.6      | 3.880E-05 | 0.3722    | 945.1       | *total*    | *total*                          |
+| nan     | residents       | 55_030        | 180.6      | 3.881E-05 | 0.3722    | 945.1       | *total*    | *total*                          |
 | nan     | structural      | 2_241_584_896 | 21_669_618 | 55_359    | 3_295_740 | 105_257_309 | *total*    | *total*                          |

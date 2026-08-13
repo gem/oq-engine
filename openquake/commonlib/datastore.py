@@ -579,7 +579,7 @@ class DataStore(collections.abc.MutableMapping):
     def __exit__(self, etype, exc, tb):
         if self.was_close:  # and has been opened in __enter__, close it
             self.close()
-        del self.was_close
+        self.was_close = True
 
     def __getstate__(self):
         # make the datastore pickleable
