@@ -344,7 +344,8 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         # long arrays (around AE_MAX) and hence a good performance
         na = int(sum(num_assets[df.sid].sum() for df in blk))
         if na > AE_MAX:  # big task
-            print(f'{monitor.calc_id=}, {monitor.task_no=}, {na=:_d}, {blk}')
+            calc_id, task_no = monitor.calc_id, monitor.task_no
+            print(f'{calc_id=}, {task_no=}, {na=:_d}, {len(blk)=}')
             yield event_based_risk, pandas.concat(blk)
         else:
             yield event_based_risk(pandas.concat(blk), monitor)
