@@ -262,8 +262,6 @@ class VulnerabilityFunction(object):
         # NB: we use fill_value="extrapolate" for compatibility with numpy 1
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
                                              fill_value="extrapolate")
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
-                                              fill_value="extrapolate")
         self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
@@ -398,11 +396,12 @@ class VulnerabilityFunction(object):
         [0.0049, 0.006, 0.027], the clipped imls are
         [0.005,  0.006, 0.0269].
         """
-        return self._covs_i1d(
-            numpy.piecewise(
-                imls,
-                [imls > self.imls[-1], imls < self.imls[0]],
-                [self.imls[-1], self.imls[0], lambda x: x]))
+
+        imls = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1], imls < self.imls[0]],
+            [self.imls[-1], self.imls[0], lambda x: x])
+        return numpy.interp(imls, self.imls, self.covs)
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
