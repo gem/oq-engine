@@ -1,3 +1,7 @@
+  [Anirudh Rao]
+  * Speed up `truncation_level = 0` case for the conditioned gmfs calculator
+  * Treat ShakeMap grid.xml values as medians and not as arithmetic means
+
   [Michele Simionato]
   * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model
   * Improved the task distribution for ebrisk calculations and saved memory
