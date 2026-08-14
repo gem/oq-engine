@@ -1,23 +1,23 @@
 | ID_0    | loss_type       | value          | lossmea     | q05        | q50         | q95         | ID      | NAME                         |
 |---------+-----------------+----------------+-------------+------------+-------------+-------------+---------+------------------------------|
-| JPN     | contents        | 3_595_577_856  | 21_836_072  | 2_645_476  | 14_300_514  | 57_152_748  | nan     | nan                          |
-| JPN     | structural      | 14_153_817_088 | 154_617_168 | 55_264_520 | 120_799_488 | 326_851_808 | nan     | nan                          |
+| JPN     | contents        | 3_595_577_856  | 21_868_262  | 2_645_476  | 14_300_514  | 57_152_748  | nan     | nan                          |
+| JPN     | structural      | 14_153_817_088 | 154_574_096 | 55_264_520 | 120_799_488 | 326_851_808 | nan     | nan                          |
 | JPN     | occupants       | 92_698         | 0.7761      | 0.0436     | 0.3651      | 3.0965      | nan     | nan                          |
 | JPN     | area            | 7_600_854      | 16_765      | 1_297      | 9_415       | 52_270      | nan     | nan                          |
 | JPN     | number          | 38_109         | 52.1387     | 1.9257     | 31.8252     | 167.7966    | nan     | nan                          |
 | JPN     | residents       | 119_488        | 212.2       | 11.9763    | 115.8519    | 492.8       | nan     | nan                          |
 | JPN     | affectedpop     | 119_488        | 343.9       | 21.8249    | 186.9       | 863.4       | nan     | nan                          |
 | JPN     | injured         | 92_698         | 9.7535      | 0.5570     | 4.5481      | 35.6520     | nan     | nan                          |
-| JPN     | embodied_carbon | 2_106_058      | 43_693      | 18_315     | 37_880      | 86_857      | nan     | nan                          |
+| JPN     | embodied_carbon | 2_106_058      | 43_694      | 18_315     | 37_880      | 86_857      | nan     | nan                          |
 | *total* | affectedpop     | 119_488        | 343.9       | 21.8249    | 186.9       | 863.4       | nan     | nan                          |
 | *total* | area            | 7_600_854      | 16_765      | 1_297      | 9_415       | 52_270      | nan     | nan                          |
-| *total* | contents        | 3_595_577_856  | 21_836_072  | 2_645_476  | 14_300_514  | 57_152_748  | nan     | nan                          |
-| *total* | embodied_carbon | 2_106_058      | 43_693      | 18_315     | 37_880      | 86_857      | nan     | nan                          |
+| *total* | contents        | 3_595_577_856  | 21_868_262  | 2_645_476  | 14_300_514  | 57_152_748  | nan     | nan                          |
+| *total* | embodied_carbon | 2_106_058      | 43_694      | 18_315     | 37_880      | 86_857      | nan     | nan                          |
 | *total* | injured         | 92_698         | 9.7535      | 0.5570     | 4.5481      | 35.6520     | nan     | nan                          |
 | *total* | number          | 38_109         | 52.1387     | 1.9257     | 31.8252     | 167.7966    | nan     | nan                          |
 | *total* | occupants       | 92_698         | 0.7761      | 0.0436     | 0.3651      | 3.0965      | nan     | nan                          |
 | *total* | residents       | 119_488        | 212.2       | 11.9763    | 115.8519    | 492.8       | nan     | nan                          |
-| *total* | structural      | 14_153_817_088 | 154_617_168 | 55_264_520 | 120_799_488 | 326_851_808 | nan     | nan                          |
+| *total* | structural      | 14_153_817_088 | 154_574_096 | 55_264_520 | 120_799_488 | 326_851_808 | nan     | nan                          |
 | nan     | contents        | 57_860_848     | 22_287      | 0.0        | 0.0909      | 2_599       | 01101   | Montgomery County            |
 | nan     | structural      | 221_466_416    | 162_690     | 0.0        | 27_486      | 643_428     | 01101   | Montgomery County            |
 | nan     | occupants       | 1_221          | 5.165E-06   | 0.0        | 5.939E-06   | 1.221E-05   | 01101   | Montgomery County            |
@@ -3145,13 +3145,13 @@
 | nan     | affectedpop     | 1.5414         | 4.637E-06   | 1.541E-08  | 1.541E-08   | 1.541E-08   | 13101   | Echols County                |
 | nan     | injured         | 0.7809         | 7.809E-09   | 7.809E-09  | 7.809E-09   | 7.809E-09   | 13101   | Echols County                |
 | nan     | embodied_carbon | 32.9419        | 0.0871      | 3.294E-07  | 0.0214      | 0.1444      | 13101   | Echols County                |
-| nan     | contents        | 2_744_440      | 46_345      | 0.0        | 0.0137      | 47_117      | 13102   | Chuo-ku                      |
-| nan     | structural      | 10_977_760     | 816_096     | 66_820     | 399_546     | 1_691_045   | 13102   | Chuo-ku                      |
+| nan     | contents        | 2_744_440      | 50_261      | 0.0        | 0.0137      | 47_117      | 13102   | Chuo-ku                      |
+| nan     | structural      | 10_977_760     | 794_702     | 66_820     | 399_546     | 1_691_045   | 13102   | Chuo-ku                      |
 | nan     | occupants       | 22.0083        | 6.141E-06   | 2.201E-07  | 2.201E-07   | 2.201E-07   | 13102   | Chuo-ku                      |
 | nan     | area            | 4_203          | 17.2146     | 4.203E-05  | 4.203E-05   | 4.203E-05   | 13102   | Chuo-ku                      |
 | nan     | number          | 0.9379         | 0.0038      | 9.379E-09  | 9.379E-09   | 9.379E-09   | 13102   | Chuo-ku                      |
 | nan     | injured         | 22.0083        | 0.0022      | 2.201E-07  | 2.201E-07   | 2.201E-07   | 13102   | Chuo-ku                      |
-| nan     | embodied_carbon | 2_605          | 165.8195    | 14.2740    | 82.7632     | 325.8       | 13102   | Chuo-ku                      |
+| nan     | embodied_carbon | 2_605          | 166.0013    | 14.2740    | 82.7632     | 325.8       | 13102   | Chuo-ku                      |
 | nan     | contents        | 2_786_413      | 228_924     | 0.0        | 0.1253      | 2_298_153   | 13103   | Effingham County             |
 | nan     | structural      | 11_145_653     | 939_348     | 11_740     | 118_368     | 9_072_070   | 13103   | Effingham County             |
 | nan     | occupants       | 57.5979        | 9.833E-05   | 5.760E-07  | 5.760E-07   | 9.582E-04   | 13103   | Effingham County             |
@@ -3162,21 +3162,21 @@
 | nan     | injured         | 57.5979        | 0.0992      | 5.760E-07  | 5.760E-07   | 0.9992      | 13103   | Effingham County             |
 | nan     | embodied_carbon | 1_549          | 173.5366    | 4.2655     | 46.5720     | 1_198       | 13103   | Effingham County             |
 | nan     | contents        | 25_977_114     | 107_530     | 0.2163     | 3_079       | 309_816     | 13104   | Shinjuku-ku                  |
-| nan     | structural      | 106_147_984    | 892_999     | 74_525     | 419_603     | 3_333_382   | 13104   | Shinjuku-ku                  |
+| nan     | structural      | 106_147_984    | 892_990     | 74_525     | 419_603     | 3_333_382   | 13104   | Shinjuku-ku                  |
 | nan     | occupants       | 482.9          | 0.0015      | 4.829E-06  | 2.508E-05   | 0.0101      | 13104   | Shinjuku-ku                  |
 | nan     | area            | 49_657         | 92.4563     | 4.966E-04  | 0.9637      | 652.9       | 13104   | Shinjuku-ku                  |
 | nan     | number          | 152.9820       | 0.1315      | 1.530E-06  | 4.079E-04   | 0.2757      | 13104   | Shinjuku-ku                  |
 | nan     | residents       | 548.0          | 2.5933      | 5.480E-06  | 0.0284      | 17.4472     | 13104   | Shinjuku-ku                  |
 | nan     | affectedpop     | 548.0          | 4.3793      | 5.480E-06  | 0.1473      | 32.2798     | 13104   | Shinjuku-ku                  |
 | nan     | injured         | 482.9          | 0.0271      | 4.829E-06  | 4.829E-06   | 0.1878      | 13104   | Shinjuku-ku                  |
-| nan     | embodied_carbon | 16_390         | 451.9       | 89.1794    | 370.7       | 869.5       | 13104   | Shinjuku-ku                  |
+| nan     | embodied_carbon | 16_390         | 452.0       | 89.1794    | 370.7       | 869.5       | 13104   | Shinjuku-ku                  |
 | nan     | contents        | 965_303        | 0.0097      | 0.0097     | 0.0097      | 0.0097      | 13106   | Taito-ku                     |
 | nan     | structural      | 2_895_910      | 2_968       | 0.0290     | 1_085       | 10_007      | 13106   | Taito-ku                     |
 | nan     | occupants       | 10.1383        | 1.014E-07   | 1.014E-07  | 1.014E-07   | 1.014E-07   | 13106   | Taito-ku                     |
 | nan     | area            | 987.7          | 9.877E-06   | 9.877E-06  | 9.877E-06   | 9.877E-06   | 13106   | Taito-ku                     |
 | nan     | number          | 0.9098         | 9.098E-09   | 9.098E-09  | 9.098E-09   | 9.098E-09   | 13106   | Taito-ku                     |
 | nan     | injured         | 10.1383        | 1.014E-07   | 1.014E-07  | 1.014E-07   | 1.014E-07   | 13106   | Taito-ku                     |
-| nan     | embodied_carbon | 599.6          | 3.2895      | 0.0770     | 1.8398      | 9.6711      | 13106   | Taito-ku                     |
+| nan     | embodied_carbon | 599.6          | 3.2895      | 0.0773     | 1.8398      | 9.6711      | 13106   | Taito-ku                     |
 | nan     | contents        | 2_906_249      | 180_637     | 0.0        | 0.0114      | 468_940     | 13108   | Koto-ku                      |
 | nan     | structural      | 6_781_248      | 570_858     | 18_227     | 151_360     | 974_529     | 13108   | Koto-ku                      |
 | nan     | occupants       | 80.1402        | 4.221E-04   | 8.014E-07  | 8.014E-07   | 2.028E-04   | 13108   | Koto-ku                      |
@@ -3194,14 +3194,14 @@
 | nan     | injured         | 974.5          | 0.5917      | 9.745E-06  | 0.0193      | 5.5852      | 13109   | Evans County                 |
 | nan     | embodied_carbon | 14_780         | 468.2       | 42.2369    | 178.2767    | 2_911       | 13109   | Evans County                 |
 | nan     | contents        | 27_408_828     | 238_974     | 2.759E-06  | 4_849       | 587_817     | 13111   | Fannin County                |
-| nan     | structural      | 153_823_392    | 2_506_224   | 516_075    | 1_350_080   | 4_268_592   | 13111   | Fannin County                |
+| nan     | structural      | 153_823_392    | 2_506_199   | 516_075    | 1_350_080   | 4_268_592   | 13111   | Fannin County                |
 | nan     | occupants       | 783.2          | 0.0045      | 7.832E-06  | 3.555E-05   | 0.0034      | 13111   | Fannin County                |
 | nan     | area            | 52_613         | 141.5613    | 5.261E-04  | 0.1128      | 115.1667    | 13111   | Fannin County                |
 | nan     | number          | 49.9611        | 0.2205      | 4.996E-07  | 9.615E-04   | 0.4341      | 13111   | Fannin County                |
 | nan     | residents       | 1_546          | 5.1885      | 1.546E-05  | 0.0030      | 3.4390      | 13111   | Fannin County                |
 | nan     | affectedpop     | 1_546          | 10.3290     | 1.546E-05  | 0.0091      | 8.1927      | 13111   | Fannin County                |
 | nan     | injured         | 783.2          | 0.0697      | 7.832E-06  | 7.832E-06   | 0.0543      | 13111   | Fannin County                |
-| nan     | embodied_carbon | 24_997         | 782.8       | 165.1292   | 529.9       | 1_773       | 13111   | Fannin County                |
+| nan     | embodied_carbon | 24_997         | 782.4       | 165.1292   | 529.9       | 1_773       | 13111   | Fannin County                |
 | nan     | contents        | 35_791_872     | 402_831     | 0.1077     | 33_201      | 2_489_660   | 13112   | Setagaya-ku                  |
 | nan     | structural      | 184_865_472    | 3_162_666   | 439_653    | 2_348_132   | 8_874_726   | 13112   | Setagaya-ku                  |
 | nan     | occupants       | 1_051          | 0.0021      | 1.051E-05  | 7.987E-05   | 0.0097      | 13112   | Setagaya-ku                  |
@@ -3238,8 +3238,8 @@
 | nan     | affectedpop     | 35.3546        | 0.1133      | 3.535E-07  | 3.535E-07   | 0.5011      | 13116   | Toshima-ku                   |
 | nan     | injured         | 17.9107        | 4.502E-04   | 1.791E-07  | 1.791E-07   | 0.0022      | 13116   | Toshima-ku                   |
 | nan     | embodied_carbon | 323.1          | 5.4827      | 0.2362     | 3.0596      | 15.8740     | 13116   | Toshima-ku                   |
-| nan     | contents        | 29_480_608     | 36_772      | 0.0272     | 2_708       | 84_983      | 13117   | Forsyth County               |
-| nan     | structural      | 157_449_200    | 1_542_552   | 275_557    | 1_000_017   | 3_331_883   | 13117   | Forsyth County               |
+| nan     | contents        | 29_480_608     | 36_808      | 0.0272     | 2_708       | 84_983      | 13117   | Forsyth County               |
+| nan     | structural      | 157_449_200    | 1_541_187   | 275_557    | 995_361     | 3_331_883   | 13117   | Forsyth County               |
 | nan     | occupants       | 931.0          | 0.0096      | 9.419E-06  | 3.767E-04   | 0.0606      | 13117   | Forsyth County               |
 | nan     | area            | 53_700         | 133.7019    | 5.370E-04  | 9.2428      | 838.0       | 13117   | Forsyth County               |
 | nan     | number          | 111.8738       | 0.0772      | 1.119E-06  | 0.0053      | 0.4837      | 13117   | Forsyth County               |
@@ -3248,7 +3248,7 @@
 | nan     | injured         | 931.0          | 0.0721      | 9.310E-06  | 0.0053      | 0.4508      | 13117   | Forsyth County               |
 | nan     | embodied_carbon | 26_699         | 529.4       | 88.8777    | 374.4       | 1_110       | 13117   | Forsyth County               |
 | nan     | contents        | 54_872_956     | 63_793      | 0.4586     | 4_489       | 272_618     | 13119   | Franklin County              |
-| nan     | structural      | 219_959_440    | 1_275_384   | 89_634     | 948_538     | 2_701_026   | 13119   | Franklin County              |
+| nan     | structural      | 219_959_440    | 1_275_365   | 89_634     | 948_538     | 2_701_026   | 13119   | Franklin County              |
 | nan     | occupants       | 1_541          | 2.909E-04   | 1.541E-05  | 3.456E-05   | 0.0017      | 13119   | Franklin County              |
 | nan     | area            | 130_979        | 12.7268     | 0.0013     | 2.3098      | 45.2781     | 13119   | Franklin County              |
 | nan     | number          | 941.9          | 0.0270      | 9.419E-06  | 0.0062      | 0.1043      | 13119   | Franklin County              |
@@ -3265,17 +3265,17 @@
 | nan     | affectedpop     | 518.3          | 5.6817      | 5.183E-06  | 0.2565      | 25.5350     | 13120   | Nerima-ku                    |
 | nan     | injured         | 262.6          | 0.0485      | 2.626E-06  | 2.626E-06   | 0.1419      | 13120   | Nerima-ku                    |
 | nan     | embodied_carbon | 7_236          | 270.4       | 36.9958    | 184.6       | 581.5       | 13120   | Nerima-ku                    |
-| nan     | contents        | 31_414_020     | 540_004     | 21.8032    | 116_913     | 2_241_957   | 13121   | Fulton County                |
-| nan     | structural      | 145_291_680    | 4_969_049   | 773_193    | 3_215_362   | 11_528_491  | 13121   | Fulton County                |
+| nan     | contents        | 31_414_020     | 534_631     | 21.8032    | 105_221     | 2_241_957   | 13121   | Fulton County                |
+| nan     | structural      | 145_291_680    | 4_963_197   | 773_193    | 3_215_362   | 11_528_491  | 13121   | Fulton County                |
 | nan     | occupants       | 1_045          | 2.769E-04   | 1.045E-05  | 1.045E-05   | 1.599E-04   | 13121   | Fulton County                |
 | nan     | area            | 54_052         | 141.8409    | 5.405E-04  | 5.405E-04   | 3.2226      | 13121   | Fulton County                |
 | nan     | number          | 100.9592       | 0.0722      | 1.010E-06  | 1.010E-06   | 0.0037      | 13121   | Fulton County                |
 | nan     | residents       | 1_069          | 4.2734      | 1.069E-05  | 1.069E-05   | 0.3399      | 13121   | Fulton County                |
 | nan     | affectedpop     | 1_069          | 6.8334      | 1.069E-05  | 1.069E-05   | 5.1028      | 13121   | Fulton County                |
 | nan     | injured         | 1_045          | 0.0878      | 1.045E-05  | 1.045E-05   | 0.0041      | 13121   | Fulton County                |
-| nan     | embodied_carbon | 26_469         | 1_096       | 203.4      | 791.7       | 2_211       | 13121   | Fulton County                |
+| nan     | embodied_carbon | 26_469         | 1_097       | 203.4      | 791.7       | 2_211       | 13121   | Fulton County                |
 | nan     | contents        | 7_518_270      | 263_440     | 0.0142     | 2.2643      | 269_122     | 13122   | Katsushika-ku                |
-| nan     | structural      | 31_231_362     | 1_884_510   | 174_547    | 536_743     | 3_861_330   | 13122   | Katsushika-ku                |
+| nan     | structural      | 31_231_362     | 1_884_501   | 174_547    | 536_743     | 3_861_330   | 13122   | Katsushika-ku                |
 | nan     | occupants       | 272.0          | 0.0714      | 3.110E-06  | 0.0016      | 0.0793      | 13122   | Katsushika-ku                |
 | nan     | area            | 10_890         | 390.1       | 1.089E-04  | 8.5426      | 531.9       | 13122   | Katsushika-ku                |
 | nan     | number          | 13.9051        | 0.1536      | 1.391E-07  | 0.0034      | 0.2094      | 13122   | Katsushika-ku                |
@@ -3283,15 +3283,15 @@
 | nan     | affectedpop     | 40.4615        | 0.0012      | 4.046E-07  | 4.046E-07   | 4.046E-07   | 13122   | Katsushika-ku                |
 | nan     | injured         | 272.0          | 0.5966      | 2.720E-06  | 2.720E-06   | 0.8268      | 13122   | Katsushika-ku                |
 | nan     | embodied_carbon | 6_553          | 402.3       | 46.4705    | 138.6488    | 588.7       | 13122   | Katsushika-ku                |
-| nan     | contents        | 24_176_928     | 416_669     | 5_791      | 140_154     | 1_162_017   | 13123   | Gilmer County                |
-| nan     | structural      | 98_114_336     | 5_285_957   | 794_675    | 4_249_173   | 10_360_665  | 13123   | Gilmer County                |
+| nan     | contents        | 24_176_928     | 432_110     | 5_791      | 140_154     | 1_162_017   | 13123   | Gilmer County                |
+| nan     | structural      | 98_114_336     | 5_278_393   | 794_675    | 4_249_173   | 10_360_665  | 13123   | Gilmer County                |
 | nan     | occupants       | 673.5          | 0.0010      | 6.735E-06  | 8.657E-06   | 2.422E-04   | 13123   | Gilmer County                |
 | nan     | area            | 50_278         | 56.5801     | 5.028E-04  | 5.028E-04   | 307.0       | 13123   | Gilmer County                |
 | nan     | number          | 258.0          | 0.2657      | 2.580E-06  | 2.580E-06   | 0.8996      | 13123   | Gilmer County                |
 | nan     | residents       | 1_329          | 2.6837      | 1.329E-05  | 1.329E-05   | 24.0724     | 13123   | Gilmer County                |
 | nan     | affectedpop     | 1_329          | 5.7182      | 1.329E-05  | 0.0316      | 29.4667     | 13123   | Gilmer County                |
 | nan     | injured         | 673.5          | 0.0277      | 6.735E-06  | 6.735E-06   | 0.0939      | 13123   | Gilmer County                |
-| nan     | embodied_carbon | 11_838         | 629.3       | 75.7305    | 391.7       | 1_540       | 13123   | Gilmer County                |
+| nan     | embodied_carbon | 11_838         | 626.4       | 75.7305    | 391.7       | 1_540       | 13123   | Gilmer County                |
 | nan     | contents        | 754_932        | 8_116       | 0.0045     | 46.3528     | 69_261      | 13201   | Miller County                |
 | nan     | structural      | 2_114_339      | 51_115      | 2_065      | 24_274      | 207_817     | 13201   | Miller County                |
 | nan     | occupants       | 34.3102        | 2.342E-04   | 3.431E-07  | 5.099E-06   | 3.854E-04   | 13201   | Miller County                |
@@ -4336,33 +4336,33 @@
 | nan     | affectedpop     | 36.2575        | 2.175E-07   | 0.0        | 3.626E-07   | 3.626E-07   | 18442   | Mihama-cho                   |
 | nan     | injured         | 18.7674        | 1.126E-07   | 0.0        | 1.877E-07   | 1.877E-07   | 18442   | Mihama-cho                   |
 | nan     | embodied_carbon | 363.3          | 0.1485      | 0.0        | 0.0119      | 0.7080      | 18442   | Mihama-cho                   |
-| nan     | contents        | 11_798_625     | 106_268     | 2.9338     | 7_960       | 483_812     | 19201   | Kofu-shi                     |
-| nan     | structural      | 49_585_572     | 1_504_214   | 185_244    | 925_256     | 3_968_324   | 19201   | Kofu-shi                     |
+| nan     | contents        | 11_798_625     | 110_510     | 2.9338     | 7_960       | 483_812     | 19201   | Kofu-shi                     |
+| nan     | structural      | 49_585_572     | 1_507_173   | 185_244    | 925_256     | 3_968_324   | 19201   | Kofu-shi                     |
 | nan     | occupants       | 248.9          | 0.0178      | 2.093E-05  | 0.0025      | 0.1194      | 19201   | Kofu-shi                     |
 | nan     | area            | 24_372         | 121.4432    | 0.1231     | 17.3947     | 612.8       | 19201   | Kofu-shi                     |
 | nan     | number          | 139.8698       | 0.1770      | 8.231E-05  | 0.0116      | 0.8330      | 19201   | Kofu-shi                     |
 | nan     | residents       | 378.0          | 0.4539      | 3.780E-06  | 6.520E-04   | 3.4058      | 19201   | Kofu-shi                     |
 | nan     | affectedpop     | 378.0          | 1.3440      | 3.780E-06  | 0.0026      | 10.1588     | 19201   | Kofu-shi                     |
 | nan     | injured         | 248.9          | 0.1220      | 2.489E-06  | 0.0203      | 0.7134      | 19201   | Kofu-shi                     |
-| nan     | embodied_carbon | 5_451          | 218.9       | 25.0375    | 141.1234    | 511.9       | 19201   | Kofu-shi                     |
+| nan     | embodied_carbon | 5_451          | 219.1       | 25.0375    | 141.1234    | 511.9       | 19201   | Kofu-shi                     |
 | nan     | contents        | 88_902         | 3_781       | 0.0        | 3.734E-16   | 18_312      | 19202   | Fujiyoshida-shi              |
-| nan     | structural      | 503_781        | 43_087      | 598.7      | 6_771       | 266_280     | 19202   | Fujiyoshida-shi              |
+| nan     | structural      | 503_781        | 43_086      | 598.7      | 6_771       | 266_280     | 19202   | Fujiyoshida-shi              |
 | nan     | occupants       | 2.0828         | 3.218E-04   | 2.083E-08  | 8.256E-07   | 0.0012      | 19202   | Fujiyoshida-shi              |
 | nan     | area            | 246.8          | 12.6027     | 2.468E-06  | 0.0676      | 54.1301     | 19202   | Fujiyoshida-shi              |
 | nan     | number          | 1.9792         | 0.1011      | 1.979E-08  | 5.418E-04   | 0.4340      | 19202   | Fujiyoshida-shi              |
 | nan     | residents       | 4.1108         | 0.2819      | 4.111E-08  | 0.0017      | 1.4068      | 19202   | Fujiyoshida-shi              |
 | nan     | affectedpop     | 4.1108         | 0.4676      | 4.111E-08  | 0.0190      | 2.4709      | 19202   | Fujiyoshida-shi              |
 | nan     | injured         | 2.0828         | 0.0049      | 2.083E-08  | 2.083E-08   | 0.0214      | 19202   | Fujiyoshida-shi              |
-| nan     | embodied_carbon | 146.4873       | 9.8393      | 0.0613     | 0.9881      | 57.9918     | 19202   | Fujiyoshida-shi              |
+| nan     | embodied_carbon | 146.4873       | 9.8394      | 0.0613     | 0.9881      | 57.9918     | 19202   | Fujiyoshida-shi              |
 | nan     | contents        | 442_276        | 10_081      | 5.375E-07  | 0.0033      | 107_652     | 19205   | Yamanashi-shi                |
-| nan     | structural      | 1_769_102      | 114_080     | 1_725      | 58_745      | 558_199     | 19205   | Yamanashi-shi                |
+| nan     | structural      | 1_769_102      | 114_082     | 1_725      | 58_745      | 558_199     | 19205   | Yamanashi-shi                |
 | nan     | occupants       | 8.2357         | 0.0011      | 8.236E-08  | 1.798E-04   | 0.0073      | 19205   | Yamanashi-shi                |
 | nan     | area            | 1_057          | 37.8254     | 1.057E-05  | 8.2926      | 236.0       | 19205   | Yamanashi-shi                |
 | nan     | number          | 8.0383         | 0.2959      | 8.038E-08  | 0.0649      | 1.8461      | 19205   | Yamanashi-shi                |
 | nan     | residents       | 16.2561        | 0.6633      | 1.626E-07  | 0.1776      | 3.8345      | 19205   | Yamanashi-shi                |
 | nan     | affectedpop     | 16.2561        | 0.7832      | 1.626E-07  | 0.3046      | 3.9091      | 19205   | Yamanashi-shi                |
 | nan     | injured         | 8.2357         | 0.0053      | 8.236E-08  | 0.0012      | 0.0331      | 19205   | Yamanashi-shi                |
-| nan     | embodied_carbon | 130.6455       | 5.7631      | 0.0466     | 2.0727      | 32.2073     | 19205   | Yamanashi-shi                |
+| nan     | embodied_carbon | 130.6455       | 5.7630      | 0.0466     | 2.0727      | 32.2073     | 19205   | Yamanashi-shi                |
 | nan     | contents        | 98_121         | 3.1031      | 0.0        | 9.812E-04   | 9.812E-04   | 19206   | Otsuki-shi                   |
 | nan     | structural      | 556_018        | 3_378       | 0.0056     | 409.1       | 14_521      | 19206   | Otsuki-shi                   |
 | nan     | occupants       | 1.5430         | 5.580E-08   | 1.543E-08  | 1.543E-08   | 6.849E-08   | 19206   | Otsuki-shi                   |
@@ -4372,15 +4372,15 @@
 | nan     | affectedpop     | 3.0458         | 1.188E-04   | 3.046E-08  | 3.046E-08   | 3.046E-08   | 19206   | Otsuki-shi                   |
 | nan     | injured         | 1.5430         | 1.504E-08   | 1.543E-08  | 1.543E-08   | 1.543E-08   | 19206   | Otsuki-shi                   |
 | nan     | embodied_carbon | 74.8751        | 1.6762      | 0.0158     | 0.4347      | 6.5070      | 19206   | Otsuki-shi                   |
-| nan     | contents        | 2_536_180      | 15_058      | 0.0049     | 0.0254      | 20_853      | 19207   | Nirasaki-shi                 |
-| nan     | structural      | 6_732_857      | 102_063     | 5_565      | 34_086      | 416_824     | 19207   | Nirasaki-shi                 |
+| nan     | contents        | 2_536_180      | 24_709      | 0.0049     | 0.0254      | 20_853      | 19207   | Nirasaki-shi                 |
+| nan     | structural      | 6_732_857      | 102_886     | 5_565      | 34_086      | 416_824     | 19207   | Nirasaki-shi                 |
 | nan     | occupants       | 27.2207        | 5.704E-07   | 2.722E-07  | 2.722E-07   | 6.281E-07   | 19207   | Nirasaki-shi                 |
 | nan     | area            | 3_406          | 1.4888      | 3.406E-05  | 3.406E-05   | 2.0861      | 19207   | Nirasaki-shi                 |
 | nan     | number          | 10.8058        | 0.0012      | 1.081E-07  | 1.081E-07   | 0.0017      | 19207   | Nirasaki-shi                 |
 | nan     | residents       | 19.4629        | 1.946E-07   | 1.946E-07  | 1.946E-07   | 1.946E-07   | 19207   | Nirasaki-shi                 |
 | nan     | affectedpop     | 19.4629        | 1.946E-07   | 1.946E-07  | 1.946E-07   | 1.946E-07   | 19207   | Nirasaki-shi                 |
 | nan     | injured         | 27.2207        | 3.241E-04   | 2.722E-07  | 2.722E-07   | 2.722E-07   | 19207   | Nirasaki-shi                 |
-| nan     | embodied_carbon | 1_050          | 41.4391     | 3.6917     | 18.8659     | 159.2816    | 19207   | Nirasaki-shi                 |
+| nan     | embodied_carbon | 1_050          | 40.7603     | 3.6917     | 18.8659     | 159.2816    | 19207   | Nirasaki-shi                 |
 | nan     | contents        | 55_119         | 1.2930      | 0.0        | 5.512E-04   | 5.512E-04   | 19208   | Minamiarupusu-shi            |
 | nan     | structural      | 220_475        | 3_794       | 0.0022     | 1_233       | 17_481      | 19208   | Minamiarupusu-shi            |
 | nan     | occupants       | 1.1301         | 1.515E-08   | 1.130E-08  | 1.130E-08   | 1.130E-08   | 19208   | Minamiarupusu-shi            |
@@ -4391,7 +4391,7 @@
 | nan     | injured         | 1.1301         | 1.130E-08   | 1.130E-08  | 1.130E-08   | 1.130E-08   | 19208   | Minamiarupusu-shi            |
 | nan     | embodied_carbon | 16.2750        | 0.1031      | 1.627E-07  | 0.0203      | 0.5460      | 19208   | Minamiarupusu-shi            |
 | nan     | contents        | 212_436        | 0.0016      | 0.0        | 0.0021      | 0.0021      | 19209   | Hokuto-shi                   |
-| nan     | structural      | 849_746        | 21_485      | 1_580      | 9_319       | 81_183      | 19209   | Hokuto-shi                   |
+| nan     | structural      | 849_746        | 21_484      | 1_580      | 9_319       | 81_183      | 19209   | Hokuto-shi                   |
 | nan     | occupants       | 2.5061         | 4.896E-08   | 2.506E-08  | 2.506E-08   | 7.525E-08   | 19209   | Hokuto-shi                   |
 | nan     | area            | 507.9          | 0.0236      | 5.079E-06  | 5.079E-06   | 0.0587      | 19209   | Hokuto-shi                   |
 | nan     | number          | 3.9997         | 1.862E-04   | 4.000E-08  | 4.000E-08   | 4.622E-04   | 19209   | Hokuto-shi                   |
@@ -4400,7 +4400,7 @@
 | nan     | injured         | 2.5061         | 2.506E-08   | 2.506E-08  | 2.506E-08   | 2.506E-08   | 19209   | Hokuto-shi                   |
 | nan     | embodied_carbon | 62.7607        | 0.7692      | 0.0376     | 0.2657      | 3.2681      | 19209   | Hokuto-shi                   |
 | nan     | contents        | 267_675        | 11_291      | 0.0        | 0.0040      | 52_658      | 19212   | Uenohara-shi                 |
-| nan     | structural      | 1_070_700      | 42_080      | 1_376      | 19_746      | 123_773     | 19212   | Uenohara-shi                 |
+| nan     | structural      | 1_070_700      | 42_081      | 1_376      | 19_746      | 123_773     | 19212   | Uenohara-shi                 |
 | nan     | occupants       | 4.6681         | 1.576E-04   | 4.668E-08  | 6.417E-07   | 5.613E-04   | 19212   | Uenohara-shi                 |
 | nan     | area            | 640.0          | 6.6522      | 6.400E-06  | 6.400E-06   | 24.2545     | 19212   | Uenohara-shi                 |
 | nan     | number          | 5.0030         | 0.0520      | 5.003E-08  | 5.003E-08   | 0.1896      | 19212   | Uenohara-shi                 |
@@ -4414,16 +4414,16 @@
 | nan     | area            | 1_087          | 1.087E-05   | 1.087E-05  | 1.087E-05   | 1.087E-05   | 19366   | Nanbu-cho                    |
 | nan     | number          | 0.8830         | 8.830E-09   | 8.830E-09  | 8.830E-09   | 8.830E-09   | 19366   | Nanbu-cho                    |
 | nan     | injured         | 12.3121        | 1.231E-07   | 1.231E-07  | 1.231E-07   | 1.231E-07   | 19366   | Nanbu-cho                    |
-| nan     | embodied_carbon | 439.7          | 13.2520     | 1.0454     | 7.9937      | 39.2688     | 19366   | Nanbu-cho                    |
-| nan     | contents        | 4_455_434      | 63_177      | 0.0        | 0.0446      | 399_427     | 19384   | Showa-cho                    |
-| nan     | structural      | 17_821_738     | 282_489     | 12_631     | 83_934      | 1_451_019   | 19384   | Showa-cho                    |
+| nan     | embodied_carbon | 439.7          | 13.2528     | 1.0454     | 7.9937      | 39.2688     | 19366   | Nanbu-cho                    |
+| nan     | contents        | 4_455_434      | 67_455      | 0.0        | 0.0446      | 399_427     | 19384   | Showa-cho                    |
+| nan     | structural      | 17_821_738     | 271_902     | 12_631     | 83_934      | 1_451_019   | 19384   | Showa-cho                    |
 | nan     | occupants       | 118.2363       | 3.282E-06   | 1.182E-06  | 1.182E-06   | 6.842E-06   | 19384   | Showa-cho                    |
 | nan     | area            | 8_344          | 5.7033      | 8.344E-05  | 8.344E-05   | 15.4559     | 19384   | Showa-cho                    |
 | nan     | number          | 40.9949        | 0.0280      | 4.099E-07  | 4.099E-07   | 0.0759      | 19384   | Showa-cho                    |
 | nan     | residents       | 228.4          | 0.1580      | 2.284E-06  | 2.284E-06   | 0.4228      | 19384   | Showa-cho                    |
 | nan     | affectedpop     | 228.4          | 0.5094      | 2.284E-06  | 2.284E-06   | 1.4123      | 19384   | Showa-cho                    |
 | nan     | injured         | 118.2363       | 0.0022      | 1.182E-06  | 1.182E-06   | 1.182E-06   | 19384   | Showa-cho                    |
-| nan     | embodied_carbon | 3_028          | 109.0133    | 6.7786     | 44.9622     | 515.3       | 19384   | Showa-cho                    |
+| nan     | embodied_carbon | 3_028          | 112.6175    | 6.7786     | 44.9622     | 515.3       | 19384   | Showa-cho                    |
 | nan     | contents        | 147_911        | 566.7       | 3.413E-13  | 0.0015      | 405.6       | 19422   | Doshi-mura                   |
 | nan     | structural      | 591_643        | 24_058      | 1_459      | 14_669      | 77_136      | 19422   | Doshi-mura                   |
 | nan     | occupants       | 2.8838         | 5.406E-07   | 2.884E-08  | 2.884E-08   | 2.786E-07   | 19422   | Doshi-mura                   |
@@ -4450,25 +4450,25 @@
 | nan     | residents       | 9.3903         | 0.0118      | 9.390E-08  | 9.390E-08   | 0.0017      | 19429   | Narusawa-mura                |
 | nan     | affectedpop     | 9.3903         | 0.0275      | 9.390E-08  | 9.390E-08   | 0.0063      | 19429   | Narusawa-mura                |
 | nan     | injured         | 4.7575         | 8.258E-05   | 4.757E-08  | 4.757E-08   | 4.757E-08   | 19429   | Narusawa-mura                |
-| nan     | embodied_carbon | 66.6008        | 2.1199      | 0.0819     | 0.8556      | 6.6019      | 19429   | Narusawa-mura                |
+| nan     | embodied_carbon | 66.6008        | 2.1197      | 0.0819     | 0.8556      | 6.6019      | 19429   | Narusawa-mura                |
 | nan     | contents        | 4_919_652      | 84_449      | 0.0059     | 1_432       | 338_111     | 19430   | Fujikawaguchiko-machi        |
-| nan     | structural      | 22_570_690     | 681_177     | 33_115     | 264_012     | 1_979_048   | 19430   | Fujikawaguchiko-machi        |
+| nan     | structural      | 22_570_690     | 681_158     | 33_115     | 264_012     | 1_979_048   | 19430   | Fujikawaguchiko-machi        |
 | nan     | occupants       | 123.0486       | 2.377E-04   | 1.230E-06  | 1.865E-06   | 3.705E-04   | 19430   | Fujikawaguchiko-machi        |
 | nan     | area            | 8_738          | 21.8720     | 8.738E-05  | 8.738E-05   | 17.2047     | 19430   | Fujikawaguchiko-machi        |
 | nan     | number          | 9.0303         | 0.0231      | 9.030E-08  | 9.030E-08   | 0.0185      | 19430   | Fujikawaguchiko-machi        |
 | nan     | residents       | 90.1006        | 0.5649      | 9.010E-07  | 9.010E-07   | 0.5305      | 19430   | Fujikawaguchiko-machi        |
 | nan     | affectedpop     | 90.1006        | 1.1241      | 9.010E-07  | 9.010E-07   | 1.8144      | 19430   | Fujikawaguchiko-machi        |
 | nan     | injured         | 123.0486       | 0.0115      | 1.230E-06  | 1.230E-06   | 0.0091      | 19430   | Fujikawaguchiko-machi        |
-| nan     | embodied_carbon | 3_966          | 301.6       | 35.4204    | 191.9       | 808.7       | 19430   | Fujikawaguchiko-machi        |
-| nan     | contents        | 214_913        | 23_640      | 0.0        | 0.0122      | 124_797     | 19442   | Kosuge-mura                  |
-| nan     | structural      | 859_651        | 83_480      | 539.0      | 12_968      | 396_816     | 19442   | Kosuge-mura                  |
+| nan     | embodied_carbon | 3_966          | 301.7       | 35.4204    | 191.9       | 808.7       | 19430   | Fujikawaguchiko-machi        |
+| nan     | contents        | 214_913        | 23_639      | 0.0        | 0.0122      | 124_797     | 19442   | Kosuge-mura                  |
+| nan     | structural      | 859_651        | 83_479      | 539.0      | 12_968      | 396_816     | 19442   | Kosuge-mura                  |
 | nan     | occupants       | 3.3633         | 5.764E-04   | 3.363E-08  | 2.047E-07   | 0.0032      | 19442   | Kosuge-mura                  |
 | nan     | area            | 513.8          | 25.1427     | 5.138E-06  | 5.138E-06   | 138.7930    | 19442   | Kosuge-mura                  |
 | nan     | number          | 4.0104         | 0.1962      | 4.010E-08  | 4.010E-08   | 1.0833      | 19442   | Kosuge-mura                  |
 | nan     | residents       | 6.6381         | 0.3504      | 6.638E-08  | 6.638E-08   | 1.9624      | 19442   | Kosuge-mura                  |
 | nan     | affectedpop     | 6.6381         | 0.4270      | 6.638E-08  | 6.638E-08   | 2.4373      | 19442   | Kosuge-mura                  |
 | nan     | injured         | 3.3633         | 0.0029      | 3.363E-08  | 3.363E-08   | 0.0160      | 19442   | Kosuge-mura                  |
-| nan     | embodied_carbon | 63.4926        | 4.1274      | 0.0141     | 0.4326      | 19.4247     | 19442   | Kosuge-mura                  |
+| nan     | embodied_carbon | 63.4926        | 4.1275      | 0.0141     | 0.4326      | 19.4247     | 19442   | Kosuge-mura                  |
 | nan     | contents        | 15_958_640     | 23_127      | 0.1065     | 225.1       | 85_053      | 20201   | Washington County            |
 | nan     | structural      | 68_321_752     | 541_394     | 161_745    | 326_264     | 1_311_726   | 20201   | Washington County            |
 | nan     | occupants       | 349.0          | 5.358E-05   | 3.313E-06  | 3.502E-06   | 2.934E-04   | 20201   | Washington County            |
@@ -8088,7 +8088,7 @@
 | nan     | injured         | 3.4765         | 6.953E-09   | 0.0        | 0.0         | 3.477E-08   | 39202   | Muroto-shi                   |
 | nan     | embodied_carbon | 71.0539        | 0.0130      | 0.0        | 0.0         | 0.1928      | 39202   | Muroto-shi                   |
 | nan     | contents        | 47_734         | 9.547E-05   | 0.0        | 0.0         | 4.773E-04   | 39203   | Aki-shi                      |
-| nan     | structural      | 190_937        | 80.2332     | 0.0        | 0.0         | 1_144       | 39203   | Aki-shi                      |
+| nan     | structural      | 190_937        | 80.2298     | 0.0        | 0.0         | 1_144       | 39203   | Aki-shi                      |
 | nan     | occupants       | 0.8402         | 1.680E-09   | 0.0        | 0.0         | 8.402E-09   | 39203   | Aki-shi                      |
 | nan     | area            | 116.4961       | 2.330E-07   | 0.0        | 0.0         | 1.165E-06   | 39203   | Aki-shi                      |
 | nan     | number          | 0.9997         | 1.999E-09   | 0.0        | 0.0         | 9.997E-09   | 39203   | Aki-shi                      |
@@ -8113,7 +8113,7 @@
 | nan     | injured         | 19.6859        | 3.937E-08   | 0.0        | 1.969E-07   | 1.969E-07   | 39206   | Susaki-shi                   |
 | nan     | embodied_carbon | 399.5          | 0.1355      | 0.0        | 0.3468      | 1.0898      | 39206   | Susaki-shi                   |
 | nan     | contents        | 309_283        | 8.8333      | 0.0        | 0.0         | 3.3425      | 39208   | Sukumo-shi                   |
-| nan     | structural      | 1_237_130      | 692.2       | 0.0        | 0.0         | 5_587       | 39208   | Sukumo-shi                   |
+| nan     | structural      | 1_237_130      | 691.7       | 0.0        | 0.0         | 5_587       | 39208   | Sukumo-shi                   |
 | nan     | occupants       | 5.1219         | 3.824E-08   | 0.0        | 0.0         | 5.122E-08   | 39208   | Sukumo-shi                   |
 | nan     | area            | 684.9          | 0.0013      | 0.0        | 0.0         | 6.849E-06   | 39208   | Sukumo-shi                   |
 | nan     | number          | 5.9923         | 1.143E-05   | 0.0        | 0.0         | 5.992E-08   | 39208   | Sukumo-shi                   |
@@ -8138,7 +8138,7 @@
 | nan     | injured         | 12.6066        | 1.576E-08   | 0.0        | 0.0         | 1.261E-07   | 39210   | Shimanto-shi                 |
 | nan     | embodied_carbon | 324.5          | 0.0463      | 0.0        | 0.0         | 0.7753      | 39210   | Shimanto-shi                 |
 | nan     | contents        | 46_653         | 8.164E-05   | 0.0        | 4.665E-04   | 4.665E-04   | 39211   | Konan-shi                    |
-| nan     | structural      | 186_613        | 70.1560     | 0.0        | 191.2       | 784.6       | 39211   | Konan-shi                    |
+| nan     | structural      | 186_613        | 70.1355     | 0.0        | 191.1       | 784.6       | 39211   | Konan-shi                    |
 | nan     | occupants       | 0.9773         | 1.955E-09   | 0.0        | 9.773E-09   | 9.773E-09   | 39211   | Konan-shi                    |
 | nan     | area            | 113.8580       | 2.277E-07   | 0.0        | 1.139E-06   | 1.139E-06   | 39211   | Konan-shi                    |
 | nan     | number          | 1.0014         | 2.003E-09   | 0.0        | 1.001E-08   | 1.001E-08   | 39211   | Konan-shi                    |
@@ -8220,10 +8220,10 @@
 | nan     | embodied_carbon | 123.8041       | 0.0154      | 0.0        | 0.0051      | 0.2767      | 39428   | Kuroshio-cho                 |
 | nan     | affectedpop     | 119_488        | 343.9       | 7.368E-04  | 18.5334     | 1_407       | *total* | *total*                      |
 | nan     | area            | 7_600_854      | 16_765      | 7.1269     | 1_148       | 65_361      | *total* | *total*                      |
-| nan     | contents        | 3_595_578_112  | 21_836_071  | 50_084     | 2_701_960   | 93_286_667  | *total* | *total*                      |
-| nan     | embodied_carbon | 2_106_058      | 43_693      | 5_359      | 25_022      | 128_366     | *total* | *total*                      |
+| nan     | contents        | 3_595_578_112  | 21_868_261  | 50_084     | 2_690_269   | 93_286_667  | *total* | *total*                      |
+| nan     | embodied_carbon | 2_106_058      | 43_694      | 5_359      | 25_022      | 128_366     | *total* | *total*                      |
 | nan     | injured         | 92_698         | 9.7535      | 5.718E-04  | 0.5173      | 40.2741     | *total* | *total*                      |
 | nan     | number          | 38_109         | 52.1387     | 0.0028     | 3.2959      | 191.0       | *total* | *total*                      |
 | nan     | occupants       | 92_698         | 0.7761      | 0.0016     | 0.0477      | 3.2627      | *total* | *total*                      |
 | nan     | residents       | 119_488        | 212.2       | 7.360E-04  | 7.9149      | 808.3       | *total* | *total*                      |
-| nan     | structural      | 14_153_817_088 | 154_617_172 | 13_569_278 | 74_064_472  | 496_283_448 | *total* | *total*                      |
+| nan     | structural      | 14_153_817_088 | 154_574_105 | 13_569_278 | 74_059_816  | 496_283_448 | *total* | *total*                      |
