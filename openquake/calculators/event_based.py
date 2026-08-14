@@ -23,6 +23,7 @@ import logging
 import h5py
 import numpy
 import pandas
+from scipy.spatial import KDTree
 from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, general, performance)
@@ -38,7 +39,7 @@ from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
-from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditioned)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
@@ -205,11 +206,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
 
 def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
     oq = cmaker.oq
-    alldata = []
-    sig_eps = []
-    times = []
     se_dt = sig_eps_dt(oq.imtls)
-    mea_tau_phi = []
     for proxy in proxies:
         t0 = time.time()
         if proxy['mag'] < cmaker.min_mag:
@@ -217,6 +214,7 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             continue
+        dic = dict(gmfdata={}, sig_eps=())
         try:
             ebr = proxy.to_ebr(cmaker.trt)
             computer = get_computer(cmaker, ebr, sites, sec_perils)
@@ -226,24 +224,13 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
             df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
-                mea_tau_phi.append(mtp)
-        sig_eps.append(computer.build_sig_eps(se_dt))
+                dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
+        dic['sig_eps'] = computer.build_sig_eps(se_dt)
+        dic['gmfdata'] = df
         dt = time.time() - t0
-        times.append((proxy['id'], computer.ctx.rrup.min(), dt,
-                      rup_weight(proxy)))
-        alldata.append(df)
-    times = numpy.array([tup + (cmon.task_no,) for tup in times], rup_dt)
-    times.sort(order='rup_id')
-    if sum(len(df) for df in alldata) == 0:
-        return dict(gmfdata={}, times=times, sig_eps=())
-
-    gmfdata = pandas.concat(alldata)  # ~40 MB
-    dic = dict(gmfdata=gmfdata,
-               times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
-    if oq.mea_tau_phi:
-        mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
-        dic['mea_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
-    return dic
+        dic['times'] = numpy.array([(proxy['id'], computer.ctx.rrup.min(), dt,
+                                     rup_weight(proxy), cmon.task_no)], rup_dt)
+        yield dic
 
 
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
@@ -261,20 +248,20 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
-    chunksize = int(config.memory.max_ruptures_chunk)
+    kdt = KDTree(sites.xyz)  # instantiated once per task
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
         # NB: the maximum distance can vary between TRTs/CMakers
         maxdist = cmaker.oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sites, maxdist)
+        srcfilter.kdt = kdt
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        for block in block_splitter(proxies, chunksize, lambda p: 1):
-            yield _event_based(block, cmaker, secperils, srcfilter, cmon, umon)
+        yield from _event_based(proxies, cmaker, secperils, srcfilter, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -432,9 +419,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
             station_data, station_sites.sids)
         G = len(cmaker.gsims)
         N = len(computer.ctx)
-        size = 2 * G * N * N * 8  # tau, phi
-        msg = f'{G=} * {humansize(N*N*8)} * 2'
-        logging.info('Requiring %s for tau, phi [%s]', humansize(size), msg)
+        compute_covs = max(computer.tlw, computer.tlb) > \
+            TRUNCATION_THRESHOLD
+        if compute_covs:
+            size = 2 * G * N * N * 8  # tau, phi
+            msg = f'{G=} * {humansize(N*N*8)} * 2'
+            matrices = 'tau, phi'
+        else:
+            D = len(station_sites)
+            size = 2 * G * N * D * 8  # target-station matrices
+            msg = f'{G=} * {humansize(N*D*8)} * 2'
+            matrices = 'target-station matrices'
+        logging.info(
+            'Requiring %s for %s [%s]', humansize(size), matrices, msg)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {N=}. '
@@ -445,8 +442,12 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
 
     dstore.swmr_on()
     smap = parallel.Starmap(conditioned, h5=dstore)
-    pre = build_precomputed(ebr.rupture, cmaker, computer.inp)
-    smap.share(YY=pre.YY, YD=pre.YD, DY=pre.DY, DD=pre.DD)
+    pre = build_precomputed(
+        ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
+    shared = dict(YD=pre.YD, DD=pre.DD)
+    if compute_covs:
+        shared.update(YY=pre.YY, DY=pre.DY)
+    smap.share(**shared)
     computer.init_eid_rlz_sig_eps()
     for conditioner in pre.conditioners:
         smap.submit((computer, conditioner))
@@ -473,7 +474,7 @@ def ntasks_by_model(cmaker_rups, concurrent_tasks):
         totr += rups_by[model]
         totw += sum(rup_weight(rups).sum() for rups in rupss)
 
-    ct = max(concurrent_tasks, totw / 8E7)
+    ct = max(concurrent_tasks, totw / 8E7)  # 8E7 fine-tuned on China
     return {model: int(numpy.ceil(ct * nr / totr))
             for model, nr in rups_by.items()}
 
@@ -486,7 +487,7 @@ def get_allargs(oq, acc, filrups, calc):
     p = sum(len(pairs) for pairs in cmaker_rups.values())
     logging.info(f'There are {p:_d} pairs cmaker_rups')
     allargs = []
-    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks // 2 or 1)
+    ntasks = ntasks_by_model(cmaker_rups, oq.concurrent_tasks * .75 or 1)
     if len(ntasks) > 1:
         logging.info(f'ntasks by model={ntasks}')
     nr = 0
