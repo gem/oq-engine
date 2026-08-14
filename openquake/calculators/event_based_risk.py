@@ -43,7 +43,7 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 # AE_MAX chosen so that China runs with 3 GB per core
-AE_MAX = 1.5E8
+AE_MAX = 1.2E8
 get_n_occ = operator.itemgetter(1)
 
 

@@ -395,7 +395,6 @@ class VulnerabilityFunction(object):
         [0.0049, 0.006, 0.027], the clipped imls are
         [0.005,  0.006, 0.0269].
         """
-
         imls = numpy.piecewise(
             imls,
             [imls > self.imls[-1], imls < self.imls[0]],
@@ -489,7 +488,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self._dtype = numpy.dtype(ls)
 
     def init(self):
-        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)  # 2D
         lratios = F64(self.loss_ratios)
         cols = list(range(len(self.probs)))
         self.sampler = Sampler(self.distribution_name, lratios, cols)
@@ -633,7 +632,6 @@ class FragilityFunctionDiscrete(object):
         if len(imls) != len(poes):
             raise ValueError('%s: %d levels but %d poes' % (
                 limit_state, len(imls), len(poes)))
-        self._interp = None
         self.no_damage_limit = no_damage_limit
 
     def __call__(self, imls):
@@ -654,7 +652,7 @@ class FragilityFunctionDiscrete(object):
     # so that the curve is pickeable
     def __getstate__(self):
         return dict(limit_state=self.limit_state,
-                    poes=self.poes, imls=self.imls, _interp=None,
+                    poes=self.poes, imls=self.imls,
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
