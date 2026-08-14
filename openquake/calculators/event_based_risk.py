@@ -333,6 +333,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
+    # NB: there is one dataframe per filtered rupture
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, dstore, monitor)
            if len(dic['gmfdata']))
