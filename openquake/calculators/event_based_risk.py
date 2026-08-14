@@ -43,7 +43,7 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 # AE_MAX chosen so that China runs with 3 GB per core
-AE_MAX = 1.2E8
+AE_MAX = 1.5E8
 get_n_occ = operator.itemgetter(1)
 
 
@@ -342,7 +342,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around AE_MAX) and hence a good performance
         na = int(sum(num_assets[df.sid].sum() for df in blk))
-        if na >= 2*AE_MAX:  # very big task
+        if na > AE_MAX:  # big task
             print(f'{monitor.calc_id=}, {monitor.task_no=}, {na=:_d}')
             yield event_based_risk, pandas.concat(blk)
         else:
