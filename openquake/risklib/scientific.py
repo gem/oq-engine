@@ -29,7 +29,7 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats
+from scipy import stats
 from openquake.baselib import hdf5, general, performance
 
 F64 = numpy.float64
@@ -77,6 +77,39 @@ affectedpop injured embodied_carbon
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
+
+
+def _interp1d(x, y, fill_value=None, extrapolate=False):
+    """Return a NumPy-based 1-D linear interpolator."""
+    x = numpy.asarray(x)
+    y = numpy.asarray(y)
+
+    def interp(xp):
+        scalar = numpy.ndim(xp) == 0
+        xp = numpy.asarray(xp)
+        if extrapolate:
+            left_slope = (y[1] - y[0]) / (x[1] - x[0])
+            right_slope = (y[-1] - y[-2]) / (x[-1] - x[-2])
+            result = numpy.interp(xp, x, y)
+            left = xp < x[0]
+            right = xp > x[-1]
+            result = numpy.where(
+                left, y[0] + (xp - x[0]) * left_slope, result)
+            result = numpy.where(
+                right, y[-1] + (xp - x[-1]) * right_slope, result)
+        else:
+            if fill_value is None:
+                left_value = y[0]
+                right_value = y[-1]
+            elif isinstance(fill_value, tuple):
+                left_value, right_value = fill_value
+            else:
+                left_value = right_value = fill_value
+            result = numpy.interp(
+                xp, x, y, left=left_value, right=right_value)
+        return result.item() if scalar and numpy.ndim(result) == 0 else result
+
+    return interp
 
 
 def _reduce(nested_dic):
@@ -260,10 +293,10 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         # NB: we use fill_value="extrapolate" for compatibility with numpy 1
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
-                                             fill_value="extrapolate")
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
-                                              fill_value="extrapolate")
+        self._mlr_i1d = _interp1d(self.imls, self.mean_loss_ratios,
+                                  extrapolate=True)
+        self._covs_i1d = _interp1d(self.imls, self.covs,
+                                   extrapolate=True)
         self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
@@ -491,7 +524,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self._dtype = numpy.dtype(ls)
 
     def init(self):
-        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        self._probs_i1d = [_interp1d(self.imls, probs)
+                           for probs in self.probs]
         lratios = F64(self.loss_ratios)
         cols = list(range(len(self.probs)))
         self.sampler = Sampler(self.distribution_name, lratios, cols)
@@ -536,7 +570,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
-        for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
+        for m, interp in enumerate(self._probs_i1d):
+            probs = interp(gmvs_curve[ok])
             dic[m][ok] = probs
         return pandas.DataFrame(dic, gmf_df.sid)
 
@@ -1024,7 +1059,7 @@ def classical_damage(
         assert min_val > 0, hazard_imls  # sanity check
         imls[imls < min_val] = min_val
         imls[imls > max_val] = max_val
-        poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+        poes = _interp1d(hazard_imls, hazard_poes)(imls)
     else:
         imls = hazard_imls
         poes = numpy.array(hazard_poes)
@@ -1079,7 +1114,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
-    poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    poes = _interp1d(hazard_imls, hazard_poes)(imls)
     if abs((1-poes).mean()) < 1E-4:  # flat curve
         raise ValueError('The hazard curve is flat (all ones) probably due to '
                          'a (hazard) investigation time too large')
@@ -1259,8 +1294,7 @@ def insurance_loss_curve(curve, deductible, insurance_limit):
            [ 0.85294118,  0.5       ]])
     """
     losses, poes = curve[:, curve[0] <= insurance_limit]
-    limit_poe = interpolate.interp1d(
-        *curve, bounds_error=False, fill_value=1)(deductible)
+    limit_poe = _interp1d(curve[0], curve[1], fill_value=1)(deductible)
     return numpy.array([
         losses,
         numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])
@@ -1299,10 +1333,8 @@ def pla_factor(df):
     return_period and pla_factor.
     """
     factors = df.pla_factor.to_numpy()  # ordered from 1 to maxvalue
-    return interpolate.interp1d(df.return_period.to_numpy(),
-                                factors,
-                                bounds_error=False,
-                                fill_value=(1., factors[-1]))
+    return _interp1d(df.return_period.to_numpy(), factors,
+                     fill_value=(1., factors[-1]))
 
 
 # ####################### statistics #################################### #
@@ -1422,9 +1454,8 @@ def normalize_curves_eb(curves):
         max_losses = [losses[-1] for losses, _poes in non_zero_curves]
         reference_curve = non_zero_curves[numpy.argmax(max_losses)]
         loss_ratios = reference_curve[0]
-        curves_poes = [interpolate.interp1d(
-            losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
-            for losses, poes in curves]
+        curves_poes = [_interp1d(losses, poes, fill_value=0)(loss_ratios)
+                       for losses, poes in curves]
         # fix degenerated case with flat curve
         for cp in curves_poes:
             if numpy.isnan(cp[0]):
