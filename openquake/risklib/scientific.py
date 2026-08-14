@@ -1077,7 +1077,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
-    poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    poes = numpy.interp(imls, hazard_imls, hazard_poes)
     if abs((1-poes).mean()) < 1E-4:  # flat curve
         raise ValueError('The hazard curve is flat (all ones) probably due to '
                          'a (hazard) investigation time too large')
