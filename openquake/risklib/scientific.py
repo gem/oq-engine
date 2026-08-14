@@ -260,8 +260,6 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         # NB: we use fill_value="extrapolate" for compatibility with numpy 1
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
-                                             fill_value="extrapolate")
         self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
@@ -280,7 +278,8 @@ class VulnerabilityFunction(object):
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['mean'][ok] = numpy.interp(
+            curve_ok, self.imls, self.mean_loss_ratios)
         dic['cov'][ok] = self._cov_for(curve_ok)
         return pandas.DataFrame(dic, gmf_df.sid)
 
