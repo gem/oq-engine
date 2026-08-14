@@ -23,6 +23,7 @@ import logging
 import h5py
 import numpy
 import pandas
+from scipy.spatial import KDTree
 from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, general, performance)
@@ -245,12 +246,14 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
+    kdt = KDTree(sites.xyz)  # instantiated once per task
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
         # NB: the maximum distance can vary between TRTs/CMakers
         maxdist = cmaker.oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sites, maxdist)
+        srcfilter.kdt = kdt
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
