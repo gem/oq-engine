@@ -13,7 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Baker and Cornell (2006) cross-IMT correlation model."""
+"""Baker and Cornell (2006) cross-IMT correlation model.
+
+References
+----------
+Baker, J. W., and Cornell, C. A. (2006). Correlation of response spectral
+values for multicomponent ground motions. Bulletin of the Seismological
+Society of America, 96(1), 215-227.
+https://doi.org/10.1785/0120050060
+"""
 
 import math
 

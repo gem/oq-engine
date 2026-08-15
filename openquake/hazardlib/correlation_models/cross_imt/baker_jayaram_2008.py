@@ -13,7 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Baker and Jayaram (2008) cross-IMT correlation model."""
+"""Baker and Jayaram (2008) cross-IMT correlation model.
+
+References
+----------
+Baker, J. W., and Jayaram, N. (2008). Correlation of Spectral Acceleration
+Values from NGA Ground Motion Models. Earthquake Spectra, 24(1), 299-317.
+https://doi.org/10.1193/1.2857544
+"""
 
 import numpy
 from scipy import constants

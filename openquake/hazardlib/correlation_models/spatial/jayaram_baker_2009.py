@@ -13,7 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Jayaram and Baker (2009) spatial correlation model."""
+"""Jayaram and Baker (2009) spatial correlation model.
+
+References
+----------
+Jayaram, N., and Baker, J. W. (2009). Correlation model for spatially
+distributed ground-motion intensities. Earthquake Engineering & Structural
+Dynamics, 38(15), 1687-1708. https://doi.org/10.1002/eqe.922
+"""
 
 import numpy
 

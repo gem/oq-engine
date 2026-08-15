@@ -13,7 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Heresi and Miranda (2019) spatial correlation model."""
+"""Heresi and Miranda (2019) spatial correlation model.
+
+References
+----------
+Heresi Venegas, P. C., and Miranda Mijares, E. (2019). Uncertainty in
+intraevent spatial correlation of elastic pseudo-acceleration spectral
+ordinates. Bulletin of Earthquake Engineering, 17(3), 1099-1115.
+https://doi.org/10.1007/s10518-018-0506-6
+"""
 
 import numpy
 

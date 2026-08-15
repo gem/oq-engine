@@ -13,7 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Goda and Atkinson (2009) cross-IMT correlation model."""
+"""Goda and Atkinson (2009) cross-IMT correlation model.
+
+References
+----------
+Goda, K., and Atkinson, G. M. (2009). Probabilistic characterization of
+spatially correlated response spectra for earthquakes in Japan. Bulletin of
+the Seismological Society of America, 99(5), 3003-3020.
+https://doi.org/10.1785/0120090007
+"""
 
 import numpy
 

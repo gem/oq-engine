@@ -13,7 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Bradley (2012) cross-IMT correlation model."""
+"""Bradley (2012) cross-IMT correlation model.
+
+References
+----------
+Bradley, B. A. (2012). Empirical correlations between peak ground velocity
+and spectrum-based intensity measures. Earthquake Spectra, 28(1), 17-35.
+https://doi.org/10.1193/1.3675582
+"""
 
 import numpy
 
