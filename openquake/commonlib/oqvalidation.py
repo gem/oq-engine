@@ -40,7 +40,8 @@ from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import stats, calc
 from openquake.hazardlib.correlation_models.base import (
-    TruncatedCrossIMTCorrelationModel)
+    CrossIMTCorrelationModel, ResidualComponent,
+    SpatialCrossIMTCorrelationModel, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
@@ -221,15 +222,15 @@ countries:
   Example: *countries = ITA*.
   Default: ()
 
-cross_imt_correlation_model:
-  Name of a registered cross-IMT correlation model. It is used consistently
-  by regular and ShakeMap calculations.
-  Example: *cross_imt_correlation_model = BakerJayaram2008*.
-  Default: empty, meaning no cross-IMT correlation
+between_event_correlation_model:
+  Name of a registered model for correlation between event terms at
+  different IMTs.
+  Example: *between_event_correlation_model = GodaAtkinson2009*.
+  Default: empty, meaning independent between-event residuals
 
-cross_imt_correlation_params:
-  Parameters passed to the cross-IMT correlation model constructor.
-  Example: *cross_imt_correlation_params = {}*.
+between_event_correlation_params:
+  Parameters passed to the between-event correlation model constructor.
+  Example: *between_event_correlation_params = {}*.
   Default: empty dictionary
 
 siteid:
@@ -341,15 +342,27 @@ exports:
   Example: *exports = csv, rst*.
   Default: empty list
 
-spatial_correlation_model:
-  Name of a registered spatial correlation model. It is used consistently
-  by regular and ShakeMap calculations.
-  Example: *spatial_correlation_model = JayaramBaker2009*.
-  Default: None
+total_residual_correlation_model:
+  Name of a registered cross-IMT model for total residuals. This is used by
+  calculations such as conditional spectra.
+  Example: *total_residual_correlation_model = BakerJayaram2008*.
+  Default: empty, meaning independent total residuals
 
-spatial_correlation_params:
-  Parameters passed to the spatial correlation model constructor.
-  Example: *spatial_correlation_params = {"vs30_clustering": False}*.
+total_residual_correlation_params:
+  Parameters passed to the total-residual correlation model constructor.
+  Example: *total_residual_correlation_params = {}*.
+  Default: empty dictionary
+
+within_event_correlation_model:
+  Name of a registered model for within-event residuals. Spatial-only models
+  apply correlation independently to each IMT; joint models can correlate
+  residuals across both sites and IMTs.
+  Example: *within_event_correlation_model = JayaramBaker2009*.
+  Default: empty, meaning independent within-event residuals
+
+within_event_correlation_params:
+  Parameters passed to the within-event correlation model constructor.
+  Example: *within_event_correlation_params = {"vs30_clustering": False}*.
   Default: empty dictionary
 
 ground_motion_fields:
@@ -1079,11 +1092,18 @@ class OqParam(valid.ParamSet):
                'mean_hazard_curves': 'mean',
                'max_hazard_curves': 'max',
                'ground_motion_correlation_model':
-               'spatial_correlation_model',
+               'within_event_correlation_model',
                'ground_motion_correlation_params':
-               'spatial_correlation_params',
-               'cross_correlation': 'cross_imt_correlation_model',
-               'spatial_correlation': 'spatial_correlation_model'}
+               'within_event_correlation_params',
+               'spatial_correlation':
+               'within_event_correlation_model'}
+    PROVISIONAL_CORRELATION_NAMES = {
+        'spatial_correlation_model': 'within_event_correlation_model',
+        'spatial_correlation_params': 'within_event_correlation_params',
+        'cross_imt_correlation_model':
+        'a residual-specific correlation model setting',
+        'cross_imt_correlation_params':
+        'the corresponding residual-specific parameter setting'}
 
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
@@ -1121,9 +1141,9 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     countries = valid.Param(valid.namelist, ())
-    cross_imt_correlation_model = valid.Param(
+    between_event_correlation_model = valid.Param(
         valid.NoneOr(valid.utf8_not_empty), None)
-    cross_imt_correlation_params = valid.Param(valid.dictionary, {})
+    between_event_correlation_params = valid.Param(valid.dictionary, {})
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
     siteid = valid.Param(valid.base64names, ())
@@ -1146,9 +1166,12 @@ class OqParam(valid.ParamSet):
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
-    spatial_correlation_model = valid.Param(
+    total_residual_correlation_model = valid.Param(
         valid.NoneOr(valid.utf8_not_empty), None)
-    spatial_correlation_params = valid.Param(valid.dictionary, {})
+    total_residual_correlation_params = valid.Param(valid.dictionary, {})
+    within_event_correlation_model = valid.Param(
+        valid.NoneOr(valid.utf8_not_empty), None)
+    within_event_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
@@ -1334,6 +1357,23 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def fix_legacy_names(self, dic):
+        for name, replacement in self.PROVISIONAL_CORRELATION_NAMES.items():
+            if name in dic:
+                raise NameError(
+                    f'{name} has been replaced by {replacement}')
+
+        if 'cross_correlation' in dic:
+            if dic.get('postproc_func') == 'conditional_spectrum.main':
+                replacement = 'total_residual_correlation_model'
+            else:
+                replacement = 'between_event_correlation_model'
+            if replacement in dic:
+                raise NameError(
+                    'Please remove cross_correlation, you should use only '
+                    f'{replacement}')
+            dic[replacement] = dic.pop('cross_correlation')
+            self._legacy_cross_correlation_role = replacement
+
         for name in list(dic):
             if name in self.ALIASES:
                 if self.ALIASES[name] in dic:
@@ -2098,40 +2138,84 @@ class OqParam(valid.ParamSet):
         """
         return sum(sum(imls) for imls in self.imtls.values()) == 0
 
-    def get_spatial_correlation_model(self):
-        """Return the configured spatial correlation model, if any."""
-        if self.spatial_correlation_model is None:
+    def _validate_correlation_model(self, name, component):
+        if name is None:
             return
-        return get_model(
-            self.spatial_correlation_model, 'spatial',
-            **self.spatial_correlation_params)
+        cls = get_model_class(name)
+        if component == ResidualComponent.WITHIN_EVENT:
+            valid_type = (
+                issubclass(cls, SpatialCrossIMTCorrelationModel) and
+                not issubclass(cls, CrossIMTCorrelationModel))
+            expected_type = 'spatial or spatial-cross-IMT'
+        else:
+            valid_type = issubclass(cls, CrossIMTCorrelationModel)
+            expected_type = 'cross-IMT'
+        if not valid_type:
+            raise TypeError(
+                f'{name} is not a {expected_type} correlation model')
 
-    def get_cross_imt_correlation_model(self):
-        """Return the configured cross-IMT correlation model, if any."""
-        if self.cross_imt_correlation_model is None:
+        calibrated = cls.calibrated_component
+        if calibrated is not None and calibrated != component:
+            legacy_role = getattr(
+                self, '_legacy_cross_correlation_role', None)
+            current_role = f'{component.value}_event_correlation_model'
+            if (component == ResidualComponent.TOTAL or
+                    legacy_role != current_role):
+                raise ValueError(
+                    f'{name} provides {calibrated.value} correlation, not '
+                    f'{component.value} correlation')
+            logging.warning(
+                'The legacy cross_correlation setting applies %s to %s '
+                'residuals even though it was calibrated for %s residuals',
+                name, component.value, calibrated.value)
+        return cls
+
+    def _get_correlation_model(self, name, params, component):
+        cls = self._validate_correlation_model(name, component)
+        if cls is None:
             return
-        cls = get_model_class(
-            self.cross_imt_correlation_model, model_type='cross_imt')
-        params = self.cross_imt_correlation_params
-        if issubclass(cls, TruncatedCrossIMTCorrelationModel):
-            params = dict(params)
+        params = dict(params)
+        if (component == ResidualComponent.BETWEEN_EVENT and
+                issubclass(cls, TruncatedCrossIMTCorrelationModel)):
             truncation_level = self.truncation_level_between
             if truncation_level is None:
                 truncation_level = (
                     getattr(self, 'truncation_level', None) or 99.)
             params.setdefault('truncation_level', truncation_level)
-        return get_model(
-            self.cross_imt_correlation_model, 'cross_imt', **params)
+        return get_model(name, **params)
+
+    def get_within_event_correlation_model(self):
+        """Return the configured within-event model, if any."""
+        return self._get_correlation_model(
+            self.within_event_correlation_model,
+            self.within_event_correlation_params,
+            ResidualComponent.WITHIN_EVENT)
+
+    def get_between_event_correlation_model(self):
+        """Return the configured between-event model, if any."""
+        return self._get_correlation_model(
+            self.between_event_correlation_model,
+            self.between_event_correlation_params,
+            ResidualComponent.BETWEEN_EVENT)
+
+    def get_total_residual_correlation_model(self):
+        """Return the configured total-residual model, if any."""
+        return self._get_correlation_model(
+            self.total_residual_correlation_model,
+            self.total_residual_correlation_params,
+            ResidualComponent.TOTAL)
 
     @property
     def correl_model(self):
-        """Compatibility alias for the configured spatial model."""
-        return self.get_spatial_correlation_model()
+        """Compatibility alias for the configured within-event model."""
+        return self.get_within_event_correlation_model()
 
     @property
     def cross_correl(self):
         """Compatibility alias for the configured cross-IMT model."""
-        return self.get_cross_imt_correlation_model()
+        if self.postproc_func == 'conditional_spectrum.main':
+            return self.get_total_residual_correlation_model()
+        return self.get_between_event_correlation_model()
 
     @property
     def rupture_xml(self):
@@ -2273,21 +2357,27 @@ class OqParam(valid.ParamSet):
 
     def is_valid_correlation_models(self):
         """
-        Correlation model names must be registered for the requested type
+        Correlation models must be calibrated for the requested component
         """
         models = (
-            (self.spatial_correlation_model, 'spatial'),
-            (self.cross_imt_correlation_model, 'cross_imt'))
-        for name, model_type in models:
-            if name:
-                get_model_class(name, model_type)
+            (self.within_event_correlation_model,
+             self.within_event_correlation_params,
+             ResidualComponent.WITHIN_EVENT),
+            (self.between_event_correlation_model,
+             self.between_event_correlation_params,
+             ResidualComponent.BETWEEN_EVENT),
+            (self.total_residual_correlation_model,
+             self.total_residual_correlation_params,
+             ResidualComponent.TOTAL))
+        for name, _params, component in models:
+            self._validate_correlation_model(name, component)
         return True
 
     def is_valid_truncation_level(self):
         """
         In presence of a correlation model the truncation level must be nonzero
         """
-        if self.spatial_correlation_model:
+        if self.within_event_correlation_model:
             return self.truncation_level_within != 0
         else:
             return True
@@ -2364,12 +2454,13 @@ class OqParam(valid.ParamSet):
         `intensity_measure_types` must not be set.
         """
         models = (
-            (self.spatial_correlation_model, 'spatial'),
-            (self.cross_imt_correlation_model, 'cross_imt'))
-        for name, model_type in models:
+            self.within_event_correlation_model,
+            self.between_event_correlation_model,
+            self.total_residual_correlation_model)
+        for name in models:
             if not name:
                 continue
-            cls = get_model_class(name, model_type)
+            cls = get_model_class(name)
             if cls.supported_imts is None:
                 continue
             for imt_str in self.imtls:
@@ -2610,6 +2701,10 @@ class OqParam(valid.ParamSet):
         Converts the parameters into a string in .ini format
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        if (getattr(self, '_legacy_cross_correlation_role', None) ==
+                'between_event_correlation_model'):
+            dic['cross_correlation'] = dic.pop(
+                'between_event_correlation_model')
         dic['inputs'].update(inputs)
         dic.pop('base_path', None)
         dic.pop('req_site_params', None)

@@ -316,9 +316,9 @@ file like the following::
 	number_of_ground_motion_fields = 10
 	truncation_level = 3
 	shakemap_id = usp000fjta
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
-	cross_imt_correlation_model = BakerCornell2006
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
+	total_residual_correlation_model = BakerCornell2006
 
 This example refers to the 2007 Mw8.0 Pisco earthquake in Peru 
 (see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap). 
@@ -387,11 +387,12 @@ Correlation
 ***********
 
 ShakeMap and regular calculations use the same named correlation models. Set
-``spatial_correlation_model`` and/or ``cross_imt_correlation_model`` to a
-registered model name. Omitting a parameter disables that kind of correlation.
-The example above preserves the historical ShakeMap defaults: Jayaram and Baker
-(2009) spatial correlation with clustered Vs30, and Baker and Cornell (2006)
-cross-IMT correlation.
+``within_event_correlation_model`` and/or
+``total_residual_correlation_model`` to a registered model name. Omitting a
+parameter disables that kind of correlation. The example above preserves the
+historical ShakeMap defaults: Jayaram and Baker (2009) spatial correlation with
+clustered Vs30, and Baker and Cornell (2006) total-residual cross-IMT
+correlation.
 
 MMI is not a physical ground-motion measure, so correlation models configured
 for MMI-only ShakeMaps are ignored. Other IMTs are checked against each

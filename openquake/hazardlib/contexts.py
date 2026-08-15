@@ -552,7 +552,7 @@ class ContextMaker(object):
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
             try:
-                resolver = oq.get_cross_imt_correlation_model
+                resolver = oq.get_total_residual_correlation_model
             except AttributeError:
                 self.cross_imt_model = getattr(
                     oq, 'cross_imt_model', None)

@@ -42,8 +42,8 @@ event based damage calculation is shown in the listing below.::
 	number_of_logic_tree_samples = 0
 	
 	[correlation]
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 	
 	[hazard_calculation]
 	random_seed = 24
@@ -129,8 +129,8 @@ event based risk calculation is shown in the listing below.::
 	gsim_logic_tree_file = gsim_logic_tree.xml
 	
 	[correlation]
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 	
 	[hazard_calculation]
 	random_seed = 24
@@ -464,4 +464,3 @@ An example of a PLA input model is presented in the table below.
     +---------------+------------+
     | 500           | 1.2908     |
     +---------------+------------+
-
