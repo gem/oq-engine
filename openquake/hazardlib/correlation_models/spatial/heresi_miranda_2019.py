@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Heresi and Miranda (2018) spatial correlation model."""
+"""Heresi and Miranda (2019) spatial correlation model."""
 
 import numpy
 
@@ -24,7 +24,7 @@ from openquake.hazardlib.correlation_models.registry import register_model
 
 def _correlation_matrix(sites_or_distances, imt,
                         uncertainty_multiplier=0):
-    """Return the Heresi and Miranda (2018) correlation matrix."""
+    """Return the Heresi and Miranda (2019) correlation matrix."""
     if hasattr(sites_or_distances, 'mesh'):
         distances = sites_or_distances.mesh.get_distance_matrix()
     else:
@@ -45,12 +45,12 @@ def _correlation_matrix(sites_or_distances, imt,
 
 
 @register_model(
-    'HM2018', 'HM2018CorrelationModel',
-    description='Heresi and Miranda (2018) spatial correlation')
-class HeresiMiranda2018(SpatialCorrelationModel):
-    """Within-event spatial correlation by Heresi and Miranda (2018)."""
+    'HM2019', 'HM2018', 'HM2018CorrelationModel',
+    description='Heresi and Miranda (2019) spatial correlation')
+class HeresiMiranda2019(SpatialCorrelationModel):
+    """Within-event spatial correlation by Heresi and Miranda (2019)."""
 
-    name = 'HeresiMiranda2018'
+    name = 'HeresiMiranda2019'
     calibrated_component = ResidualComponent.WITHIN_EVENT
     supported_imts = ('PGA', 'SA')
 

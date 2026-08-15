@@ -31,18 +31,25 @@ from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 import 
     GodaAtkinson2009)
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class, get_model_specs)
+from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 import (
+    HeresiMiranda2019)
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.imt import PGA, SA
 
 
 def test_registry_aliases_and_metadata():
+    assert get_model_class('HM2018') is HeresiMiranda2019
+    assert get_model_class('HM2019') is HeresiMiranda2019
+    assert get_model_class('HeresiMiranda2019') is HeresiMiranda2019
     assert get_model_class('JB2009') is JayaramBaker2009
     assert get_model_class('JayaramBaker2009') is JayaramBaker2009
     assert get_model_class('GodaAtkinson2009') is GodaAtkinson2009
     assert get_model_class('Bradley2012') is Bradley2012
     assert get_model_class('BakerCornell2006') is BakerCornell2006
     specs = get_model_specs('spatial')
+    assert specs['HeresiMiranda2019'].aliases == (
+        'HM2019', 'HM2018', 'HM2018CorrelationModel')
     assert specs['JayaramBaker2009'].aliases == (
         'JB2009', 'JB2009CorrelationModel')
     assert specs['JayaramBaker2009'].calibrated_component == (
@@ -111,8 +118,7 @@ def test_default_factor_repairs_indefinite_covariance():
 
 def test_legacy_modules_export_canonical_classes():
     assert correlation.JB2009CorrelationModel is JayaramBaker2009
-    assert correlation.HM2018CorrelationModel.__name__ == (
-        'HeresiMiranda2018')
+    assert correlation.HM2018CorrelationModel is HeresiMiranda2019
     assert cross_correlation.BakerJayaram2008 is BakerJayaram2008
     assert cross_correlation.GodaAtkinson2009 is GodaAtkinson2009
     assert issubclass(

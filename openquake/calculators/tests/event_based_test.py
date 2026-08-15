@@ -642,7 +642,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
 
     def test_31(self):
-        # HM2018CorrelationModel with filtered site collection
+        # HeresiMiranda2019 with filtered site collection
         self.run_calc(case_31.__file__, 'job.ini',
                       hazard_calculation_id='job_rup.ini',  exports='csv')
 
