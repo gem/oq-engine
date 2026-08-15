@@ -119,7 +119,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     out = outdict(M, N, P, cmaker.gid.min(), cmaker.gid.max() + 1)
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([
-        cmaker.cross_imt_model.rho(imt_ref, imt)
+        cmaker.total_residual_model.rho(imt_ref, imt)
         for imt in cmaker.imts])
     for sid, imls in enumerate(imlsNP):
         ctx = ctxt[ctxt.sids == sid]

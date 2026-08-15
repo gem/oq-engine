@@ -116,6 +116,31 @@ def test_default_factor_repairs_indefinite_covariance():
     assert numpy.linalg.eigvalsh(repaired).min() > 0
 
 
+def test_joint_model_correlates_imt_major_samples():
+    covariance = numpy.array([
+        [1.0, 0.2, 0.3, 0.1],
+        [0.2, 1.0, 0.1, 0.4],
+        [0.3, 0.1, 1.0, 0.2],
+        [0.1, 0.4, 0.2, 1.0]])
+
+    class JointModel(SpatialCrossIMTCorrelationModel):
+        calibrated_component = ResidualComponent.WITHIN_EVENT
+
+        def covariance(self, sites, imts, component=None, context=None):
+            self._get_component(component)
+            return covariance
+
+    samples = numpy.eye(4).reshape(2, 2, 4)
+    correlated = JointModel().correlate(
+        range(2), [PGA(), SA(1.0)], samples,
+        ResidualComponent.WITHIN_EVENT)
+    numpy.testing.assert_allclose(
+        correlated.reshape(4, 4), numpy.linalg.cholesky(covariance))
+
+    with pytest.raises(ValueError, match='Expected samples with shape'):
+        JointModel().correlate(range(2), [PGA()], samples)
+
+
 def test_legacy_modules_export_canonical_classes():
     assert correlation.JB2009CorrelationModel is JayaramBaker2009
     assert correlation.HM2018CorrelationModel is HeresiMiranda2019

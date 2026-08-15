@@ -194,14 +194,14 @@ class ConditionedGmfComputer(GmfComputer):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param spatial_model:
-        Instance of a spatial correlation model object. See
+    :param within_event_model:
+        Instance of a within-event correlation model object. See
         :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
-    :param cross_imt_model:
-        Instance of a cross-IMT correlation model object. See
+    :param between_event_model:
+        Instance of a between-event correlation model object. See
         :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
@@ -215,19 +215,20 @@ class ConditionedGmfComputer(GmfComputer):
     """
     def __init__(
             self, rupture, sitecol, station_sitecol, station_data,
-            observed_imts, cmaker, spatial_model=None,
-            cross_imt_model=None, spatial_correlation_params=None,
+            observed_imts, cmaker, within_event_model=None,
+            between_event_model=None, within_event_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=(),
             **legacy):
         aliases = {
-            'spatial_correl': 'spatial_model',
-            'cross_correl_between': 'cross_imt_model',
+            'spatial_correl': 'within_event_model',
+            'cross_correl_between': 'between_event_model',
             'ground_motion_correlation_params':
-            'spatial_correlation_params'}
+            'within_event_correlation_params'}
         values = {
-            'spatial_model': spatial_model,
-            'cross_imt_model': cross_imt_model,
-            'spatial_correlation_params': spatial_correlation_params}
+            'within_event_model': within_event_model,
+            'between_event_model': between_event_model,
+            'within_event_correlation_params':
+            within_event_correlation_params}
         for old_name, new_name in aliases.items():
             if old_name in legacy:
                 if values[new_name] is not None:
@@ -235,19 +236,20 @@ class ConditionedGmfComputer(GmfComputer):
                 values[new_name] = legacy.pop(old_name)
         if legacy:
             raise TypeError('Unknown arguments: %s' % sorted(legacy))
-        spatial_model = values['spatial_model']
-        cross_imt_model = values['cross_imt_model']
-        spatial_correlation_params = (
-            values['spatial_correlation_params'] or {})
+        within_event_model = values['within_event_model']
+        between_event_model = values['between_event_model']
+        within_event_correlation_params = (
+            values['within_event_correlation_params'] or {})
         assert len(station_data) == len(station_sitecol), (
             len(station_data), len(station_sitecol))
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
-            spatial_model=spatial_model,
-            cross_imt_model=cross_imt_model,
+            within_event_model=within_event_model,
+            between_event_model=between_event_model,
             amplifier=amplifier, sec_perils=sec_perils)
 
-        clust = spatial_correlation_params.get("vs30_clustering", True)
+        clust = within_event_correlation_params.get(
+            "vs30_clustering", True)
         self.rupture = rupture
 
         # Target IMT must be PGA or SA
@@ -257,8 +259,8 @@ class ConditionedGmfComputer(GmfComputer):
         self.inp = Input(
             sitecol, station_sitecol,
             target_imts, observed_imts, station_data,
-            spatial_model or JayaramBaker2009(clust),
-            cross_imt_model or GodaAtkinson2009(),
+            within_event_model or JayaramBaker2009(clust),
+            between_event_model or GodaAtkinson2009(),
             BakerJayaram2008())
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):

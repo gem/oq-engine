@@ -197,7 +197,7 @@ class Oq(object):
     """
     af = None
     impact = False
-    cross_imt_model = None
+    total_residual_model = None
     mea_tau_phi = False
     split_sources = True
     keep_rupdata = True
@@ -531,12 +531,12 @@ class ContextMaker(object):
 
     @property
     def cross_correl(self):
-        """Compatibility alias for :attr:`cross_imt_model`."""
-        return self.cross_imt_model
+        """Compatibility alias for :attr:`total_residual_model`."""
+        return self.total_residual_model
 
     @cross_correl.setter
     def cross_correl(self, model):
-        self.cross_imt_model = model
+        self.total_residual_model = model
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -545,8 +545,8 @@ class ContextMaker(object):
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
-            self.cross_imt_model = param.get(
-                'cross_imt_model', param.get('cross_correl'))
+            self.total_residual_model = param.get(
+                'total_residual_model', param.get('cross_correl'))
         else:  # OqParam
             param = vars(oq)
             param['reqv'] = oq.get_reqv()
@@ -554,13 +554,13 @@ class ContextMaker(object):
             try:
                 resolver = oq.get_total_residual_correlation_model
             except AttributeError:
-                self.cross_imt_model = getattr(
-                    oq, 'cross_imt_model', None)
-                if self.cross_imt_model is None:
-                    self.cross_imt_model = getattr(
+                self.total_residual_model = getattr(
+                    oq, 'total_residual_model', None)
+                if self.total_residual_model is None:
+                    self.total_residual_model = getattr(
                         oq, 'cross_correl', None)
             else:
-                self.cross_imt_model = resolver()
+                self.total_residual_model = resolver()
             self.imtls = oq.imtls
             try:
                 self.mags = oq.mags_by_trt[trt]

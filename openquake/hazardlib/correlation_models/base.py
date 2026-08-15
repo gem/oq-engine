@@ -132,6 +132,22 @@ class SpatialCrossIMTCorrelationModel(CorrelationModel):
             lower_triangle = numpy.linalg.cholesky(covariance)
         return CholeskyFactor(lower_triangle)
 
+    def correlate(self, sites, imts, samples, component=None, context=None):
+        """Correlate standard-normal samples across IMTs and sites.
+
+        ``samples`` must have shape ``(M, N, E)``. The first two dimensions
+        are flattened in IMT-major order before applying the factorization.
+        """
+        samples = numpy.asarray(samples)
+        expected = (len(imts), len(sites))
+        if samples.ndim != 3 or samples.shape[:2] != expected:
+            raise ValueError(
+                f'Expected samples with shape {expected} + (E,), got '
+                f'{samples.shape}')
+        factor = self.factor(sites, imts, component, context)
+        correlated = factor.apply(samples.reshape(-1, samples.shape[-1]))
+        return correlated.reshape(samples.shape)
+
 
 class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
     """Same-IMT spatial correlation over a collection of sites."""

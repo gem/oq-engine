@@ -217,7 +217,7 @@ class Input(object):
             hparams.update(extra)
         M = len(hparams['imtls'])
         assert isinstance(hparams['maximum_distance'], IntegrationDistance)
-        hparams.setdefault('cross_imt_model', None)
+        hparams.setdefault('total_residual_model', None)
         hparams.setdefault('number_of_logic_tree_samples', 0)
         hparams.setdefault('random_seed', 42)
         hparams.setdefault('ses_seed', 42)
