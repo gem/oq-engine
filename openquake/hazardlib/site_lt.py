@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 Epistemic uncertainty on the site model: a NRML logic tree whose single
-``uncertaintyType="siteModel"`` branchset lists per-branch site-model
+"uncertaintyType=siteModel" branchset lists per-branch site-model
 files with weights summing to 1
 """
 import os
@@ -53,7 +53,7 @@ class SiteModelLogicTree(object):
     @classmethod
     def is_site_model_lt(cls, filename):
         """
-        :returns: ``True`` if the given XML file is a site-model logic tree
+        :returns: True if the given XML file is a site-model logic tree
         """
         try:
             root = nrml.read(filename)
@@ -140,7 +140,7 @@ class SiteModelLogicTree(object):
 class SiteModelsEpistemic(object):
     """
     Container holding one structured site-model array per branch; branches
-    share identical geometry (``lon``, ``lat``, and ``depth`` if present)
+    share identical geometry ("lon", "lat", and "depth" if present)
     and field sets
     """
     def __init__(self, names, weights, arrays, filenames=None,
@@ -199,7 +199,7 @@ class SiteModelsEpistemic(object):
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
-        Monte-Carlo sample ``n`` site branches with prob = branch weight;
+        Monte-Carlo sample "n" site branches with prob = branch weight;
         returns :class:`Realization` objects (branches may repeat or be absent)
         """
         probs = lt.random(n, seed, sampling_method)
@@ -208,7 +208,7 @@ class SiteModelsEpistemic(object):
     @property
     def shortener(self):
         """
-        :returns: dict ``branchID -> single BASE183 character`` (consistent
+        :returns: dict of branchID -> single BASE183 character (consistent
             with the SSC and GSIM shorteners)
         """
         return {name: BASE183[i] for i, name in enumerate(self.names)}

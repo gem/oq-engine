@@ -64,7 +64,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param rlz_filter:
-        set of rlz ordinals to keep, or ``None`` to disable filtering
+        set of rlz ordinals to keep, or "None" to disable filtering
         (used by the site-model LT outer loop in :meth:`compute`)
     :param monitor:
         monitor of the currently running job
@@ -343,7 +343,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     def _compute_pass(self, rlz_filter):
         """
         Single pass of the disaggregation compute loop; used both by
-        the regular path (``rlz_filter=None``) and by the site-model
+        the regular path (rlz_filter=None) and by the site-model
         epistemic outer loop (one pass per site rlz)
         """
         dstore = (self.datastore.parent if self.datastore.parent

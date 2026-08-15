@@ -704,7 +704,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_epistemic_site(self, sgs, ds):
         """
         Run :meth:`_execute` once per site-model realization; each branch's
-        rates are stored in a separate ``_rates_site_i`` group
+        rates are stored in a separate "_rates_site_i" group
         """
         oq = self.oqparam
         smep = readinput.get_site_models_epistemic(oq)
