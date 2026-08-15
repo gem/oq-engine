@@ -412,7 +412,8 @@ class GmfComputer(object):
                 E = len(idxs)
                 result = np.zeros((len(self.imts), len(self.ctx.sids), E), F32)
                 # arrays of random numbers of shape (M, N, E) and (M, E)
-                within_eps = self._draw_within_eps(E)
+                within_eps = self._draw_within_eps(
+                    E, correlate=not conditioned)
                 # between_eps are used in _compute
                 if self.tlb <= TRUNCATION_THRESHOLD:
                     self.between_eps[idxs] = 0.
@@ -439,14 +440,15 @@ class GmfComputer(object):
         with umon:
             return self.strip_zeros(data)
 
-    def _draw_within_eps(self, num_events):
+    def _draw_within_eps(self, num_events, correlate=True):
         if self.tlw <= TRUNCATION_THRESHOLD:
             return np.zeros((self.M, self.N, num_events), F32)
         samples = np.asarray([
             self.within_dist.rvs((self.N, num_events), self.rng).astype(F32)
             for _ in range(self.M)])
         model = self.within_event_model
-        if model is None or isinstance(model, SpatialCorrelationModel):
+        if (not correlate or model is None or
+                isinstance(model, SpatialCorrelationModel)):
             return samples
         if self._within_event_factor is None:
             self._within_event_factor = model.factor(

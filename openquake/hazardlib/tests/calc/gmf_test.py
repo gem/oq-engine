@@ -88,3 +88,13 @@ def test_spatial_model_preserves_the_existing_per_imt_sampling_path():
     computer = build_computer(JayaramBaker2009(False))
     numpy.testing.assert_array_equal(
         computer._draw_within_eps(3), draw_uncorrelated(7, 3))
+
+
+def test_conditioned_path_does_not_build_an_unused_joint_factor():
+    model = RecordingJointModel()
+    computer = build_computer(model)
+    numpy.testing.assert_array_equal(
+        computer._draw_within_eps(3, correlate=False),
+        draw_uncorrelated(7, 3))
+    assert computer._within_event_factor is None
+    assert not hasattr(model, 'factor_calls')
