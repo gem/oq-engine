@@ -521,8 +521,8 @@ A demo showing an example of Event Based PSHA calculation is provided with the f
 	
 	[event_based_params]
 	ses_per_logic_tree_path = 100
-	ground_motion_correlation_model =
-	ground_motion_correlation_params =
+	spatial_correlation_model =
+	spatial_correlation_params =
 	
 	[output]
 	export_dir = ...
