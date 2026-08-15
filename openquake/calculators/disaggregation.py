@@ -64,7 +64,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param rlz_filter:
-        set of rlz ordinals to keep, or "None" to disable filtering
+        set of rlz ordinals to keep, or None to disable filtering
         (used by the site-model LT outer loop in :meth:`compute`)
     :param monitor:
         monitor of the currently running job

@@ -848,8 +848,8 @@ class HazardCalculator(BaseCalculator):
 
     def _overlay_sitecol(self, arr):
         """
-        Overlay "arr"'s per-site params on "self.sitecol" and
-        "dstore['sitecol/*']"; "arr" is a structured array with the
+        Overlay arr's per-site params on self.sitecol and
+        dstore['sitecol/*']; arr is a structured array with the
         same rows as the sitecol (either a per-branch site model or a
         copy used to restore it)
         """

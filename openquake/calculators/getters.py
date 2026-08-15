@@ -249,10 +249,10 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
 
 def _site_lt_variants(full_lt, trt_smrs, fastmean):
     """
-    :returns: ``(variants, gweights_by_site)``
-        ``variants`` is a list of ``(rates_dset, rlz_mask)``; for the
-        no-site-LT case that's a single ``('_rates', None)`` entry.
-        ``gweights_by_site`` is ``None`` unless ``fastmean`` is on
+    :returns: (variants, gweights_by_site)
+        variants is a list of (rates_dset, rlz_mask); for the
+        no-site-LT case that's a single ('_rates', None) entry.
+        gweights_by_site is None unless fastmean is on
         together with a site LT
     """
     site_lt = getattr(full_lt, 'site_model_lt', None)
@@ -453,8 +453,8 @@ class MapGetter(object):
 class MergedMapGetter(object):
     """
     Wraps a list of per-site-rlz :class:`MapGetter` instances (all sharing
-    ``chunk``, ``sids``, ``trt_rlzs``, ``R``) into one getter with a single
-    hcurve per ``sid``; used by disagg and fastmean under a site-model LT
+    chunk, sids, trt_rlzs, R) into one getter with a single
+    hcurve per sid; used by disagg and fastmean under a site-model LT
     """
     def __init__(self, sub_getters):
         first = sub_getters[0]
@@ -492,8 +492,8 @@ class MergedMapGetter(object):
 
     def get_hcurve(self, sid):
         """
-        :returns: an array of shape ``(L, R)``; each column ``r`` is taken
-            from the sub-getter whose ``rlz_mask`` includes ``r``
+        :returns: an array of shape (L, R); each column r is taken
+            from the sub-getter whose rlz_mask includes r
         """
         r0 = numpy.zeros((self.L, self.R))
         for sub in self.sub_getters:
@@ -502,8 +502,8 @@ class MergedMapGetter(object):
 
     def get_fast_mean(self):
         """
-        :returns: a :class:`MapArray` of shape ``(N, M, L1)`` with the mean
-            hcurves, aggregated across sub-getter rates before ``to_probs``
+        :returns: a :class:`MapArray` of shape (N, M, L1) with the mean
+            hcurves, aggregated across sub-getter rates before to_probs
         """
         M = self.M
         L1 = self.L // M

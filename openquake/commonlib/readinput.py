@@ -655,7 +655,7 @@ def check_site_param(oqparam, name):
 
 
 def _expand_site_model_lt(oqparam):
-    # If inputs["site_model"] is a site-LT XML, rewrite it to the list
+    # If inputs['site_model'] is a site-LT XML, rewrite it to the list
     # of per-branch site-model files and cache the tree on oqparam
     if getattr(oqparam, '_site_model_lt', None) is not None:
         return oqparam._site_model_lt
@@ -719,8 +719,8 @@ def _parse_site_model_file(fname, oqparam, arrays, sm_fieldsets):
 
 def get_site_models_epistemic(oqparam):
     """
-    :returns: a :class:`SiteModelsEpistemic` if the "site_model" input
-        is a logic-tree XML, else "None"
+    :returns: a :class:`SiteModelsEpistemic` if the 'site_model' input
+        is a logic-tree XML, else None
     """
     tree = _expand_site_model_lt(oqparam)
     if tree is None:
