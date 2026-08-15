@@ -27,7 +27,8 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
-from openquake.hazardlib.cross_correlation import NoCrossCorrelation
+from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
+    import NoCrossCorrelation
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -178,15 +179,15 @@ class GmfComputer(object):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param correlation_model:
+    :param spatial_model:
         Instance of a spatial correlation model object. See
-        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
-    :param cross_correl:
-        Instance of a cross correlation model object. See
-        :mod:`openquake.hazardlib.cross_correlation`. Can be ``None``, in which
+    :param cross_imt_model:
+        Instance of a cross-IMT correlation model object. See
+        :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
     :param amplifier:
@@ -208,8 +209,19 @@ class GmfComputer(object):
     # a matrix of size (M, N, E) is returned, where M is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
-                 cross_correl=None, amplifier=None, sec_perils=()):
+    def __init__(self, rupture, sitecol, cmaker, spatial_model=None,
+                 cross_imt_model=None, amplifier=None, sec_perils=(),
+                 **legacy):
+        if 'correlation_model' in legacy:
+            if spatial_model is not None:
+                raise TypeError('Pass only spatial_model')
+            spatial_model = legacy.pop('correlation_model')
+        if 'cross_correl' in legacy:
+            if cross_imt_model is not None:
+                raise TypeError('Pass only cross_imt_model')
+            cross_imt_model = legacy.pop('cross_correl')
+        if legacy:
+            raise TypeError('Unknown arguments: %s' % sorted(legacy))
         if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(cmaker.imtls) == 0:
@@ -220,7 +232,7 @@ class GmfComputer(object):
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.cmaker = cmaker
         self.gsims = sorted(cmaker.gsims)
-        self.correlation_model = correlation_model
+        self.spatial_model = spatial_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
         self.ebrupture = rupture
@@ -232,9 +244,9 @@ class GmfComputer(object):
             raise FarAwayRupture
         [self.ctx] = ctxs
         self.N = len(self.ctx)
-        if correlation_model:  # store the filtered sitecol
+        if spatial_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
-        self.cross_correl = cross_correl or NoCrossCorrelation(
+        self.cross_imt_model = cross_imt_model or NoCrossCorrelation(
             cmaker.truncation_level_between)
         self.within_dist = NoCrossCorrelation(
             cmaker.truncation_level_within).distribution
@@ -244,6 +256,24 @@ class GmfComputer(object):
         for m, imt in enumerate(cmaker.imtls):
             if imt == 'MMI':
                 self.mmi_index = m
+
+    @property
+    def correlation_model(self):
+        """Compatibility alias for :attr:`spatial_model`."""
+        return self.spatial_model
+
+    @correlation_model.setter
+    def correlation_model(self, model):
+        self.spatial_model = model
+
+    @property
+    def cross_correl(self):
+        """Compatibility alias for :attr:`cross_imt_model`."""
+        return self.cross_imt_model
+
+    @cross_correl.setter
+    def cross_correl(self, model):
+        self.cross_imt_model = model
 
     def init_eid_rlz_sig_eps(self):
         """
@@ -386,7 +416,7 @@ class GmfComputer(object):
                     self.between_eps[idxs] = 0.
                 else:
                     self.between_eps[idxs] = \
-                        self.cross_correl.get_inter_eps(
+                        self.cross_imt_model.get_inter_eps(
                             self.imts, E, self.rng).T
                 mean = []
                 for m, imt in enumerate(self.imts):
@@ -438,7 +468,7 @@ class GmfComputer(object):
         if (self.tlw <= TRUNCATION_THRESHOLD and
                 self.tlb <= TRUNCATION_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
-            if self.correlation_model:
+            if self.spatial_model:
                 raise ValueError('truncation_level_within=0 requires '
                                  'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, np.newaxis].repeat(
@@ -448,9 +478,9 @@ class GmfComputer(object):
             # to compute mean and total standard deviation at the sites
             # of interest.
             # In this case, we also assume no correlation model is used.
-            if self.correlation_model:
+            if self.spatial_model:
                 raise CorrelationButNoInterIntraStdDevs(
-                    self.correlation_model, gsim)
+                    self.spatial_model, gsim)
             gmf = exp(mean[:, np.newaxis] + sig[:, np.newaxis] * within_eps,
                       im != 'MMI')
             self.sig[idxs, m] = np.nan
@@ -460,8 +490,8 @@ class GmfComputer(object):
             # a[:, newaxis] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
-            if self.correlation_model is not None:
-                within_res = self.correlation_model.apply_correlation(
+            if self.spatial_model is not None:
+                within_res = self.spatial_model.apply_correlation(
                     self.sites, imt, within_res, phi).astype(F32)
             between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]
             # shape (N, 1) * E => (N, E)
