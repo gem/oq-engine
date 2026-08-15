@@ -117,6 +117,8 @@ from openquake.baselib import performance
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.correlation_models.base import (
+    ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
     import BakerJayaram2008
 from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 \
@@ -261,7 +263,7 @@ class ConditionedGmfComputer(GmfComputer):
             target_imts, observed_imts, station_data,
             within_event_model or JayaramBaker2009(clust),
             between_event_model or GodaAtkinson2009(),
-            BakerJayaram2008())
+            BakerJayaram2008(), self.correlation_context)
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
@@ -312,9 +314,10 @@ class Input:
     imts_Y: list = ()
     imts_D: list = ()
     stations: pandas.DataFrame = ()
-    spatial_model: object = 0
-    between_event_cross_imt_model: object = 0
-    within_event_cross_imt_model: object = 0
+    within_event_model: object = 0
+    between_event_model: object = 0
+    separable_cross_imt_model: object = 0
+    correlation_context: object = None
 
 
 @dataclass
@@ -437,9 +440,10 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     t.zeta_D = yD - mu_yD
     t.phi_D = phi_D.flatten()
 
-    cov_WD_WD = compute_spatial_cross_covariance_matrix(
-        inp.spatial_model, inp.within_event_cross_imt_model, DD,
-        t.conditioning_imts, t.conditioning_imts, t.phi_D, t.phi_D)
+    cov_WD_WD = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, DD,
+        t.conditioning_imts, t.conditioning_imts, t.phi_D, t.phi_D,
+        inp.correlation_context)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -461,7 +465,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
     # H is the normalized between-event residual
-    t.corr_HD_HD = inp.between_event_cross_imt_model.correlation_matrix(
+    t.corr_HD_HD = inp.between_event_model.correlation_matrix(
         t.bracketed_imts)
     return t
 
@@ -484,8 +488,8 @@ def compute_distance_matrix(sites1, sites2):
     return distance_matrix
 
 
-# called only by compute_spatial_cross_covariance_matrix
-def _compute_spatial_cross_correlation_matrix(
+# called only by _get_separable_correlation_matrix
+def _get_separable_correlation_block(
         imt_1, imt_2, spatial_model, cross_imt_model, distance_matrix):
     if imt_1 == imt_2:
         # since we have a single IMT, there are no cross-correlation terms
@@ -497,20 +501,45 @@ def _compute_spatial_cross_correlation_matrix(
     return spatial_correlation_matrix * F32(cross_corr_coeff)
 
 
-def compute_spatial_cross_covariance_matrix(
-        spatial_model, cross_imt_model, distance_matrix,
-        imts1, imts2, stddev1, stddev2):
+def _get_separable_correlation_matrix(
+        spatial_model, cross_imt_model, distance_matrix, imts1, imts2):
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
     # assume here that the correlation between differing IMs at differing
     # locations is simply the product of the cross correlation of IMs i and j
     # at the same location and the spatial correlation due to the distance
-    # between sites m and n. Can be refactored down the line to support direct
-    # spatial cross-correlation models
-    rho = [[_compute_spatial_cross_correlation_matrix(
+    # between sites m and n. This branch retains that historical approximation
+    # for spatial-only models.
+    rho = [[_get_separable_correlation_block(
         imt_1, imt_2, spatial_model, cross_imt_model, distance_matrix)
             for imt_2 in imts2] for imt_1 in imts1]
-    covariance = numpy.block(rho)
+    return numpy.block(rho)
+
+
+def compute_within_event_covariance_matrix(
+        within_event_model, separable_cross_imt_model, distance_matrix,
+        imts1, imts2, stddev1, stddev2, context=None):
+    """Return a scaled within-event covariance block.
+
+    Spatial-only models retain the historical separable approximation.
+    Joint models supply the spatial cross-IMT correlation directly.
+    """
+    if isinstance(within_event_model, SpatialCorrelationModel):
+        covariance = _get_separable_correlation_matrix(
+            within_event_model, separable_cross_imt_model,
+            distance_matrix, imts1, imts2)
+    else:
+        covariance = within_event_model.correlation_block(
+            distance_matrix, imts1, imts2,
+            ResidualComponent.WITHIN_EVENT, context)
+    expected = (
+        len(imts1) * distance_matrix.shape[0],
+        len(imts2) * distance_matrix.shape[1])
+    if covariance.shape != expected:
+        raise ValueError(
+            f'Expected within-event correlation shape {expected}, got '
+            f'{covariance.shape}')
+    covariance = numpy.array(covariance, dtype=F32, copy=True)
     covariance *= stddev1.astype(F32)[:, numpy.newaxis]
     covariance *= stddev2.astype(F32)[numpy.newaxis, :]
     return covariance
@@ -591,9 +620,10 @@ class Conditioner:
         # target sites and observation sites; the shapes are
         # (nsites, nstations) and (nstations, nsites) respectively
         with monitor.shared['YD'] as YD:
-            cov_WY_WD = compute_spatial_cross_covariance_matrix(
-                inp.spatial_model, inp.within_event_cross_imt_model, YD,
-                [t.imt], t.conditioning_imts, phi_Y, t.phi_D)
+            cov_WY_WD = compute_within_event_covariance_matrix(
+                inp.within_event_model, inp.separable_cross_imt_model, YD,
+                [t.imt], t.conditioning_imts, phi_Y, t.phi_D,
+                inp.correlation_context)
 
         # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
         RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
@@ -615,16 +645,18 @@ def _compute_target_covs(
         t, inp, phi_Y, tau_Y, RC, cov_HD_HD_yD, monitor):
     """Compute the covariance matrices required for random fields."""
     with monitor.shared['DY'] as DY:
-        cov_WD_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_model, inp.within_event_cross_imt_model, DY,
-            t.conditioning_imts, [t.imt], t.phi_D, phi_Y)
+        cov_WD_WY = compute_within_event_covariance_matrix(
+            inp.within_event_model, inp.separable_cross_imt_model, DY,
+            t.conditioning_imts, [t.imt], t.phi_D, phi_Y,
+            inp.correlation_context)
 
     # This is the dominant piece, both in time and memory.
     with (monitor.shared['YY'] as YY,
           monitor('computing cov_Y_Y', measuremem=True)):
-        cov_WY_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_model, inp.within_event_cross_imt_model, YY,
-            [t.imt], [t.imt], phi_Y, phi_Y)
+        cov_WY_WY = compute_within_event_covariance_matrix(
+            inp.within_event_model, inp.separable_cross_imt_model, YY,
+            [t.imt], [t.imt], phi_Y, phi_Y,
+            inp.correlation_context)
 
         # Conditioned within-event covariance, clipped to zero.
         cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(
