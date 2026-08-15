@@ -619,7 +619,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk4()
 
         if (oq.calculation_mode == 'event_based' and
-                oq.ground_motion_correlation_model and
+                oq.spatial_correlation_model and
                 len(self.sitecol) > oq.max_sites_correl):
             raise ValueError('You cannot use a correlation model with '
                              f'{self.N} sites [{oq.max_sites_correl=}]')
@@ -1804,7 +1804,8 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
         # calculations with MMI should be executed
         if len(oq.imtls) == 1:
             # only MMI intensities
-            if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+            if (oq.spatial_correlation_model or
+                    oq.cross_imt_correlation_model):
                 logging.warning('Calculations with MMI intensities do not '
                                 'support correlation. No correlations '
                                 'are applied.')
@@ -1820,11 +1821,14 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
         # no MMI intensities, calculation with or without correlation
         if oq.impact:
             gmf_dict = {'kind': 'basic'}  # possibly add correlation
-        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
-            # cross correlation and/or spatial correlation after S&H
+        elif (oq.spatial_correlation_model or
+              oq.cross_imt_correlation_model):
+            # spatial and cross-IMT correlation after Silva and Horspool
             gmf_dict = {'kind': 'Silva&Horspool',
-                        'spatialcorr': oq.spatial_correlation,
-                        'crosscorr': oq.cross_correlation,
+                        'spatial_model':
+                        oq.get_spatial_correlation_model(),
+                        'cross_imt_model':
+                        oq.get_cross_imt_correlation_model(),
                         'cholesky_limit': oq.cholesky_limit}
         else:
             # no correlation required, basic calculation is faster
