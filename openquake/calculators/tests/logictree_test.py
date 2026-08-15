@@ -73,7 +73,8 @@ class LogictreeTestCase(CalculatorTestCase):
         return 1 - numpy.exp(-mean_rate)  # Rates -> poes
 
     def _assert_site_lt_disagg_keys(self, dstore):
-        # At least one _rates_site_i must exist (sampling may drop some)
+        # After a disagg run with a site-model LT, at least one
+        # _rates_site_i group must exist in the (parent) datastore
         keys = list(dstore.parent) if dstore.parent != () else list(dstore)
         assert any(k.startswith('_rates_site_') for k in keys), keys
         assert 'disagg-rlzs' in dstore, list(dstore)
@@ -715,6 +716,7 @@ hazard_uhs-std.csv
         self.run_calc(case_24.__file__,
                       'job_sampling.ini,job_disagg_from_parent.ini')
         dstore = self.calc.datastore
+        
         # Site-model LT metadata must survive the __toh5__/__fromh5__ round-trip
         assert dstore['full_lt'].init().site_model_lt is not None
         self._assert_site_lt_disagg_keys(dstore)
