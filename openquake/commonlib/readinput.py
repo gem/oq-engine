@@ -668,8 +668,8 @@ def _expand_site_model_lt(oqparam):
         return None
     if oqparam.calculation_mode not in ('classical', 'disaggregation'):
         raise InvalidFile(
-            '%s: site-model logic trees are only supported by the '
-            'classical and disaggregation calculators (got %r)'
+            '%s: site-model logic trees are only (currently) supported by '
+            'the classical and disaggregation calculators (got %r)'
             % (fname, oqparam.calculation_mode))
     tree = site_lt.SiteModelLogicTree(fname)
     oqparam._site_model_lt = tree
