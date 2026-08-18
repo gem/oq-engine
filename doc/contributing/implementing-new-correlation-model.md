@@ -120,9 +120,10 @@ serializable.
 
 ## Implement the numerical model
 
-Correlation methods return dimensionless correlation coefficients.
-The GMF calculators then combine the normalized correlated
-residuals with the appropriate GSIM-provided `phi` and `tau` values.
+Correlation methods return dimensionless correlation coefficients. Calculators
+scale normalized correlated residuals with the standard deviation of the
+modelled component: GSIM-provided `phi` for within-event, `tau` for
+between-event, or `sigma` for total residuals.
 
 Implementations should:
 
