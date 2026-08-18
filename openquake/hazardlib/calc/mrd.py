@@ -59,7 +59,7 @@ def update_mrd(ctxt: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     # Correlation matrix
     im1, im2 = cm.imtls
     imts = [from_string(im1), from_string(im2)]
-    corrm = crosscorr.get_cross_correlation_mtx(imts)
+    corrm = crosscorr.correlation_matrix(imts, dtype=numpy.float32)
 
     # Compute mean and standard deviation
     [mea, sig, _, _] = cm.get_mean_stds([ctxt])
@@ -227,7 +227,7 @@ def calc_mean_rate_dist(ctx, nsites, cmaker, crosscorr, imt1, imt2,
     cm = cmaker.restrict([imt1, imt2])
     G = len(cm.gsims)
     len1 = len(cm.imtls[imt1]) - 1
-    corrm = crosscorr.get_cross_correlation_mtx(cm.imts)
+    corrm = crosscorr.correlation_matrix(cm.imts, dtype=numpy.float32)
     mrd = numpy.zeros((len1, len1, nsites, G))
     for sid in range(nsites):
         if method == 'direct':

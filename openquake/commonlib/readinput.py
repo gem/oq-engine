@@ -892,14 +892,14 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
-    gmfcorr = oqparam.correl_model
+    spatial_model = oqparam.get_spatial_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
-            if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
+            if spatial_model and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             {StdDev.TOTAL}) and not oqparam.with_betw_ratio:
-                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+                raise CorrelationButNoInterIntraStdDevs(spatial_model, gsim)
     imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
     if oqparam.number_of_logic_tree_samples and imt_dep_w:
         logging.warning(

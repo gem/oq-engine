@@ -26,7 +26,9 @@ from openquake.calculators.base import calculators, store_gmfs
 
 # see qa_tests_data/scenario/case_21
 def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
-         trunclevel: float = 3, spatialcorr='yes', crosscorr='yes',
+         trunclevel: float = 3, spatial_correlation_model='',
+         spatial_correlation_params='', cross_imt_correlation_model='',
+         cross_imt_correlation_params='',
          cholesky_limit: int = 10_000, imt_mode='warn'):
     """
     Given a shakemap ID and a path to a site_model.csv file build a
@@ -46,6 +48,12 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
                  calculation_mode='scenario',
                  random_seed=str(random_seed),
                  inputs={'job_ini': '<memory>'})
+    if spatial_correlation_model:
+        param['spatial_correlation_model'] = spatial_correlation_model
+        param['spatial_correlation_params'] = spatial_correlation_params
+    if cross_imt_correlation_model:
+        param['cross_imt_correlation_model'] = cross_imt_correlation_model
+        param['cross_imt_correlation_params'] = cross_imt_correlation_params
     if site_model:
         param['inputs']['site_model'] = [os.path.abspath(site_model)]
     else:
@@ -68,8 +76,9 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         calc.datastore['sitecol'] = sitecol
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         gmfdic = {'kind': 'Silva&Horspool',
-                  'spatialcorr': spatialcorr,
-                  'crosscorr': crosscorr,
+                  'spatial_model': oq.get_spatial_correlation_model(),
+                  'cross_imt_model':
+                  oq.get_cross_imt_correlation_model(),
                   'cholesky_limit': cholesky_limit}
         store_gmfs(calc, sitecol, shakemap, gmfdic)
     gmv = float(calc.datastore.read_df('gmf_data')[imts[0]].max())
@@ -82,7 +91,9 @@ main.site_model = 'Path to site model file'
 main.num_gmfs = 'Number of GMFs to generate'
 main.random_seed = 'Random seed to use'
 main.trunclevel = 'Truncation level'
-main.spatialcorr = 'Spatial correlation'
-main.crosscorr = 'Cross correlation among IMTs'
+main.spatial_correlation_model = 'Spatial correlation model name'
+main.spatial_correlation_params = 'Spatial model parameter dictionary'
+main.cross_imt_correlation_model = 'Cross-IMT correlation model name'
+main.cross_imt_correlation_params = 'Cross-IMT model parameter dictionary'
 main.cholesky_limit = 'Cholesky Limit'
 main.imt_mode = 'if "strict", raise an error in case expected imts are missing'
