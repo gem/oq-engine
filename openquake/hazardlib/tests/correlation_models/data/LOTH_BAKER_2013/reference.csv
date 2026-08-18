@@ -1,11 +1,4 @@
 period1,period2,distance,correlation
-# Loth and Baker (2013), Equation 42, with the 2020 erratum tables.
-# Near-diagonal interpolation and B3 precision follow the authors' Matlab:
-# https://github.com/bakerjw/GMMs/blob/HEAD/correlations/lb_2013_spatial_corr.m
-# Source revision: d7c324109a0b
-# (updates dated 2022-04-20 and 2022-05-09). Values were generated on
-# 2026-08-18 by running that unchanged function with GNU Octave 8.4.0 at
-# https://www.mycompiler.io/new/octave, without using hazardlib.
 0.01,0.01,0,1
 0.01,0.01,20,0.21389348729484703
 1,2,0,0.72000003542902147
