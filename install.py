@@ -214,7 +214,6 @@ URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 DEMOS = "https://artifacts.openquake.org/travis/demos-engine-3.23.zip"
 
 
-
 def ensure(pip=None, pyvenv=None):
     """
     Create venv and install pip
