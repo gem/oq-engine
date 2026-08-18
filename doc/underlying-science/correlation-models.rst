@@ -122,10 +122,11 @@ through the site- and IMT-dependent standard deviations:
    \Sigma_W[(s,i),(t,j)] =
    \phi_{s,i}\phi_{t,j}\rho_W((s,i),(t,j)).
 
-The equivalent expression for between-event residuals uses :math:`\tau`. The
-OpenQuake correlation-model interfaces operate primarily on standardized
-correlations; the ground-motion calculators apply the GSIM standard deviations
-when constructing residual ground motions.
+The equivalent expression for between-event residuals uses :math:`\tau`, while
+total-residual covariance uses :math:`\sigma`. The OpenQuake correlation-model
+interfaces operate primarily on standardized correlations; calculators apply
+the corresponding standard deviations when constructing covariance or
+residual ground motions.
 
 The default sampler forms a dense correlation matrix and uses a Cholesky
 factorization. Its memory requirement grows quadratically and its factorization
