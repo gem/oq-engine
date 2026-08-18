@@ -209,6 +209,9 @@ PLATFORM = {
 }
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
+# demos are not included in engine-3.23 wheel so we must download them.
+DEMOS = "https://artifacts.openquake.org/travis/demos-engine-3.23.zip"
+
 
 
 def ensure(pip=None, pyvenv=None):
@@ -584,6 +587,20 @@ def install(inst, version, from_fork):
             subprocess.check_call(["systemctl", "start", service_name])
 
     if inst in (user, server):
+        if not os.path.isdir(os.path.join(inst.VENV, 'demos')):
+            # download and unzip the demos
+            try:
+                with urlopen(DEMOS) as f:
+                    data = f.read()
+            except OSError:
+                msg = "However, we could not download the demos from %s" % DEMOS
+            else:
+                th, tmp = tempfile.mkstemp(suffix=".zip")
+                with os.fdopen(th, "wb") as t:
+                    t.write(data)
+                zipfile.ZipFile(tmp).extractall(inst.VENV)
+                os.remove(tmp)
+
         path = os.path.join(
             inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
             "job.ini")
