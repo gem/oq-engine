@@ -197,7 +197,7 @@ class Oq(object):
     """
     af = None
     impact = False
-    cross_correl = None
+    cross_imt_model = None
     mea_tau_phi = False
     split_sources = True
     keep_rupdata = True
@@ -529,6 +529,15 @@ class ContextMaker(object):
     source_mb = 0  # set in build_dparam
     dt = 0
 
+    @property
+    def cross_correl(self):
+        """Compatibility alias for :attr:`cross_imt_model`."""
+        return self.cross_imt_model
+
+    @cross_correl.setter
+    def cross_correl(self, model):
+        self.cross_imt_model = model
+
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
         if isinstance(oq, dict):
@@ -536,12 +545,22 @@ class ContextMaker(object):
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
-            self.cross_correl = param.get('cross_correl')  # cond_spectra_test
+            self.cross_imt_model = param.get(
+                'cross_imt_model', param.get('cross_correl'))
         else:  # OqParam
             param = vars(oq)
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
-            self.cross_correl = oq.cross_correl
+            try:
+                resolver = oq.get_cross_imt_correlation_model
+            except AttributeError:
+                self.cross_imt_model = getattr(
+                    oq, 'cross_imt_model', None)
+                if self.cross_imt_model is None:
+                    self.cross_imt_model = getattr(
+                        oq, 'cross_correl', None)
+            else:
+                self.cross_imt_model = resolver()
             self.imtls = oq.imtls
             try:
                 self.mags = oq.mags_by_trt[trt]

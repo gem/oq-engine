@@ -23,6 +23,7 @@ import logging
 import h5py
 import numpy
 import pandas
+from scipy.spatial import KDTree
 from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, general, performance)
@@ -190,25 +191,23 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
                 ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],
                 observed_imts, cmaker,
-                oq.correl_model, oq.cross_correl,
-                oq.ground_motion_correlation_params,
+                oq.get_spatial_correlation_model(),
+                oq.get_cross_imt_correlation_model(),
+                oq.spatial_correlation_params,
                 oq.number_of_ground_motion_fields,
                 oq._amplifier, sec_perils)
         else:
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, sites, cmaker, oq.correl_model, oq.cross_correl,
+        ebr, sites, cmaker, oq.get_spatial_correlation_model(),
+        oq.get_cross_imt_correlation_model(),
         oq._amplifier, sec_perils)
 
 
 def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
     oq = cmaker.oq
-    alldata = []
-    sig_eps = []
-    times = []
     se_dt = sig_eps_dt(oq.imtls)
-    mea_tau_phi = []
     for proxy in proxies:
         t0 = time.time()
         if proxy['mag'] < cmaker.min_mag:
@@ -216,6 +215,7 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             continue
+        dic = dict(gmfdata={}, sig_eps=())
         try:
             ebr = proxy.to_ebr(cmaker.trt)
             computer = get_computer(cmaker, ebr, sites, sec_perils)
@@ -225,24 +225,13 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
             df = computer.compute_all(None, cmon, umon)
             if oq.mea_tau_phi:
                 mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
-                mea_tau_phi.append(mtp)
-        sig_eps.append(computer.build_sig_eps(se_dt))
+                dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
+        dic['sig_eps'] = computer.build_sig_eps(se_dt)
+        dic['gmfdata'] = df
         dt = time.time() - t0
-        times.append((proxy['id'], computer.ctx.rrup.min(), dt,
-                      rup_weight(proxy)))
-        alldata.append(df)
-    times = numpy.array([tup + (cmon.task_no,) for tup in times], rup_dt)
-    times.sort(order='rup_id')
-    if sum(len(df) for df in alldata) == 0:
-        return dict(gmfdata={}, times=times, sig_eps=())
-
-    gmfdata = pandas.concat(alldata)  # ~40 MB
-    dic = dict(gmfdata=gmfdata,
-               times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
-    if oq.mea_tau_phi:
-        mtpdata = numpy.concatenate(mea_tau_phi, dtype=GmfComputer.mtp_dt)
-        dic['mea_tau_phi'] = {col: mtpdata[col] for col in mtpdata.dtype.names}
-    return dic
+        dic['times'] = numpy.array([(proxy['id'], computer.ctx.rrup.min(), dt,
+                                     rup_weight(proxy), cmon.task_no)], rup_dt)
+        yield dic
 
 
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
@@ -260,20 +249,20 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
             except KeyError:
                 complete = f['sitecol']
         sites = complete.filtered(sids)
-    chunksize = int(config.memory.max_ruptures_chunk)
+    kdt = KDTree(sites.xyz)  # instantiated once per task
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
             cmaker.init_monitoring(monitor)
         # NB: the maximum distance can vary between TRTs/CMakers
         maxdist = cmaker.oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sites, maxdist)
+        srcfilter.kdt = kdt
         with rmon:
             try:
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        for block in block_splitter(proxies, chunksize, lambda p: 1):
-            yield _event_based(block, cmaker, secperils, srcfilter, cmon, umon)
+        yield from _event_based(proxies, cmaker, secperils, srcfilter, cmon, umon)
 
 
 def filter_stations(station_df, complete, rup, maxdist):

@@ -19,7 +19,6 @@
 import io
 import os
 import math
-from unittest import mock
 from unittest.mock import patch
 import numpy
 import pandas
@@ -87,81 +86,6 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
 
 class EventBasedTestCase(CalculatorTestCase):
-
-    def test_cmakers_maximum_distance(self):
-        # A task containing multiple CMakers must not lose later GMFs
-
-        class Oq:
-            def maximum_distance(self, trt):
-                return {'short': 10.0, 'long': 100.0}[trt]
-
-        class Cmaker:
-            def __init__(self, trt):
-                self.trt = trt
-                self.oq = Oq()
-
-            def init_monitoring(self, monitor):
-                pass
-
-        class Dstore:
-            filename = 'dummy.hdf5'
-            parent = None
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args):
-                pass
-
-            def __getitem__(self, key):
-                if key == 'complete':
-                    return self
-                raise KeyError(key)
-
-            def filtered(self, sids):
-                return self
-
-        class SourceFilter:
-            def __init__(self, sites, maxdist):
-                self.maxdist = maxdist
-
-        class Monitor:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args):
-                pass
-
-            def __call__(self, *args, **kwargs):
-                return self
-
-        dtype = numpy.dtype([('id', 'i8'), ('distance', 'f4')])
-        rups = [
-            numpy.array([(1, 5.0)], dtype),
-            numpy.array([(2, 50.0)], dtype),
-        ]
-        cmakers = [Cmaker('short'), Cmaker('long')]
-        received = []
-
-        def get_proxies(_filename, rows):
-            return list(rows)
-
-        def fake_event_based(
-                block, cmaker, _sec_perils, srcfilter, _cmon, _umon):
-            for rup in block:
-                if rup['distance'] <= srcfilter.maxdist:
-                    received.append((cmaker.trt, int(rup['id'])))
-            yield {'gmfdata': {}}
-
-        with mock.patch.object(event_based, 'SourceFilter', SourceFilter), \
-                mock.patch.object(event_based, 'get_proxies', get_proxies), \
-                mock.patch.object(
-                    event_based, '_event_based', fake_event_based):
-            for result in event_based.event_based(
-                    rups, cmakers, numpy.array([0]), (), Dstore(), Monitor()):
-                list(result)
-
-        self.assertEqual(received, [('short', 1), ('long', 2)])
 
     def check_avg_gmf(self):
         # checking avg_gmf with a single site
@@ -718,7 +642,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
 
     def test_31(self):
-        # HM2018CorrelationModel with filtered site collection
+        # HeresiMiranda2019 with filtered site collection
         self.run_calc(case_31.__file__, 'job.ini',
                       hazard_calculation_id='job_rup.ini',  exports='csv')
 

@@ -115,9 +115,14 @@ import numpy
 import pandas
 from openquake.baselib import performance
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
-from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
+    import BakerJayaram2008
+from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 \
+    import GodaAtkinson2009
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 \
+    import JayaramBaker2009
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 U32 = numpy.uint32
@@ -189,15 +194,15 @@ class ConditionedGmfComputer(GmfComputer):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param correlation_model:
+    :param spatial_model:
         Instance of a spatial correlation model object. See
-        :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+        :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
-    :param cross_correl:
-        Instance of a cross correlation model object. See
-        :mod:`openquake.hazardlib.cross_correlation`. Can be ``None``, in which
+    :param cross_imt_model:
+        Instance of a cross-IMT correlation model object. See
+        :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
     :param amplifier:
@@ -210,18 +215,39 @@ class ConditionedGmfComputer(GmfComputer):
     """
     def __init__(
             self, rupture, sitecol, station_sitecol, station_data,
-            observed_imts, cmaker, spatial_correl=None,
-            cross_correl_between=None, ground_motion_correlation_params=None,
-            number_of_ground_motion_fields=1, amplifier=None, sec_perils=()):
+            observed_imts, cmaker, spatial_model=None,
+            cross_imt_model=None, spatial_correlation_params=None,
+            number_of_ground_motion_fields=1, amplifier=None, sec_perils=(),
+            **legacy):
+        aliases = {
+            'spatial_correl': 'spatial_model',
+            'cross_correl_between': 'cross_imt_model',
+            'ground_motion_correlation_params':
+            'spatial_correlation_params'}
+        values = {
+            'spatial_model': spatial_model,
+            'cross_imt_model': cross_imt_model,
+            'spatial_correlation_params': spatial_correlation_params}
+        for old_name, new_name in aliases.items():
+            if old_name in legacy:
+                if values[new_name] is not None:
+                    raise TypeError(f'Pass only {new_name}')
+                values[new_name] = legacy.pop(old_name)
+        if legacy:
+            raise TypeError('Unknown arguments: %s' % sorted(legacy))
+        spatial_model = values['spatial_model']
+        cross_imt_model = values['cross_imt_model']
+        spatial_correlation_params = (
+            values['spatial_correlation_params'] or {})
         assert len(station_data) == len(station_sitecol), (
             len(station_data), len(station_sitecol))
         GmfComputer.__init__(
             self, rupture=rupture, sitecol=sitecol, cmaker=cmaker,
-            correlation_model=spatial_correl,
-            cross_correl=cross_correl_between,
+            spatial_model=spatial_model,
+            cross_imt_model=cross_imt_model,
             amplifier=amplifier, sec_perils=sec_perils)
 
-        clust = ground_motion_correlation_params.get("vs30_clustering", True)
+        clust = spatial_correlation_params.get("vs30_clustering", True)
         self.rupture = rupture
 
         # Target IMT must be PGA or SA
@@ -231,9 +257,9 @@ class ConditionedGmfComputer(GmfComputer):
         self.inp = Input(
             sitecol, station_sitecol,
             target_imts, observed_imts, station_data,
-            spatial_correl or correlation.JB2009CorrelationModel(clust),
-            cross_correl_between or cross_correlation.GodaAtkinson2009(),
-            cross_correlation.BakerJayaram2008())
+            spatial_model or JayaramBaker2009(clust),
+            cross_imt_model or GodaAtkinson2009(),
+            BakerJayaram2008())
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
@@ -284,9 +310,9 @@ class Input:
     imts_Y: list = ()
     imts_D: list = ()
     stations: pandas.DataFrame = ()
-    spatial_correl: object = 0
-    cross_correl_between: object = 0
-    cross_correl_within: object = 0
+    spatial_model: object = 0
+    between_event_cross_imt_model: object = 0
+    within_event_cross_imt_model: object = 0
 
 
 @dataclass
@@ -410,7 +436,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     t.phi_D = phi_D.flatten()
 
     cov_WD_WD = compute_spatial_cross_covariance_matrix(
-        inp.spatial_correl, inp.cross_correl_within, DD,
+        inp.spatial_model, inp.within_event_cross_imt_model, DD,
         t.conditioning_imts, t.conditioning_imts, t.phi_D, t.phi_D)
 
     # Add on the additional variance of the residuals
@@ -433,7 +459,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
     # H is the normalized between-event residual
-    t.corr_HD_HD = inp.cross_correl_between._get_correlation_matrix(
+    t.corr_HD_HD = inp.between_event_cross_imt_model.correlation_matrix(
         t.bracketed_imts)
     return t
 
@@ -458,19 +484,19 @@ def compute_distance_matrix(sites1, sites2):
 
 # called only by compute_spatial_cross_covariance_matrix
 def _compute_spatial_cross_correlation_matrix(
-        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix):
+        imt_1, imt_2, spatial_model, cross_imt_model, distance_matrix):
     if imt_1 == imt_2:
         # since we have a single IMT, there are no cross-correlation terms
-        return spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
-    matrix1 = spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
-    matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
+        return spatial_model.correlation_matrix(distance_matrix, imt_1)
+    matrix1 = spatial_model.correlation_matrix(distance_matrix, imt_1)
+    matrix2 = spatial_model.correlation_matrix(distance_matrix, imt_2)
     spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
-    cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
+    cross_corr_coeff = cross_imt_model.rho(imt_1, imt_2)
     return spatial_correlation_matrix * F32(cross_corr_coeff)
 
 
 def compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, distance_matrix,
+        spatial_model, cross_imt_model, distance_matrix,
         imts1, imts2, stddev1, stddev2):
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
@@ -480,7 +506,7 @@ def compute_spatial_cross_covariance_matrix(
     # between sites m and n. Can be refactored down the line to support direct
     # spatial cross-correlation models
     rho = [[_compute_spatial_cross_correlation_matrix(
-        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
+        imt_1, imt_2, spatial_model, cross_imt_model, distance_matrix)
             for imt_2 in imts2] for imt_1 in imts1]
     covariance = numpy.block(rho)
     covariance *= stddev1.astype(F32)[:, numpy.newaxis]
@@ -564,7 +590,7 @@ class Conditioner:
         # (nsites, nstations) and (nstations, nsites) respectively
         with monitor.shared['YD'] as YD:
             cov_WY_WD = compute_spatial_cross_covariance_matrix(
-                inp.spatial_correl, inp.cross_correl_within, YD,
+                inp.spatial_model, inp.within_event_cross_imt_model, YD,
                 [t.imt], t.conditioning_imts, phi_Y, t.phi_D)
 
         # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
@@ -588,14 +614,14 @@ def _compute_target_covs(
     """Compute the covariance matrices required for random fields."""
     with monitor.shared['DY'] as DY:
         cov_WD_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_correl, inp.cross_correl_within, DY,
+            inp.spatial_model, inp.within_event_cross_imt_model, DY,
             t.conditioning_imts, [t.imt], t.phi_D, phi_Y)
 
     # This is the dominant piece, both in time and memory.
     with (monitor.shared['YY'] as YY,
           monitor('computing cov_Y_Y', measuremem=True)):
         cov_WY_WY = compute_spatial_cross_covariance_matrix(
-            inp.spatial_correl, inp.cross_correl_within, YY,
+            inp.spatial_model, inp.within_event_cross_imt_model, YY,
             [t.imt], [t.imt], phi_Y, phi_Y)
 
         # Conditioned within-event covariance, clipped to zero.
