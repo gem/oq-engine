@@ -115,7 +115,13 @@ def _period_interval(period):
 
 
 def _interpolate_near_diagonal(table, period1, period2, index):
-    """Interpolate without flattening the diagonal ridge."""
+    """Interpolate within one period interval around the diagonal ridge.
+
+    First interpolate along the ridge at the mean period, then interpolate
+    from that value towards the off-diagonal corner using the period
+    difference. This follows the authors' 2022 refinement and avoids the
+    saddle points produced by interpolating across the whole table cell.
+    """
     low, high = _PERIODS[index:index + 2]
     diagonal = numpy.interp(
         (period1 + period2) / 2, (low, high),
@@ -126,7 +132,12 @@ def _interpolate_near_diagonal(table, period1, period2, index):
 
 
 def _interpolate_off_diagonal(table, period1, period2, index1, index2):
-    """Apply the authors' local four-point linear interpolation."""
+    """Interpolate within a table cell that does not cross the diagonal.
+
+    The diagonal ridge is outside this cell, so use the authors' ordinary
+    linear interpolation over its four corner values. Passing only the
+    local cell also mirrors the Matlab implementation and limits the work.
+    """
     period1_bounds = _PERIODS[index1:index1 + 2]
     period2_bounds = _PERIODS[index2:index2 + 2]
     grid2, grid1 = numpy.meshgrid(period2_bounds, period1_bounds)
