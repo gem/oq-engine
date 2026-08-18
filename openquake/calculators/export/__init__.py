@@ -99,7 +99,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m²)',
-    'number': 'Buildings beyond repair',
+    'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '

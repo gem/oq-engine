@@ -64,8 +64,8 @@ LOSS_METADATA = {
             '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
     },
     "number": {
-        "label": "Buildings lost",
-        "title": "buildings beyond repair",
+        "label": "Buildings destroyed",
+        "title": "buildings destroyed",
         "colors": [
             '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
     },
