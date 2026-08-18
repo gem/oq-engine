@@ -134,80 +134,13 @@ tractable for one IMT or a small site collection can become infeasible for a
 large multi-IMT field. Structured methods and alternative factorizations are
 needed for substantially larger calculations.
 
-Configuration in OpenQuake
---------------------------
-
-Correlation models are selected according to their residual component:
-
-.. code-block:: ini
-
-   [correlation]
-   within_event_correlation_model = JayaramBaker2009
-   within_event_correlation_params = {"vs30_clustering": false}
-
-   between_event_correlation_model = GodaAtkinson2009
-   between_event_correlation_params = {}
-
-   total_residual_correlation_model = BakerJayaram2008
-   total_residual_correlation_params = {}
-
-Only settings required by the calculation need to be supplied. In ordinary
-scenario and event-based GMF calculations, an omitted within-event or
-between-event setting leaves that dimension independent. Other workflows can
-require a model or retain compatibility defaults, as described below. The
-parameter names do not contain ``spatial`` or ``cross-IMT`` because those are
-capabilities of a model, whereas the residual component determines whether the
-model is scientifically valid in a particular calculation.
-
-Constructor parameters are supplied as dictionaries. The engine checks that a
-registered model is calibrated for the requested residual component and that
-the requested IMT names are declared by the model. Individual implementations
-must additionally enforce their calibrated period, damping, component and
-context domains.
-
-Models currently included in hazardlib
---------------------------------------
-
-The current model registry includes:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 27 22 19 20
-
-   * - Model
-     - Capability
-     - Residual
-     - Declared IMTs
-   * - ``JayaramBaker2009``
-     - Spatial
-     - Within-event
-     - PGA, PGV, SA
-   * - ``HeresiMiranda2019``
-     - Spatial
-     - Within-event
-     - PGA, SA
-   * - ``GodaAtkinson2009``
-     - Cross-IMT
-     - Between-event
-     - PGA, SA
-   * - ``BakerCornell2006``
-     - Cross-IMT
-     - Total
-     - PGA, PGV, SA
-   * - ``BakerJayaram2008``
-     - Cross-IMT
-     - Total
-     - PGA, SA
-   * - ``Bradley2012``
-     - Cross-IMT
-     - Total
-     - PGA, PGV, SA
-
-Some legacy implementations accept IMTs through proxy spectral periods beyond
-the quantities for which the publications were calibrated. Their declared
-domains will be reviewed as the correlation library is expanded. New models
-should declare and enforce their original calibration domains rather than add
-such proxies.
+Configuration examples are provided in the User Guide for
+:ref:`scenario hazard <scenario-hazard-params>`,
+:ref:`event-based PSHA <event-based-psha-params>`,
+:ref:`ShakeMap workflows <scenarios-from-shakemaps>`, and
+:ref:`advanced calculations <advanced-calculations>`. The implemented model
+classes and interfaces are listed in the
+:ref:`hazardlib API reference <openquake-hazardlib-correlation-models>`.
 
 Conditioning on observations
 ----------------------------
