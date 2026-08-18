@@ -40,6 +40,7 @@ import shutil
 import socket
 import getpass
 import tempfile
+import zipfile
 import argparse
 import platform
 import subprocess
