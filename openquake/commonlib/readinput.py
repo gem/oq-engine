@@ -1158,7 +1158,13 @@ def read_consdict(oqparam, limit_states, perils):
             fnames = [fnames]
         # i.e. files collapsed.csv, fatalities.csv, ... with headers like
         # taxonomy,consequence,slight,moderate,extensive
-        df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+        dfs = []
+        for fname in fnames:
+            if os.path.exists(fname):
+                dfs.append(pandas.read_csv(fname))
+        if not dfs:
+            continue
+        df = pandas.concat(dfs)
         # NB: consequence files depend on loss_type, unlike fragility files
         if 'taxonomy' in df.columns:  # obsolete name
             df['risk_id'] = df['taxonomy']
