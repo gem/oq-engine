@@ -23,7 +23,7 @@ import pytest
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     loth_baker_2013 import LothBaker2013
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 DATA = Path(__file__).with_name('data') / 'LOTH_BAKER_2013'
@@ -72,12 +72,25 @@ def test_rectangular_block_uses_imt_major_ordering():
                 correlation[rows, cols], expected)
 
 
+def test_pga_uses_sa_0_01_correlation_proxy():
+    distances = numpy.array([
+        [0.0, 10.0, 25.0],
+        [15.0, 5.0, 40.0],
+    ])
+    model = LothBaker2013()
+    actual = model.correlation_block(
+        distances, [PGA(), SA(0.3)], [PGA(), SA(1.0)])
+    expected = model.correlation_block(
+        distances, [SA(0.01), SA(0.3)], [SA(0.01), SA(1.0)])
+    numpy.testing.assert_array_equal(actual, expected)
+
+
 def test_covariance_is_symmetric_positive_definite():
     positions = numpy.array([0.0, 3.0, 17.0, 51.0])
     distances = abs(positions[:, None] - positions)
     sites = SimpleNamespace(mesh=Mesh(distances))
-    imts = [SA(period) for period in (
-        0.01, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 7.5, 10.0)]
+    imts = [PGA()] + [SA(period) for period in (
+        0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 7.5, 10.0)]
     model = LothBaker2013()
 
     covariance = model.covariance(sites, imts)
@@ -93,7 +106,7 @@ def test_covariance_is_symmetric_positive_definite():
 
 
 @pytest.mark.parametrize(('imt', 'message'), [
-    (PGA(), 'does not support PGA'),
+    (PGV(), 'does not support PGV'),
     (SA(0.005), 'periods from 0.01 to 10 s'),
     (SA(10.1), 'periods from 0.01 to 10 s'),
     (SA(1.0, damping=10.0), 'only 5%-damped SA'),
@@ -101,6 +114,11 @@ def test_covariance_is_symmetric_positive_definite():
 def test_rejects_imts_outside_calibrated_domain(imt, message):
     with pytest.raises(ValueError, match=message):
         LothBaker2013().validate_imts([imt])
+
+
+def test_rejects_pga_together_with_sa_0_01():
+    with pytest.raises(ValueError, match='cannot combine PGA and SA\\(0.01\\)'):
+        LothBaker2013().validate_imts([PGA(), SA(0.01)])
 
 
 def test_rejects_wrong_residual_component():

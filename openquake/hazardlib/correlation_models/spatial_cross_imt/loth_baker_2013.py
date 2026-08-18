@@ -157,20 +157,36 @@ def _interpolate_coefficients(period1, period2):
         table, period1, period2, index1, index2) for table in _TABLES)
 
 
+def _correlation_period(imt):
+    """Return the SA period used to obtain correlation coefficients.
+
+    PGA is represented by SA(0.01), following the operational ShakeMap
+    convention. This mapping affects only correlation coefficients; PGA
+    medians and standard deviations remain those supplied by the GSIM.
+    """
+    return 0.01 if imt.name == 'PGA' else imt.period
+
+
 @register_model(
     description='Loth and Baker (2013) within-event joint correlation')
 class LothBaker2013(SpatialCrossIMTCorrelationModel):
-    """Within-event spatial cross-IMT model by Loth and Baker (2013)."""
+    """Within-event spatial cross-IMT model by Loth and Baker (2013).
+
+    The model was calibrated for 5%-damped SA from 0.01 to 10 s. PGA is
+    supported through the conventional SA(0.01) correlation proxy.
+    """
 
     name = 'LothBaker2013'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('SA',)
+    supported_imts = ('PGA', 'SA')
     imc = 'Average horizontal'
     damping = 5.0
 
     def validate_imts(self, imts):
         super().validate_imts(imts)
         for imt in imts:
+            if imt.name == 'PGA':
+                continue
             if imt.damping != self.damping:
                 raise ValueError(
                     f'{self.name} supports only {self.damping:g}%-damped SA')
@@ -178,6 +194,12 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                 raise ValueError(
                     f'{self.name} supports SA periods from 0.01 to 10 s, '
                     f'not {imt.period:g} s')
+        if (any(imt.name == 'PGA' for imt in imts) and
+                any(imt.name == 'SA' and imt.period == 0.01
+                    for imt in imts)):
+            raise ValueError(
+                f'{self.name} cannot combine PGA and SA(0.01), because PGA '
+                'uses SA(0.01) as its correlation proxy')
 
     def correlation_block(self, distances, imts1, imts2=None,
                           component=None, context=None):
@@ -203,7 +225,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
             row = []
             for imt2 in imts2:
                 b1, b2, b3 = _interpolate_coefficients(
-                    imt1.period, imt2.period)
+                    _correlation_period(imt1),
+                    _correlation_period(imt2))
                 row.append(
                     b1 * short_range + b2 * long_range + b3 * same_site)
             blocks.append(row)

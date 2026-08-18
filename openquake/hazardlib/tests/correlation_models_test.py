@@ -67,7 +67,7 @@ def test_registry_aliases_and_metadata():
     assert joint['LothBaker2013'].cls is LothBaker2013
     assert joint['LothBaker2013'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert joint['LothBaker2013'].supported_imts == ('SA',)
+    assert joint['LothBaker2013'].supported_imts == ('PGA', 'SA')
 
 
 def test_registry_instantiation_and_type_validation():
