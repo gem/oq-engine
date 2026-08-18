@@ -14,12 +14,12 @@ page.
 
 ## Establish the scientific specification
 
-Whenever possible, implement the model from its publication rather than
-translating an existing software implementation. Check for any published
-errata and later corrections. If reference implementations disagree, resolve
-the difference from the publication and its calibration domain.
+Establish the model's scientific specification from authoritative sources,
+such as the original publication and supplements, published corrections, or
+software maintained by the authors. If sources disagree, explain which
+interpretation is followed and why.
 
-Record the following before writing code:
+Before implementation, identify:
 
 - the residual component for which the model was calibrated:
   `WITHIN_EVENT`, `BETWEEN_EVENT`, or `TOTAL`
@@ -33,6 +33,8 @@ Record the following before writing code:
 - interpolation, extrapolation and boundary rules
 - whether the resulting matrices are expected to be positive semidefinite
 
+Reflect the applicable details in the model metadata, validation, tests, and
+pull request description.
 
 ## Select the model interface
 
