@@ -39,7 +39,7 @@ class Mesh:
 
 def test_reference_values():
     reference = numpy.genfromtxt(
-        DATA / 'reference.csv', delimiter=',', names=True, skip_header=6)
+        DATA / 'reference.csv', delimiter=',', names=True)
     model = LothBaker2013()
     actual = []
     for row in reference:
