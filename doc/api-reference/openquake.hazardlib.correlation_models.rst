@@ -37,9 +37,11 @@ Spatial models
 Joint spatial and cross-IMT models
 ----------------------------------
 
-No direct joint model is currently distributed with hazardlib. New joint
-models implement
-:class:`~openquake.hazardlib.correlation_models.base.SpatialCrossIMTCorrelationModel`.
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.loth_baker_2013
+
+.. autoclass:: LothBaker2013
+    :members:
+    :show-inheritance:
 
 Cross-IMT models
 ----------------
