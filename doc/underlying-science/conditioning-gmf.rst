@@ -72,14 +72,25 @@ We can assume that the ground shaking for the various IMs are multivariate rando
 
 In addition to the generation of cross-spatially correlated ground motion fields conditioned on data from seismic stations, it is also possible to constrain the resulting ground shaking based on observational data usually characterized using macroseismic intensity. This option can be advantageous for regions with poor seismic networks or when considering older events for which strong motion data might also be limited. This process requires the conversion of macroseismic intensity into ground motion, which will inevitably introduce additional uncertainty. As a result, the ground shaking converted from macroseismic intensity will be represented not only by a single value (as done when a seismic station is used) but by a mean and standard deviation. This variability can be taken from the chosen conversion equation. The incorporation of macroseismic intensity in this procedure has also been implemented within the OpenQuake-engine. Additional details about the mathematical formulation of this procedure can be found in Worden et al. (2018).
 
-Future improvements
--------------------
+Correlation models
+------------------
 
-Additional improvements and testing are required for a more robust tool. Some of the capabilities foreseen in the coming years include:
+The within-event and between-event correlation models used for conditioning
+are selected with ``within_event_correlation_model`` and
+``between_event_correlation_model``. A within-event model can describe spatial
+correlation only or directly describe joint spatial and cross-IMT correlation.
+The latter avoids assuming that spatial and cross-IMT dependence are separable.
+See :doc:`correlation-models` for the model interfaces and configuration.
 
-- The conditioning process requires the specification of a spatial correlation model of the within-event residuals between two points for the intensity measures involved in the calculation, a model for the cross-measure correlation of the within-event residuals, and a model for the cross-measure correlation of the between-event residuals. Assuming a conditional independence of the cross-measure correlation and the spatial correlation of a given intensity measure, the spatial cross-correlation of two different IMs at two different sites can be obtained as the product of the cross-correlation of two IMs at the same location and the spatial correlation due to the distance between sites. Given the limited set of correlation models available in the engine currently, the choice of the three aforementioned correlation models could be hardcoded in the initial implementation of the conditioned GMF calculator using JB2009CorrelationModel as the spatial correlation model of the within-event residuals, BakerJayaram2008 as the cross-measure correlation model for the within-event residuals, and GodaAtkinson2009 as the cross-measure correlation model for the between-event residuals.
+For compatibility, a spatial-only model is currently combined with a fixed
+Baker and Jayaram (2008) cross-IMT model using a separable approximation. Since
+Baker and Jayaram (2008) describes total-residual rather than within-event
+correlation, this is a legacy approximation rather than a direct model of the
+required covariance. A direct joint model bypasses that approximation.
 
-- Ideally, the choice of the different correlation models should be exposed to the user through parameters in the job file. Direct spatial cross-correlation models for the within-event residuals (Loth and Baker 2013 and Du and Ning 2021) could also be used instead of separate models for the spatial correlation and cross-measure correlation. Supporting these choices would entail a substantial refactoring of the existing engine and is thus left for a future implementation.
+The model library currently has a limited selection for station-conditioned,
+multi-IMT calculations. Loth and Baker (2013), further direct joint models and
+scalable covariance factorizations are priorities for future development.
 
 
 References
@@ -92,4 +103,3 @@ References
 - Silva, V., & Horspool, N. (2019). Combining USGS ShakeMaps and the OpenQuake-engine for damage and loss assessment. Earthquake Engineering and Structural Dynamics, 48(6), 634–652. DOI: https://doi.org/10.1002/eqe.3154.
 
 - Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022). Partitioning Ground Motion Uncertainty When Conditioned on Station Data. Bulletin of the Seismological Society of America, 112(2), 1060–1079. DOI: https://doi.org/10.1785/0120210177.
-
