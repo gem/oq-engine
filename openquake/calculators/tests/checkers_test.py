@@ -34,7 +34,7 @@ def test_check_ini_accepts_legacy_aliases(tmp_path):
     checkers.check_ini(str(demo / 'job.ini'), hc=False)
 
     params = readinput.get_params(str(demo / 'job.tmp.ini'))
-    assert 'spatial_correlation_model' in params
-    assert 'spatial_correlation_params' in params
+    assert 'within_event_correlation_model' in params
+    assert 'within_event_correlation_params' in params
     assert 'ground_motion_correlation_model' not in params
     assert 'ground_motion_correlation_params' not in params

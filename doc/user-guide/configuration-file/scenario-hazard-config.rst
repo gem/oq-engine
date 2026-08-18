@@ -28,8 +28,8 @@ The basic job configuration file required for running a scenario hazard calculat
 	site_model_file = site_model.csv site_model_stations.csv
 
 	[correlation]
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 
 	[hazard_calculation]
 	intensity_measure_types = PGA, SA(0.3), SA(1.0)
