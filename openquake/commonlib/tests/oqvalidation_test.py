@@ -248,13 +248,6 @@ class OqParamTestCase(unittest.TestCase):
         self.assertEqual(
             oq.total_residual_correlation_model, 'BakerJayaram2008')
 
-    def test_provisional_correlation_names_are_rejected(self):
-        with self.assertRaisesRegex(
-                NameError, 'spatial_correlation_model has been replaced'):
-            OqParam(
-                calculation_mode='event_based', inputs=fakeinputs,
-                spatial_correlation_model='JayaramBaker2009')
-
     def test_shakemap_switches_are_not_model_names(self):
         for value in ('yes', 'no', 'full'):
             with self.subTest(value=value), self.assertRaises(KeyError):

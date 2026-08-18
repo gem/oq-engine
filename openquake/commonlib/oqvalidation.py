@@ -1097,13 +1097,6 @@ class OqParam(valid.ParamSet):
                'within_event_correlation_params',
                'spatial_correlation':
                'within_event_correlation_model'}
-    PROVISIONAL_CORRELATION_NAMES = {
-        'spatial_correlation_model': 'within_event_correlation_model',
-        'spatial_correlation_params': 'within_event_correlation_params',
-        'cross_imt_correlation_model':
-        'a residual-specific correlation model setting',
-        'cross_imt_correlation_params':
-        'the corresponding residual-specific parameter setting'}
 
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
@@ -1357,11 +1350,6 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def fix_legacy_names(self, dic):
-        for name, replacement in self.PROVISIONAL_CORRELATION_NAMES.items():
-            if name in dic:
-                raise NameError(
-                    f'{name} has been replaced by {replacement}')
-
         if 'cross_correlation' in dic:
             if dic.get('postproc_func') == 'conditional_spectrum.main':
                 replacement = 'total_residual_correlation_model'
