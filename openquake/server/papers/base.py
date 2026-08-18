@@ -118,9 +118,9 @@ def get_job_ctx(rup_id,
         'number_of_ground_motion_fields': str(num_gmfs),
         # NOTE: correlation disabled to avoid too big
         #       calculations and suppression of avg_gmf outputs
-        # 'cross_imt_correlation_model': 'GodaAtkinson2009',
-        # 'spatial_correlation_model': 'JayaramBaker2009',
-        # 'spatial_correlation_params': '{"vs30_clustering":True}',
+        # 'between_event_correlation_model': 'GodaAtkinson2009',
+        # 'within_event_correlation_model': 'JayaramBaker2009',
+        # 'within_event_correlation_params': '{"vs30_clustering":True}',
         'horiz_comp_to_geom_mean': 'true',
         # 'time_event': day_or_night,
         'export_dir': '/tmp',
@@ -146,9 +146,9 @@ def get_job_ctx(rup_id,
 
         # Correlation requires non-zero truncation (it's set to zero
         # in hazard only) given we just want the median ground-motion
-        for key in ['cross_imt_correlation_model',
-                    'spatial_correlation_model',
-                    'spatial_correlation_params']:
+        for key in ['between_event_correlation_model',
+                    'within_event_correlation_model',
+                    'within_event_correlation_params']:
             del job_dict[key]
 
     [job] = engine.create_jobs([job_dict], config.distribution.log_level, None,

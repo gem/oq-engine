@@ -6,6 +6,7 @@
   * Standardize correlation settings across regular and ShakeMap calculations
   * Correct the Heresi and Miranda model publication year and document the
     references for the implemented correlation models
+  * Introduce residual-specific correlation configuration parameters
 
   [Michele Simionato]
   * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model

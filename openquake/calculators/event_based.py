@@ -190,17 +190,17 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
                 ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],
                 observed_imts, cmaker,
-                oq.get_spatial_correlation_model(),
-                oq.get_cross_imt_correlation_model(),
-                oq.spatial_correlation_params,
+                oq.get_within_event_correlation_model(),
+                oq.get_between_event_correlation_model(),
+                oq.within_event_correlation_params,
                 oq.number_of_ground_motion_fields,
                 oq._amplifier, sec_perils)
         else:
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, sites, cmaker, oq.get_spatial_correlation_model(),
-        oq.get_cross_imt_correlation_model(),
+        ebr, sites, cmaker, oq.get_within_event_correlation_model(),
+        oq.get_between_event_correlation_model(),
         oq._amplifier, sec_perils)
 
 
