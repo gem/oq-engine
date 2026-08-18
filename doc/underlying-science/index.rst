@@ -29,6 +29,7 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    PSHA-with-OQ-engine
    seismic-source-models
    gmpes
+   correlation-models
    logic-trees
    conditioning-gmf
    calculations
@@ -71,4 +72,3 @@ used throughout the Underlying Science sections.
    glossary
    acronyms
 .. _appendices:
-
