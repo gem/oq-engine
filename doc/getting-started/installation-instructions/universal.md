@@ -47,7 +47,7 @@ You just need to download the installation script as:
 **on Windows:**
 ```
 C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
-C:\>py.exe install.py user
+C:\>py.exe install.py user --version=3.23
 ```
 
 **on macOS:**
@@ -56,13 +56,13 @@ Before running the universal installer Python 3.11 need to be installed, please 
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
-$ python3.11 install.py user
+$ python3.11 install.py user --version=3.23
 ```
 
 **on Linux:**
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
-$ python3.11 install.py user
+$ python3.11 install.py user --version=3.23
 ```
 
 This installation method will create a Python virtual environment in
@@ -180,7 +180,7 @@ automatically installed and started: `openquake-dbserver` and
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
-$ sudo -H python3.11 install.py server
+$ sudo -H python3.11 install.py server --version=3.23
 ```
 
 The installation script will automatically create a user called
