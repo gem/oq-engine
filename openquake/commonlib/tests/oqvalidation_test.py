@@ -191,7 +191,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 maximum_distance='400',
                 truncation_level='3',
-                spatial_correlation_model='JayaramBaker2009',
+                within_event_correlation_model='JayaramBaker2009',
                 intensity_measure_types_and_levels=imtls,
             ).validate()
         self.assertEqual(
@@ -208,19 +208,45 @@ class OqParamTestCase(unittest.TestCase):
             ground_motion_correlation_params=(
                 '{"vs30_clustering": False}'),
             cross_correlation='GodaAtkinson2009')
-        assert oq.spatial_correlation_model == 'JB2009'
-        assert oq.spatial_correlation_params == {
+        assert oq.within_event_correlation_model == 'JB2009'
+        assert oq.within_event_correlation_params == {
             'vs30_clustering': False}
-        assert oq.cross_imt_correlation_model == 'GodaAtkinson2009'
+        assert oq.between_event_correlation_model == 'GodaAtkinson2009'
 
-    def test_cross_imt_model_uses_split_truncation_level(self):
+    def test_between_event_model_uses_split_truncation_level(self):
         oq = OqParam(
             calculation_mode='event_based', inputs=fakeinputs,
             sites='0.1 0.2', maximum_distance='400',
             truncation_level='3', truncation_level_between='2',
-            cross_imt_correlation_model='GodaAtkinson2009')
-        model = oq.get_cross_imt_correlation_model()
+            between_event_correlation_model='GodaAtkinson2009')
+        model = oq.get_between_event_correlation_model()
         assert model.truncation_level == 2
+
+    def test_correlation_models_match_residual_components(self):
+        common = dict(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3')
+        with self.assertRaisesRegex(
+                ValueError, 'Bradley2012 provides total correlation'):
+            OqParam(
+                **common,
+                between_event_correlation_model='Bradley2012').validate()
+        model = OqParam(
+            **common,
+            total_residual_correlation_model='Bradley2012'
+        ).get_total_residual_correlation_model()
+        self.assertEqual(model.name, 'Bradley2012')
+
+    def test_conditional_spectrum_cross_correlation_alias(self):
+        oq = OqParam(
+            calculation_mode='classical', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3',
+            postproc_func='conditional_spectrum.main',
+            cross_correlation='BakerJayaram2008')
+        self.assertEqual(
+            oq.total_residual_correlation_model, 'BakerJayaram2008')
 
     def test_shakemap_switches_are_not_model_names(self):
         for value in ('yes', 'no', 'full'):

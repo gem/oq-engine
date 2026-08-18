@@ -28,8 +28,8 @@ in the ``calculation_configuration`` part). Additionally, in this section the us
 model to be used for the generation of ground motion fields.::
 
 	ses_per_logic_tree_path = 5
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 
 The acceptable flags for the parameter ``vs30_clustering`` are ``False`` and ``True``, with a capital ``F`` and ``T`` 
 respectively. ``0`` and ``1`` are also acceptable flags.

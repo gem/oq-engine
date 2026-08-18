@@ -101,8 +101,8 @@ damage distribution for a portfolio of assets due to the ground motion fields.
 	gsim = BooreAtkinson2008
 	intensity_measure_types = PGA, SA(0.3)
 	number_of_ground_motion_fields = 1000
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 
 **Scenario damage example**::
 
@@ -306,8 +306,8 @@ The only change that needs to be made in the hazard job configuration file is to
 	gsim_logic_tree_file = gsim_logic_tree.xml
 	intensity_measure_types = PGA, SA(0.3)
 	number_of_ground_motion_fields = 1000
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 
 **Example 5**
 
@@ -338,8 +338,8 @@ is shown in the listing below.::
 	maximum_distance = 200.0
 	gsim = BooreAtkinson2008
 	number_of_ground_motion_fields = 1000
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 	
 	[fragility]
 	structural_fragility_file = structural_fragility_model.xml
@@ -411,8 +411,8 @@ is shown in the listing below.::
 	maximum_distance = 200.0
 	gsim = BooreAtkinson2008
 	number_of_ground_motion_fields = 1000
-	spatial_correlation_model = JayaramBaker2009
-	spatial_correlation_params = {"vs30_clustering": True}
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
 	
 	[vulnerability]
 	structural_vulnerability_file = structural_vulnerability_model.xml

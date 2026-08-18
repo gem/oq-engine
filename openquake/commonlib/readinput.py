@@ -892,7 +892,7 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
-    spatial_model = oqparam.get_spatial_correlation_model()
+    spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
