@@ -1,0 +1,15 @@
+# Loth and Baker (2013), Equation 42, with the 2020 erratum tables.
+# Near-diagonal interpolation and B3 precision follow the authors' Matlab
+# implementation at bakerjw/GMMs commit
+# d7c324109a0bd78d83a6b6e3ff41e0cadecf31c7
+# (updates dated 2022-04-20 and 2022-05-09). These values were evaluated
+# independently from the source equations, without using hazardlib.
+period1,period2,distance,correlation
+0.01,0.01,0,1
+0.01,0.01,20,0.21389348729484703
+1,2,0,0.7200000354290215
+1,2,10,0.3206412520233559
+0.15,0.18,0,0.9309999131690294
+0.15,0.18,25,0.1494242928348915
+0.15,1,12.5,0.13531197306751236
+0.01,10,50,0.014111344216150744
