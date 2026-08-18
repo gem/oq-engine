@@ -29,6 +29,8 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
     import NoCrossCorrelation
+from openquake.hazardlib.correlation_models.base import (
+    CorrelationContext, ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -179,14 +181,14 @@ class GmfComputer(object):
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
-    :param spatial_model:
-        Instance of a spatial correlation model object. See
+    :param within_event_model:
+        Instance of a within-event correlation model object. See
         :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
 
-    :param cross_imt_model:
-        Instance of a cross-IMT correlation model object. See
+    :param between_event_model:
+        Instance of a between-event correlation model object. See
         :mod:`openquake.hazardlib.correlation_models`. Can be ``None``, in which
         case non-cross-correlated ground motion fields are calculated.
 
@@ -209,17 +211,17 @@ class GmfComputer(object):
     # a matrix of size (M, N, E) is returned, where M is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, cmaker, spatial_model=None,
-                 cross_imt_model=None, amplifier=None, sec_perils=(),
+    def __init__(self, rupture, sitecol, cmaker, within_event_model=None,
+                 between_event_model=None, amplifier=None, sec_perils=(),
                  **legacy):
         if 'correlation_model' in legacy:
-            if spatial_model is not None:
-                raise TypeError('Pass only spatial_model')
-            spatial_model = legacy.pop('correlation_model')
+            if within_event_model is not None:
+                raise TypeError('Pass only within_event_model')
+            within_event_model = legacy.pop('correlation_model')
         if 'cross_correl' in legacy:
-            if cross_imt_model is not None:
-                raise TypeError('Pass only cross_imt_model')
-            cross_imt_model = legacy.pop('cross_correl')
+            if between_event_model is not None:
+                raise TypeError('Pass only between_event_model')
+            between_event_model = legacy.pop('cross_correl')
         if legacy:
             raise TypeError('Unknown arguments: %s' % sorted(legacy))
         if len(sitecol) == 0:
@@ -232,7 +234,7 @@ class GmfComputer(object):
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.cmaker = cmaker
         self.gsims = sorted(cmaker.gsims)
-        self.spatial_model = spatial_model
+        self.within_event_model = within_event_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
         self.ebrupture = rupture
@@ -244,10 +246,16 @@ class GmfComputer(object):
             raise FarAwayRupture
         [self.ctx] = ctxs
         self.N = len(self.ctx)
-        if spatial_model:  # store the filtered sitecol
+        if within_event_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
-        self.cross_imt_model = cross_imt_model or NoCrossCorrelation(
+            within_event_model.validate_imts(self.imts)
+        self.between_event_model = between_event_model or NoCrossCorrelation(
             cmaker.truncation_level_between)
+        self.between_event_model.validate_imts(self.imts)
+        self.correlation_context = CorrelationContext(
+            mag=rupture.mag, rake=getattr(rupture, 'rake', None),
+            trt=cmaker.trt)
+        self._within_event_factor = None
         self.within_dist = NoCrossCorrelation(
             cmaker.truncation_level_within).distribution
         self.mea_tau_phi = []
@@ -259,21 +267,21 @@ class GmfComputer(object):
 
     @property
     def correlation_model(self):
-        """Compatibility alias for :attr:`spatial_model`."""
-        return self.spatial_model
+        """Compatibility alias for :attr:`within_event_model`."""
+        return self.within_event_model
 
     @correlation_model.setter
     def correlation_model(self, model):
-        self.spatial_model = model
+        self.within_event_model = model
 
     @property
     def cross_correl(self):
-        """Compatibility alias for :attr:`cross_imt_model`."""
-        return self.cross_imt_model
+        """Compatibility alias for :attr:`between_event_model`."""
+        return self.between_event_model
 
     @cross_correl.setter
     def cross_correl(self, model):
-        self.cross_imt_model = model
+        self.between_event_model = model
 
     def init_eid_rlz_sig_eps(self):
         """
@@ -404,19 +412,14 @@ class GmfComputer(object):
                 E = len(idxs)
                 result = np.zeros((len(self.imts), len(self.ctx.sids), E), F32)
                 # arrays of random numbers of shape (M, N, E) and (M, E)
-                if self.tlw <= TRUNCATION_THRESHOLD:
-                    within_eps = [np.zeros((self.N, E), F32)
-                                 for _ in range(self.M)]
-                else:
-                    within_eps = [
-                        self.within_dist.rvs((self.N, E), self.rng).astype(F32)
-                        for _ in range(self.M)]
+                within_eps = self._draw_within_eps(
+                    E, correlate=not conditioned)
                 # between_eps are used in _compute
                 if self.tlb <= TRUNCATION_THRESHOLD:
                     self.between_eps[idxs] = 0.
                 else:
                     self.between_eps[idxs] = \
-                        self.cross_imt_model.get_inter_eps(
+                        self.between_event_model.get_inter_eps(
                             self.imts, E, self.rng).T
                 mean = []
                 for m, imt in enumerate(self.imts):
@@ -436,6 +439,24 @@ class GmfComputer(object):
                 self.update(data, result, rlzs, np.array(mean), max_iml)
         with umon:
             return self.strip_zeros(data)
+
+    def _draw_within_eps(self, num_events, correlate=True):
+        if self.tlw <= TRUNCATION_THRESHOLD:
+            return np.zeros((self.M, self.N, num_events), F32)
+        samples = np.asarray([
+            self.within_dist.rvs((self.N, num_events), self.rng).astype(F32)
+            for _ in range(self.M)])
+        model = self.within_event_model
+        if (not correlate or model is None or
+                isinstance(model, SpatialCorrelationModel)):
+            return samples
+        if self._within_event_factor is None:
+            self._within_event_factor = model.factor(
+                self.sites, self.imts, ResidualComponent.WITHIN_EVENT,
+                self.correlation_context)
+        flattened = samples.reshape(-1, num_events)
+        correlated = self._within_event_factor.apply(flattened)
+        return correlated.reshape(samples.shape).astype(F32)
 
     def _compute_update(self, result, m, imt, gs, ms, idxs, within_eps):
         try:
@@ -468,7 +489,7 @@ class GmfComputer(object):
         if (self.tlw <= TRUNCATION_THRESHOLD and
                 self.tlb <= TRUNCATION_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
-            if self.spatial_model:
+            if self.within_event_model:
                 raise ValueError('truncation_level_within=0 requires '
                                  'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, np.newaxis].repeat(
@@ -478,9 +499,9 @@ class GmfComputer(object):
             # to compute mean and total standard deviation at the sites
             # of interest.
             # In this case, we also assume no correlation model is used.
-            if self.spatial_model:
+            if self.within_event_model:
                 raise CorrelationButNoInterIntraStdDevs(
-                    self.spatial_model, gsim)
+                    self.within_event_model, gsim)
             gmf = exp(mean[:, np.newaxis] + sig[:, np.newaxis] * within_eps,
                       im != 'MMI')
             self.sig[idxs, m] = np.nan
@@ -490,8 +511,8 @@ class GmfComputer(object):
             # a[:, newaxis] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
-            if self.spatial_model is not None:
-                within_res = self.spatial_model.apply_correlation(
+            if isinstance(self.within_event_model, SpatialCorrelationModel):
+                within_res = self.within_event_model.apply_correlation(
                     self.sites, imt, within_res, phi).astype(F32)
             between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]
             # shape (N, 1) * E => (N, E)

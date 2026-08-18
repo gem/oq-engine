@@ -109,9 +109,21 @@ class CorrelationModel:
 class SpatialCrossIMTCorrelationModel(CorrelationModel):
     """Correlation over a joint, IMT-major vector of sites and IMTs."""
 
+    def correlation_block(self, distances, imts1, imts2=None,
+                          component=None, context=None):
+        """Return correlation between two IMT-major site vectors.
+
+        ``distances`` has shape ``(N1, N2)`` and the returned matrix has
+        shape ``(len(imts1) * N1, len(imts2) * N2)``. Joint models should
+        implement this method so they can also be used for conditioning.
+        """
+        raise NotImplementedError
+
     def covariance(self, sites, imts, component=None, context=None):
         """Return a covariance matrix with shape ``(M*N, M*N)``."""
-        raise NotImplementedError
+        distances = sites.mesh.get_distance_matrix()
+        return self.correlation_block(
+            distances, imts, component=component, context=context)
 
     def factor(self, sites, imts, component=None, context=None,
                ensure_psd=True):
@@ -131,6 +143,22 @@ class SpatialCrossIMTCorrelationModel(CorrelationModel):
             covariance = cov_nearest(covariance, threshold=1E-12)
             lower_triangle = numpy.linalg.cholesky(covariance)
         return CholeskyFactor(lower_triangle)
+
+    def correlate(self, sites, imts, samples, component=None, context=None):
+        """Correlate standard-normal samples across IMTs and sites.
+
+        ``samples`` must have shape ``(M, N, E)``. The first two dimensions
+        are flattened in IMT-major order before applying the factorization.
+        """
+        samples = numpy.asarray(samples)
+        expected = (len(imts), len(sites))
+        if samples.ndim != 3 or samples.shape[:2] != expected:
+            raise ValueError(
+                f'Expected samples with shape {expected} + (E,), got '
+                f'{samples.shape}')
+        factor = self.factor(sites, imts, component, context)
+        correlated = factor.apply(samples.reshape(-1, samples.shape[-1]))
+        return correlated.reshape(samples.shape)
 
 
 class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
@@ -184,6 +212,27 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
             covariance[block, block] = self.correlation_matrix(
                 sites, imt, component, context)
         return covariance
+
+    def correlation_block(self, distances, imts1, imts2=None,
+                          component=None, context=None):
+        """Return same-IMT spatial blocks for two site vectors."""
+        self._get_component(component)
+        if imts2 is None:
+            imts2 = imts1
+        num_sites1, num_sites2 = distances.shape
+        correlation = numpy.zeros(
+            (len(imts1) * num_sites1, len(imts2) * num_sites2))
+        for index1, imt1 in enumerate(imts1):
+            for index2, imt2 in enumerate(imts2):
+                if imt1 != imt2:
+                    continue
+                rows = slice(index1 * num_sites1,
+                             (index1 + 1) * num_sites1)
+                cols = slice(index2 * num_sites2,
+                             (index2 + 1) * num_sites2)
+                correlation[rows, cols] = self.correlation_matrix(
+                    distances, imt1, component, context)
+        return correlation
 
 
 class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
