@@ -29,6 +29,10 @@ Loth, C., and Baker, J. W. (2020). Erratum: A spatial cross-correlation model
 for ground motion spectral accelerations at multiple periods. Earthquake
 Engineering & Structural Dynamics, 49(3), 315-316.
 https://doi.org/10.1002/eqe.3233
+
+Author-maintained Matlab implementation
+---------------------------------------
+https://github.com/bakerjw/GMMs/blob/master/correlations/lb_2013_spatial_corr.m
 """
 
 import numpy
