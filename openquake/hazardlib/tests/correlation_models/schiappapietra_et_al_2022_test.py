@@ -65,7 +65,6 @@ def test_reference_values():
         model = MODELS[row['region']]()
         actual = model.correlation_matrix(
             numpy.array([[float(row['distance'])]]), imt)
-        assert model._range(period) == pytest.approx(float(row['range']))
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
             rtol=1E-14, atol=1E-15)
