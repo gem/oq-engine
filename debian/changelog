@@ -7,6 +7,8 @@
   * Correct the Heresi and Miranda model publication year and document the
     references for the implemented correlation models
   * Introduce residual-specific correlation configuration parameters
+  * Add the Loth and Baker (2013) joint spatial and cross-IMT within-event
+    correlation model
 
   [Michele Simionato]
   * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model
