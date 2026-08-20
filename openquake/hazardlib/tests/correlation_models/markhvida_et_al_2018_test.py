@@ -102,8 +102,22 @@ def test_many_imts_are_positive_definite():
     assert numpy.linalg.eigvalsh(covariance).min() > 0
 
 
+def test_pga_uses_sa_001_proxy():
+    distances = numpy.array([[0.0, 10.0], [10.0, 0.0]])
+    model = MarkhvidaEtAl2018()
+    pga = model.correlation_block(
+        distances, [PGA()], [SA(0.5)])
+    sa_001 = model.correlation_block(
+        distances, [SA(0.01)], [SA(0.5)])
+    numpy.testing.assert_array_equal(pga, sa_001)
+
+
+def test_rejects_pga_and_sa_001_together():
+    with pytest.raises(ValueError, match='cannot combine PGA and SA\\(0.01\\)'):
+        MarkhvidaEtAl2018().validate_imts([PGA(), SA(0.01)])
+
+
 @pytest.mark.parametrize(('imt', 'message'), [
-    (PGA(), 'does not support PGA'),
     (PGV(), 'does not support PGV'),
     (SA(0.005), 'periods from 0.01 to 5 s'),
     (SA(5.1), 'periods from 0.01 to 5 s'),

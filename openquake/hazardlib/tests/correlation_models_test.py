@@ -73,7 +73,7 @@ def test_registry_aliases_and_metadata():
     assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
     assert joint['MarkhvidaEtAl2018'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert joint['MarkhvidaEtAl2018'].supported_imts == ('SA',)
+    assert joint['MarkhvidaEtAl2018'].supported_imts == ('PGA', 'SA')
     assert joint['MarkhvidaEtAl2018'].imc == 'RotD50'
 
 
