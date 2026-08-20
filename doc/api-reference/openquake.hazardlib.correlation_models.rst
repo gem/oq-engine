@@ -34,6 +34,12 @@ Spatial models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial.aldea_et_al_2022
+
+.. autoclass:: AldeaEtAl2022
+    :members:
+    :show-inheritance:
+
 .. currentmodule:: openquake.hazardlib.correlation_models.spatial.schiappapietra_et_al_2022
 
 .. autoclass:: SchiappapietraEtAl2022NorthernItaly
