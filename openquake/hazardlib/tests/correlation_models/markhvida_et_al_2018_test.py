@@ -91,7 +91,7 @@ def test_covariance_is_symmetric_positive_definite():
         covariance, rtol=1E-13, atol=1E-14)
 
 
-def test_more_than_five_imts_is_positive_semidefinite():
+def test_many_imts_are_positive_definite():
     positions = numpy.array([0.0, 3.0, 17.0, 51.0])
     distances = abs(positions[:, None] - positions)
     sites = SimpleNamespace(mesh=Mesh(distances))
@@ -99,7 +99,7 @@ def test_more_than_five_imts_is_positive_semidefinite():
         0.01, 0.075, 0.1, 0.3, 1.0, 2.0, 3.0, 5.0)]
     covariance = MarkhvidaEtAl2018().covariance(sites, imts)
 
-    assert numpy.linalg.eigvalsh(covariance).min() > -1E-12
+    assert numpy.linalg.eigvalsh(covariance).min() > 0
 
 
 @pytest.mark.parametrize(('imt', 'message'), [
