@@ -1,3 +1,7 @@
+  [Vitor Azevedo Monteiro, Anirudh Rao]
+  * Add the Schiappapietra et al. and Aldea et al. (2022) within-event
+    spatial correlation models
+
   [Anirudh Rao]
   * Speed up `truncation_level = 0` case for the conditioned gmfs calculator
   * Treat ShakeMap grid.xml values as medians and not as arithmetic means
