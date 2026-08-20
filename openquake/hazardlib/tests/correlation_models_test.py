@@ -37,6 +37,8 @@ from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     loth_baker_2013 import LothBaker2013
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    markhvida_et_al_2018 import MarkhvidaEtAl2018
 from openquake.hazardlib.imt import PGA, SA
 
 
@@ -68,6 +70,11 @@ def test_registry_aliases_and_metadata():
     assert joint['LothBaker2013'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['LothBaker2013'].supported_imts == ('PGA', 'SA')
+    assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
+    assert joint['MarkhvidaEtAl2018'].calibrated_component == (
+        ResidualComponent.WITHIN_EVENT)
+    assert joint['MarkhvidaEtAl2018'].supported_imts == ('PGA', 'SA')
+    assert joint['MarkhvidaEtAl2018'].imc == 'RotD50'
 
 
 def test_registry_instantiation_and_type_validation():

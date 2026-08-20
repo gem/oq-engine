@@ -63,6 +63,12 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.markhvida_et_al_2018
+
+.. autoclass:: MarkhvidaEtAl2018
+    :members:
+    :show-inheritance:
+
 Cross-IMT models
 ----------------
 
