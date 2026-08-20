@@ -219,7 +219,8 @@ _SILLS = _NUGGET + _SHORT_SILL + _LONG_SILL
 
 def _interpolate_coefficients(imts):
     """Linearly interpolate each PCA coefficient at the requested periods."""
-    periods = numpy.array([imt.period for imt in imts])
+    periods = numpy.array([
+        0.01 if imt.name == 'PGA' else imt.period for imt in imts])
     return numpy.column_stack([
         numpy.interp(periods, _PERIODS, coefficients)
         for coefficients in _PCA_COEFFICIENTS.T
@@ -253,19 +254,22 @@ class MarkhvidaEtAl2018(SpatialCrossIMTCorrelationModel):
 
     The model uses all nineteen principal components, following the authors'
     current reference implementation, and was calibrated for 5%-damped SA
-    from 0.01 to 5 seconds. The authors do not
-    define a PGA proxy, so PGA is not supported.
+    from 0.01 to 5 seconds. PGA is supported through the conventional
+    SA(0.01) correlation proxy; this is an operational approximation rather
+    than a calibrated part of the model.
     """
 
     name = 'MarkhvidaEtAl2018'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('SA',)
+    supported_imts = ('PGA', 'SA')
     imc = 'RotD50'
     damping = 5.0
 
     def validate_imts(self, imts):
         super().validate_imts(imts)
         for imt in imts:
+            if imt.name == 'PGA':
+                continue
             if imt.damping != self.damping:
                 raise ValueError(
                     f'{self.name} supports only {self.damping:g}%-damped SA')
@@ -273,6 +277,12 @@ class MarkhvidaEtAl2018(SpatialCrossIMTCorrelationModel):
                 raise ValueError(
                     f'{self.name} supports SA periods from 0.01 to 5 s, '
                     f'not {imt.period:g} s')
+        if (any(imt.name == 'PGA' for imt in imts) and
+                any(imt.name == 'SA' and imt.period == 0.01
+                    for imt in imts)):
+            raise ValueError(
+                f'{self.name} cannot combine PGA and SA(0.01), because PGA '
+                'uses SA(0.01) as its correlation proxy')
 
     def correlation_block(self, distances, imts1, imts2=None,
                           component=None, context=None):
