@@ -9,6 +9,8 @@
   * Introduce residual-specific correlation configuration parameters
   * Add the Loth and Baker (2013) joint spatial and cross-IMT within-event
     correlation model
+  * Add the Markhvida et al. (2018) joint spatial and cross-IMT within-event
+    correlation model
 
   [Michele Simionato]
   * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model
