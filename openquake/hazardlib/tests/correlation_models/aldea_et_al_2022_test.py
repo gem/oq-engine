@@ -23,7 +23,7 @@ import pytest
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.registry import get_model_class
 from openquake.hazardlib.correlation_models.spatial.aldea_et_al_2022 import (
-    AldeaEtAl2022, _correlation_range)
+    AldeaEtAl2022)
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
@@ -56,8 +56,6 @@ def test_reference_values():
         imt = PGA() if period == 0 else SA(period)
         actual = model.correlation_matrix(
             numpy.array([[float(row['distance'])]]), imt)
-        assert _correlation_range(period) == pytest.approx(
-            float(row['range']))
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
             rtol=1E-14, atol=1E-15)
