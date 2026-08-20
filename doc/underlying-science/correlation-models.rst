@@ -166,8 +166,18 @@ spatial-only, the off-diagonal IMT blocks are completed with a fixed Baker and
 Jayaram (2008) separable approximation. That model describes total-residual
 correlation, so its use for the within-event blocks is a legacy approximation.
 A direct joint within-event model bypasses this construction. Loth and Baker
-(2013), which was calibrated jointly across sites and periods, is planned as
-the first such implementation.
+(2013) is the first such model distributed with hazardlib. It was calibrated
+jointly across sites and 5%-damped spectral-acceleration periods from 0.01 to
+10 seconds. PGA is supported using SA(0.01) as a correlation proxy, following
+the operational ShakeMap convention. This changes only the correlation
+coefficients; PGA medians and standard deviations still come from the GSIM.
+The model rejects simultaneous PGA and SA(0.01), which would otherwise create
+duplicate residual fields, and does not support PGV or other IMTs.
+
+The implementation uses the coefficient tables corrected by the 2020 erratum
+and follows the authors' 2022 Matlab refinements. These preserve the diagonal
+ridge during interpolation and use a revised, higher-precision nugget matrix
+to retain positive definiteness.
 
 Conditional spectra require an explicitly configured total-residual model;
 omitting it does not request an independent calculation.
@@ -214,3 +224,7 @@ References
 * Loth, C., and Baker, J. W. (2013). A spatial cross-correlation model of
   spectral accelerations at multiple periods. *Earthquake Engineering &
   Structural Dynamics*, 42(3), 397-417. https://doi.org/10.1002/eqe.2212
+* Loth, C., and Baker, J. W. (2020). Erratum: A spatial cross-correlation model
+  for ground motion spectral accelerations at multiple periods. *Earthquake
+  Engineering & Structural Dynamics*, 49(3), 315-316.
+  https://doi.org/10.1002/eqe.3233
