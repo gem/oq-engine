@@ -69,6 +69,16 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.wang_du_2013
+
+.. autoclass:: WangDu2013PGAIAPGV
+    :members:
+    :show-inheritance:
+
+.. autoclass:: WangDu2013SpectralAcceleration
+    :members:
+    :show-inheritance:
+
 Cross-IMT models
 ----------------
 
