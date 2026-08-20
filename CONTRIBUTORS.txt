@@ -6,120 +6,120 @@ think a name is missing or a date is incorrect, please let us know. =)
 
 Code
 ----
-Marco Pagani             (@mmpagani)            July 2010
-Andy Smith               (@termie)              August 2010
-Fabian Euchner           (@feuchner)            August 2010
-Aurea Mömke              (@amoemke)             August 2010
-Joshua McKenty           (@joshuamckenty)       August 2010
-Philipp Kästli           (@kaestli)             August 2010
-Christopher MacGown      (@ChristopherMacGown)  November 2010
-Lars Butler              (@larsbutler)          November 2010
-Roland Siegert           (@rolandsiegert)       November 2010
-Andrea Cerisara          (@acerisara)           December 2010
-Vitor Silva              (@vsilva)              December 2010
-Marco Milanesi           (@kpanic)              February 2011
-Muharem Hrnjadovic       (@arbeit)              February 2011
-Damiano Monelli          (@monellid)            May 2011
-Gabriele Favalessa       (@favalex)             June 2011
-Mattia Barbon            (@mbarbon)             June 2011
-Giuseppe Vallarelli      (@gvallarelli)         July 2011
-Anton Gritsay            (@angri)               August 2011
-Luigi Panzeri            (@matley)              August 2012
-Matteo Nastasi           (@nastasi-oq)          November 2012
-Michele Simionato        (@micheles)            December 2012
-Luis Rodríguez           (@luisera)             December 2012
-Daniele Viganò           (@daniviga)            April 2013
-Graeme Weatherill        (@g-weatherill)        September 2013
-Paolo Tormene            (@ptormene)            October 2013
-Yen-Shin Chen            (@vup1120)             November 2013
-Julio Garcia             (@julgp)               March 2014
-Laurentiu Danciu         (@danciul)             August 2014
-Nick Horspool            (@nickhorspool)        September 2014
-Anirudh Rao              (@raoanirudh)          January 2015
-C. Bruce Worden          (@cbworden)            August 2015
-Robin Gee                (@rcgee)               September 2015
-Catalina Yepes-Estrada   (@CatalinaYepes)       November 2015
-Silvia Canessa           (@silviacanessa)       December 2015
-Nick Ackerley            (@nackerley)           December 2015
-Trevor Allen             (@treviallen)          July 2016
-Jonathan Griffin         (@griffij)             October 2016
-Özkan Kale               (@ozkankale)           October 2016
-Valerio Poggi            (@klunk386)            March 2017
-Abhineet Gupta           (@abhineetgupta)       April 2017
-Armando Scarpati         (@hascar)              June 2017
-Kendra Johnson           (@kejohnso)            April 2018
-Pablo Heresi             (@pheresi)             August 2018
-Chris Van Houtte         (@cvanhoutte)          October 2018
-Stéphane Drouet          (@stephane-on)         December 2018
-Changlong Li             (@mstlgzfdh)           February 2019
-Rodolfo Puglia           (@rodolfopuglia)       February 2019
-Giovanni Lanzano         (@giovannilanzanoINGV) March 2019
-Guillaume Daniel         (@guyomd)              April 2019
-Richard Styron           (@cossatot)            July 2019
-Kris Vanneste            (@krisvanneste)        September 2019
-Alberto Chiusole         (@bebosudo)            November 2019
-Iason Grigoratos         (@jasongrig)           April 2020
-Francis Bernales         (@ftbernales)          August 2020
-Athanasios Papadopoulos  (@thpap)               September 2020
-Viktor Polak             (@viktor76525)         November 2020
-Thomas Chartier          (@tomchartier)         December 2020
-Claudia Mascandola       (@mascandola)          December 2020
-Nicolas Schmid           (@schmidni)            March 2021
-Antonio Ettorre          (@antonioettorre)      April 2021
-Stanley Sayson           (@stansays)            July 2021
-Nico Kuehn               (@nikuehn)             July 2021
-Elena Manea              (@manea)               August 2021
-Shreyasvi Chandrasekhar  (@Shreyasvi91)         November 2021
-Giuseppina Tusa          (@gtus23)              December 2021
-Miguel Leonardo-Suárez   (@mleonardos)          December 2021
-Manuela Villani          (@ManuelaVillani)      January 2022
-Prajakta Jadhav          (@Prajakta-Jadhav-25)  February 2022
-Dharma Wijewickreme      (@Dharma-Wijewickreme) February 2022
-Tom Son                  (@SnowNooDLe)          March 2022
-Julián Montejo Espitia   (@SantiMon1417)        May 2022
-Pablo Iturrieta          (@pabloitu)            June 2022
-Anne Hulsey              (@annehulsey)          July 2022
-Nicole Paul              (@nicolepaul)          May 2023
-Claudio Schill           (@claudio525)          June 2023
-Astha Poudel             (@asthapoudel)         July 2023
-Lana Todorovic           (@LanaTodorovic93)     August 2023
-Christopher Brooks       (@CB-quakemodel)       September 2023
-Chris di Caprio          (@chrisdicaprio)       January 2024
-Michal Kolaj             (@MichalKolaj)         March 2024
-Kirsty Bayliss           (@kirstybayliss)       April 2024 
-Fatemeh Alishahiha       (@FatemehAlsh)         May 2024
-Anna Rood                (@AnnaRood)            May 2024
-Kyle Smith               (@kslytherin)          June 2024
-Savvinos Aristeidou      (@Savvinos-Aristeidou) July 2024
-Davit Shahnazaryan       (@davitshahnazaryan3)  July 2024
-Enrico Abcede            (@emabcede30)          September 2024
-Ilaria Oliveti           (@IlariaOliveti)       October 2024
-Catarina Costa           (@catarinaquintela)    February 2025
-Mara Mita                (@MaraMita)            February 2025
-Valeria Cascone          (@ValeriaCascone)      February 2025
-Baran Güryuva            (@BaranGuryuva)        May 2025
-Guillermo Aldama-Bustos  (@aldabus)             August 2025
-Myles Turner             (@mylesturner99)       August 2025
-Amir Taherian            (@amirt1994)           October 2025
-Ji Kun                   (@JIKUN1990)           November 2025
-Amirhossein Mohammadi    (@amirxdbx)            December 2025
-Maoxin Wang              (@MaoxinWang)          December 2025
-Antonio Scala            (@antonio-scala)       January 2026
-Nicholas Clemett         (@nc-hsu)              January 2026
-Thuany Costa de Lima     (@thuanycostadelima)   May 2026
-Fahrettin Kuran          (@kurannn)             May 2026
-Savas Ceylan             (@sceylan)             June 2026
-Amir Shahmohammadian     (@Shahmohamadian)      July 2026
-Mohsen Kohrangi          (@Mohsen-Kohrangi)     August 2026
-Vitor Azevedo Monteiro   (@vitorazevedomonteiro)August 2026
+Marco Pagani             (@mmpagani)             July 2010
+Andy Smith               (@termie)               August 2010
+Fabian Euchner           (@feuchner)             August 2010
+Aurea Mömke              (@amoemke)              August 2010
+Joshua McKenty           (@joshuamckenty)        August 2010
+Philipp Kästli           (@kaestli)              August 2010
+Christopher MacGown      (@ChristopherMacGown)   November 2010
+Lars Butler              (@larsbutler)           November 2010
+Roland Siegert           (@rolandsiegert)        November 2010
+Andrea Cerisara          (@acerisara)            December 2010
+Vitor Silva              (@vsilva)               December 2010
+Marco Milanesi           (@kpanic)               February 2011
+Muharem Hrnjadovic       (@arbeit)               February 2011
+Damiano Monelli          (@monellid)             May 2011
+Gabriele Favalessa       (@favalex)              June 2011
+Mattia Barbon            (@mbarbon)              June 2011
+Giuseppe Vallarelli      (@gvallarelli)          July 2011
+Anton Gritsay            (@angri)                August 2011
+Luigi Panzeri            (@matley)               August 2012
+Matteo Nastasi           (@nastasi-oq)           November 2012
+Michele Simionato        (@micheles)             December 2012
+Luis Rodríguez           (@luisera)              December 2012
+Daniele Viganò           (@daniviga)             April 2013
+Graeme Weatherill        (@g-weatherill)         September 2013
+Paolo Tormene            (@ptormene)             October 2013
+Yen-Shin Chen            (@vup1120)              November 2013
+Julio Garcia             (@julgp)                March 2014
+Laurentiu Danciu         (@danciul)              August 2014
+Nick Horspool            (@nickhorspool)         September 2014
+Anirudh Rao              (@raoanirudh)           January 2015
+C. Bruce Worden          (@cbworden)             August 2015
+Robin Gee                (@rcgee)                September 2015
+Catalina Yepes-Estrada   (@CatalinaYepes)        November 2015
+Silvia Canessa           (@silviacanessa)        December 2015
+Nick Ackerley            (@nackerley)            December 2015
+Trevor Allen             (@treviallen)           July 2016
+Jonathan Griffin         (@griffij)              October 2016
+Özkan Kale               (@ozkankale)            October 2016
+Valerio Poggi            (@klunk386)             March 2017
+Abhineet Gupta           (@abhineetgupta)        April 2017
+Armando Scarpati         (@hascar)               June 2017
+Kendra Johnson           (@kejohnso)             April 2018
+Pablo Heresi             (@pheresi)              August 2018
+Chris Van Houtte         (@cvanhoutte)           October 2018
+Stéphane Drouet          (@stephane-on)          December 2018
+Changlong Li             (@mstlgzfdh)            February 2019
+Rodolfo Puglia           (@rodolfopuglia)        February 2019
+Giovanni Lanzano         (@giovannilanzanoINGV)  March 2019
+Guillaume Daniel         (@guyomd)               April 2019
+Richard Styron           (@cossatot)             July 2019
+Kris Vanneste            (@krisvanneste)         September 2019
+Alberto Chiusole         (@bebosudo)             November 2019
+Iason Grigoratos         (@jasongrig)            April 2020
+Francis Bernales         (@ftbernales)           August 2020
+Athanasios Papadopoulos  (@thpap)                September 2020
+Viktor Polak             (@viktor76525)          November 2020
+Thomas Chartier          (@tomchartier)          December 2020
+Claudia Mascandola       (@mascandola)           December 2020
+Nicolas Schmid           (@schmidni)             March 2021
+Antonio Ettorre          (@antonioettorre)       April 2021
+Stanley Sayson           (@stansays)             July 2021
+Nico Kuehn               (@nikuehn)              July 2021
+Elena Manea              (@manea)                August 2021
+Shreyasvi Chandrasekhar  (@Shreyasvi91)          November 2021
+Giuseppina Tusa          (@gtus23)               December 2021
+Miguel Leonardo-Suárez   (@mleonardos)           December 2021
+Manuela Villani          (@ManuelaVillani)       January 2022
+Prajakta Jadhav          (@Prajakta-Jadhav-25)   February 2022
+Dharma Wijewickreme      (@Dharma-Wijewickreme)  February 2022
+Tom Son                  (@SnowNooDLe)           March 2022
+Julián Montejo Espitia   (@SantiMon1417)         May 2022
+Pablo Iturrieta          (@pabloitu)             June 2022
+Anne Hulsey              (@annehulsey)           July 2022
+Nicole Paul              (@nicolepaul)           May 2023
+Claudio Schill           (@claudio525)           June 2023
+Astha Poudel             (@asthapoudel)          July 2023
+Lana Todorovic           (@LanaTodorovic93)      August 2023
+Christopher Brooks       (@CB-quakemodel)        September 2023
+Chris di Caprio          (@chrisdicaprio)        January 2024
+Michal Kolaj             (@MichalKolaj)          March 2024
+Kirsty Bayliss           (@kirstybayliss)        April 2024 
+Fatemeh Alishahiha       (@FatemehAlsh)          May 2024
+Anna Rood                (@AnnaRood)             May 2024
+Kyle Smith               (@kslytherin)           June 2024
+Savvinos Aristeidou      (@Savvinos-Aristeidou)  July 2024
+Davit Shahnazaryan       (@davitshahnazaryan3)   July 2024
+Enrico Abcede            (@emabcede30)           September 2024
+Ilaria Oliveti           (@IlariaOliveti)        October 2024
+Catarina Costa           (@catarinaquintela)     February 2025
+Mara Mita                (@MaraMita)             February 2025
+Valeria Cascone          (@ValeriaCascone)       February 2025
+Baran Güryuva            (@BaranGuryuva)         May 2025
+Guillermo Aldama-Bustos  (@aldabus)              August 2025
+Myles Turner             (@mylesturner99)        August 2025
+Amir Taherian            (@amirt1994)            October 2025
+Ji Kun                   (@JIKUN1990)            November 2025
+Amirhossein Mohammadi    (@amirxdbx)             December 2025
+Maoxin Wang              (@MaoxinWang)           December 2025
+Antonio Scala            (@antonio-scala)        January 2026
+Nicholas Clemett         (@nc-hsu)               January 2026
+Thuany Costa de Lima     (@thuanycostadelima)    May 2026
+Fahrettin Kuran          (@kurannn)              May 2026
+Savas Ceylan             (@sceylan)              June 2026
+Amir Shahmohammadian     (@Shahmohamadian)       July 2026
+Mohsen Kohrangi          (@Mohsen-Kohrangi)      August 2026
+Vitor Azevedo Monteiro   (@vitorazevedomonteiro) August 2026
 
 Project management
 ------------------
-Joshua McKenty           (@joshuamckenty)       August 2010
-John Tarter                                     November 2010
-Paul Henshaw             (@pslh)                February 2012
+Joshua McKenty           (@joshuamckenty)        August 2010
+John Tarter                                      November 2010
+Paul Henshaw             (@pslh)                 February 2012
 
 Documentation
 -------------
-Sandra Giacomini                                June 2022
-Basar Yucel              (@basaryucell)         May 2023
+Sandra Giacomini                                 June 2022
+Basar Yucel              (@basaryucell)          May 2023
