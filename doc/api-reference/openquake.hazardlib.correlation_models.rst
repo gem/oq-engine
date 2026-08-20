@@ -34,6 +34,26 @@ Spatial models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial.aldea_et_al_2022
+
+.. autoclass:: AldeaEtAl2022
+    :members:
+    :show-inheritance:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial.schiappapietra_et_al_2022
+
+.. autoclass:: SchiappapietraEtAl2022NorthernItaly
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SchiappapietraEtAl2022CentralItaly
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SchiappapietraEtAl2022SouthernItaly
+    :members:
+    :show-inheritance:
+
 Joint spatial and cross-IMT models
 ----------------------------------
 
