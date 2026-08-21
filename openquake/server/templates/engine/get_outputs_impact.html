@@ -107,11 +107,11 @@
     <div class="impact-losses-container">
       {% if losses_header is not None %}
       <table id="impact-losses">
-        * Mean
+        The following table displays mean values
         <thead>
           <tr>
             {% for header in losses_header %}
-              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}{% if forloop.counter >= 3 %} *{% endif %}</th>
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}</th>
             {% endfor %}
           </tr>
         </thead>
