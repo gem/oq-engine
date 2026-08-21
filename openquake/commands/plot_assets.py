@@ -20,6 +20,7 @@ import os
 import numpy
 import shapely
 import logging
+from openquake.engine import APPLICATION
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.calculators.getters import get_ebrupture
@@ -116,8 +117,7 @@ def main(calc_id: int = -1, site_model=False,
             dist = sitecol.get_cdist(rec)
             print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        if (os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT'
-                and not use_shakemap):
+        if (APPLICATION.mode == 'IMPACT' and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
             ax, add_rupture(ax, rup)

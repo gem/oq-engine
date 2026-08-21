@@ -70,7 +70,7 @@ from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo, impact
+from openquake.engine import engine, aelo, impact, APPLICATION
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
@@ -83,7 +83,7 @@ from wsgiref.util import FileWrapper
 
 from openquake.server.papers import base as papers
 
-if settings.LOCKDOWN:
+if APPLICATION.has_authentication_enabled():
     from django.contrib.auth import authenticate, login, logout
 
 UTC = timezone.utc
@@ -714,7 +714,7 @@ def share_job(user_level, calc_id, share):
 
 
 def get_user_level(request):
-    if settings.LOCKDOWN:
+    if APPLICATION.has_authentication_enabled():
         try:
             return request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
@@ -1647,7 +1647,7 @@ def save_pik(job, dirname):
 
 
 def get_allowed_outputs(oes, request):
-    if settings.LOCKDOWN:
+    if APPLICATION.has_authentication_enabled():
         # When authentication is enabled, HIDDEN_OUTPUTS are visible only to
         # users with level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
         user = request.user
@@ -1767,7 +1767,7 @@ def calc_result(request, result_id):
             return HttpResponseForbidden()
         # When authentication is enabled, HIDDEN_OUTPUTS are visible only to
         # users with level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
-        if (settings.LOCKDOWN
+        if (APPLICATION.has_authentication_enabled()
                 and ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
@@ -1921,7 +1921,7 @@ def exposure_by_lse(request, calc_id):
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
+    Wrapper over the `oq extract` command. If authentication is enabled
     only calculations owned by the current user can be retrieved.
     """
     job = logs.dbcmd('get_job', int(calc_id))
@@ -2042,17 +2042,15 @@ def calc_zip(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    application_mode = settings.APPLICATION_MODE
-    # NOTE: application_mode is already added by the context processor
     params = {}
-    if application_mode == 'AELO':
+    if APPLICATION.mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
-    elif application_mode == 'IMPACT':
+    elif APPLICATION.mode == 'IMPACT':
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
@@ -2071,7 +2069,6 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    application_mode = settings.APPLICATION_MODE
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
@@ -2082,11 +2079,11 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
-            if application_mode == 'IMPACT':
+            if APPLICATION.mode == 'IMPACT':
                 pngs['avg_gmf'] = [
                     k for k in ds['png'] if k.startswith('avg_gmf-')]
                 pngs['assets'] = 'assets.png' in ds['png']
-            if application_mode == 'AELO':
+            if APPLICATION.mode == 'AELO':
                 pngs['hcurves'] = 'hcurves.png' in ds['png']
                 # NOTE: remove "and 'All' in k" to show the individual plots
                 pngs['disagg_by_src'] = [
@@ -2095,7 +2092,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                 pngs['mce'] = 'mce.png' in ds['png']
                 pngs['mce_spectra'] = 'mce_spectra.png' in ds['png']
     kwargs['pngs'] = pngs
-    if application_mode == 'AELO':
+    if APPLICATION.mode == 'AELO':
         # e.g. [[-61.071, 14.686, 0.0]]
         kwargs['lon'], kwargs['lat'] = ds['oqparam'].sites[0][:2]
         kwargs['site_class'] = get_site_class_display_name(ds)
@@ -2113,7 +2110,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             kwargs['calc_aelo_version'] = '1.0.0'
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
-    elif application_mode == 'IMPACT':
+    elif APPLICATION.mode == 'IMPACT':
         kwargs['warnings'] = get_aristotle_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 

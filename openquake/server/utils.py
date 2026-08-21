@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import getpass
 import requests
 import logging
@@ -25,7 +24,7 @@ from time import sleep
 from django.conf import settings
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from openquake.engine import __version__ as oqversion
+from openquake.engine import __version__ as oqversion, APPLICATION
 from openquake.calculators.base import get_aelo_version
 
 
@@ -34,7 +33,7 @@ def is_superuser(request):
     Without authentication (settings.LOCKDOW is false) every user is considered
     a superuser, otherwise look at the attribute `request.user.is_superuser`.
     """
-    if not settings.LOCKDOWN:
+    if not APPLICATION.has_authentication_enabled():
         return True
     return request.user.is_superuser if hasattr(request, 'user') else False
 
@@ -44,7 +43,7 @@ def get_username(request):
     Returns the users from `request` if authentication is enabled, otherwise
     returns the default user (from settings, or as reported by the OS).
     """
-    if settings.LOCKDOWN and hasattr(request, 'user'):
+    if APPLICATION.has_authentication_enabled() and hasattr(request, 'user'):
         if request.user.is_authenticated:
             username = request.user.username
         else:
@@ -61,10 +60,10 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
-    if settings.LOCKDOWN:
+    if APPLICATION.has_authentication_enabled():
         User = get_user_model()
     users = [get_username(request)]
-    if settings.LOCKDOWN and hasattr(request, 'user'):
+    if APPLICATION.has_authentication_enabled() and hasattr(request, 'user'):
         if request.user.is_authenticated:
             groups = request.user.groups.all()
             if groups:
@@ -94,7 +93,8 @@ def user_has_permission(request, owner, job_status):
     to view a job-related resource, returns `False` otherwise.
     """
     if job_status == 'shared':
-        if settings.LOCKDOWN and hasattr(request, 'user'):
+        if APPLICATION.has_authentication_enabled() and hasattr(
+                request, 'user'):
             return request.user.is_authenticated
         return True
     else:
@@ -107,9 +107,10 @@ def oq_server_context_processor(request):
     context variables.
     """
 
-    # NOTE: defining env variable at runtime, instead of defining it when the
-    # engine imports variable from the server module
-    os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
+    # FIXME
+    # # NOTE: defining env variable at runtime, instead of defining it when the
+    # # engine imports variable from the server module
+    # os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
 
     context = {}
 
@@ -131,16 +132,16 @@ def oq_server_context_processor(request):
     context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
     context['external_tools'] = settings.EXTERNAL_TOOLS
-    context['application_mode'] = settings.APPLICATION_MODE
+    context['application'] = APPLICATION
     context['announcements'] = announcements
     context['help_url'] = settings.HELP_URL
     if settings.GOOGLE_ANALYTICS_TOKEN is not None:
         context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
-    if settings.APPLICATION_MODE == 'AELO':
+    if APPLICATION.mode == 'AELO':
         context['aelo_version'] = get_aelo_version()
 
     # setting user_level
-    if settings.LOCKDOWN:
+    if APPLICATION.has_authentication_enabled():
         try:
             context['user_level'] = request.user.level
         except AttributeError:  # e.g. AnonymousUser (not authenticated)
@@ -151,7 +152,8 @@ def oq_server_context_processor(request):
         # NOTE: this needs to be the maximum existing user level
         context['user_level'] = 2
 
-    context['lockdown'] = settings.LOCKDOWN
+    # FIXME
+    # context['lockdown'] = APPLICATION.has_authentication_enabled()
 
     return context
 

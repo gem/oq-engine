@@ -18,6 +18,7 @@
 
 from django.urls import re_path, path
 from django.conf import settings
+from openquake.engine import APPLICATION
 from openquake.server import views
 
 # each url is prefixed with /v1/calc/
@@ -51,20 +52,22 @@ urlpatterns = [
     path('get_preferred_job_for_tag/<str:tag_name>',
          views.calc_get_preferred_job_for_tag),
 ]
-if settings.APPLICATION_MODE == 'AELO':
-    urlpatterns.extend([
-        re_path(r'^aelo_run$', views.aelo_run),
-        re_path(r'^(\d+)/abort$', views.calc_abort),
-        re_path(r'^(\d+)/remove$', views.calc_remove),
-    ])
-elif settings.APPLICATION_MODE == 'IMPACT':
+if APPLICATION.has_standard_job_launching_enabled():
+    urlpatterns.append(re_path(r'^run$', views.calc_run))
+if APPLICATION.has_aelo_job_launching_enabled():
+    urlpatterns.append(re_path(r'^aelo_run$', views.aelo_run))
+if APPLICATION.has_impact_job_launching_enabled():
+    urlpatterns.append(re_path(r'^impact_run$', views.impact_run))
+    urlpatterns.append(re_path(r'^impact_run_with_shakemap$',
+                               views.impact_run_with_shakemap))
+if APPLICATION.has_job_removing_enabled():
+    urlpatterns.append(re_path(r'^(\d+)/remove$', views.calc_remove))
+if APPLICATION.has_job_aborting_enabled():
+    urlpatterns.append(re_path(r'^(\d+)/abort$', views.calc_remove))
+elif APPLICATION.mode == 'IMPACT':
     urlpatterns.extend([
         re_path(r'^impact_get_rupture_data$',
                 views.impact_get_rupture_data),
-        re_path(r'^impact_run$', views.impact_run),
-        re_path(r'^impact_run_with_shakemap$', views.impact_run_with_shakemap),
-        re_path(r'^(\d+)/abort$', views.calc_abort),
-        re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^(\d+)/impact$', views.impact_results),
         re_path(r'^(\d+)/exposure_by_mmi$', views.exposure_by_mmi),
         re_path(r'^(\d+)/exposure_by_lse$', views.exposure_by_lse),
@@ -72,10 +75,8 @@ elif settings.APPLICATION_MODE == 'IMPACT':
         re_path(r'^(\d+)/extract_html_table/([-/_\.\(\)\w]+)$',
                 views.extract_html_table),
     ])
-elif settings.APPLICATION_MODE != 'READ_ONLY':
+elif APPLICATION.mode != 'READ_ONLY':  # FIXME
     urlpatterns.extend([
-        re_path(r'^(\d+)/abort$', views.calc_abort),
-        re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^run$', views.calc_run),
         re_path(r'^run_ini$', views.calc_run_ini),
         re_path(r'^validate_ini$', views.validate_ini),

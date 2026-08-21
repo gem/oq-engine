@@ -25,6 +25,7 @@ import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
+from openquake.engine import APPLICATION
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -139,8 +140,6 @@ MIDDLEWARE = (
     # 'openquake.server.middleware.PrintHeadersMiddleware',
 )
 
-# Authentication is not enabled by default
-LOCKDOWN = False
 # Forbid users to see other users outputs by default
 ACL_ON = True
 
@@ -215,17 +214,6 @@ SERVER_NAME = socket.gethostname()
 # (either 'username@hostname' or just 'username')
 DISPLAY_USER_HOST = False
 
-APPLICATION_MODES = [
-    'PUBLIC',      # The default behavior without authentication
-    'RESTRICTED',  # Enabling authentication
-    'AELO',        # Specific configurations for AELO installations
-    'IMPACT',   # Specific configurations for IMPACT installations
-    'READ_ONLY',   # Inhibits the possibility to run calculations
-    'TOOLS_ONLY',  # Provides standalone tools
-]
-
-APPLICATION_MODE = 'PUBLIC'
-
 IMPACT_DEFAULT_USGS_ID = ''
 # IMPACT_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # IMPACT_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
@@ -235,7 +223,7 @@ STANDALONE_APP_NAME_MAP = {
         'openquakeplatform_ipt': 'ipt',
         'django_gem_taxonomy': 'taxonomy',
     }
-if APPLICATION_MODE != 'TOOLS_ONLY':
+if not APPLICATION.has_standalone_tools_enabled():
     STANDALONE_APP_NAME_MAP['openquakeplatform_taxonomy'] = 'glossary'
 
 EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
@@ -317,16 +305,9 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
     }
     LOGGING['handlers']['console']['filters'] = ['suppress_403_warnings']
 
-# NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
-# both the default setting and the one specified in the local settings
-APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
-
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'IMPACT'):
-    LOCKDOWN = True
-
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
-if APPLICATION_MODE not in ('PUBLIC',):
+if APPLICATION.has_authentication_enabled():
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
             0, 'django.template.context_processors.request')
@@ -340,7 +321,6 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
 
-if LOCKDOWN:
     if TEST:
         # NOTE: keep the setting if already specified
         #       (e.g. in local_settings.py)
@@ -357,16 +337,20 @@ if LOCKDOWN:
     else:
         EMAIL_BACKEND = (
             EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend')
-    if APPLICATION_MODE == 'IMPACT':
-        ALLOW_DATASTORE_DOWNLOAD = False
-        EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
-        EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
-    elif APPLICATION_MODE == 'AELO':
-        EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
-        EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
-    else:
-        EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
-        EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
+
+    # FIXME
+    # if APPLICATION_MODE == 'IMPACT':
+    #     ALLOW_DATASTORE_DOWNLOAD = False
+    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
+    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
+    # elif APPLICATION_MODE == 'AELO':
+    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
+    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
+    # else:
+    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
+    EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+    EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
 
     # NOTE: the following variables are needed to send pasword reset emails
     #       using the createnormaluser Django command.

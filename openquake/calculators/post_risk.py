@@ -25,6 +25,7 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel
+from openquake.engine import APPLICATION
 from openquake.hazardlib.stats import weighted_quantiles
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
@@ -652,7 +653,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks and save agg_curves-stats
         """
-        if os.environ.get('OQ_APPLICATION_MODE') == 'IMPACT':
+        if APPLICATION.mode == 'IMPACT':
             try:
                 self._plot_assets()
             except Exception:

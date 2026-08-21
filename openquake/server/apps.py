@@ -20,6 +20,7 @@ import os
 from django.apps import AppConfig
 from django.conf import settings
 from sqlite3 import OperationalError
+from openquake.engine import APPLICATION
 from openquake.baselib import config
 from openquake.server import dbserver, db
 
@@ -40,7 +41,7 @@ class ServerConfig(AppConfig):
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
 
         import openquake.server.signals  # NOQA
-        if settings.LOCKDOWN:
+        if APPLICATION.has_authentication_enabled():
             import openquake.server.user_profile.signals  # NOQA
 
         # reset any computation left in the 'executing' state
@@ -50,11 +51,7 @@ class ServerConfig(AppConfig):
             # in the action "docs" the database does not exist
             pass
 
-        if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
-            raise ValueError(
-                f'Invalid application mode: "{settings.APPLICATION_MODE}".'
-                f' It must be one of {settings.APPLICATION_MODES}')
-        if settings.APPLICATION_MODE == 'IMPACT':
+        if APPLICATION.mode == 'IMPACT':
             try:
                 # NOTE: optional dependency needed for IMPACT
                 from timezonefinder import TimezoneFinder  # noqa
@@ -63,7 +60,8 @@ class ServerConfig(AppConfig):
                     'The python package "timezonefinder" is not installed.'
                     ' It is required in order to convert the UTC time to'
                     ' the local time of the event.')
-        if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
+        if (APPLICATION.has_authentication_enabled()
+                and 'django_pam.auth.backends.PAMBackend'
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
             if settings.EMAIL_BACKEND is None:
@@ -80,12 +78,12 @@ class ServerConfig(AppConfig):
                             f'If authentication is enabled (without PAM)'
                             f' all the following settings must be specified:'
                             f' {required_email_settings}')
-        if settings.APPLICATION_MODE in ('AELO', 'IMPACT'):
+        if APPLICATION.has_mosaic_dir_required_enabled():
             if not config.directory.mosaic_dir:
                 raise NameError(
-                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
+                    f'If APPLICATION.mode is {APPLICATION.mode}, '
                     f'mosaic_dir must be specified in openquake.cfg')
-            if settings.APPLICATION_MODE == 'AELO':
+            if APPLICATION.mode == 'AELO':
                 # NOTE: this might be needed also for IMPACT
                 aelo_changelog_path = os.path.join(
                     config.directory.mosaic_dir, 'aelo_changelog.ini')

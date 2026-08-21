@@ -19,6 +19,11 @@
 import os
 import sys
 import configparser
+import logging
+from enum import Enum, auto
+from dataclasses import dataclass, field
+from typing import FrozenSet
+
 
 # use utf8 as default encodings on all platforms (i.e. Windows)
 # TODO: to remove in Python 3.15 when this will become the default
@@ -133,6 +138,180 @@ else:  # linux
     except KeyError:  # on the IUSS cluster
         install_user = None
     config.multi_user = install_user in ('root', 'openquake')
+
+
+class Mode(str, Enum):
+    # TODO: we probably need better names. For instance:
+    #   - PUBLIC     -> SINGLE_USER,
+    #   - RESTRICTED -> MULTI_USER
+
+    PUBLIC = 'PUBLIC'
+    RESTRICTED = 'RESTRICTED'
+    AELO = 'AELO'
+    IMPACT = 'IMPACT'
+    READ_ONLY = 'READ_ONLY'
+    TOOLS_ONLY = 'TOOLS_ONLY'
+
+    @property
+    def description(self) -> str:
+        return {
+            Mode.PUBLIC: "Single user application without authentication",
+            Mode.RESTRICTED: "Multi-user application with authentication",
+            Mode.AELO: "AELO assessment mode",
+            Mode.IMPACT: "Impact assessment mode",
+            Mode.READ_ONLY: "Inhibits the possibility to run calculations",
+            Mode.TOOLS_ONLY: "Provides standalone tools",
+        }[self]
+
+    def __repr__(self) -> str:
+        return f"{self.name}: {self.description}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+class Capability(Enum):
+    # auto assigns incremental integers
+    AUTHENTICATION = auto()
+    JOB_ABORTING = auto()
+    JOB_REMOVING = auto()
+    JOB_SHARING = auto()
+    JOB_TAGGING = auto()
+    JOB_CONTINUING = auto()
+    STANDARD_JOB_LAUNCHING = auto()
+    AELO_JOB_LAUNCHING = auto()
+    IMPACT_JOB_LAUNCHING = auto()
+    STANDALONE_TOOLS = auto()
+    MOSAIC_DIR_REQUIRED = auto()
+    VISIBLE_SERVER_NAME = auto()
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+# Mapping modes to active capabilities
+MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
+    Mode.PUBLIC: frozenset(
+        {
+         Capability.STANDARD_JOB_LAUNCHING,
+         Capability.JOB_CONTINUING,
+         Capability.JOB_ABORTING,
+         Capability.JOB_REMOVING,
+         Capability.VISIBLE_SERVER_NAME,
+         }
+    ),
+    Mode.RESTRICTED: frozenset(
+        {
+         Capability.AUTHENTICATION,
+         Capability.STANDARD_JOB_LAUNCHING,
+         Capability.JOB_CONTINUING,
+         Capability.JOB_ABORTING,
+         Capability.JOB_REMOVING,
+         Capability.JOB_SHARING,
+         Capability.JOB_TAGGING,
+         Capability.VISIBLE_SERVER_NAME,
+         }
+    ),
+    Mode.IMPACT: frozenset(
+        {
+         Capability.AUTHENTICATION,
+         Capability.IMPACT_JOB_LAUNCHING,
+         Capability.JOB_ABORTING,
+         Capability.JOB_REMOVING,
+         Capability.JOB_SHARING,
+         Capability.JOB_TAGGING,
+         Capability.VISIBLE_SERVER_NAME,
+         }
+    ),
+    Mode.AELO: frozenset(
+        {
+         Capability.AUTHENTICATION,
+         Capability.AELO_JOB_LAUNCHING,
+         Capability.JOB_ABORTING,
+         Capability.JOB_REMOVING,
+         Capability.MOSAIC_DIR_REQUIRED,
+         }
+    ),
+    Mode.READ_ONLY: frozenset(
+        {
+         Capability.AUTHENTICATION,
+         Capability.VISIBLE_SERVER_NAME,
+         }
+    ),
+    Mode.TOOLS_ONLY: frozenset(
+        {
+         Capability.AUTHENTICATION,
+         Capability.STANDALONE_TOOLS,
+         Capability.VISIBLE_SERVER_NAME,
+         }
+    ),
+}
+
+
+def generate_capability_checkers(cls):
+    for cap in Capability:
+        method_name = f"has_{cap.name.lower()}_enabled"
+
+        # Helper function creates a proper closure over 'cap'
+        def make_method(capability):
+            return lambda self: self.has(capability)
+
+        setattr(cls, method_name, make_method(cap))
+    return cls
+
+
+@generate_capability_checkers
+@dataclass(frozen=True)
+class Application:
+    mode: Mode
+    capabilities: FrozenSet[Capability] = field(init=False)
+
+    def __init__(self, mode: str):
+        target_mode: Mode
+
+        # Normalize input string (case-insensitive)
+        raw_str = str(mode).upper()
+        try:
+            target_mode = Mode[raw_str]
+        except KeyError:
+            available_modes = [m.name for m in Mode]
+            logging.warning(
+                "Application mode '%s' is not recognized. "
+                "Falling back to default 'PUBLIC' mode. "
+                "Available modes are: %s",
+                mode,
+                ", ".join(available_modes),
+            )
+            target_mode = Mode.PUBLIC
+
+        # Set immutable fields on frozen dataclass
+        object.__setattr__(self, "mode", target_mode)
+        object.__setattr__(
+            self, "capabilities", MODE_CAPABILITIES.get(
+                target_mode, frozenset())
+        )
+
+    def has(self, cap: Capability) -> bool:
+        return cap in self.capabilities
+
+    def __repr__(self) -> str:
+        caps_formatted = ("{" + ", ".join(cap.name for cap in
+                                          self.capabilities) + "}")
+        return f"Application(mode={self.mode}, capabilities={caps_formatted})"
+
+
+def get_application() -> Application:
+    """
+    Reads the raw mode from config/env and returns an Application instance.
+    """
+    raw_mode = os.environ.get("OQ_APPLICATION_MODE",
+                              config.webapi.application_mode)
+    return Application(mode=raw_mode)
+
+
+# Singleton initialized on import
+APPLICATION = get_application()
+
 
 # the version is managed by the universal installer
 __version__ = '3.27.0'

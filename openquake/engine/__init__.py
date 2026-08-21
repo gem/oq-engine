@@ -51,6 +51,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 from openquake.baselib import __version__  # noqa
+from openquake.baselib import APPLICATION  # noqa
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

@@ -3,7 +3,7 @@
 
   {% block nav-items %}
   {{ block.super }}
-                {% if application_mode != 'AELO' and application_mode != 'IMPACT' and application_mode != 'READ_ONLY' %}
+                {% if application.has_standard_job_launching_enabled %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -25,15 +25,15 @@
         <div id="oq-body-wrapper">
           <div id="new-release-box" class="alert alert-warning">
           </div>
-          {% if application_mode == 'AELO' %}
+          {% if application.mode == 'AELO' %}
           {% include './includes/aelo_form.html' %}
-          {% elif application_mode == 'IMPACT' %}
+          {% elif application.mode == 'IMPACT' %}
           {% with './includes/impact_form_level_'|addstr:user_level|add:'.html' as template_path %}
           {% include template_path %}
           {% endwith %}
           {% endif %}
           <div class="span12">
-            <h2>List of calculations{% if application_mode != 'AELO' %}{% if server_name %} from {{ server_name }}{% endif %}{% endif %}</h2>
+            <h2>List of calculations{% if application.has_visible_server_name_enabled != 'AELO' %}{% if server_name %} from {{ server_name }}{% endif %}{% endif %}</h2>
             <div id="tag-filters">
                 <label for="list_preferred_only">
                     <input type="checkbox" id="list_preferred_only" name="list_preferred_only">
@@ -93,7 +93,7 @@
                 {% endif %}
                 <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
 
-                {% if application_mode != 'READ_ONLY' and user_level >= 2 and lockdown %}
+                {% if application.has_job_sharing_enabled and user_level >= 2 and application.has_authentication_enabled %}
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
                 <% } else if (calc.get('status') == 'shared') { %>

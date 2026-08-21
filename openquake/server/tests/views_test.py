@@ -26,6 +26,7 @@ import random
 import django
 from django.contrib.auth import get_user_model
 from openquake.baselib.general import gettemp
+from openquake.engine import APPLICATION
 from openquake.commonlib.readinput import loadnpz
 
 
@@ -99,8 +100,7 @@ class EngineServerTestCase(django.test.TestCase):
             time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
-                if os.environ.get('OQ_APPLICATION_MODE') in ('AELO',
-                                                             'IMPACT'):
+                if APPLICATION.mode in ('AELO', 'IMPACT'):
                     # NOTE: some more time is needed in order to wait for the
                     # callback to finish and produce the email notification
                     time.sleep(1)
