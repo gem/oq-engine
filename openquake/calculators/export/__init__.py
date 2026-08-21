@@ -105,7 +105,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
-    'value': 'Value',
+    'value': 'Exposed value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
     'q50': 'Median',

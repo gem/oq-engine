@@ -2579,11 +2579,16 @@ def extract_html_table(request, calc_id, name):
 
     table_contents = table.to_numpy()
     if summarize and name == 'aggrisk_tags':  # the impact table
-        table_header = table_header[1:-1]
-        # keep only rows with '*total*' and discard first and last columns
-        # (ID and NAME)
+        # keep only rows with '*total*' and discard first and last 2 columns
+        # (ID_0, ID and NAME)
+        table_header = table_header[1:-2]
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
-            :, 1:-1]
+            :, 1:-2]
+
+        # NOTE: Intentionally excluding embodied_carbon from this summary
+        table_contents = table_contents[
+            table_contents[:, 0] != 'embodied_carbon']
+
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
         mask = numpy.isin(table_contents[:, 0], rows_to_sum)
