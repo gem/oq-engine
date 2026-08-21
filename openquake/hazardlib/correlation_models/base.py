@@ -22,6 +22,7 @@ from typing import Mapping, Protocol, runtime_checkable
 import numpy
 from scipy import stats
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_utils import corr_clipped, cov_nearest
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
@@ -69,23 +70,104 @@ class CorrelationModel:
     name = ''
     calibrated_component = None
     supported_imts = None
+    calibrated_imts = None
+    imt_approximations = {}
     imc = None
     damping = None
+    period_limits = {}
     required_context = ()
 
     def validate(self):
         """Validate model parameters after construction."""
+        if self.imc is not None and not isinstance(self.imc, const.IMC):
+            raise TypeError(
+                f'{self.name or self.__class__.__name__}.imc must be an '
+                'openquake.hazardlib.const.IMC member')
 
     def validate_imts(self, imts):
         """Raise when an IMT is outside the model's declared scope."""
-        if self.supported_imts is None:
+        model_name = self.name or self.__class__.__name__
+        if self.supported_imts is not None:
+            unsupported = sorted({
+                imt.name for imt in imts
+                if imt.name not in self.supported_imts})
+            if unsupported:
+                raise ValueError(
+                    f'{model_name} does not support '
+                    f'{", ".join(unsupported)}')
+        for imt in imts:
+            if (imt.name == 'SA' and self.damping is not None and
+                    imt.damping != self.damping):
+                raise ValueError(
+                    f'{model_name} supports only '
+                    f'{self.damping:g}%-damped SA')
+            limits = self.period_limits.get(imt.name)
+            if limits is not None:
+                minimum, maximum = limits
+                if not minimum <= imt.period <= maximum:
+                    raise ValueError(
+                        f'{model_name} supports {imt.name} periods from '
+                        f'{minimum:g} to {maximum:g} s, not '
+                        f'{imt.period:g} s')
+        self._validate_imt_combination(imts)
+
+    def _validate_imt_combination(self, imts):
+        """Validate restrictions involving more than one IMT."""
+
+    def validate_context(self, context):
+        """Raise when a predictor required by the model is unavailable."""
+        if not self.required_context:
             return
-        unsupported = sorted({imt.name for imt in imts
-                              if imt.name not in self.supported_imts})
-        if unsupported:
+        values = {} if context is None else getattr(context, 'values', {})
+        missing = []
+        for name in self.required_context:
+            value = None if context is None else getattr(context, name, None)
+            if value is None:
+                value = values.get(name)
+            if value is None:
+                missing.append(name)
+        if missing:
+            model_name = self.name or self.__class__.__name__
             raise ValueError(
-                f'{self.name or self.__class__.__name__} does not support '
-                f'{", ".join(unsupported)}')
+                f'{model_name} requires correlation context values: '
+                f'{", ".join(missing)}')
+
+    @staticmethod
+    def _validate_distances(sites_or_distances):
+        """Return a finite, non-negative distance matrix in float64."""
+        if hasattr(sites_or_distances, 'mesh'):
+            distances = sites_or_distances.mesh.get_distance_matrix()
+        else:
+            distances = sites_or_distances
+        distances = numpy.asarray(distances, dtype=numpy.float64)
+        if distances.ndim != 2:
+            raise ValueError('Distances must be a two-dimensional matrix')
+        if not numpy.all(numpy.isfinite(distances)):
+            raise ValueError('Distances must be finite')
+        if numpy.any(distances < 0):
+            raise ValueError('Distances must be non-negative')
+        return distances
+
+    @staticmethod
+    def _validate_block(block, expected_shape, check_bounds=True):
+        """Validate the shape and values returned by a model."""
+        block = numpy.asarray(block)
+        if block.shape != expected_shape:
+            raise ValueError(
+                f'Expected a correlation block with shape {expected_shape}, '
+                f'got {block.shape}')
+        if not numpy.all(numpy.isfinite(block)):
+            raise ValueError('Correlation values must be finite')
+        if (check_bounds and
+                numpy.any(numpy.abs(block) > 1 + 1E-12)):
+            raise ValueError('Correlation values must be between -1 and 1')
+        return block
+
+    @classmethod
+    def _calibrated_imts(cls):
+        if cls.calibrated_imts is None:
+            return cls.supported_imts
+        return cls.calibrated_imts
 
     def _get_component(self, component=None):
         if component is None:
@@ -117,6 +199,21 @@ class SpatialCrossIMTCorrelationModel(CorrelationModel):
         shape ``(len(imts1) * N1, len(imts2) * N2)``. Joint models should
         implement this method so they can also be used for conditioning.
         """
+        self._get_component(component)
+        self.validate_context(context)
+        if imts2 is None:
+            imts2 = imts1
+        self.validate_imts(imts1)
+        self.validate_imts(imts2)
+        distances = self._validate_distances(distances)
+        block = self._correlation_block(
+            distances, imts1, imts2, context=context)
+        expected = (len(imts1) * distances.shape[0],
+                    len(imts2) * distances.shape[1])
+        return self._validate_block(block, expected)
+
+    def _correlation_block(self, distances, imts1, imts2, context=None):
+        """Implement :meth:`correlation_block` in a concrete model."""
         raise NotImplementedError
 
     def covariance(self, sites, imts, component=None, context=None):
@@ -134,7 +231,16 @@ class SpatialCrossIMTCorrelationModel(CorrelationModel):
         is true. Models with efficient structured factorizations should
         override this method.
         """
-        covariance = self.covariance(sites, imts, component, context)
+        covariance = numpy.asarray(
+            self.covariance(sites, imts, component, context))
+        if covariance.ndim != 2 or covariance.shape[0] != covariance.shape[1]:
+            raise ValueError('A correlation matrix must be square')
+        self._validate_block(
+            covariance, covariance.shape, check_bounds=False)
+        if not numpy.allclose(covariance, covariance.T):
+            raise ValueError('A correlation matrix must be symmetric')
+        if not numpy.allclose(numpy.diag(covariance), 1):
+            raise ValueError('A correlation matrix must have a unit diagonal')
         try:
             lower_triangle = numpy.linalg.cholesky(covariance)
         except numpy.linalg.LinAlgError:
@@ -168,18 +274,41 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
         self.cache = {}
 
     def correlation_matrix(self, sites, imt, component=None, context=None):
-        """Return an ``N x N`` same-IMT spatial correlation matrix."""
+        """Return a same-IMT spatial correlation matrix or block."""
         self._get_component(component)
+        self.validate_context(context)
+        self.validate_imts([imt])
+        distances = self._validate_distances(sites)
+        implementation = type(self)._correlation_matrix
+        if implementation is not SpatialCorrelationModel._correlation_matrix:
+            matrix = implementation(self, distances, imt, context)
+        else:
+            legacy = type(self)._get_correlation_matrix
+            if legacy is SpatialCorrelationModel._get_correlation_matrix:
+                raise NotImplementedError
+            matrix = legacy(self, distances, imt)
+        matrix = self._validate_block(matrix, distances.shape)
+        is_self_distance = (
+            distances.shape[0] == distances.shape[1] and
+            numpy.allclose(distances, distances.T) and
+            numpy.allclose(numpy.diag(distances), 0))
+        if is_self_distance:
+            if not numpy.allclose(matrix, matrix.T):
+                raise ValueError('A correlation matrix must be symmetric')
+            if not numpy.allclose(numpy.diag(matrix), 1):
+                raise ValueError(
+                    'A correlation matrix must have a unit diagonal')
+        return matrix
+
+    def _correlation_matrix(self, distances, imt, context=None):
+        """Implement :meth:`correlation_matrix` in a concrete model."""
         legacy = type(self)._get_correlation_matrix
         if legacy is SpatialCorrelationModel._get_correlation_matrix:
             raise NotImplementedError
-        return legacy(self, sites, imt)
+        return legacy(self, distances, imt)
 
     def _get_correlation_matrix(self, sites, imt):
-        implementation = type(self).correlation_matrix
-        if implementation is SpatialCorrelationModel.correlation_matrix:
-            raise NotImplementedError
-        return implementation(self, sites, imt)
+        return self.correlation_matrix(sites, imt)
 
     def get_lower_triangle_correlation_matrix(self, sites, imt):
         """Return the dense Cholesky factor of the correlation matrix."""
@@ -213,12 +342,8 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
                 sites, imt, component, context)
         return covariance
 
-    def correlation_block(self, distances, imts1, imts2=None,
-                          component=None, context=None):
+    def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return same-IMT spatial blocks for two site vectors."""
-        self._get_component(component)
-        if imts2 is None:
-            imts2 = imts1
         num_sites1, num_sites2 = distances.shape
         correlation = numpy.zeros(
             (len(imts1) * num_sites1, len(imts2) * num_sites2))
@@ -230,8 +355,8 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
                              (index1 + 1) * num_sites1)
                 cols = slice(index2 * num_sites2,
                              (index2 + 1) * num_sites2)
-                correlation[rows, cols] = self.correlation_matrix(
-                    distances, imt1, component, context)
+                correlation[rows, cols] = self._correlation_matrix(
+                    distances, imt1, context)
         return correlation
 
 
@@ -241,6 +366,26 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
     def rho(self, from_imt, to_imt, component=None, context=None):
         """Return the correlation between two IMTs."""
         self._get_component(component)
+        self.validate_context(context)
+        self.validate_imts([from_imt, to_imt])
+        implementation = type(self)._rho
+        if implementation is not CrossIMTCorrelationModel._rho:
+            correlation = implementation(
+                self, from_imt, to_imt, context=context)
+        else:
+            legacy = type(self).get_correlation
+            if legacy is CrossIMTCorrelationModel.get_correlation:
+                raise NotImplementedError
+            correlation = legacy(self, from_imt, to_imt)
+        if not numpy.isscalar(correlation) or not numpy.isfinite(correlation):
+            raise ValueError('A correlation coefficient must be finite')
+        if abs(correlation) > 1 + 1E-12:
+            raise ValueError(
+                'A correlation coefficient must be between -1 and 1')
+        return correlation
+
+    def _rho(self, from_imt, to_imt, context=None):
+        """Implement :meth:`rho` in a concrete model."""
         legacy = type(self).get_correlation
         if legacy is CrossIMTCorrelationModel.get_correlation:
             raise NotImplementedError
@@ -248,15 +393,14 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
 
     def get_correlation(self, from_imt, to_imt):
         """Compatibility alias for :meth:`rho`."""
-        implementation = type(self).rho
-        if implementation is CrossIMTCorrelationModel.rho:
-            raise NotImplementedError
-        return implementation(self, from_imt, to_imt)
+        return self.rho(from_imt, to_imt)
 
     def correlation_matrix(self, imts, component=None, context=None,
                            dtype=float):
         """Return an ``M x M`` cross-IMT correlation matrix."""
         self._get_component(component)
+        self.validate_context(context)
+        self.validate_imts(imts)
         matrix = numpy.zeros((len(imts), len(imts)), dtype)
         for row, from_imt in enumerate(imts):
             for col in range(row, len(imts)):

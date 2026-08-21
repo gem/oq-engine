@@ -29,8 +29,7 @@ class NoCrossCorrelation(TruncatedCrossIMTCorrelationModel):
     name = 'NoCrossCorrelation'
     calibrated_component = ResidualComponent.BETWEEN_EVENT
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
+    def _rho(self, from_imt, to_imt, context=None):
         return from_imt == to_imt
 
     def get_inter_eps(self, imts, num_events, rng):

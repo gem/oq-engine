@@ -25,6 +25,7 @@ https://doi.org/10.1193/1.2857544
 import numpy
 from scipy import constants
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
@@ -34,17 +35,25 @@ from openquake.hazardlib.correlation_models.registry import register_model
     'BJ2008',
     description='Baker and Jayaram (2008) cross-IMT correlation')
 class BakerJayaram2008(CrossIMTCorrelationModel):
-    """Total-residual cross-IMT correlation for GMRotI50."""
+    """Total-residual cross-IMT correlation for GMRotI50.
+
+    The publication calibrated 5%-damped SA from 0.01 to 10 seconds. PGA is
+    represented by the model's shortest calibrated period, SA(0.01).
+    """
 
     name = 'BakerJayaram2008'
     calibrated_component = ResidualComponent.TOTAL
     supported_imts = ('PGA', 'SA')
-    imc = 'GMRotI50'
+    calibrated_imts = ('SA',)
+    imt_approximations = {
+        'PGA': 'SA(0.01)'}
+    imc = const.IMC.GMRotI50
+    damping = 5.0
+    period_limits = {'SA': (0.01, 10.0)}
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
-        from_period = from_imt.period
-        to_period = to_imt.period
+    def _rho(self, from_imt, to_imt, context=None):
+        from_period = from_imt.period or 0.01
+        to_period = to_imt.period or 0.01
         if numpy.abs(from_period - to_period) < 1E-10:
             return 1.0
 

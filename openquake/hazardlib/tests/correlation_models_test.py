@@ -17,10 +17,11 @@
 import numpy
 import pytest
 
-from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib import const, correlation, cross_correlation
 from openquake.hazardlib import correlation_models
 from openquake.hazardlib.correlation_models.base import (
-    ResidualComponent, SpatialCrossIMTCorrelationModel)
+    CorrelationContext, CrossIMTCorrelationModel, ResidualComponent,
+    SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
@@ -42,7 +43,7 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.\
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     wang_du_2013 import (
         WangDu2013PGAIAPGV, WangDu2013SpectralAcceleration)
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 def test_registry_aliases_and_metadata():
@@ -63,7 +64,17 @@ def test_registry_aliases_and_metadata():
         ResidualComponent.WITHIN_EVENT)
     assert specs['JayaramBaker2009'].supported_imts == (
         'PGA', 'PGV', 'SA')
+    assert specs['JayaramBaker2009'].calibrated_imts == ('PGA', 'SA')
+    assert specs['JayaramBaker2009'].imt_approximations == {
+        'PGV': 'SA(1.0)'}
+    assert specs['JayaramBaker2009'].period_limits == {
+        'SA': (0.01, 10.0)}
     cross_imt = get_model_specs('cross_imt')
+    assert cross_imt['BakerCornell2006'].supported_imts == (
+        'PGA', 'PGV', 'SA')
+    assert cross_imt['BakerCornell2006'].calibrated_imts == ('SA',)
+    assert cross_imt['BakerCornell2006'].imt_approximations == {
+        'PGA': 'SA(0.05)', 'PGV': 'SA(0.05)'}
     assert cross_imt['GodaAtkinson2009'].calibrated_component == (
         ResidualComponent.BETWEEN_EVENT)
     assert cross_imt['Bradley2012'].calibrated_component == (
@@ -73,11 +84,12 @@ def test_registry_aliases_and_metadata():
     assert joint['LothBaker2013'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['LothBaker2013'].supported_imts == ('PGA', 'SA')
+    assert joint['LothBaker2013'].calibrated_imts == ('SA',)
     assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
     assert joint['MarkhvidaEtAl2018'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['MarkhvidaEtAl2018'].supported_imts == ('PGA', 'SA')
-    assert joint['MarkhvidaEtAl2018'].imc == 'RotD50'
+    assert joint['MarkhvidaEtAl2018'].imc is const.IMC.RotD50
     assert joint['WangDu2013PGAIAPGV'].cls is WangDu2013PGAIAPGV
     assert joint['WangDu2013PGAIAPGV'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
@@ -101,6 +113,14 @@ def test_registry_instantiation_and_type_validation():
         get_model_class('MissingModel')
 
 
+def test_imc_metadata_validation():
+    model = BakerJayaram2008()
+    assert model.imc is const.IMC.GMRotI50
+    model.imc = 'GMRotI50'
+    with pytest.raises(TypeError, match='imc must be an .*const.IMC member'):
+        model.validate()
+
+
 def test_package_does_not_reexport_models():
     assert not hasattr(correlation_models, 'JayaramBaker2009')
     assert not hasattr(correlation_models, 'get_model')
@@ -116,9 +136,33 @@ def test_residual_component_validation():
                   ResidualComponent.WITHIN_EVENT)
 
 
+def test_baker_cornell_preserves_historical_pgv_proxy():
+    model = BakerCornell2006()
+    assert model.rho(PGV(), SA(0.3)) == model.rho(PGA(), SA(0.3))
+
+
+def test_required_context_validation():
+    class ContextModel(CrossIMTCorrelationModel):
+        supported_imts = ('SA',)
+        required_context = ('mag', 'site_class')
+
+        def _rho(self, from_imt, to_imt, context=None):
+            return 1.0
+
+    model = ContextModel()
+    context = CorrelationContext(
+        mag=6.5, values={'site_class': 'rock'})
+    assert model.rho(SA(0.2), SA(1.0), context=context) == 1
+    with pytest.raises(
+            ValueError, match='requires correlation context values: mag'):
+        model.rho(
+            SA(0.2), SA(1.0),
+            context=CorrelationContext(values={'site_class': 'rock'}))
+
+
 def test_cross_im_covariance_uses_imt_major_ordering():
     model = BakerJayaram2008()
-    imts = [PGA(), SA(0.5)]
+    imts = [SA(0.01), SA(0.5)]
     sites = range(2)
     correlation_value = model.rho(*imts)
     expected = numpy.array([
@@ -137,9 +181,11 @@ def test_default_factor_repairs_indefinite_covariance():
             return numpy.array([[1.0, 1.01], [1.01, 1.0]])
 
     model = IndefiniteModel()
+    sites = range(2)
+    imts = [SA(1.0)]
     with pytest.raises(numpy.linalg.LinAlgError):
-        model.factor(None, None, ensure_psd=False)
-    factor = model.factor(None, None)
+        model.factor(sites, imts, ensure_psd=False)
+    factor = model.factor(sites, imts)
     repaired = factor.lower_triangle @ factor.lower_triangle.T
     assert numpy.linalg.eigvalsh(repaired).min() > 0
 

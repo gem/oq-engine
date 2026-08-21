@@ -29,14 +29,8 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
-def _correlation_matrix(sites_or_distances, imt,
-                        vs30_clustering=False):
+def _evaluate_correlation(distances, imt, vs30_clustering=False):
     """Return the Jayaram and Baker (2009) correlation matrix."""
-    if hasattr(sites_or_distances, 'mesh'):
-        distances = sites_or_distances.mesh.get_distance_matrix()
-    else:
-        distances = sites_or_distances
-
     period = 1.0 if imt.string == 'PGV' else imt.period
     if period < 1:
         if vs30_clustering:
@@ -52,17 +46,24 @@ def _correlation_matrix(sites_or_distances, imt,
     'JB2009', 'JB2009CorrelationModel',
     description='Jayaram and Baker (2009) spatial correlation')
 class JayaramBaker2009(SpatialCorrelationModel):
-    """Within-event spatial correlation by Jayaram and Baker (2009)."""
+    """Within-event spatial correlation by Jayaram and Baker (2009).
+
+    The publication calibrated PGA and 5%-damped SA through 10 seconds. PGV
+    is retained temporarily using OpenQuake's historical SA(1.0) proxy.
+    """
 
     name = 'JayaramBaker2009'
     calibrated_component = ResidualComponent.WITHIN_EVENT
     supported_imts = ('PGA', 'PGV', 'SA')
+    calibrated_imts = ('PGA', 'SA')
+    imt_approximations = {'PGV': 'SA(1.0)'}
+    damping = 5.0
+    period_limits = {'SA': (0.01, 10.0)}
 
     def __init__(self, vs30_clustering):
         super().__init__()
         self.vs30_clustering = vs30_clustering
 
-    def correlation_matrix(self, sites, imt, component=None, context=None):
-        self._get_component(component)
-        return _correlation_matrix(
-            sites, imt, self.vs30_clustering)
+    def _correlation_matrix(self, distances, imt, context=None):
+        return _evaluate_correlation(
+            distances, imt, self.vs30_clustering)

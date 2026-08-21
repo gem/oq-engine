@@ -63,8 +63,8 @@ def test_reference_values():
         period = float(row['period'])
         imt = PGA() if period == 0 else SA(period)
         model = MODELS[row['region']]()
-        actual = model.correlation_matrix(
-            numpy.array([[float(row['distance'])]]), imt)
+        actual = model.correlation_block(
+            numpy.array([[float(row['distance'])]]), [imt], [imt])
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
             rtol=1E-14, atol=1E-15)

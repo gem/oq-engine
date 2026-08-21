@@ -38,6 +38,7 @@ https://github.com/bakerjw/GMMs/blob/master/correlations/lb_2013_spatial_corr.m
 import numpy
 from scipy.interpolate import griddata
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
@@ -179,21 +180,14 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     name = 'LothBaker2013'
     calibrated_component = ResidualComponent.WITHIN_EVENT
     supported_imts = ('PGA', 'SA')
-    imc = 'Average horizontal'
+    calibrated_imts = ('SA',)
+    imt_approximations = {
+        'PGA': 'SA(0.01)'}
+    imc = const.IMC.GEOMETRIC_MEAN
     damping = 5.0
+    period_limits = {'SA': (0.01, 10.0)}
 
-    def validate_imts(self, imts):
-        super().validate_imts(imts)
-        for imt in imts:
-            if imt.name == 'PGA':
-                continue
-            if imt.damping != self.damping:
-                raise ValueError(
-                    f'{self.name} supports only {self.damping:g}%-damped SA')
-            if not 0.01 <= imt.period <= 10.0:
-                raise ValueError(
-                    f'{self.name} supports SA periods from 0.01 to 10 s, '
-                    f'not {imt.period:g} s')
+    def _validate_imt_combination(self, imts):
         if (any(imt.name == 'PGA' for imt in imts) and
                 any(imt.name == 'SA' and imt.period == 0.01
                     for imt in imts)):
@@ -201,22 +195,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                 f'{self.name} cannot combine PGA and SA(0.01), because PGA '
                 'uses SA(0.01) as its correlation proxy')
 
-    def correlation_block(self, distances, imts1, imts2=None,
-                          component=None, context=None):
+    def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        self._get_component(component)
-        if imts2 is None:
-            imts2 = imts1
-        self.validate_imts(imts1)
-        self.validate_imts(imts2)
-        distances = numpy.asarray(distances, dtype=numpy.float64)
-        if distances.ndim != 2:
-            raise ValueError('Distances must be a two-dimensional matrix')
-        if not numpy.all(numpy.isfinite(distances)):
-            raise ValueError('Distances must be finite')
-        if numpy.any(distances < 0):
-            raise ValueError('Distances must be non-negative')
-
         short_range = numpy.exp(-3 * distances / 20)
         long_range = numpy.exp(-3 * distances / 70)
         same_site = distances == 0

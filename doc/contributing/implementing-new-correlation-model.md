@@ -42,17 +42,18 @@ The base interfaces are defined in
 `openquake/hazardlib/correlation_models/base.py`.
 
 - Subclass `SpatialCorrelationModel` when the model correlates one IMT across
-  sites. Implement `correlation_matrix`.
+  sites. Implement `_correlation_matrix`.
 - Subclass `CrossIMTCorrelationModel` when the model correlates different IMTs
-  at one site. Implement `rho`.
+  at one site. Implement `_rho`.
 - Subclass `SpatialCrossIMTCorrelationModel` when the model directly describes
-  a joint field across sites and IMTs. Implement `correlation_block`.
+  a joint field across sites and IMTs. Implement `_correlation_block`.
 
-A joint model should implement `correlation_block` rather than only
+A joint model should implement `_correlation_block` rather than only
 `covariance`. Conditioning requires rectangular covariance blocks between two
 different collections of sites and IMTs. The returned rows and columns must be
 in IMT-major order: all sites for the first IMT, followed by all sites for the
-second IMT, and so on.
+second IMT, and so on. The public methods perform shared validation before
+calling these protected numerical methods.
 
 Place the implementation in the matching package:
 
@@ -76,8 +77,10 @@ scientific review:
 name = 'ExampleModel2026'
 calibrated_component = ResidualComponent.WITHIN_EVENT
 supported_imts = ('SA',)
-imc = 'RotD50'
+calibrated_imts = ('SA',)
+imc = const.IMC.RotD50
 damping = 5.0
+period_limits = {'SA': (0.1, 5.0)}
 required_context = ('mag',)
 ```
 
@@ -86,20 +89,26 @@ The fields have the following meanings:
 - `name` is the canonical configuration name and normally matches the class.
 - `calibrated_component` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or `TOTAL`.
 - `supported_imts` lists the IMTs accepted by the implementation. Clearly
-  distinguish the calibrated IMTs from any documented proxy in the model
-  docstring and validation.
+  distinguish accepted operational approximations from calibrated IMTs.
+- `calibrated_imts` lists the IMTs used to derive the model. It may be omitted
+  when it is identical to `supported_imts`.
+- `imt_approximations` maps each accepted IMT proxy to its canonical
+  substitute, for example `{'PGA': 'SA(0.01)'}`.
 - `imc` identifies the intensity measure component for which the model was
-  derived.
+  derived, using a member of `openquake.hazardlib.const.IMC`.
 - `damping` gives the supported spectral damping, when applicable.
+- `period_limits` gives the inclusive calibrated period range for each
+  spectral IMT.
 - `required_context` lists predictors obtained from `CorrelationContext`.
 
 Use `None` only when a field genuinely does not apply or the model is not
-restricted. The base class validates IMT names and residual components. Do not
-infer a proxy SA period for an unsupported IMT merely from a similar period. A
-proxy established by an authoritative source or operational convention must
-be scientifically justified, explicitly documented and tested. Implement any
-additional validation required for spectral periods, damping, component
-definitions, context values and constructor parameters.
+restricted. The base classes validate IMT names, spectral periods, damping,
+residual components, required context, distance matrices and returned matrix
+values. Do not infer a proxy SA period for an unsupported IMT merely from a
+similar period. A proxy established by an authoritative source or operational
+convention must be scientifically justified, explicitly documented and
+tested. Implement only validation specific to an IMT combination, component
+definition, context value or constructor parameter in the concrete class.
 
 ## Register the model
 

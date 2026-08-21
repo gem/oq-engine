@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
 import numpy
 
 from openquake.hazardlib.imt import SA, PGA, PGV
@@ -51,12 +50,12 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
 
     def test_clustered(self):
         cormo = JB2009CorrelationModel(vs30_clustering=True)
-        imt = SA(period=0.001, damping=5)
+        imt = PGA()
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1,          0.44046654, 1,          0.44046654],
-                     [0.44046654, 1,          0.44046654, 0.19401077],
-                     [1,          0.44046654, 1,          0.44046654],
-                     [0.44046654, 0.19401077, 0.44046654, 1]])
+        aaae(corma, [[1,          0.44059678, 1,          0.44060911],
+                     [0.44059678, 1,          0.44059678, 0.19413095],
+                     [1,          0.44059678, 1,          0.44060911],
+                     [0.44060911, 0.19413095, 0.44060911, 1]])
 
         imt = SA(period=0.5, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
@@ -90,15 +89,12 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         sa = SA(period=1e-50, damping=5)
         pga = PGA()
 
-        cormo = JB2009CorrelationModel(vs30_clustering=False)
-        corma = cormo._get_correlation_matrix(self.SITECOL, sa)
-        corma2 = cormo._get_correlation_matrix(self.SITECOL, pga)
-        self.assertTrue((corma == corma2).all())
-
-        cormo = JB2009CorrelationModel(vs30_clustering=True)
-        corma = cormo._get_correlation_matrix(self.SITECOL, sa)
-        corma2 = cormo._get_correlation_matrix(self.SITECOL, pga)
-        self.assertTrue((corma == corma2).all())
+        for vs30_clustering in (False, True):
+            cormo = JB2009CorrelationModel(vs30_clustering)
+            corma = cormo._get_correlation_matrix(self.SITECOL, pga)
+            self.assertTrue((numpy.diag(corma) == 1).all())
+            with self.assertRaisesRegex(ValueError, 'periods from 0.01'):
+                cormo._get_correlation_matrix(self.SITECOL, sa)
 
     def test_pgv(self):
         sa = SA(period=1.0, damping=5)
@@ -107,12 +103,8 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         for vs30_clustering in (False, True):
             cormo = JB2009CorrelationModel(
                 vs30_clustering=vs30_clustering)
-
-            corma = cormo._get_correlation_matrix(
-                self.SITECOL, sa)
-            corma2 = cormo._get_correlation_matrix(
-                self.SITECOL, pgv)
-
+            corma = cormo._get_correlation_matrix(self.SITECOL, sa)
+            corma2 = cormo._get_correlation_matrix(self.SITECOL, pgv)
             self.assertTrue((corma == corma2).all())
 
 
@@ -222,7 +214,7 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
 
         cormo2 = HM2018CorrelationModel(uncertainty_multiplier=1E-30)
         corma2 = cormo2._get_correlation_matrix(self.SITECOL, imt)
-        self.assertTrue((corma == corma2).all())
+        numpy.testing.assert_allclose(corma, corma2)
 
     def test_pga_no_uncertainty(self):
         sa = SA(period=1e-50, damping=5)

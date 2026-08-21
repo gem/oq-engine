@@ -29,6 +29,7 @@ independently to generate the test reference values.
 
 import numpy
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
@@ -103,7 +104,7 @@ class _WangDu2013(SpatialCrossIMTCorrelationModel):
     """Shared parameter and input validation for both publication models."""
 
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    imc = 'geometric mean of horizontal components'
+    imc = const.IMC.GEOMETRIC_MEAN
 
     def __init__(self,
                  vs30_correlation_range=_DEFAULT_VS30_CORRELATION_RANGE):
@@ -115,25 +116,11 @@ class _WangDu2013(SpatialCrossIMTCorrelationModel):
         self.validate()
 
     def validate(self):
+        super().validate()
         value = self.vs30_correlation_range
         if not numpy.isfinite(value) or not 0 <= value <= 25:
             raise ValueError(
                 'vs30_correlation_range must be between 0 and 25 km')
-
-    def _prepare(self, distances, imts1, imts2, component):
-        self._get_component(component)
-        if imts2 is None:
-            imts2 = imts1
-        self.validate_imts(imts1)
-        self.validate_imts(imts2)
-        distances = numpy.asarray(distances, dtype=numpy.float64)
-        if distances.ndim != 2:
-            raise ValueError('Distances must be a two-dimensional matrix')
-        if not numpy.all(numpy.isfinite(distances)):
-            raise ValueError('Distances must be finite')
-        if numpy.any(distances < 0):
-            raise ValueError('Distances must be non-negative')
-        return distances, imts2
 
     def _assemble(self, distances, p01, p02, k, long_range):
         short_decay = numpy.exp(-3 * distances / 10)
@@ -159,11 +146,8 @@ class WangDu2013PGAIAPGV(_WangDu2013):
     name = 'WangDu2013PGAIAPGV'
     supported_imts = ('PGA', 'IA', 'PGV')
 
-    def correlation_block(self, distances, imts1, imts2=None,
-                          component=None, context=None):
+    def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        distances, imts2 = self._prepare(
-            distances, imts1, imts2, component)
         indices1 = [_PGA_IA_PGV_INDEX[imt.name] for imt in imts1]
         indices2 = [_PGA_IA_PGV_INDEX[imt.name] for imt in imts2]
         p0 = _P0[numpy.ix_(indices1, indices2)]
@@ -187,23 +171,10 @@ class WangDu2013SpectralAcceleration(_WangDu2013):
     name = 'WangDu2013SpectralAcceleration'
     supported_imts = ('SA',)
     damping = 5.0
+    period_limits = {'SA': (0.01, 10.0)}
 
-    def validate_imts(self, imts):
-        super().validate_imts(imts)
-        for imt in imts:
-            if imt.damping != self.damping:
-                raise ValueError(
-                    f'{self.name} supports only {self.damping:g}%-damped SA')
-            if not 0.01 <= imt.period <= 10.0:
-                raise ValueError(
-                    f'{self.name} supports SA periods from 0.01 to 10 s, '
-                    f'not {imt.period:g} s')
-
-    def correlation_block(self, distances, imts1, imts2=None,
-                          component=None, context=None):
+    def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the normalized joint correlation block."""
-        distances, imts2 = self._prepare(
-            distances, imts1, imts2, component)
         periods1 = numpy.array([imt.period for imt in imts1])
         periods2 = numpy.array([imt.period for imt in imts2])
         p01 = _coefficient_matrix(_P01_SA, periods1, periods2)

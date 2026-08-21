@@ -26,24 +26,10 @@ https://doi.org/10.1007/s10518-022-01413-z
 
 import numpy
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
-
-
-def _distances(sites_or_distances):
-    if hasattr(sites_or_distances, 'mesh'):
-        distances = sites_or_distances.mesh.get_distance_matrix()
-    else:
-        distances = sites_or_distances
-    distances = numpy.asarray(distances, dtype=float)
-    if distances.ndim != 2:
-        raise ValueError('Distances must be a two-dimensional array')
-    if not numpy.isfinite(distances).all():
-        raise ValueError('Distances must be finite')
-    if (distances < 0).any():
-        raise ValueError('Distances must be non-negative')
-    return distances
 
 
 class _SchiappapietraEtAl2022(SpatialCorrelationModel):
@@ -57,21 +43,11 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
 
     calibrated_component = ResidualComponent.WITHIN_EVENT
     supported_imts = ('PGA', 'SA')
-    imc = 'RotD50'
+    imc = const.IMC.RotD50
     damping = 5.0
+    period_limits = {'SA': (0.1, 2.0)}
     region = None
     range_coefficients = None
-
-    def validate_imts(self, imts):
-        super().validate_imts(imts)
-        for imt in imts:
-            if imt.name == 'SA':
-                if imt.damping != self.damping:
-                    raise ValueError(
-                        f'{self.name} supports only 5%-damped SA')
-                if not 0.1 <= imt.period <= 2.0:
-                    raise ValueError(
-                        f'{self.name} supports SA periods from 0.1 to 2 s')
 
     def _range(self, period):
         a0, a1, a2, hinge = self.range_coefficients
@@ -80,11 +56,9 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
         slope = a1 if period <= hinge else a2
         return a0 + slope * (period - hinge)
 
-    def correlation_matrix(self, sites, imt, component=None, context=None):
-        self._get_component(component)
-        self.validate_imts([imt])
+    def _correlation_matrix(self, distances, imt, context=None):
         period = 0.0 if imt.name == 'PGA' else imt.period
-        return numpy.exp(-3.0 * _distances(sites) / self._range(period))
+        return numpy.exp(-3.0 * distances / self._range(period))
 
 
 @register_model(

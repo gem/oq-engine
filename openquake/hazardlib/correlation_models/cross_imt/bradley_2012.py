@@ -36,13 +36,22 @@ class Bradley2012(TruncatedCrossIMTCorrelationModel):
     name = 'Bradley2012'
     calibrated_component = ResidualComponent.TOTAL
     supported_imts = ('PGV', 'PGA', 'SA')
+    damping = 5.0
+    period_limits = {'SA': (0.01, 10.0)}
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
+    def _validate_imt_combination(self, imts):
+        unique = tuple(dict.fromkeys(imts))
+        if len(unique) <= 1:
+            return
+        if (len(unique) != 2 or
+                sum(imt.name == 'PGV' for imt in unique) != 1):
+            raise ValueError(
+                f'{self.name} defines only a pair containing PGV and one '
+                'PGA or SA intensity measure')
+
+    def _rho(self, from_imt, to_imt, context=None):
         if from_imt == to_imt:
             return 1
-        if from_imt.string != 'PGV' and to_imt.string != 'PGV':
-            return 0
         period = (to_imt.period if from_imt.string == 'PGV'
                   else from_imt.period)
         if period < 0.01:

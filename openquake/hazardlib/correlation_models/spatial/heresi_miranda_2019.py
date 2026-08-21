@@ -30,14 +30,8 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.correlation_models.registry import register_model
 
 
-def _correlation_matrix(sites_or_distances, imt,
-                        uncertainty_multiplier=0):
+def _evaluate_correlation(distances, imt, uncertainty_multiplier=0):
     """Return the Heresi and Miranda (2019) correlation matrix."""
-    if hasattr(sites_or_distances, 'mesh'):
-        distances = sites_or_distances.mesh.get_distance_matrix()
-    else:
-        distances = sites_or_distances
-
     period = imt.period
     if period < 1.37:
         median_beta = 4.231 * period ** 2 - 5.180 * period + 13.392
@@ -61,16 +55,17 @@ class HeresiMiranda2019(SpatialCorrelationModel):
     name = 'HeresiMiranda2019'
     calibrated_component = ResidualComponent.WITHIN_EVENT
     supported_imts = ('PGA', 'SA')
+    damping = 5.0
+    period_limits = {'SA': (0.0, 10.0)}
 
     def __init__(self, uncertainty_multiplier=0):
         super().__init__()
         self.uncertainty_multiplier = uncertainty_multiplier
         self.distance_matrix = {}
 
-    def correlation_matrix(self, sites, imt, component=None, context=None):
-        self._get_component(component)
-        return _correlation_matrix(
-            sites, imt, self.uncertainty_multiplier)
+    def _correlation_matrix(self, distances, imt, context=None):
+        return _evaluate_correlation(
+            distances, imt, self.uncertainty_multiplier)
 
     def apply_correlation(self, sites, imt, residuals, stddev_intra):
         num_sites = len(sites)

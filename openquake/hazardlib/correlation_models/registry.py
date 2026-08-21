@@ -42,12 +42,24 @@ class ModelSpec:
         return self.cls.supported_imts
 
     @property
+    def calibrated_imts(self):
+        return self.cls._calibrated_imts()
+
+    @property
+    def imt_approximations(self):
+        return dict(self.cls.imt_approximations)
+
+    @property
     def imc(self):
         return self.cls.imc
 
     @property
     def damping(self):
         return self.cls.damping
+
+    @property
+    def period_limits(self):
+        return dict(self.cls.period_limits)
 
     @property
     def required_context(self):
