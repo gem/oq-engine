@@ -70,53 +70,66 @@ names and publication year. For example, `loth_baker_2013.py` contains
 
 ## Declare model metadata
 
-Every model class must declare enough metadata for configuration validation and
-scientific review:
+Every scientific model must declare its residual component and the IMTs
+accepted by its implementation:
 
 ```python
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA
 
 DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
-DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
-DEFINED_FOR_SA_DAMPING = 5.0
-DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
-DEFINED_FOR_REGION = 'Example region'
-required_context = ('mag',)
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 ```
 
-The fields have the following meanings:
+### Mandatory metadata
 
 - `DEFINED_FOR_RESIDUAL_COMPONENT` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or
   `TOTAL`.
 - `DEFINED_FOR_INTENSITY_MEASURE_TYPES` lists the IMT classes accepted by the
   implementation, following the existing GSIM convention. Clearly distinguish
   accepted operational approximations from calibrated IMTs.
+
+### Conditional metadata
+
+Declare the following metadata only when it applies:
+
+- `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT` identifies a component established
+  by the publication, using a member of `openquake.hazardlib.const.IMC`.
 - `CALIBRATED_FOR_INTENSITY_MEASURE_TYPES` lists the IMTs used to derive the
-  model. It may be omitted when it is identical to
-  `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
+  model when they differ from the accepted IMTs. Omit it when it matches the
+  accepted IMT set.
 - `INTENSITY_MEASURE_TYPE_APPROXIMATIONS` maps each accepted IMT factory to
-  the IMT that represents it, for example `{PGA: SA(0.01)}`.
-- `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT` identifies the intensity measure
-  component for which the model was derived, using a member of
-  `openquake.hazardlib.const.IMC`.
+  the IMT that represents it when an operational proxy is explicitly
+  supported.
 - `DEFINED_FOR_SA_DAMPING` gives the supported spectral damping, when
   applicable.
 - `DEFINED_FOR_SA_PERIOD_RANGE` gives the inclusive calibrated period range.
-- `DEFINED_FOR_REGION` records a geographic calibration restriction.
-- `required_context` lists predictors obtained from `CorrelationContext`.
+- `DEFINED_FOR_REGION` records an explicit geographic applicability or
+  calibration restriction. Most models should inherit the default `None`.
+
+For example, an SA model that also accepts PGA as a documented SA(0.01) proxy
+would declare the following applicable metadata:
+
+```python
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, SA
+
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+DEFINED_FOR_SA_DAMPING = 5.0
+DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
+```
 
 Use `None` only when a field genuinely does not apply or the model is not
-restricted. The base classes validate IMT names, spectral periods, damping,
-residual components, required context, distance matrices and returned matrix
-values. Do not infer a proxy SA period for an unsupported IMT merely from a
-similar period. A proxy established by an authoritative source or operational
-convention must be scientifically justified, explicitly documented and
-tested. Implement only validation specific to an IMT combination, component
-definition, context value or constructor parameter in the concrete class.
+restricted; concrete classes do not need to repeat optional metadata with a
+`None` value. The base classes validate IMT names, spectral periods, damping,
+residual components, distance matrices and returned matrix values. Do not infer
+a proxy SA period for an unsupported IMT merely from a similar period. A proxy
+established by an authoritative source or operational convention must be
+scientifically justified, explicitly documented and tested. Implement only
+validation specific to an IMT combination, component definition or constructor
+parameter in the concrete class.
 
 ## Register the model
 

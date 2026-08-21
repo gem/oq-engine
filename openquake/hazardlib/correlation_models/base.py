@@ -15,9 +15,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Base interfaces shared by ground-motion correlation models."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy
 from scipy import stats
@@ -44,7 +44,6 @@ class CorrelationContext:
     rake: float | None = None
     trt: str | None = None
     region: str | None = None
-    values: Mapping[str, object] = field(default_factory=dict)
 
 
 @runtime_checkable
@@ -76,7 +75,6 @@ class CorrelationModel:
     DEFINED_FOR_SA_DAMPING = None
     DEFINED_FOR_SA_PERIOD_RANGE = None
     DEFINED_FOR_REGION = None
-    required_context = ()
 
     def validate(self):
         """Validate model parameters after construction."""
@@ -134,24 +132,6 @@ class CorrelationModel:
 
     def _validate_imt_combination(self, imts):
         """Validate restrictions involving more than one IMT."""
-
-    def validate_context(self, context):
-        """Raise when a predictor required by the model is unavailable."""
-        if not self.required_context:
-            return
-        values = {} if context is None else getattr(context, 'values', {})
-        missing = []
-        for name in self.required_context:
-            value = None if context is None else getattr(context, name, None)
-            if value is None:
-                value = values.get(name)
-            if value is None:
-                missing.append(name)
-        if missing:
-            model_name = self.__class__.__name__
-            raise ValueError(
-                f'{model_name} requires correlation context values: '
-                f'{", ".join(missing)}')
 
     @staticmethod
     def _validate_distances(sites_or_distances):
@@ -223,7 +203,6 @@ class SpatialCrossIMTCorrelationModel(CorrelationModel):
         implement this method so they can also be used for conditioning.
         """
         self._get_component(component)
-        self.validate_context(context)
         if imts2 is None:
             imts2 = imts1
         self.validate_imts(imts1)
@@ -299,7 +278,6 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
     def correlation_matrix(self, sites, imt, component=None, context=None):
         """Return a same-IMT spatial correlation matrix or block."""
         self._get_component(component)
-        self.validate_context(context)
         self.validate_imts([imt])
         distances = self._validate_distances(sites)
         implementation = type(self)._correlation_matrix
@@ -389,7 +367,6 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
     def rho(self, from_imt, to_imt, component=None, context=None):
         """Return the correlation between two IMTs."""
         self._get_component(component)
-        self.validate_context(context)
         self.validate_imts([from_imt, to_imt])
         implementation = type(self)._rho
         if implementation is not CrossIMTCorrelationModel._rho:
@@ -422,7 +399,6 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
                            dtype=float):
         """Return an ``M x M`` cross-IMT correlation matrix."""
         self._get_component(component)
-        self.validate_context(context)
         self.validate_imts(imts)
         matrix = numpy.zeros((len(imts), len(imts)), dtype)
         for row, from_imt in enumerate(imts):

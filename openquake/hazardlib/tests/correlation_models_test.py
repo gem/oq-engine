@@ -20,8 +20,7 @@ import pytest
 from openquake.hazardlib import const, correlation, cross_correlation
 from openquake.hazardlib import correlation_models
 from openquake.hazardlib.correlation_models.base import (
-    CorrelationContext, CrossIMTCorrelationModel, ResidualComponent,
-    SpatialCrossIMTCorrelationModel)
+    ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
@@ -156,25 +155,6 @@ def test_residual_component_validation():
 def test_baker_cornell_preserves_historical_pgv_proxy():
     model = BakerCornell2006()
     assert model.rho(PGV(), SA(0.3)) == model.rho(PGA(), SA(0.3))
-
-
-def test_required_context_validation():
-    class ContextModel(CrossIMTCorrelationModel):
-        DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-        required_context = ('mag', 'site_class')
-
-        def _rho(self, from_imt, to_imt, context=None):
-            return 1.0
-
-    model = ContextModel()
-    context = CorrelationContext(
-        mag=6.5, values={'site_class': 'rock'})
-    assert model.rho(SA(0.2), SA(1.0), context=context) == 1
-    with pytest.raises(
-            ValueError, match='requires correlation context values: mag'):
-        model.rho(
-            SA(0.2), SA(1.0),
-            context=CorrelationContext(values={'site_class': 'rock'}))
 
 
 def test_cross_im_covariance_uses_imt_major_ordering():

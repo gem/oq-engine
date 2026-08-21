@@ -65,10 +65,6 @@ class ModelSpec:
     def region(self):
         return self.cls.DEFINED_FOR_REGION
 
-    @property
-    def required_context(self):
-        return self.cls.required_context
-
 
 registry = {}
 _specs = {}
