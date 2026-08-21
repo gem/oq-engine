@@ -48,7 +48,11 @@
               {% if aggrisk_tags %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
-                  Show impact table</a>
+                  Show full impact table</a>
+              </div>
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">
+                  Show summary impact table</a>
               </div>
               {% endif %}
               {% if mmi_tags %}
