@@ -763,12 +763,20 @@ def download_shakemap_rupture_data(usgs_id, shakemap_contents, user):
 def extract_event_details(ffm):
     # Extract event details from the geojson metadata
     # and return a data object with the event details
-    epicenter = ffm["metadata"]["epicenter"]
+    try:
+        hypocenter = ffm["metadata"]["hypocenter"]
+    except KeyError:
+        # NOTE: the field was originally named 'epicenter'. However, since
+        # it included also the depth, we assume it was always meant to
+        # represent the hypocenter. For compatibility with old events
+        # providing data in the old format, we look for the old name if the new
+        # one is missing.
+        hypocenter = ffm["metadata"]["epicenter"]
     return {
-        "mag": epicenter.get("mag"),
-        "lon": epicenter.get("lon"),
-        "lat": epicenter.get("lat"),
-        "dep": epicenter.get("depth"),
+        "mag": hypocenter.get("mag"),
+        "lon": hypocenter.get("lon"),
+        "lat": hypocenter.get("lat"),
+        "dep": hypocenter.get("depth"),
     }
 
 
