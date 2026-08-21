@@ -34,12 +34,48 @@ Spatial models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial.aldea_et_al_2022
+
+.. autoclass:: AldeaEtAl2022
+    :members:
+    :show-inheritance:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial.schiappapietra_et_al_2022
+
+.. autoclass:: SchiappapietraEtAl2022NorthernItaly
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SchiappapietraEtAl2022CentralItaly
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SchiappapietraEtAl2022SouthernItaly
+    :members:
+    :show-inheritance:
+
 Joint spatial and cross-IMT models
 ----------------------------------
 
 .. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.loth_baker_2013
 
 .. autoclass:: LothBaker2013
+    :members:
+    :show-inheritance:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.markhvida_et_al_2018
+
+.. autoclass:: MarkhvidaEtAl2018
+    :members:
+    :show-inheritance:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.wang_du_2013
+
+.. autoclass:: WangDu2013PGAIAPGV
+    :members:
+    :show-inheritance:
+
+.. autoclass:: WangDu2013SpectralAcceleration
     :members:
     :show-inheritance:
 

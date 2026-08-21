@@ -37,6 +37,11 @@ from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     loth_baker_2013 import LothBaker2013
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    markhvida_et_al_2018 import MarkhvidaEtAl2018
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    wang_du_2013 import (
+        WangDu2013PGAIAPGV, WangDu2013SpectralAcceleration)
 from openquake.hazardlib.imt import PGA, SA
 
 
@@ -68,6 +73,22 @@ def test_registry_aliases_and_metadata():
     assert joint['LothBaker2013'].calibrated_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['LothBaker2013'].supported_imts == ('PGA', 'SA')
+    assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
+    assert joint['MarkhvidaEtAl2018'].calibrated_component == (
+        ResidualComponent.WITHIN_EVENT)
+    assert joint['MarkhvidaEtAl2018'].supported_imts == ('PGA', 'SA')
+    assert joint['MarkhvidaEtAl2018'].imc == 'RotD50'
+    assert joint['WangDu2013PGAIAPGV'].cls is WangDu2013PGAIAPGV
+    assert joint['WangDu2013PGAIAPGV'].calibrated_component == (
+        ResidualComponent.WITHIN_EVENT)
+    assert joint['WangDu2013PGAIAPGV'].supported_imts == (
+        'PGA', 'IA', 'PGV')
+    assert joint['WangDu2013SpectralAcceleration'].cls is (
+        WangDu2013SpectralAcceleration)
+    assert joint[
+        'WangDu2013SpectralAcceleration'
+    ].calibrated_component == ResidualComponent.WITHIN_EVENT
+    assert joint['WangDu2013SpectralAcceleration'].supported_imts == ('SA',)
 
 
 def test_registry_instantiation_and_type_validation():
