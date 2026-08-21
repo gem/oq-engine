@@ -53,13 +53,12 @@ class JayaramBaker2009(SpatialCorrelationModel):
     is retained temporarily using OpenQuake's historical SA(1.0) proxy.
     """
 
-    name = 'JayaramBaker2009'
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-    calibrated_imts = {PGA, SA}
-    imt_approximations = {'PGV': 'SA(1.0)'}
-    damping = 5.0
-    period_limits = {'SA': (0.01, 10.0)}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGV: SA(1.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
     def __init__(self, vs30_clustering):
         super().__init__()

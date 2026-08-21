@@ -60,37 +60,40 @@ def test_registry_aliases_and_metadata():
         'HM2019', 'HM2018', 'HM2018CorrelationModel')
     assert specs['JayaramBaker2009'].aliases == (
         'JB2009', 'JB2009CorrelationModel')
-    assert specs['JayaramBaker2009'].calibrated_component == (
+    assert specs['JayaramBaker2009'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
     assert specs['JayaramBaker2009'].supported_imts == {PGA, PGV, SA}
     assert specs['JayaramBaker2009'].calibrated_imts == {PGA, SA}
-    assert specs['JayaramBaker2009'].imt_approximations == {
-        'PGV': 'SA(1.0)'}
-    assert specs['JayaramBaker2009'].period_limits == {
-        'SA': (0.01, 10.0)}
+    assert specs[
+        'JayaramBaker2009'
+    ].intensity_measure_type_approximations == {PGV: SA(1.0)}
+    assert specs['JayaramBaker2009'].sa_period_range == (0.01, 10.0)
+    assert specs['JayaramBaker2009'].sa_damping == 5.0
     cross_imt = get_model_specs('cross_imt')
     assert cross_imt['BakerCornell2006'].supported_imts == {
         PGA, PGV, SA}
     assert cross_imt['BakerCornell2006'].calibrated_imts == {SA}
-    assert cross_imt['BakerCornell2006'].imt_approximations == {
-        'PGA': 'SA(0.05)', 'PGV': 'SA(0.05)'}
-    assert cross_imt['GodaAtkinson2009'].calibrated_component == (
+    assert cross_imt[
+        'BakerCornell2006'
+    ].intensity_measure_type_approximations == {
+        PGA: SA(0.05), PGV: SA(0.05)}
+    assert cross_imt['GodaAtkinson2009'].residual_component == (
         ResidualComponent.BETWEEN_EVENT)
-    assert cross_imt['Bradley2012'].calibrated_component == (
+    assert cross_imt['Bradley2012'].residual_component == (
         ResidualComponent.TOTAL)
     joint = get_model_specs('spatial_cross_imt')
     assert joint['LothBaker2013'].cls is LothBaker2013
-    assert joint['LothBaker2013'].calibrated_component == (
+    assert joint['LothBaker2013'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['LothBaker2013'].supported_imts == {PGA, SA}
     assert joint['LothBaker2013'].calibrated_imts == {SA}
     assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
-    assert joint['MarkhvidaEtAl2018'].calibrated_component == (
+    assert joint['MarkhvidaEtAl2018'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['MarkhvidaEtAl2018'].supported_imts == {PGA, SA}
     assert joint['MarkhvidaEtAl2018'].imc is const.IMC.RotD50
     assert joint['WangDu2013PGAIAPGV'].cls is WangDu2013PGAIAPGV
-    assert joint['WangDu2013PGAIAPGV'].calibrated_component == (
+    assert joint['WangDu2013PGAIAPGV'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
     assert joint['WangDu2013PGAIAPGV'].supported_imts == {
         PGA, IA, PGV}
@@ -98,7 +101,7 @@ def test_registry_aliases_and_metadata():
         WangDu2013SpectralAcceleration)
     assert joint[
         'WangDu2013SpectralAcceleration'
-    ].calibrated_component == ResidualComponent.WITHIN_EVENT
+    ].residual_component == ResidualComponent.WITHIN_EVENT
     assert joint['WangDu2013SpectralAcceleration'].supported_imts == {SA}
 
 
@@ -119,6 +122,20 @@ def test_imc_metadata_validation():
     setattr(model, attr, 'GMRotI50')
     with pytest.raises(TypeError, match=f'{attr} must be an .*const.IMC'):
         model.validate()
+
+
+def test_intensity_measure_type_metadata_validation():
+    class UnsupportedCalibration(BakerJayaram2008):
+        CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
+
+    with pytest.raises(ValueError, match='does not support'):
+        UnsupportedCalibration().validate()
+
+    class InvalidApproximation(BakerJayaram2008):
+        INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: 'SA(0.01)'}
+
+    with pytest.raises(TypeError, match='must map to IMT instances'):
+        InvalidApproximation().validate()
 
 
 def test_package_does_not_reexport_models():

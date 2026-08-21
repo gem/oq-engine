@@ -42,15 +42,13 @@ class BakerJayaram2008(CrossIMTCorrelationModel):
     represented by the model's shortest calibrated period, SA(0.01).
     """
 
-    name = 'BakerJayaram2008'
-    calibrated_component = ResidualComponent.TOTAL
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-    calibrated_imts = {SA}
-    imt_approximations = {
-        'PGA': 'SA(0.01)'}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
-    damping = 5.0
-    period_limits = {'SA': (0.01, 10.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
     def _rho(self, from_imt, to_imt, context=None):
         from_period = from_imt.period or 0.01

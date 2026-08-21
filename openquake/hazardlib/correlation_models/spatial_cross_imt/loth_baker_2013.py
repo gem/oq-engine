@@ -178,23 +178,21 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     supported through the conventional SA(0.01) correlation proxy.
     """
 
-    name = 'LothBaker2013'
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-    calibrated_imts = {SA}
-    imt_approximations = {
-        'PGA': 'SA(0.01)'}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    damping = 5.0
-    period_limits = {'SA': (0.01, 10.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
     def _validate_imt_combination(self, imts):
         if (any(imt.name == 'PGA' for imt in imts) and
                 any(imt.name == 'SA' and imt.period == 0.01
                     for imt in imts)):
             raise ValueError(
-                f'{self.name} cannot combine PGA and SA(0.01), because PGA '
-                'uses SA(0.01) as its correlation proxy')
+                f'{self.__class__.__name__} cannot combine PGA and SA(0.01), '
+                'because PGA uses SA(0.01) as its correlation proxy')
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""

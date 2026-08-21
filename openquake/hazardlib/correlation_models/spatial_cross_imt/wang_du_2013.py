@@ -104,7 +104,7 @@ def _coefficient_matrix(table, periods1, periods2):
 class _WangDu2013(SpatialCrossIMTCorrelationModel):
     """Shared parameter and input validation for both publication models."""
 
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     def __init__(self,
@@ -144,7 +144,6 @@ class _WangDu2013(SpatialCrossIMTCorrelationModel):
 class WangDu2013PGAIAPGV(_WangDu2013):
     """Joint correlation for the publication's PGA, IA, and PGV set."""
 
-    name = 'WangDu2013PGAIAPGV'
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, IA, PGV}
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
@@ -169,10 +168,9 @@ class WangDu2013SpectralAcceleration(_WangDu2013):
     matrix. This preserves the standard deviations supplied by the GSIM.
     """
 
-    name = 'WangDu2013SpectralAcceleration'
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-    damping = 5.0
-    period_limits = {'SA': (0.01, 10.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the normalized joint correlation block."""

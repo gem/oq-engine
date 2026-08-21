@@ -34,8 +34,8 @@ class ModelSpec:
     description: str
 
     @property
-    def calibrated_component(self):
-        return self.cls.calibrated_component
+    def residual_component(self):
+        return self.cls.DEFINED_FOR_RESIDUAL_COMPONENT
 
     @property
     def supported_imts(self):
@@ -46,20 +46,24 @@ class ModelSpec:
         return self.cls._calibrated_imts()
 
     @property
-    def imt_approximations(self):
-        return dict(self.cls.imt_approximations)
+    def intensity_measure_type_approximations(self):
+        return dict(self.cls.INTENSITY_MEASURE_TYPE_APPROXIMATIONS)
 
     @property
     def imc(self):
         return self.cls.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     @property
-    def damping(self):
-        return self.cls.damping
+    def sa_damping(self):
+        return self.cls.DEFINED_FOR_SA_DAMPING
 
     @property
-    def period_limits(self):
-        return dict(self.cls.period_limits)
+    def sa_period_range(self):
+        return self.cls.DEFINED_FOR_SA_PERIOD_RANGE
+
+    @property
+    def region(self):
+        return self.cls.DEFINED_FOR_REGION
 
     @property
     def required_context(self):
@@ -97,7 +101,7 @@ def register_model(*aliases, description=''):
     def decorator(cls):
         if not issubclass(cls, CorrelationModel):
             raise TypeError(f'{cls.__name__} is not a correlation model')
-        name = cls.name or cls.__name__
+        name = cls.__name__
         keys = (name,) + tuple(aliases)
         duplicates = sorted(key for key in keys if key in registry)
         if duplicates:

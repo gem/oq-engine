@@ -48,13 +48,12 @@ def _correlation_range(period):
 class AldeaEtAl2022(SpatialCorrelationModel):
     """Within-event model for the Chilean subduction zone."""
 
-    name = 'AldeaEtAl2022'
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    damping = 5.0
-    period_limits = {'SA': (0.1, 10.0)}
-    region = 'Chilean subduction zone'
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 10.0)
+    DEFINED_FOR_REGION = 'Chilean subduction zone'
 
     def _correlation_matrix(self, distances, imt, context=None):
         period = 0.0 if imt.name == 'PGA' else imt.period

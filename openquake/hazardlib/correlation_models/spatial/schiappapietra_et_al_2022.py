@@ -42,12 +42,12 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
     make results dependent on call order and incompatible with factor caching.
     """
 
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-    damping = 5.0
-    period_limits = {'SA': (0.1, 2.0)}
-    region = None
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 2.0)
+    DEFINED_FOR_REGION = None
     range_coefficients = None
 
     def _range(self, period):
@@ -68,8 +68,7 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
 class SchiappapietraEtAl2022NorthernItaly(_SchiappapietraEtAl2022):
     """Median model calibrated for Northern Italy."""
 
-    name = 'SchiappapietraEtAl2022NorthernItaly'
-    region = 'Northern Italy'
+    DEFINED_FOR_REGION = 'Northern Italy'
     range_coefficients = (27.48, -52.20, 15.81, 0.55)
 
 
@@ -79,8 +78,7 @@ class SchiappapietraEtAl2022NorthernItaly(_SchiappapietraEtAl2022):
 class SchiappapietraEtAl2022CentralItaly(_SchiappapietraEtAl2022):
     """Median model calibrated for Central Italy."""
 
-    name = 'SchiappapietraEtAl2022CentralItaly'
-    region = 'Central Italy'
+    DEFINED_FOR_REGION = 'Central Italy'
     range_coefficients = (17.87, -8.52, 7.85, 1.0)
 
 
@@ -95,6 +93,5 @@ class SchiappapietraEtAl2022SouthernItaly(_SchiappapietraEtAl2022):
     were available for its calibration.
     """
 
-    name = 'SchiappapietraEtAl2022SouthernItaly'
-    region = 'Southern Italy'
+    DEFINED_FOR_REGION = 'Southern Italy'
     range_coefficients = (23.25, -5.44, None, None)

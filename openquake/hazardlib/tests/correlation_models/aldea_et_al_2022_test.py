@@ -63,11 +63,11 @@ def test_reference_values():
 
 
 def test_model_is_registered_with_calibration_metadata():
-    assert get_model_class(AldeaEtAl2022.name) is AldeaEtAl2022
-    assert AldeaEtAl2022.region == 'Chilean subduction zone'
+    assert get_model_class(AldeaEtAl2022.__name__) is AldeaEtAl2022
+    assert AldeaEtAl2022.DEFINED_FOR_REGION == 'Chilean subduction zone'
     assert AldeaEtAl2022.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is (
         const.IMC.GEOMETRIC_MEAN)
-    assert AldeaEtAl2022.damping == 5.0
+    assert AldeaEtAl2022.DEFINED_FOR_SA_DAMPING == 5.0
 
 
 def test_covariance_and_factor_are_positive_definite():

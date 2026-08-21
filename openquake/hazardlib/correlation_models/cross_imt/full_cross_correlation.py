@@ -26,8 +26,7 @@ from openquake.hazardlib.correlation_models.registry import register_model
 class FullCrossCorrelation(TruncatedCrossIMTCorrelationModel):
     """Represent perfect cross-IMT correlation."""
 
-    name = 'FullCrossCorrelation'
-    calibrated_component = ResidualComponent.BETWEEN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.BETWEEN_EVENT
 
     def _rho(self, from_imt, to_imt, context=None):
         return 1.0

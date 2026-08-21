@@ -24,6 +24,7 @@ from scipy import stats
 
 from openquake.hazardlib import const
 from openquake.hazardlib.correlation_utils import corr_clipped, cov_nearest
+from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 
@@ -67,14 +68,14 @@ class CholeskyFactor:
 class CorrelationModel:
     """Common metadata and validation for all correlation models."""
 
-    name = ''
-    calibrated_component = None
+    DEFINED_FOR_RESIDUAL_COMPONENT = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    calibrated_imts = None
-    imt_approximations = {}
-    damping = None
-    period_limits = {}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = None
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {}
+    DEFINED_FOR_SA_DAMPING = None
+    DEFINED_FOR_SA_PERIOD_RANGE = None
+    DEFINED_FOR_REGION = None
     required_context = ()
 
     def validate(self):
@@ -82,13 +83,28 @@ class CorrelationModel:
         imc = self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
         if imc is not None and not isinstance(imc, const.IMC):
             raise TypeError(
-                f'{self.name or self.__class__.__name__}.'
+                f'{self.__class__.__name__}.'
                 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT must be an '
                 'openquake.hazardlib.const.IMC member')
+        supported = self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        calibrated = self._calibrated_imts()
+        approximations = self.INTENSITY_MEASURE_TYPE_APPROXIMATIONS
+        if supported is not None and not calibrated <= supported:
+            raise ValueError(
+                f'{self.__class__.__name__} declares calibrated intensity '
+                'measure types that it does not support')
+        if supported is not None and not approximations.keys() <= supported:
+            raise ValueError(
+                f'{self.__class__.__name__} declares approximations for '
+                'unsupported intensity measure types')
+        if not all(isinstance(imt, IMT) for imt in approximations.values()):
+            raise TypeError(
+                f'{self.__class__.__name__} intensity measure type '
+                'approximations must map to IMT instances')
 
     def validate_imts(self, imts):
         """Raise when an IMT is outside the model's declared scope."""
-        model_name = self.name or self.__class__.__name__
+        model_name = self.__class__.__name__
         supported = self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         if supported is not None:
             supported_names = {imt_type.__name__ for imt_type in supported}
@@ -100,14 +116,15 @@ class CorrelationModel:
                     f'{model_name} does not support '
                     f'{", ".join(unsupported)}')
         for imt in imts:
-            if (imt.name == 'SA' and self.damping is not None and
-                    imt.damping != self.damping):
+            damping = self.DEFINED_FOR_SA_DAMPING
+            if (imt.name == 'SA' and damping is not None and
+                    imt.damping != damping):
                 raise ValueError(
                     f'{model_name} supports only '
-                    f'{self.damping:g}%-damped SA')
-            limits = self.period_limits.get(imt.name)
-            if limits is not None:
-                minimum, maximum = limits
+                    f'{damping:g}%-damped SA')
+            period_range = self.DEFINED_FOR_SA_PERIOD_RANGE
+            if imt.name == 'SA' and period_range is not None:
+                minimum, maximum = period_range
                 if not minimum <= imt.period <= maximum:
                     raise ValueError(
                         f'{model_name} supports {imt.name} periods from '
@@ -131,7 +148,7 @@ class CorrelationModel:
             if value is None:
                 missing.append(name)
         if missing:
-            model_name = self.name or self.__class__.__name__
+            model_name = self.__class__.__name__
             raise ValueError(
                 f'{model_name} requires correlation context values: '
                 f'{", ".join(missing)}')
@@ -169,13 +186,14 @@ class CorrelationModel:
 
     @classmethod
     def _calibrated_imts(cls):
-        if cls.calibrated_imts is None:
+        calibrated = cls.CALIBRATED_FOR_INTENSITY_MEASURE_TYPES
+        if calibrated is None:
             return cls.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-        return cls.calibrated_imts
+        return calibrated
 
     def _get_component(self, component=None):
         if component is None:
-            return self.calibrated_component
+            return self.DEFINED_FOR_RESIDUAL_COMPONENT
         try:
             component = ResidualComponent(component)
         except ValueError as exc:
@@ -183,11 +201,12 @@ class CorrelationModel:
             raise ValueError(
                 f'Unknown residual component {component!r}; use {allowed}'
             ) from exc
-        if (self.calibrated_component is not None and
-                component != self.calibrated_component):
+        defined_component = self.DEFINED_FOR_RESIDUAL_COMPONENT
+        if (defined_component is not None and
+                component != defined_component):
             raise ValueError(
-                f'{self.name or self.__class__.__name__} provides '
-                f'{self.calibrated_component.value} correlation, not '
+                f'{self.__class__.__name__} provides '
+                f'{defined_component.value} correlation, not '
                 f'{component.value}')
         return component
 

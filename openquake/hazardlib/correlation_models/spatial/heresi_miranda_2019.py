@@ -53,11 +53,10 @@ def _evaluate_correlation(distances, imt, uncertainty_multiplier=0):
 class HeresiMiranda2019(SpatialCorrelationModel):
     """Within-event spatial correlation by Heresi and Miranda (2019)."""
 
-    name = 'HeresiMiranda2019'
-    calibrated_component = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-    damping = 5.0
-    period_limits = {'SA': (0.0, 10.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.0, 10.0)
 
     def __init__(self, uncertainty_multiplier=0):
         super().__init__()

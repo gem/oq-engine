@@ -42,14 +42,12 @@ class GodaAtkinson2009(TruncatedCrossIMTCorrelationModel):
     lies outside that calibrated range.
     """
 
-    name = 'GodaAtkinson2009'
-    calibrated_component = ResidualComponent.BETWEEN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.BETWEEN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-    calibrated_imts = {SA}
-    imt_approximations = {
-        'PGA': 'SA(0.05)'}
-    damping = 5.0
-    period_limits = {'SA': (0.1, 5.0)}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.05)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 5.0)
     matrix_dtype = numpy.float32
 
     def _rho(self, from_imt, to_imt, context=None):

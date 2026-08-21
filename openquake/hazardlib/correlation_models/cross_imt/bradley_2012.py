@@ -34,11 +34,10 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 class Bradley2012(TruncatedCrossIMTCorrelationModel):
     """Total-residual correlation between PGV and spectrum-based IMTs."""
 
-    name = 'Bradley2012'
-    calibrated_component = ResidualComponent.TOTAL
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-    damping = 5.0
-    period_limits = {'SA': (0.01, 10.0)}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
     def _validate_imt_combination(self, imts):
         unique = tuple(dict.fromkeys(imts))
@@ -47,8 +46,8 @@ class Bradley2012(TruncatedCrossIMTCorrelationModel):
         if (len(unique) != 2 or
                 sum(imt.name == 'PGV' for imt in unique) != 1):
             raise ValueError(
-                f'{self.name} defines only a pair containing PGV and one '
-                'PGA or SA intensity measure')
+                f'{self.__class__.__name__} defines only a pair containing '
+                'PGV and one PGA or SA intensity measure')
 
     def _rho(self, from_imt, to_imt, context=None):
         if from_imt == to_imt:

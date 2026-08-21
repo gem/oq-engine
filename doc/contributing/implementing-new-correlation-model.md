@@ -75,35 +75,38 @@ scientific review:
 
 ```python
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import SA
+from openquake.hazardlib.imt import PGA, SA
 
-name = 'ExampleModel2026'
-calibrated_component = ResidualComponent.WITHIN_EVENT
-DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-calibrated_imts = {SA}
-damping = 5.0
-period_limits = {'SA': (0.1, 5.0)}
+CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+DEFINED_FOR_SA_DAMPING = 5.0
+DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
+DEFINED_FOR_REGION = 'Example region'
 required_context = ('mag',)
 ```
 
 The fields have the following meanings:
 
-- `name` is the canonical configuration name and normally matches the class.
-- `calibrated_component` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or `TOTAL`.
+- `DEFINED_FOR_RESIDUAL_COMPONENT` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or
+  `TOTAL`.
 - `DEFINED_FOR_INTENSITY_MEASURE_TYPES` lists the IMT classes accepted by the
   implementation, following the existing GSIM convention. Clearly distinguish
   accepted operational approximations from calibrated IMTs.
-- `calibrated_imts` lists the IMTs used to derive the model. It may be omitted
-  when it is identical to `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
-- `imt_approximations` maps each accepted IMT proxy to its canonical
-  substitute, for example `{'PGA': 'SA(0.01)'}`.
+- `CALIBRATED_FOR_INTENSITY_MEASURE_TYPES` lists the IMTs used to derive the
+  model. It may be omitted when it is identical to
+  `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
+- `INTENSITY_MEASURE_TYPE_APPROXIMATIONS` maps each accepted IMT factory to
+  the IMT that represents it, for example `{PGA: SA(0.01)}`.
 - `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT` identifies the intensity measure
   component for which the model was derived, using a member of
   `openquake.hazardlib.const.IMC`.
-- `damping` gives the supported spectral damping, when applicable.
-- `period_limits` gives the inclusive calibrated period range for each
-  spectral IMT.
+- `DEFINED_FOR_SA_DAMPING` gives the supported spectral damping, when
+  applicable.
+- `DEFINED_FOR_SA_PERIOD_RANGE` gives the inclusive calibrated period range.
+- `DEFINED_FOR_REGION` records a geographic calibration restriction.
 - `required_context` lists predictors obtained from `CorrelationContext`.
 
 Use `None` only when a field genuinely does not apply or the model is not
@@ -125,6 +128,9 @@ Decorate the class with `register_model`:
 class ExampleModel2026(SpatialCrossIMTCorrelationModel):
     ...
 ```
+
+The class name is the canonical configuration name. Use aliases only for
+established alternative names or backward compatibility.
 
 The registry discovers model modules lazily. Do not import them from package
 `__init__.py` files.
