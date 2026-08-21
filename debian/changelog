@@ -1,4 +1,15 @@
   [Anirudh Rao]
+  * Add the Wang and Du (2013) joint spatial and cross-IMT within-event
+    correlation models for PGA-IA-PGV and SAs considering regional site-
+    conditions
+  * Add the Markhvida et al. (2018) joint spatial and cross-IMT within-event
+    correlation model 
+
+  [Vitor Azevedo Monteiro, Anirudh Rao]
+  * Add the Schiappapietra et al. and Aldea et al. (2022) within-event
+    spatial correlation models
+
+  [Anirudh Rao]
   * Speed up `truncation_level = 0` case for the conditioned gmfs calculator
   * Treat ShakeMap grid.xml values as medians and not as arithmetic means
   * Refactor spatial and cross-IMT correlation models into a common registry,
