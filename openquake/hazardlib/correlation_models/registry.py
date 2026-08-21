@@ -39,7 +39,7 @@ class ModelSpec:
 
     @property
     def supported_imts(self):
-        return self.cls.supported_imts
+        return self.cls.DEFINED_FOR_INTENSITY_MEASURE_TYPES
 
     @property
     def calibrated_imts(self):
@@ -51,7 +51,7 @@ class ModelSpec:
 
     @property
     def imc(self):
-        return self.cls.imc
+        return self.cls.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     @property
     def damping(self):

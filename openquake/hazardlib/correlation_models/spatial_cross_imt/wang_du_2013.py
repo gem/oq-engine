@@ -33,6 +33,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import IA, PGA, PGV, SA
 
 
 _DEFAULT_VS30_CORRELATION_RANGE = 12.5
@@ -104,7 +105,7 @@ class _WangDu2013(SpatialCrossIMTCorrelationModel):
     """Shared parameter and input validation for both publication models."""
 
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    imc = const.IMC.GEOMETRIC_MEAN
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     def __init__(self,
                  vs30_correlation_range=_DEFAULT_VS30_CORRELATION_RANGE):
@@ -144,7 +145,7 @@ class WangDu2013PGAIAPGV(_WangDu2013):
     """Joint correlation for the publication's PGA, IA, and PGV set."""
 
     name = 'WangDu2013PGAIAPGV'
-    supported_imts = ('PGA', 'IA', 'PGV')
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, IA, PGV}
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
@@ -169,7 +170,7 @@ class WangDu2013SpectralAcceleration(_WangDu2013):
     """
 
     name = 'WangDu2013SpectralAcceleration'
-    supported_imts = ('SA',)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
     damping = 5.0
     period_limits = {'SA': (0.01, 10.0)}
 

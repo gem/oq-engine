@@ -30,6 +30,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 class _SchiappapietraEtAl2022(SpatialCorrelationModel):
@@ -42,8 +43,8 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
     """
 
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'SA')
-    imc = const.IMC.RotD50
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     damping = 5.0
     period_limits = {'SA': (0.1, 2.0)}
     region = None

@@ -27,6 +27,7 @@ import numpy
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 def _evaluate_correlation(distances, imt, vs30_clustering=False):
@@ -54,8 +55,8 @@ class JayaramBaker2009(SpatialCorrelationModel):
 
     name = 'JayaramBaker2009'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'PGV', 'SA')
-    calibrated_imts = ('PGA', 'SA')
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+    calibrated_imts = {PGA, SA}
     imt_approximations = {'PGV': 'SA(1.0)'}
     damping = 5.0
     period_limits = {'SA': (0.01, 10.0)}

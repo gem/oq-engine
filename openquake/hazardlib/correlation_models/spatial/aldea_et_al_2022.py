@@ -29,6 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 def _correlation_range(period):
@@ -49,8 +50,8 @@ class AldeaEtAl2022(SpatialCorrelationModel):
 
     name = 'AldeaEtAl2022'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'SA')
-    imc = const.IMC.GEOMETRIC_MEAN
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     damping = 5.0
     period_limits = {'SA': (0.1, 10.0)}
     region = 'Chilean subduction zone'

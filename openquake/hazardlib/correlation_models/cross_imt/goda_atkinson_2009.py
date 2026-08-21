@@ -28,6 +28,7 @@ import numpy
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 @register_model(
@@ -37,14 +38,14 @@ class GodaAtkinson2009(TruncatedCrossIMTCorrelationModel):
     """Between-event cross-IMT correlation by Goda and Atkinson (2009).
 
     The model was calibrated for 5%-damped SA from 0.1 to 5 seconds. PGA is
-    retained temporarily using OpenQuake's historical SA(0.05) proxy, which
+    retained temporarily using the engine's historical SA(0.05) proxy, which
     lies outside that calibrated range.
     """
 
     name = 'GodaAtkinson2009'
     calibrated_component = ResidualComponent.BETWEEN_EVENT
-    supported_imts = ('PGA', 'SA')
-    calibrated_imts = ('SA',)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    calibrated_imts = {SA}
     imt_approximations = {
         'PGA': 'SA(0.05)'}
     damping = 5.0

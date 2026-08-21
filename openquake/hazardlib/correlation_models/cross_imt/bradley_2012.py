@@ -27,6 +27,7 @@ import numpy
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 @register_model(description='Bradley (2012) PGV and spectrum correlation')
@@ -35,7 +36,7 @@ class Bradley2012(TruncatedCrossIMTCorrelationModel):
 
     name = 'Bradley2012'
     calibrated_component = ResidualComponent.TOTAL
-    supported_imts = ('PGV', 'PGA', 'SA')
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     damping = 5.0
     period_limits = {'SA': (0.01, 10.0)}
 

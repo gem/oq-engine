@@ -91,8 +91,11 @@ def test_models_are_registered_with_calibration_metadata():
     assert get_model_class(
         WangDu2013SpectralAcceleration.name
     ) is WangDu2013SpectralAcceleration
-    assert WangDu2013PGAIAPGV.supported_imts == ('PGA', 'IA', 'PGV')
-    assert WangDu2013SpectralAcceleration.supported_imts == ('SA',)
+    assert WangDu2013PGAIAPGV.DEFINED_FOR_INTENSITY_MEASURE_TYPES == {
+        PGA, IA, PGV}
+    assert (
+        WangDu2013SpectralAcceleration.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        == {SA})
     assert WangDu2013SpectralAcceleration.damping == 5.0
 
 

@@ -42,6 +42,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 _PERIODS = numpy.array([
@@ -262,11 +263,11 @@ class MarkhvidaEtAl2018(SpatialCrossIMTCorrelationModel):
 
     name = 'MarkhvidaEtAl2018'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'SA')
-    calibrated_imts = ('SA',)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    calibrated_imts = {SA}
     imt_approximations = {
         'PGA': 'SA(0.01)'}
-    imc = const.IMC.RotD50
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     damping = 5.0
     period_limits = {'SA': (0.01, 5.0)}
 

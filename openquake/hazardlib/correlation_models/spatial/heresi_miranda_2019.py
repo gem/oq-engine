@@ -28,6 +28,7 @@ import numpy
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 def _evaluate_correlation(distances, imt, uncertainty_multiplier=0):
@@ -54,7 +55,7 @@ class HeresiMiranda2019(SpatialCorrelationModel):
 
     name = 'HeresiMiranda2019'
     calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'SA')
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     damping = 5.0
     period_limits = {'SA': (0.0, 10.0)}
 

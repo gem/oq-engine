@@ -74,11 +74,14 @@ Every model class must declare enough metadata for configuration validation and
 scientific review:
 
 ```python
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import SA
+
 name = 'ExampleModel2026'
 calibrated_component = ResidualComponent.WITHIN_EVENT
-supported_imts = ('SA',)
-calibrated_imts = ('SA',)
-imc = const.IMC.RotD50
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+calibrated_imts = {SA}
 damping = 5.0
 period_limits = {'SA': (0.1, 5.0)}
 required_context = ('mag',)
@@ -88,14 +91,16 @@ The fields have the following meanings:
 
 - `name` is the canonical configuration name and normally matches the class.
 - `calibrated_component` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or `TOTAL`.
-- `supported_imts` lists the IMTs accepted by the implementation. Clearly
-  distinguish accepted operational approximations from calibrated IMTs.
+- `DEFINED_FOR_INTENSITY_MEASURE_TYPES` lists the IMT classes accepted by the
+  implementation, following the existing GSIM convention. Clearly distinguish
+  accepted operational approximations from calibrated IMTs.
 - `calibrated_imts` lists the IMTs used to derive the model. It may be omitted
-  when it is identical to `supported_imts`.
+  when it is identical to `DEFINED_FOR_INTENSITY_MEASURE_TYPES`.
 - `imt_approximations` maps each accepted IMT proxy to its canonical
   substitute, for example `{'PGA': 'SA(0.01)'}`.
-- `imc` identifies the intensity measure component for which the model was
-  derived, using a member of `openquake.hazardlib.const.IMC`.
+- `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT` identifies the intensity measure
+  component for which the model was derived, using a member of
+  `openquake.hazardlib.const.IMC`.
 - `damping` gives the supported spectral damping, when applicable.
 - `period_limits` gives the inclusive calibrated period range for each
   spectral IMT.

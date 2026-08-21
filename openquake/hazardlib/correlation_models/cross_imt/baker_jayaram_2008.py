@@ -29,6 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 @register_model(
@@ -43,11 +44,11 @@ class BakerJayaram2008(CrossIMTCorrelationModel):
 
     name = 'BakerJayaram2008'
     calibrated_component = ResidualComponent.TOTAL
-    supported_imts = ('PGA', 'SA')
-    calibrated_imts = ('SA',)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    calibrated_imts = {SA}
     imt_approximations = {
         'PGA': 'SA(0.01)'}
-    imc = const.IMC.GMRotI50
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
     damping = 5.0
     period_limits = {'SA': (0.01, 10.0)}
 

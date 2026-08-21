@@ -69,28 +69,32 @@ class CorrelationModel:
 
     name = ''
     calibrated_component = None
-    supported_imts = None
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
     calibrated_imts = None
     imt_approximations = {}
-    imc = None
     damping = None
     period_limits = {}
     required_context = ()
 
     def validate(self):
         """Validate model parameters after construction."""
-        if self.imc is not None and not isinstance(self.imc, const.IMC):
+        imc = self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+        if imc is not None and not isinstance(imc, const.IMC):
             raise TypeError(
-                f'{self.name or self.__class__.__name__}.imc must be an '
+                f'{self.name or self.__class__.__name__}.'
+                'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT must be an '
                 'openquake.hazardlib.const.IMC member')
 
     def validate_imts(self, imts):
         """Raise when an IMT is outside the model's declared scope."""
         model_name = self.name or self.__class__.__name__
-        if self.supported_imts is not None:
+        supported = self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        if supported is not None:
+            supported_names = {imt_type.__name__ for imt_type in supported}
             unsupported = sorted({
                 imt.name for imt in imts
-                if imt.name not in self.supported_imts})
+                if imt.name not in supported_names})
             if unsupported:
                 raise ValueError(
                     f'{model_name} does not support '
@@ -166,7 +170,7 @@ class CorrelationModel:
     @classmethod
     def _calibrated_imts(cls):
         if cls.calibrated_imts is None:
-            return cls.supported_imts
+            return cls.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         return cls.calibrated_imts
 
     def _get_component(self, component=None):

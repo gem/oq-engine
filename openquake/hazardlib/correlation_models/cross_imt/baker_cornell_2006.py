@@ -28,6 +28,7 @@ import math
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 @register_model(description='Baker and Cornell (2006) SA correlation')
@@ -35,13 +36,13 @@ class BakerCornell2006(CrossIMTCorrelationModel):
     """Total-residual spectral correlation by Baker and Cornell (2006).
 
     The publication calibrated 5%-damped SA from 0.05 to 5 seconds. PGA and
-    PGV are retained temporarily using OpenQuake's historical SA(0.05) proxy.
+    PGV are retained temporarily using the engine's historical SA(0.05) proxy.
     """
 
     name = 'BakerCornell2006'
     calibrated_component = ResidualComponent.TOTAL
-    supported_imts = ('PGA', 'PGV', 'SA')
-    calibrated_imts = ('SA',)
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+    calibrated_imts = {SA}
     imt_approximations = {
         'PGA': 'SA(0.05)',
         'PGV': 'SA(0.05)',
