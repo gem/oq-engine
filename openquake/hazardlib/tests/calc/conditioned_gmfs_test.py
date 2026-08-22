@@ -44,7 +44,7 @@ def test_joint_within_event_covariance_block():
     correlation = numpy.array([[1.0], [0.5], [0.25], [0.125]])
 
     class JointModel(SpatialCrossIMTCorrelationModel):
-        calibrated_component = ResidualComponent.WITHIN_EVENT
+        DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
 
         def correlation_block(
                 self, distances, imts1, imts2=None,

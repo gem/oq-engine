@@ -26,11 +26,9 @@ from openquake.hazardlib.correlation_models.registry import register_model
 class NoCrossCorrelation(TruncatedCrossIMTCorrelationModel):
     """Represent the absence of cross-IMT correlation."""
 
-    name = 'NoCrossCorrelation'
-    calibrated_component = ResidualComponent.BETWEEN_EVENT
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.BETWEEN_EVENT
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
+    def _rho(self, from_imt, to_imt, context=None):
         return from_imt == to_imt
 
     def get_inter_eps(self, imts, num_events, rng):
