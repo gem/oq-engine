@@ -179,6 +179,24 @@ and follows the authors' 2022 Matlab refinements. These preserve the diagonal
 ridge during interpolation and use a revised, higher-precision nugget matrix
 to retain positive definiteness.
 
+Du and Ning (2021) directly models normalized within-event residuals for PGA,
+PGV, IA, CAV, the 5--75% and 5--95% significant durations, and 5%-damped SA.
+Its recommended approximation retains seven principal components and combines
+their nested spatial covariance models before normalizing the reconstructed
+IM covariance. The implemented SA scope is limited to the 17 periods published
+from 0.01 to 10 seconds. Author-supplied Matlab functions establish the stored
+coefficient ordering and covariance reconstruction, but their interpolation
+of final correlations at unlisted SA periods is an unpublished extension that
+can give a non-unit diagonal. OpenQuake consequently rejects off-grid periods.
+
+The calibrated vector does not have one common horizontal-component
+definition. PGA, PGV, and SA use the RotD50 residuals of Campbell and Bozorgnia
+(2014); IA and CAV use the geometric mean of the two as-recorded horizontal
+components in Campbell and Bozorgnia (2019); and both durations use that
+geometric-mean definition in Du and Wang (2017). The model therefore leaves
+its model-wide intensity-measure-component metadata unset rather than
+mislabeling part of the vector.
+
 Conditional spectra require an explicitly configured total-residual model;
 omitting it does not request an independent calculation.
 
@@ -210,6 +228,11 @@ References
 * Bradley, B. A. (2012). Empirical correlations between peak ground velocity
   and spectrum-based intensity measures. *Earthquake Spectra*, 28(1), 17-35.
   https://doi.org/10.1193/1.3675582
+* Du, W., and Ning, C.-L. (2021). Modeling spatial cross-correlation of
+  multiple ground motion intensity measures (SAs, PGA, PGV, Ia, CAV, and
+  significant durations) based on principal component and geostatistical
+  analyses. *Earthquake Spectra*, 37(1), 486-504.
+  https://doi.org/10.1177/8755293020952442
 * Goda, K., and Atkinson, G. M. (2009). Probabilistic characterization of
   spatially correlated response spectra for earthquakes in Japan. *Bulletin
   of the Seismological Society of America*, 99(5), 3003-3020.
