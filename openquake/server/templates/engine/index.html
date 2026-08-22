@@ -107,9 +107,12 @@
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
                   <input type="hidden" name="calculation_type" value="risk"/>
+
+                  {% if application.has_job_continuing_enabled and user_level > 0 %}  {# TODO: Enable continuing only for jobs that can be continued #}
                   <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
                     <span class="btn btn-default btn-sm btn-file calc-list-btn"><span class="fileinput-new">Continue</span><input type="file" name="archive"/></span>
                   </div>
+                  {% endif %}
                   <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
                   </form>
                   {% endif %}

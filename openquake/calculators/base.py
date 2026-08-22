@@ -41,6 +41,7 @@ from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
+from openquake.engine import APPLICATION
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -215,8 +216,12 @@ def save_version_checksum(oq, dstore):
     """
     attrs = dstore['/'].attrs
     attrs['engine_version'] = general.engine_version()
-    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
-        attrs['aelo_version'] = get_aelo_version()
+
+    # FIXME
+    # attrs.extend(APPLICATION.get_additional_attrs())
+    # if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+    #     attrs['aelo_version'] = get_aelo_version()
+
     attrs['date'] = datetime.now().isoformat()[:19]
     if 'checksum32' in attrs:
         # if save_params has been already called, don't recompute

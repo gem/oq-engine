@@ -140,6 +140,9 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 
+# FIXME: we could have a standard mode with a set of capabilities and
+# subclasses for specialized modes that differ just for a few capabilities
+
 class Mode(str, Enum):
     # TODO: we probably need better names. For instance:
     #   - PUBLIC     -> SINGLE_USER,
@@ -160,7 +163,7 @@ class Mode(str, Enum):
             Mode.AELO: "AELO assessment mode",
             Mode.IMPACT: "Impact assessment mode",
             Mode.READ_ONLY: "Inhibits the possibility to run calculations",
-            Mode.TOOLS_ONLY: "Provides standalone tools",
+            Mode.TOOLS_ONLY: "Provides standalone tools only",
         }[self]
 
     def __repr__(self) -> str:
@@ -173,6 +176,8 @@ class Mode(str, Enum):
 class Capability(Enum):
     # auto assigns incremental integers
     AUTHENTICATION = auto()
+
+    # Job-related capabilities
     JOB_ABORTING = auto()
     JOB_REMOVING = auto()
     JOB_SHARING = auto()
@@ -181,9 +186,12 @@ class Capability(Enum):
     STANDARD_JOB_LAUNCHING = auto()
     AELO_JOB_LAUNCHING = auto()
     IMPACT_JOB_LAUNCHING = auto()
+
     STANDALONE_TOOLS = auto()
     MOSAIC_DIR_REQUIRED = auto()
     VISIBLE_SERVER_NAME = auto()
+    PLOT_ASSETS_POST_RISK = auto()
+    GLOSSARY = auto()  # FIXME: check logic
 
     def __repr__(self) -> str:
         return self.name
@@ -198,6 +206,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
          Capability.JOB_ABORTING,
          Capability.JOB_REMOVING,
          Capability.VISIBLE_SERVER_NAME,
+         Capability.GLOSSARY,
          }
     ),
     Mode.RESTRICTED: frozenset(
@@ -210,6 +219,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
          Capability.JOB_SHARING,
          Capability.JOB_TAGGING,
          Capability.VISIBLE_SERVER_NAME,
+         Capability.GLOSSARY,
          }
     ),
     Mode.IMPACT: frozenset(
@@ -220,7 +230,10 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
          Capability.JOB_REMOVING,
          Capability.JOB_SHARING,
          Capability.JOB_TAGGING,
+         Capability.MOSAIC_DIR_REQUIRED,
          Capability.VISIBLE_SERVER_NAME,
+         Capability.PLOT_ASSETS_POST_RISK,
+         Capability.GLOSSARY,
          }
     ),
     Mode.AELO: frozenset(
@@ -230,6 +243,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
          Capability.JOB_ABORTING,
          Capability.JOB_REMOVING,
          Capability.MOSAIC_DIR_REQUIRED,
+         Capability.GLOSSARY,
          }
     ),
     Mode.READ_ONLY: frozenset(
@@ -243,6 +257,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
          Capability.AUTHENTICATION,
          Capability.STANDALONE_TOOLS,
          Capability.VISIBLE_SERVER_NAME,
+         Capability.GLOSSARY,
          }
     ),
 }
@@ -298,6 +313,12 @@ class Application:
         caps_formatted = ("{" + ", ".join(cap.name for cap in
                                           self.capabilities) + "}")
         return f"Application(mode={self.mode}, capabilities={caps_formatted})"
+
+    # def get_additioanl_attrs(self):
+    #     return {}
+
+
+# class AeloApplication(Application):
 
 
 def get_application() -> Application:

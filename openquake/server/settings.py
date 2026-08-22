@@ -223,7 +223,7 @@ STANDALONE_APP_NAME_MAP = {
         'openquakeplatform_ipt': 'ipt',
         'django_gem_taxonomy': 'taxonomy',
     }
-if not APPLICATION.has_standalone_tools_enabled():
+if APPLICATION.has_glossary_enabled():
     STANDALONE_APP_NAME_MAP['openquakeplatform_taxonomy'] = 'glossary'
 
 EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
@@ -307,7 +307,7 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
-if APPLICATION.has_authentication_enabled():
+if APPLICATION.has_autentication_enabled():
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
             0, 'django.template.context_processors.request')
@@ -338,7 +338,8 @@ if APPLICATION.has_authentication_enabled():
         EMAIL_BACKEND = (
             EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend')
 
-    # FIXME
+    # FIXME: import application-specific settings (that could be in a
+    # project-specific folder containing settings, templates, etc.)
     # if APPLICATION_MODE == 'IMPACT':
     #     ALLOW_DATASTORE_DOWNLOAD = False
     #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'

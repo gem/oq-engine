@@ -653,7 +653,7 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks and save agg_curves-stats
         """
-        if APPLICATION.mode == 'IMPACT':
+        if APPLICATION.has_plot_asset_post_risk_enabled():
             try:
                 self._plot_assets()
             except Exception:
