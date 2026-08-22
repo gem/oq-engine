@@ -111,6 +111,34 @@ approximation,
 This is a modelling assumption, not a general identity. A direct joint model
 is preferable when one has been calibrated for the application.
 
+Baker and Bradley (2017) total residuals
+----------------------------------------
+
+Baker and Bradley (2017) estimated within- and between-event correlations
+from NGA-West2 residuals, then combined them into total-residual correlation
+using the :math:`\tau`, :math:`\phi` and :math:`\sigma` weighting shown above.
+The corrected electronic supplement provides aggregate RotD50 correlations
+for PGA, PGV and 5%-damped SA at 105 periods from 0.01 to 10 seconds. PGA and
+PGV are direct empirical IMTs rather than spectral-period proxies.
+
+The paper reports using active-shallow-crustal records with :math:`M>5` and
+:math:`R<100` km. The corrected author code implements inclusive limits of
+:math:`M\geq5` and :math:`R_{JB}\leq100` km. It found no practically
+significant dependence on magnitude, distance or :math:`V_{S30}`. The paper
+also found that RotD50 and RotD100 SA correlations are essentially identical,
+but the aggregate table and the implementation metadata retain RotD50 as the
+calibrated component.
+
+No interpolation rule was published, so ``BakerBradley2017`` accepts only the
+tabulated SA periods and does not extrapolate or substitute IMTs. The raw
+empirical table is slightly indefinite when many IMTs are
+assembled. The model returns those published values unchanged; the common
+factorization machinery performs positive-semidefinite repair only when it is
+needed for sampling. Although the authors computed separate residual
+components during their analysis, the supplement does not publish a
+between-event matrix. The implemented total-residual table must therefore not
+be used or labelled as a between-event model.
+
 Covariance and sampling
 -----------------------
 
@@ -204,6 +232,12 @@ References
   values for multicomponent ground motions. *Bulletin of the Seismological
   Society of America*, 96(1), 215-227.
   https://doi.org/10.1785/0120050060
+* Baker, J. W., and Bradley, B. A. (2017). Intensity measure correlations
+  observed in the NGA-West2 database, and dependence of correlations on
+  rupture and site parameters. *Earthquake Spectra*, 33(1), 145-156.
+  https://doi.org/10.1193/060716EQS095M
+* Baker, J. W., and Bradley, B. A. (2025). Corrigendum. *Earthquake Spectra*,
+  41(2), 1825-1827. https://doi.org/10.1177/87552930241245554
 * Baker, J. W., and Jayaram, N. (2008). Correlation of spectral acceleration
   values from NGA ground motion models. *Earthquake Spectra*, 24(1), 299-317.
   https://doi.org/10.1193/1.2857544
