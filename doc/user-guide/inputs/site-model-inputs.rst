@@ -127,5 +127,39 @@ We used this feature to split the ESHM20 model in two parts (Northern Europe and
 full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
 overlap, thus making impossible to join the outputs.
 
-A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the
 unique identification of all potential sites across the globe.
+
+Site model logic tree
+---------------------
+
+The ``site_model_file`` can point to a NRML logic tree XML declaring alternative site models with weights, instead of
+a single site model file. This adds a third leg to the SSC × GMM logic tree; under full enumeration realizations become
+``R_SSC × R_GMM × R_SITE`` while under sampling all three legs are Monte-Carlo sampled ``num_samples`` times. Each
+realization path gains a third ``~``-separated branch ID (e.g. ``A~A~B``). All branches must reference the same sites
+(identical ``lon``/``lat`` and ``depth`` if present, in the same order, and identical field sets); only per-site parameter
+values (``vs30``, ``z1pt0``, ``z2pt5``, ...) may differ. Branch files may be CSV or NRML ``<siteModel>`` XML. *Site model
+logic trees are currently only supported in classical and disaggregation.*
+
+Example logic tree XML::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+      <logicTree logicTreeID="lt_site">
+        <logicTreeBranchSet uncertaintyType="siteModel" branchSetID="bs_site">
+          <logicTreeBranch branchID="rock">
+            <uncertaintyModel>site_model_rock.csv</uncertaintyModel>
+            <uncertaintyWeight>0.6</uncertaintyWeight>
+          </logicTreeBranch>
+          <logicTreeBranch branchID="soil">
+            <uncertaintyModel>site_model_soil.csv</uncertaintyModel>
+            <uncertaintyWeight>0.4</uncertaintyWeight>
+          </logicTreeBranch>
+        </logicTreeBranchSet>
+      </logicTree>
+    </nrml>
+
+Referenced from ``job.ini`` as::
+
+    [geometry]
+    site_model_file = site_model_lt.xml

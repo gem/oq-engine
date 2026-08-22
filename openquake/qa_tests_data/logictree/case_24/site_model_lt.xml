@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt_site">
+        <logicTreeBranchSet uncertaintyType="siteModel"
+                            branchSetID="bs_site">
+            <logicTreeBranch branchID="rock">
+                <uncertaintyModel>site_model_rock.csv</uncertaintyModel>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="soil">
+                <uncertaintyModel>site_model_soil.csv</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

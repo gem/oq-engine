@@ -112,6 +112,14 @@ site
     :undoc-members:
     :show-inheritance:
 
+site_lt
+-------------------------------
+
+.. automodule:: openquake.hazardlib.site_lt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sourceconverter
 ------------------------------------------
 

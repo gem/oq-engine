@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <sourceModel name="Site model epistemic - test source A">
+        <sourceGroup name="grp1" tectonicRegion="Active Shallow Crust">
+            <areaSource id="1" name="area src A" tectonicRegion="Active Shallow Crust">
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -65.5 -0.5 -65.5 0.5 -64.5 0.5 -64.5 -0.5
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>15.0</lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.0</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.5" bValue="1.0"
+                                           minMag="5.0" maxMag="6.5"/>
+                <nodalPlaneDist>
+                    <nodalPlane probability="1.0" strike="0.0"
+                                dip="90.0" rake="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth probability="1.0" depth="8.0"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
