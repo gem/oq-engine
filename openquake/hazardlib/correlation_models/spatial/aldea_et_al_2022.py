@@ -25,24 +25,11 @@ Dynamics, 51(11), 2575-2590. https://doi.org/10.1002/eqe.3674
 
 import numpy
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
-
-
-def _distances(sites_or_distances):
-    if hasattr(sites_or_distances, 'mesh'):
-        distances = sites_or_distances.mesh.get_distance_matrix()
-    else:
-        distances = sites_or_distances
-    distances = numpy.asarray(distances, dtype=float)
-    if distances.ndim != 2:
-        raise ValueError('Distances must be a two-dimensional array')
-    if not numpy.isfinite(distances).all():
-        raise ValueError('Distances must be finite')
-    if (distances < 0).any():
-        raise ValueError('Distances must be non-negative')
-    return distances
+from openquake.hazardlib.imt import PGA, SA
 
 
 def _correlation_range(period):
@@ -61,27 +48,14 @@ def _correlation_range(period):
 class AldeaEtAl2022(SpatialCorrelationModel):
     """Within-event model for the Chilean subduction zone."""
 
-    name = 'AldeaEtAl2022'
-    calibrated_component = ResidualComponent.WITHIN_EVENT
-    supported_imts = ('PGA', 'SA')
-    imc = 'geometric mean of horizontal components'
-    damping = 5.0
-    region = 'Chilean subduction zone'
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 10.0)
+    DEFINED_FOR_REGION = 'Chilean subduction zone'
 
-    def validate_imts(self, imts):
-        super().validate_imts(imts)
-        for imt in imts:
-            if imt.name == 'SA':
-                if imt.damping != self.damping:
-                    raise ValueError(
-                        f'{self.name} supports only 5%-damped SA')
-                if not 0.1 <= imt.period <= 10.0:
-                    raise ValueError(
-                        f'{self.name} supports SA periods from 0.1 to 10 s')
-
-    def correlation_matrix(self, sites, imt, component=None, context=None):
-        self._get_component(component)
-        self.validate_imts([imt])
+    def _correlation_matrix(self, distances, imt, context=None):
         period = 0.0 if imt.name == 'PGA' else imt.period
         correlation_range = _correlation_range(period)
-        return numpy.exp(-(_distances(sites) / correlation_range) ** 0.59)
+        return numpy.exp(-(distances / correlation_range) ** 0.59)

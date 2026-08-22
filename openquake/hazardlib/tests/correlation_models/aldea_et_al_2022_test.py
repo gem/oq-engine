@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy
 import pytest
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.registry import get_model_class
 from openquake.hazardlib.correlation_models.spatial.aldea_et_al_2022 import (
@@ -54,18 +55,19 @@ def test_reference_values():
     for row in reference:
         period = float(row['period'])
         imt = PGA() if period == 0 else SA(period)
-        actual = model.correlation_matrix(
-            numpy.array([[float(row['distance'])]]), imt)
+        actual = model.correlation_block(
+            numpy.array([[float(row['distance'])]]), [imt], [imt])
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
             rtol=1E-14, atol=1E-15)
 
 
 def test_model_is_registered_with_calibration_metadata():
-    assert get_model_class(AldeaEtAl2022.name) is AldeaEtAl2022
-    assert AldeaEtAl2022.region == 'Chilean subduction zone'
-    assert AldeaEtAl2022.imc == 'geometric mean of horizontal components'
-    assert AldeaEtAl2022.damping == 5.0
+    assert get_model_class(AldeaEtAl2022.__name__) is AldeaEtAl2022
+    assert AldeaEtAl2022.DEFINED_FOR_REGION == 'Chilean subduction zone'
+    assert AldeaEtAl2022.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is (
+        const.IMC.GEOMETRIC_MEAN)
+    assert AldeaEtAl2022.DEFINED_FOR_SA_DAMPING == 5.0
 
 
 def test_covariance_and_factor_are_positive_definite():

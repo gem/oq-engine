@@ -236,7 +236,7 @@ class OqParamTestCase(unittest.TestCase):
             **common,
             total_residual_correlation_model='Bradley2012'
         ).get_total_residual_correlation_model()
-        self.assertEqual(model.name, 'Bradley2012')
+        self.assertEqual(model.__class__.__name__, 'Bradley2012')
 
     def test_conditional_spectrum_cross_correlation_alias(self):
         oq = OqParam(
