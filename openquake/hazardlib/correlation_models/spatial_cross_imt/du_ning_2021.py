@@ -55,6 +55,7 @@ import numpy
 
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.registry import register_model
 from openquake.hazardlib.imt import CAV, IA, PGA, PGV, RSD575, RSD595, SA
 
 
@@ -148,6 +149,9 @@ def _normalized_coefficients(imts):
     return coefficients / numpy.sqrt(variances[:, numpy.newaxis])
 
 
+@register_model(
+    description=('Du and Ning (2021) within-event PGA, PGV, IA, CAV, '
+                 'duration, and spectral-acceleration joint correlation'))
 class DuNing2021(SpatialCrossIMTCorrelationModel):
     """Published seven-PC within-event joint correlation model.
 
