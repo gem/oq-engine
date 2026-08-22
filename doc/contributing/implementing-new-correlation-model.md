@@ -42,17 +42,18 @@ The base interfaces are defined in
 `openquake/hazardlib/correlation_models/base.py`.
 
 - Subclass `SpatialCorrelationModel` when the model correlates one IMT across
-  sites. Implement `correlation_matrix`.
+  sites. Implement `_correlation_matrix`.
 - Subclass `CrossIMTCorrelationModel` when the model correlates different IMTs
-  at one site. Implement `rho`.
+  at one site. Implement `_rho`.
 - Subclass `SpatialCrossIMTCorrelationModel` when the model directly describes
-  a joint field across sites and IMTs. Implement `correlation_block`.
+  a joint field across sites and IMTs. Implement `_correlation_block`.
 
-A joint model should implement `correlation_block` rather than only
+A joint model should implement `_correlation_block` rather than only
 `covariance`. Conditioning requires rectangular covariance blocks between two
 different collections of sites and IMTs. The returned rows and columns must be
 in IMT-major order: all sites for the first IMT, followed by all sites for the
-second IMT, and so on.
+second IMT, and so on. The public methods perform shared validation before
+calling these protected numerical methods.
 
 Place the implementation in the matching package:
 
@@ -69,37 +70,66 @@ names and publication year. For example, `loth_baker_2013.py` contains
 
 ## Declare model metadata
 
-Every model class must declare enough metadata for configuration validation and
-scientific review:
+Every scientific model must declare its residual component and the IMTs
+accepted by its implementation:
 
 ```python
-name = 'ExampleModel2026'
-calibrated_component = ResidualComponent.WITHIN_EVENT
-supported_imts = ('SA',)
-imc = 'RotD50'
-damping = 5.0
-required_context = ('mag',)
+from openquake.hazardlib.imt import PGA
+
+DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 ```
 
-The fields have the following meanings:
+### Mandatory metadata
 
-- `name` is the canonical configuration name and normally matches the class.
-- `calibrated_component` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or `TOTAL`.
-- `supported_imts` lists the IMTs accepted by the implementation. Clearly
-  distinguish the calibrated IMTs from any documented proxy in the model
-  docstring and validation.
-- `imc` identifies the intensity measure component for which the model was
-  derived.
-- `damping` gives the supported spectral damping, when applicable.
-- `required_context` lists predictors obtained from `CorrelationContext`.
+- `DEFINED_FOR_RESIDUAL_COMPONENT` is `WITHIN_EVENT`, `BETWEEN_EVENT`, or
+  `TOTAL`.
+- `DEFINED_FOR_INTENSITY_MEASURE_TYPES` lists the IMT classes accepted by the
+  implementation, following the existing GSIM convention. Clearly distinguish
+  accepted operational approximations from calibrated IMTs.
+
+### Conditional metadata
+
+Declare the following metadata only when it applies:
+
+- `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT` identifies a component established
+  by the publication, using a member of `openquake.hazardlib.const.IMC`.
+- `CALIBRATED_FOR_INTENSITY_MEASURE_TYPES` lists the IMTs used to derive the
+  model when they differ from the accepted IMTs. Omit it when it matches the
+  accepted IMT set.
+- `INTENSITY_MEASURE_TYPE_APPROXIMATIONS` maps each accepted IMT factory to
+  the IMT that represents it when an operational proxy is explicitly
+  supported.
+- `DEFINED_FOR_SA_DAMPING` gives the supported spectral damping, when
+  applicable.
+- `DEFINED_FOR_SA_PERIOD_RANGE` gives the inclusive calibrated period range.
+- `DEFINED_FOR_REGION` records an explicit geographic applicability or
+  calibration restriction. Most models should inherit the default `None`.
+
+For example, an SA model that also accepts PGA as a documented SA(0.01) proxy
+would declare the following applicable metadata:
+
+```python
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, SA
+
+DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+DEFINED_FOR_SA_DAMPING = 5.0
+DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
+```
 
 Use `None` only when a field genuinely does not apply or the model is not
-restricted. The base class validates IMT names and residual components. Do not
-infer a proxy SA period for an unsupported IMT merely from a similar period. A
-proxy established by an authoritative source or operational convention must
-be scientifically justified, explicitly documented and tested. Implement any
-additional validation required for spectral periods, damping, component
-definitions, context values and constructor parameters.
+restricted; concrete classes do not need to repeat optional metadata with a
+`None` value. The base classes validate IMT names, spectral periods, damping,
+residual components, distance matrices and returned matrix values. Do not infer
+a proxy SA period for an unsupported IMT merely from a similar period. A proxy
+established by an authoritative source or operational convention must be
+scientifically justified, explicitly documented and tested. Implement only
+validation specific to an IMT combination, component definition or constructor
+parameter in the concrete class.
 
 ## Register the model
 
@@ -111,6 +141,9 @@ Decorate the class with `register_model`:
 class ExampleModel2026(SpatialCrossIMTCorrelationModel):
     ...
 ```
+
+The class name is the canonical configuration name. Use aliases only for
+established alternative names or backward compatibility.
 
 The registry discovers model modules lazily. Do not import them from package
 `__init__.py` files.

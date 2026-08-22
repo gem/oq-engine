@@ -87,13 +87,17 @@ def test_spectral_acceleration_reference_values():
 
 
 def test_models_are_registered_with_calibration_metadata():
-    assert get_model_class(WangDu2013PGAIAPGV.name) is WangDu2013PGAIAPGV
     assert get_model_class(
-        WangDu2013SpectralAcceleration.name
+        WangDu2013PGAIAPGV.__name__) is WangDu2013PGAIAPGV
+    assert get_model_class(
+        WangDu2013SpectralAcceleration.__name__
     ) is WangDu2013SpectralAcceleration
-    assert WangDu2013PGAIAPGV.supported_imts == ('PGA', 'IA', 'PGV')
-    assert WangDu2013SpectralAcceleration.supported_imts == ('SA',)
-    assert WangDu2013SpectralAcceleration.damping == 5.0
+    assert WangDu2013PGAIAPGV.DEFINED_FOR_INTENSITY_MEASURE_TYPES == {
+        PGA, IA, PGV}
+    assert (
+        WangDu2013SpectralAcceleration.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        == {SA})
+    assert WangDu2013SpectralAcceleration.DEFINED_FOR_SA_DAMPING == 5.0
 
 
 @pytest.mark.parametrize(('model', 'imts1', 'imts2'), [

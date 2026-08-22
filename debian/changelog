@@ -1,4 +1,8 @@
   [Anirudh Rao]
+  * Harmonize correlation module metadata with GSIM conventions, abstract
+    out common validation functions to the correlation base class
+  * Add independent verification for pre-existing correlation models, and 
+    remove unsupported IMT combinations
   * Add the Wang and Du (2013) joint spatial and cross-IMT within-event
     correlation models for PGA-IA-PGV and SAs considering regional site-
     conditions

@@ -63,8 +63,8 @@ def test_reference_values():
         period = float(row['period'])
         imt = PGA() if period == 0 else SA(period)
         model = MODELS[row['region']]()
-        actual = model.correlation_matrix(
-            numpy.array([[float(row['distance'])]]), imt)
+        actual = model.correlation_block(
+            numpy.array([[float(row['distance'])]]), [imt], [imt])
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
             rtol=1E-14, atol=1E-15)
@@ -72,10 +72,13 @@ def test_reference_values():
 
 def test_regional_classes_are_registered_and_explicit():
     for model_class in MODELS.values():
-        assert get_model_class(model_class.name) is model_class
-    assert SchiappapietraEtAl2022NorthernItaly.region == 'Northern Italy'
-    assert SchiappapietraEtAl2022CentralItaly.region == 'Central Italy'
-    assert SchiappapietraEtAl2022SouthernItaly.region == 'Southern Italy'
+        assert get_model_class(model_class.__name__) is model_class
+    assert (SchiappapietraEtAl2022NorthernItaly.DEFINED_FOR_REGION ==
+            'Northern Italy')
+    assert (SchiappapietraEtAl2022CentralItaly.DEFINED_FOR_REGION ==
+            'Central Italy')
+    assert (SchiappapietraEtAl2022SouthernItaly.DEFINED_FOR_REGION ==
+            'Southern Italy')
 
 
 @pytest.mark.parametrize('model_class', MODELS.values())

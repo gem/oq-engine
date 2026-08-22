@@ -27,22 +27,31 @@ import numpy
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 @register_model(description='Bradley (2012) PGV and spectrum correlation')
 class Bradley2012(TruncatedCrossIMTCorrelationModel):
     """Total-residual correlation between PGV and spectrum-based IMTs."""
 
-    name = 'Bradley2012'
-    calibrated_component = ResidualComponent.TOTAL
-    supported_imts = ('PGV', 'PGA', 'SA')
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
+    def _validate_imt_combination(self, imts):
+        unique = tuple(dict.fromkeys(imts))
+        if len(unique) <= 1:
+            return
+        if (len(unique) != 2 or
+                sum(imt.name == 'PGV' for imt in unique) != 1):
+            raise ValueError(
+                f'{self.__class__.__name__} defines only a pair containing '
+                'PGV and one PGA or SA intensity measure')
+
+    def _rho(self, from_imt, to_imt, context=None):
         if from_imt == to_imt:
             return 1
-        if from_imt.string != 'PGV' and to_imt.string != 'PGV':
-            return 0
         period = (to_imt.period if from_imt.string == 'PGV'
                   else from_imt.period)
         if period < 0.01:
