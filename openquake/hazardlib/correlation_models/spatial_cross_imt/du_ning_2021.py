@@ -23,6 +23,9 @@ also interpolates correlations for unlisted SA periods, but that extension
 is not described in the paper and can produce a non-unit diagonal. This
 implementation therefore supports only the 17 published SA periods.
 
+The deterministic verification table was generated independently with GNU
+Octave 8.4.0 from those unchanged author-supplied Matlab functions.
+
 The calibrated intensity-measure components are not uniform. PGA, PGV, and
 SA use the RotD50 component of Campbell and Bozorgnia (2014), whereas IA,
 CAV, RSD575, and RSD595 use geometric means of the two as-recorded
