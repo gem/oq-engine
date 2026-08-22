@@ -16,7 +16,7 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-            <h2>Outputs from calculation {{ calc_id }}: {{ description }}{% if local_timestamp %} (event time: {{ local_timestamp }}){% endif %}</h2>
+            <h2>Outputs from calculation {{ calc_id }}: {% if usgs_id %}{{ usgs_id}}: {% endif %}{{ description }}{% if local_timestamp %} (event time: {{ local_timestamp }}){% endif %}</h2>
             {% if time_job_after_event %}<h3>Results computed {{ time_job_after_event }} after the event</h3><br/>{% endif %}
             {% if warnings %}
             <div id="warning-box" class="alert alert-warning" style=>
@@ -48,7 +48,11 @@
               {% if aggrisk_tags %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
-                  Show impact table</a>
+                  Show impact full table</a>
+              </div>
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">
+                  Show impact summary table</a>
               </div>
               {% endif %}
               {% if mmi_tags %}
@@ -70,6 +74,12 @@
               </div>
               {% endif %}
               {% endif %}
+              {% for iso3 in impact_iso3_list %}
+              <div class="my-pngs">
+                <a href="/v1/calc/{{ calc_id }}/impact_report?&iso3={{ iso3 }}&format=PNG" class="btn btn-sm" target="_blank">
+                    Show impact report ({{ iso3 }})</a>
+              </div>
+              {% endfor %}
             </div>
             <div class="outputs-general-btns-center"></div>
             <div class="outputs-general-btns-right">
@@ -97,6 +107,7 @@
     <div class="impact-losses-container">
       {% if losses_header is not None %}
       <table id="impact-losses">
+        The following table displays mean values
         <thead>
           <tr>
             {% for header in losses_header %}
