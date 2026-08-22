@@ -19,8 +19,7 @@ The coefficient matrix is the corrected ``rhoData.csv`` electronic
 supplement published by the authors. It contains aggregate total-residual
 correlations computed with Equation 2 of the paper. The 2025 corrigendum
 corrected erroneous Z1.0 and earthquake-region inputs used in the original
-analysis. The authors' corrected analysis is maintained at commit
-``476198eb54e231e57b10a68b1bcaec10cddd0a55`` of
+analysis. The authors' corrected analysis is maintained at
 https://github.com/bakerjw/NGAW2_correlations.
 
 The publication does not prescribe interpolation between the 105 tabulated
