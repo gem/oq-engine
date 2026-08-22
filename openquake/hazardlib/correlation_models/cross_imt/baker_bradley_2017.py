@@ -48,6 +48,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
+from openquake.hazardlib.correlation_models.registry import register_model
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
@@ -99,6 +100,8 @@ def _imt_index(imt):
     return _sa_index(imt.period)
 
 
+@register_model(
+    description='Baker and Bradley (2017) total-residual correlation')
 class BakerBradley2017(CrossIMTCorrelationModel):
     """Corrected total-residual correlation for RotD50 ground motion.
 
